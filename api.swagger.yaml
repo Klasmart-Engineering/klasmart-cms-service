@@ -1,0 +1,277 @@
+openapi: 3.0.1
+info:
+  title: KidsLoop 2.0 Asset REST API
+  description: Kidsloop 2.0 Asset backend rest api
+  version: 1.0.0
+  contact:
+    email: peter.yang@badanamu.com.cn
+servers:
+  - url: "http://127.0.0.1:12345/1.0"
+    description: local dev
+  - url: "http://192.168.1.234:12345/1.0"
+    description: local test
+tags:
+  - name: asset
+    description: asset management
+paths:
+  /assets:
+    get:
+      tags:
+        - asset
+      summary: query asset
+      description: query asset
+      operationId: queryAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: query
+          description: asset name
+          schema:
+            type: string
+          required: false
+          allowEmptyValue: true
+        - name: page
+          in: query
+          description: "page index, not paging if page <= 0"
+          schema:
+            type: integer
+            format: int32
+            nullable: true
+            default: 1
+          required: false
+          allowEmptyValue: true
+        - name: page_size
+          in: query
+          description: "records per page, not paging if page_size <= 0"
+          schema:
+            type: integer
+            format: int32
+            nullable: true
+            default: 10
+          required: false
+          allowEmptyValue: true
+        - name: order_by
+          in: query
+          description: order by enum
+          schema:
+            type: string
+            enum:
+              - "name"
+              - "-name"
+              - "create_at"
+              - "-create_at"
+              - "last_update_at"
+              - "-last_update_at"
+            nullable: true
+            default: "create_at"
+          required: false
+          allowEmptyValue: true
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                description: asset list
+                properties:
+                  total:
+                    type: integer
+                    format: int32
+                    description: total records
+                    example: 1
+                  list:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Asset"
+        "400":
+          description: Bad request
+        "401":
+          description: User not login
+        "403":
+          description: Forbidden
+        "500":
+          description: Server error
+    post:
+      tags:
+        - asset
+      summary: CreateAsset
+      description: CreateAsset
+      operationId: createAsset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetCreateRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "400":
+          description: Bad request
+        "401":
+          description: User not login
+        "403":
+          description: Forbidden
+        "500":
+          description: Server error
+  /assets/{asset_id}:
+    get:
+      tags:
+        - asset
+      summary: GetAsset
+      description: GetAsset
+      operationId: getAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: asset_id
+          in: path
+          description: AssetID
+          schema:
+            type: string
+          required: true
+          allowEmptyValue: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "400":
+          description: Bad request
+        "401":
+          description: User not login
+        "403":
+          description: Forbidden
+        "404":
+          description: Recorde not found
+        "500":
+          description: Server error
+    put:
+      tags:
+        - asset
+      summary: update asset
+      description: update asset
+      operationId: updateAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: asset_id
+          in: path
+          description: AssetID
+          schema:
+            type: string
+          required: true
+          allowEmptyValue: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetCreateRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "400":
+          description: Bad request
+        "401":
+          description: User not login
+        "403":
+          description: Forbidden
+        "404":
+          description: Recorde not found
+        "500":
+          description: Server error
+    delete:
+      tags:
+        - asset
+      summary: delete asset
+      description: delete asset
+      operationId: deleteAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: asset_id
+          in: path
+          description: AssetID
+          schema:
+            type: string
+          required: true
+          allowEmptyValue: false
+      responses:
+        "200":
+          description: Success
+        "400":
+          description: Bad request
+        "401":
+          description: User not login
+        "403":
+          description: Forbidden
+        "404":
+          description: Recorde not found
+        "500":
+          description: Server error
+components:
+  securitySchemes:
+    bearerAuth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT # optional, arbitrary value for documentation purposes
+  schemas:
+    AssetCreateRequest:
+      type: object
+      description: Asset
+      properties:
+        name:
+          type: string
+          description: asset name
+          example: "Asset #1"
+    Asset:
+      allOf:
+        - $ref: "#/components/schemas/AssetCreateRequest"
+        - type: object
+          description: Company
+          properties:
+            id:
+              type: string
+              description: AssetID
+              example: ede1995ebdb440ebb9526c53e07a9ff3
+            create_user_id:
+              type: string
+              description: create user id
+              example: d84158ed948711e89644107b444aba3c
+            create_user_name:
+              type: string
+              description: create user name
+              example: "James"
+            created_at:
+              type: integer
+              format: int64
+              description: create at timestamp in seconds
+              example: 1595916114
+            last_update_user_id:
+              type: string
+              description: last updated user id
+              example: d84158ed948711e89644107b444aba3c
+            last_update_user_name:
+              type: string
+              description: last updated user name
+              example: "James"
+            last_updated_at:
+              type: integer
+              format: int64
+              description: last updated at timestamp in seconds(秒)
+              example: 1595916114
