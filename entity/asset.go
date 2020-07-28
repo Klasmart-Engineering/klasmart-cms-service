@@ -11,7 +11,6 @@ type AssetObject struct {
 	URL      string   `json:"url" dynamodbav:"url"`
 
 	Uploader   string     `json:"uploader" dynamodbav:"uploader"`
-	UploadedAt *time.Time `json:"uploaded_at" dynamodbav:"uploaded_at"`
 
 	CreatedAt *time.Time `json:"created_at" dynamodbav:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at" dynamodbav:"updated_at"`

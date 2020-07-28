@@ -118,6 +118,10 @@ func (am *AssetModel) buildUpdateParams(ctx context.Context, data entity.UpdateA
 	}
 
 	//TODO:Updated_at
+	updateStr = append(updateStr, "set updated_at = :ud")
+	updateValues[":ud"] = &dynamodb.AttributeValue{
+		S:    aws.String(time.Now().String()),
+	}
 	return &UpdateParams{
 		keys:   updateStr,
 		values: updateValues,
