@@ -24,17 +24,17 @@ var (
 type IStorage interface{
 	OpenStorage(ctx context.Context) error
 	CloseStorage(ctx context.Context)
-	UploadFile(ctx context.Context, partition int, filePath string, fileStream multipart.File) error
-	DownloadFile(ctx context.Context, partition int, filePath string) (io.Reader, error)
-	ExitsFile(ctx context.Context, partition int, filePath string) bool
-	GetFilePath(ctx context.Context, partition int) string
-	GetFileTempPath(ctx context.Context, partition int, filePath string) (string, error)
+	UploadFile(ctx context.Context, partition string, filePath string, fileStream multipart.File) error
+	DownloadFile(ctx context.Context, partition string, filePath string) (io.Reader, error)
+	ExitsFile(ctx context.Context, partition string, filePath string) bool
+	GetFilePath(ctx context.Context, partition string) string
+	GetFileTempPath(ctx context.Context, partition string, filePath string) (string, error)
 
-	GetUploadFileTempPath(ctx context.Context, partition int, fileName string) (string ,error)
+	GetUploadFileTempPath(ctx context.Context, partition string, fileName string) (string ,error)
 	GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string ,error)
 
-	UploadFileBytes(ctx context.Context, partition int, filePath string, fileStream *bytes.Buffer) error
-	UploadFileLAN(ctx context.Context, partition int, filePath string, contentType string, r io.Reader) error
+	UploadFileBytes(ctx context.Context, partition string, filePath string, fileStream *bytes.Buffer) error
+	UploadFileLAN(ctx context.Context, partition string, filePath string, contentType string, r io.Reader) error
 	CopyFile(ctx context.Context, source, target string) error
 }
 
