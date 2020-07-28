@@ -11,7 +11,8 @@ type ITagModel interface{
 	BatchAdd(ctx context.Context, tag []*entity.TagAddView) error
 	Update(ctx context.Context, tag *entity.TagUpdateView) error
 	Query(ctx context.Context, condition *entity.TagCondition) ([]*entity.TagView,error)
-	GetByID(ctx context.Context,tagID string)(*entity.TagView,error)
+	GetByID(ctx context.Context,id string)(*entity.TagView,error)
+	GetByName(ctx context.Context,name string)(*entity.TagView,error)
 }
 
 type tagModel struct{}
@@ -45,6 +46,38 @@ func (t tagModel) Query(ctx context.Context, condition *entity.TagCondition) ([]
 	return nil,nil
 }
 
-func (t tagModel)GetByID(ctx context.Context,tagID string)(*entity.TagView,error){
+func (t tagModel) GetByID(ctx context.Context,id string)(*entity.TagView,error){
+
+
+	//tag:=new(entity.Tag)
+	//err=dynamodbattribute.UnmarshalMap(result.Item,tag)
+	//if err!=nil{
+	//	return nil,err
+	//}
+	//
+	//tagView:=&entity.TagView{
+	//	ID:       tag.ID,
+	//	Name:     tag.Name,
+	//	CreateAt: tag.CreatedAt,
+	//}
 	return nil,nil
+}
+
+func (t tagModel) GetByName(ctx context.Context,name string)(*entity.TagView,error){
+	return nil,nil
+}
+
+func (t tagModel) getItem(in entity.Tag){
+	//key, err := dynamodbattribute.MarshalMap(in)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//input := &dynamodb.GetItemInput{
+	//	Key: key,
+	//	TableName: aws.String(constant.TableNameTag),
+	//}
+	//result, err := dbclient.GetClient().GetItem(input)
+	//if err!=nil{
+	//	return nil,err
+	//}
 }
