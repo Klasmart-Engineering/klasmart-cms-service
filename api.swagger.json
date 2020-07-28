@@ -161,6 +161,18 @@
             "name": "tags",
             "description": "Search asset by tags",
             "type": "string"
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "description": "Search asset page size",
+            "type": "integer"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "Search asset page idnex",
+            "type": "integer"
           }
         ],
         "responses": {
