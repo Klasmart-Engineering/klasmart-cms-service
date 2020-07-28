@@ -731,6 +731,325 @@
           }
         }
       }
+    },
+    "/tag": {
+      "get": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "query tag",
+        "description": "query tag",
+        "operationId": "queryTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Search tag by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 1
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if page_size <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 10
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by enum",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "create_at",
+                "-create_at"
+              ],
+              "nullable": true,
+              "default": "create_at"
+            },
+            "required": false,
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "tag list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tag"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "create tag",
+        "description": "Create Tag",
+        "operationId": "createTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "string",
+                  "description": "tag id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/tag/{tag_id}": {
+      "get": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "get tag by id",
+        "description": "get tag by id",
+        "operationId": "GetTagByID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "description": "tag id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "update tag",
+        "description": "update tag",
+        "operationId": "updateTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "description": "tag id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "delete tag",
+        "description": "delete tag",
+        "operationId": "deleteTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "description": "delete tag",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -806,14 +1125,49 @@
           }
         ]
       },
+      "TagCreate": {
+        "type": "object",
+        "description": "create tag request",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "tag name"
+          }
+        }
+      },
+      "TagUpdate": {
+        "type": "object",
+        "description": "update tag request",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "tag name"
+          },
+          "states": {
+            "type": "integer",
+            "description": "tag state, 1--enable,2--disenable"
+          }
+        }
+      },
       "Tag": {
         "type": "object",
         "description": "Asset",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "tag id"
+          },
           "name": {
             "type": "string",
-            "description": "asset name",
-            "example": "Tag #1"
+            "description": "tag name"
+          },
+          "states": {
+            "type": "integer",
+            "description": "tag state, 1--enable,2--disenable"
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "tag create time, timestamp"
           }
         }
       },

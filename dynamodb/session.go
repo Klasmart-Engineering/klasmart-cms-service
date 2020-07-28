@@ -1,18 +1,19 @@
 package dynamodb
 
-import(
+import (
+	"sync"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"sync"
 )
 
 var (
 	client *dynamodb.DynamoDB
-	_once sync.Once
+	_once  sync.Once
 )
 
-func GetClient() *dynamodb.DynamoDB{
+func GetClient() *dynamodb.DynamoDB {
 	_once.Do(func() {
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
