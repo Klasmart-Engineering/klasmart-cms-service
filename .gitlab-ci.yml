@@ -1,0 +1,4 @@
+include:
+  - project: 'devops/ci-center'
+    ref: 'dev'
+    file: 'gitlab-ci-template/.gitlab-ci-swagger.yml'
