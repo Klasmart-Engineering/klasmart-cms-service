@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"strings"
 	"sync"
+	"time"
 )
 
 type IAssetModel interface {
@@ -40,7 +41,7 @@ type AssetEntity struct {
 	URL      string
 }
 
-func (u *UpdateParams) key()string{
+func (u *UpdateParams) key() string {
 	return strings.Join(u.keys, ",")
 }
 
@@ -59,13 +60,16 @@ func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) 
 		URL:      data.URL,
 	}, true)
 
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 	return am.doCreateAsset(ctx, data)
 }
 
 func (am *AssetModel) doCreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
+	now := time.Now()
+	data.CreatedAt = &now
+	data.UpdatedAt = &now
 	data.Id = utils.NewId()
 	m, err := dynamodbattribute.MarshalMap(data)
 	if err != nil {
@@ -82,36 +86,38 @@ func (am *AssetModel) doCreateAsset(ctx context.Context, data entity.AssetObject
 	return data.Id, nil
 }
 
-func (am *AssetModel) buildUpdateParams(ctx context.Context, data entity.UpdateAssetRequest)(*UpdateParams, error){
+func (am *AssetModel) buildUpdateParams(ctx context.Context, data entity.UpdateAssetRequest) (*UpdateParams, error) {
 	updateStr := make([]string, 0)
 	updateValues := make(map[string]*dynamodb.AttributeValue)
 
 	if data.Category != "" {
 		updateStr = append(updateStr, "set category = :c")
 		updateValues[":c"] = &dynamodb.AttributeValue{
-			S:    aws.String(data.Category),
+			S: aws.String(data.Category),
 		}
 	}
 	if data.Name != "" {
 		updateStr = append(updateStr, "set name = :n")
 		updateValues[":n"] = &dynamodb.AttributeValue{
-			S:    aws.String(data.Name),
+			S: aws.String(data.Name),
 		}
 	}
 
 	if data.URL != "" {
 		updateStr = append(updateStr, "set name = :u")
 		updateValues[":u"] = &dynamodb.AttributeValue{
-			S:    aws.String(data.URL),
+			S: aws.String(data.URL),
 		}
 	}
 
 	if data.Tag != nil {
 		updateStr = append(updateStr, "set tag = :t")
 		updateValues[":t"] = &dynamodb.AttributeValue{
-			SS:    aws.StringSlice(data.Tag),
+			SS: aws.StringSlice(data.Tag),
 		}
 	}
+
+	//TODO:Updated_at
 	return &UpdateParams{
 		keys:   updateStr,
 		values: updateValues,
@@ -126,28 +132,28 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	}, false)
 
 	co := entity.AssetObject{
-		Id:            data.Id,
+		Id: data.Id,
 	}
 	av, err := dynamodbattribute.MarshalMap(co)
-	if err != nil{
+	if err != nil {
 		log.Get().Errorf("marshal asset failed, error: %v", err)
 		return err
 	}
 
 	params, err := am.buildUpdateParams(ctx, data)
-	if err != nil{
+	if err != nil {
 		log.Get().Errorf("build params failed, error: %v", err)
 		return err
 	}
 
 	_, err = client.GetClient().UpdateItem(&dynamodb.UpdateItemInput{
-		ExpressionAttributeValues:   params.values,
-		Key:                         av,
-		TableName:                   aws.String(co.TableName()),
-		ReturnValues:     			 aws.String("UPDATED_NEW"),
-		UpdateExpression:            aws.String(params.key()),
+		ExpressionAttributeValues: params.values,
+		Key:                       av,
+		TableName:                 aws.String(co.TableName()),
+		ReturnValues:              aws.String("UPDATED_NEW"),
+		UpdateExpression:          aws.String(params.key()),
 	})
-	if err != nil{
+	if err != nil {
 		log.Get().Errorf("update asset failed, error: %v", err)
 		return err
 	}
@@ -156,17 +162,17 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 
 func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
 	co := entity.AssetObject{
-		Id:            id,
+		Id: id,
 	}
 	av, err := dynamodbattribute.MarshalMap(co)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	_, err = client.GetClient().DeleteItem(&dynamodb.DeleteItemInput{
-		Key:                         av,
-		TableName:                   aws.String(co.TableName()),
+		Key:       av,
+		TableName: aws.String(co.TableName()),
 	})
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return nil
@@ -174,23 +180,23 @@ func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
 
 func (am *AssetModel) GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error) {
 	co := entity.AssetObject{
-		Id:            id,
+		Id: id,
 	}
 	av, err := dynamodbattribute.MarshalMap(co)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
 	result, err := client.GetClient().GetItem(&dynamodb.GetItemInput{
-		Key:                      av,
-		TableName:                aws.String(co.TableName()),
+		Key:       av,
+		TableName: aws.String(co.TableName()),
 	})
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	asset := new(entity.AssetObject)
 	err = dynamodbattribute.UnmarshalMap(result.Item, &asset)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -215,6 +221,8 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *SearchAssetCo
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(entity.AssetObject{}.TableName()),
+		Limit:                     aws.Int64(condition.PageSize),
+		Segment:                   aws.Int64(condition.Page),
 	}
 	result, err := client.GetClient().Scan(params)
 	if err != nil {
@@ -252,9 +260,12 @@ type SearchAssetCondition struct {
 	SizeMax    int      `json:"size_max"`
 
 	Tags []string `json:"tag"`
+
+	PageSize int64 `json:"page_size"`
+	Page     int64 `json:"page"`
 }
 
-func (s *SearchAssetCondition) getConditions() []expression.ConditionBuilder{
+func (s *SearchAssetCondition) getConditions() []expression.ConditionBuilder {
 	conditions := make([]expression.ConditionBuilder, 0)
 	if len(s.Ids) > 0 {
 		condition := expression.Name("_id").In(expression.Value(s.Ids))
@@ -288,7 +299,7 @@ func (s *SearchAssetCondition) getConditions() []expression.ConditionBuilder{
 var assetModel *AssetModel
 var _assetOnce sync.Once
 
-func GetAssetModel()*AssetModel{
+func GetAssetModel() *AssetModel {
 	_assetOnce.Do(func() {
 		assetModel = new(AssetModel)
 	})
