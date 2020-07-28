@@ -18,7 +18,7 @@ import (
 
 type IAssetModel interface {
 	CreateAsset(ctx context.Context, data entity.AssetObject) (string, error)
-	UpdateAsset(ctx context.Context, data entity.AssetObject) error
+	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
 	DeleteAsset(ctx context.Context, id string) error
 
 	GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error)
