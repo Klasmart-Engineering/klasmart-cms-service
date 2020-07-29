@@ -2,6 +2,7 @@ package entity
 
 import (
 	"calmisland/kidsloop2/constant"
+	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 )
 
 type Tag struct {
@@ -22,6 +23,14 @@ type TagCondition struct {
 	Name     string `json:"name"`
 	PageSize int64  `json:"page_size"`
 	Page     int64  `json:"page"`
+}
+
+func (t TagCondition) getConditions()[]expression.ConditionBuilder{
+	//conditions := make([]expression.ConditionBuilder, 0)
+	//if t.Name==""{
+	//	condition :=
+	//}
+	return nil
 }
 
 type TagAddView struct {
