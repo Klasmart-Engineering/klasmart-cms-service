@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"strconv"
 	"sync"
 	"time"
@@ -104,7 +103,10 @@ func (t tagModel) Update(ctx context.Context, tag *entity.TagUpdateView) error {
 	_, err = dbclient.GetClient().UpdateItem(input)
 	return utils.ConvertDynamodbError(err)
 }
-
+//func (t tagModel) getConditions()[]expression.ConditionBuilder{
+//	conditions := make([]expression.ConditionBuilder, 0)
+//
+//}
 func (t tagModel) Query(ctx context.Context, condition *entity.TagCondition) ([]*entity.TagView, error) {
 
 	return nil, nil
