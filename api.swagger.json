@@ -1,0 +1,1212 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "KidsLoop 2.0 Asset REST API",
+    "description": "Kidsloop 2.0 Asset backend rest api",
+    "version": "1.0.0",
+    "contact": {
+      "email": "peter.yang@badanamu.com.cn"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:12345/1.0",
+      "description": "local dev"
+    },
+    {
+      "url": "http://192.168.1.234:12345/1.0",
+      "description": "local test"
+    }
+  ],
+  "tags": [
+    {
+      "name": "asset",
+      "description": "asset management"
+    },
+    {
+      "name": "category",
+      "description": "asset category management"
+    },
+    {
+      "name": "tag",
+      "description": "asset tag management"
+    }
+  ],
+  "paths": {
+    "/assets": {
+      "get": {
+        "tags": [
+          "asset"
+        ],
+        "summary": "query asset",
+        "description": "query asset",
+        "operationId": "queryAsset",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Search asset by ids",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "names",
+            "in": "query",
+            "description": "Search asset by names",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "categories",
+            "in": "query",
+            "description": "Search asset by categories",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "size_min",
+            "in": "query",
+            "description": "Search asset by size_min",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 2
+            }
+          },
+          {
+            "name": "size_max",
+            "in": "query",
+            "description": "Search asset by size_max",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 1
+            }
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "description": "Search asset by tags",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 1
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if page_size <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 10
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by enum",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "create_at",
+                "-create_at",
+                "last_update_at",
+                "-last_update_at"
+              ],
+              "nullable": true,
+              "default": "create_at"
+            },
+            "required": false,
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "asset list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Asset"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "asset"
+        ],
+        "summary": "CreateAsset",
+        "description": "CreateAsset",
+        "operationId": "createAsset",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Asset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/assets/{asset_id}": {
+      "get": {
+        "tags": [
+          "asset"
+        ],
+        "summary": "GetAsset",
+        "description": "GetAsset",
+        "operationId": "getAsset",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "description": "AssetID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Asset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "asset"
+        ],
+        "summary": "update asset",
+        "description": "update asset",
+        "operationId": "updateAsset",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "description": "AssetID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Asset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "asset"
+        ],
+        "summary": "delete asset",
+        "description": "delete asset",
+        "operationId": "deleteAsset",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "description": "AssetID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "tags": [
+          "category"
+        ],
+        "summary": "query category",
+        "description": "query category",
+        "operationId": "queryCategory",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Search category by ids",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "names",
+            "in": "query",
+            "description": "Search category by names",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <=0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 1
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if page_size <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 10
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by enum",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "create_at",
+                "-create_at",
+                "last_update_at",
+                "last_update_at"
+              ],
+              "nullable": true,
+              "default": "create_at"
+            },
+            "required": false,
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "category list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Category"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "category"
+        ],
+        "summary": "create category",
+        "description": "create category",
+        "operationId": "createCategory",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "409": {
+            "description": "conflict"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/categories/{category_id}": {
+      "get": {
+        "tags": [
+          "category"
+        ],
+        "summary": "get category",
+        "description": "get category",
+        "operationId": "getCategory",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "description": "CategoryID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "category"
+        ],
+        "summary": "update category",
+        "description": "update category",
+        "operationId": "updateCategory",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "description": "CategoryID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "category"
+        ],
+        "summary": "delete category",
+        "description": "delete category",
+        "operationId": "deleteCategory",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "description": "CategoryID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/tag": {
+      "get": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "query tag",
+        "description": "query tag",
+        "operationId": "queryTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Search tag by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 1
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if page_size <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 10
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by enum",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "create_at",
+                "-create_at"
+              ],
+              "nullable": true,
+              "default": "create_at"
+            },
+            "required": false,
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "tag list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tag"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "create tag",
+        "description": "Create Tag",
+        "operationId": "createTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "string",
+                  "description": "tag id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/tag/{tag_id}": {
+      "get": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "get tag by id",
+        "description": "get tag by id",
+        "operationId": "GetTagByID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "description": "tag id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "update tag",
+        "description": "update tag",
+        "operationId": "updateTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "description": "tag id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tag"
+        ],
+        "summary": "delete tag",
+        "description": "delete tag",
+        "operationId": "deleteTag",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "description": "delete tag",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "AssetCreateRequest": {
+        "type": "object",
+        "description": "Asset",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "asset name",
+            "example": "Asset #1"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "url": {
+            "type": "string",
+            "example": "https://badanamu.com/song.mp3"
+          }
+        }
+      },
+      "Asset": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AssetCreateRequest"
+          },
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "AssetID",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "uploader": {
+                "type": "string",
+                "format": "int64",
+                "description": "asset uploader",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "created_at": {
+                "type": "integer",
+                "format": "int64",
+                "description": "create at timestamp in seconds",
+                "example": 1595916114
+              },
+              "updated_at": {
+                "type": "integer",
+                "format": "int64",
+                "description": "last updated at timestamp in seconds(秒)",
+                "example": 1595916114
+              }
+            }
+          }
+        ]
+      },
+      "TagCreate": {
+        "type": "object",
+        "description": "create tag request",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "tag name"
+          }
+        }
+      },
+      "TagUpdate": {
+        "type": "object",
+        "description": "update tag request",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "tag name"
+          },
+          "states": {
+            "type": "integer",
+            "description": "tag state, 1--enable,2--disenable"
+          }
+        }
+      },
+      "Tag": {
+        "type": "object",
+        "description": "Asset",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "tag id"
+          },
+          "name": {
+            "type": "string",
+            "description": "tag name"
+          },
+          "states": {
+            "type": "integer",
+            "description": "tag state, 1--enable,2--disenable"
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "tag create time, timestamp"
+          }
+        }
+      },
+      "CategoryCreateRequest": {
+        "type": "object",
+        "description": "Asset",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "category name",
+            "example": "Category #1"
+          },
+          "parent_id": {
+            "type": "string",
+            "description": "parent category id"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "description": "Category",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "CategoryID",
+            "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+          },
+          "name": {
+            "type": "string",
+            "description": "asset name",
+            "example": "Category #1"
+          },
+          "parent_id": {
+            "type": "string",
+            "description": "ParentCategoryID",
+            "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+          }
+        }
+      }
+    }
+  }
+}
