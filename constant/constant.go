@@ -11,3 +11,9 @@ var (
 	ErrDuplicateRecord = errors.New("duplicate record")
 	ErrExceededLimit = errors.New("exceeded limit")
 )
+
+// tag States
+const (
+	Enable = 1
+	Disabled = 2
+)

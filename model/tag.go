@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"sync"
 	dbclient "calmisland/kidsloop2/dynamodb"
+	"time"
 )
 
 type ITagModel interface{
@@ -36,8 +37,33 @@ func GetTagModel() ITagModel{
 }
 
 func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string,error){
-	t.GetByName(ctx,tag.Name)
-	return "",nil
+	old,err:=t.GetByName(ctx,tag.Name)
+	if err!=nil && err!=constant.ErrRecordNotFound{
+		return "",err
+	}
+	if old!=nil{
+		return "",constant.ErrDuplicateRecord
+	}
+	svc:=dbclient.GetClient()
+	in:=entity.Tag{
+		ID:        utils.NewId(),
+		Name:      tag.Name,
+		States:    constant.Enable,
+		CreatedAt: time.Now().Unix(),
+		DeletedAt: 0,
+	}
+	item,err:=dynamodbattribute.MarshalMap(in)
+	if err!=nil{
+		return "",err
+	}
+	input:=&dynamodb.PutItemInput{
+		Item:                       item ,
+		ReturnConsumedCapacity: aws.String("TOTAL"),
+		TableName:              aws.String(constant.TableNameTag),
+	}
+	_, err = svc.PutItem(input)
+	err = utils.ConvertDynamodbError(err)
+	return in.ID,err
 }
 
 func (t tagModel) BatchAdd(ctx context.Context, tag []*entity.TagAddView) error{
