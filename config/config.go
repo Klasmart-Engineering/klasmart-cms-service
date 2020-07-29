@@ -1,22 +1,23 @@
-package conf
+package config
 
 import (
-	"calmisland/kidsloop2/log"
 	"fmt"
 	"os"
 	"strconv"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
 )
 
 type Config struct {
 	StorageConfig StorageConfig
-	CDNConfig CDNConfig
+	CDNConfig     CDNConfig
 }
 
 var config *Config
 
 type StorageConfig struct {
-	Accelerate bool `yaml:"accelerate"`
-	CloudEnv string `yaml:"cloud_env"`
+	Accelerate    bool   `yaml:"accelerate"`
+	CloudEnv      string `yaml:"cloud_env"`
 	StorageBucket string `yaml:"storage_bucket"`
 	StorageRegion string `yaml:"storage_region"`
 }
@@ -25,8 +26,8 @@ type CDNConfig struct {
 	CDNOpen bool
 	CDNMode string
 
-	CDNPath string
-	CDNKeyId string
+	CDNPath       string
+	CDNKeyId      string
 	CDNPrivateKey string
 
 	CDNServicePath string
@@ -40,7 +41,7 @@ func assertGetEnv(key string) string {
 	return value
 }
 
-func Init(){
+func Init() {
 	config = new(Config)
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
@@ -48,7 +49,7 @@ func Init(){
 
 	accelerateStr := assertGetEnv("storage_accelerate")
 	accelerate, err := strconv.ParseBool(accelerateStr)
-	if err != nil{
+	if err != nil {
 		log.Get().Errorf("Can't parse storage_accelerate, value: %v", accelerateStr)
 		panic(err)
 	}
@@ -56,26 +57,26 @@ func Init(){
 
 	cdnOpenStr := assertGetEnv("cdn_open")
 	cdnOpen, err := strconv.ParseBool(cdnOpenStr)
-	if err != nil{
+	if err != nil {
 		log.Get().Errorf("Can't parse cdn_open, value: %v", cdnOpenStr)
 		panic(err)
 	}
 	config.CDNConfig.CDNOpen = cdnOpen
 
 	config.CDNConfig.CDNMode = assertGetEnv("cdn_mode")
-	if config.CDNConfig.CDNMode == "service"{
+	if config.CDNConfig.CDNMode == "service" {
 		config.CDNConfig.CDNServicePath = assertGetEnv("cdn_service_path")
-	}else if config.CDNConfig.CDNMode == "key" {
+	} else if config.CDNConfig.CDNMode == "key" {
 		config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
 		config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
 		config.CDNConfig.CDNPrivateKey = assertGetEnv("cdn_private_key")
-	}else{
+	} else {
 		log.Get().Errorf("Unsupported cdn_mode, value: %v", config.CDNConfig.CDNMode)
 		panic("Unsupported cdn_mode")
 	}
 
 }
 
-func Get() *Config{
+func Get() *Config {
 	return config
 }
