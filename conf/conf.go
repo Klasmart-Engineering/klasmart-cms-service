@@ -40,7 +40,7 @@ func assertGetEnv(key string) string {
 	return value
 }
 
-func init(){
+func Init(){
 	config = new(Config)
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
