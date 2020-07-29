@@ -1145,7 +1145,11 @@
           },
           "states": {
             "type": "integer",
-            "description": "tag state, 1--enable,2--disenable"
+            "enum": [
+              1,
+              2
+            ],
+            "description": "\n * 1 - enable \n * 2 - disable\n"
           }
         }
       },
@@ -1163,7 +1167,11 @@
           },
           "states": {
             "type": "integer",
-            "description": "tag state, 1--enable,2--disenable"
+            "enum": [
+              1,
+              2
+            ],
+            "description": "\n * 1 - enable \n * 2 - disable\n"
           },
           "created_at": {
             "type": "integer",
