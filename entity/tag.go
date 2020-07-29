@@ -1,6 +1,8 @@
 package entity
 
-import "calmisland/kidsloop2/constant"
+import (
+	"calmisland/kidsloop2/constant"
+)
 
 type Tag struct {
 	ID     string `dynamodbav:"id"`
@@ -8,6 +10,7 @@ type Tag struct {
 	States int    `dynamodbav:"states"`
 
 	CreatedAt int64 `dynamodbav:"createdAt"`
+	UpdatedAt int64 `dynamodbav:"updated_at"`
 	DeletedAt int64 `dynamodbav:"deletedAt"`
 }
 
@@ -27,6 +30,7 @@ type TagAddView struct {
 type TagUpdateView struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	States   int    `json:"states"`
 }
 type TagView struct {
 	ID       string `json:"id"`
