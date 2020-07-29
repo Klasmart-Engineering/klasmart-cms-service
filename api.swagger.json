@@ -1168,8 +1168,8 @@
           "states": {
             "type": "integer",
             "enum": [
-              "1",
-              "2"
+              1,
+              2
             ],
             "description": "\n * 1 - enable \n * 2 - disable\n"
           },
