@@ -278,10 +278,10 @@ func scanPages(input *dynamodb.ScanInput, pageIndex int) (*dynamodb.ScanOutput, 
 		}
 		if currentPage == pageIndex {
 			result = output
-			return false
 		}
 		currentPage ++
-		return true
+		
+		return currentPage < pageIndex
 	})
 	if err != nil{
 		return nil, err
