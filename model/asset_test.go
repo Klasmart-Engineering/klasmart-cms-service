@@ -3,15 +3,17 @@ package model
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"os"
-	"testing"
 )
-func InitEnv(){
+
+func InitEnv() {
 	os.Setenv("cloud_env", "aws")
 	os.Setenv("storage_bucket", "kidsloop-global-resources-dev")
 	os.Setenv("storage_region", "ap-northeast-2")
@@ -21,10 +23,9 @@ func InitEnv(){
 	os.Setenv("cdn_open", "false")
 }
 
-func TestCreateTable(t *testing.T){
+func TestCreateTable(t *testing.T) {
 	_, err := client.GetClient().DeleteTable(&dynamodb.DeleteTableInput{TableName: aws.String("assets")})
 	t.Log(err)
-
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
@@ -56,7 +57,7 @@ func TestCreateTable(t *testing.T){
 	fmt.Println("Created the table", "assets")
 
 	out, err := client.GetClient().ListTables(&dynamodb.ListTablesInput{})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("%#v", out)
@@ -74,7 +75,7 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 		ResourceName: "http://www.baidu.com",
 		Uploader:     "123",
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Log(id)
@@ -86,7 +87,6 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 	}
 	t.Logf("Asset: %#v", asset)
 }
-
 
 func TestAssetModel_GetAsset(t *testing.T) {
 	InitEnv()
@@ -109,7 +109,7 @@ func TestAssetModel_SearchAssets(t *testing.T) {
 		ID:        "5f22462699878cfe177a4101",
 		Name:      "Hello.mp3",
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Log(count)

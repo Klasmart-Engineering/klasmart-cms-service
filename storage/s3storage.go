@@ -13,9 +13,8 @@ import (
 	"net/http"
 	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
-	// "gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -54,10 +53,11 @@ func (s *S3Storage) OpenStorage(ctx context.Context) error {
 		S3UseAccelerate: aws.Bool(config.Get().StorageConfig.Accelerate),
 	})
 	if err != nil {
-		log.Get().Errorf("Session create failed, error: %v", err)
+		log.Error(ctx, "Session create failed", log.Err(err))
 		return err
 	}
-	log.Get().Infof("Open s3 storage, bucket: %v, region: %v", s.bucket, s.region)
+
+	log.Info(ctx, "Open s3 storage", log.String("bucket", s.bucket), log.String("region", s.region))
 	s.session = sess
 	return nil
 }
@@ -97,7 +97,7 @@ func (s *S3Storage) UploadFileBytes(ctx context.Context, partition string, fileP
 	})
 
 	if err != nil {
-		log.Get().Errorf("Object upload failed, error: %v", err)
+		log.Error(ctx, "Object upload failed", log.Err(err))
 		return err
 	}
 	return nil
@@ -114,7 +114,7 @@ func (s *S3Storage) UploadFile(ctx context.Context, partition string, filePath s
 		ContentType: &contentType,
 	})
 	if err != nil {
-		log.Get().Errorf("Object upload failed, error: %v", err)
+		log.Error(ctx, "Object upload failed", log.Err(err))
 		return err
 	}
 	return nil
@@ -127,7 +127,7 @@ func (s *S3Storage) UploadFileLAN(ctx context.Context, partition string, filePat
 		S3UseAccelerate: aws.Bool(false),
 	})
 	if err != nil {
-		log.Get().Errorf("Session create failed, error: %v", err)
+		log.Error(ctx, "Session create failed", log.Err(err))
 		return err
 	}
 
@@ -141,7 +141,7 @@ func (s *S3Storage) UploadFileLAN(ctx context.Context, partition string, filePat
 		ContentType: aws.String(contentType),
 	})
 	if err != nil {
-		log.Get().Errorf("Object upload failed, error: %v", err)
+		log.Error(ctx, "Object upload failed", log.Err(err))
 		return err
 	}
 	return nil
@@ -157,9 +157,10 @@ func (s *S3Storage) DownloadFile(ctx context.Context, partition string, filePath
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 	})
-	log.Get().Infof("Object download, size: %v", numBytes)
+
+	log.Info(ctx, "Object download", log.Int64("size", numBytes))
 	if err != nil {
-		log.Get().Warnf("Object download failed, error: %v", err)
+		log.Warn(ctx, "Object download failed", log.Err(err))
 		return nil, err
 	}
 
@@ -218,7 +219,7 @@ func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath strin
 	urlStr, err := req.Presign(PRESIGN_UPLOAD_DURATION_MINUTES * time.Minute)
 
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
@@ -237,7 +238,7 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string,
 	urlStr, err := req.Presign(PRESIGN_UPLOAD_DURATION_MINUTES * time.Minute)
 
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
@@ -245,7 +246,7 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string,
 }
 
 func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, filePath string) (string, error) {
-	log.Get().Infof("Must Get CDN config: %#v", config.Get().CDNConfig)
+	log.Info(ctx, "Must Get CDN config", log.Any("config", config.Get().CDNConfig))
 	if config.Get().CDNConfig.CDNOpen {
 		switch config.Get().CDNConfig.CDNMode {
 		case "service":
@@ -267,7 +268,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, fileP
 	urlStr, err := req.Presign(PRESIGN_DURATION_MINUTES * time.Minute)
 
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
@@ -292,7 +293,7 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition string,
 	signer := sign.NewURLSigner(keyID, privKey)
 	signedURL, err := signer.Sign(path, time.Now().Add(PRESIGN_DURATION_MINUTES*time.Minute))
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
