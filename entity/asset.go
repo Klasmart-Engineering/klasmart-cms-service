@@ -3,7 +3,7 @@ package entity
 import "time"
 
 type AssetObject struct {
-	Id       string   `json:"id" dynamodbav:"id"`
+	ID       string   `json:"id" dynamodbav:"id"`
 	Name     string   `json:"name" dynamodbav:"name"`
 	Category string   `json:"category" dynamodbav:"category"`
 	Size     int      `json:"size" dynamodbav:"size"`
@@ -19,22 +19,22 @@ type AssetObject struct {
 
 
 type UpdateAssetRequest struct {
-	Id       string   `json:"id" dynamodbav:"id"`
-	Name     string `json:"name" dynamodbav:"name"`
-	Category string `json:"category" dynamodbav:"category"`
+	ID       string   `json:"id" dynamodbav:"id"`
+	Name     string   `json:"name" dynamodbav:"name"`
+	Category string   `json:"category" dynamodbav:"category"`
 	Tag      []string `json:"tag" dynamodbav:"tag"`
-	URL      string `json:"url" dynamodbav:"url"`
+	URL      string   `json:"url" dynamodbav:"url"`
 }
 
 func (a AssetObject) TableName() string{
 	return "assets"
 }
 type SearchAssetCondition struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
 	Category string `json:"category"`
-	SizeMin    int      `json:"size_min"`
-	SizeMax    int      `json:"size_max"`
+	SizeMin  int    `json:"size_min"`
+	SizeMax  int    `json:"size_max"`
 
 	Tag 	string `json:"tag"`
 

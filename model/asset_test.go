@@ -80,7 +80,7 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 	t.Log(id)
 
 
-	asset, err := assetModel.GetAssetById(context.Background(), id)
+	asset, err := assetModel.GetAssetByID(context.Background(), id)
 	if err != nil{
 		panic(err)
 	}
@@ -93,7 +93,7 @@ func TestAssetModel_GetAsset(t *testing.T) {
 	conf.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
-	asset, err := assetModel.GetAssetById(context.Background(), "269fdbaba6d4f1b4")
+	asset, err := assetModel.GetAssetByID(context.Background(), "269fdbaba6d4f1b4")
 	if err != nil{
 		panic(err)
 	}

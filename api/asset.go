@@ -34,7 +34,7 @@ func (s *Server) updateAsset(c *gin.Context){
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
-	data.Id = id
+	data.ID = id
 
 	err = model.GetAssetModel().UpdateAsset(c.Request.Context(), *data)
 	if err != nil{
@@ -54,9 +54,9 @@ func (s *Server) deleteAsset(c *gin.Context) {
 	c.JSON(http.StatusOK, responseMsg("success"))
 }
 
-func (s *Server) getAssetById(c *gin.Context) {
+func (s *Server) getAssetByID(c *gin.Context) {
 	id := c.Param("id")
-	assetInfo, err := model.GetAssetModel().GetAssetById(c.Request.Context(), id)
+	assetInfo, err := model.GetAssetModel().GetAssetByID(c.Request.Context(), id)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -104,7 +104,7 @@ func buildAssetSearchCondition(c *gin.Context) *entity.SearchAssetCondition{
 	Page, _ := strconv.Atoi("page")
 
 	data := &entity.SearchAssetCondition{
-		Id:       c.Query("id"),
+		ID:       c.Query("id"),
 		Name:     c.Query("name"),
 		Category: c.Query("category"),
 		SizeMin:  sizeMin,

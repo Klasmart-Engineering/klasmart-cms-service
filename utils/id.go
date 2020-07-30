@@ -1,12 +1,9 @@
 package utils
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func NewId()string{
-	b := make([]byte, 8)
-	rand.Read(b)
-	return hex.EncodeToString(b)
+func NewID()string{
+	return primitive.NewObjectID().String()
 }

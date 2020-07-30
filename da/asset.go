@@ -29,7 +29,7 @@ type IAssetDA interface {
 	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
 	DeleteAsset(ctx context.Context, id string) error
 
-	GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
 	SearchAssets(ctx context.Context, condition *SearchAssetCondition) ([]*entity.AssetObject, error)
 }
 type UpdateParams struct {
@@ -47,7 +47,7 @@ func (DynamoDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject)
 	now := time.Now()
 	data.CreatedAt = &now
 	data.UpdatedAt = &now
-	data.Id = utils.NewId()
+	data.ID = utils.NewID()
 	m, err := dynamodbattribute.MarshalMap(data)
 	if err != nil {
 		log.Get().Errorf("marshal asset failed, error: %v", err)
@@ -61,13 +61,13 @@ func (DynamoDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject)
 		log.Get().Errorf("insert assets failed, error: %v", err)
 		return "", err
 	}
-	return data.Id, nil
+	return data.ID, nil
 }
 
 func (am *DynamoDBAssetDA) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error {
 	av := make(map[string]*dynamodb.AttributeValue)
 	av["id"] = &dynamodb.AttributeValue{
-		S:    aws.String(data.Id),
+		S:    aws.String(data.ID),
 	}
 
 	params, err := am.buildUpdateParams(ctx, data)
@@ -105,7 +105,7 @@ func (DynamoDBAssetDA) DeleteAsset(ctx context.Context, id string) error {
 	return nil
 }
 
-func (DynamoDBAssetDA) GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error) {
+func (DynamoDBAssetDA) GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error) {
 	av := make(map[string]*dynamodb.AttributeValue)
 	av["id"] = &dynamodb.AttributeValue{
 		S:    aws.String(id),

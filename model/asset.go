@@ -22,7 +22,7 @@ type IAssetModel interface {
 	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
 	DeleteAsset(ctx context.Context, id string) error
 
-	GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
 	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) ([]*entity.AssetObject, error)
 
 	GetAssetUploadPath(ctx context.Context, extension string) (string, error)
@@ -95,8 +95,8 @@ func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
 	return da.GetAssetDA().DeleteAsset(ctx, id)
 }
 
-func (am *AssetModel) GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error) {
-	return da.GetAssetDA().GetAssetById(ctx, id)
+func (am *AssetModel) GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error) {
+	return da.GetAssetDA().GetAssetByID(ctx, id)
 }
 
 func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) ([]*entity.AssetObject, error) {
@@ -105,7 +105,7 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.Search
 
 func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) (string, error) {
 	client := storage.DefaultStorage()
-	name := fmt.Sprintf("%s.%s", utils.NewId(), extension)
+	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
 	return client.GetUploadFileTempPath(ctx, "asset", name)
 }

@@ -24,7 +24,7 @@ func (s Server) registeRoute() {
 	{
 		v1.GET("/", s.searchAssets)
 		v1.POST("/", s.createAsset)
-		v1.GET("/:id", s.getAssetById)
+		v1.GET("/:id", s.getAssetByID)
 		v1.PUT("/:id", s.updateAsset)
 		v1.DELETE("/:id", s.deleteAsset)
 		v1.GET("/:ext/upload", s.getAssetUploadPath)
