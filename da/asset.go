@@ -208,7 +208,7 @@ func (am *DynamoDBAssetDA) buildUpdateParams(ctx context.Context, data entity.Up
 }
 
 type SearchAssetCondition struct {
-	Id        string `json:"id"`
+	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Category string `json:"category"`
 	SizeMin    int      `json:"size_min"`
@@ -222,8 +222,8 @@ type SearchAssetCondition struct {
 
 func (s *SearchAssetCondition) getConditions() expression.ConditionBuilder {
 	conditions := make([]expression.ConditionBuilder, 0)
-	if s.Id != "" {
-		condition := expression.Name("id").Equal(expression.Value(s.Id))
+	if s.ID != "" {
+		condition := expression.Name("id").Equal(expression.Value(s.ID))
 		conditions = append(conditions, condition)
 	}
 	if s.Name != ""{

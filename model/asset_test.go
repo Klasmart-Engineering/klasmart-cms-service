@@ -1,13 +1,13 @@
 package model
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/conf"
-	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"os"
 	"testing"
 )
@@ -63,7 +63,7 @@ func TestCreateTable(t *testing.T){
 }
 func TestAssetModel_CreateAsset(t *testing.T) {
 	InitEnv()
-	conf.LoadEnvConfig()
+	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
 	id, err := assetModel.CreateAsset(context.Background(), entity.AssetObject{
@@ -90,7 +90,7 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 
 func TestAssetModel_GetAsset(t *testing.T) {
 	InitEnv()
-	conf.LoadEnvConfig()
+	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
 	asset, err := assetModel.GetAssetByID(context.Background(), "269fdbaba6d4f1b4")
@@ -102,11 +102,11 @@ func TestAssetModel_GetAsset(t *testing.T) {
 
 func TestAssetModel_SearchAssets(t *testing.T) {
 	InitEnv()
-	conf.LoadEnvConfig()
+	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
-	res, err := assetModel.SearchAssets(context.Background(), &SearchAssetCondition{
-		Id:        "ea2feb2590199523",
+	res, err := assetModel.SearchAssets(context.Background(), &entity.SearchAssetCondition{
+		ID:        "ea2feb2590199523",
 		Name:      "Hello.mp3",
 		//Categories: nil,
 		//SizeMin:    0,
