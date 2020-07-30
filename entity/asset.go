@@ -41,3 +41,8 @@ type SearchAssetCondition struct {
 	PageSize int `json:"page_size"`
 	Page     int `json:"page"`
 }
+
+type ResourcePath struct{
+	Path string `json:"path"`
+	Name string `json:"name"`
+}

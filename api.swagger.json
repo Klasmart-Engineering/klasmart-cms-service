@@ -401,7 +401,7 @@
         }
       }
     },
-    "/assets/{ext}/upload": {
+    "/assets/{ext}/resource/upload": {
       "get": {
         "tags": [
           "asset"
@@ -419,6 +419,68 @@
             "name": "ext",
             "in": "path",
             "description": "File Extension",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "category list",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "upload asset path",
+                      "example": "https://badanamu.com/upload/bada.mp3"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/assets/{name}/resource": {
+      "get": {
+        "tags": [
+          "asset"
+        ],
+        "summary": "GetAssetResourcePath",
+        "description": "GetAssetResourcePath",
+        "operationId": "getAssetResourcePath",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "File name",
             "schema": {
               "type": "string"
             },

@@ -157,3 +157,29 @@ func TestAssetModel_DeleteAssets(t *testing.T) {
 	}
 	t.Logf("Asset: %#v", asset)
 }
+
+func TestAssetModel_GetAssetUploadPath(t *testing.T) {
+	InitEnv()
+	config.LoadEnvConfig()
+
+	assetModel := GetAssetModel()
+
+	path, err := assetModel.GetAssetUploadPath(context.Background(), "jpg")
+	if err != nil{
+		panic(err)
+	}
+	t.Logf("path: %#v", path)
+}
+
+func TestAssetModel_GetAssetResourcePath(t *testing.T){
+	InitEnv()
+	config.LoadEnvConfig()
+
+	assetModel := GetAssetModel()
+
+	path, err := assetModel.GetAssetResourcePath(context.Background(), "5f225eeee763b300cf63cb90.jpg")
+	if err != nil{
+		panic(err)
+	}
+	t.Logf("path: %#v", path)
+}

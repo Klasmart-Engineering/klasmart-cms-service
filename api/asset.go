@@ -87,7 +87,22 @@ func (s *Server) searchAssets(c *gin.Context){
 func (s *Server) getAssetUploadPath(c *gin.Context) {
 	ext := c.Param("ext")
 
-	path, err := model.GetAssetModel().GetAssetUploadPath(c.Request.Context(), ext)
+	resource, err := model.GetAssetModel().GetAssetUploadPath(c.Request.Context(), ext)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"path": resource.Path,
+		"name": resource.Name,
+	})
+}
+
+
+func (s *Server) getAssetResourcePath(c *gin.Context) {
+	name := c.Param("name")
+
+	path, err := model.GetAssetModel().GetAssetResourcePath(c.Request.Context(), name)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return

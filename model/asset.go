@@ -12,6 +12,10 @@ import (
 	"sync"
 )
 
+const(
+	Asset_Storage_Partition = "asset"
+)
+
 var(
 	ErrNoSuchURL = errors.New("no such url")
 	ErrRequestItemIsNil = errors.New("request item is nil")
@@ -25,7 +29,8 @@ type IAssetModel interface {
 	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
 	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error)
 
-	GetAssetUploadPath(ctx context.Context, extension string) (string, error)
+	GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error)
+	GetAssetResourcePath(ctx context.Context, name string) (string ,error)
 }
 
 type AssetModel struct{}
@@ -103,11 +108,23 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.Search
 	return da.GetAssetDA().SearchAssets(ctx, (*da.SearchAssetCondition)(condition))
 }
 
-func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) (string, error) {
-	client := storage.DefaultStorage()
+func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error) {
+	storage := storage.DefaultStorage()
 	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
-	return client.GetUploadFileTempPath(ctx, "asset", name)
+	path, err := storage.GetUploadFileTempPath(ctx, Asset_Storage_Partition, name)
+	if err != nil{
+		return nil, err
+	}
+	return &entity.ResourcePath{
+		Path: path,
+		Name: name,
+	}, nil
+}
+
+func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string) (string ,error){
+	storage := storage.DefaultStorage()
+	return storage.GetFileTempPath(ctx, Asset_Storage_Partition, name)
 }
 
 var assetModel *AssetModel
