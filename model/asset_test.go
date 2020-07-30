@@ -3,13 +3,14 @@ package model
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"os"
-	"testing"
 )
 
 func InitEnv() {

@@ -2,26 +2,27 @@ package da
 
 import (
 	"context"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
-	"sync"
-	"time"
 )
 
 type SearchCategoryCondition struct {
-	IDs        []string `json:"ids"`
-	Names      []string `json:"names"`
+	IDs   []string `json:"ids"`
+	Names []string `json:"names"`
 
-	PageSize int64 `json:"page_size"`
-	Page     int64 `json:"page"`
-	OrderBy	 string `json:"order_by"`
+	PageSize int64  `json:"page_size"`
+	Page     int64  `json:"page"`
+	OrderBy  string `json:"order_by"`
 }
 
 type IAssetDA interface {
@@ -50,7 +51,8 @@ func (DynamoDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject)
 	data.Id = utils.NewId()
 	m, err := dynamodbattribute.MarshalMap(data)
 	if err != nil {
-		log.Get().Errorf("marshal asset failed, error: %v", err)
+		log.Error(ctx, "marshal asset failed", log.Err(err))
+		return "", err
 	}
 	_, err = client.GetClient().PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String("assets"),
@@ -58,7 +60,7 @@ func (DynamoDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject)
 	})
 
 	if err != nil {
-		log.Get().Errorf("insert assets failed, error: %v", err)
+		log.Error(ctx, "insert asset failed", log.Err(err), log.Any("data", data))
 		return "", err
 	}
 	return data.Id, nil
@@ -67,12 +69,12 @@ func (DynamoDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject)
 func (am *DynamoDBAssetDA) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error {
 	av := make(map[string]*dynamodb.AttributeValue)
 	av["id"] = &dynamodb.AttributeValue{
-		S:    aws.String(data.Id),
+		S: aws.String(data.Id),
 	}
 
 	params, err := am.buildUpdateParams(ctx, data)
 	if err != nil {
-		log.Get().Errorf("build params failed, error: %v", err)
+		log.Error(ctx, "build params failed", log.Err(err), log.Any("data", data))
 		return err
 	}
 
@@ -84,7 +86,7 @@ func (am *DynamoDBAssetDA) UpdateAsset(ctx context.Context, data entity.UpdateAs
 		UpdateExpression:          aws.String(params.key()),
 	})
 	if err != nil {
-		log.Get().Errorf("update asset failed, error: %v", err)
+		log.Error(ctx, "update asset failed", log.Err(err))
 		return err
 	}
 	return nil
@@ -93,13 +95,13 @@ func (am *DynamoDBAssetDA) UpdateAsset(ctx context.Context, data entity.UpdateAs
 func (DynamoDBAssetDA) DeleteAsset(ctx context.Context, id string) error {
 	av := make(map[string]*dynamodb.AttributeValue)
 	av["id"] = &dynamodb.AttributeValue{
-		S:    aws.String(id),
+		S: aws.String(id),
 	}
 	_, err := client.GetClient().DeleteItem(&dynamodb.DeleteItemInput{
 		Key:       av,
 		TableName: aws.String(entity.AssetObject{}.TableName()),
 	})
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return nil
@@ -108,7 +110,7 @@ func (DynamoDBAssetDA) DeleteAsset(ctx context.Context, id string) error {
 func (DynamoDBAssetDA) GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error) {
 	av := make(map[string]*dynamodb.AttributeValue)
 	av["id"] = &dynamodb.AttributeValue{
-		S:    aws.String(id),
+		S: aws.String(id),
 	}
 
 	result, err := client.GetClient().GetItem(&dynamodb.GetItemInput{
@@ -131,7 +133,7 @@ func (DynamoDBAssetDA) SearchAssets(ctx context.Context, condition *SearchAssetC
 	builder = builder.WithFilter(condition.getConditions())
 	expr, err := builder.Build()
 	if err != nil {
-		log.Get().Errorf("Got error building expression: %v", err)
+		log.Error(ctx, "Got error building expression", log.Err(err))
 		return nil, err
 	}
 
@@ -146,7 +148,7 @@ func (DynamoDBAssetDA) SearchAssets(ctx context.Context, condition *SearchAssetC
 	}
 	result, err := client.GetClient().Scan(params)
 	if err != nil {
-		log.Get().Errorf("Query API call failed:", err)
+		log.Error(ctx, "Query API call failed", log.Err(err))
 		return nil, err
 	}
 
@@ -156,7 +158,7 @@ func (DynamoDBAssetDA) SearchAssets(ctx context.Context, condition *SearchAssetC
 
 		err = dynamodbattribute.UnmarshalMap(i, item)
 		if err != nil {
-			log.Get().Errorf("Got error unmarshalling:", err)
+			log.Error(ctx, "Got error unmarshalling", log.Err(err))
 			return nil, err
 		}
 		ret = append(ret, item)
@@ -199,7 +201,7 @@ func (am *DynamoDBAssetDA) buildUpdateParams(ctx context.Context, data entity.Up
 	//TODO:Updated_at
 	updateStr = append(updateStr, "set updated_at = :ud")
 	updateValues[":ud"] = &dynamodb.AttributeValue{
-		S:    aws.String(time.Now().String()),
+		S: aws.String(time.Now().String()),
 	}
 	return &UpdateParams{
 		keys:   updateStr,
@@ -208,13 +210,13 @@ func (am *DynamoDBAssetDA) buildUpdateParams(ctx context.Context, data entity.Up
 }
 
 type SearchAssetCondition struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
+	Id       string `json:"id"`
+	Name     string `json:"name"`
 	Category string `json:"category"`
-	SizeMin    int      `json:"size_min"`
-	SizeMax    int      `json:"size_max"`
+	SizeMin  int    `json:"size_min"`
+	SizeMax  int    `json:"size_max"`
 
-	Tag 	string `json:"tag"`
+	Tag string `json:"tag"`
 
 	PageSize int `json:"page_size"`
 	Page     int `json:"page"`
@@ -226,7 +228,7 @@ func (s *SearchAssetCondition) getConditions() expression.ConditionBuilder {
 		condition := expression.Name("id").Equal(expression.Value(s.Id))
 		conditions = append(conditions, condition)
 	}
-	if s.Name != ""{
+	if s.Name != "" {
 		condition := expression.Name("name").Equal(expression.Value(s.Name))
 		conditions = append(conditions, condition)
 	}
@@ -263,8 +265,7 @@ func (s *SearchAssetCondition) getConditions() expression.ConditionBuilder {
 var _assetDA IAssetDA
 var _assetDAOnce sync.Once
 
-
-func GetAssetDA() IAssetDA{
+func GetAssetDA() IAssetDA {
 	_assetDAOnce.Do(func() {
 		_assetDA = new(DynamoDBAssetDA)
 	})

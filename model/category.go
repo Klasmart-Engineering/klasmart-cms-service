@@ -3,17 +3,17 @@ package model
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strconv"
-	"sync"
-	"time"
 )
 
 type ICategoryModel interface {
@@ -23,7 +23,6 @@ type ICategoryModel interface {
 	GetCategoryById(ctx context.Context, id string) (*entity.CategoryObject, error)
 
 	SearchCategories(ctx context.Context, condition *SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
-	PageCategories(ctx context.Context, condition *SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
 }
 
 type CategoryModel struct{}
@@ -31,13 +30,13 @@ type CategoryModel struct{}
 // Repeated insertion with the same primary key will overwrite non-primary key data
 func (cm *CategoryModel) CreateCategory(ctx context.Context, data entity.CategoryObject) (string, error) {
 	now := time.Now().Unix()
-	data.ID = utils.NewId()
+	data.ID = "id_test2" // TODO: change to real id
 	data.CreatedAt = now
 	data.UpdatedAt = now
 
 	av, err := dynamodbattribute.MarshalMap(data)
 	if err != nil {
-		log.Get().Errorf("CreateCategory marshal failed: %v", err)
+		log.Error(ctx, "CreateCategory marshal failed", log.Err(err))
 		return "", err
 	}
 
@@ -46,7 +45,7 @@ func (cm *CategoryModel) CreateCategory(ctx context.Context, data entity.Categor
 		Item:      av,
 	})
 	if err != nil {
-		log.Get().Errorf("CreateCategory put item failed: %v", err)
+		log.Error(ctx, "CreateCategory put item failed", log.Err(err))
 		return "", err
 	}
 	return data.ID, nil
@@ -64,7 +63,7 @@ func (cm *CategoryModel) UpdateCategory(ctx context.Context, data entity.Categor
 		ExpressionAttributeValues: exprAttrValue,
 	})
 	if err != nil {
-		log.Get().Errorf("UpdateCategory get item failed: %v", err)
+		log.Error(ctx, "UpdateCategory get item failed", log.Err(err))
 		return err
 	}
 	fmt.Printf("%+v\n", output)
@@ -88,7 +87,7 @@ func (cm *CategoryModel) DeleteCategory(ctx context.Context, id string) error {
 		},
 	})
 	if err != nil {
-		log.Get().Errorf("DeleteCategory failed: %v", err)
+		log.Error(ctx, "DeleteCategory failed", log.Err(err))
 		return err
 	}
 	return nil
@@ -100,13 +99,13 @@ func (cm *CategoryModel) GetCategoryById(ctx context.Context, id string) (*entit
 		Key:       map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
 	})
 	if err != nil {
-		log.Get().Errorf("GetCategoryById get item failed: %v", err)
+		log.Error(ctx, "GetCategoryById get item failed", log.Err(err))
 		return nil, err
 	}
 	var category entity.CategoryObject
 	err = dynamodbattribute.UnmarshalMap(output.Item, &category)
 	if err != nil {
-		log.Get().Errorf("GetCategoryById unmarshal failed: %v", err)
+		log.Error(ctx, "GetCategoryById unmarshal failed", log.Err(err))
 		return nil, err
 	}
 	return &category, nil
@@ -116,19 +115,21 @@ func (cm *CategoryModel) SearchCategories(ctx context.Context, condition *Search
 
 	expr, err := condition.toExpr()
 	if err != nil {
-		log.Get().Errorf("SearchCategories build expression failed: %v", err)
+		log.Error(ctx, "SearchCategories build expression failed", log.Err(err))
 		return 0, nil, err
 	}
-
-	output, err := client.GetClient().Scan(&dynamodb.ScanInput{
+	input := &dynamodb.ScanInput{
 		TableName:                 aws.String(entity.CategoryObject{}.TableName()),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
-	})
+		//ProjectionExpression:      expr.Projection(),
+	}
 
+	output, err := client.GetClient().Scan(input)
+	fmt.Printf("%+v", output)
 	if err != nil {
-		log.Get().Errorf("SearchCategories scan failed: %v", err)
+		log.Error(ctx, "SearchCategories scan failed", log.Err(err))
 		return 0, nil, err
 	}
 	var categories []*entity.CategoryObject
@@ -136,7 +137,7 @@ func (cm *CategoryModel) SearchCategories(ctx context.Context, condition *Search
 		var item entity.CategoryObject
 		err = dynamodbattribute.UnmarshalMap(i, &item)
 		if err != nil {
-			log.Get().Errorf("SearchCategories unmarshal failed: %v", err)
+			log.Error(ctx, "SearchCategories unmarshal failed", log.Err(err))
 			return 0, nil, err
 		}
 		categories = append(categories, &item)
@@ -147,7 +148,8 @@ func (cm *CategoryModel) SearchCategories(ctx context.Context, condition *Search
 func (cm *CategoryModel) PageCategories(ctx context.Context, condition *SearchCategoryCondition) (int64, []*entity.CategoryObject, error) {
 	expr, err := condition.toExpr()
 	if err != nil {
-		log.Get().Errorf("SearchCategories build expression failed: %v", err)
+		//log.Get().Errorf("SearchCategories build expression failed: %v", err)
+		log.Error(ctx, "SearchCategories build expression failed", log.Err(err))
 		return 0, nil, err
 	}
 
@@ -168,7 +170,7 @@ func (cm *CategoryModel) PageCategories(ctx context.Context, condition *SearchCa
 				var item entity.CategoryObject
 				err = dynamodbattribute.UnmarshalMap(i, &item)
 				if err != nil {
-					log.Get().Errorf("PageCategories unmarshal failed: %v", err)
+					log.Error(ctx, "PageCategories unmarshal failed", log.Err(err))
 				}
 				categories = append(categories, &item)
 			}
@@ -183,7 +185,7 @@ func (cm *CategoryModel) PageCategories(ctx context.Context, condition *SearchCa
 	})
 
 	if err != nil {
-		log.Get().Errorf("PageCategories unmarshal failed: %v", err)
+		log.Error(ctx, "PageCategories unmarshal failed", log.Err(err))
 	}
 	return count, categories, nil
 }
