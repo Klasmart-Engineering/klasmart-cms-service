@@ -35,19 +35,19 @@ type IAssetModel interface {
 type AssetModel struct{}
 
 type AssetEntity struct {
-	Category string
-	Tag      []string
-	Path     string
+	Category     string
+	Tag          []string
+	ResourceName string
 }
 
 func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must bool) error {
-	if must && (entity.Path == "" || entity.Category == "") {
+	if must && (entity.ResourceName == "" || entity.Category == "") {
 		return ErrRequestItemIsNil
 	}
 
 	//TODO:Check if url is exists
-	if entity.Path != "" {
-		exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, entity.Path)
+	if entity.ResourceName != "" {
+		exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, entity.ResourceName)
 		if !exist {
 			return ErrNoSuchURL
 		}
@@ -59,9 +59,9 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 
 func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
 	err := am.checkEntity(ctx, AssetEntity{
-		Category: data.Category,
-		Tag:      data.Tags,
-		Path:     data.Path,
+		Category:     data.Category,
+		Tag:          data.Tags,
+		ResourceName: data.ResourceName,
 	}, true)
 
 	if err != nil {
@@ -72,9 +72,9 @@ func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) 
 
 func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error {
 	err := am.checkEntity(ctx, AssetEntity{
-		Category: data.Category,
-		Tag:      data.Tag,
-		Path:     data.Path,
+		Category:     data.Category,
+		Tag:          data.Tag,
+		ResourceName: data.Path,
 	}, false)
 
 	if err != nil{
