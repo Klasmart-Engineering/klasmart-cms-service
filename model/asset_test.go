@@ -105,19 +105,55 @@ func TestAssetModel_SearchAssets(t *testing.T) {
 	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
-	res, err := assetModel.SearchAssets(context.Background(), &entity.SearchAssetCondition{
-		ID:        "ea2feb2590199523",
+	count, res, err := assetModel.SearchAssets(context.Background(), &entity.SearchAssetCondition{
+		ID:        "5f22462699878cfe177a4101",
 		Name:      "Hello.mp3",
-		//Categories: nil,
-		//SizeMin:    0,
-		//SizeMax:    0,
-		//Tags:       nil,
-		//PageSize:   10,
 	})
 	if err != nil{
 		panic(err)
 	}
+	t.Log(count)
 	for i := range res{
 		t.Logf("%#v", res[i])
 	}
+}
+
+
+func TestAssetModel_UpdateAssets(t *testing.T) {
+	InitEnv()
+	config.LoadEnvConfig()
+
+	assetModel := GetAssetModel()
+	err := assetModel.UpdateAsset(context.Background(), entity.UpdateAssetRequest{
+		ID:        "ea2feb2590199523",
+		Category:      "123123123aabbcc",
+	})
+	if err != nil{
+		panic(err)
+	}
+
+	asset, err := assetModel.GetAssetByID(context.Background(), "ea2feb2590199523")
+	if err != nil{
+		panic(err)
+	}
+	t.Logf("Asset: %#v", asset)
+}
+
+
+
+func TestAssetModel_DeleteAssets(t *testing.T) {
+	InitEnv()
+	config.LoadEnvConfig()
+
+	assetModel := GetAssetModel()
+	err := assetModel.DeleteAsset(context.Background(), "ea2feb2590199523")
+	if err != nil{
+		panic(err)
+	}
+
+	asset, err := assetModel.GetAssetByID(context.Background(), "ea2feb2590199523")
+	if err != nil{
+		panic(err)
+	}
+	t.Logf("Asset: %#v", asset)
 }

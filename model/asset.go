@@ -23,7 +23,7 @@ type IAssetModel interface {
 	DeleteAsset(ctx context.Context, id string) error
 
 	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
-	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) ([]*entity.AssetObject, error)
+	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error)
 
 	GetAssetUploadPath(ctx context.Context, extension string) (string, error)
 }
@@ -99,7 +99,7 @@ func (am *AssetModel) GetAssetByID(ctx context.Context, id string) (*entity.Asse
 	return da.GetAssetDA().GetAssetByID(ctx, id)
 }
 
-func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) ([]*entity.AssetObject, error) {
+func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error) {
 	return da.GetAssetDA().SearchAssets(ctx, (*da.SearchAssetCondition)(condition))
 }
 

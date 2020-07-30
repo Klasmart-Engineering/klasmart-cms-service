@@ -5,5 +5,5 @@ import (
 )
 
 func NewID()string{
-	return primitive.NewObjectID().String()
+	return primitive.NewObjectID().Hex()
 }

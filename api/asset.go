@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
@@ -57,6 +58,10 @@ func (s *Server) deleteAsset(c *gin.Context) {
 func (s *Server) getAssetByID(c *gin.Context) {
 	id := c.Param("id")
 	assetInfo, err := model.GetAssetModel().GetAssetByID(c.Request.Context(), id)
+	if err == da.ErrRecordNotFound{
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		return
+	}
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -68,12 +73,13 @@ func (s *Server) getAssetByID(c *gin.Context) {
 }
 func (s *Server) searchAssets(c *gin.Context){
 	data := buildAssetSearchCondition(c)
-	assetsList, err := model.GetAssetModel().SearchAssets(c.Request.Context(), data)
+	count, assetsList, err := model.GetAssetModel().SearchAssets(c.Request.Context(), data)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
+		"total": count,
 		"assets": assetsList,
 	})
 }
