@@ -1,17 +1,19 @@
 package model
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/conf"
-	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"os"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
-func InitEnv(){
+
+func InitEnv() {
 	os.Setenv("cloud_env", "aws")
 	os.Setenv("storage_bucket", "kidsloop-global-resources-dev")
 	os.Setenv("storage_region", "ap-northeast-2")
@@ -21,10 +23,9 @@ func InitEnv(){
 	os.Setenv("cdn_open", "false")
 }
 
-func TestCreateTable(t *testing.T){
+func TestCreateTable(t *testing.T) {
 	_, err := client.GetClient().DeleteTable(&dynamodb.DeleteTableInput{TableName: aws.String("assets")})
 	t.Log(err)
-
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
@@ -56,45 +57,43 @@ func TestCreateTable(t *testing.T){
 	fmt.Println("Created the table", "assets")
 
 	out, err := client.GetClient().ListTables(&dynamodb.ListTablesInput{})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("%#v", out)
 }
 func TestAssetModel_CreateAsset(t *testing.T) {
 	InitEnv()
-	conf.LoadEnvConfig()
+	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
 	id, err := assetModel.CreateAsset(context.Background(), entity.AssetObject{
-		Name:      "Hello.mp3",
-		Category:  "HelloCategory",
-		Size:      180,
-		Tags:      []string{"Hello"},
-		URL:       "http://www.baidu.com",
-		Uploader:  "123",
+		Name:     "Hello.mp3",
+		Category: "HelloCategory",
+		Size:     180,
+		Tags:     []string{"Hello"},
+		URL:      "http://www.baidu.com",
+		Uploader: "123",
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Log(id)
 
-
 	asset, err := assetModel.GetAssetById(context.Background(), id)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("Asset: %#v", asset)
 }
 
-
 func TestAssetModel_GetAsset(t *testing.T) {
 	InitEnv()
-	conf.LoadEnvConfig()
+	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
 	asset, err := assetModel.GetAssetById(context.Background(), "269fdbaba6d4f1b4")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("Asset: %#v", asset)
@@ -102,22 +101,22 @@ func TestAssetModel_GetAsset(t *testing.T) {
 
 func TestAssetModel_SearchAssets(t *testing.T) {
 	InitEnv()
-	conf.LoadEnvConfig()
+	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
 	res, err := assetModel.SearchAssets(context.Background(), &SearchAssetCondition{
-		Id:        "ea2feb2590199523",
-		Name:      "Hello.mp3",
+		Id:   "ea2feb2590199523",
+		Name: "Hello.mp3",
 		//Categories: nil,
 		//SizeMin:    0,
 		//SizeMax:    0,
 		//Tags:       nil,
 		//PageSize:   10,
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
-	for i := range res{
+	for i := range res {
 		t.Logf("%#v", res[i])
 	}
 }
