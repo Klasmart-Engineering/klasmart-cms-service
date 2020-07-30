@@ -100,7 +100,7 @@ func (s *Server) getAssetUploadPath(c *gin.Context) {
 
 
 func (s *Server) getAssetResourcePath(c *gin.Context) {
-	name := c.Param("name")
+	name := c.Param("path")
 
 	path, err := model.GetAssetModel().GetAssetResourcePath(c.Request.Context(), name)
 	if err != nil{

@@ -8,7 +8,7 @@ type AssetObject struct {
 	Category string   `json:"category" dynamodbav:"category"`
 	Size     int      `json:"size" dynamodbav:"size"`
 	Tags     []string `json:"tags" dynamodbav:"tags"`
-	URL      string   `json:"url" dynamodbav:"url"`
+	Path     string   `json:"path" dynamodbav:"path"`
 
 	Uploader   string     `json:"uploader" dynamodbav:"uploader"`
 
@@ -23,7 +23,7 @@ type UpdateAssetRequest struct {
 	Name     string   `json:"name" dynamodbav:"name"`
 	Category string   `json:"category" dynamodbav:"category"`
 	Tag      []string `json:"tag" dynamodbav:"tag"`
-	URL      string   `json:"url" dynamodbav:"url"`
+	Path     string   `json:"path" dynamodbav:"path"`
 }
 
 func (a AssetObject) TableName() string{

@@ -67,12 +67,12 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 
 	assetModel := GetAssetModel()
 	id, err := assetModel.CreateAsset(context.Background(), entity.AssetObject{
-		Name:      "Hello.mp3",
-		Category:  "HelloCategory",
-		Size:      180,
-		Tags:      []string{"Hello"},
-		URL:       "http://www.baidu.com",
-		Uploader:  "123",
+		Name:     "Hello.mp3",
+		Category: "HelloCategory",
+		Size:     180,
+		Tags:     []string{"Hello"},
+		Path:     "http://www.baidu.com",
+		Uploader: "123",
 	})
 	if err != nil{
 		panic(err)

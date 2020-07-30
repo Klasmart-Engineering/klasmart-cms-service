@@ -463,7 +463,7 @@
         }
       }
     },
-    "/assets/{name}/resource": {
+    "/assets/{path}/resource": {
       "get": {
         "tags": [
           "asset"
@@ -478,9 +478,9 @@
         ],
         "parameters": [
           {
-            "name": "name",
+            "name": "path",
             "in": "path",
-            "description": "File name",
+            "description": "File path",
             "schema": {
               "type": "string"
             },
@@ -1207,7 +1207,7 @@
               "$ref": "#/components/schemas/Tag"
             }
           },
-          "url": {
+          "path": {
             "type": "string",
             "example": "https://badanamu.com/song.mp3"
           }

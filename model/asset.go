@@ -8,7 +8,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 	"sync"
 )
 
@@ -38,19 +37,19 @@ type AssetModel struct{}
 type AssetEntity struct {
 	Category string
 	Tag      []string
-	URL      string
+	Path     string
 }
 
 func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must bool) error {
-	if must && (entity.URL == "" || entity.Category == "") {
+	if must && (entity.Path == "" || entity.Category == "") {
 		return ErrRequestItemIsNil
 	}
 
 	//TODO:Check if url is exists
-	if entity.URL != "" {
-		err := checkURL(entity.URL)
-		if err != nil{
-			return err
+	if entity.Path != "" {
+		exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, entity.Path)
+		if !exist {
+			return ErrNoSuchURL
 		}
 	}
 	//TODO:Check tag & category entity
@@ -58,23 +57,11 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 	return nil
 }
 
-func checkURL(url string) error {
-	resp, err := http.Get(url)
-	if err != nil{
-		return err
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		return ErrNoSuchURL
-	}
-	return nil
-
-}
-
 func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
 	err := am.checkEntity(ctx, AssetEntity{
 		Category: data.Category,
 		Tag:      data.Tags,
-		URL:      data.URL,
+		Path:     data.Path,
 	}, true)
 
 	if err != nil {
@@ -87,7 +74,7 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	err := am.checkEntity(ctx, AssetEntity{
 		Category: data.Category,
 		Tag:      data.Tag,
-		URL:      data.URL,
+		Path:     data.Path,
 	}, false)
 
 	if err != nil{

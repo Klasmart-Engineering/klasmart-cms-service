@@ -168,7 +168,14 @@ func (s *S3Storage) DownloadFile(ctx context.Context, partition string, filePath
 }
 
 func (s *S3Storage) ExitsFile(ctx context.Context, partition string, filePath string) bool {
-	_, err := s.DownloadFile(ctx, partition, filePath)
+	//_, err := s.DownloadFile(ctx, partition, filePath)
+	path := fmt.Sprintf("%s/%s", partition, filePath)
+	svc := s3.New(s.session)
+	_, err := svc.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key: aws.String(path),
+	})
+
 	if err != nil {
 		return false
 	}

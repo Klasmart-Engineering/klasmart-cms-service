@@ -191,10 +191,10 @@ func (am *DynamoDBAssetDA) buildUpdateParams(ctx context.Context, data entity.Up
 		}
 	}
 
-	if data.URL != "" {
+	if data.Path != "" {
 		updateStr = append(updateStr, "name = :u")
 		updateValues[":u"] = &dynamodb.AttributeValue{
-			S: aws.String(data.URL),
+			S: aws.String(data.Path),
 		}
 	}
 
