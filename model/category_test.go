@@ -1,9 +1,9 @@
 package model
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
 )
 
@@ -23,10 +23,10 @@ func TestCategoryModel_CreateCategory(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				data: entity.CategoryObject{
-					Name: "name3",
+					Name: "name",
 				},
 			},
-			want: "ok",
+			want:    "ok",
 			wantErr: false,
 		},
 	}
@@ -54,8 +54,8 @@ func TestCategoryModel_DeleteCategory(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "delete category",
-			args: args{context.Background(), "id_test1"},
+			name:    "delete category",
+			args:    args{context.Background(), "id_test1"},
 			wantErr: false,
 		},
 	}
@@ -81,9 +81,9 @@ func TestCategoryModel_GetCategoryById(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "getById",
-			args: args{context.Background(), "id_test1"},
-			want: nil,
+			name:    "getById",
+			args:    args{context.Background(), "id_test1"},
+			want:    nil,
 			wantErr: false,
 		},
 	}
@@ -115,9 +115,9 @@ func TestCategoryModel_SearchCategories(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "test_search",
-			args: args{context.Background(), &SearchCategoryCondition{Names: []string{"name3"}}},
-			want: nil,
+			name:    "test_search",
+			args:    args{context.Background(), &SearchCategoryCondition{Names: []string{"name3"}}},
+			want:    nil,
 			wantErr: false,
 		},
 	}
@@ -147,8 +147,8 @@ func TestCategoryModel_UpdateCategory(t *testing.T) {
 		{
 			name: "update",
 			args: args{context.Background(), entity.CategoryObject{
-				ID: "id_test1",
-				Name: "name4",
+				ID:       "id_test1",
+				Name:     "name4",
 				ParentID: "id_test1",
 			}},
 			wantErr: false,
@@ -164,3 +164,35 @@ func TestCategoryModel_UpdateCategory(t *testing.T) {
 	}
 }
 
+func TestCategoryModel_PageCategories(t *testing.T) {
+	type args struct {
+		ctx       context.Context
+		condition *SearchCategoryCondition
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []*entity.CategoryObject
+		wantErr bool
+	}{
+		{
+			name:    "test_search",
+			args:    args{context.Background(), &SearchCategoryCondition{Names: []string{"name"}, PageSize: 2, Page: 4}},
+			want:    nil,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cm := &CategoryModel{}
+			_, got, err := cm.PageCategories(tt.args.ctx, tt.args.condition)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SearchCategories() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			for _, g := range got {
+				fmt.Printf("%+v\n", g)
+			}
+		})
+	}
+}

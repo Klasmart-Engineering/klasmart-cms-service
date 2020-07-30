@@ -2,5 +2,6 @@
 .vscode/
 .DS_Store
 debug
+.run
 kidsloop2
 kidsloop2.exe
