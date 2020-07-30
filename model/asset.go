@@ -283,8 +283,8 @@ type SearchAssetCondition struct {
 
 	Tag 	string `json:"tag"`
 
-	PageSize int64 `json:"page_size"`
-	Page     int64 `json:"page"`
+	PageSize int `json:"page_size"`
+	Page     int `json:"page"`
 }
 
 func (s *SearchAssetCondition) getConditions() expression.ConditionBuilder {

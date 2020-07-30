@@ -1,127 +1,118 @@
 package api
 
 import (
-	"context"
-	"encoding/json"
+	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
+	"strconv"
 )
 
-type AssetServer struct {
-
-}
-
-func (as *AssetServer) DoHandler(ctx context.Context, action string, body []byte)*entity.Response{
-	switch action {
-	case "create":
-		return as.createAsset(ctx, body)
-	case "delete":
-		return as.deleteAsset(ctx, body)
-	case "update":
-		return as.updateAsset(ctx, body)
-	case "get":
-		return as.getAssetById(ctx, body)
-	case "search":
-		return as.searchAssets(ctx, body)
-	case "upload":
-		return as.getAssetUploadPath(ctx, body)
-	}
-	return entity.NewErrorResponse(http.StatusNotFound, "Action not found")
-}
-
-func (as AssetServer) Prefix() string{
-	return "asset"
-}
-
-func (as *AssetServer) createAsset(ctx context.Context, body []byte) *entity.Response{
+func (s *Server) createAsset(c *gin.Context) {
 	data := new(entity.AssetObject)
-	err := json.Unmarshal(body, data)
+	err := c.ShouldBind(data)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
 	}
 
-	id, err := model.GetAssetModel().CreateAsset(ctx, *data)
+	id, err := model.GetAssetModel().CreateAsset(c.Request.Context(), *data)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
 	}
-	return &entity.Response{
-		StatusCode: http.StatusOK,
-		StatusMsg: entity.IdMsg{Id: id},
-	}
+	c.JSON(http.StatusOK, gin.H{
+		"id": id,
+	})
 }
-func (as *AssetServer) updateAsset(ctx context.Context, body []byte) *entity.Response{
+func (s *Server) updateAsset(c *gin.Context){
+	id := c.Param("id")
+
 	data := new(entity.UpdateAssetRequest)
-	err := json.Unmarshal(body, data)
+	err := c.ShouldBind(data)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
 	}
-	err = model.GetAssetModel().UpdateAsset(ctx, *data)
+	data.Id = id
+
+	err = model.GetAssetModel().UpdateAsset(c.Request.Context(), *data)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
 	}
-	return &entity.Response{
-		StatusCode: http.StatusOK,
-	}
+	c.JSON(http.StatusOK, responseMsg("success"))
 }
-func (as *AssetServer) deleteAsset(ctx context.Context, body []byte) *entity.Response{
-	data := new(entity.IdMsg)
-	err := json.Unmarshal(body, data)
+func (s *Server) deleteAsset(c *gin.Context) {
+	id := c.Param("id")
+	err := model.GetAssetModel().DeleteAsset(c.Request.Context(), id)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
 	}
-	err = model.GetAssetModel().DeleteAsset(ctx, data.Id)
-	if err != nil{
-		return entity.NewErrorResponse(http.StatusInternalServerError, err.Error())
-	}
-	return &entity.Response{
-		StatusCode: http.StatusOK,
-	}
+
+	c.JSON(http.StatusOK, responseMsg("success"))
 }
 
-func (as *AssetServer) getAssetById(ctx context.Context, body []byte) *entity.Response{
-	data := new(entity.IdMsg)
-	err := json.Unmarshal(body, data)
+func (s *Server) getAssetById(c *gin.Context) {
+	id := c.Param("id")
+	assetInfo, err := model.GetAssetModel().GetAssetById(c.Request.Context(), id)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
 	}
-	assetInfo, err := model.GetAssetModel().GetAssetById(ctx, data.Id)
-	if err != nil{
-		return entity.NewErrorResponse(http.StatusInternalServerError, err.Error())
-	}
-	return &entity.Response{
-		StatusCode: http.StatusOK,
-		StatusMsg: assetInfo,
-	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"asset": assetInfo,
+	})
 }
-func (as *AssetServer) searchAssets(ctx context.Context, body []byte) *entity.Response{
-	data := new(model.SearchAssetCondition)
-	err := json.Unmarshal(body, data)
+func (s *Server) searchAssets(c *gin.Context){
+	data := buildAssetSearchCondition(c)
+	assetsList, err := model.GetAssetModel().SearchAssets(c.Request.Context(), data)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
 	}
-	assetsList, err := model.GetAssetModel().SearchAssets(ctx, data)
-	if err != nil{
-		return entity.NewErrorResponse(http.StatusInternalServerError, err.Error())
-	}
-	return &entity.Response{
-		StatusCode: http.StatusOK,
-		StatusMsg: assetsList,
-	}
+	c.JSON(http.StatusOK, gin.H{
+		"assets": assetsList,
+	})
 }
 
-func (as *AssetServer) getAssetUploadPath(ctx context.Context, body []byte) *entity.Response{
-	data := new(entity.FileExtensionRequest)
-	err := json.Unmarshal(body, data)
+func (s *Server) getAssetUploadPath(c *gin.Context) {
+	ext := c.Param("ext")
+
+	path, err := model.GetAssetModel().GetAssetUploadPath(c.Request.Context(), ext)
 	if err != nil{
-		return entity.NewErrorResponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
 	}
-	path, err := model.GetAssetModel().GetAssetUploadPath(ctx, data.Extension)
-	if err != nil{
-		return entity.NewErrorResponse(http.StatusInternalServerError, err.Error())
+	c.JSON(http.StatusOK, gin.H{
+		"path": path,
+	})
+}
+
+
+func responseMsg(msg string) interface{}{
+	return gin.H{
+		"msg": msg,
 	}
-	return &entity.Response{
-		StatusCode: http.StatusOK,
-		StatusMsg: entity.PathRequest{Path: path},
+}
+func buildAssetSearchCondition(c *gin.Context) *model.SearchAssetCondition{
+	sizeMin, _ := strconv.Atoi("size_min")
+	sizeMax, _ := strconv.Atoi("size_max")
+	PageSize, _ := strconv.Atoi("page_size")
+	Page, _ := strconv.Atoi("page")
+
+	data := &model.SearchAssetCondition{
+		Id:       c.Query("id"),
+		Name:     c.Query("name"),
+		Category: c.Query("category"),
+		SizeMin:  sizeMin,
+		SizeMax:  sizeMax,
+		Tag:      c.Query("tag"),
+		PageSize: PageSize,
+		Page:     Page,
 	}
+
+	return data
 }
