@@ -74,7 +74,7 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	err := am.checkEntity(ctx, AssetEntity{
 		Category:     data.Category,
 		Tag:          data.Tag,
-		ResourceName: data.Path,
+		ResourceName: data.ResourceName,
 	}, false)
 
 	if err != nil{
