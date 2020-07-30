@@ -1,6 +1,7 @@
 package entity
 
-import "calmisland/kidsloop2/constant"
+import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 
 type Tag struct {
 	ID     string `dynamodbav:"id"`

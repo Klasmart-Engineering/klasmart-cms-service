@@ -1,5 +1,4 @@
 package main
-
 import (
 	"os"
 	"os/signal"
@@ -10,17 +9,15 @@ import (
 	_ "gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"go.uber.org/zap"
 )
 
 func main() {
+	//获取数据库连接
+	config.LoadEnvConfig()
 	// init logger
-	lc := zap.NewDevelopmentConfig()
-	lc.Encoding = "json"
-
-	logger, _ := lc.Build()
-	defer logger.Sync()
-
+	logger, _ := zap.NewDevelopment(zap.AddCaller())
 	zap.ReplaceGlobals(logger)
 
 	// init dynamodb connection

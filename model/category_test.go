@@ -1,7 +1,7 @@
 package model
 
 import (
-	"calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"context"
 	"fmt"
 	"testing"
