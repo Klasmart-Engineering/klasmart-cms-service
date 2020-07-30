@@ -1,15 +1,16 @@
 package model
 
 import (
-	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strconv"
 	"sync"
 	"time"
@@ -20,17 +21,17 @@ type ICategoryModel interface {
 	UpdateCategory(ctx context.Context, data entity.CategoryObject) error
 	DeleteCategory(ctx context.Context, id string) error
 	GetCategoryById(ctx context.Context, id string) (*entity.CategoryObject, error)
-	
+
 	SearchCategories(ctx context.Context, condition *SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
+	PageCategories(ctx context.Context, condition *SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
 }
 
 type CategoryModel struct{}
 
-
 // Repeated insertion with the same primary key will overwrite non-primary key data
 func (cm *CategoryModel) CreateCategory(ctx context.Context, data entity.CategoryObject) (string, error) {
 	now := time.Now().Unix()
-	data.ID = "id_test2" // TODO: change to real id
+	data.ID = utils.NewId()
 	data.CreatedAt = now
 	data.UpdatedAt = now
 
@@ -55,11 +56,11 @@ func (cm *CategoryModel) UpdateCategory(ctx context.Context, data entity.Categor
 	upExpr, exprAttrName, exprAttrValue := data.ToUpdateParam()
 	fmt.Println("upExpr: ", upExpr)
 	output, err := client.GetClient().UpdateItem(&dynamodb.UpdateItemInput{
-		TableName: aws.String(entity.CategoryObject{}.TableName()),
-		Key: data.ToKey(),
-		ReturnValues: aws.String("UPDATED_NEW"),
-		UpdateExpression: aws.String(upExpr),
-		ExpressionAttributeNames: exprAttrName,
+		TableName:                 aws.String(entity.CategoryObject{}.TableName()),
+		Key:                       data.ToKey(),
+		ReturnValues:              aws.String("UPDATED_NEW"),
+		UpdateExpression:          aws.String(upExpr),
+		ExpressionAttributeNames:  exprAttrName,
 		ExpressionAttributeValues: exprAttrValue,
 	})
 	if err != nil {
@@ -78,9 +79,9 @@ func (cm *CategoryModel) DeleteCategory(ctx context.Context, id string) error {
 	//	},
 	//})
 	_, err := client.GetClient().UpdateItem(&dynamodb.UpdateItemInput{
-		TableName: aws.String(entity.CategoryObject{}.TableName()),
-		Key: map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
-		ReturnValues: aws.String("UPDATED_NEW"),
+		TableName:        aws.String(entity.CategoryObject{}.TableName()),
+		Key:              map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
+		ReturnValues:     aws.String("UPDATED_NEW"),
 		UpdateExpression: aws.String("set deleted_at = :del_at"),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":del_at": {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))},
@@ -96,7 +97,7 @@ func (cm *CategoryModel) DeleteCategory(ctx context.Context, id string) error {
 func (cm *CategoryModel) GetCategoryById(ctx context.Context, id string) (*entity.CategoryObject, error) {
 	output, err := client.GetClient().GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String(entity.CategoryObject{}.TableName()),
-		Key: map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
+		Key:       map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
 	})
 	if err != nil {
 		log.Get().Errorf("GetCategoryById get item failed: %v", err)
@@ -118,16 +119,14 @@ func (cm *CategoryModel) SearchCategories(ctx context.Context, condition *Search
 		log.Get().Errorf("SearchCategories build expression failed: %v", err)
 		return 0, nil, err
 	}
-	input := &dynamodb.ScanInput{
+
+	output, err := client.GetClient().Scan(&dynamodb.ScanInput{
 		TableName:                 aws.String(entity.CategoryObject{}.TableName()),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
-		//ProjectionExpression:      expr.Projection(),
-	}
+	})
 
-	output, err := client.GetClient().Scan(input)
-	fmt.Printf("%+v", output)
 	if err != nil {
 		log.Get().Errorf("SearchCategories scan failed: %v", err)
 		return 0, nil, err
@@ -145,6 +144,50 @@ func (cm *CategoryModel) SearchCategories(ctx context.Context, condition *Search
 	return *output.ScannedCount, categories, nil
 }
 
+func (cm *CategoryModel) PageCategories(ctx context.Context, condition *SearchCategoryCondition) (int64, []*entity.CategoryObject, error) {
+	expr, err := condition.toExpr()
+	if err != nil {
+		log.Get().Errorf("SearchCategories build expression failed: %v", err)
+		return 0, nil, err
+	}
+
+	input := &dynamodb.ScanInput{
+		TableName:                 aws.String(entity.CategoryObject{}.TableName()),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Filter(),
+		Limit:                     aws.Int64(condition.PageSize),
+	}
+
+	var page int64
+	var count int64
+	var categories []*entity.CategoryObject
+	err = client.GetClient().ScanPages(input, func(output *dynamodb.ScanOutput, hasNoPage bool) bool {
+		if page == condition.Page {
+			for _, i := range output.Items {
+				var item entity.CategoryObject
+				err = dynamodbattribute.UnmarshalMap(i, &item)
+				if err != nil {
+					log.Get().Errorf("PageCategories unmarshal failed: %v", err)
+				}
+				categories = append(categories, &item)
+			}
+			count = *output.ScannedCount
+			return false
+		}
+		if hasNoPage {
+			return false
+		}
+		page = page + 1
+		return true
+	})
+
+	if err != nil {
+		log.Get().Errorf("PageCategories unmarshal failed: %v", err)
+	}
+	return count, categories, nil
+}
+
 var categoryModel *CategoryModel
 var _categoryOnce sync.Once
 
@@ -156,12 +199,12 @@ func GetCategoryModel() ICategoryModel {
 }
 
 type SearchCategoryCondition struct {
-	IDs        []string `json:"ids"`
-	Names      []string `json:"names"`
+	IDs   []string `json:"ids"`
+	Names []string `json:"names"`
 
-	PageSize int64 `json:"page_size"`
-	Page     int64 `json:"page"`
-	OrderBy	 string `json:"order_by"`
+	PageSize int64  `json:"page_size"`
+	Page     int64  `json:"page"`
+	OrderBy  string `json:"order_by"`
 }
 
 func (s *SearchCategoryCondition) toExpr() (expression.Expression, error) {
