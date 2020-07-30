@@ -45,7 +45,6 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 		return ErrRequestItemIsNil
 	}
 
-	//TODO:Check if url is exists
 	if entity.ResourceName != "" {
 		exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, entity.ResourceName)
 		if !exist {
