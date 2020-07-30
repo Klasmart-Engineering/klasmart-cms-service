@@ -1,6 +1,7 @@
 package kidsloop2
 
 import(
+	"calmisland/kidsloop2/conf"
 	"calmisland/kidsloop2/dynamodb"
 	"calmisland/kidsloop2/entity"
 	"calmisland/kidsloop2/log"
@@ -39,6 +40,7 @@ func doLambda(ctx context.Context, request events.APIGatewayProxyRequest) (event
 
 func main() {
 	//获取数据库连接
+	conf.LoadEnvConfig()
 	dynamodb.GetClient()
 	storage.DefaultStorage()
 

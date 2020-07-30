@@ -7,14 +7,21 @@ import (
 	"calmisland/kidsloop2/storage"
 	"calmisland/kidsloop2/utils"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
+)
+
+var(
+	ErrNoSuchURL = errors.New("no such url")
+	ErrRequestItemIsNil = errors.New("request item is nil")
 )
 
 type IAssetModel interface {
@@ -46,11 +53,32 @@ func (u *UpdateParams) key() string {
 }
 
 func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must bool) error {
-	//TODO:Check if url is exists
+	if must && (entity.URL == "" || entity.Category == "") {
+		return ErrRequestItemIsNil
+	}
 
+	//TODO:Check if url is exists
+	if entity.URL != "" {
+		err := checkURL(entity.URL)
+		if err != nil{
+			return err
+		}
+	}
 	//TODO:Check tag & category entity
 
 	return nil
+}
+
+func checkURL(url string) error {
+	resp, err := http.Get(url)
+	if err != nil{
+		return err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return ErrNoSuchURL
+	}
+	return nil
+
 }
 
 func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
@@ -75,13 +103,14 @@ func (am *AssetModel) doCreateAsset(ctx context.Context, data entity.AssetObject
 	if err != nil {
 		log.Get().Errorf("marshal asset failed, error: %v", err)
 	}
-
 	_, err = client.GetClient().PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String("niobium"),
+		TableName: aws.String("assets"),
 		Item:      m,
 	})
+
 	if err != nil {
-		log.Get().Errorf("insert asset failed, error: %v", err)
+		log.Get().Errorf("insert assets failed, error: %v", err)
+		return "", err
 	}
 	return data.Id, nil
 }
@@ -135,13 +164,9 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 		URL:      data.URL,
 	}, false)
 
-	co := entity.AssetObject{
-		Id: data.Id,
-	}
-	av, err := dynamodbattribute.MarshalMap(co)
-	if err != nil {
-		log.Get().Errorf("marshal asset failed, error: %v", err)
-		return err
+	av := make(map[string]*dynamodb.AttributeValue)
+	av["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(data.Id),
 	}
 
 	params, err := am.buildUpdateParams(ctx, data)
@@ -153,7 +178,7 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	_, err = client.GetClient().UpdateItem(&dynamodb.UpdateItemInput{
 		ExpressionAttributeValues: params.values,
 		Key:                       av,
-		TableName:                 aws.String(co.TableName()),
+		TableName:                 aws.String(entity.AssetObject{}.TableName()),
 		ReturnValues:              aws.String("UPDATED_NEW"),
 		UpdateExpression:          aws.String(params.key()),
 	})
@@ -165,16 +190,13 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 }
 
 func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
-	co := entity.AssetObject{
-		Id: id,
+	av := make(map[string]*dynamodb.AttributeValue)
+	av["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(id),
 	}
-	av, err := dynamodbattribute.MarshalMap(co)
-	if err != nil {
-		return err
-	}
-	_, err = client.GetClient().DeleteItem(&dynamodb.DeleteItemInput{
+	_, err := client.GetClient().DeleteItem(&dynamodb.DeleteItemInput{
 		Key:       av,
-		TableName: aws.String(co.TableName()),
+		TableName: aws.String(entity.AssetObject{}.TableName()),
 	})
 	if err != nil {
 		return err
@@ -183,17 +205,14 @@ func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
 }
 
 func (am *AssetModel) GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error) {
-	co := entity.AssetObject{
-		Id: id,
-	}
-	av, err := dynamodbattribute.MarshalMap(co)
-	if err != nil {
-		return nil, err
+	av := make(map[string]*dynamodb.AttributeValue)
+	av["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(id),
 	}
 
 	result, err := client.GetClient().GetItem(&dynamodb.GetItemInput{
 		Key:       av,
-		TableName: aws.String(co.TableName()),
+		TableName: aws.String(entity.AssetObject{}.TableName()),
 	})
 	if err != nil {
 		return nil, err
@@ -209,15 +228,14 @@ func (am *AssetModel) GetAssetById(ctx context.Context, id string) (*entity.Asse
 
 func (am *AssetModel) SearchAssets(ctx context.Context, condition *SearchAssetCondition) ([]*entity.AssetObject, error) {
 	builder := expression.NewBuilder()
-	conditions := condition.getConditions()
-	for i := range conditions {
-		builder = builder.WithFilter(conditions[i])
-	}
+	builder = builder.WithFilter(condition.getConditions())
 	expr, err := builder.Build()
 	if err != nil {
 		log.Get().Errorf("Got error building expression: %v", err)
 		return nil, err
 	}
+	fmt.Println("Condition:", *expr.Filter())
+	fmt.Println("NAMES:", expr.Values())
 
 	params := &dynamodb.ScanInput{
 		ExpressionAttributeNames:  expr.Names(),
@@ -225,8 +243,8 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *SearchAssetCo
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(entity.AssetObject{}.TableName()),
-		Limit:                     aws.Int64(condition.PageSize),
-		Segment:                   aws.Int64(condition.Page),
+		//Limit:                     aws.Int64(condition.PageSize),
+		//Segment:                   aws.Int64(condition.Page),
 	}
 	result, err := client.GetClient().Scan(params)
 	if err != nil {
@@ -257,30 +275,30 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) 
 }
 
 type SearchAssetCondition struct {
-	Ids        []string `json:"ids"`
-	Names      []string `json:"names"`
-	Categories []string `json:"categories"`
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	Category string `json:"category"`
 	SizeMin    int      `json:"size_min"`
 	SizeMax    int      `json:"size_max"`
 
-	Tags []string `json:"tag"`
+	Tag 	string `json:"tag"`
 
 	PageSize int64 `json:"page_size"`
 	Page     int64 `json:"page"`
 }
 
-func (s *SearchAssetCondition) getConditions() []expression.ConditionBuilder {
+func (s *SearchAssetCondition) getConditions() expression.ConditionBuilder {
 	conditions := make([]expression.ConditionBuilder, 0)
-	if len(s.Ids) > 0 {
-		condition := expression.Name("_id").In(expression.Value(s.Ids))
+	if s.Id != "" {
+		condition := expression.Name("id").Equal(expression.Value(s.Id))
 		conditions = append(conditions, condition)
 	}
-	if len(s.Names) > 0 {
-		condition := expression.Name("name").In(expression.Value(s.Names))
+	if s.Name != ""{
+		condition := expression.Name("name").Equal(expression.Value(s.Name))
 		conditions = append(conditions, condition)
 	}
-	if len(s.Categories) > 0 {
-		condition := expression.Name("category").In(expression.Value(s.Categories))
+	if s.Category != "" {
+		condition := expression.Name("category").Equal(expression.Value(s.Category))
 		conditions = append(conditions, condition)
 	}
 	if s.SizeMin > 0 {
@@ -292,12 +310,21 @@ func (s *SearchAssetCondition) getConditions() []expression.ConditionBuilder {
 		conditions = append(conditions, condition)
 	}
 
-	if len(s.Tags) > 0 {
-		condition := expression.Name("tag").In(expression.Value(s.Tags))
+	if s.Tag != "" {
+		condition := expression.Name("tag").Equal(expression.Value(s.Tag))
 		conditions = append(conditions, condition)
 	}
 
-	return conditions
+	if len(conditions) > 0 {
+		for i := range conditions {
+			if i == 0 {
+				continue
+			}
+			conditions[0] = conditions[0].And(conditions[i])
+		}
+	}
+
+	return conditions[0]
 }
 
 var assetModel *AssetModel

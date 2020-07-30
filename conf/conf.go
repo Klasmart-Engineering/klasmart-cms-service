@@ -40,7 +40,7 @@ func assertGetEnv(key string) string {
 	return value
 }
 
-func init(){
+func LoadEnvConfig(){
 	config = new(Config)
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
@@ -61,19 +61,19 @@ func init(){
 		panic(err)
 	}
 	config.CDNConfig.CDNOpen = cdnOpen
-
-	config.CDNConfig.CDNMode = assertGetEnv("cdn_mode")
-	if config.CDNConfig.CDNMode == "service"{
-		config.CDNConfig.CDNServicePath = assertGetEnv("cdn_service_path")
-	}else if config.CDNConfig.CDNMode == "key" {
-		config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
-		config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
-		config.CDNConfig.CDNPrivateKey = assertGetEnv("cdn_private_key")
-	}else{
-		log.Get().Errorf("Unsupported cdn_mode, value: %v", config.CDNConfig.CDNMode)
-		panic("Unsupported cdn_mode")
+	if cdnOpen{
+		config.CDNConfig.CDNMode = assertGetEnv("cdn_mode")
+		if config.CDNConfig.CDNMode == "service"{
+			config.CDNConfig.CDNServicePath = assertGetEnv("cdn_service_path")
+		}else if config.CDNConfig.CDNMode == "key" {
+			config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
+			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
+			config.CDNConfig.CDNPrivateKey = assertGetEnv("cdn_private_key")
+		}else{
+			log.Get().Errorf("Unsupported cdn_mode, value: %v", config.CDNConfig.CDNMode)
+			panic("Unsupported cdn_mode")
+		}
 	}
-
 }
 
 func Get() *Config{
