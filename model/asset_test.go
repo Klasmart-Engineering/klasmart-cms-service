@@ -1,9 +1,9 @@
 package model
 
 import (
-	"calmisland/kidsloop2/conf"
-	client "calmisland/kidsloop2/dynamodb"
-	"calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/conf"
+	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"

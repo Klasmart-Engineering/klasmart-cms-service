@@ -1,48 +1,36 @@
-package kidsloop2
+package main
+import (
+	"os"
+	"os/signal"
+	"syscall"
 
-import(
-	"calmisland/kidsloop2/conf"
-	"calmisland/kidsloop2/dynamodb"
-	"calmisland/kidsloop2/entity"
-	"calmisland/kidsloop2/log"
-	"calmisland/kidsloop2/route"
-	"calmisland/kidsloop2/storage"
-	"context"
-	"encoding/json"
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
-	_"calmisland/kidsloop2/conf"
-	_ "calmisland/kidsloop2/route"
-	"net/http"
+	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
+	_ "gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"go.uber.org/zap"
 )
-
-func response(statusCode int, body interface{}) events.APIGatewayProxyResponse{
-	data, err := json.Marshal(body)
-	if err != nil{
-		log.Get().Errorf("Can't marshal response body, err: %v", err)
-	}
-	return events.APIGatewayProxyResponse{
-		StatusCode:        statusCode,
-		Body:              string(data),
-	}}
-
-func doLambda(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	res, err := route.Route(ctx, request.PathParameters["action"], []byte(request.Body))
-	if err != nil{
-		return response(http.StatusInternalServerError, entity.ErrMsg{
-			ErrMsg: "Internal server error",
-		}), err
-	}
-	return response(res.StatusCode, res.StatusMsg), nil
-
-	//return response(http.StatusNotFound, "Status not found"), nil
-}
 
 func main() {
 	//获取数据库连接
-	conf.LoadEnvConfig()
+	config.LoadEnvConfig()
+	// init logger
+	logger, _ := zap.NewDevelopment(zap.AddCaller())
+	zap.ReplaceGlobals(logger)
+
+	// init dynamodb connection
 	dynamodb.GetClient()
 	storage.DefaultStorage()
 
-	lambda.Start(doLambda)
+	zap.L().Info("start kidsloop2 api service")
+	defer zap.L().Info("kidsloop2 api service stopped")
+
+	common.Setenv(common.EnvLAMBDA)
+	go common.RunWithHTTPHandler(api.NewServer(), "")
+
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 }

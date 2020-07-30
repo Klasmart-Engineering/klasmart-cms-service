@@ -1,10 +1,10 @@
-package route
+package api
 
 import (
-	"calmisland/kidsloop2/entity"
-	"calmisland/kidsloop2/model"
 	"context"
 	"encoding/json"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 

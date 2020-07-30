@@ -1,11 +1,11 @@
 package model
 
 import (
-	client "calmisland/kidsloop2/dynamodb"
-	"calmisland/kidsloop2/entity"
-	"calmisland/kidsloop2/log"
-	"calmisland/kidsloop2/storage"
-	"calmisland/kidsloop2/utils"
+	client "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"context"
 	"errors"
 	"fmt"
