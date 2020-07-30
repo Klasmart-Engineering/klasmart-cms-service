@@ -97,13 +97,13 @@ func responseMsg(msg string) interface{}{
 		"msg": msg,
 	}
 }
-func buildAssetSearchCondition(c *gin.Context) *model.SearchAssetCondition{
+func buildAssetSearchCondition(c *gin.Context) *entity.SearchAssetCondition{
 	sizeMin, _ := strconv.Atoi("size_min")
 	sizeMax, _ := strconv.Atoi("size_max")
 	PageSize, _ := strconv.Atoi("page_size")
 	Page, _ := strconv.Atoi("page")
 
-	data := &model.SearchAssetCondition{
+	data := &entity.SearchAssetCondition{
 		Id:       c.Query("id"),
 		Name:     c.Query("name"),
 		Category: c.Query("category"),
