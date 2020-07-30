@@ -15,7 +15,12 @@ import (
 
 func main() {
 	// init logger
-	logger, _ := zap.NewDevelopment(zap.AddCaller())
+	lc := zap.NewDevelopmentConfig()
+	lc.Encoding = "json"
+
+	logger, _ := lc.Build()
+	defer logger.Sync()
+
 	zap.ReplaceGlobals(logger)
 
 	// init dynamodb connection
