@@ -1,36 +1,21 @@
 package entity
 
 import (
-	"calmisland/kidsloop2/constant"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type Tag struct {
-	ID     string `dynamodbav:"id"`
-	Name   string `dynamodbav:"name"`
-	States int    `dynamodbav:"states"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	States int    `json:"states"`
 
-	CreatedAt int64 `dynamodbav:"createdAt"`
-	UpdatedAt int64 `dynamodbav:"updated_at"`
-	DeletedAt int64 `dynamodbav:"deletedAt"`
+	CreatedAt int64 `json:"created_at"`
+	UpdatedAt int64 `json:"updated_at"`
+	DeletedAt int64 `json:"deleted_at"`
 }
 
 func (t Tag) TableName() string {
 	return constant.TableNameTag
-}
-
-type TagCondition struct {
-	Name     string `json:"name"`
-	PageSize int64  `json:"page_size"`
-	Page     int64  `json:"page"`
-}
-
-func (t TagCondition) getConditions()[]expression.ConditionBuilder{
-	//conditions := make([]expression.ConditionBuilder, 0)
-	//if t.Name==""{
-	//	condition :=
-	//}
-	return nil
 }
 
 type TagAddView struct {

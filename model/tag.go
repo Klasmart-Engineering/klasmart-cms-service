@@ -1,14 +1,16 @@
 package model
 
 import (
-	"calmisland/kidsloop2/constant"
-	dbclient "calmisland/kidsloop2/dynamodb"
-	"calmisland/kidsloop2/entity"
-	"calmisland/kidsloop2/utils"
 	"context"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strconv"
 	"sync"
 	"time"
@@ -17,7 +19,7 @@ import (
 type ITagModel interface {
 	Add(ctx context.Context, tag *entity.TagAddView) (string, error)
 	Update(ctx context.Context, tag *entity.TagUpdateView) error
-	Query(ctx context.Context, condition *entity.TagCondition) ([]*entity.TagView, error)
+	Query(ctx context.Context, condition *da.TagCondition) ([]*entity.TagView, error)
 	GetByID(ctx context.Context, id string) (*entity.TagView, error)
 	GetByName(ctx context.Context, name string) (*entity.TagView, error)
 }
@@ -57,6 +59,7 @@ func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string, erro
 	if err != nil {
 		return "", err
 	}
+
 	input := &dynamodb.PutItemInput{
 		Item:                   item,
 		ReturnConsumedCapacity: aws.String("TOTAL"),
@@ -70,12 +73,9 @@ func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string, erro
 
 func (t tagModel) Update(ctx context.Context, tag *entity.TagUpdateView) error {
 	// key
-	tagKey := entity.Tag{
-		ID: tag.ID,
-	}
-	key, err := dynamodbattribute.MarshalMap(tagKey)
-	if err != nil {
-		return err
+	key:=make(map[string]*dynamodb.AttributeValue)
+	key["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(tag.ID),
 	}
 
 	// expr
@@ -100,40 +100,70 @@ func (t tagModel) Update(ctx context.Context, tag *entity.TagUpdateView) error {
 		UpdateExpression:          aws.String("set name = :n, states = :s, updated_at = :up"),
 	}
 
-	_, err = dbclient.GetClient().UpdateItem(input)
+	_, err := dbclient.GetClient().UpdateItem(input)
 	return utils.ConvertDynamodbError(err)
 }
-//func (t tagModel) getConditions()[]expression.ConditionBuilder{
-//	conditions := make([]expression.ConditionBuilder, 0)
-//
-//}
-func (t tagModel) Query(ctx context.Context, condition *entity.TagCondition) ([]*entity.TagView, error) {
 
-	return nil, nil
+func (t tagModel) Query(ctx context.Context, condition *da.TagCondition) ([]*entity.TagView, error) {
+	var filt expression.ConditionBuilder
+	if len(condition.Name)!=0{
+		filt = expression.Name("name").Equal(expression.Value(condition.Name))
+	}
+	proj:=expression.NamesList(expression.Name("id"),expression.Name("name"),expression.Name("states"),expression.Name("created_at"))
+	expr,err:=expression.NewBuilder().WithFilter(filt).WithProjection(proj).Build()
+	if err!=nil{
+		return nil,err
+	}
+	params:=&dynamodb.ScanInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Filter(),
+		ProjectionExpression:      expr.Projection(),
+		TableName:                 aws.String(constant.TableNameTag),
+		//Limit:                     nil,
+		//ReturnConsumedCapacity:    nil,
+		//ScanFilter:                nil,
+		//Segment:                   nil,
+		//Select:                    nil,
+		//TotalSegments:             nil,
+	}
+	scanResult, err := dbclient.GetClient().Scan(params)
+	if err!=nil{
+		return nil,err
+	}
+	result:=make([]*entity.TagView,0)
+	for _,i:=range scanResult.Items{
+		tagItem:=&entity.TagView{}
+		err = dynamodbattribute.UnmarshalMap(i, &tagItem)
+		if err!=nil{
+			return nil,err
+		}
+		result = append(result,tagItem)
+	}
+	return result, nil
 }
 
 func (t tagModel) GetByID(ctx context.Context, id string) (*entity.TagView, error) {
-	in := entity.Tag{
-		ID: id,
-	}
-	result, err := t.getItem(in)
+	result, err := t.getItem(id)
 	err = utils.ConvertDynamodbError(err)
 	return result, err
 }
 
 func (t tagModel) GetByName(ctx context.Context, name string) (*entity.TagView, error) {
-	in := entity.Tag{
-		Name: name,
+	queryItems,_:=t.Query(ctx,&da.TagCondition{
+		Name:     name,
+		DeleteAt: 0,
+	})
+	if len(queryItems)>0{
+		return queryItems[0],nil
 	}
-	result, err := t.getItem(in)
-	err = utils.ConvertDynamodbError(err)
-	return result, err
+	return nil,constant.ErrRecordNotFound
 }
 
-func (t tagModel) getItem(in entity.Tag) (*entity.TagView, error) {
-	key, err := dynamodbattribute.MarshalMap(in)
-	if err != nil {
-		return nil, err
+func (t tagModel) getItem(id string) (*entity.TagView, error) {
+	key:=make(map[string]*dynamodb.AttributeValue)
+	key["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(id),
 	}
 	input := &dynamodb.GetItemInput{
 		Key:       key,

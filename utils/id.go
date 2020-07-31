@@ -1,5 +1,7 @@
 package utils
 
+import "github.com/google/uuid"
+
 func NewId()string{
-	return ""
+	return uuid.New().String()
 }

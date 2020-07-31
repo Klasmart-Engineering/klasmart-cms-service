@@ -10,6 +10,7 @@ var (
 	ErrRecordNotFound = errors.New("record not found")
 	ErrDuplicateRecord = errors.New("duplicate record")
 	ErrExceededLimit = errors.New("exceeded limit")
+	//ErrUnknown = errors.New("unknown error")
 )
 
 // tag States
