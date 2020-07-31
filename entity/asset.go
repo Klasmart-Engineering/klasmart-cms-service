@@ -29,10 +29,15 @@ type UpdateAssetRequest struct {
 func (a AssetObject) TableName() string{
 	return "assets"
 }
+type SearchAssetCondition struct {
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	Category string `json:"category"`
+	SizeMin    int      `json:"size_min"`
+	SizeMax    int      `json:"size_max"`
 
-type FileExtensionRequest struct {
-	Extension string `json:"extension"`
-}
-type PathRequest struct {
-	Path string `json:"path"`
+	Tag 	string `json:"tag"`
+
+	PageSize int `json:"page_size"`
+	Page     int `json:"page"`
 }

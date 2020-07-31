@@ -2,15 +2,27 @@ package da
 
 import (
 	"context"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"strconv"
 	"sync"
+	"time"
 )
 
 type ITagDA interface{
-	//Insert(context.Context, interface{}) (interface{}, error)
-	//Update(context.Context, interface{}) (int64, error)
+	Insert(ctx context.Context,tag entity.Tag)error
+	Update(ctx context.Context,tag entity.Tag)error
 	//Page(context.Context, Conditions, interface{}) (int, error)
-	//Query(context.Context, Conditions, interface{}) error
+	Query(ctx context.Context, condition TagCondition) ([]*entity.Tag,error)
+	GetByID(ctx context.Context,id string)(*entity.Tag,error)
+	Delete(ctx context.Context,id string) error
+	Page(ctx context.Context,condition TagCondition)([]*entity.Tag,error)
 }
 
 type tagDA struct{}
@@ -22,14 +34,201 @@ type TagCondition struct {
 
 	DeleteAt int
 }
-//aws dynamodb put-item \
-//--table-name tags  \
-//--item \
-//'{"id": {"N": "2"}, "name": {"S": "Call Me Today"}, "states": {"N": "1"}, "createdAt": {"N": "0"},"updated_at": {"N": "0"},"deletedAt": {"N": "0"}}'
-func (tagDA) Insert(ctx context.Context)(interface{},error){
-	return nil,nil
+
+func (tagDA) Insert(ctx context.Context,tag entity.Tag)error{
+	svc := dbclient.GetClient()
+	item, err := dynamodbattribute.MarshalMap(tag)
+	if err != nil {
+		return  err
+	}
+
+	input := &dynamodb.PutItemInput{
+		Item:                   item,
+		TableName:              aws.String(constant.TableNameTag),
+	}
+
+	_, err = svc.PutItem(input)
+	return nil
 }
+
+func (tagDA) Query(ctx context.Context, condition TagCondition) ([]*entity.Tag,error){
+	expr,err:= condition.GetCondition()
+	if err!=nil{
+		return nil,err
+	}
+	params:=&dynamodb.ScanInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Filter(),
+		ProjectionExpression:      expr.Projection(),
+		TableName:                 aws.String(constant.TableNameTag),
+		//Limit:                     nil,
+		//ReturnConsumedCapacity:    nil,
+		//ScanFilter:                nil,
+		//Segment:                   nil,
+		//Select:                    nil,
+		//TotalSegments:             nil,
+	}
+	scanResult, err := dbclient.GetClient().Scan(params)
+
+	if err!=nil{
+		return nil,err
+	}
+
+	result:=make([]*entity.Tag,0)
+	for _,i:=range scanResult.Items{
+		tagItem:=&entity.Tag{}
+		err = dynamodbattribute.UnmarshalMap(i, &tagItem)
+		if err!=nil{
+			return nil,err
+		}
+		result = append(result,tagItem)
+	}
+
+	return result,nil
+}
+
+func (tagDA) Page (ctx context.Context,condition TagCondition)([]*entity.Tag,error){
+	expr,err:= condition.GetCondition()
+	if err!=nil{
+		return nil,err
+	}
+	params:=&dynamodb.ScanInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Filter(),
+		ProjectionExpression:      expr.Projection(),
+		TableName:                 aws.String(constant.TableNameTag),
+		Limit:                     aws.Int64(1),
+		//ReturnConsumedCapacity:    nil,
+		//ScanFilter:                nil,
+		//Segment:                   nil,
+		//Select:                    nil,
+		//TotalSegments:             nil,
+	}
+	result:=make([]*entity.Tag,0)
+
+	pageNum:=0
+	err=dbclient.GetClient().ScanPages(params,func(page *dynamodb.ScanOutput, lastPage bool) bool {
+		           pageNum++
+		           fmt.Println(page)
+		           return !lastPage
+		//for _,i:=range page.Items{
+		//	tagItem:=&entity.Tag{}
+		//	err = dynamodbattribute.UnmarshalMap(i, &tagItem)
+		//	if err!=nil{
+		//		return false
+		//	}
+		//	result = append(result,tagItem)
+		//}
+		//
+		//return false
+	})
+	return result,err
+}
+
+func (tagDA) Update(ctx context.Context,tag entity.Tag)error{
+	key:=make(map[string]*dynamodb.AttributeValue)
+	key["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(tag.ID),
+	}
+	// expr
+	params := make(map[string]*dynamodb.AttributeValue)
+	params[":n"] = &dynamodb.AttributeValue{
+		S: aws.String(tag.Name),
+	}
+	statesStr := strconv.Itoa(tag.States)
+	params[":s"] = &dynamodb.AttributeValue{
+		N: aws.String(statesStr),
+	}
+	updateTimeStr := strconv.FormatInt(time.Now().Unix(), 10)
+	params[":up"] = &dynamodb.AttributeValue{
+		N: aws.String(updateTimeStr),
+	}
+
+	input := &dynamodb.UpdateItemInput{
+		ExpressionAttributeNames: map[string]*string{
+			"#n": aws.String("name"),
+			"#s":  aws.String("states"),
+			"#up":  aws.String("updated_at"),
+		},
+		ExpressionAttributeValues: params,
+		Key:                       key,
+		ReturnValues:              aws.String("UPDATED_NEW"),
+		TableName:                 aws.String(constant.TableNameTag),
+		UpdateExpression:          aws.String("set #n = :n, #s = :s, #up = :up"),
+	}
+
+	_, err := dbclient.GetClient().UpdateItem(input)
+
+	return err
+}
+
+func (tagDA) GetByID(ctx context.Context,id string)(*entity.Tag,error){
+	key:=make(map[string]*dynamodb.AttributeValue)
+	key["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(id),
+	}
+	input := &dynamodb.GetItemInput{
+		Key:       key,
+		TableName: aws.String(constant.TableNameTag),
+	}
+	result, err := dbclient.GetClient().GetItem(input)
+	if err != nil {
+		return nil, err
+	}
+	tag := new(entity.Tag)
+	err = dynamodbattribute.UnmarshalMap(result.Item, tag)
+	if err != nil {
+		return nil, err
+	}
+	return tag,nil
+}
+
+func (tagDA) Delete(ctx context.Context,id string) error{
+	key:=make(map[string]*dynamodb.AttributeValue)
+	key["id"] = &dynamodb.AttributeValue{
+		S:    aws.String(id),
+	}
+	input := &dynamodb.DeleteItemInput{
+		Key:       key,
+		TableName: aws.String(constant.TableNameTag),
+	}
+	_, err := dbclient.GetClient().DeleteItem(input)
+	return err
+}
+
+func (t TagCondition) GetCondition() (expression.Expression,error){
+	var filt expression.ConditionBuilder
+	if t.DeleteAt!=0{
+		filt = expression.Name("deleted_at").NotEqual(expression.Value(0))
+	}else{
+		filt = expression.Name("deleted_at").Equal(expression.Value(0))
+	}
+	if len(t.Name)!=0{
+		filt = filt.And(expression.Name("name").Equal(expression.Value(t.Name)))
+	}
+	expr,err:=expression.NewBuilder().WithFilter(filt).Build()
+	if err!=nil{
+		return expression.Expression{},err
+	}
+	return expr,nil
+}
+
+var (
+	_tagOnce sync.Once
+	_tagDA ITagDA
+)
+
+func GetTagDA() ITagDA{
+	_tagOnce.Do(func(){
+		_tagDA = tagDA{}
+	})
+	return _tagDA
+}
+
 //aws dynamodb create-table \
+//--endpoint-url http://192.168.1.234:18000 \
 //--table-name tags \
 //--attribute-definitions \
 //AttributeName=id,AttributeType=S \
@@ -45,24 +244,8 @@ func (tagDA) Insert(ctx context.Context)(interface{},error){
 //"[{\"Create\":{\"IndexName\": \"name-index\",\"KeySchema\":[{\"AttributeName\":\"name\",\"KeyType\":\"HASH\"}], \
 //\"ProvisionedThroughput\": {\"ReadCapacityUnits\": 10, \"WriteCapacityUnits\": 5      },\"Projection\":{\"ProjectionType\":\"ALL\"}}}]"
 
-func (t TagCondition) GetConditions()[]expression.ConditionBuilder{
-	//conditions := make([]expression.ConditionBuilder, 0)
-	//if t.Name==""{
-	//	condition := expression.
-	//}
-	return nil
-}
-
-
-var (
-	_tagOnce sync.Once
-	_tagDA ITagDA
-)
-
-func GetTagDA() ITagDA{
-	_tagOnce.Do(func(){
-		_tagDA = tagDA{}
-	})
-	return _tagDA
-}
+//aws dynamodb put-item \
+//--table-name tags  \
+//--item \
+//'{"id": {"N": "2"}, "name": {"S": "Call Me Today"}, "states": {"N": "1"}, "createdAt": {"N": "0"},"updated_at": {"N": "0"},"deletedAt": {"N": "0"}}'
 

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 func TestTagModel_Add(t *testing.T) {
-	id,err:=GetTagModel().Add(context.Background(),&entity.TagAddView{Name: "history"})
+	id,err:=GetTagModel().Add(context.Background(),&entity.TagAddView{Name: "history6"})
 	if err!=nil{
 		fmt.Println(err)
 		return
@@ -18,16 +18,20 @@ func TestTagModel_Add(t *testing.T) {
 
 func TestTagModel_Update(t *testing.T) {
 	err:=GetTagModel().Update(context.Background(),&entity.TagUpdateView{
-		ID:     "3357bafe-7463-4254-8e48-b37fa3cc23ee",
+		ID:     "1",
 		Name:   "video",
 		States: 2,
 	})
 	fmt.Println(err)
 }
+func TestTagModel_Delete(t *testing.T) {
+	err:=GetTagModel().Delete(context.Background(),"3357bafe-7463-4254-8e48-b37fa3cc23ee")
+	fmt.Println(err)
+}
 
 func TestTagModel_Query(t *testing.T) {
-	resut,err:=GetTagModel().Query(context.Background(),&da.TagCondition{
-		Name:     "history",
+	resut,err:=GetTagModel().Query(context.Background(),da.TagCondition{
+		Name:     "",
 		PageSize: 0,
 		Page:     0,
 		DeleteAt: 0,
@@ -40,3 +44,19 @@ func TestTagModel_Query(t *testing.T) {
 		fmt.Println(*item)
 	}
 }
+func TestTagModel_Page(t *testing.T) {
+	resut,err:=GetTagModel().Page(context.Background(),da.TagCondition{
+		Name:     "",
+		PageSize: 0,
+		Page:     0,
+		DeleteAt: 0,
+	})
+	if err!=nil{
+		fmt.Println(err)
+		return
+	}
+	for _,item:=range resut{
+		fmt.Println(*item)
+	}
+}
+

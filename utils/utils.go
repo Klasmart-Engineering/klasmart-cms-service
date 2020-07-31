@@ -21,5 +21,3 @@ func ConvertDynamodbError(err error) error{
 
 	return err
 }
-
-

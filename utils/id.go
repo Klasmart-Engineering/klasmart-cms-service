@@ -1,7 +1,12 @@
 package utils
 
-import "github.com/google/uuid"
+import (
+	"crypto/rand"
+	"encoding/hex"
+)
 
 func NewId()string{
-	return uuid.New().String()
+	b := make([]byte, 8)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
