@@ -31,6 +31,7 @@ type CDNConfig struct {
 	CDNPrivateKey string
 
 	CDNServicePath string
+	CDNServiceToken string
 }
 
 func assertGetEnv(key string) string {
@@ -69,17 +70,9 @@ func LoadEnvConfig() {
 	if cdnOpen {
 		config.CDNConfig.CDNMode = assertGetEnv("cdn_mode")
 		if config.CDNConfig.CDNMode == "service" {
-			config.CDNConfig.CDNServicePath = assertGetEnv("cdn_service_path")
-		} else if config.CDNConfig.CDNMode == "key" {
 			config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
-			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
-			config.CDNConfig.CDNPrivateKey = assertGetEnv("cdn_private_key")
-		} else {
-			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
-		}
-		config.CDNConfig.CDNMode = assertGetEnv("cdn_mode")
-		if config.CDNConfig.CDNMode == "service" {
 			config.CDNConfig.CDNServicePath = assertGetEnv("cdn_service_path")
+			config.CDNConfig.CDNServiceToken = assertGetEnv("cdn_service_token")
 		} else if config.CDNConfig.CDNMode == "key" {
 			config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
 			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
