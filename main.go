@@ -25,7 +25,7 @@ func main() {
 	log.Info(context.TODO(), "start kidsloop2 api service")
 	defer log.Info(context.TODO(), "kidsloop2 api service stopped")
 
-	common.Setenv(common.EnvLAMBDA)
+	common.Setenv(common.EnvHTTP)
 	go common.RunWithHTTPHandler(api.NewServer(), "")
 
 	quit := make(chan os.Signal)

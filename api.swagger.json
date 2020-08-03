@@ -401,7 +401,7 @@
         }
       }
     },
-    "/assets/{ext}/resource/upload": {
+    "/resources/upload/{ext}": {
       "get": {
         "tags": [
           "asset"
@@ -463,7 +463,7 @@
         }
       }
     },
-    "/assets/{resource_name}/resource": {
+    "/resources/path/{resource_name}": {
       "get": {
         "tags": [
           "asset"
