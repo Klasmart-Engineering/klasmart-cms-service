@@ -56,11 +56,12 @@ func TestTagModel_Query(t *testing.T) {
 	for _,item:=range resut{
 		fmt.Println(*item)
 	}
+	fmt.Println(len(resut))
 }
 func TestTagModel_Page(t *testing.T) {
 	log.Info(context.Background(),"sfsfa")
 	total,resut,err:=GetTagModel().Page(context.Background(),da.TagCondition{
-		Name:     "",
+		Name:     "2",
 		PageSize: 5,
 		Page:     0,
 		DeleteAt: 0,

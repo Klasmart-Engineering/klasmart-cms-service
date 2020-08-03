@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -38,9 +39,11 @@ func GetTagModel() ITagModel {
 func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string, error) {
 	old, err := t.GetByName(ctx, tag.Name)
 	if err != nil && err != constant.ErrRecordNotFound {
+		log.Error(ctx,"get tag by name",log.Err(err),log.String("tagName",tag.Name))
 		return "", err
 	}
 	if old != nil {
+		log.Error(ctx,"tag name duplicate record",log.String("tagName",tag.Name))
 		return "", constant.ErrDuplicateRecord
 	}
 	in := entity.Tag{
@@ -51,16 +54,18 @@ func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string, erro
 		UpdatedAt: 0,
 		DeletedAt: 0,
 	}
-	err=da.GetTagDA().Insert(ctx,in)
-	err = utils.ConvertDynamodbError(err)
+	err =da.GetTagDA().Insert(ctx,in)
+	if err!=nil{
+		log.Error(ctx,"insert tag error",log.Err(err),log.Any("tagInfo",in))
+		return "",utils.ConvertDynamodbError(err)
+	}
+
 	return in.ID, err
 }
 
 func (t tagModel) Update(ctx context.Context, view *entity.TagUpdateView) error {
-	old, err := t.GetByName(ctx, view.Name)
-	if err!=nil&&err != constant.ErrRecordNotFound{
-		return err
-	}
+	old, _ := t.GetByName(ctx, view.Name)
+
 	if old!=nil&&old.ID != view.ID{
 		return constant.ErrDuplicateRecord
 	}
@@ -70,7 +75,7 @@ func (t tagModel) Update(ctx context.Context, view *entity.TagUpdateView) error 
 		Name:      view.Name,
 		States:    view.States,
 	}
-	err=da.GetTagDA().Update(ctx,tag)
+	err:=da.GetTagDA().Update(ctx,tag)
 
 	return utils.ConvertDynamodbError(err)
 }

@@ -30,6 +30,8 @@ type tagDA struct{}
 
 type TagCondition struct {
 	Name     string
+
+	StartID string
 	PageSize int64
 	Page     int64
 
@@ -94,6 +96,7 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) (int64,[]*entity.
 	if err != nil {
 		return 0,nil, err
 	}
+
 	params := &dynamodb.ScanInput{
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -101,7 +104,11 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) (int64,[]*entity.
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(constant.TableNameTag),
 		Limit:                     aws.Int64(condition.PageSize),
-		ReturnConsumedCapacity:    aws.String("TOTAL"),
+		//ExclusiveStartKey: map[string]*dynamodb.AttributeValue{
+		//	"id":&dynamodb.AttributeValue{
+		//		S: aws.String(condition.StartID),
+		//	},
+		//},
 		//ReturnConsumedCapacity:    nil,
 		//ScanFilter:                nil,
 		//Segment:                   nil,
@@ -110,12 +117,12 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) (int64,[]*entity.
 	}
 	result := make([]*entity.Tag, 0)
 
-	var pageNum int64
+	var pageIndex int64
 	var count int64
 	err = dbclient.GetClient().ScanPages(params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
 		count += aws.Int64Value(page.Count)
 
-		if pageNum == condition.Page {
+		if pageIndex == condition.Page {
 			for _, i := range page.Items {
 				tagItem := &entity.Tag{}
 				err = dynamodbattribute.UnmarshalMap(i, &tagItem)
@@ -129,7 +136,7 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) (int64,[]*entity.
 		if lastPage {
 			return false
 		}
-		pageNum++
+
 		return true
 	})
 	return count,result, err

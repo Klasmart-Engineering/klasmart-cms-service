@@ -18,3 +18,8 @@ const (
 	Enable = 1
 	Disabled = 2
 )
+
+const (
+	DefaultPageSize = 10
+	DefaultPageIndex = 0
+)
