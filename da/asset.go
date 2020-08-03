@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -16,22 +17,19 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type SearchCategoryCondition struct {
-	IDs   []string `json:"ids"`
-	Names []string `json:"names"`
+var(
+	ErrRecordNotFound = errors.New("record not found")
+	ErrPageOutOfRange = errors.New("page out of range")
+)
 
-	PageSize int64  `json:"page_size"`
-	Page     int64  `json:"page"`
-	OrderBy  string `json:"order_by"`
-}
 
 type IAssetDA interface {
 	CreateAsset(ctx context.Context, data entity.AssetObject) (string, error)
 	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
 	DeleteAsset(ctx context.Context, id string) error
 
-	GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error)
-	SearchAssets(ctx context.Context, condition *SearchAssetCondition) ([]*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
+	SearchAssets(ctx context.Context, condition *SearchAssetCondition) (int64, []*entity.AssetObject, error)
 }
 type UpdateParams struct {
 	keys   []string
@@ -39,7 +37,7 @@ type UpdateParams struct {
 }
 
 func (u *UpdateParams) key() string {
-	return strings.Join(u.keys, ",")
+	return "set " + strings.Join(u.keys, ",")
 }
 
 type DynamoDBAssetDA struct{}
@@ -48,7 +46,7 @@ func (DynamoDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject)
 	now := time.Now()
 	data.CreatedAt = &now
 	data.UpdatedAt = &now
-	data.Id = utils.NewId()
+	data.ID = utils.NewID()
 	m, err := dynamodbattribute.MarshalMap(data)
 	if err != nil {
 		log.Error(ctx, "marshal asset failed", log.Err(err))
@@ -63,13 +61,13 @@ func (DynamoDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject)
 		log.Error(ctx, "insert asset failed", log.Err(err), log.Any("data", data))
 		return "", err
 	}
-	return data.Id, nil
+	return data.ID, nil
 }
 
 func (am *DynamoDBAssetDA) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error {
 	av := make(map[string]*dynamodb.AttributeValue)
 	av["id"] = &dynamodb.AttributeValue{
-		S: aws.String(data.Id),
+		S:    aws.String(data.ID),
 	}
 
 	params, err := am.buildUpdateParams(ctx, data)
@@ -107,7 +105,7 @@ func (DynamoDBAssetDA) DeleteAsset(ctx context.Context, id string) error {
 	return nil
 }
 
-func (DynamoDBAssetDA) GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error) {
+func (DynamoDBAssetDA) GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error) {
 	av := make(map[string]*dynamodb.AttributeValue)
 	av["id"] = &dynamodb.AttributeValue{
 		S: aws.String(id),
@@ -121,6 +119,11 @@ func (DynamoDBAssetDA) GetAssetById(ctx context.Context, id string) (*entity.Ass
 		return nil, err
 	}
 	asset := new(entity.AssetObject)
+
+	if len(result.Item) < 1 {
+		return nil, ErrRecordNotFound
+	}
+
 	err = dynamodbattribute.UnmarshalMap(result.Item, &asset)
 	if err != nil {
 		return nil, err
@@ -128,43 +131,41 @@ func (DynamoDBAssetDA) GetAssetById(ctx context.Context, id string) (*entity.Ass
 	return asset, nil
 }
 
-func (DynamoDBAssetDA) SearchAssets(ctx context.Context, condition *SearchAssetCondition) ([]*entity.AssetObject, error) {
+func (DynamoDBAssetDA) SearchAssets(ctx context.Context, condition *SearchAssetCondition) (int64, []*entity.AssetObject, error) {
 	builder := expression.NewBuilder()
 	builder = builder.WithFilter(condition.getConditions())
 	expr, err := builder.Build()
 	if err != nil {
 		log.Error(ctx, "Got error building expression", log.Err(err))
-		return nil, err
+		return 0, nil, err
 	}
 
+	if condition.PageSize < 1 {
+		condition.PageSize = 10000000
+	}
 	params := &dynamodb.ScanInput{
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(entity.AssetObject{}.TableName()),
-		//Limit:                     aws.Int64(condition.PageSize),
-		//Segment:                   aws.Int64(condition.Page),
+		Limit:						aws.Int64(int64(condition.PageSize)),
 	}
-	result, err := client.GetClient().Scan(params)
+	//result, err := client.GetClient().Scan(params)
+	result, err := scanPages(params, condition.Page)
 	if err != nil {
 		log.Error(ctx, "Query API call failed", log.Err(err))
-		return nil, err
+		return 0, nil, err
 	}
 
-	ret := make([]*entity.AssetObject, 0)
-	for _, i := range result.Items {
-		item := new(entity.AssetObject)
-
-		err = dynamodbattribute.UnmarshalMap(i, item)
-		if err != nil {
-			log.Error(ctx, "Got error unmarshalling", log.Err(err))
-			return nil, err
-		}
-		ret = append(ret, item)
+	var ret []*entity.AssetObject
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &ret)
+	if err != nil {
+		log.Error(ctx, "Got error unmarshalling:", log.Err(err))
+		return 0, nil, err
 	}
 
-	return ret, nil
+	return *result.Count, ret, nil
 }
 
 func (am *DynamoDBAssetDA) buildUpdateParams(ctx context.Context, data entity.UpdateAssetRequest) (*UpdateParams, error) {
@@ -172,36 +173,36 @@ func (am *DynamoDBAssetDA) buildUpdateParams(ctx context.Context, data entity.Up
 	updateValues := make(map[string]*dynamodb.AttributeValue)
 
 	if data.Category != "" {
-		updateStr = append(updateStr, "set category = :c")
+		updateStr = append(updateStr, "category = :c")
 		updateValues[":c"] = &dynamodb.AttributeValue{
 			S: aws.String(data.Category),
 		}
 	}
 	if data.Name != "" {
-		updateStr = append(updateStr, "set name = :n")
+		updateStr = append(updateStr, "name = :n")
 		updateValues[":n"] = &dynamodb.AttributeValue{
 			S: aws.String(data.Name),
 		}
 	}
 
-	if data.URL != "" {
-		updateStr = append(updateStr, "set name = :u")
+	if data.ResourceName != "" {
+		updateStr = append(updateStr, "name = :u")
 		updateValues[":u"] = &dynamodb.AttributeValue{
-			S: aws.String(data.URL),
+			S: aws.String(data.ResourceName),
 		}
 	}
 
 	if data.Tag != nil {
-		updateStr = append(updateStr, "set tag = :t")
+		updateStr = append(updateStr, "tag = :t")
 		updateValues[":t"] = &dynamodb.AttributeValue{
 			SS: aws.StringSlice(data.Tag),
 		}
 	}
 
 	//TODO:Updated_at
-	updateStr = append(updateStr, "set updated_at = :ud")
+	updateStr = append(updateStr, "updated_at = :ud")
 	updateValues[":ud"] = &dynamodb.AttributeValue{
-		S: aws.String(time.Now().String()),
+		S:    aws.String(time.Now().Format("2006-01-02T15:04:05Z07:00")),
 	}
 	return &UpdateParams{
 		keys:   updateStr,
@@ -210,8 +211,8 @@ func (am *DynamoDBAssetDA) buildUpdateParams(ctx context.Context, data entity.Up
 }
 
 type SearchAssetCondition struct {
-	Id       string `json:"id"`
-	Name     string `json:"name"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
 	Category string `json:"category"`
 	SizeMin  int    `json:"size_min"`
 	SizeMax  int    `json:"size_max"`
@@ -224,8 +225,8 @@ type SearchAssetCondition struct {
 
 func (s *SearchAssetCondition) getConditions() expression.ConditionBuilder {
 	conditions := make([]expression.ConditionBuilder, 0)
-	if s.Id != "" {
-		condition := expression.Name("id").Equal(expression.Value(s.Id))
+	if s.ID != "" {
+		condition := expression.Name("id").Equal(expression.Value(s.ID))
 		conditions = append(conditions, condition)
 	}
 	if s.Name != "" {
@@ -260,6 +261,27 @@ func (s *SearchAssetCondition) getConditions() expression.ConditionBuilder {
 	}
 
 	return conditions[0]
+}
+
+func scanPages(input *dynamodb.ScanInput, pageIndex int) (*dynamodb.ScanOutput, error){
+	currentPage := 0
+	var result *dynamodb.ScanOutput
+	err := client.GetClient().ScanPages(input, func(output *dynamodb.ScanOutput, b bool) bool {
+		if !b {
+			return false
+		}
+		if currentPage == pageIndex {
+			result = output
+		}
+		currentPage ++
+
+		return currentPage < pageIndex
+	})
+	if err != nil{
+		return nil, err
+	}
+
+	return result, nil
 }
 
 var _assetDA IAssetDA

@@ -25,7 +25,7 @@ type CategoryModel struct{}
 // Repeated insertion with the same primary key will overwrite non-primary key data
 func (cm *CategoryModel) CreateCategory(ctx context.Context, data entity.CategoryObject) (*entity.CategoryObject, error) {
 	now := time.Now().Unix()
-	data.ID = utils.NewId()
+	data.ID = utils.NewID()
 	data.CreatedAt = now
 	data.UpdatedAt = now
 	return da.GetCategoryDA().CreateCategory(ctx, data)

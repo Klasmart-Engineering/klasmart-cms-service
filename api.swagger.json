@@ -401,7 +401,7 @@
         }
       }
     },
-    "/assets/{ext}/upload": {
+    "/resources/upload/{ext}": {
       "get": {
         "tags": [
           "asset"
@@ -419,6 +419,68 @@
             "name": "ext",
             "in": "path",
             "description": "File Extension",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "category list",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "upload asset path",
+                      "example": "https://badanamu.com/upload/bada.mp3"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/resources/path/{resource_name}": {
+      "get": {
+        "tags": [
+          "asset"
+        ],
+        "summary": "GetAssetResourcePath",
+        "description": "GetAssetResourcePath",
+        "operationId": "getAssetResourcePath",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "description": "File path",
             "schema": {
               "type": "string"
             },
@@ -1145,9 +1207,9 @@
               "$ref": "#/components/schemas/Tag"
             }
           },
-          "url": {
+          "resource_name": {
             "type": "string",
-            "example": "https://badanamu.com/song.mp3"
+            "example": "song.mp3"
           }
         }
       },

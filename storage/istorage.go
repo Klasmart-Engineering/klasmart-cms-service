@@ -27,7 +27,8 @@ type IStorage interface {
 	CloseStorage(ctx context.Context)
 	UploadFile(ctx context.Context, partition string, filePath string, fileStream multipart.File) error
 	DownloadFile(ctx context.Context, partition string, filePath string) (io.Reader, error)
-	ExitsFile(ctx context.Context, partition string, filePath string) bool
+	ExitsFile(ctx context.Context, partition string, filePath string) (int64, bool)
+
 	GetFilePath(ctx context.Context, partition string) string
 	GetFileTempPath(ctx context.Context, partition string, filePath string) (string, error)
 
