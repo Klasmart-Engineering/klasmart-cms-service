@@ -15,18 +15,18 @@ import (
 )
 
 func InitEnv() {
-	os.Setenv("cloud_env", "aws")
-	os.Setenv("storage_bucket", "kidsloop-global-resources-dev")
-	os.Setenv("storage_region", "ap-northeast-2")
-	os.Setenv("secret_id", "AKIAXGKUAYT2P2IJ2KX7")
-	os.Setenv("secret_key", "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")
-	os.Setenv("storage_accelerate", "true")
-	os.Setenv("cdn_open", "false")
+	//os.Setenv("cloud_env", "aws")
+	//os.Setenv("storage_bucket", "kidsloop-global-resources-dev")
+	//os.Setenv("storage_region", "ap-northeast-2")
+	//os.Setenv("secret_id", "AKIAXGKUAYT2P2IJ2KX7")
+	//os.Setenv("secret_key", "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")
+	//os.Setenv("storage_accelerate", "true")
+	//os.Setenv("cdn_open", "false")
 }
 
 func TestCreateTable(t *testing.T) {
-	_, err := client.GetClient().DeleteTable(&dynamodb.DeleteTableInput{TableName: aws.String("assets")})
-	t.Log(err)
+	//_, err := client.GetClient().DeleteTable(&dynamodb.DeleteTableInput{TableName: aws.String("assets")})
+	//t.Log(err)
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
@@ -48,7 +48,7 @@ func TestCreateTable(t *testing.T) {
 		TableName: aws.String("assets"),
 	}
 
-	_, err = client.GetClient().CreateTable(input)
+	_, err := client.GetClient().CreateTable(input)
 	if err != nil {
 		fmt.Println("Got error calling CreateTable:")
 		fmt.Println(err.Error())
@@ -67,9 +67,14 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 	InitEnv()
 	config.LoadEnvConfig()
 
+	out, err := client.GetClient().ListTables(&dynamodb.ListTablesInput{})
+	if err != nil {
+		panic(err)
+	}
+	t.Logf("%#v", out)
+
 	assetModel := GetAssetModel()
 	id, err := assetModel.CreateAsset(context.Background(), entity.AssetObject{
-
 		Name:     "Hello.mp3",
 		Category: "HelloCategory",
 		Size:     180,
