@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -182,4 +183,21 @@ func TestAssetModel_GetAssetResourcePath(t *testing.T){
 		panic(err)
 	}
 	t.Logf("path: %#v", path)
+}
+
+func TestGetAssetJSON(t *testing.T){
+	obj := entity.AssetObject{
+
+		Name:     "Hello.mp3",
+		Category: "HelloCategory",
+		Size:     180,
+		Tags:     []string{"Hello"},
+		//URL:      "http://www.baidu.com",
+		Uploader: "123",
+	}
+	data, err := json.Marshal(obj)
+	if err != nil{
+		panic(err)
+	}
+	t.Log(string(data))
 }

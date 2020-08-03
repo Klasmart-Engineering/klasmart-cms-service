@@ -6,7 +6,7 @@ type AssetObject struct {
 	ID           string   `json:"id" dynamodbav:"id"`
 	Name         string   `json:"name" dynamodbav:"name"`
 	Category     string   `json:"category" dynamodbav:"category"`
-	Size         int      `json:"size" dynamodbav:"size"`
+	Size         int64      `json:"size" dynamodbav:"size"`
 	Tags         []string `json:"tags" dynamodbav:"tags"`
 	ResourceName string   `json:"resource_name" dynamodbav:"resource_name"`
 
@@ -23,6 +23,7 @@ type UpdateAssetRequest struct {
 	Name     string   `json:"name" dynamodbav:"name"`
 	Category string   `json:"category" dynamodbav:"category"`
 	Tag      []string `json:"tag" dynamodbav:"tag"`
+	Size 	 int64	  `json:"size"`
 	ResourceName     string   `json:"resource_name" dynamodbav:"resource_name"`
 }
 

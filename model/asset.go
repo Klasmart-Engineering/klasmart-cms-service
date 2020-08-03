@@ -38,20 +38,27 @@ type AssetModel struct{}
 type AssetEntity struct {
 	Category     string
 	Tag          []string
-	ResourceName string
+}
+
+func (am AssetModel) checkResource(ctx context.Context, url string, must bool)(int64, error){
+	if must && url == "" {
+		return -1, ErrRequestItemIsNil
+	}
+	if url != "" {
+		size, exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, url)
+		if !exist {
+			return -1, ErrNoSuchURL
+		}
+		return size, nil
+	}
+	return 0, nil
 }
 
 func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must bool) error {
-	if must && (entity.ResourceName == "" || entity.Category == "") {
+	if must && entity.Category == "" {
 		return ErrRequestItemIsNil
 	}
 
-	if entity.ResourceName != "" {
-		exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, entity.ResourceName)
-		if !exist {
-			return ErrNoSuchURL
-		}
-	}
 	//TODO:Check tag & category entity
 	_, err := GetCategoryModel().GetCategoryById(ctx, entity.Category)
 	if err != nil{
@@ -66,12 +73,18 @@ func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) 
 	err := am.checkEntity(ctx, AssetEntity{
 		Category:     data.Category,
 		Tag:          data.Tags,
-		ResourceName: data.ResourceName,
 	}, true)
-
 	if err != nil {
 		return "", err
 	}
+
+	data.Size = 0
+	size, err := am.checkResource(ctx, data.ResourceName, true)
+	if err != nil {
+		return "", err
+	}
+	data.Size = size
+
 	return da.GetAssetDA().CreateAsset(ctx, data)
 }
 
@@ -79,12 +92,20 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	err := am.checkEntity(ctx, AssetEntity{
 		Category:     data.Category,
 		Tag:          data.Tag,
-		ResourceName: data.ResourceName,
 	}, false)
-
 	if err != nil{
 		return err
 	}
+
+	data.Size = 0
+	if data.ResourceName != ""{
+		size, err := am.checkResource(ctx, data.ResourceName, true)
+		if err != nil {
+			return err
+		}
+		data.Size = size
+	}
+
 	return da.GetAssetDA().UpdateAsset(ctx, data)
 }
 
