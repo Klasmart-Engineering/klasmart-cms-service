@@ -131,7 +131,7 @@ func (c *CategoryDA) PageCategories(ctx context.Context, condition *entity.Searc
 
 	expr, err := condition.ToExpr()
 	if err != nil {
-		log.Error(ctx, "SearchCategories build expression failed", log.Err(err))
+		log.Error(ctx, "PageCategories build expression failed", log.Err(err))
 		return 0, nil, err
 	}
 
@@ -167,7 +167,7 @@ func (c *CategoryDA) PageCategories(ctx context.Context, condition *entity.Searc
 	})
 
 	if err != nil {
-		log.Error(ctx, "PageCategories unmarshal failed", log.Err(err))
+		log.Error(ctx, "PageCategories failed", log.Err(err))
 	}
 	return count, categories, nil
 }

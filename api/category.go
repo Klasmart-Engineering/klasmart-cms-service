@@ -77,14 +77,14 @@ func (s *Server) searchCategories(c *gin.Context) {
 
 func buildCategorySearchCondition(c *gin.Context) *entity.SearchCategoryCondition {
 	ids := c.QueryArray("ids")
-	name := c.Query("name")
+	names := c.QueryArray("names")
 	pageSize, _ := strconv.Atoi(c.Query("page_size"))
 	page, _ := strconv.Atoi(c.Query("page"))
 
 	// TODO: get ids names
 	data := &entity.SearchCategoryCondition{
 		IDs:      ids,
-		Names:    []string{name},
+		Names:    names,
 		PageSize: int64(pageSize),
 		Page:     int64(page),
 		//OrderBy: "",

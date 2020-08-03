@@ -79,6 +79,9 @@ func (s *SearchCategoryCondition) ToExpr() (expression.Expression, error) {
 		condition = condition.And(expression.Name("name").In(exprValues[0], exprValues...))
 	}
 
+	if s.PageSize == 0 {
+		s.PageSize = 10
+	}
 	expr, err := expression.NewBuilder().WithFilter(condition).Build()
 	return expr, err
 }
