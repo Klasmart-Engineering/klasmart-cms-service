@@ -20,15 +20,17 @@ func (s Server) registeRoute() {
 		c.String(http.StatusOK, "pong")
 	})
 
-	v1 := s.engine.Group("/v1/assets")
+	assets := s.engine.Group("/v1/assets")
 	{
-		v1.GET("/", s.searchAssets)
-		v1.POST("/", s.createAsset)
-		v1.GET("/:id", s.getAssetByID)
-		v1.PUT("/:id", s.updateAsset)
-		v1.DELETE("/:id", s.deleteAsset)
-		v1.GET("/:ext/resource/upload", s.getAssetUploadPath)
-		v1.GET("/:resource_name/resource", s.getAssetResourcePath)
-
+		assets.GET("/", s.searchAssets)
+		assets.POST("/", s.createAsset)
+		assets.GET("/:id", s.getAssetByID)
+		assets.PUT("/:id", s.updateAsset)
+		assets.DELETE("/:id", s.deleteAsset)
+	}
+	resource := s.engine.Group("/v1/resources")
+	{
+		resource.GET("/upload/:ext", s.getAssetUploadPath)
+		resource.GET("/path/:resource_name", s.getAssetResourcePath)
 	}
 }

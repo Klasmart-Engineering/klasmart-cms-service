@@ -73,7 +73,7 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 		Category: "HelloCategory",
 		Size:     180,
 		Tags:     []string{"Hello"},
-		URL:      "http://www.baidu.com",
+		//URL:      "http://www.baidu.com",
 		Uploader: "123",
 	})
 	if err != nil {
