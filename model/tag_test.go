@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -57,16 +58,19 @@ func TestTagModel_Query(t *testing.T) {
 	}
 }
 func TestTagModel_Page(t *testing.T) {
-	resut,err:=GetTagModel().Page(context.Background(),da.TagCondition{
+	log.Info(context.Background(),"sfsfa")
+	total,resut,err:=GetTagModel().Page(context.Background(),da.TagCondition{
 		Name:     "",
-		PageSize: 0,
-		Page:     1,
+		PageSize: 5,
+		Page:     0,
 		DeleteAt: 0,
 	})
 	if err!=nil{
 		fmt.Println(err)
 		return
 	}
+
+	fmt.Println("total:",total)
 	for _,item:=range resut{
 		fmt.Println(*item)
 	}

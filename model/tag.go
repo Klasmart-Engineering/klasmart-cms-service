@@ -18,7 +18,7 @@ type ITagModel interface {
 	GetByIDs(ctx context.Context,ids []string) ([]*entity.TagView, error)
 	GetByName(ctx context.Context, name string) (*entity.TagView, error)
 	Delete(ctx context.Context,id string) error
-	Page(ctx context.Context,condition da.TagCondition)([]*entity.TagView, error)
+	Page(ctx context.Context,condition da.TagCondition)(int64,[]*entity.TagView, error)
 }
 
 type tagModel struct{}
@@ -153,10 +153,11 @@ func (t tagModel) Delete(ctx context.Context,id string) error{
 	return err
 }
 
-func (t tagModel)Page(ctx context.Context,condition da.TagCondition)([]*entity.TagView, error){
-	tags,err:=da.GetTagDA().Page(ctx,condition)
+func (t tagModel)Page(ctx context.Context,condition da.TagCondition)(int64,[]*entity.TagView, error){
+	total,tags,err:=da.GetTagDA().Page(ctx,condition)
+	err = utils.ConvertDynamodbError(err)
 	if err!=nil{
-		return nil,err
+		return 0,nil,err
 	}
 	result :=make([]*entity.TagView,len(tags))
 	for i,item:=range tags{
@@ -167,6 +168,6 @@ func (t tagModel)Page(ctx context.Context,condition da.TagCondition)([]*entity.T
 			CreateAt: item.CreatedAt,
 		}
 	}
-	return result,nil
+	return total,result,nil
 }
 

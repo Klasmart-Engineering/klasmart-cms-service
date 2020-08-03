@@ -3,9 +3,11 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
+	"strconv"
 )
 
 func (s Server) addTag(c *gin.Context){
@@ -84,5 +86,31 @@ func (s Server) getTagByID(c *gin.Context){
 }
 
 func (s Server) queryTag(c *gin.Context){
+	condition:=da.TagCondition{}
+	pageSize, err := strconv.ParseInt(c.Query("page_size"), 10, 64)
+	if err!=nil{
 
+	}
+	pageIndex, err := strconv.ParseInt(c.Query("page_size"), 10, 64)
+	if err!=nil{
+
+	}
+	condition.PageSize = pageSize
+	condition.Page = pageIndex
+	condition.Name = c.Query("name")
+
+	total,result,err:=model.GetTagModel().Page(c.Request.Context(),condition)
+	status:=http.StatusOK
+	if err!=nil{
+		status = http.StatusInternalServerError
+		if err == constant.ErrRecordNotFound{
+			status = http.StatusNotFound
+		}
+		c.JSON(status,err.Error())
+		return
+	}
+	c.JSON(status,gin.H{
+		"total":total,
+		"data":result,
+	})
 }

@@ -2,7 +2,6 @@ package da
 
 import (
 	"context"
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -24,7 +23,7 @@ type ITagDA interface {
 	GetByID(ctx context.Context, id string) (*entity.Tag, error)
 	GetByIDs(ctx context.Context,ids []string)([]*entity.Tag,error)
 	Delete(ctx context.Context, id string) error
-	Page(ctx context.Context, condition TagCondition) ([]*entity.Tag, error)
+	Page(ctx context.Context, condition TagCondition) (int64,[]*entity.Tag, error)
 }
 
 type tagDA struct{}
@@ -65,7 +64,7 @@ func (tagDA) Query(ctx context.Context, condition TagCondition) ([]*entity.Tag, 
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(constant.TableNameTag),
 		//Limit:                     nil,
-		//ReturnConsumedCapacity:    nil,
+		//ReturnConsumedCapacity:    aws.String("TOTAL"),
 		//ScanFilter:                nil,
 		//Segment:                   nil,
 		//Select:                    nil,
@@ -90,10 +89,10 @@ func (tagDA) Query(ctx context.Context, condition TagCondition) ([]*entity.Tag, 
 	return result, nil
 }
 
-func (tagDA) Page(ctx context.Context, condition TagCondition) ([]*entity.Tag, error) {
+func (tagDA) Page(ctx context.Context, condition TagCondition) (int64,[]*entity.Tag, error) {
 	expr, err := condition.GetCondition()
 	if err != nil {
-		return nil, err
+		return 0,nil, err
 	}
 	params := &dynamodb.ScanInput{
 		ExpressionAttributeNames:  expr.Names(),
@@ -101,7 +100,8 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) ([]*entity.Tag, e
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(constant.TableNameTag),
-		Limit:                     aws.Int64(2),
+		Limit:                     aws.Int64(condition.PageSize),
+		ReturnConsumedCapacity:    aws.String("TOTAL"),
 		//ReturnConsumedCapacity:    nil,
 		//ScanFilter:                nil,
 		//Segment:                   nil,
@@ -111,7 +111,10 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) ([]*entity.Tag, e
 	result := make([]*entity.Tag, 0)
 
 	var pageNum int64
+	var count int64
 	err = dbclient.GetClient().ScanPages(params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
+		count += aws.Int64Value(page.Count)
+
 		if pageNum == condition.Page {
 			for _, i := range page.Items {
 				tagItem := &entity.Tag{}
@@ -122,16 +125,14 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) ([]*entity.Tag, e
 				result = append(result, tagItem)
 			}
 			return false
-			fmt.Println(page.Items)
 		}
-		fmt.Println(page.Items)
 		if lastPage {
 			return false
 		}
 		pageNum++
 		return true
 	})
-	return result, err
+	return count,result, err
 }
 
 func (tagDA) Update(ctx context.Context, tag entity.Tag) error {
@@ -206,7 +207,6 @@ func (tagDA)GetByIDs(ctx context.Context,ids []string)([]*entity.Tag,error){
 	 attributes := map[string]*dynamodb.KeysAndAttributes{
 		constant.TableNameTag:{
 			Keys:keys,
-
 		},
 	}
 	input := &dynamodb.BatchGetItemInput{

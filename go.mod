@@ -5,10 +5,10 @@ go 1.14
 require (
 	github.com/aws/aws-sdk-go v1.33.12
 	github.com/gin-gonic/gin v1.5.0
-	github.com/google/uuid v1.1.1
-	github.com/prometheus/common v0.10.0
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0
-	gitlab.badanamu.com.cn/calmisland/common-log v0.1.1
-	go.uber.org/zap v1.15.0
+	gitlab.badanamu.com.cn/calmisland/common-log v0.1.3
+	gopkg.in/yaml.v2 v2.2.4 // indirect
 )
