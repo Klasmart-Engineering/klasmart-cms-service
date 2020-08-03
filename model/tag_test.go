@@ -5,15 +5,27 @@ import (
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"testing"
 )
 func TestTagModel_Add(t *testing.T) {
-	id,err:=GetTagModel().Add(context.Background(),&entity.TagAddView{Name: "history6"})
+	id,err:=GetTagModel().Add(context.Background(),&entity.TagAddView{Name: "history"})
 	if err!=nil{
 		fmt.Println(err)
 		return
 	}
 	fmt.Println(id)
+}
+func TestTagModel_BatchAdd(t *testing.T) {
+	for i:=0;i<10;i++{
+		name:=fmt.Sprintf("tag-%s",utils.NewId())
+		id,err:=GetTagModel().Add(context.Background(),&entity.TagAddView{Name: name})
+		if err!=nil{
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(id)
+	}
 }
 
 func TestTagModel_Update(t *testing.T) {
@@ -48,7 +60,7 @@ func TestTagModel_Page(t *testing.T) {
 	resut,err:=GetTagModel().Page(context.Background(),da.TagCondition{
 		Name:     "",
 		PageSize: 0,
-		Page:     0,
+		Page:     1,
 		DeleteAt: 0,
 	})
 	if err!=nil{
@@ -60,3 +72,11 @@ func TestTagModel_Page(t *testing.T) {
 	}
 }
 
+func TestTagModel_GetByIDs(t *testing.T) {
+	result,_:=GetTagModel().GetByIDs(context.Background(),[]string{
+		"6235f3c66cb63d43","351d1c9472be37e3",
+	})
+	for _,item:=range result{
+		fmt.Println(item)
+	}
+}

@@ -15,6 +15,7 @@ type ITagModel interface {
 	Update(ctx context.Context, tag *entity.TagUpdateView) error
 	Query(ctx context.Context, condition da.TagCondition) ([]*entity.TagView, error)
 	GetByID(ctx context.Context, id string) (*entity.TagView, error)
+	GetByIDs(ctx context.Context,ids []string) ([]*entity.TagView, error)
 	GetByName(ctx context.Context, name string) (*entity.TagView, error)
 	Delete(ctx context.Context,id string) error
 	Page(ctx context.Context,condition da.TagCondition)([]*entity.TagView, error)
@@ -104,6 +105,23 @@ func (t tagModel) GetByID(ctx context.Context, id string) (*entity.TagView, erro
 	}
 	err = utils.ConvertDynamodbError(err)
 	return tagView, err
+}
+
+func (t tagModel) GetByIDs(ctx context.Context,ids []string) ([]*entity.TagView, error){
+	tags,err:=da.GetTagDA().GetByIDs(ctx,ids)
+	if err!=nil{
+		return nil,err
+	}
+	result :=make([]*entity.TagView,len(tags))
+	for i,item:=range tags{
+		result[i] = &entity.TagView{
+			ID:       item.ID,
+			Name:     item.Name,
+			States:   item.States,
+			CreateAt: item.CreatedAt,
+		}
+	}
+	return result,nil
 }
 
 func (t tagModel) GetByName(ctx context.Context, name string) (*entity.TagView, error) {
