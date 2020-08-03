@@ -11,7 +11,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"os"
 	"testing"
-
 )
 
 func InitEnv() {
@@ -88,7 +87,7 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 	t.Log(id)
 
 	asset, err := assetModel.GetAssetByID(context.Background(), id)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("Asset: %#v", asset)
@@ -100,7 +99,7 @@ func TestAssetModel_GetAsset(t *testing.T) {
 
 	assetModel := GetAssetModel()
 	asset, err := assetModel.GetAssetByID(context.Background(), "269fdbaba6d4f1b4")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("Asset: %#v", asset)
@@ -112,18 +111,17 @@ func TestAssetModel_SearchAssets(t *testing.T) {
 
 	assetModel := GetAssetModel()
 	count, res, err := assetModel.SearchAssets(context.Background(), &entity.SearchAssetCondition{
-		ID:        "5f22462699878cfe177a4101",
-		Name:      "Hello.mp3",
+		ID:   "5f22462699878cfe177a4101",
+		Name: "Hello.mp3",
 	})
 	if err != nil {
 		panic(err)
 	}
 	t.Log(count)
-	for i := range res{
+	for i := range res {
 		t.Logf("%#v", res[i])
 	}
 }
-
 
 func TestAssetModel_UpdateAssets(t *testing.T) {
 	InitEnv()
@@ -131,21 +129,19 @@ func TestAssetModel_UpdateAssets(t *testing.T) {
 
 	assetModel := GetAssetModel()
 	err := assetModel.UpdateAsset(context.Background(), entity.UpdateAssetRequest{
-		ID:        "ea2feb2590199523",
-		Category:      "123123123aabbcc",
+		ID:       "ea2feb2590199523",
+		Category: "123123123aabbcc",
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 
 	asset, err := assetModel.GetAssetByID(context.Background(), "ea2feb2590199523")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("Asset: %#v", asset)
 }
-
-
 
 func TestAssetModel_DeleteAssets(t *testing.T) {
 	InitEnv()
@@ -153,12 +149,12 @@ func TestAssetModel_DeleteAssets(t *testing.T) {
 
 	assetModel := GetAssetModel()
 	err := assetModel.DeleteAsset(context.Background(), "ea2feb2590199523")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 
 	asset, err := assetModel.GetAssetByID(context.Background(), "ea2feb2590199523")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("Asset: %#v", asset)
@@ -171,26 +167,26 @@ func TestAssetModel_GetAssetUploadPath(t *testing.T) {
 	assetModel := GetAssetModel()
 
 	path, err := assetModel.GetAssetUploadPath(context.Background(), "jpg")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("path: %#v", path)
 }
 
-func TestAssetModel_GetAssetResourcePath(t *testing.T){
+func TestAssetModel_GetAssetResourcePath(t *testing.T) {
 	InitEnv()
 	config.LoadEnvConfig()
 
 	assetModel := GetAssetModel()
 
 	path, err := assetModel.GetAssetResourcePath(context.Background(), "5f225eeee763b300cf63cb90.jpg")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Logf("path: %#v", path)
 }
 
-func TestGetAssetJSON(t *testing.T){
+func TestGetAssetJSON(t *testing.T) {
 	obj := entity.AssetObject{
 
 		Name:     "Hello.mp3",
@@ -201,7 +197,7 @@ func TestGetAssetJSON(t *testing.T){
 		Uploader: "123",
 	}
 	data, err := json.Marshal(obj)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	t.Log(string(data))

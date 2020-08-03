@@ -33,4 +33,12 @@ func (s Server) registeRoute() {
 		resource.GET("/upload/:ext", s.getAssetUploadPath)
 		resource.GET("/path/:resource_name", s.getAssetResourcePath)
 	}
+	category := s.engine.Group("/v1/categories")
+	{
+		category.GET("/", s.searchCategories)
+		category.GET("/:id", s.getCategoryByID)
+		category.POST("/", s.createCategory)
+		category.PUT("/:id", s.updateCategory)
+		category.DELETE("/:id", s.deleteCategory)
+	}
 }
