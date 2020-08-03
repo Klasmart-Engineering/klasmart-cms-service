@@ -131,7 +131,6 @@ func (c *CategoryDA) PageCategories(ctx context.Context, condition *entity.Searc
 
 	expr, err := condition.ToExpr()
 	if err != nil {
-		//log.Get().Errorf("SearchCategories build expression failed: %v", err)
 		log.Error(ctx, "SearchCategories build expression failed", log.Err(err))
 		return 0, nil, err
 	}
