@@ -54,8 +54,8 @@ func createStorageByEnv() {
 
 	switch conf.StorageConfig.CloudEnv {
 	case "aws":
-		assertGetEnv("AWS_ACCESS_KEY_ID")
-		assertGetEnv("AWS_SECRET_ACCESS_KEY")
+		os.Setenv("AWS_ACCESS_KEY_ID", os.Getenv("secret_id"))
+		os.Setenv("AWS_SECRET_ACCESS_KEY", os.Getenv("secret_key"))
 		defaultStorage = newS3Storage(S3StorageConfig{
 			Bucket:    conf.StorageConfig.StorageBucket,
 			Region:    conf.StorageConfig.StorageRegion,
