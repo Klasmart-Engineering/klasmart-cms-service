@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
@@ -52,6 +53,11 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 		}
 	}
 	//TODO:Check tag & category entity
+	_, err := GetCategoryModel().GetCategoryById(ctx, entity.Category)
+	if err != nil{
+		log.Error(ctx, "Invalid category ", log.Err(err))
+		return err
+	}
 
 	return nil
 }

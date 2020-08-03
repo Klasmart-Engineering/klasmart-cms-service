@@ -22,14 +22,6 @@ var(
 	ErrPageOutOfRange = errors.New("page out of range")
 )
 
-type SearchCategoryCondition struct {
-	IDs   []string `json:"ids"`
-	Names []string `json:"names"`
-
-	PageSize int64  `json:"page_size"`
-	Page     int64  `json:"page"`
-	OrderBy  string `json:"order_by"`
-}
 
 type IAssetDA interface {
 	CreateAsset(ctx context.Context, data entity.AssetObject) (string, error)
