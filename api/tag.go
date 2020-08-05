@@ -8,8 +8,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -110,17 +110,8 @@ func (s Server) getTagByID(c *gin.Context) {
 }
 
 func (s Server) queryTag(c *gin.Context) {
-	condition := da.TagCondition{}
-	pageSize, err := strconv.ParseInt(c.Query("page_size"), 10, 64)
-	if err != nil {
-		condition.PageSize = constant.DefaultPageSize
-	}
-	pageIndex, err := strconv.ParseInt(c.Query("page_size"), 10, 64)
-	if err != nil {
-		condition.Page = constant.DefaultPageIndex
-	}
-	condition.PageSize = pageSize
-	condition.Page = pageIndex
+	condition := new(da.TagCondition)
+	condition.Pager = utils.GetPager(c.Query("page"),c.Query("page_size"))
 	condition.Name = c.Query("name")
 
 	total, result, err := model.GetTagModel().Page(c.Request.Context(), condition)

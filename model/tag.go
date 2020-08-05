@@ -14,12 +14,12 @@ import (
 type ITagModel interface {
 	Add(ctx context.Context, tag *entity.TagAddView) (string, error)
 	Update(ctx context.Context, tag *entity.TagUpdateView) error
-	Query(ctx context.Context, condition da.TagCondition) ([]*entity.TagView, error)
+	Query(ctx context.Context, condition *da.TagCondition) ([]*entity.TagView, error)
 	GetByID(ctx context.Context, id string) (*entity.TagView, error)
 	GetByIDs(ctx context.Context, ids []string) ([]*entity.TagView, error)
 	GetByName(ctx context.Context, name string) (*entity.TagView, error)
 	Delete(ctx context.Context, id string) error
-	Page(ctx context.Context, condition da.TagCondition) (int64, []*entity.TagView, error)
+	Page(ctx context.Context, condition *da.TagCondition) (int64, []*entity.TagView, error)
 }
 
 type tagModel struct{}
@@ -46,7 +46,7 @@ func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string, erro
 		log.Info(ctx, "tag name duplicate record", log.String("tagName", tag.Name))
 		return "", constant.ErrDuplicateRecord
 	}
-	in := entity.Tag{
+	in := &entity.Tag{
 		ID:        utils.NewId(),
 		Name:      tag.Name,
 		States:    constant.Enable,
@@ -71,7 +71,7 @@ func (t tagModel) Update(ctx context.Context, view *entity.TagUpdateView) error 
 		return constant.ErrDuplicateRecord
 	}
 
-	tag := entity.Tag{
+	tag := &entity.Tag{
 		ID:     view.ID,
 		Name:   view.Name,
 		States: view.States,
@@ -81,7 +81,7 @@ func (t tagModel) Update(ctx context.Context, view *entity.TagUpdateView) error 
 	return utils.ConvertDynamodbError(err)
 }
 
-func (t tagModel) Query(ctx context.Context, condition da.TagCondition) ([]*entity.TagView, error) {
+func (t tagModel) Query(ctx context.Context, condition *da.TagCondition) ([]*entity.TagView, error) {
 	tags, err := da.GetTagDA().Query(ctx, condition)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (t tagModel) GetByIDs(ctx context.Context, ids []string) ([]*entity.TagView
 }
 
 func (t tagModel) GetByName(ctx context.Context, name string) (*entity.TagView, error) {
-	tags, err := da.GetTagDA().Query(ctx, da.TagCondition{
+	tags, err := da.GetTagDA().Query(ctx, &da.TagCondition{
 		Name:     name,
 		DeleteAt: 0,
 	})
@@ -160,7 +160,7 @@ func (t tagModel) Delete(ctx context.Context, id string) error {
 	return err
 }
 
-func (t tagModel) Page(ctx context.Context, condition da.TagCondition) (int64, []*entity.TagView, error) {
+func (t tagModel) Page(ctx context.Context, condition *da.TagCondition) (int64, []*entity.TagView, error) {
 	total, tags, err := da.GetTagDA().Page(ctx, condition)
 	err = utils.ConvertDynamodbError(err)
 	if err != nil {

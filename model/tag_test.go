@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -43,10 +42,12 @@ func TestTagModel_Delete(t *testing.T) {
 }
 
 func TestTagModel_Query(t *testing.T) {
-	resut,err:=GetTagModel().Query(context.Background(),da.TagCondition{
+	resut,err:=GetTagModel().Query(context.Background(),&da.TagCondition{
 		Name:     "",
-		PageSize: 0,
-		Page:     0,
+		Pager: utils.Pager{
+			PageIndex: 1,
+			PageSize:  2,
+		},
 		DeleteAt: 0,
 	})
 	if err!=nil{
@@ -59,11 +60,12 @@ func TestTagModel_Query(t *testing.T) {
 	fmt.Println(len(resut))
 }
 func TestTagModel_Page(t *testing.T) {
-	log.Info(context.Background(),"sfsfa")
-	total,resut,err:=GetTagModel().Page(context.Background(),da.TagCondition{
-		Name:     "2",
-		PageSize: 5,
-		Page:     0,
+	total,resut,err:=GetTagModel().Page(context.Background(),&da.TagCondition{
+		Name:     "",
+		Pager: utils.Pager{
+			PageIndex: 1,
+			PageSize:  2,
+		},
 		DeleteAt: 0,
 	})
 	if err!=nil{
@@ -79,7 +81,7 @@ func TestTagModel_Page(t *testing.T) {
 
 func TestTagModel_GetByIDs(t *testing.T) {
 	result,_:=GetTagModel().GetByIDs(context.Background(),[]string{
-		"6235f3c66cb63d43","351d1c9472be37e3",
+		"6235f3c66cb63d43","351d1c9472be37e3233",
 	})
 	for _,item:=range result{
 		fmt.Println(item)

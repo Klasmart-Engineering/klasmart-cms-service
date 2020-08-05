@@ -21,5 +21,5 @@ const (
 
 const (
 	DefaultPageSize = 10
-	DefaultPageIndex = 0
+	DefaultPageIndex = 1
 )

@@ -1,7 +1,6 @@
 package utils
 
 import (
-
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -21,3 +20,4 @@ func ConvertDynamodbError(err error) error{
 
 	return err
 }
+

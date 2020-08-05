@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,13 +18,13 @@ import (
 )
 
 type ITagDA interface {
-	Insert(ctx context.Context, tag entity.Tag) error
-	Update(ctx context.Context, tag entity.Tag) error
-	Query(ctx context.Context, condition TagCondition) ([]*entity.Tag, error)
+	Insert(ctx context.Context, tag *entity.Tag) error
+	Update(ctx context.Context, tag *entity.Tag) error
+	Query(ctx context.Context, condition *TagCondition) ([]*entity.Tag, error)
 	GetByID(ctx context.Context, id string) (*entity.Tag, error)
 	GetByIDs(ctx context.Context, ids []string) ([]*entity.Tag, error)
 	Delete(ctx context.Context, id string) error
-	Page(ctx context.Context, condition TagCondition) (int64, []*entity.Tag, error)
+	Page(ctx context.Context, condition *TagCondition) (int64, []*entity.Tag, error)
 }
 
 type tagDA struct{}
@@ -31,14 +32,13 @@ type tagDA struct{}
 type TagCondition struct {
 	Name string
 
-	StartID  string
-	PageSize int64
-	Page     int64
+	//StartID  string
+	Pager utils.Pager
 
 	DeleteAt int
 }
 
-func (tagDA) Insert(ctx context.Context, tag entity.Tag) error {
+func (tagDA) Insert(ctx context.Context, tag *entity.Tag) error {
 	svc := dbclient.GetClient()
 	item, err := dynamodbattribute.MarshalMap(tag)
 	if err != nil {
@@ -59,7 +59,7 @@ func (tagDA) Insert(ctx context.Context, tag entity.Tag) error {
 	return nil
 }
 
-func (tagDA) Query(ctx context.Context, condition TagCondition) ([]*entity.Tag, error) {
+func (tagDA) Query(ctx context.Context, condition *TagCondition) ([]*entity.Tag, error) {
 	expr, err := condition.GetCondition()
 	if err != nil {
 		log.Error(ctx, "get tag condition error", log.Err(err), log.Any("condition", condition))
@@ -79,21 +79,21 @@ func (tagDA) Query(ctx context.Context, condition TagCondition) ([]*entity.Tag, 
 		return nil, err
 	}
 
-	result := make([]*entity.Tag, 0)
-	for _, i := range scanResult.Items {
+	result := make([]*entity.Tag, len(scanResult.Items))
+	for i, item := range scanResult.Items {
 		tagItem := &entity.Tag{}
-		err = dynamodbattribute.UnmarshalMap(i, &tagItem)
+		err = dynamodbattribute.UnmarshalMap(item, &tagItem)
 		if err != nil {
 			log.Error(ctx, "dynamodb unmarshalmap error", log.Err(err), log.Any("condition", condition))
 			return nil, err
 		}
-		result = append(result, tagItem)
+		result[i] = tagItem
 	}
 
 	return result, nil
 }
 
-func (tagDA) Page(ctx context.Context, condition TagCondition) (int64, []*entity.Tag, error) {
+func (tagDA) Page(ctx context.Context, condition *TagCondition) (int64, []*entity.Tag, error) {
 	expr, err := condition.GetCondition()
 	if err != nil {
 		log.Error(ctx, "get tag condition error", log.Err(err), log.Any("condition", condition))
@@ -106,36 +106,37 @@ func (tagDA) Page(ctx context.Context, condition TagCondition) (int64, []*entity
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(constant.TableNameTag),
-		Limit:                     aws.Int64(condition.PageSize),
+		Limit:                     aws.Int64(condition.Pager.PageSize),
 	}
 	result := make([]*entity.Tag, 0)
 
-	var pageIndex int64
+	var pageIndex int64 = 1
 	var count int64
 	err = dbclient.GetClient().ScanPages(params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
-		if pageIndex == condition.Page {
-			for _, i := range page.Items {
+		if pageIndex == condition.Pager.PageIndex {
+			for _, item := range page.Items {
 				tagItem := &entity.Tag{}
-				err = dynamodbattribute.UnmarshalMap(i, &tagItem)
+				err = dynamodbattribute.UnmarshalMap(item, tagItem)
 				if err != nil {
 					log.Error(ctx, "dynamodb unmarshalmap error", log.Err(err))
 					return false
 				}
-				result = append(result, tagItem)
+				result=append(result,tagItem)
 			}
 			count = *page.ScannedCount
-			return false
 		}
+
+		pageIndex++
 		if lastPage {
 			return false
 		}
-
 		return true
 	})
+
 	return count, result, err
 }
 
-func (tagDA) Update(ctx context.Context, tag entity.Tag) error {
+func (tagDA) Update(ctx context.Context, tag *entity.Tag) error {
 	key := make(map[string]*dynamodb.AttributeValue)
 	key["id"] = &dynamodb.AttributeValue{
 		S: aws.String(tag.ID),
@@ -223,7 +224,7 @@ func (tagDA) GetByIDs(ctx context.Context, ids []string) ([]*entity.Tag, error) 
 		return nil, err
 	}
 	tagList := result.Responses[constant.TableNameTag]
-	tags := make([]*entity.Tag, 0)
+	tags := make([]*entity.Tag, len(tagList))
 	err = dynamodbattribute.UnmarshalListOfMaps(tagList, &tags)
 	if err != nil {
 		log.Error(ctx, "dynamodb unmarshalmap error", log.Err(err))
