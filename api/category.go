@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
@@ -54,9 +55,16 @@ func (s *Server) deleteCategory(c *gin.Context) {
 
 func (s *Server) getCategoryByID(c *gin.Context) {
 	id := c.Param("id")
-	category, err := model.GetCategoryModel().GetCategoryById(c.Request.Context(), id)
-	if err != nil {
+	if id == "" {
+		c.JSON(http.StatusBadRequest, "id illegal")
+		return
+	}
+	category, err := model.GetCategoryModel().GetCategoryByID(c.Request.Context(), id)
+	if err != nil && err != constant.ErrRecordNotFound {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	} else if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 		return
 	}
 

@@ -14,7 +14,7 @@ type ICategoryModel interface {
 	CreateCategory(ctx context.Context, data entity.CategoryObject) (*entity.CategoryObject, error)
 	UpdateCategory(ctx context.Context, data entity.CategoryObject) error
 	DeleteCategory(ctx context.Context, id string) error
-	GetCategoryById(ctx context.Context, id string) (*entity.CategoryObject, error)
+	GetCategoryByID(ctx context.Context, id string) (*entity.CategoryObject, error)
 
 	SearchCategories(ctx context.Context, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
 	PageCategories(ctx context.Context, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
@@ -39,8 +39,8 @@ func (cm *CategoryModel) DeleteCategory(ctx context.Context, id string) error {
 	return da.GetCategoryDA().DeleteCategory(ctx, id)
 }
 
-func (cm *CategoryModel) GetCategoryById(ctx context.Context, id string) (*entity.CategoryObject, error) {
-	return da.GetCategoryDA().GetCategoryById(ctx, id)
+func (cm *CategoryModel) GetCategoryByID(ctx context.Context, id string) (*entity.CategoryObject, error) {
+	return da.GetCategoryDA().GetCategoryByID(ctx, id)
 }
 
 func (cm *CategoryModel) SearchCategories(ctx context.Context, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error) {

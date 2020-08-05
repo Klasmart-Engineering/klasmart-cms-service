@@ -55,7 +55,7 @@ func TestCategoryModel_DeleteCategory(t *testing.T) {
 	}{
 		{
 			name:    "delete category",
-			args:    args{context.Background(), "id_test1"},
+			args:    args{context.Background(), "ooooooooooooo"},
 			wantErr: false,
 		},
 	}
@@ -90,13 +90,13 @@ func TestCategoryModel_GetCategoryById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cm := &CategoryModel{}
-			got, err := cm.GetCategoryById(tt.args.ctx, tt.args.id)
+			got, err := cm.GetCategoryByID(tt.args.ctx, tt.args.id)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetCategoryById() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetCategoryByID() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			//if !reflect.DeepEqual(got, tt.want) {
-			//	t.Errorf("GetCategoryById() got = %v, want %v", got, tt.want)
+			//	t.Errorf("GetCategoryByID() got = %v, want %v", got, tt.want)
 			//}
 			fmt.Println(got)
 		})
@@ -106,7 +106,7 @@ func TestCategoryModel_GetCategoryById(t *testing.T) {
 func TestCategoryModel_SearchCategories(t *testing.T) {
 	type args struct {
 		ctx       context.Context
-		condition *SearchCategoryCondition
+		condition *entity.SearchCategoryCondition
 	}
 	tests := []struct {
 		name    string
@@ -116,7 +116,7 @@ func TestCategoryModel_SearchCategories(t *testing.T) {
 	}{
 		{
 			name:    "test_search",
-			args:    args{context.Background(), &SearchCategoryCondition{Names: []string{"name3"}}},
+			args:    args{context.Background(), &entity.SearchCategoryCondition{Names: []string{"name3"}}},
 			want:    nil,
 			wantErr: false,
 		},
@@ -167,7 +167,7 @@ func TestCategoryModel_UpdateCategory(t *testing.T) {
 func TestCategoryModel_PageCategories(t *testing.T) {
 	type args struct {
 		ctx       context.Context
-		condition *SearchCategoryCondition
+		condition *entity.SearchCategoryCondition
 	}
 	tests := []struct {
 		name    string
@@ -177,7 +177,7 @@ func TestCategoryModel_PageCategories(t *testing.T) {
 	}{
 		{
 			name:    "test_search",
-			args:    args{context.Background(), &SearchCategoryCondition{Names: []string{"name"}, PageSize: 2, Page: 4}},
+			args:    args{context.Background(), &entity.SearchCategoryCondition{Names: []string{"name"}, PageSize: 2, Page: 3}},
 			want:    nil,
 			wantErr: false,
 		},

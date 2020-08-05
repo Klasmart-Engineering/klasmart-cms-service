@@ -12,12 +12,12 @@ import (
 	"sync"
 )
 
-const(
+const (
 	Asset_Storage_Partition = "asset"
 )
 
-var(
-	ErrNoSuchURL = errors.New("no such url")
+var (
+	ErrNoSuchURL        = errors.New("no such url")
 	ErrRequestItemIsNil = errors.New("request item is nil")
 )
 
@@ -30,17 +30,17 @@ type IAssetModel interface {
 	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error)
 
 	GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error)
-	GetAssetResourcePath(ctx context.Context, name string) (string ,error)
+	GetAssetResourcePath(ctx context.Context, name string) (string, error)
 }
 
 type AssetModel struct{}
 
 type AssetEntity struct {
-	Category     string
-	Tag          []string
+	Category string
+	Tag      []string
 }
 
-func (am AssetModel) checkResource(ctx context.Context, url string, must bool)(int64, error){
+func (am AssetModel) checkResource(ctx context.Context, url string, must bool) (int64, error) {
 	if must && url == "" {
 		return -1, ErrRequestItemIsNil
 	}
@@ -60,8 +60,8 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 	}
 
 	//TODO:Check tag & category entity
-	_, err := GetCategoryModel().GetCategoryById(ctx, entity.Category)
-	if err != nil{
+	_, err := GetCategoryModel().GetCategoryByID(ctx, entity.Category)
+	if err != nil {
 		log.Error(ctx, "Invalid category ", log.Err(err))
 		return err
 	}
@@ -71,8 +71,8 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 
 func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
 	err := am.checkEntity(ctx, AssetEntity{
-		Category:     data.Category,
-		Tag:          data.Tags,
+		Category: data.Category,
+		Tag:      data.Tags,
 	}, true)
 	if err != nil {
 		return "", err
@@ -90,15 +90,15 @@ func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) 
 
 func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error {
 	err := am.checkEntity(ctx, AssetEntity{
-		Category:     data.Category,
-		Tag:          data.Tag,
+		Category: data.Category,
+		Tag:      data.Tag,
 	}, false)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
 	data.Size = 0
-	if data.ResourceName != ""{
+	if data.ResourceName != "" {
 		size, err := am.checkResource(ctx, data.ResourceName, true)
 		if err != nil {
 			return err
@@ -126,7 +126,7 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) 
 	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
 	path, err := storage.GetUploadFileTempPath(ctx, Asset_Storage_Partition, name)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return &entity.ResourcePath{
@@ -135,7 +135,7 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) 
 	}, nil
 }
 
-func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string) (string ,error){
+func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string) (string, error) {
 	storage := storage.DefaultStorage()
 	return storage.GetFileTempPath(ctx, Asset_Storage_Partition, name)
 }
