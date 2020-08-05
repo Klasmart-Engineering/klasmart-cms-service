@@ -50,7 +50,7 @@ func (c *CategoryDynamoDA) UpdateCategory(ctx context.Context, data entity.Categ
 	return nil
 }
 
-func (c *CategoryDynamoDA) DeleteCategory(ctx context.Context, id string) error {
+func (c *CategoryDynamoDA) DeleteCategory(ctx context.Context, op *entity.Operator, id string) error {
 	category, err := c.GetCategoryByID(ctx, id)
 	if err != nil && err != constant.ErrRecordNotFound {
 		return err
@@ -66,9 +66,10 @@ func (c *CategoryDynamoDA) DeleteCategory(ctx context.Context, id string) error 
 		TableName:        aws.String(entity.CategoryObject{}.TableName()),
 		Key:              map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
 		ReturnValues:     aws.String("UPDATED_NEW"),
-		UpdateExpression: aws.String("set deleted_at = :del_at"),
+		UpdateExpression: aws.String("set deleted_at = :del_at, deleted_id = :del_id"),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":del_at": {N: aws.String(strconv.FormatInt(time.Now().Unix(), 10))},
+			":del_id": {S: aws.String(op.UserID)},
 		},
 	})
 	if err != nil {

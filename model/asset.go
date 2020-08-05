@@ -60,7 +60,7 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 	}
 
 	//TODO:Check tag & category entity
-	_, err := GetCategoryModel().GetCategoryByID(ctx, entity.Category)
+	_, err := GetCategoryModel().GetCategoryByID(ctx, nil, entity.Category)
 	if err != nil {
 		log.Error(ctx, "Invalid category ", log.Err(err))
 		return err

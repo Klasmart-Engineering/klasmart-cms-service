@@ -9,7 +9,7 @@ import (
 type ICategoryDA interface {
 	CreateCategory(ctx context.Context, data entity.CategoryObject) (*entity.CategoryObject, error)
 	UpdateCategory(ctx context.Context, data entity.CategoryObject) error
-	DeleteCategory(ctx context.Context, id string) error
+	DeleteCategory(ctx context.Context, op *entity.Operator, id string) error
 	GetCategoryByID(ctx context.Context, id string) (*entity.CategoryObject, error)
 
 	SearchCategories(ctx context.Context, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
