@@ -28,19 +28,19 @@ func (s Server) addTag(c *gin.Context) {
 		return
 	}
 
-	status := http.StatusOK
-	ID, err := model.GetTagModel().Add(ctx, data)
-	if err != nil {
-		status = http.StatusInternalServerError
-		if err == constant.ErrDuplicateRecord {
-			status = http.StatusConflict
-		}
-		c.JSON(status, err.Error())
+	id, err := model.GetTagModel().Add(ctx, data)
+	if err == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"id": id,
+		})
 		return
 	}
-	c.JSON(status, gin.H{
-		"id": ID,
-	})
+	if err == constant.ErrDuplicateRecord {
+		c.JSON(http.StatusConflict, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
 
 func (s Server) delTag(c *gin.Context) {
@@ -76,37 +76,37 @@ func (s Server) updateTag(c *gin.Context) {
 	}
 	err = model.GetTagModel().Update(ctx, data)
 
-	status := http.StatusOK
-	if err != nil {
-		status = http.StatusInternalServerError
-		if err == constant.ErrRecordNotFound {
-			status = http.StatusNotFound
-		}
-		if err == constant.ErrDuplicateRecord {
-			status = http.StatusConflict
-		}
-		c.JSON(status, err.Error())
+	if err == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"id": data.ID,
+		})
+		return
+	}
+	if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, err.Error())
+		return
+	}
+	if err == constant.ErrDuplicateRecord {
+		c.JSON(http.StatusConflict, err.Error())
 		return
 	}
 
-	c.JSON(status, gin.H{
-		"id": data.ID,
-	})
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
 
 func (s Server) getTagByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	result, err := model.GetTagModel().GetByID(ctx, c.Param("id"))
-	status := http.StatusOK
-	if err != nil {
-		status = http.StatusInternalServerError
-		if err == constant.ErrRecordNotFound {
-			status = http.StatusNotFound
-		}
-		c.JSON(status, err.Error())
+
+	if err == nil {
+		c.JSON(http.StatusOK, result)
 		return
 	}
-	c.JSON(status, result)
+	if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, err.Error())
+		return
+	}
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
 
 func (s Server) queryTag(c *gin.Context) {
@@ -124,17 +124,17 @@ func (s Server) queryTag(c *gin.Context) {
 	condition.Name = c.Query("name")
 
 	total, result, err := model.GetTagModel().Page(c.Request.Context(), condition)
-	status := http.StatusOK
-	if err != nil {
-		status = http.StatusInternalServerError
-		if err == constant.ErrRecordNotFound {
-			status = http.StatusNotFound
-		}
-		c.JSON(status, err.Error())
+
+	if err == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"total": total,
+			"data":  result,
+		})
 		return
 	}
-	c.JSON(status, gin.H{
-		"total": total,
-		"data":  result,
-	})
+	if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, err.Error())
+		return
+	}
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
