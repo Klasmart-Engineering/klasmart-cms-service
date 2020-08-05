@@ -39,11 +39,11 @@ func GetTagModel() ITagModel {
 func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string, error) {
 	old, err := t.GetByName(ctx, tag.Name)
 	if err != nil && err != constant.ErrRecordNotFound {
-		log.Error(ctx, "get tag by name", log.Err(err), log.String("tagName", tag.Name))
+		log.Info(ctx, "get tag by name", log.Err(err), log.String("tagName", tag.Name))
 		return "", err
 	}
 	if old != nil {
-		log.Error(ctx, "tag name duplicate record", log.String("tagName", tag.Name))
+		log.Info(ctx, "tag name duplicate record", log.String("tagName", tag.Name))
 		return "", constant.ErrDuplicateRecord
 	}
 	in := entity.Tag{
@@ -67,6 +67,7 @@ func (t tagModel) Update(ctx context.Context, view *entity.TagUpdateView) error 
 	old, _ := t.GetByName(ctx, view.Name)
 
 	if old != nil && old.ID != view.ID {
+		log.Info(ctx, "tag name duplicate record", log.String("tagName", view.Name))
 		return constant.ErrDuplicateRecord
 	}
 
@@ -135,6 +136,7 @@ func (t tagModel) GetByName(ctx context.Context, name string) (*entity.TagView, 
 		DeleteAt: 0,
 	})
 	if err != nil {
+		log.Error(ctx, "get tag by name error",log.Err(err), log.String("tagName", name))
 		return nil, err
 	}
 	if len(tags) > 0 {
