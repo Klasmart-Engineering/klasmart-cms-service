@@ -124,7 +124,7 @@ func TestCategoryModel_SearchCategories(t *testing.T) {
 			args: args{
 				context.Background(),
 				&entity.Operator{UserID: "No.1", Role: "admin"},
-				&entity.SearchCategoryCondition{Names: []string{"name3"}},
+				&entity.SearchCategoryCondition{Names: entity.NullStrings{Strings: []string{"name3"}, Valid: true}},
 			},
 			want:    nil,
 			wantErr: false,
@@ -191,7 +191,7 @@ func TestCategoryModel_PageCategories(t *testing.T) {
 			args: args{
 				context.Background(),
 				&entity.Operator{UserID: "No.1", Role: "admin"},
-				&entity.SearchCategoryCondition{Names: []string{"name"}, PageSize: 2, Page: 3},
+				&entity.SearchCategoryCondition{Names: entity.NullStrings{Strings: []string{"name"}, Valid: true}, PageSize: 2, Page: 0},
 			},
 			want:    nil,
 			wantErr: false,
