@@ -19,17 +19,17 @@ func (s Server) addTag(c *gin.Context) {
 	err := c.ShouldBindJSON(data)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
-		log.Error(ctx, "bind json data error", log.Err(err))
+		log.Info(ctx, "bind json data error", log.Err(err))
 		return
 	}
 	if strings.TrimSpace(data.Name) == "" {
 		c.JSON(http.StatusBadRequest, errors.New("tag name is empty"))
-		log.Error(ctx, "tag name is empty")
+		log.Info(ctx, "tag name is empty")
 		return
 	}
 
 	status := http.StatusOK
-	id, err := model.GetTagModel().Add(ctx, data)
+	ID, err := model.GetTagModel().Add(ctx, data)
 	if err != nil {
 		status = http.StatusInternalServerError
 		if err == constant.ErrDuplicateRecord {
@@ -39,7 +39,7 @@ func (s Server) addTag(c *gin.Context) {
 		return
 	}
 	c.JSON(status, gin.H{
-		"id": id,
+		"id": ID,
 	})
 }
 
@@ -55,23 +55,23 @@ func (s Server) delTag(c *gin.Context) {
 
 func (s Server) updateTag(c *gin.Context) {
 	ctx := c.Request.Context()
-	id := c.Param("id")
+	ID := c.Param("id")
 	data := new(entity.TagUpdateView)
 	err := c.ShouldBindJSON(data)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
-		log.Error(ctx, "bind json data error", log.Err(err))
+		log.Info(ctx, "bind json data error", log.Err(err))
 		return
 	}
-	data.ID = id
+	data.ID = ID
 	if strings.TrimSpace(data.Name) == "" {
 		c.JSON(http.StatusBadRequest, errors.New("tag name is empty"))
-		log.Error(ctx, "tag name is empty")
+		log.Info(ctx, "tag name is empty")
 		return
 	}
 	if data.States != constant.Enable || data.States != constant.Disabled {
 		c.JSON(http.StatusBadRequest, errors.New("tag states is invalid"))
-		log.Error(ctx, "tag states is invalid")
+		log.Info(ctx, "tag states is invalid")
 		return
 	}
 	err = model.GetTagModel().Update(ctx, data)
