@@ -1,64 +1,60 @@
 package model
 
 import (
-	"calmisland/kidsloop2/entity"
 	"context"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
+	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type ICategoryModel interface {
-	CreateCategory(ctx context.Context, data entity.CategoryObject) (string, error)
-	UpdateCategory(ctx context.Context, data entity.CategoryObject) error
-	DeleteCategory(ctx context.Context, id string) error
-	GetCategoryById(ctx context.Context, id string) (*entity.CategoryObject, error)
-	
-	SearchCategories(ctx context.Context, condition *SearchCategoryCondition) ([]*entity.CategoryObject, error)
-}
+	CreateCategory(ctx context.Context, op *entity.Operator, data entity.CategoryObject) (*entity.CategoryObject, error)
+	UpdateCategory(ctx context.Context, op *entity.Operator, data entity.CategoryObject) error
+	DeleteCategory(ctx context.Context, op *entity.Operator, id string) error
+	GetCategoryByID(ctx context.Context, op *entity.Operator, id string) (*entity.CategoryObject, error)
 
-type SearchCategoryCondition struct {
-	IDs        []string `json:"ids"`
-	Names      []string `json:"names"`
-
-	PageSize int64 `json:"page_size"`
-	Page     int64 `json:"page"`
-	OrderBy	 string `json:"order_by"`
-}
-
-func (s *SearchCategoryCondition) getConditions() []expression.ConditionBuilder {
-	conditions := make([]expression.ConditionBuilder, 0)
-	if len(s.IDs) > 0 {
-		condition := expression.Name("_id").In(expression.Value(s.IDs))
-		conditions = append(conditions, condition)
-	}
-	if len(s.Names) > 0 {
-		condition := expression.Name("name").In(expression.Value(s.Names))
-		conditions = append(conditions, condition)
-	}
-
-	return conditions
+	SearchCategories(ctx context.Context, op *entity.Operator, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
+	PageCategories(ctx context.Context, op *entity.Operator, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error)
 }
 
 type CategoryModel struct{}
 
-func (cm *CategoryModel) CreateCategory(ctx context.Context, data entity.CategoryObject) (string, error) {
-	panic("implement me")
+// Repeated insertion with the same primary key will overwrite non-primary key data
+func (cm *CategoryModel) CreateCategory(ctx context.Context, op *entity.Operator, data entity.CategoryObject) (*entity.CategoryObject, error) {
+	now := time.Now().Unix()
+	data.ID = utils.NewID()
+	data.CreatedID = op.UserID
+	data.UpdatedID = op.UserID
+	data.CreatedAt = now
+	data.UpdatedAt = now
+	return da.GetCategoryDA().CreateCategory(ctx, data)
 }
 
-func (cm *CategoryModel) UpdateCategory(ctx context.Context, data entity.CategoryObject) error {
-	panic("implement me")
+func (cm *CategoryModel) UpdateCategory(ctx context.Context, op *entity.Operator, data entity.CategoryObject) error {
+	data.UpdatedID = op.UserID
+	data.UpdatedAt = time.Now().Unix()
+	return da.GetCategoryDA().UpdateCategory(ctx, data)
 }
 
-func (cm *CategoryModel) DeleteCategory(ctx context.Context, id string) error {
-	panic("implement me")
+func (cm *CategoryModel) DeleteCategory(ctx context.Context, op *entity.Operator, id string) error {
+	return da.GetCategoryDA().DeleteCategory(ctx, op, id)
 }
 
-func (cm *CategoryModel) GetCategoryById(ctx context.Context, id string) (*entity.CategoryObject, error) {
-	panic("implement me")
+func (cm *CategoryModel) GetCategoryByID(ctx context.Context, op *entity.Operator, id string) (*entity.CategoryObject, error) {
+	return da.GetCategoryDA().GetCategoryByID(ctx, id)
 }
 
-func (cm *CategoryModel) SearchCategories(ctx context.Context, condition *SearchCategoryCondition) ([]*entity.CategoryObject, error) {
-	panic("implement me")
+func (cm *CategoryModel) SearchCategories(ctx context.Context, op *entity.Operator, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error) {
+
+	return da.GetCategoryDA().SearchCategories(ctx, condition)
+
+}
+
+func (cm *CategoryModel) PageCategories(ctx context.Context, op *entity.Operator, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error) {
+	return da.GetCategoryDA().PageCategories(ctx, condition)
 }
 
 var categoryModel *CategoryModel

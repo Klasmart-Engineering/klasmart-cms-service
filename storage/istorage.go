@@ -2,36 +2,38 @@ package storage
 
 import (
 	"bytes"
-	"calmisland/kidsloop2/conf"
 	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"os"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
 
-const(
-	PRESIGN_DURATION_MINUTES = 60 * 24
+const (
+	PRESIGN_DURATION_MINUTES        = 60 * 24
 	PRESIGN_UPLOAD_DURATION_MINUTES = 60
 )
 
 var (
-	doOnce sync.Once
+	doOnce         sync.Once
 	defaultStorage IStorage
 )
 
-type IStorage interface{
+type IStorage interface {
 	OpenStorage(ctx context.Context) error
 	CloseStorage(ctx context.Context)
 	UploadFile(ctx context.Context, partition string, filePath string, fileStream multipart.File) error
 	DownloadFile(ctx context.Context, partition string, filePath string) (io.Reader, error)
-	ExitsFile(ctx context.Context, partition string, filePath string) bool
+	ExitsFile(ctx context.Context, partition string, filePath string) (int64, bool)
+
 	GetFilePath(ctx context.Context, partition string) string
 	GetFileTempPath(ctx context.Context, partition string, filePath string) (string, error)
 
-	GetUploadFileTempPath(ctx context.Context, partition string, fileName string) (string ,error)
-	GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string ,error)
+	GetUploadFileTempPath(ctx context.Context, partition string, fileName string) (string, error)
+	GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string, error)
 
 	UploadFileBytes(ctx context.Context, partition string, filePath string, fileStream *bytes.Buffer) error
 	UploadFileLAN(ctx context.Context, partition string, filePath string, contentType string, r io.Reader) error
@@ -47,16 +49,16 @@ func assertGetEnv(key string) string {
 }
 
 //根据环境变量创建存储对象
-func createStorageByEnv(){
-	config := conf.Get()
+func createStorageByEnv() {
+	conf := config.Get()
 
-	switch config.StorageConfig.CloudEnv{
+	switch conf.StorageConfig.CloudEnv {
 	case "aws":
-		assertGetEnv("AWS_ACCESS_KEY_ID")
-		assertGetEnv("AWS_SECRET_ACCESS_KEY")
+		os.Setenv("AWS_ACCESS_KEY_ID", os.Getenv("secret_id"))
+		os.Setenv("AWS_SECRET_ACCESS_KEY", os.Getenv("secret_key"))
 		defaultStorage = newS3Storage(S3StorageConfig{
-			Bucket: config.StorageConfig.StorageBucket,
-			Region: config.StorageConfig.StorageRegion,
+			Bucket:    conf.StorageConfig.StorageBucket,
+			Region:    conf.StorageConfig.StorageRegion,
 			ArnBucket: os.Getenv("storage_arn_bucket"),
 		})
 		defaultStorage.OpenStorage(context.TODO())
@@ -64,7 +66,7 @@ func createStorageByEnv(){
 		panic("Environment CLOUD_ENV is nil")
 	}
 }
-func DefaultStorage() IStorage{
+func DefaultStorage() IStorage {
 	doOnce.Do(func() {
 		if defaultStorage == nil {
 			createStorageByEnv()

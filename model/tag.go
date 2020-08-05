@@ -1,15 +1,15 @@
 package model
 
 import (
-	"calmisland/kidsloop2/constant"
-	"calmisland/kidsloop2/entity"
-	"calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"context"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"sync"
-	dbclient "calmisland/kidsloop2/dynamodb"
+	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 )
 
 type ITagModel interface{

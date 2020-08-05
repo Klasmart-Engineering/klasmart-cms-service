@@ -1,5 +1,9 @@
 package utils
 
-func NewId()string{
-	return ""
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+func NewID()string{
+	return primitive.NewObjectID().Hex()
 }

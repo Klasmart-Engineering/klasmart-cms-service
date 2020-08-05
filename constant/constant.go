@@ -7,7 +7,8 @@ const (
 )
 
 var (
-	ErrRecordNotFound = errors.New("record not found")
+	ErrRecordNotFound  = errors.New("record not found")
 	ErrDuplicateRecord = errors.New("duplicate record")
-	ErrExceededLimit = errors.New("exceeded limit")
+	ErrExceededLimit   = errors.New("exceeded limit")
+	ErrUnauthorized    = errors.New("unauthorized")
 )

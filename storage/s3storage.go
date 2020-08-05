@@ -2,8 +2,6 @@ package storage
 
 import (
 	"bytes"
-	"calmisland/kidsloop2/conf"
-	"calmisland/kidsloop2/log"
 	"context"
 	"crypto/x509"
 	"encoding/base64"
@@ -15,29 +13,32 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 type S3StorageConfig struct {
-	Bucket string
-	Region string
+	Bucket    string
+	Region    string
 	ArnBucket string
 }
 
 type S3Storage struct {
-	session *session.Session
-	bucket  string
-	region  string
+	session   *session.Session
+	bucket    string
+	region    string
 	arnBucket string
 }
 
 type CDNServiceRequest struct {
-	URL string `json:"url"`
-	Duration int `json:"duration"`
+	URL      string `json:"url"`
+	Duration int    `json:"duration"`
 }
 
 type CDNServiceResponse struct {
@@ -48,14 +49,15 @@ func (s *S3Storage) OpenStorage(ctx context.Context) error {
 	//在~/.aws/credentials文件中保存secretId和secretKey
 
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(s.region),
-		S3UseAccelerate: aws.Bool(conf.Get().StorageConfig.Accelerate),
-		})
+		Region:          aws.String(s.region),
+		S3UseAccelerate: aws.Bool(config.Get().StorageConfig.Accelerate),
+	})
 	if err != nil {
-		log.Get().Errorf("Session create failed, error: %v", err)
+		log.Error(ctx, "Session create failed", log.Err(err))
 		return err
 	}
-	log.Get().Infof("Open s3 storage, bucket: %v, region: %v", s.bucket, s.region)
+
+	log.Info(ctx, "Open s3 storage", log.String("bucket", s.bucket), log.String("region", s.region))
 	s.session = sess
 	return nil
 }
@@ -63,16 +65,16 @@ func (s *S3Storage) CloseStorage(ctx context.Context) {
 
 }
 
-func getContentType(fileStream multipart.File) string{
+func getContentType(fileStream multipart.File) string {
 	data := make([]byte, 512)
 	fileStream.Read(data)
 
 	t := http.DetectContentType(data)
-	fileStream.Seek(0,  io.SeekStart)
+	fileStream.Seek(0, io.SeekStart)
 	return t
 }
 
-func getContentTypeBytes(fileStream *bytes.Buffer) string{
+func getContentTypeBytes(fileStream *bytes.Buffer) string {
 	data := make([]byte, 512)
 	fileStream.Read(data)
 
@@ -81,21 +83,21 @@ func getContentTypeBytes(fileStream *bytes.Buffer) string{
 	return t
 }
 
-func (s *S3Storage) UploadFileBytes(ctx context.Context, partition string, filePath string, fileStream *bytes.Buffer) error{
+func (s *S3Storage) UploadFileBytes(ctx context.Context, partition string, filePath string, fileStream *bytes.Buffer) error {
 	path := fmt.Sprintf("%s/%s", partition, filePath)
 	uploader := s3manager.NewUploader(s.session)
 
 	contentType := getContentTypeBytes(fileStream)
 
 	_, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
-		Body:   fileStream,
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(path),
+		Body:        fileStream,
 		ContentType: &contentType,
 	})
 
 	if err != nil {
-		log.Get().Errorf("Object upload failed, error: %v", err)
+		log.Error(ctx, "Object upload failed", log.Err(err))
 		return err
 	}
 	return nil
@@ -106,27 +108,26 @@ func (s *S3Storage) UploadFile(ctx context.Context, partition string, filePath s
 	contentType := getContentType(fileStream)
 
 	_, err := uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
-		Body:   fileStream,
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(path),
+		Body:        fileStream,
 		ContentType: &contentType,
 	})
 	if err != nil {
-		log.Get().Errorf("Object upload failed, error: %v", err)
+		log.Error(ctx, "Object upload failed", log.Err(err))
 		return err
 	}
 	return nil
 }
 
-
 func (s *S3Storage) UploadFileLAN(ctx context.Context, partition string, filePath string, contentType string, r io.Reader) error {
 	//建立session
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(s.region),
+		Region:          aws.String(s.region),
 		S3UseAccelerate: aws.Bool(false),
 	})
 	if err != nil {
-		log.Get().Errorf("Session create failed, error: %v", err)
+		log.Error(ctx, "Session create failed", log.Err(err))
 		return err
 	}
 
@@ -134,13 +135,13 @@ func (s *S3Storage) UploadFileLAN(ctx context.Context, partition string, filePat
 	uploader := s3manager.NewUploader(sess)
 
 	_, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
-		Body:   r,
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(path),
+		Body:        r,
 		ContentType: aws.String(contentType),
 	})
 	if err != nil {
-		log.Get().Errorf("Object upload failed, error: %v", err)
+		log.Error(ctx, "Object upload failed", log.Err(err))
 		return err
 	}
 	return nil
@@ -156,9 +157,10 @@ func (s *S3Storage) DownloadFile(ctx context.Context, partition string, filePath
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 	})
-	log.Get().Infof("Object download, size: %v", numBytes)
+
+	log.Info(ctx, "Object download", log.Int64("size", numBytes))
 	if err != nil {
-		log.Get().Warnf("Object download failed, error: %v", err)
+		log.Warn(ctx, "Object download failed", log.Err(err))
 		return nil, err
 	}
 
@@ -166,24 +168,31 @@ func (s *S3Storage) DownloadFile(ctx context.Context, partition string, filePath
 	return buffer, nil
 }
 
-func (s *S3Storage) ExitsFile(ctx context.Context, partition string, filePath string) bool {
-	_, err := s.DownloadFile(ctx, partition, filePath)
+func (s *S3Storage) ExitsFile(ctx context.Context, partition string, filePath string) (int64, bool) {
+	//_, err := s.DownloadFile(ctx, partition, filePath)
+	path := fmt.Sprintf("%s/%s", partition, filePath)
+	svc := s3.New(s.session)
+	res, err := svc.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key: aws.String(path),
+	})
+
 	if err != nil {
-		return false
+		return -1, false
 	}
-	return true
+	return *res.ContentLength, true
 }
 
 func (s *S3Storage) GetFilePath(ctx context.Context, partition string) string {
 	return fmt.Sprintf("http://%s.s3-website-%s.amazonaws.com/%s/", s.bucket, s.region, partition)
 }
 
-func (s *S3Storage) CopyFile(ctx context.Context, source, target string) error{
+func (s *S3Storage) CopyFile(ctx context.Context, source, target string) error {
 	svc := s3.New(s.session)
 	_, err := svc.CopyObject(&s3.CopyObjectInput{
 		CopySource: aws.String(s.bucket + "/" + source),
-		Key: aws.String(target),
-		Bucket: aws.String(s.bucket),
+		Key:        aws.String(target),
+		Bucket:     aws.String(s.bucket),
 	})
 	if err != nil {
 		return err
@@ -198,7 +207,7 @@ func (s *S3Storage) CopyFile(ctx context.Context, source, target string) error{
 	return nil
 }
 
-func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string ,error) {
+func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string, error) {
 	path := fmt.Sprintf("%s/%s", tempPath, fileName)
 	svc := s3.New(s.session)
 
@@ -210,14 +219,14 @@ func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath strin
 	urlStr, err := req.Presign(PRESIGN_UPLOAD_DURATION_MINUTES * time.Minute)
 
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
 	return urlStr, nil
 }
 
-func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string, fileName string) (string ,error) {
+func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string, fileName string) (string, error) {
 	path := fmt.Sprintf("%s/%s", partition, fileName)
 	svc := s3.New(s.session)
 
@@ -229,7 +238,7 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string,
 	urlStr, err := req.Presign(PRESIGN_UPLOAD_DURATION_MINUTES * time.Minute)
 
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
@@ -237,9 +246,9 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string,
 }
 
 func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, filePath string) (string, error) {
-	log.Get().Infof("Must Get CDN config: %#v", conf.Get().CDNConfig)
-	if conf.Get().CDNConfig.CDNOpen {
-		switch conf.Get().CDNConfig.CDNMode {
+	log.Info(ctx, "Must Get CDN config", log.Any("config", config.Get().CDNConfig))
+	if config.Get().CDNConfig.CDNOpen {
+		switch config.Get().CDNConfig.CDNMode {
 		case "service":
 			return s.GetFileTempPathForCDNByService(ctx, partition, filePath)
 		case "key":
@@ -259,7 +268,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, fileP
 	urlStr, err := req.Presign(PRESIGN_DURATION_MINUTES * time.Minute)
 
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
@@ -267,24 +276,24 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, fileP
 }
 
 func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition string, filePath string) (string, error) {
-	cdnConf := conf.Get().CDNConfig
+	cdnConf := config.Get().CDNConfig
 
 	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
 	keyID := cdnConf.CDNKeyId
 
 	privateKeyDer, err := base64.StdEncoding.DecodeString(cdnConf.CDNPrivateKey)
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 	privKey, err := x509.ParsePKCS1PrivateKey(privateKeyDer)
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 
 	signer := sign.NewURLSigner(keyID, privKey)
-	signedURL, err := signer.Sign(path, time.Now().Add(PRESIGN_DURATION_MINUTES * time.Minute))
+	signedURL, err := signer.Sign(path, time.Now().Add(PRESIGN_DURATION_MINUTES*time.Minute))
 	if err != nil {
-		log.Get().Errorf("Get presigned url failed, error: %v", err)
+		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
 
@@ -292,36 +301,36 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition string,
 }
 
 func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partition string, filePath string) (string, error) {
-	cdnConf := conf.Get().CDNConfig
+	cdnConf := config.Get().CDNConfig
 	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
 
 	params := &CDNServiceRequest{
 		URL:      path,
-		Duration: PRESIGN_DURATION_MINUTES ,
+		Duration: PRESIGN_DURATION_MINUTES,
 	}
 	data, err := json.Marshal(params)
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 
 	request, err := http.NewRequest("POST", cdnConf.CDNServicePath, bytes.NewReader(data))
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("charset", "utf-8")
 
 	resp, err := http.DefaultClient.Do(request)
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 	respData := new(CDNServiceResponse)
 	err = json.Unmarshal(respBody, respData)
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 
@@ -330,8 +339,8 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 
 func newS3Storage(c S3StorageConfig) IStorage {
 	return &S3Storage{
-		bucket: c.Bucket,
-		region: c.Region,
+		bucket:    c.Bucket,
+		region:    c.Region,
 		arnBucket: c.ArnBucket,
 	}
 }
