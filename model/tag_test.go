@@ -43,12 +43,14 @@ func TestTagModel_Delete(t *testing.T) {
 
 func TestTagModel_Query(t *testing.T) {
 	resut,err:=GetTagModel().Query(context.Background(),&da.TagCondition{
-		Name:     "",
+		Name:     entity.NullString{
+			Strings: "",
+			Valid:   false,
+		},
 		Pager: utils.Pager{
 			PageIndex: 1,
 			PageSize:  2,
 		},
-		DeleteAt: 0,
 	})
 	if err!=nil{
 		fmt.Println(err)
@@ -61,12 +63,14 @@ func TestTagModel_Query(t *testing.T) {
 }
 func TestTagModel_Page(t *testing.T) {
 	total,resut,err:=GetTagModel().Page(context.Background(),&da.TagCondition{
-		Name:     "",
+		Name:     entity.NullString{
+			Strings: "",
+			Valid:   false,
+		},
 		Pager: utils.Pager{
 			PageIndex: 1,
-			PageSize:  2,
+			PageSize:  12,
 		},
-		DeleteAt: 0,
 	})
 	if err!=nil{
 		fmt.Println(err)

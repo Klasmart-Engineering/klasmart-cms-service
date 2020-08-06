@@ -6,9 +6,10 @@ import (
 )
 
 type Pager struct {
-	PageIndex     int64
-	PageSize int64
+	PageIndex int64
+	PageSize  int64
 }
+
 func GetPager(pageIndexStr string, pageSizeStr string) Pager {
 	pageIndex, err := strconv.ParseInt(pageIndexStr, 10, 64)
 	if err != nil {

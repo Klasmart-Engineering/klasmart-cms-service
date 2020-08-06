@@ -110,15 +110,25 @@ func (s Server) getTagByID(c *gin.Context) {
 }
 
 func (s Server) queryTag(c *gin.Context) {
+	ctx := c.Request.Context()
 	condition := new(da.TagCondition)
-	condition.Pager = utils.GetPager(c.Query("page"),c.Query("page_size"))
-	name:=c.Query("name")
+	condition.Pager = utils.GetPager(c.Query("page"), c.Query("page_size"))
+	name := c.Query("name")
 	condition.Name = entity.NullString{
 		Strings: name,
-		Valid:   len(name)!=0,
+		Valid:   len(name) != 0,
 	}
-
-	total, result, err := model.GetTagModel().Page(c.Request.Context(), condition)
+	var (
+		total  int64
+		result []*entity.TagView
+		err    error
+	)
+	if condition.Pager.PageIndex == 0 || condition.Pager.PageSize == 0 {
+		result, err = model.GetTagModel().Query(ctx, condition)
+		total = int64(len(result))
+	} else {
+		total, result, err = model.GetTagModel().Page(ctx, condition)
+	}
 
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{
