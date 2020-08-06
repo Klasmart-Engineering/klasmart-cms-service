@@ -41,4 +41,13 @@ func (s Server) registeRoute() {
 		category.PUT("/:id", MustLogin, s.updateCategory)
 		category.DELETE("/:id", MustLogin, s.deleteCategory)
 	}
+
+	tag:=s.engine.Group("/v1/tag")
+	{
+		tag.GET("/",s.queryTag)
+		tag.GET("/:id",s.getTagByID)
+		tag.POST("/",s.addTag)
+		tag.PUT("/:id",s.updateTag)
+		tag.DELETE("/:id",s.delTag)
+	}
 }
