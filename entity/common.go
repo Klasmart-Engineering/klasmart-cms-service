@@ -14,3 +14,8 @@ type NullString struct {
 	Strings string
 	Valid   bool
 }
+
+type NullInt struct {
+	Int int
+	Valid   bool
+}

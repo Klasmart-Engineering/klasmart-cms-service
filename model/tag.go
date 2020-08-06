@@ -136,7 +136,6 @@ func (t tagModel) GetByName(ctx context.Context, name string) (*entity.TagView, 
 			Strings: name,
 			Valid:   len(name) != 0,
 		},
-		DeleteAt: 0,
 	})
 	if err != nil {
 		log.Error(ctx, "get tag by name error", log.Err(err), log.String("tagName", name))
