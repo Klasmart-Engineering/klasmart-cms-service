@@ -5,13 +5,17 @@ import (
 )
 
 type Tag struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	States int    `json:"states"`
+	ID     string `json:"id" dynamodbav:"id"`
+	Name   string `json:"name" dynamodbav:"name"`
+	States int    `json:"states" dynamodbav:"states"`
 
-	CreatedAt int64 `json:"created_at"`
-	UpdatedAt int64 `json:"updated_at"`
-	DeletedAt int64 `json:"deleted_at"`
+	CreatedID string `json:"-" dynamodbav:"created_id"`
+	UpdatedID string `json:"-" dynamodbav:"updated_id"`
+	DeletedID string `json:"-" dynamodbav:"deleted_id"`
+
+	CreatedAt int64 `json:"-" dynamodbav:"created_at"`
+	UpdatedAt int64 `json:"-" dynamodbav:"updated_at"`
+	DeletedAt int64 `json:"-" dynamodbav:"deleted_at"`
 }
 
 func (t Tag) TableName() string {

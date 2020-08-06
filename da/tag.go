@@ -14,6 +14,8 @@ type ITagDA interface {
 	GetByID(ctx context.Context, id string) (*entity.Tag, error)
 	GetByIDs(ctx context.Context, ids []string) ([]*entity.Tag, error)
 	Delete(ctx context.Context, id string) error
+	DeleteSoft(ctx context.Context,op *entity.Operator, id string) error
+
 	Page(ctx context.Context, condition *TagCondition) (int64, []*entity.Tag, error)
 }
 

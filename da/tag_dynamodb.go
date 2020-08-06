@@ -126,11 +126,14 @@ func (tagDynamoDA) Update(ctx context.Context, tag *entity.Tag) error {
 	params[":n"] = &dynamodb.AttributeValue{
 		S: aws.String(tag.Name),
 	}
+	params[":upOpID"] = &dynamodb.AttributeValue{
+		S: aws.String(tag.UpdatedID),
+	}
 	statesStr := strconv.Itoa(tag.States)
 	params[":s"] = &dynamodb.AttributeValue{
 		N: aws.String(statesStr),
 	}
-	updateTimeStr := strconv.FormatInt(time.Now().Unix(), 10)
+	updateTimeStr := strconv.FormatInt(tag.UpdatedAt, 10)
 	params[":up"] = &dynamodb.AttributeValue{
 		N: aws.String(updateTimeStr),
 	}
@@ -140,12 +143,13 @@ func (tagDynamoDA) Update(ctx context.Context, tag *entity.Tag) error {
 			"#n":  aws.String("name"),
 			"#s":  aws.String("states"),
 			"#up": aws.String("updated_at"),
+			"#upOpID": aws.String("updated_id"),
 		},
 		ExpressionAttributeValues: params,
 		Key:                       key,
 		ReturnValues:              aws.String("UPDATED_NEW"),
 		TableName:                 aws.String(constant.TableNameTag),
-		UpdateExpression:          aws.String("set #n = :n, #s = :s, #up = :up"),
+		UpdateExpression:          aws.String("set #n = :n, #s = :s, #up = :up, #upOpID = :upOpID"),
 	}
 
 	_, err := dbclient.GetClient().UpdateItem(input)
@@ -212,6 +216,38 @@ func (tagDynamoDA) GetByIDs(ctx context.Context, ids []string) ([]*entity.Tag, e
 	}
 
 	return tags, nil
+}
+
+func (tagDynamoDA) DeleteSoft(ctx context.Context,op *entity.Operator, id string) error{
+	key := make(map[string]*dynamodb.AttributeValue)
+	key["id"] = &dynamodb.AttributeValue{
+		S: aws.String(id),
+	}
+	params := make(map[string]*dynamodb.AttributeValue)
+	params[":delOpID"] = &dynamodb.AttributeValue{
+		S: aws.String(op.UserID),
+	}
+	delTimeStr := strconv.FormatInt(time.Now().Unix(), 10)
+	params[":delat"] = &dynamodb.AttributeValue{
+		N: aws.String(delTimeStr),
+	}
+	input := &dynamodb.UpdateItemInput{
+		ExpressionAttributeNames: map[string]*string{
+			"#delOpID":  aws.String("deleted_id"),
+			"#delat":  aws.String("deleted_at"),
+		},
+		ExpressionAttributeValues: params,
+		Key:                       key,
+		ReturnValues:              aws.String("UPDATED_NEW"),
+		TableName:                 aws.String(constant.TableNameTag),
+		UpdateExpression:          aws.String("set #delOpID = :delOpID, #delat = :delat"),
+	}
+	_, err := dbclient.GetClient().UpdateItem(input)
+	if err != nil {
+		log.Error(ctx, "delete tag error", log.Err(err), log.String("operator_id", op.UserID),log.String("tag_id", id))
+		return err
+	}
+	return nil
 }
 
 func (tagDynamoDA) Delete(ctx context.Context, id string) error {
