@@ -18,7 +18,7 @@ func TestTagModel_Add(t *testing.T) {
 }
 func TestTagModel_BatchAdd(t *testing.T) {
 	for i:=0;i<10;i++{
-		name:=fmt.Sprintf("tag-%s",utils.NewId())
+		name:=fmt.Sprintf("tag-%s",utils.NewID())
 		id,err:=GetTagModel().Add(context.Background(),&entity.TagAddView{Name: name})
 		if err!=nil{
 			fmt.Println(err)

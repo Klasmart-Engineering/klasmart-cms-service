@@ -10,5 +10,6 @@ require (
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.3
+	go.mongodb.org/mongo-driver v1.3.5
 	gopkg.in/yaml.v2 v2.2.4 // indirect
 )

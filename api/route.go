@@ -20,15 +20,28 @@ func (s Server) registeRoute() {
 		c.String(http.StatusOK, "pong")
 	})
 
-	v1 := s.engine.Group("/v1/assets")
+	assets := s.engine.Group("/v1/assets")
 	{
-		v1.GET("/", s.searchAssets)
-		v1.POST("/", s.createAsset)
-		v1.GET("/:id", s.getAssetById)
-		v1.PUT("/:id", s.updateAsset)
-		v1.DELETE("/:id", s.deleteAsset)
-		v1.GET("/:ext/upload", s.getAssetUploadPath)
+		assets.GET("/", s.searchAssets)
+		assets.POST("/", s.createAsset)
+		assets.GET("/:id", s.getAssetByID)
+		assets.PUT("/:id", s.updateAsset)
+		assets.DELETE("/:id", s.deleteAsset)
 	}
+	resource := s.engine.Group("/v1/resources")
+	{
+		resource.GET("/upload/:ext", s.getAssetUploadPath)
+		resource.GET("/path/:resource_name", s.getAssetResourcePath)
+	}
+	category := s.engine.Group("/v1/categories")
+	{
+		category.GET("/", MustLogin, s.searchCategories)
+		category.GET("/:id", MustLogin, s.getCategoryByID)
+		category.POST("/", MustLogin, s.createCategory)
+		category.PUT("/:id", MustLogin, s.updateCategory)
+		category.DELETE("/:id", MustLogin, s.deleteCategory)
+	}
+
 	tag:=s.engine.Group("/v1/tag")
 	{
 		tag.GET("/",s.queryTag)
@@ -37,5 +50,4 @@ func (s Server) registeRoute() {
 		tag.PUT("/:id",s.updateTag)
 		tag.DELETE("/:id",s.delTag)
 	}
-
 }

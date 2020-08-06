@@ -47,7 +47,7 @@ func (t tagModel) Add(ctx context.Context, tag *entity.TagAddView) (string, erro
 		return "", constant.ErrDuplicateRecord
 	}
 	in := &entity.Tag{
-		ID:        utils.NewId(),
+		ID:        utils.NewID(),
 		Name:      tag.Name,
 		States:    constant.Enable,
 		CreatedAt: time.Now().Unix(),
@@ -132,11 +132,14 @@ func (t tagModel) GetByIDs(ctx context.Context, ids []string) ([]*entity.TagView
 
 func (t tagModel) GetByName(ctx context.Context, name string) (*entity.TagView, error) {
 	tags, err := da.GetTagDA().Query(ctx, &da.TagCondition{
-		Name:     name,
+		Name: entity.NullString{
+			Strings: name,
+			Valid:   len(name) != 0,
+		},
 		DeleteAt: 0,
 	})
 	if err != nil {
-		log.Error(ctx, "get tag by name error",log.Err(err), log.String("tagName", name))
+		log.Error(ctx, "get tag by name error", log.Err(err), log.String("tagName", name))
 		return nil, err
 	}
 	if len(tags) > 0 {

@@ -30,7 +30,7 @@ type ITagDA interface {
 type tagDA struct{}
 
 type TagCondition struct {
-	Name string
+	Name entity.NullString
 
 	//StartID  string
 	Pager utils.Pager
@@ -258,7 +258,7 @@ func (t TagCondition) GetCondition() (expression.Expression, error) {
 	} else {
 		filt = expression.Name("deleted_at").Equal(expression.Value(0))
 	}
-	if len(t.Name) != 0 {
+	if t.Name.Valid {
 		filt = filt.And(expression.Name("name").Equal(expression.Value(t.Name)))
 	}
 	expr, err := expression.NewBuilder().WithFilter(filt).Build()

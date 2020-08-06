@@ -4,16 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 	"sync"
 )
 
-var(
-	ErrNoSuchURL = errors.New("no such url")
+const (
+	Asset_Storage_Partition = "asset"
+)
+
+var (
+	ErrNoSuchURL        = errors.New("no such url")
 	ErrRequestItemIsNil = errors.New("request item is nil")
 )
 
@@ -22,10 +26,11 @@ type IAssetModel interface {
 	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
 	DeleteAsset(ctx context.Context, id string) error
 
-	GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error)
-	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) ([]*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
+	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error)
 
-	GetAssetUploadPath(ctx context.Context, extension string) (string, error)
+	GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error)
+	GetAssetResourcePath(ctx context.Context, name string) (string, error)
 }
 
 type AssetModel struct{}
@@ -33,48 +38,53 @@ type AssetModel struct{}
 type AssetEntity struct {
 	Category string
 	Tag      []string
-	URL      string
+}
+
+func (am AssetModel) checkResource(ctx context.Context, url string, must bool) (int64, error) {
+	if must && url == "" {
+		return -1, ErrRequestItemIsNil
+	}
+	if url != "" {
+		size, exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, url)
+		if !exist {
+			return -1, ErrNoSuchURL
+		}
+		return size, nil
+	}
+	return 0, nil
 }
 
 func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must bool) error {
-	if must && (entity.URL == "" || entity.Category == "") {
+	if must && entity.Category == "" {
 		return ErrRequestItemIsNil
 	}
 
-	//TODO:Check if url is exists
-	if entity.URL != "" {
-		err := checkURL(entity.URL)
-		if err != nil{
-			return err
-		}
-	}
 	//TODO:Check tag & category entity
-
-	return nil
-}
-
-func checkURL(url string) error {
-	resp, err := http.Get(url)
-	if err != nil{
+	_, err := GetCategoryModel().GetCategoryByID(ctx, nil, entity.Category)
+	if err != nil {
+		log.Error(ctx, "Invalid category ", log.Err(err))
 		return err
 	}
-	if resp.StatusCode == http.StatusNotFound {
-		return ErrNoSuchURL
-	}
-	return nil
 
+	return nil
 }
 
 func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
 	err := am.checkEntity(ctx, AssetEntity{
 		Category: data.Category,
 		Tag:      data.Tags,
-		URL:      data.URL,
 	}, true)
-
 	if err != nil {
 		return "", err
 	}
+
+	data.Size = 0
+	size, err := am.checkResource(ctx, data.ResourceName, true)
+	if err != nil {
+		return "", err
+	}
+	data.Size = size
+
 	return da.GetAssetDA().CreateAsset(ctx, data)
 }
 
@@ -82,12 +92,20 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	err := am.checkEntity(ctx, AssetEntity{
 		Category: data.Category,
 		Tag:      data.Tag,
-		URL:      data.URL,
 	}, false)
-
-	if err != nil{
+	if err != nil {
 		return err
 	}
+
+	data.Size = 0
+	if data.ResourceName != "" {
+		size, err := am.checkResource(ctx, data.ResourceName, true)
+		if err != nil {
+			return err
+		}
+		data.Size = size
+	}
+
 	return da.GetAssetDA().UpdateAsset(ctx, data)
 }
 
@@ -95,19 +113,31 @@ func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
 	return da.GetAssetDA().DeleteAsset(ctx, id)
 }
 
-func (am *AssetModel) GetAssetById(ctx context.Context, id string) (*entity.AssetObject, error) {
-	return da.GetAssetDA().GetAssetById(ctx, id)
+func (am *AssetModel) GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error) {
+	return da.GetAssetDA().GetAssetByID(ctx, id)
 }
 
-func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) ([]*entity.AssetObject, error) {
+func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error) {
 	return da.GetAssetDA().SearchAssets(ctx, (*da.SearchAssetCondition)(condition))
 }
 
-func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) (string, error) {
-	client := storage.DefaultStorage()
-	name := fmt.Sprintf("%s.%s", utils.NewId(), extension)
+func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error) {
+	storage := storage.DefaultStorage()
+	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
-	return client.GetUploadFileTempPath(ctx, "asset", name)
+	path, err := storage.GetUploadFileTempPath(ctx, Asset_Storage_Partition, name)
+	if err != nil {
+		return nil, err
+	}
+	return &entity.ResourcePath{
+		Path: path,
+		Name: name,
+	}, nil
+}
+
+func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string) (string, error) {
+	storage := storage.DefaultStorage()
+	return storage.GetFileTempPath(ctx, Asset_Storage_Partition, name)
 }
 
 var assetModel *AssetModel

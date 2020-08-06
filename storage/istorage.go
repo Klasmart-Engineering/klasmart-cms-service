@@ -27,7 +27,8 @@ type IStorage interface {
 	CloseStorage(ctx context.Context)
 	UploadFile(ctx context.Context, partition string, filePath string, fileStream multipart.File) error
 	DownloadFile(ctx context.Context, partition string, filePath string) (io.Reader, error)
-	ExitsFile(ctx context.Context, partition string, filePath string) bool
+	ExitsFile(ctx context.Context, partition string, filePath string) (int64, bool)
+
 	GetFilePath(ctx context.Context, partition string) string
 	GetFileTempPath(ctx context.Context, partition string, filePath string) (string, error)
 
@@ -53,8 +54,8 @@ func createStorageByEnv() {
 
 	switch conf.StorageConfig.CloudEnv {
 	case "aws":
-		assertGetEnv("AWS_ACCESS_KEY_ID")
-		assertGetEnv("AWS_SECRET_ACCESS_KEY")
+		os.Setenv("AWS_ACCESS_KEY_ID", os.Getenv("secret_id"))
+		os.Setenv("AWS_SECRET_ACCESS_KEY", os.Getenv("secret_key"))
 		defaultStorage = newS3Storage(S3StorageConfig{
 			Bucket:    conf.StorageConfig.StorageBucket,
 			Region:    conf.StorageConfig.StorageRegion,
