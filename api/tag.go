@@ -14,6 +14,11 @@ import (
 )
 
 func (s Server) addTag(c *gin.Context) {
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
+		return
+	}
 	ctx := c.Request.Context()
 	data := new(entity.TagAddView)
 	err := c.ShouldBindJSON(data)
@@ -28,7 +33,7 @@ func (s Server) addTag(c *gin.Context) {
 		return
 	}
 
-	id, err := model.GetTagModel().Add(ctx, data)
+	id, err := model.GetTagModel().Add(ctx,op, data)
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"id": id,
@@ -44,8 +49,13 @@ func (s Server) addTag(c *gin.Context) {
 }
 
 func (s Server) delTag(c *gin.Context) {
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
+		return
+	}
 	ctx := c.Request.Context()
-	err := model.GetTagModel().Delete(ctx, c.Param("id"))
+	err := model.GetTagModel().DeleteSoft(ctx,op, c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
@@ -54,6 +64,11 @@ func (s Server) delTag(c *gin.Context) {
 }
 
 func (s Server) updateTag(c *gin.Context) {
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
+		return
+	}
 	ctx := c.Request.Context()
 	ID := c.Param("id")
 	data := new(entity.TagUpdateView)
@@ -74,7 +89,7 @@ func (s Server) updateTag(c *gin.Context) {
 		log.Info(ctx, "tag states is invalid")
 		return
 	}
-	err = model.GetTagModel().Update(ctx, data)
+	err = model.GetTagModel().Update(ctx,op, data)
 
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{
