@@ -39,6 +39,7 @@ type SearchAssetCondition struct {
 	ID        []int64 `json:"id"`
 
 	SearchWords []string `json:"search_words"`
+	FuzzyQuery string `json:"fuzzy_query"`
 	IsSelf bool `json:"is_self"`
 
 	OrderBy  string `json:"order_by"`

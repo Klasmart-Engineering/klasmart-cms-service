@@ -153,15 +153,17 @@ func buildAssetSearchCondition(c *gin.Context) *entity.SearchAssetCondition{
 	Page, _ := strconv.Atoi("page")
 	rawSearchWord := c.Query("search_words")
 	isSelfStr := c.Query("is_self")
+	fuzzyQuery := c.Query("fuzzy_query")
+	orderBy := c.Query("order_by")
+
 	searchWords := strings.Split(rawSearchWord, " ")
-
 	isSelf, _ := strconv.ParseBool(isSelfStr)
-
 
 	data := &entity.SearchAssetCondition{
 		SearchWords:  searchWords,
+		FuzzyQuery: fuzzyQuery,
 		IsSelf:  isSelf,
-		OrderBy: 	c.Query("order_by"),
+		OrderBy: orderBy,
 		PageSize: PageSize,
 		Page:     Page,
 	}

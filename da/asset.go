@@ -86,6 +86,7 @@ type SearchAssetCondition struct {
 	OrgID	  string `json:"org_id"`
 
 	SearchWords []string `json:"search_words"`
+	FuzzyQuery  string `json:"fuzzy_query"`
 	Author      []string    `json:"author"`
 
 	OrderBy  AssetsOrderBy `json:"order_by"`
@@ -115,6 +116,19 @@ func (s SearchAssetCondition) GetConditions() ([]string, []interface{}) {
 			parameters = append(parameters, s.SearchWords[i])
 			parameters = append(parameters, s.SearchWords[i])
 		}
+	}
+	if s.FuzzyQuery != "" {
+		//wheres = append(wheres, "match(name) against('?' in boolean mode) and " +
+		//	"match(keywords) against('?' in boolean mode) and " +
+		//	"match(description) against('?' in boolean mode) and " +
+		//	"match(author_name) against('?' in boolean mode) ")
+		//parameters = append(parameters, s.FuzzyQuery)
+		//parameters = append(parameters, s.FuzzyQuery)
+		//parameters = append(parameters, s.FuzzyQuery)
+		//parameters = append(parameters, s.FuzzyQuery)
+
+		wheres = append(wheres, "match(name, keywords, description, author_name) against('?' in boolean mode)")
+		parameters = append(parameters, s.FuzzyQuery)
 	}
 
 	if len(s.Author) > 0 {
@@ -154,9 +168,9 @@ func NewAssetsOrderBy(orderby string) AssetsOrderBy {
 		return AssetsOrderByName
 	case "-name":
 		return AssetsOrderByNameDesc
-	case "author":
+	case "author_name":
 		return AssetsOrderByAuthor
-	case "-author":
+	case "-author_name":
 		return AssetsOrderByAuthorDesc
 	case "created_at":
 		return AssetsOrderByCreatedAt

@@ -130,6 +130,7 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.Search
 	cd := &da.SearchAssetCondition{
 		ID:          condition.ID,
 		SearchWords: condition.SearchWords,
+		FuzzyQuery: condition.FuzzyQuery,
 		OrgID:  	 operator.OrgID,
 		OrderBy:     da.NewAssetsOrderBy(condition.OrderBy),
 		PageSize:    condition.PageSize,

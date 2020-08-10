@@ -48,58 +48,18 @@
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "fuzzy_query",
             "in": "query",
-            "description": "Search asset by id",
+            "description": "Fuzzy search asset",
             "schema": {
               "type": "string",
               "nullable": true
             }
           },
           {
-            "name": "name",
+            "name": "search_words",
             "in": "query",
-            "description": "Search asset by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "description": "Search asset by category",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "size_min",
-            "in": "query",
-            "description": "Search asset by size_min",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 2
-            }
-          },
-          {
-            "name": "size_max",
-            "in": "query",
-            "description": "Search asset by size_max",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            }
-          },
-          {
-            "name": "tag",
-            "in": "query",
-            "description": "Search asset by tag",
+            "description": "Search asset by words split by space",
             "schema": {
               "type": "string",
               "nullable": true
@@ -142,8 +102,8 @@
                 "-name",
                 "create_at",
                 "-create_at",
-                "last_update_at",
-                "-last_update_at"
+                "author",
+                "-author"
               ],
               "nullable": true,
               "default": "create_at"
