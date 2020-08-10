@@ -18,8 +18,8 @@ func InitEnv(){
 	os.Setenv("cdn_mode", "service")
 	os.Setenv("cdn_path", "d2sl4gnftnfbyu.cloudfront.net")
 
-	os.Setenv("cdn_service_path", "https://raven.badanamu.net/cloudfront")
-	os.Setenv("cdn_service_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkb25naHVuLmNob2lAY2FsbWlkLmNvbSIsImF1ZCI6IkNhbG1Jc2xhbmQgQ2hpbmEiLCJzdWIiOiJyYXZlbiIsImlhdCI6MTUxNjIzOTAyMn0.bmwSV36lNsgsMiTN56QnJT0IiTPF1UmkmN9OdaFCc5Q")
+	os.Setenv("cdn_service_path", "https://raven.dev.badanamu.net/cloudfront")
+	os.Setenv("cdn_service_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkb25naHVuLmNob2lAY2FsbWlkLmNvbSIsImF1ZCI6IkNhbG1Jc2xhbmQgQ2hpbmEiLCJzdWIiOiJyYXZlbiIsImlhdCI6MTUxNjIzOTAyMn0.oFThEoapYtp1BQQH8m-MQozOuFQeCZMNor3_jI3fNQo")
 
 }
 func TestS3Storage_ExitsFile(t *testing.T) {

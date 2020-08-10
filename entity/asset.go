@@ -3,47 +3,49 @@ package entity
 import "time"
 
 type AssetObject struct {
-	ID           string   `json:"id" dynamodbav:"id"`
-	Name         string   `json:"name" dynamodbav:"name"`
-	Category     string   `json:"category" dynamodbav:"category"`
-	Size         int64      `json:"size" dynamodbav:"size"`
-	Tags         []string `json:"tags" dynamodbav:"tags"`
-	ResourceName string   `json:"resource_name" dynamodbav:"resource_name"`
+	ID            int64   `gorm:"type:bigint;PRIMARY_KEY;AUTO_INCREMENT;column:id" json:"id" dynamodbav:"id"`
+	Name          string   `gorm:"type:char(256);NOT NULL;column:name json:"name" dynamodbav:"name"`
+	Program       int64    `gorm:"type:bigint;NOT NULL;column:name program:"program" dynamodbav:"program"`
+	Subject       int64    `gorm:"type:bigint;NOT NULL;column:name subject:"subject" dynamodbav:"subject`
+	Developmental int64    `gorm:"type:bigint;NOT NULL;column:developmental json:"developmental" dynamodbav:"developmental`
+	Skills        int64    `gorm:"type:bigint;NOT NULL;column:skills json:"skills" dynamodbav:"skills`
+	Age           int64    `gorm:"type:bigint;NOT NULL;column:age json:"age" dynamodbav:"age`
+	Keywords      []string `gorm:"type:json;NOT NULL;column:keywords json:"keywords" dynamodbav:"keywords"`
+	Description   string   `gorm:"type:text;NOT NULL;column:description json:"description" dynamodbay: "description"`
+	Thumbnail     string   `gorm:"type:text;NOT NULL;column:thumbnail json:"thumbnail" dynamodbav:"thumbnail"`
 
-	Uploader   string     `json:"uploader" dynamodbav:"uploader"`
+	Size         int64  `gorm:"type:bigint;NOT NULL;column:size json:"size" dynamodbav:"size"`
+	ResourceName string `gorm:"type:text;NOT NULL;column:resource_name json:"resource_name" dynamodbav:"resource_name"`
 
-	CreatedAt *time.Time `json:"created_at" dynamodbav:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at" dynamodbav:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at" dynamodbav:"deleted_at"`
+	Author string `gorm:"type:bigint;NOT NULL;column:author json:"author" dynamodbav:"author"`
+
+	CreatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:updated_at" json:"created_at" dynamodbav:"created_at"`
+	UpdatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:created_at" json:"updated_at" dynamodbav:"updated_at"`
+	DeletedAt *time.Time `gorm:"type:datetime;column:deleted_at" json:"deleted_at" dynamodbav:"deleted_at"`
 }
-
 
 type UpdateAssetRequest struct {
-	ID       string   `json:"id" dynamodbav:"id"`
-	Name     string   `json:"name" dynamodbav:"name"`
-	Category string   `json:"category" dynamodbav:"category"`
-	Tag      []string `json:"tag" dynamodbav:"tag"`
-	Size 	 int64	  `json:"size"`
-	ResourceName     string   `json:"resource_name" dynamodbav:"resource_name"`
+	ID           int64   `json:"id" dynamodbav:"id"`
+	Name         string   `json:"name" dynamodbav:"name"`
 }
 
-func (a AssetObject) TableName() string{
+func (a AssetObject) TableName() string {
 	return "assets"
 }
+
 type SearchAssetCondition struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Category string `json:"category"`
-	SizeMin  int    `json:"size_min"`
-	SizeMax  int    `json:"size_max"`
+	ID        []int64 `json:"id"`
+	Name      string `json:"name"`
 
-	Tag 	string `json:"tag"`
+	SearchWords []string `json:"search_words"`
+	Author      []int    `json:"author"`
 
+	OrderBy  string `json:"order_by"`
 	PageSize int `json:"page_size"`
 	Page     int `json:"page"`
 }
 
-type ResourcePath struct{
+type ResourcePath struct {
 	Path string `json:"path"`
 	Name string `json:"name"`
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
@@ -22,11 +21,11 @@ var(
 )
 
 type IAssetModel interface {
-	CreateAsset(ctx context.Context, data entity.AssetObject) (string, error)
+	CreateAsset(ctx context.Context, data entity.AssetObject) (int64, error)
 	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
-	DeleteAsset(ctx context.Context, id string) error
+	DeleteAsset(ctx context.Context, id int64) error
 
-	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id int64) (*entity.AssetObject, error)
 	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error)
 
 	GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error)
@@ -36,8 +35,6 @@ type IAssetModel interface {
 type AssetModel struct{}
 
 type AssetEntity struct {
-	Category     string
-	Tag          []string
 }
 
 func (am AssetModel) checkResource(ctx context.Context, url string, must bool)(int64, error){
@@ -55,33 +52,19 @@ func (am AssetModel) checkResource(ctx context.Context, url string, must bool)(i
 }
 
 func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must bool) error {
-	if must && entity.Category == "" {
-		return ErrRequestItemIsNil
-	}
-
-	//TODO:Check tag & category entity
-	_, err := GetCategoryModel().GetCategoryById(ctx, entity.Category)
-	if err != nil{
-		log.Error(ctx, "Invalid category ", log.Err(err))
-		return err
-	}
-
 	return nil
 }
 
-func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
-	err := am.checkEntity(ctx, AssetEntity{
-		Category:     data.Category,
-		Tag:          data.Tags,
-	}, true)
+func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (int64, error) {
+	err := am.checkEntity(ctx, AssetEntity{}, true)
 	if err != nil {
-		return "", err
+		return -1, err
 	}
 
 	data.Size = 0
 	size, err := am.checkResource(ctx, data.ResourceName, true)
 	if err != nil {
-		return "", err
+		return -1, err
 	}
 	data.Size = size
 
@@ -89,36 +72,32 @@ func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) 
 }
 
 func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error {
-	err := am.checkEntity(ctx, AssetEntity{
-		Category:     data.Category,
-		Tag:          data.Tag,
-	}, false)
+	err := am.checkEntity(ctx, AssetEntity{}, false)
 	if err != nil{
 		return err
-	}
-
-	data.Size = 0
-	if data.ResourceName != ""{
-		size, err := am.checkResource(ctx, data.ResourceName, true)
-		if err != nil {
-			return err
-		}
-		data.Size = size
 	}
 
 	return da.GetAssetDA().UpdateAsset(ctx, data)
 }
 
-func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
+func (am *AssetModel) DeleteAsset(ctx context.Context, id int64) error {
 	return da.GetAssetDA().DeleteAsset(ctx, id)
 }
 
-func (am *AssetModel) GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error) {
+func (am *AssetModel) GetAssetByID(ctx context.Context, id int64) (*entity.AssetObject, error) {
 	return da.GetAssetDA().GetAssetByID(ctx, id)
 }
 
 func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error) {
-	return da.GetAssetDA().SearchAssets(ctx, (*da.SearchAssetCondition)(condition))
+	return da.GetAssetDA().SearchAssets(ctx, &da.SearchAssetCondition{
+		ID:          condition.ID,
+		Name:        condition.Name,
+		SearchWords: condition.SearchWords,
+		Author:      condition.Author,
+		OrderBy:     da.NewAssetsOrderBy(condition.OrderBy),
+		PageSize:    condition.PageSize,
+		Page:        condition.Page,
+	})
 }
 
 func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error) {

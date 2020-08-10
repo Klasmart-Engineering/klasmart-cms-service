@@ -79,7 +79,7 @@ func TestAssetModel_CreateAsset(t *testing.T) {
 		Size:     180,
 		Tags:     []string{"Hello"},
 		//URL:      "http://www.baidu.com",
-		Uploader: "123",
+		Author: "123",
 	})
 	if err != nil {
 		panic(err)
@@ -194,7 +194,7 @@ func TestGetAssetJSON(t *testing.T) {
 		Size:     180,
 		Tags:     []string{"Hello"},
 		//URL:      "http://www.baidu.com",
-		Uploader: "123",
+		Author: "123",
 	}
 	data, err := json.Marshal(obj)
 	if err != nil {

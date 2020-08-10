@@ -16,6 +16,7 @@ require (
 	github.com/tidwall/pretty v1.0.1 // indirect
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.2
+	gitlab.badanamu.com.cn/calmisland/dbo v0.1.6 // indirect
 	go.mongodb.org/mongo-driver v1.4.0
 	go.uber.org/zap v1.15.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
@@ -25,4 +26,9 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/go-playground/validator.v9 v9.31.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
+)
+
+replace (
+	github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.4
+	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 )
