@@ -14,10 +14,12 @@ type AssetObject struct {
 	Description   string   `gorm:"type:text;NOT NULL;column:description json:"description" dynamodbay: "description"`
 	Thumbnail     string   `gorm:"type:text;NOT NULL;column:thumbnail json:"thumbnail" dynamodbav:"thumbnail"`
 
-	Size         int64  `gorm:"type:bigint;NOT NULL;column:size json:"size" dynamodbav:"size"`
-	ResourceName string `gorm:"type:text;NOT NULL;column:resource_name json:"resource_name" dynamodbav:"resource_name"`
+	Size     int64  `gorm:"type:bigint;NOT NULL;column:size json:"size" dynamodbav:"size"`
+	Resource string `gorm:"type:text;NOT NULL;column:resource json:"resource" dynamodbav:"resource"`
 
-	Author string `gorm:"type:bigint;NOT NULL;column:author json:"author" dynamodbav:"author"`
+	Author 		string `gorm:"type:varchar(256);NOT NULL;column:author json:"author" dynamodbav:"author"`
+	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name json:"author_name" dynamodbav:"author_name"`
+	Org 		string `gorm:"type:varchar(256);NOT NULL;column:org json:"org" dynamodbav:"org"`
 
 	CreatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:updated_at" json:"created_at" dynamodbav:"created_at"`
 	UpdatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:created_at" json:"updated_at" dynamodbav:"updated_at"`
@@ -35,10 +37,9 @@ func (a AssetObject) TableName() string {
 
 type SearchAssetCondition struct {
 	ID        []int64 `json:"id"`
-	Name      string `json:"name"`
 
 	SearchWords []string `json:"search_words"`
-	Author      []int    `json:"author"`
+	IsSelf bool `json:"is_self"`
 
 	OrderBy  string `json:"order_by"`
 	PageSize int `json:"page_size"`

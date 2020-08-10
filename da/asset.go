@@ -83,9 +83,10 @@ func (m *MysqlDBAssetDA) SearchAssets(ctx context.Context, condition *SearchAsse
 type SearchAssetCondition struct {
 	ID        []int64 `json:"id"`
 	Name      string `json:"name"`
+	OrgID	  string `json:"org_id"`
 
 	SearchWords []string `json:"search_words"`
-	Author      []int    `json:"author"`
+	Author      []string    `json:"author"`
 
 	OrderBy  AssetsOrderBy `json:"order_by"`
 	PageSize int `json:"page_size"`
@@ -108,7 +109,8 @@ func (s SearchAssetCondition) GetConditions() ([]string, []interface{}) {
 
 	if len(s.SearchWords) > 0 {
 		for i := range s.SearchWords {
-			wheres = append(wheres, "name like %?% or keywords like %?% or description like %?%")
+			wheres = append(wheres, "name like %?% or keywords like %?% or description like %?% or author_name like %?%")
+			parameters = append(parameters, s.SearchWords[i])
 			parameters = append(parameters, s.SearchWords[i])
 			parameters = append(parameters, s.SearchWords[i])
 			parameters = append(parameters, s.SearchWords[i])
