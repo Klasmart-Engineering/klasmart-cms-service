@@ -1,6 +1,7 @@
 .idea
 .vscode/
 .DS_Store
+dist
 debug
 .run
 kidsloop2

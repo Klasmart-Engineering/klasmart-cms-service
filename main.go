@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,9 +15,28 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 )
 
+func initDBO(){
+	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
+		dbConf := config.Get().DBConfig
+		c.ShowLog = dbConf.ShowLog
+		c.ShowSQL = dbConf.ShowSQL
+		c.MaxIdleConns = dbConf.MaxIdleConns
+		c.MaxOpenConns = dbConf.MaxOpenConns
+		c.ConnectionString = dbConf.ConnectionString
+	})
+	if err != nil{
+		log.Error(context.TODO(), "create dbo failed", log.Err(err))
+		panic(err)
+	}
+	dbo.ReplaceGlobal(dboHandler)
+}
+
 func main() {
 	//获取数据库连接
 	config.LoadEnvConfig()
+
+	//设置数据库配置
+	initDBO()
 
 	// init dynamodb connection
 	dynamodb.GetClient()

@@ -11,9 +11,18 @@ import (
 type Config struct {
 	StorageConfig StorageConfig
 	CDNConfig     CDNConfig
+	DBConfig		DBConfig
 }
 
 var config *Config
+
+type DBConfig struct {
+	ConnectionString string `json:"connection_string"`
+	MaxOpenConns     int `json:"max_open_conns"`
+	MaxIdleConns     int `json:"max_idle_conns"`
+	ShowLog          bool `json:"show_log"`
+	ShowSQL          bool `json:"show_sql"`
+}
 
 type StorageConfig struct {
 	Accelerate    bool   `yaml:"accelerate"`
@@ -45,6 +54,10 @@ func assertGetEnv(key string) string {
 func LoadEnvConfig() {
 	ctx := context.TODO()
 	config = new(Config)
+	loadStorageEnvConfig(ctx)
+	loadDBEnvConfig(ctx)
+}
+func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
@@ -81,6 +94,43 @@ func LoadEnvConfig() {
 			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
 		}
 	}
+
+}
+
+func loadDBEnvConfig(ctx context.Context){
+	config.DBConfig.ConnectionString = assertGetEnv("connection_string")
+	maxOpenConnsStr := assertGetEnv("max_open_conns")
+	maxIdleConnsStr := assertGetEnv("max_idle_conns")
+	showLogStr := assertGetEnv("show_log")
+	showSQLStr := assertGetEnv("show_sql")
+
+	maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
+	if err != nil{
+		log.Error(ctx, "Can't parse max_open_conns")
+		maxOpenConns = 16
+	}
+	config.DBConfig.MaxOpenConns = maxOpenConns
+
+	maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
+	if err != nil{
+		log.Error(ctx, "Can't parse max_idle_conns")
+		maxOpenConns = 16
+	}
+	config.DBConfig.MaxIdleConns = maxIdleConns
+
+	showLog, err := strconv.ParseBool(showLogStr)
+	if err != nil{
+		log.Error(ctx, "Can't parse show_log")
+		showLog = true
+	}
+	config.DBConfig.ShowLog = showLog
+
+	showSQL, err := strconv.ParseBool(showSQLStr)
+	if err != nil{
+		log.Error(ctx, "Can't parse show_sql")
+		showLog = true
+	}
+	config.DBConfig.ShowSQL = showSQL
 }
 
 func Get() *Config {
