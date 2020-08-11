@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Server) createAsset(c *gin.Context) {
-	data := new(entity.AssetObject)
+	data := new(entity.CreateAssetData)
 	err := c.ShouldBind(data)
 	if err != nil{
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
@@ -36,11 +36,7 @@ func (s *Server) updateAsset(c *gin.Context){
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
-	data.ID, err = strconv.ParseInt(id, 10, 64)
-	if err != nil{
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
+	data.ID = id
 
 	err = model.GetAssetModel().UpdateAsset(c.Request.Context(), *data, s.getOperator(c))
 	if err == model.ErrNoAuth{
@@ -55,14 +51,9 @@ func (s *Server) updateAsset(c *gin.Context){
 }
 
 func (s *Server) deleteAsset(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil{
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
+	id := c.Param("id")
 
-	err = model.GetAssetModel().DeleteAsset(c.Request.Context(), id, s.getOperator(c))
+	err := model.GetAssetModel().DeleteAsset(c.Request.Context(), id, s.getOperator(c))
 	if err == model.ErrNoAuth{
 		c.JSON(http.StatusForbidden, err.Error())
 		return
@@ -76,12 +67,7 @@ func (s *Server) deleteAsset(c *gin.Context) {
 }
 
 func (s *Server) getAssetByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil{
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
+	id := c.Param("id")
 	assetInfo, err := model.GetAssetModel().GetAssetByID(c.Request.Context(), id, s.getOperator(c))
 	if err == da.ErrRecordNotFound{
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))

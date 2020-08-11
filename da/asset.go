@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 	"time"
 
@@ -18,11 +19,11 @@ var(
 
 
 type IAssetDA interface {
-	CreateAsset(ctx context.Context, data entity.AssetObject) (int64, error)
+	CreateAsset(ctx context.Context, data entity.AssetObject) (string, error)
 	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
-	DeleteAsset(ctx context.Context, id int64) error
+	DeleteAsset(ctx context.Context, id string) error
 
-	GetAssetByID(ctx context.Context, id int64) (*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
 	SearchAssets(ctx context.Context, condition *SearchAssetCondition) (int64, []*entity.AssetObject, error)
 }
 
@@ -30,14 +31,15 @@ type MysqlDBAssetDA struct {
 	dbo.BaseDA
 }
 
-func (m *MysqlDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject) (int64, error) {
+func (m *MysqlDBAssetDA) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
 	now := time.Now()
+	data.ID = utils.NewID()
 	data.CreatedAt = &now
 	data.UpdatedAt = &now
 	_, err := m.InsertTx(ctx, dbo.MustGetDB(ctx), data)
 	if err != nil {
 		log.Error(ctx, "create asset failed", log.Err(err))
-		return -1, err
+		return "", err
 	}
 	return data.ID, nil
 }
@@ -56,7 +58,7 @@ func (m *MysqlDBAssetDA) UpdateAsset(ctx context.Context, data entity.UpdateAsse
 	return nil
 }
 
-func (m *MysqlDBAssetDA) DeleteAsset(ctx context.Context, id int64) error {
+func (m *MysqlDBAssetDA) DeleteAsset(ctx context.Context, id string) error {
 	now := time.Now()
 	_, err := m.UpdateTx(ctx, dbo.MustGetDB(ctx), entity.AssetObject{ID: id, DeletedAt: &now})
 	if err != nil {
@@ -65,7 +67,7 @@ func (m *MysqlDBAssetDA) DeleteAsset(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (m *MysqlDBAssetDA) GetAssetByID(ctx context.Context, id int64) (*entity.AssetObject, error) {
+func (m *MysqlDBAssetDA) GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error) {
 	obj := new(entity.AssetObject)
 	err := m.GetTx(ctx, dbo.MustGetDB(ctx), id, obj)
 	if err != nil {
@@ -81,7 +83,7 @@ func (m *MysqlDBAssetDA) SearchAssets(ctx context.Context, condition *SearchAsse
 }
 
 type SearchAssetCondition struct {
-	ID        []int64 `json:"id"`
+	ID        []string `json:"id"`
 	Name      string `json:"name"`
 	OrgID	  string `json:"org_id"`
 

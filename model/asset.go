@@ -23,12 +23,12 @@ var(
 )
 
 type IAssetModel interface {
-	CreateAsset(ctx context.Context, data entity.AssetObject, operator entity.Operator) (int64, error)
+	CreateAsset(ctx context.Context, data entity.CreateAssetData, operator entity.Operator) (string, error)
 	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest, operator entity.Operator) error
-	DeleteAsset(ctx context.Context, id int64, operator entity.Operator) error
+	DeleteAsset(ctx context.Context, id string, operator entity.Operator) error
 
-	GetAssetByID(ctx context.Context, id int64, operator entity.Operator) (*entity.AssetObject, error)
-	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition, operator entity.Operator) (int64, []*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id string, operator entity.Operator) (*entity.AssetData, error)
+	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition, operator entity.Operator) (int64, []*entity.AssetData, error)
 
 	GetAssetUploadPath(ctx context.Context, extension string, operator entity.Operator) (*entity.ResourcePath, error)
 	GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string ,error)
@@ -69,20 +69,21 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 	return nil
 }
 
-func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject, operator entity.Operator) (int64, error) {
+func (am *AssetModel) CreateAsset(ctx context.Context, req entity.CreateAssetData, operator entity.Operator) (string, error) {
 	err := am.checkEntity(ctx, AssetEntity{}, true)
 	if err != nil {
-		return -1, err
+		return "", err
 	}
 
-	data.Size = 0
 	size, err := am.checkResource(ctx, AssetSource{
-		assetSource:     data.Resource,
-		thumbnailSource: data.Thumbnail,
+		assetSource:     req.Resource,
+		thumbnailSource: req.Thumbnail,
 	}, true)
 	if err != nil {
-		return -1, err
+		return "", err
 	}
+	data := req.ToAssetObject()
+
 	data.Size = size
 
 	//TODO: get user name
@@ -90,7 +91,7 @@ func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject, 
 	data.Author = operator.UserID
 	data.AuthorName = operator.UserID
 
-	return da.GetAssetDA().CreateAsset(ctx, data)
+	return da.GetAssetDA().CreateAsset(ctx, *data)
 }
 
 func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest, operator entity.Operator) error {
@@ -110,7 +111,7 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	return da.GetAssetDA().UpdateAsset(ctx, data)
 }
 
-func (am *AssetModel) DeleteAsset(ctx context.Context, id int64, operator entity.Operator) error {
+func (am *AssetModel) DeleteAsset(ctx context.Context, id string, operator entity.Operator) error {
 	assets, err := am.GetAssetByID(ctx, id, operator)
 	if err != nil{
 		return err
@@ -122,11 +123,15 @@ func (am *AssetModel) DeleteAsset(ctx context.Context, id int64, operator entity
 	return da.GetAssetDA().DeleteAsset(ctx, id)
 }
 
-func (am *AssetModel) GetAssetByID(ctx context.Context, id int64, operator entity.Operator) (*entity.AssetObject, error) {
-	return da.GetAssetDA().GetAssetByID(ctx, id)
+func (am *AssetModel) GetAssetByID(ctx context.Context, id string, operator entity.Operator) (*entity.AssetData, error) {
+	res, err :=  da.GetAssetDA().GetAssetByID(ctx, id)
+	if err != nil{
+		return nil, err
+	}
+	return res.ToAssetData(), nil
 }
 
-func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition, operator entity.Operator) (int64, []*entity.AssetObject, error) {
+func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition, operator entity.Operator) (int64, []*entity.AssetData, error) {
 	cd := &da.SearchAssetCondition{
 		ID:          condition.ID,
 		SearchWords: condition.SearchWords,
@@ -139,7 +144,15 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.Search
 	if condition.IsSelf {
 		cd.Author = []string{operator.UserID}
 	}
-	return da.GetAssetDA().SearchAssets(ctx, cd)
+	count, res, err := da.GetAssetDA().SearchAssets(ctx, cd)
+	if err != nil {
+		return count, nil, err
+	}
+	data := make([]*entity.AssetData, len(res))
+	for i := range res {
+		data[i] = res[i].ToAssetData()
+	}
+	return count, data, nil
 }
 
 func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string, operator entity.Operator) (*entity.ResourcePath, error) {
