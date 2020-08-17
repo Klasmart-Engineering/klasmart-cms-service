@@ -11,15 +11,30 @@ import (
 	"sync"
 )
 
-const(
-	Asset_Storage_Partition = "asset"
+const (
+	Asset_Storage_Partition     = "asset"
 	Thumbnail_Storage_Partition = "thumbnail"
 )
 
-var(
-	ErrNoSuchURL = errors.New("no such url")
-	ErrRequestItemIsNil = errors.New("request item is nil")
-	ErrNoAuth = errors.New("no auth to operate")
+var (
+	ErrNoSuchURL           = errors.New("no such url")
+	ErrRequestItemIsNil    = errors.New("request item is nil")
+	ErrNoAuth              = errors.New("no auth to operate")
+	ErrCreateContentFailed = errors.New("create contentdata into data access failed")
+
+	ErrNoContentData = errors.New("no content data")
+	ErrNoContent     = errors.New("no content")
+	ErrInvalidPublishStatus            = errors.New("invalid publish status")
+	ErrGetUnpublishedContent           = errors.New("unpublished content")
+	ErrGetUnauthorizedContent          = errors.New("unauthorized content")
+	ErrCloneContentFailed              = errors.New("clone content failed")
+	ErrParseContentDataFailed = errors.New("parse content data failed")
+	ErrParseContentDataDetailsFailed = errors.New("parse content data details failed")
+	ErrUpdateContentFailed             = errors.New("update contentdata into data access failed")
+	ErrInvalidContentStatusToPublish         = errors.New("content status is invalid to publish")
+	ErrReadContentFailed               = errors.New("read content failed")
+	ErrDeleteContentFailed             = errors.New("delete contentdata into data access failed")
+
 )
 
 type IAssetModel interface {
@@ -31,7 +46,7 @@ type IAssetModel interface {
 	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition, operator entity.Operator) (int64, []*entity.AssetData, error)
 
 	GetAssetUploadPath(ctx context.Context, extension string, operator entity.Operator) (*entity.ResourcePath, error)
-	GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string ,error)
+	GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string, error)
 }
 
 type AssetModel struct{}
@@ -39,11 +54,11 @@ type AssetModel struct{}
 type AssetEntity struct {
 }
 type AssetSource struct {
-	assetSource string
+	assetSource     string
 	thumbnailSource string
 }
 
-func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must bool)(int64, error){
+func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must bool) (int64, error) {
 	if must && (data.assetSource == "" || data.thumbnailSource == "") {
 		return -1, ErrRequestItemIsNil
 	}
@@ -96,7 +111,7 @@ func (am *AssetModel) CreateAsset(ctx context.Context, req entity.CreateAssetDat
 
 func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest, operator entity.Operator) error {
 	assets, err := am.GetAssetByID(ctx, data.ID, operator)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	if assets.Author != operator.UserID {
@@ -104,7 +119,7 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	}
 
 	err = am.checkEntity(ctx, AssetEntity{}, false)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -113,7 +128,7 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 
 func (am *AssetModel) DeleteAsset(ctx context.Context, id string, operator entity.Operator) error {
 	assets, err := am.GetAssetByID(ctx, id, operator)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	if assets.Author != operator.UserID {
@@ -124,8 +139,8 @@ func (am *AssetModel) DeleteAsset(ctx context.Context, id string, operator entit
 }
 
 func (am *AssetModel) GetAssetByID(ctx context.Context, id string, operator entity.Operator) (*entity.AssetData, error) {
-	res, err :=  da.GetAssetDA().GetAssetByID(ctx, id)
-	if err != nil{
+	res, err := da.GetAssetDA().GetAssetByID(ctx, id)
+	if err != nil {
 		return nil, err
 	}
 	return res.ToAssetData(), nil
@@ -135,8 +150,8 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.Search
 	cd := &da.SearchAssetCondition{
 		ID:          condition.ID,
 		SearchWords: condition.SearchWords,
-		FuzzyQuery: condition.FuzzyQuery,
-		OrgID:  	 operator.OrgID,
+		FuzzyQuery:  condition.FuzzyQuery,
+		OrgID:       operator.OrgID,
 		OrderBy:     da.NewAssetsOrderBy(condition.OrderBy),
 		PageSize:    condition.PageSize,
 		Page:        condition.Page,
@@ -160,7 +175,7 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string, 
 	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
 	path, err := storage.GetUploadFileTempPath(ctx, Asset_Storage_Partition, name)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return &entity.ResourcePath{
@@ -169,7 +184,7 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string, 
 	}, nil
 }
 
-func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string ,error){
+func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string, error) {
 	storage := storage.DefaultStorage()
 	return storage.GetFileTempPath(ctx, Asset_Storage_Partition, name)
 }
