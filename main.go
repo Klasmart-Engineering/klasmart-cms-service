@@ -11,7 +11,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 )
 
@@ -39,7 +38,6 @@ func main() {
 	initDBO()
 
 	// init dynamodb connection
-	dynamodb.GetClient()
 	storage.DefaultStorage()
 
 	log.Info(context.TODO(), "start kidsloop2 api service")
