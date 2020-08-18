@@ -63,18 +63,17 @@ func (s *CombineConditions) GetOrderBy() string {
 }
 
 type ContentCondition struct {
-	IDS          []string
-	Name         string
-	ContentType  []int
-	Scope        []string
+	IDS          []string `json:"ids"`
+	Name         string `json:"name"`
+	ContentType  []int `json:"content_type"`
+	Scope        []string `json:"scope"`
+	PublishStatus []string `json:"publish_status"`
+	Author      string `json:"author"`
+	Org    		string `json:"org"`
 
-	PublishStatus []string
-	Author      string
-	Org    		string
-
-	OrderBy  ContentOrderBy
-	Page     int
-	PageSize int
+	OrderBy  ContentOrderBy `json:"order_by"`
+	Page     int `json:"page"`
+	PageSize int `json:"page_size"`
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
