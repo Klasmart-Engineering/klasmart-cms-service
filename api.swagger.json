@@ -20,6 +20,10 @@
   ],
   "tags": [
     {
+      "name": "content",
+      "description": "content tag management"
+    },
+    {
       "name": "asset",
       "description": "asset management"
     },
@@ -35,6 +39,9 @@
   "paths": {
     "/content": {
       "post": {
+        "tags": [
+          "content"
+        ],
         "description": "Create content",
         "requestBody": {
           "required": true,
@@ -70,6 +77,9 @@
     },
     "/content/{content_id}/publish": {
       "put": {
+        "tags": [
+          "content"
+        ],
         "description": "Publish content",
         "parameters": [
           {
@@ -114,6 +124,9 @@
         }
       ],
       "get": {
+        "tags": [
+          "content"
+        ],
         "description": "Get content by content_id",
         "parameters": [
           {
@@ -142,6 +155,9 @@
         }
       },
       "put": {
+        "tags": [
+          "content"
+        ],
         "description": "Update content by content_id",
         "requestBody": {
           "required": true,
@@ -160,6 +176,9 @@
         }
       },
       "delete": {
+        "tags": [
+          "content"
+        ],
         "description": "Delete content by content_id",
         "responses": {
           "200": {
@@ -170,6 +189,9 @@
     },
     "/contents": {
       "get": {
+        "tags": [
+          "content"
+        ],
         "description": "Search content with condition",
         "parameters": [
           {
@@ -252,6 +274,9 @@
     },
     "/contents/private": {
       "get": {
+        "tags": [
+          "content"
+        ],
         "description": "Search user's private content with condition",
         "parameters": [
           {
@@ -334,6 +359,9 @@
     },
     "/contents/pending": {
       "get": {
+        "tags": [
+          "content"
+        ],
         "description": "Search pending content",
         "parameters": [
           {
