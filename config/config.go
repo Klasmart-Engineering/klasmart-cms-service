@@ -12,10 +12,16 @@ type Config struct {
 	StorageConfig StorageConfig
 	CDNConfig     CDNConfig
 	DBConfig		DBConfig
+	RedisConfig 	RedisConfig
 }
 
 var config *Config
 
+type RedisConfig struct {
+	Host string
+	Port int
+	Password string
+}
 type DBConfig struct {
 	ConnectionString string `json:"connection_string"`
 	MaxOpenConns     int `json:"max_open_conns"`
@@ -56,6 +62,7 @@ func LoadEnvConfig() {
 	config = new(Config)
 	loadStorageEnvConfig(ctx)
 	loadDBEnvConfig(ctx)
+	loadRedisEnvConfig(ctx)
 }
 func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
@@ -95,6 +102,20 @@ func loadStorageEnvConfig(ctx context.Context) {
 		}
 	}
 
+}
+
+func loadRedisEnvConfig(ctx context.Context) {
+	host := assertGetEnv("redis_host")
+	portStr := assertGetEnv("redis_port")
+	password := assertGetEnv("redis_password")
+	config.RedisConfig.Host = host
+	port ,err := strconv.Atoi(portStr)
+	if err != nil{
+		log.Error(ctx, "Can't parse redis_port")
+		port = 3306
+	}
+	config.RedisConfig.Port = port
+	config.RedisConfig.Password = password
 }
 
 func loadDBEnvConfig(ctx context.Context){

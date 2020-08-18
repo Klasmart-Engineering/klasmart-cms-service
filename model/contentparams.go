@@ -46,6 +46,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Extra:         c.Extra,
 		Author:        operator.UserID,
 		AuthorName:    authorName,
+		LockedBy: 	   "-",
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,
 		PublishStatus: publishStatus,

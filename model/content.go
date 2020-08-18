@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/contentdata"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutext"
 	"sync"
 	"time"
 )
@@ -17,6 +18,7 @@ type IContentModel interface {
 	PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
+	UnlockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 
 	GetContentById(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentInfo, error)
@@ -244,7 +246,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	return nil
 }
 
-func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error{
+func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error{
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
 		logger.WithContext(ctx).WithField("subject", "course").Warnf("Can't read contentdata for publishing, error: %v", err)
@@ -252,7 +254,30 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	}
 	//TODO:检查权限
 
-	if content.LockedBy != "" {
+	if content.LockedBy != user.UserID {
+		return ErrNoAuth
+	}
+	now := time.Now()
+	content.LockedBy = "-"
+	content.UpdatedAt = &now
+	return da.GetDyContentDA().UpdateContent(ctx, cid, *content)
+}
+func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error{
+	locker, err := mutex.NewLock(ctx, "content", "lock", cid)
+	if err != nil{
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	
+	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
+	if err != nil {
+		logger.WithContext(ctx).WithField("subject", "course").Warnf("Can't read contentdata for publishing, error: %v", err)
+		return ErrNoContent
+	}
+	//TODO:检查权限
+
+	if content.LockedBy != "" && content.LockedBy != "-" {
 		return ErrContentAlreadyLocked
 	}
 	now := time.Now()
