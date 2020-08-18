@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"net/http"
 	"strings"
@@ -13,7 +14,7 @@ func ExtractSession(c *gin.Context) (string, error) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
 		log.Error(c.Request.Context(), "ExtractSession", log.Err(errors.New("no session")))
-		return "", errors.New("ErrUnauthorized")
+		return "", constant.ErrUnAuthorized
 	}
 
 	prefix := "Bearer "
