@@ -1174,6 +1174,324 @@
           }
         }
       }
+    },
+
+    "/schedules": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "query schedules",
+        "description": "query schedules",
+        "operationId": "queryschedules",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "teacher_id",
+            "in": "query",
+            "description": "Search schedules by teacher_id",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "lastKey",
+            "in": "query",
+            "description": "The key value of the last record",
+            "schema": {
+              "type": "string",
+              "format": "string",
+              "nullable": true,
+              "default": ""
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "records per page, not paging if pageSize <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 10
+            },
+            "required": false,
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "schedule list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Schedule"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "create schedule",
+        "description": "Create schedule",
+        "operationId": "createSchedule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "string",
+                  "description": "schedule id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/schedules/{schedule_id}": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "get schedules by id",
+        "description": "get schedules by id",
+        "operationId": "GetSchedulesByID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "description": "schedule id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleDetailed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "update schedule",
+        "description": "update schedule",
+        "operationId": "updateSchedule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "description": "schedule id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "string",
+                  "description": "schedule id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "delete schedule",
+        "description": "delete schedule",
+        "operationId": "deleteSchedule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "description": "delete schedule",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          },
+          {
+            "name": "repeat_edit_options",
+            "in": "query",
+            "description": "Search schedules by teacher_id",
+            "schema": {
+              "type": "string",
+              "enum": ["only_current", "with_following"],
+              "nullable": true,
+              "description": "repeat edit option"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1336,6 +1654,687 @@
             "type": "string",
             "description": "ParentCategoryID",
             "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+          }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "description": "schedule short info",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "schedule id"
+          },
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "lessonPlanID": {
+            "type": "string",
+            "description": "schedule lessonPlan id"
+          },
+          "lessonPlanName": {
+            "type": "string",
+            "description": "schedule lessonPlan name"
+          },
+          "teachers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Teacher"
+            }
+          }
+        }
+      },
+      "Teacher": {
+        "type": "object",
+        "description": "teacher short info",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "schedule teacher id"
+          },
+          "name": {
+            "type": "string",
+            "description": "schedule teacher name"
+          }
+        }
+      },
+      "ScheduleCreate": {
+        "type":"object",
+        "description": "schedule create info",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "class_id": {
+            "type": "string",
+            "description": "schedule class id"
+          },
+          "lesson_plan_id": {
+            "type": "string",
+            "description": "schedule lesson_plan_id"
+          },
+          "teacher_ids": {
+            "type": "array",
+            "items":{
+              "type": "string"
+            },
+            "description": "schedule teacher_ids"
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "mode_type": {
+            "type": "string",
+            "enum": [
+              "AllDay",
+              "Repeat"
+            ],
+            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
+          },
+          "repeat": {
+            "type": "object",
+            "description": "repeat options, only work when mode_type equal Repeat,",
+            "properties": {
+              "type": {
+                "type":"string",
+                "enum": ["never", "after_count", "after_time"],
+                "description": "repeat type"
+              },
+              "daily": {
+                "type": "object",
+                "description": "repeat daily options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "weekly": {
+                "type": "object",
+                "description": "repeat weekly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "on": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "monthly": {
+                "type": "object",
+                "description": "repeat monthly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval months"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "yearly": {
+                "type": "object",
+                "description": "repeat yearly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval years (less or equal than 2 years)"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_month": {
+                    "type": "integer",
+                    "description": "on date month"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_month": {
+                    "type": "integer",
+                    "description": "on week month"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              }
+            }
+          },
+          "subject_id": {
+            "type": "string",
+            "description": "schedule SubjectID"
+          },
+          "program_id": {
+            "type": "string",
+            "description": "schedule ProgramID"
+          },
+          "class_type": {
+            "type": "string",
+            "enum": [
+              "OnlineClass",
+              "OfflineClass",
+              "Homework",
+              "Task"
+            ],
+            "description": "schedule class_type"
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "If I schedule the time as homework or task, then I should be able to set a due date. This is optional for me. The due date cannot be earlier than class end time."
+          },
+          "description": {
+            "type": "string",
+            "description": "schedule description"
+          },
+          "attachment_id": {
+            "type": "string",
+            "description": "schedule attachment id"
+          }
+        }
+      },
+      "ScheduleUpdate": {
+        "type":"object",
+        "description": "schedule create info",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "class_id": {
+            "type": "string",
+            "description": "schedule lessonPlan name"
+          },
+          "lesson_plan_id": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "teacher_ids": {
+            "type": "array",
+            "items":{
+              "type": "string"
+            },
+            "description": "schedule lessonPlan name"
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "mode_type": {
+            "type": "string",
+            "enum": [
+              "AllDay",
+              "Repeat"
+            ],
+            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
+          },
+          "repeat_edit_options": {
+            "type": "string",
+            "enum": ["only_current", "with_following"],
+            "description": "repeat edit option"
+          },
+          "repeat": {
+            "type": "object",
+            "description": "repeat options, only work when mode_type equal Repeat,",
+            "properties": {
+              "type": {
+                "type":"string",
+                "enum": ["never", "after_count", "after_time"],
+                "description": "repeat type"
+              },
+              "daily": {
+                "type": "object",
+                "description": "repeat daily options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "weekly": {
+                "type": "object",
+                "description": "repeat weekly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "on": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "monthly": {
+                "type": "object",
+                "description": "repeat monthly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval months"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "yearly": {
+                "type": "object",
+                "description": "repeat yearly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval years (less or equal than 2 years)"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_month": {
+                    "type": "integer",
+                    "description": "on date month"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_month": {
+                    "type": "integer",
+                    "description": "on week month"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              }
+            }
+          },
+          "subject_id": {
+            "type": "string",
+            "description": "schedule SubjectID"
+          },
+          "program_id": {
+            "type": "string",
+            "description": "schedule ProgramID"
+          },
+          "class_type": {
+            "type": "string",
+            "enum": [
+              "OnlineClass",
+              "OfflineClass",
+              "Homework",
+              "Task"
+            ],
+            "description": "schedule class_type"
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "If I schedule the time as homework or task, then I should be able to set a due date. This is optional for me. The due date cannot be earlier than class end time."
+          },
+          "description": {
+            "type": "string",
+            "description": "schedule description"
+          },
+          "attachment_id": {
+            "type": "string",
+            "description": "schedule attachment id"
+          }
+        }
+      },
+      "ScheduleDetailed": {
+        "type":"object",
+        "description": "schedule create info",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "schedule id"
+          },
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "class_info": {
+            "type": "object",
+            "description": "schedule class info",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "schedule class id"
+              },
+              "name": {
+                "type": "string",
+                "description": "schedule class name"
+              }
+            }
+          },
+          "lesson_plan_info": {
+            "type": "object",
+            "description": "schedule lesson plan info",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "schedule lesson plan id"
+              },
+              "name": {
+                "type": "string",
+                "description": "schedule lesson plan name"
+              }
+            }
+          },
+          "teacher_infos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Teacher"
+            }
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "mode_type": {
+            "type": "string",
+            "enum": [
+              "AllDay",
+              "Repeat"
+            ],
+            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
+          },
+          "repeat": {
+            "type": "object",
+            "description": "repeat options, only work when mode_type equal Repeat,",
+            "properties": {
+              "type": {
+                "type":"string",
+                "enum": ["never", "after_count", "after_time"],
+                "description": "repeat type"
+              },
+              "daily": {
+                "type": "object",
+                "description": "repeat daily options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "weekly": {
+                "type": "object",
+                "description": "repeat weekly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "on": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "monthly": {
+                "type": "object",
+                "description": "repeat monthly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval months"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "yearly": {
+                "type": "object",
+                "description": "repeat yearly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval years (less or equal than 2 years)"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_month": {
+                    "type": "integer",
+                    "description": "on date month"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_month": {
+                    "type": "integer",
+                    "description": "on week month"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              }
+            }
+          },
+          "subject_info": {
+            "type": "object",
+            "description": "schedule subject info",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "schedule subject_id"
+              },
+              "name": {
+                "type": "string",
+                "description": "schedule subject_name"
+              }
+            }
+          },
+          "program_info": {
+            "type": "object",
+            "description": "schedule program info",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "schedule ProgramID"
+              },
+              "name": {
+                "type": "string",
+                "description": "schedule program_name"
+              }
+            }
+          },
+          "class_type": {
+            "type": "string",
+            "enum": [
+              "OnlineClass",
+              "OfflineClass",
+              "Homework",
+              "Task"
+            ],
+            "description": "schedule class_type"
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "If I schedule the time as homework or task, then I should be able to set a due date. This is optional for me. The due date cannot be earlier than class end time."
+          },
+          "description": {
+            "type": "string",
+            "description": "schedule description"
+          },
+          "attachment_info": {
+            "type": "object",
+            "description": "schedule attachment info",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "schedule attachment id"
+              },
+              "name": {
+                "type": "string",
+                "description": "schedule attachment name"
+              }
+            }
+          }
+        }
+      },
+      "RepeatEnd": {
+        "type": "object",
+        "description": "repeat end options",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["never", "after_count", "after_time"]
+          },
+          "after_count": {
+            "type": "integer",
+            "description": "end after N count"
+          },
+          "after_time": {
+            "type": "integer",
+            "description": "end after the time(unix timestamp)"
           }
         }
       }
