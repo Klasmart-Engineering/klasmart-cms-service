@@ -88,8 +88,8 @@ func TestGetContent(t *testing.T){
 }
 
 func TestUpdateContent(t *testing.T) {
-	id := "5f3b8adee5eef1ee75e97532"
-	err := GetDyContentDA().UpdateContent(context.Background(), id, entity.UpdateDyContent{
+	id := "5f3b90b291fa8fed55d310a0"
+	err := GetDyContentDA().UpdateContent(context.Background(), id, entity.Content{
 		Org:           "org2",
 		PublishScope:  "org1",
 		PublishStatus: "draft",
@@ -143,7 +143,7 @@ func TestSearchContent(t *testing.T) {
 		panic(err)
 	}
 	fmt.Println("ID:", id)
-	sub, contents, err := GetDyContentDA().SearchContent(context.Background(), DyContentCondition{
+	sub, contents, err := GetDyContentDA().SearchContent(context.Background(), &DyContentCondition{
 		//IDS:           []string{id},
 		//Name:          "",
 		//ContentType:   nil,

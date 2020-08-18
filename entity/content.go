@@ -72,6 +72,8 @@ type Content struct {
 
 	RejectReason string 				`gorm:"type:varchar(255);NOT NULL;column:reject_reason" dynamodbav:"reject_reason" json:"reject_reason" dynamoupdate:":rr"`
 	Version  int64                       `gorm:"type:int;NOT NULL;column:version" dynamodbav:"version" json:"version" dynamoupdate:":ve"`
+	LockedBy string 			 `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
+	SourceId string 				`gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
 
 	CreatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
@@ -99,6 +101,7 @@ type UpdateDyContent struct {
 	Keywords      string `json:":ky"`
 	Description   string `json:":de"`
 	Thumbnail     string `json:":th"`
+	LockedBy string `json:":lb"`
 
 	Data string `json:":d"`
 	Extra        string `json:":ex"`
@@ -111,6 +114,7 @@ type UpdateDyContent struct {
 	PublishStatus ContentPublishStatus `json:":pst"`
 
 	RejectReason string `json:":rr"`
+	SourceId string `json:":si"`
 	Version  int64 `json:":ve"`
 
 	CreatedAt *time.Time `json:":ca"`
@@ -164,6 +168,7 @@ type CreateContentRequest struct {
 
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
+	RejectReason string `json:"reject_reason"`
 
 	Data  ContentData `json:"data"`
 	Extra string      `json:"extra"`

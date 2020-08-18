@@ -24,6 +24,7 @@ var (
 
 	ErrNoContentData = errors.New("no content data")
 	ErrNoContent     = errors.New("no content")
+	ErrContentAlreadyLocked     = errors.New("content is already locked")
 	ErrInvalidPublishStatus            = errors.New("invalid publish status")
 	ErrGetUnpublishedContent           = errors.New("unpublished content")
 	ErrGetUnauthorizedContent          = errors.New("unauthorized content")

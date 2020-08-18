@@ -22,11 +22,11 @@ var(
 
 type IDyContentDA interface {
 	CreateContent(ctx context.Context, co entity.Content) (string, error)
-	UpdateContent(ctx context.Context, cid string, co entity.UpdateDyContent) error
+	UpdateContent(ctx context.Context, cid string, co entity.Content) error
 	DeleteContent(ctx context.Context, cid string) error
 	GetContentById(ctx context.Context, cid string) (*entity.Content, error)
 
-	SearchContent(ctx context.Context, condition DyContentCondition) (string, []*entity.Content, error)
+	SearchContent(ctx context.Context, condition IDyCondition) (string, []*entity.Content, error)
 }
 
 type DyContentDA struct {
@@ -51,10 +51,10 @@ func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (str
 	return co.ID, nil
 }
 
-func (d *DyContentDA) UpdateContent(ctx context.Context, cid string, co entity.UpdateDyContent) error {
+func (d *DyContentDA) UpdateContent(ctx context.Context, cid string, co0 entity.Content) error {
 	now := time.Now()
-	co.UpdatedAt = &now
-	err := d.getContentForUpdateContent(ctx, cid, &co)
+	co0.UpdatedAt = &now
+	co, err := d.getContentForUpdateContent(ctx, cid, &co0)
 	if err != nil{
 		return err
 	}
@@ -117,13 +117,14 @@ func (d *DyContentDA) GetContentById(ctx context.Context, cid string) (*entity.C
 	return content, nil
 }
 
-func (d *DyContentDA) SearchContent(ctx context.Context, condition DyContentCondition) (string, []*entity.Content, error) {
+func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition) (string, []*entity.Content, error) {
 	expr, err := expression.NewBuilder().WithFilter(condition.GetConditions()).Build()
 	if err != nil{
 		return "", nil, err
 	}
-	if condition.PageSize < 1 {
-		condition.PageSize = 10000
+	pageSize := condition.GetPageSize()
+	if pageSize < 1 {
+		pageSize = 10000
 	}
 	input := &dynamodb.ScanInput{
 		TableName: aws.String("content"),
@@ -131,11 +132,11 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition DyContentCond
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
-		Limit: 			aws.Int64(condition.PageSize),
+		Limit: 			aws.Int64(pageSize),
 	}
 
-	if condition.LastKey != "" {
-		key := &entity.ContentID{ID: condition.LastKey}
+	if condition.GetLastKey() != "" {
+		key := &entity.ContentID{ID: condition.GetLastKey()}
 		startKey, err := dynamodbattribute.MarshalMap(key)
 		if err != nil{
 			return "", nil, err
@@ -161,79 +162,111 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition DyContentCond
 	return key.ID, contentList ,nil
 }
 
-func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string, co *entity.UpdateDyContent) error{
+func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string, co *entity.Content) (*entity.UpdateDyContent, error){
 	content, err := d.GetContentById(ctx, cid)
 	if err != nil{
-		return err
+		return nil, err
+	}
+	co0 := &entity.UpdateDyContent{
+		ContentType:   co.ContentType,
+		Name:          co.Name,
+		Program:       co.Program,
+		Subject:       co.Subject,
+		Developmental: co.Developmental,
+		Skills:        co.Skills,
+		Age:           co.Age,
+		Keywords:      co.Keywords,
+		Description:   co.Description,
+		Thumbnail:     co.Thumbnail,
+		Data:          co.Data,
+		Extra:         co.Extra,
+		Author:        co.Author,
+		AuthorName:    co.AuthorName,
+		Org:           co.Org,
+		PublishScope:  co.PublishScope,
+		PublishStatus: co.PublishStatus,
+		RejectReason:  co.RejectReason,
+		SourceId: co.SourceId,
+		LockedBy: co.LockedBy,
+		Version:       co.Version,
+		CreatedAt:     co.CreatedAt,
+		UpdatedAt:     co.UpdatedAt,
+		DeletedAt:     co.DeletedAt,
 	}
 	if co.ContentType == 0 {
-		co.ContentType = content.ContentType
+		co0.ContentType = content.ContentType
 	}
 	if co.Name == "" {
-		co.Name = content.Name
+		co0.Name = content.Name
 	}
 	if co.Program == "" {
-		co.Program = content.Program
+		co0.Program = content.Program
 	}
 	if co.Subject == "" {
-		co.Subject = content.Subject
+		co0.Subject = content.Subject
 	}
 	if co.Developmental == "" {
-		co.Developmental = content.Developmental
+		co0.Developmental = content.Developmental
 	}
 	if co.Skills == "" {
-		co.Skills = content.Skills
+		co0.Skills = content.Skills
 	}
 	if co.Age == "" {
-		co.Age = content.Age
+		co0.Age = content.Age
 	}
 	if co.Keywords == ""{
-		co.Keywords = content.Keywords
+		co0.Keywords = content.Keywords
 	}
 	if co.Description == "" {
-		co.Description = content.Description
+		co0.Description = content.Description
 	}
 	if co.Thumbnail == "" {
-		co.Thumbnail = content.Thumbnail
+		co0.Thumbnail = content.Thumbnail
 	}
 	if co.Data == "" {
-		co.Data = content.Data
+		co0.Data = content.Data
 	}
 	if co.Extra == "" {
-		co.Extra = content.Extra
+		co0.Extra = content.Extra
 	}
 	if co.Author == "" {
-		co.Author = content.Author
+		co0.Author = content.Author
 	}
 	if co.AuthorName == "" {
-		co.AuthorName = content.AuthorName
+		co0.AuthorName = content.AuthorName
 	}
 	if co.Org == "" {
-		co.Org = content.Org
+		co0.Org = content.Org
 	}
 	if co.PublishScope == "" {
-		co.PublishScope = content.PublishScope
+		co0.PublishScope = content.PublishScope
 	}
 	if co.PublishStatus == "" {
-		co.PublishStatus = content.PublishStatus
+		co0.PublishStatus = content.PublishStatus
 	}
 	if co.RejectReason == "" {
-		co.RejectReason = content.RejectReason
+		co0.RejectReason = content.RejectReason
+	}
+	if co.SourceId == "" {
+		co0.SourceId = content.SourceId
+	}
+	if co.LockedBy == "" {
+		co0.LockedBy = content.LockedBy
 	}
 	if co.Version == 0 {
-		co.Version = content.Version
+		co0.Version = content.Version
 	}
 	if co.CreatedAt == nil {
-		co.CreatedAt = content.CreatedAt
+		co0.CreatedAt = content.CreatedAt
 	}
 	if co.UpdatedAt == nil {
-		co.UpdatedAt = content.UpdatedAt
+		co0.UpdatedAt = content.UpdatedAt
 	}
 	if co.DeletedAt == nil {
-		co.DeletedAt = content.DeletedAt
+		co0.DeletedAt = content.DeletedAt
 	}
 	fmt.Printf("content: %#v\n", co)
-	return nil
+	return co0, nil
 }
 type DyContentCondition struct {
 	IDS          []string `json:"ids"`
@@ -304,6 +337,37 @@ func (d *DyContentCondition)GetConditions() expression.ConditionBuilder{
 		builder = builder.And(conditions[i])
 	}
 	return builder
+}
+func (d *DyContentCondition)GetPageSize() int64{
+	return d.PageSize
+}
+func (d *DyContentCondition)GetLastKey() string{
+	return d.LastKey
+}
+
+type DyCombineContentCondition struct {
+	Condition1 IDyCondition
+	Condition2 IDyCondition
+	PageSize int64
+	LastKey string
+}
+
+func (d *DyCombineContentCondition)GetConditions() expression.ConditionBuilder{
+	var builder expression.ConditionBuilder
+	builder = d.Condition1.GetConditions().Or(d.Condition2.GetConditions())
+	return builder
+}
+func (d *DyCombineContentCondition)GetPageSize() int64{
+	return d.PageSize
+}
+func (d *DyCombineContentCondition)GetLastKey() string{
+	return d.LastKey
+}
+
+type IDyCondition interface{
+	GetConditions() expression.ConditionBuilder
+	GetPageSize() int64
+	GetLastKey() string
 }
 
 var(
