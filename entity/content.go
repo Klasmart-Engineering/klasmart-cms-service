@@ -92,6 +92,7 @@ type CreateContentRequest struct {
 	Thumbnail     string `json:"thumbnail"`
 
 	DoPublish		bool `json:"do_publish"`
+	PublishScope 	string `json:"publish_scope"`
 
 	Data 		ContentData `json:"data"`
 	Extra        string `json:"extra"`
@@ -121,6 +122,9 @@ type ContentInfo struct {
 	Description   string `json:"description"`
 	Thumbnail     string `json:"thumbnail"`
 	Version int64 `json:"version"`
+
+	SourceID	string `json:"source_id"`
+	LockedBy	string `json:"locked_by"`
 
 	Data ContentData `json:"data"`
 	Extra        string `json:"extra"`
