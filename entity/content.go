@@ -2,6 +2,8 @@ package entity
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"reflect"
 	"strings"
@@ -148,62 +150,61 @@ func (s Content) GetID() interface{} {
 	return s.ID
 }
 
-
 type CreateContentRequest struct {
-	ContentType   int `json:"content_type"`
-	Name          string `json:"name"`
-	Program       string `json:"program"`
-	Subject       string `json:"subject"`
-	Developmental string `json:"developmental"`
-	Skills        string `json:"skills"`
-	Age           string `json:"age"`
+	ContentType   int      `json:"content_type"`
+	Name          string   `json:"name"`
+	Program       string   `json:"program"`
+	Subject       string   `json:"subject"`
+	Developmental string   `json:"developmental"`
+	Skills        string   `json:"skills"`
+	Age           string   `json:"age"`
 	Keywords      []string `json:"keywords"`
-	Description   string `json:"description"`
-	Thumbnail     string `json:"thumbnail"`
+	Description   string   `json:"description"`
+	Thumbnail     string   `json:"thumbnail"`
 
-	DoPublish		bool `json:"do_publish"`
-	PublishScope 	string `json:"publish_scope"`
+	DoPublish    bool   `json:"do_publish"`
+	PublishScope string `json:"publish_scope"`
 
-	Data 		ContentData `json:"data"`
-	Extra        string `json:"extra"`
+	Data  ContentData `json:"data"`
+	Extra string      `json:"extra"`
 }
 
 type ContentInfoWithDetails struct {
 	ContentInfo
-	ContentTypeName string `json:"content_type_name"`
-	ProgramName string `json:"program_name"`
-	SubjectName string `json:"subject_name"`
+	ContentTypeName   string `json:"content_type_name"`
+	ProgramName       string `json:"program_name"`
+	SubjectName       string `json:"subject_name"`
 	DevelopmentalName string `json:"developmental_name"`
-	SkillsName string `json:"skills_name"`
-	AgeName string `json:"age_name"`
-	OrgName string `json:"org_name"`
+	SkillsName        string `json:"skills_name"`
+	AgeName           string `json:"age_name"`
+	OrgName           string `json:"org_name"`
 }
 
 type ContentInfo struct {
-	ID            string `json:"id"`
-	ContentType   int `json:"content_type"`
-	Name          string `json:"name"`
-	Program       string `json:"program"`
-	Subject       string `json:"subject"`
-	Developmental string `json:"developmental"`
-	Skills        string `json:"skills"`
-	Age           string `json:"age"`
+	ID            string   `json:"id"`
+	ContentType   int      `json:"content_type"`
+	Name          string   `json:"name"`
+	Program       string   `json:"program"`
+	Subject       string   `json:"subject"`
+	Developmental string   `json:"developmental"`
+	Skills        string   `json:"skills"`
+	Age           string   `json:"age"`
 	Keywords      []string `json:"keywords"`
-	Description   string `json:"description"`
-	Thumbnail     string `json:"thumbnail"`
-	Version int64 `json:"version"`
+	Description   string   `json:"description"`
+	Thumbnail     string   `json:"thumbnail"`
+	Version       int64    `json:"version"`
 
-	SourceID	string `json:"source_id"`
-	LockedBy	string `json:"locked_by"`
+	SourceID string `json:"source_id"`
+	LockedBy string `json:"locked_by"`
 
-	Data ContentData `json:"data"`
-	Extra        string `json:"extra"`
+	Data  ContentData `json:"data"`
+	Extra string      `json:"extra"`
 
-	Author 		string `json:"author"`
-	AuthorName  string `json:"author_name"`
-	Org 		string `json:"org"`
+	Author     string `json:"author"`
+	AuthorName string `json:"author_name"`
+	Org        string `json:"org"`
 
-	PublishScope  string `json:"publish_scope"`
+	PublishScope  string               `json:"publish_scope"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
 }
 
@@ -213,4 +214,93 @@ type ContentData interface {
 
 	Validate(ctx context.Context, contentType int, tx *dbo.DBContext) error
 	PrepareResult(ctx context.Context) error
+}
+
+func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {
+	switch status {
+	case ContentStatusArchive:
+		if cInfo.allowedToArchive() {
+			cInfo.PublishStatus = ContentStatusArchive
+		}
+		return nil
+	case ContentStatusAttachment:
+		//TODO
+		fmt.Println(cInfo.PublishStatus)
+	case ContentStatusDraft:
+		//TODO
+		fmt.Println(cInfo.PublishStatus)
+	case ContentStatusHidden:
+		if cInfo.allowedToHidden() {
+			cInfo.PublishStatus = ContentStatusHidden
+		}
+		return nil
+	case ContentStatusPending:
+		if cInfo.allowedToPending() {
+			cInfo.PublishStatus = ContentStatusPending
+		}
+		return nil
+	case ContentStatusPublished:
+		if cInfo.allowedToBeReviewed() {
+			cInfo.PublishStatus = ContentStatusPublished
+		}
+		return nil
+		fmt.Println(cInfo.PublishStatus)
+	case ContentStatusRejected:
+		if cInfo.allowedToBeReviewed() {
+			cInfo.PublishStatus = ContentStatusRejected
+		}
+		return nil
+	}
+	return errors.New(fmt.Sprintf("unsupported:[%s]", status))
+}
+
+func (cInfo ContentInfo) allowedToArchive() bool {
+	switch cInfo.PublishStatus {
+	case ContentStatusPublished:
+		return true
+	}
+	return false
+}
+
+func (cInfo ContentInfo) allowedToAttachment() bool {
+	// TODO
+	return false
+}
+
+func (cInfo ContentInfo) allowedToPending() bool {
+	switch cInfo.PublishStatus {
+	case ContentStatusDraft:
+		return true
+	}
+	return false
+}
+
+func (cInfo ContentInfo) allowedToBeReviewed() bool {
+	switch cInfo.PublishStatus {
+	case ContentStatusPending:
+		return true
+	}
+	return false
+}
+
+func (cInfo ContentInfo) allowedToHidden() bool {
+	switch cInfo.PublishStatus {
+	case ContentStatusPublished:
+		return true
+	}
+	return false
+}
+
+func (cInfo ContentInfo) CanBeCancelled() bool {
+	if cInfo.PublishStatus == ContentStatusDraft {
+		return true
+	}
+	return false
+}
+
+func (cInfo ContentInfo) CanBeDeleted() bool {
+	if cInfo.PublishStatus == ContentStatusArchive {
+		return true
+	}
+	return false
 }

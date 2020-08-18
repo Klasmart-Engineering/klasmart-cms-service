@@ -35,10 +35,10 @@ func (s Server) registeRoute() {
 	}
 	category := s.engine.Group("/v1/categories")
 	{
-		category.GET("/", s.searchCategories)
-		category.GET("/:id", s.getCategoryByID)
-		category.POST("/", s.createCategory)
-		category.PUT("/:id", s.updateCategory)
-		category.DELETE("/:id", s.deleteCategory)
+		category.GET("/", MustLogin, s.searchCategories)
+		category.GET("/:id", MustLogin, s.getCategoryByID)
+		category.POST("/", MustLogin, s.createCategory)
+		category.PUT("/:id", MustLogin, s.updateCategory)
+		category.DELETE("/:id", MustLogin, s.deleteCategory)
 	}
 }
