@@ -5,6 +5,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"sync"
 )
 
 type IReviewerModel interface {
@@ -59,4 +60,14 @@ func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, u
 		return err
 	}
 	return nil
+}
+
+var reviewer *Reviewer
+var _reviewerOnce sync.Once
+
+func GetReviewerModel() IReviewerModel {
+	_reviewerOnce.Do(func() {
+		reviewer = new(Reviewer)
+	})
+	return reviewer
 }
