@@ -110,6 +110,68 @@
         }
       }
     },
+    "/content/review/{content_id}/approve": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Approve a content review by content_id",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "412": {
+            "description": "content status invalid"
+          }
+        }
+      }
+    },
+    "/content/review/{content_id}/reject": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Reject a content review by content_id",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "412": {
+            "description": "content status invalid"
+          }
+        }
+      }
+    },
     "/content/{content_id}": {
       "parameters": [
         {
