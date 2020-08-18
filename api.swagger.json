@@ -1735,6 +1735,120 @@
             ],
             "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
           },
+          "repeat": {
+            "type": "object",
+            "description": "repeat options, only work when mode_type equal Repeat,",
+            "properties": {
+              "type": {
+                "type":"string",
+                "enum": ["never", "after_count", "after_time"],
+                "description": "repeat type"
+              },
+              "daily": {
+                "type": "object",
+                "description": "repeat daily options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "weekly": {
+                "type": "object",
+                "description": "repeat weekly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "on": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "monthly": {
+                "type": "object",
+                "description": "repeat monthly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval months"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "yearly": {
+                "type": "object",
+                "description": "repeat yearly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval years (less or equal than 2 years)"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_month": {
+                    "type": "integer",
+                    "description": "on date month"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_month": {
+                    "type": "integer",
+                    "description": "on week month"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              }
+            }
+          },
           "subject_id": {
             "type": "string",
             "description": "schedule SubjectID"
@@ -1805,6 +1919,11 @@
               "Repeat"
             ],
             "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
+          },
+          "repeat_edit_options": {
+            "type": "string",
+            "enum": ["only_current", "with_following"],
+            "description": "repeat edit option"
           },
           "subject_id": {
             "type": "string",
@@ -1961,6 +2080,24 @@
                 "description": "schedule attachment name"
               }
             }
+          }
+        }
+      },
+      "RepeatEnd": {
+        "type": "object",
+        "description": "repeat end options",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["never", "after_count", "after_time"]
+          },
+          "after_count": {
+            "type": "integer",
+            "description": "end after N count"
+          },
+          "after_time": {
+            "type": "integer",
+            "description": "end after the time(unix timestamp)"
           }
         }
       }
