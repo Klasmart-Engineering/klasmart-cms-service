@@ -303,6 +303,8 @@ gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200810054559-aefe91368acc h1:t8Hh4
 gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200810054559-aefe91368acc/go.mod h1:OxUAHIdVbDLx8YrvTW9IU4SqgQLL4xFXJSoGOU/37/E=
 gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200811073236-069c9cf1a787 h1:GWM7NfapnG9jYdEGwtlxTHRh4bQJDRcNWfb+sW70kWk=
 gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200811073236-069c9cf1a787/go.mod h1:ZtNgdOvY8dqIvXbb6fwDofTuzA3ber18L/qK91mFwg4=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200819092854-7b96095e0678 h1:pWIK4lbAIwSr0EJgnyP7h0aCWDU4MvfYCdPqjwG5iTc=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200819092854-7b96095e0678/go.mod h1:ZtNgdOvY8dqIvXbb6fwDofTuzA3ber18L/qK91mFwg4=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.4/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.etcd.io/etcd v3.3.22+incompatible h1:6rUh61a1ijB5rJec+KAVzch3RqEnTcdwNizcMEeoSxU=
