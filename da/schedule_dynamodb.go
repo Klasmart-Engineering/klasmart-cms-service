@@ -2,11 +2,11 @@ package da
 
 import (
 	"context"
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -63,16 +63,12 @@ func (s scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule)
 		ExpressionAttributeValues: expr.Values(),
 		Key:                       key,
 		ReturnValues:              aws.String("ALL_NEW"),
-		TableName:                 aws.String("Music"),
-		UpdateExpression:          expr.Update()}
-	fmt.Println(input)
-	//result, err := svc.UpdateItem(input)
-	return nil
+		TableName:                 aws.String(constant.TableNameSchedule),
+		UpdateExpression:          expr.Update(),
+	}
+	_, err = dbclient.GetClient().UpdateItem(input)
+	return err
 }
-
-//func (s scheduleDynamoDA) BatchUpdate(ctx context.Context, schedule []*entity.Schedule) error {
-//	panic("implement me")
-//}
 
 func (s scheduleDynamoDA) Query(ctx context.Context, condition *ScheduleCondition) ([]*entity.Schedule, error) {
 	panic("implement me")
@@ -83,7 +79,26 @@ func (s scheduleDynamoDA) Page(ctx context.Context, condition *ScheduleCondition
 }
 
 func (s scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Schedule, error) {
-	panic("implement me")
+	key := make(map[string]*dynamodb.AttributeValue)
+	key["id"] = &dynamodb.AttributeValue{
+		S: aws.String(id),
+	}
+	input := &dynamodb.GetItemInput{
+		Key:       key,
+		TableName: aws.String(constant.TableNameSchedule),
+	}
+	result, err := dbclient.GetClient().GetItem(input)
+	if err != nil {
+		log.Error(ctx, "update schedule error", log.Err(err), log.String("id", id))
+		return nil, err
+	}
+	schedule := new(entity.Schedule)
+	err = dynamodbattribute.UnmarshalMap(result.Item, schedule)
+	if err != nil {
+		log.Error(ctx, "dynamodb unmarshalmap error", log.Err(err), log.String("id", id))
+		return nil, err
+	}
+	return schedule, nil
 }
 
 func (s scheduleDynamoDA) SoftDelete(ctx context.Context, id string) error {
@@ -95,7 +110,8 @@ func (s scheduleDynamoDA) BatchSoftDelete(ctx context.Context, op *entity.Operat
 }
 
 type ScheduleCondition struct {
-	Pager utils.Pager
+	TescherID entity.NullString
+	Pager     utils.Pager
 
 	DeleteAt entity.NullInt
 }

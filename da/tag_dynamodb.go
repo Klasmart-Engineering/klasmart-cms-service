@@ -277,25 +277,3 @@ func GetTagDA() ITagDA {
 	})
 	return _tagDA
 }
-
-//aws dynamodb create-table \
-//--endpoint-url http://192.168.1.234:18000 \
-//--table-name tags \
-//--attribute-definitions \
-//AttributeName=id,AttributeType=S \
-//--key-schema \
-//AttributeName=id,KeyType=HASH \
-//--provisioned-  \
-//ReadCapacityUnits=10,WriteCapacityUnits=5
-
-//aws dynamodb update-table \
-//--table-name tags \
-//--attribute-definitions AttributeName=name,AttributeType=S \
-//--global-secondary-index-updates \
-//"[{\"Create\":{\"IndexName\": \"name-index\",\"KeySchema\":[{\"AttributeName\":\"name\",\"KeyType\":\"HASH\"}], \
-//\"ProvisionedThroughput\": {\"ReadCapacityUnits\": 10, \"WriteCapacityUnits\": 5      },\"Projection\":{\"ProjectionType\":\"ALL\"}}}]"
-
-//aws dynamodb put-item \
-//--table-name tags  \
-//--item \
-//'{"id": {"N": "2"}, "name": {"S": "Call Me Today"}, "states": {"N": "1"}, "createdAt": {"N": "0"},"updated_at": {"N": "0"},"deletedAt": {"N": "0"}}'
