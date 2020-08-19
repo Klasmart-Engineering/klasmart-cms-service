@@ -1864,11 +1864,8 @@
             "description": "Company",
             "properties": {
               "scope": {
-                "type": "array",
+                "type": "string",
                 "description": "content published scope list",
-                "items": {
-                  "type": "string"
-                },
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
