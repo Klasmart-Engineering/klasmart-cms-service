@@ -8,7 +8,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
 
 func NewMaterialData() *MaterialData {
@@ -22,10 +22,7 @@ func (this *MaterialData) Unmarshal(ctx context.Context, data string) error {
 	ins := MaterialData{}
 	err := json.Unmarshal([]byte(data), &ins)
 	if err != nil {
-		logger.WithContext(ctx).
-			WithError(err).
-			WithField("data", data).
-			Errorln("material: unmarshal failed")
+		log.Error(ctx, "unmarshal material failed", log.String("data", data), log.Err(err))
 		return err
 	}
 	*this = ins
@@ -35,10 +32,7 @@ func (this *MaterialData) Unmarshal(ctx context.Context, data string) error {
 func (this *MaterialData) Marshal(ctx context.Context) (string, error) {
 	data, err := json.Marshal(this)
 	if err != nil {
-		logger.WithContext(ctx).
-			WithError(err).
-			WithField("this", this).
-			Errorln("material: marshal failed")
+		log.Error(ctx, "marshal material failed", log.Err(err))
 		return "", err
 	}
 	return string(data), nil
@@ -46,9 +40,7 @@ func (this *MaterialData) Marshal(ctx context.Context) (string, error) {
 
 func (this *MaterialData) Validate(ctx context.Context,  contentType int, tx *dbo.DBContext) error {
 	if strings.TrimSpace(this.Source) == "" {
-		logger.WithContext(ctx).
-			WithField("source", this.Source).
-			Errorln("material validate: require source")
+		log.Error(ctx, "marshal material failed", log.String("source", this.Source))
 		return errors.New("material: require source")
 	}
 	return nil

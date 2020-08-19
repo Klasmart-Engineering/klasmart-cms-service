@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"strings"
 )
@@ -22,10 +22,7 @@ func (this *AssetsData) Unmarshal(ctx context.Context, data string) error {
 	ins := AssetsData{}
 	err := json.Unmarshal([]byte(data), &ins)
 	if err != nil {
-		logger.WithContext(ctx).
-			WithError(err).
-			WithField("data", data).
-			Errorln("assets: unmarshal failed")
+		log.Error(ctx, "unmarshal material failed", log.String("data", data), log.Err(err))
 		return err
 	}
 	*this = ins
@@ -36,10 +33,7 @@ func (this *AssetsData) Marshal(ctx context.Context) (string, error) {
 	//插入Size
 	data, err := json.Marshal(this)
 	if err != nil {
-		logger.WithContext(ctx).
-			WithError(err).
-			WithField("this", this).
-			Errorln("assets: marshal failed")
+		log.Error(ctx, "marshal material failed", log.Err(err))
 		return "", err
 	}
 
@@ -48,9 +42,7 @@ func (this *AssetsData) Marshal(ctx context.Context) (string, error) {
 
 func (a *AssetsData) Validate(ctx context.Context,  contentType int, tx *dbo.DBContext) error {
 	if strings.TrimSpace(a.Source) == "" {
-		logger.WithContext(ctx).
-			WithField("source", a.Source).
-			Errorln("assets validate: require source")
+		log.Error(ctx, "marshal material failed", log.String("source", a.Source))
 		return errors.New("assets: require source")
 	}
 	return nil

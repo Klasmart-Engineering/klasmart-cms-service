@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/contentdata"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -53,7 +54,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	sourceContent.UpdatedAt = &now
 	err = da.GetDyContentDA().UpdateContent(ctx, sourceId, *sourceContent)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Update source content failed, error: %v", err)
+		log.Error(ctx, "update source content failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
 	return nil
@@ -62,7 +63,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	err := cm.checkPublishContent(ctx, tx, content, user)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "course").Warnf("Check content scope & sub content scope failed, error: %v", err)
+		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
 		return err
 	}
 	if user.OrgID == content.Org && user.Role != "teacher" {
@@ -87,13 +88,13 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 	//TODO:Maybe wrong
 	err := cm.preparePublishContent(ctx, tx, content, user)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Prepare publish failed, error: %v", err)
+		log.Error(ctx, "prepare publish failed", log.Err(err))
 		return err
 	}
 
 	err = da.GetDyContentDA().UpdateContent(ctx, content.ID, *content)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Update lesson plan failed, error: %v", err)
+		log.Error(ctx, "update lesson plan failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
 
@@ -101,7 +102,6 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
-	logger.WithContext(ctx).WithField("subject", "content").Infof("checkContentEntity entity, data: %#v, created: %v", c, created)
 	//TODO:Check age, category...
 	return nil
 }
@@ -137,25 +137,22 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *da.DyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error) {
 	key, objs, err := da.GetDyContentDA().SearchContent(ctx, condition)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata", log.Err(err))
 		return "", nil, ErrReadContentFailed
 	}
-	logger.WithContext(ctx).WithField("subject", "contentdata").Infof("Read count: %v,  data: %v", key, objs)
 	response := make([]*entity.ContentInfo, len(objs))
 	for i := range objs {
 		temp, err := contentdata.ConvertContentObj(ctx, objs[i])
 		if err != nil {
-			logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't parse contentdata, contentId: %v, error: %v", objs[i].ID, err)
+			log.Error(ctx, "Can't parse contentdata, contentId: %v, error: %v", log.String("id", objs[i].ID), log.Err(err))
 			return "", nil, err
 		}
 		response[i] = temp
 	}
-	logger.WithContext(ctx).WithField("subject", "contentdata").Infof("Content with contentdata: %v", key, response)
 	contentWithDetails, err := buildContentWithDetails(ctx, response, user)
 	if err != nil {
 		return "", nil, err
 	}
-	logger.WithContext(ctx).WithField("subject", "contentdata").Infof("Content with details: %v", key, contentWithDetails)
 	return key, contentWithDetails, nil
 }
 

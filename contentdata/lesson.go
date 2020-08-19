@@ -2,6 +2,8 @@ package contentdata
 
 import (
 	"context"
+	"encoding/json"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
@@ -15,10 +17,22 @@ type LessonData struct {
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
-	panic("implement me")
+	ins := LessonData{}
+	err := json.Unmarshal([]byte(data), &ins)
+	if err != nil {
+		log.Error(ctx, "unmarshal material failed", log.String("data", data), log.Err(err))
+		return err
+	}
+	*l = ins
+	return nil
 }
 func (l *LessonData) Marshal(ctx context.Context) (string, error) {
-	panic("implement me")
+	data, err := json.Marshal(l)
+	if err != nil {
+		log.Error(ctx, "marshal material failed", log.Err(err))
+		return "", err
+	}
+	return string(data), nil
 }
 
 //PrepareSave?

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
@@ -198,7 +198,7 @@ func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid
 	now := time.Now()
 	co.ID = cid
 	co.UpdatedAt = &now
-	logger.WithContext(ctx).WithField("subject", "contentdata").Infof("Update contentdata da, data: %#v", co)
+	log.Info(ctx, "Update contentdata da", log.String("id", co.ID))
 	_, err := cd.s.UpdateTx(ctx, tx, &co)
 	if err != nil {
 		return err
