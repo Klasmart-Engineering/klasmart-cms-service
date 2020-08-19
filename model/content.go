@@ -26,7 +26,7 @@ type IContentModel interface {
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 
-	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, status string) error
+	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.DyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error)
@@ -230,7 +230,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	return nil
 }
 
-func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, status string) error {
+func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error {
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
 		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata on update contentdata, error: %v", err)
@@ -238,6 +238,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	content.PublishStatus = entity.NewContentPublishStatus(status)
+	content.RejectReason = reason
 	err = da.GetDyContentDA().UpdateContent(ctx, cid, *content)
 	if err != nil {
 		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Update contentdata scope failed, error: %v", err)
