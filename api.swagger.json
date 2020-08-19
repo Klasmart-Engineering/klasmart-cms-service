@@ -1677,7 +1677,7 @@
             "type": "integer",
             "description": "schedule end time, timestamp"
           },
-          "lesson_plan_info": {
+          "lesson_plan": {
             "$ref": "#/components/schemas/CommonShortInfo"
           },
           "teachers": {
@@ -2083,13 +2083,13 @@
             "type": "string",
             "description": "schedule title"
           },
-          "class_info": {
+          "class": {
             "$ref": "#/components/schemas/CommonShortInfo"
           },
-          "lesson_plan_info": {
+          "lesson_plan": {
             "$ref": "#/components/schemas/CommonShortInfo"
           },
-          "teacher_infos": {
+          "teachers": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CommonShortInfo"
@@ -2225,10 +2225,10 @@
               }
             }
           },
-          "subject_info": {
+          "subject": {
             "$ref": "#/components/schemas/CommonShortInfo"
           },
-          "program_info": {
+          "program": {
             "$ref": "#/components/schemas/CommonShortInfo"
           },
           "class_type": {
@@ -2249,7 +2249,7 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_info": {
+          "attachment": {
             "$ref": "#/components/schemas/CommonShortInfo"
           }
         }
