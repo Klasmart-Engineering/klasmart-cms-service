@@ -186,8 +186,8 @@ type DBContentDA struct {
 func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {
 	now := time.Now()
 	co.ID = utils.NewID()
-	co.UpdatedAt = &now
-	co.CreatedAt = &now
+	co.UpdatedAt = now.Unix()
+	co.CreatedAt = now.Unix()
 	err := cd.s.SaveTx(ctx, tx, &co)
 	if err != nil {
 		return "", err
@@ -197,7 +197,7 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
 	now := time.Now()
 	co.ID = cid
-	co.UpdatedAt = &now
+	co.UpdatedAt = now.Unix()
 	log.Info(ctx, "Update contentdata da", log.String("id", co.ID))
 	_, err := cd.s.UpdateTx(ctx, tx, &co)
 	if err != nil {
@@ -210,7 +210,7 @@ func (cd *DBContentDA) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid
 	now := time.Now()
 	content := new(entity.Content)
 	content.ID = cid
-	content.DeletedAt = &now
+	content.DeletedAt = now.Unix()
 	_, err := cd.s.UpdateTx(ctx, tx, content)
 	if err != nil {
 		return err

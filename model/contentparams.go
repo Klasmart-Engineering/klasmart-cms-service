@@ -2,14 +2,12 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 	"time"
 )
 
 func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
-	now := time.Now()
 
 	publishStatus := entity.NewContentPublishStatus(entity.ContentStatusDraft)
 
@@ -50,8 +48,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
 		Version:       1,
-		CreatedAt:     &now,
-		UpdatedAt:     &now,
 	}, nil
 }
 
@@ -132,7 +128,7 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 	//	content.PublishStatus = entity.ContentStatusHidden
 	default:
 		now := time.Now()
-		content.DeletedAt = &now
+		content.DeletedAt = now.Unix()
 	}
 	return content, nil
 }

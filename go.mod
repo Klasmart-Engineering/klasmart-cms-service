@@ -18,7 +18,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.3
 	gitlab.badanamu.com.cn/calmisland/dbo v0.1.6
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
-	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200811073236-069c9cf1a787 // indirect
+	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200811073236-069c9cf1a787
 	go.mongodb.org/mongo-driver v1.4.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20200810151505-1b9f1253b3ed // indirect

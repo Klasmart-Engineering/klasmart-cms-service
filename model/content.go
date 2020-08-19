@@ -10,7 +10,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutext"
 	"sync"
-	"time"
 )
 
 type IContentModel interface {
@@ -46,12 +45,10 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	if err != nil{
 		return err
 	}
-	now := time.Now()
 	sourceContent.PublishStatus = entity.ContentStatusHidden
 	sourceContent.LatestId = contentId
 	//解锁source content
 	sourceContent.LockedBy = "-"
-	sourceContent.UpdatedAt = &now
 	err = da.GetDyContentDA().UpdateContent(ctx, sourceId, *sourceContent)
 	if err != nil {
 		log.Error(ctx, "update source content failed", log.Err(err))
@@ -320,9 +317,7 @@ func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, ci
 	//if content.LockedBy != user.UserID {
 	//	return ErrNoAuth
 	//}
-	now := time.Now()
 	content.LockedBy = "-"
-	content.UpdatedAt = &now
 	return da.GetDyContentDA().UpdateContent(ctx, cid, *content)
 }
 func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error){
@@ -346,9 +341,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	if content.LockedBy != "" && content.LockedBy != "-" {
 		return "", ErrContentAlreadyLocked
 	}
-	now := time.Now()
 	content.LockedBy = cid
-	content.UpdatedAt = &now
 	err = da.GetDyContentDA().UpdateContent(ctx, cid, *content)
 	if err != nil {
 		return "", err

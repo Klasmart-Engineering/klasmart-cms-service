@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 const (
@@ -79,9 +78,9 @@ type Content struct {
 	SourceId string 				`gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
 	LatestId string 			`gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 
-	CreatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeletedAt *time.Time `gorm:"type:datetime;column:deleted_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	CreatedAt int64 `gorm:"type:bigint;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdatedAt int64 `gorm:"type:bigint;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeletedAt int64 `gorm:"type:bigint;column:deleted_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
 }
 
 func (u Content)UpdateExpress() string{
@@ -122,9 +121,9 @@ type UpdateDyContent struct {
 	LatestId string `json:"lsi"`
 	Version  int64 `json:":ve"`
 
-	CreatedAt *time.Time `json:":ca"`
-	UpdatedAt *time.Time `json:":ua"`
-	DeletedAt *time.Time `json:":da"`
+	CreatedAt int64 `json:":ca"`
+	UpdatedAt int64 `json:":ua"`
+	DeletedAt int64 `json:":da"`
 }
 
 type TagValues struct {

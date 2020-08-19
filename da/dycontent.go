@@ -35,8 +35,8 @@ type DyContentDA struct {
 func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (string, error) {
 	now := time.Now()
 	co.ID = utils.NewID()
-	co.UpdatedAt = &now
-	co.CreatedAt = &now
+	co.UpdatedAt = now.Unix()
+	co.CreatedAt = now.Unix()
 	dyMap, err := dynamodbattribute.MarshalMap(co)
 	if err != nil{
 		return "", err
@@ -53,7 +53,7 @@ func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (str
 
 func (d *DyContentDA) UpdateContent(ctx context.Context, cid string, co0 entity.Content) error {
 	now := time.Now()
-	co0.UpdatedAt = &now
+	co0.UpdatedAt = now.Unix()
 	co, err := d.getContentForUpdateContent(ctx, cid, &co0)
 	if err != nil{
 		return err
@@ -259,13 +259,13 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	if co.Version == 0 {
 		co0.Version = content.Version
 	}
-	if co.CreatedAt == nil {
+	if co.CreatedAt == 0 {
 		co0.CreatedAt = content.CreatedAt
 	}
-	if co.UpdatedAt == nil {
+	if co.UpdatedAt == 0 {
 		co0.UpdatedAt = content.UpdatedAt
 	}
-	if co.DeletedAt == nil {
+	if co.DeletedAt == 0 {
 		co0.DeletedAt = content.DeletedAt
 	}
 	fmt.Printf("content: %#v\n", co)
