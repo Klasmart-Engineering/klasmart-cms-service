@@ -9,14 +9,18 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
+	"sync"
 	"time"
 )
 
 type IContentCache interface {
 	SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails)
-	SaveContentCacheListBySearchCondition(ctx context.Context, condition da.DyContentCondition, contents []*entity.ContentInfoWithDetails)
+	SaveContentCacheListBySearchCondition(ctx context.Context, condition da.IDyCondition, c *ContentListWithKey)
 	GetContentCacheByIdList(ctx context.Context, ids []string)([]string, []*entity.ContentInfoWithDetails)
-	GetContentCacheBySearchCondition(ctx context.Context, condition da.DyContentCondition) []*entity.ContentInfoWithDetails
+	GetContentCacheBySearchCondition(ctx context.Context, condition da.IDyCondition) *ContentListWithKey
+
+	SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails)
+	GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails
 
 	CleanContentCache(ctx context.Context, ids []string) error
 
@@ -27,10 +31,15 @@ type RedisContentCache struct{
 	expiration time.Duration
 }
 
+type ContentListWithKey struct {
+	Key string `json:"key"`
+	ContentList []*entity.ContentInfoWithDetails `json:"content_list"`
+}
+
 func (r *RedisContentCache) contentKey(id string) string {
 	return fmt.Sprintf("kidsloop2.content.id.%v", id)
 }
-func (r *RedisContentCache) contentConditionKey(condition da.DyContentCondition) string {
+func (r *RedisContentCache) contentConditionKey(condition da.IDyCondition) string {
 	h := md5.New()
 	h.Write([]byte(fmt.Sprintf("%v", condition)))
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
@@ -55,11 +64,23 @@ func (r *RedisContentCache) SaveContentCacheList(ctx context.Context, contents [
 		}
 	}()
 }
+func (r *RedisContentCache) SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails){
+	r.SaveContentCacheList(ctx, []*entity.ContentInfoWithDetails{
+		content,
+	})
+}
+func (r *RedisContentCache) GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails{
+	_, res := r.GetContentCacheByIdList(ctx, []string{id})
+	if len(res) > 0 {
+		return res[0]
+	}
+	return nil
+}
 
-func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Context, condition da.DyContentCondition, contents []*entity.ContentInfoWithDetails) {
+func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Context, condition da.IDyCondition, c *ContentListWithKey) {
 	go func() {
 		key := r.contentConditionKey(condition)
-		contentListJSON, err := json.Marshal(contents)
+		contentListJSON, err := json.Marshal(c)
 		if err != nil{
 			log.Error(ctx, "Can't parse content list into json", log.Err(err))
 			return
@@ -120,14 +141,14 @@ func (r *RedisContentCache) GetContentCacheByIdList(ctx context.Context, ids []s
 	return restIds, cachedContents
 }
 
-func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context, condition da.DyContentCondition) []*entity.ContentInfoWithDetails {
+func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context, condition da.IDyCondition) *ContentListWithKey {
 	key := r.contentConditionKey(condition)
 	res, err := ro.MustGetRedis(ctx).Get(key).Result()
 	if err != nil{
 		log.Error(ctx, "Can't get content condition from cache", log.Err(err))
 		return nil
 	}
-	contentLists := make([]*entity.ContentInfoWithDetails, 0)
+	contentLists := new(ContentListWithKey)
 	err = json.Unmarshal([]byte(res), contentLists)
 	if err != nil{
 		log.Error(ctx, "Can't unmarshal content condition from cache", log.Err(err), log.String("json", res))
@@ -157,4 +178,16 @@ func (r *RedisContentCache) CleanContentCache(ctx context.Context, ids []string)
 
 func (r *RedisContentCache) SetExpiration(t time.Duration){
 	r.expiration = t
+}
+
+var (
+	_redisContentCache *RedisContentCache
+	_redisContentCacheOnce sync.Once
+)
+
+func GetRedisContentCache() IContentCache{
+	_redisContentCacheOnce.Do(func() {
+		_redisContentCache = &RedisContentCache{expiration: time.Minute * 2}
+	})
+	return _redisContentCache
 }

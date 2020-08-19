@@ -206,6 +206,8 @@ type ContentInfo struct {
 
 	SourceID string `json:"source_id"`
 	LockedBy string `json:"locked_by"`
+	RejectReason string `json:":rr"`
+	LatestID string `json:"latest_id"`
 
 	Data  ContentData `json:"data"`
 	Extra string      `json:"extra"`

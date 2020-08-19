@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"os"
 	"os/signal"
 	"syscall"
@@ -35,7 +36,9 @@ func main() {
 	config.LoadEnvConfig()
 
 	//设置数据库配置
-	initDBO()
+	//initDBO()
+	dynamodb.GetClient()
+	//ro.SetConfig(&redis.ClusterOptions{})
 
 	// init dynamodb connection
 	storage.DefaultStorage()
