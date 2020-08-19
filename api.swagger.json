@@ -1678,12 +1678,12 @@
             "description": "schedule end time, timestamp"
           },
           "lesson_plan": {
-            "$ref": "#/components/schemas/CommonShortInfo"
+            "$ref": "#/components/schemas/CommonShort"
           },
           "teachers": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/CommonShortInfo"
+              "$ref": "#/components/schemas/CommonShort"
             }
           }
         }
@@ -2084,15 +2084,15 @@
             "description": "schedule title"
           },
           "class": {
-            "$ref": "#/components/schemas/CommonShortInfo"
+            "$ref": "#/components/schemas/CommonShort"
           },
           "lesson_plan": {
-            "$ref": "#/components/schemas/CommonShortInfo"
+            "$ref": "#/components/schemas/CommonShort"
           },
           "teachers": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/CommonShortInfo"
+              "$ref": "#/components/schemas/CommonShort"
             }
           },
           "start_at": {
@@ -2226,10 +2226,10 @@
             }
           },
           "subject": {
-            "$ref": "#/components/schemas/CommonShortInfo"
+            "$ref": "#/components/schemas/CommonShort"
           },
           "program": {
-            "$ref": "#/components/schemas/CommonShortInfo"
+            "$ref": "#/components/schemas/CommonShort"
           },
           "class_type": {
             "type": "string",
@@ -2250,11 +2250,11 @@
             "description": "schedule description"
           },
           "attachment": {
-            "$ref": "#/components/schemas/CommonShortInfo"
+            "$ref": "#/components/schemas/CommonShort"
           }
         }
       },
-      "CommonShortInfo": {
+      "CommonShort": {
         "type": "object",
         "description": "short info",
         "properties": {
