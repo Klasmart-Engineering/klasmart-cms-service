@@ -7,7 +7,7 @@ import (
 
 type ILockLogModel interface {
 	IsLock(ctx context.Context, recordID string) (bool, error)
-	Lock(ctx context.Context, recordID string, userID string) error
+	Lock(ctx context.Context, recordID string, operatorID string) error
 	Unlock(ctx context.Context, recordID string) error
 }
 
@@ -29,7 +29,7 @@ func (l *lockLogModel) IsLock(ctx context.Context, recordID string) (bool, error
 	panic("implement me")
 }
 
-func (l *lockLogModel) Lock(ctx context.Context, recordID string, userID string) error {
+func (l *lockLogModel) Lock(ctx context.Context, recordID string, operatorID string) error {
 	panic("implement me")
 }
 
