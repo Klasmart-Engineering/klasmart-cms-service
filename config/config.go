@@ -107,7 +107,7 @@ func loadStorageEnvConfig(ctx context.Context) {
 func loadRedisEnvConfig(ctx context.Context) {
 	host := assertGetEnv("redis_host")
 	portStr := assertGetEnv("redis_port")
-	password := assertGetEnv("redis_password")
+	password := os.Getenv("redis_password")
 	config.RedisConfig.Host = host
 	port ,err := strconv.Atoi(portStr)
 	if err != nil{
