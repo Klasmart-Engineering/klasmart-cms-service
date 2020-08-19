@@ -38,11 +38,11 @@ func (s scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Sched
 	panic("implement me")
 }
 
-func (s scheduleDynamoDA) DeleteSoft(ctx context.Context, id string) error {
+func (s scheduleDynamoDA) SoftDelete(ctx context.Context, id string) error {
 	panic("implement me")
 }
 
-func (s scheduleDynamoDA) BatchDeleteSoft(ctx context.Context, op *entity.Operator, condition *ScheduleCondition) error {
+func (s scheduleDynamoDA) BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *ScheduleCondition) error {
 	panic("implement me")
 }
 
