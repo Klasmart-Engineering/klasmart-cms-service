@@ -162,6 +162,7 @@ type Schedule struct {
 	ClassID      string        `dynamodbav:"class_id"`
 	LessonPlanID string        `dynamodbav:"lesson_plan_id"`
 	TeacherIDs   []string      `dynamodbav:"teacher_ids"`
+	OrgID        string        `dynamodbav:"org_id"`
 	StartAt      int64         `dynamodbav:"start_at"`
 	EndAt        int64         `dynamodbav:"end_at"`
 	ModeType     string        `dynamodbav:"mode_type"`

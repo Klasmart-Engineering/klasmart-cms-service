@@ -16,6 +16,6 @@ type IScheduleDA interface {
 	Page(ctx context.Context, condition *ScheduleCondition) (int64, []*entity.Schedule, error)
 	GetByID(ctx context.Context, id string) (*entity.Schedule, error)
 
-	DeleteSoft(ctx context.Context, id string) error
-	BatchDeleteSoft(ctx context.Context, op *entity.Operator, condition *ScheduleCondition) error
+	SoftDelete(ctx context.Context, id string) error
+	BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *ScheduleCondition) error
 }
