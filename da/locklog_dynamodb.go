@@ -63,9 +63,9 @@ func (da *lockLogDA) GetByID(ctx context.Context, id string) (*entity.LockLog, e
 
 func (da *lockLogDA) GetByRecordID(ctx context.Context, recordID string) (*entity.LockLog, error) {
 	in := dynamodb.QueryInput{
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":record": {S: aws.String(recordID)}},
 		IndexName:                 aws.String(entity.LockLog{}.IndexNameWithRecordIDAndCreatedAt()),
 		KeyConditionExpression:    aws.String("record_id = :record_id"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":record_id": {S: aws.String(recordID)}},
 		ScanIndexForward:          aws.Bool(false),
 		TableName:                 aws.String(entity.LockLog{}.TableName()),
 	}
@@ -119,11 +119,15 @@ func (da *lockLogDA) SoftDeleteByID(ctx context.Context, id string) error {
 
 func (da *lockLogDA) SoftDeleteByRecordID(ctx context.Context, recordID string) error {
 	in := dynamodb.QueryInput{
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{":record": {S: aws.String(recordID)}},
-		IndexName:                 aws.String(entity.LockLog{}.IndexNameWithRecordIDAndCreatedAt()),
-		KeyConditionExpression:    aws.String("record_id = :record_id"),
-		ScanIndexForward:          aws.Bool(false),
-		TableName:                 aws.String(entity.LockLog{}.TableName()),
+		IndexName:              aws.String(entity.LockLog{}.IndexNameWithRecordIDAndCreatedAt()),
+		KeyConditionExpression: aws.String("record_id = :record_id"),
+		FilterExpression:       aws.String("deleted_at = :empty_deleted_at"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":record_id":        {S: aws.String(recordID)},
+			":empty_deleted_at": {N: aws.String("0")},
+		},
+		ScanIndexForward: aws.Bool(false),
+		TableName:        aws.String(entity.LockLog{}.TableName()),
 	}
 	out, err := dynamodbclient.GetClient().Query(&in)
 	if err != nil {
