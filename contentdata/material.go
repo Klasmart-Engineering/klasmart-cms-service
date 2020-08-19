@@ -4,11 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+)
+
+var(
+	ErrInvalidContentType = errors.New("invalid content type")
+	ErrContentDataRequestSource = errors.New("material require source")
+	ErrInvalidMaterialInLesson = errors.New("invalid material in lesson")
 )
 
 func NewMaterialData() *MaterialData {
@@ -39,13 +46,19 @@ func (this *MaterialData) Marshal(ctx context.Context) (string, error) {
 }
 
 func (this *MaterialData) Validate(ctx context.Context,  contentType int, tx *dbo.DBContext) error {
+	if contentType != entity.ContentTypeMaterial {
+		return ErrInvalidContentType
+	}
 	if strings.TrimSpace(this.Source) == "" {
 		log.Error(ctx, "marshal material failed", log.String("source", this.Source))
-		return errors.New("material: require source")
+		return ErrContentDataRequestSource
 	}
+
 	return nil
 }
-
+func (h *MaterialData) SubContentIds(ctx context.Context) ([]string ,error){
+	return nil, nil
+}
 func (h *MaterialData) PrepareResult(ctx context.Context) error {
 	return nil
 }

@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/contentdata"
@@ -131,6 +130,25 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	}
 
 	//TODO:检查子内容是否合法
+	contentData, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
+	if err != nil{
+		return err
+	}
+	subContentIds, err := contentData.SubContentIds(ctx)
+	if err != nil{
+		return err
+	}
+	_, contentList, err := da.GetDyContentDA().SearchContent(ctx, &da.DyContentCondition{
+		IDS: subContentIds,
+	})
+	if err != nil {
+		return err
+	}
+	err = checkPublishContentChildren(ctx, content, contentList)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -159,14 +177,14 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition *da.DyCombineContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error) {
 	key, objs, err := da.GetDyContentDA().SearchContent(ctx, condition)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata", log.Err(err))
 		return "", nil, ErrReadContentFailed
 	}
 	response := make([]*entity.ContentInfo, len(objs))
 	for i := range objs {
 		temp, err := contentdata.ConvertContentObj(ctx, objs[i])
 		if err != nil {
-			logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't parse contentdata, contentId: %v, error: %v", objs[i].ID, err)
+			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return "", nil, err
 		}
 		response[i] = temp
@@ -195,7 +213,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	if c.DoPublish{
 		err = cm.preparePublishContent(ctx, tx, obj, operator)
 		if err != nil {
-			logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Publish content failed, error: %v", err)
+			log.Error(ctx, "publish content failed", log.Err(err))
 			return "", err
 		}
 	}
@@ -203,7 +221,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	//添加内容
 	pid, err := da.GetDyContentDA().CreateContent(ctx, *obj)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't create contentdata, error: %v", err)
+		log.Error(ctx, "can't create contentdata", log.Err(err))
 		return "", ErrCreateContentFailed
 	}
 
@@ -217,10 +235,9 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	}
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata on update contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
 		return ErrNoContentData
 	}
-	logger.WithContext(ctx).WithField("subject", "contentdata").Infof("Get contentdata data: %#v", content)
 
 	content, err = cm.checkUpdateContent(ctx, tx, content, user)
 	if err != nil {
@@ -230,7 +247,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	//Check Authorization
 	obj, err := cm.prepareUpdateContentParams(ctx, content, &data)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't prepare params contentdata on update contentdata, error: %v", err)
+		log.Error(ctx, "can't prepare params contentdata on update contentdata", log.Err(err))
 		return err
 	}
 
@@ -238,7 +255,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if data.DoPublish{
 		err = cm.preparePublishContent(ctx, tx, obj, user)
 		if err != nil {
-			logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Publish content failed, error: %v", err)
+			log.Error(ctx, "publish content failed", log.Err(err))
 			return err
 		}
 	}
@@ -246,7 +263,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	//更新数据库
 	err = da.GetDyContentDA().UpdateContent(ctx, cid, *obj)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Update contentdata failed, error: %v", err)
+		log.Error(ctx, "update contentdata failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
 
@@ -256,7 +273,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error {
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata on update contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
 		return ErrReadContentFailed
 	}
 
@@ -264,7 +281,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	content.RejectReason = reason
 	err = da.GetDyContentDA().UpdateContent(ctx, cid, *content)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Update contentdata scope failed, error: %v", err)
+		log.Error(ctx, "update contentdata scope failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
 	if status == entity.ContentStatusPublished {
@@ -281,7 +298,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error{
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "course").Warnf("Can't read contentdata for publishing, error: %v", err)
+		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
 		return ErrNoContent
 	}
 	//TODO:检查权限
@@ -303,7 +320,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "course").Warnf("Can't read contentdata for publishing, error: %v", err)
+		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
 		return  "", ErrNoContent
 	}
 	if content.PublishStatus != entity.ContentStatusPublished {
@@ -336,7 +353,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "course").Warnf("Can't read contentdata for publishing, error: %v", err)
+		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
 		return ErrNoContent
 	}
 
@@ -352,7 +369,7 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata on delete contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata on delete contentdata", log.Err(err))
 		return ErrReadContentFailed
 	}
 
@@ -362,13 +379,13 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 
 	obj, err := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Prepare contentdata params failed, error: %v", err)
+		log.Error(ctx, "prepare contentdata params failed", log.Err(err))
 		return ErrDeleteContentFailed
 	}
 
 	err = da.GetDyContentDA().UpdateContent(ctx, cid, *obj)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Delete contentdata failed, error: %v", err)
+		log.Error(ctx, "delete contentdata failed", log.Err(err))
 		return ErrDeleteContentFailed
 	}
 
@@ -386,7 +403,7 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error){
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata on update contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
 		return "", ErrNoContent
 	}
 
@@ -399,7 +416,7 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 		Org:    		content.Org,
 	}, user)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "course").Warnf("No auth to read content for cloning, error: %v", err)
+		log.Error(ctx, "no auth to read content for cloning", log.Err(err))
 		return "", ErrCloneContentFailed
 	}
 
@@ -407,7 +424,7 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 
 	id, err := da.GetDyContentDA().CreateContent(ctx, *obj)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("clone contentdata failed, error: %v", err)
+		log.Error(ctx, "clone contentdata failed", log.Err(err))
 		return "", ErrUpdateContentFailed
 	}
 
@@ -429,7 +446,7 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	}
 
 	if content.PublishStatus != entity.ContentStatusPublished {
-		logger.WithContext(ctx).WithField("subject", "content").Warnf("Read unpublished content, userId: %v, contentId: %v", user.UserID, content.ID)
+		log.Error(ctx, "read unpublished content, userId: %v, contentId: %v", log.String("userID", user.UserID), log.String("contentID", content.ID))
 		return ErrGetUnpublishedContent
 	}
 	//TODO: Check org scope
@@ -440,26 +457,25 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 func (cm *ContentModel) GetContentById(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	obj, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata", log.Err(err))
 		return nil, ErrNoContent
 	}
 	content, err := contentdata.ConvertContentObj(ctx, obj)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't parse contentdata, error: %v", err)
+		log.Error(ctx, "can't parse contentdata", log.Err(err))
 		return nil, ErrParseContentDataFailed
 	}
-	logger.WithContext(ctx).WithField("subject", "content").Infof("Get content by id, Content extra: %#v", content.Extra)
 
 	//补全相关内容
 	err = content.Data.PrepareResult(ctx)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't get contentdata for details, error: %v", err)
+		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
 	}
 
 	contentWithDetails, err := buildContentWithDetails(ctx, []*entity.ContentInfo{content}, user)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't parse contentdata, error: %v", err)
+		log.Error(ctx, "can't parse contentdata", log.Err(err))
 		return nil, ErrReadContentFailed
 	}
 	if len(contentWithDetails) < 1 {
@@ -478,14 +494,14 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 		IDS: cids,
 	})
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't read contentdata, error: %v", err)
+		log.Error(ctx, "can't read contentdata", log.Err(err))
 		return nil, ErrReadContentFailed
 	}
 	res := make([]*entity.ContentInfo, len(data))
 	for i := range data {
 		temp, err := contentdata.ConvertContentObj(ctx, data[i])
 		if err != nil {
-			logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't parse contentdata, id: %v, error: %v", data[i].ID, err)
+			log.Error(ctx, "can't parse contentdata", log.String("id", data[i].ID), log.Err(err))
 			return nil, ErrReadContentFailed
 		}
 		res[i] = temp
@@ -555,7 +571,7 @@ func (cm *ContentModel) GetVisibleContentById(ctx context.Context, tx *dbo.DBCon
 	}
 	contentWithDetails, err := buildContentWithDetails(ctx, []*entity.ContentInfo{content}, user)
 	if err != nil {
-		logger.WithContext(ctx).WithField("subject", "contentdata").Warnf("Can't parse contentdata, error: %v", err)
+		log.Error(ctx, "can't parse contentdata", log.Err(err))
 		return nil, ErrReadContentFailed
 	}
 	if len(contentWithDetails) < 1 {
@@ -571,6 +587,10 @@ func buildContentWithDetails(ctx context.Context, contentList []*entity.ContentI
 }
 
 func listVisibleScopes(ctx context.Context, operator *entity.Operator) []string {
+	return nil
+}
+
+func checkPublishContentChildren(ctx context.Context, c *entity.Content, children []*entity.Content) error{
 	return nil
 }
 

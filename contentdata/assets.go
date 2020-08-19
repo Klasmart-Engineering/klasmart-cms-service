@@ -39,6 +39,9 @@ func (this *AssetsData) Marshal(ctx context.Context) (string, error) {
 
 	return string(data), nil
 }
+func (a *AssetsData) SubContentIds(ctx context.Context) ([]string ,error){
+	return nil, nil
+}
 
 func (a *AssetsData) Validate(ctx context.Context,  contentType int, tx *dbo.DBContext) error {
 	if strings.TrimSpace(a.Source) == "" {

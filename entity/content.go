@@ -18,7 +18,11 @@ const (
 	ContentStatusAttachment = "attachment"
 	ContentStatusHidden     = "hidden"
 	ContentStatusArchive    = "archive"
+
+	ContentTypeMaterial = 1
+	ContentTypeLesson = 2
 )
+
 
 type ContentPublishStatus string
 
@@ -221,6 +225,7 @@ type ContentData interface {
 
 	Validate(ctx context.Context, contentType int, tx *dbo.DBContext) error
 	PrepareResult(ctx context.Context) error
+	SubContentIds(ctx context.Context) ([]string ,error)
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {
