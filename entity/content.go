@@ -174,7 +174,6 @@ type CreateContentRequest struct {
 
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
-	RejectReason string `json:"reject_reason"`
 
 	Data  ContentData `json:"data"`
 	Extra string      `json:"extra"`

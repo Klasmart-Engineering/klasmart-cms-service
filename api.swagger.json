@@ -62,7 +62,7 @@
                   "type": "object",
                   "description": "asset list",
                   "properties": {
-                    "total": {
+                    "content_id": {
                       "type": "string",
                       "description": "content id",
                       "example": "1"
@@ -1702,6 +1702,11 @@
                 "description": "content create & publish",
                 "example": false
               },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope",
+                "example": false
+              },
               "data": {
                 "type": "object",
                 "description": "content data",
@@ -1735,14 +1740,9 @@
             "description": "Company",
             "properties": {
               "scope": {
-                "type": "array",
-                "description": "content published scope list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "type": "string",
+                "description": "content published scope",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               }
             }
           }
