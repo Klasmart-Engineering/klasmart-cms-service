@@ -18,7 +18,11 @@ const (
 	ContentStatusAttachment = "attachment"
 	ContentStatusHidden     = "hidden"
 	ContentStatusArchive    = "archive"
+
+	ContentTypeMaterial = 1
+	ContentTypeLesson = 2
 )
+
 
 type ContentPublishStatus string
 
@@ -170,7 +174,6 @@ type CreateContentRequest struct {
 
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
-	RejectReason string `json:"reject_reason"`
 
 	Data  ContentData `json:"data"`
 	Extra string      `json:"extra"`
@@ -221,6 +224,7 @@ type ContentData interface {
 
 	Validate(ctx context.Context, contentType int, tx *dbo.DBContext) error
 	PrepareResult(ctx context.Context) error
+	SubContentIds(ctx context.Context) ([]string ,error)
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {

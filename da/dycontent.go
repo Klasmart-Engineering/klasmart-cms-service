@@ -143,7 +143,6 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition)
 		}
 		input.ExclusiveStartKey = startKey
 	}
-
 	result, err := db.GetClient().Scan(input)
 	if err != nil{
 		return "", nil, err

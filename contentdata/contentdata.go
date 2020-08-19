@@ -2,7 +2,7 @@ package contentdata
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 )
@@ -12,8 +12,7 @@ func CreateContentData(ctx context.Context, fileType int, data string) (entity.C
 }
 
 func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.ContentInfo, error) {
-	logger.WithContext(ctx).WithField("subject", "content").Infof("Convert content object, extra: %v", obj.Extra)
-
+	log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
 	contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
 	if err != nil {
 		return nil, err
