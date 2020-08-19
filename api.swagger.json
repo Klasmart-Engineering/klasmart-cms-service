@@ -159,6 +159,16 @@
           "content"
         ],
         "description": "Reject a content review by content_id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectReasonRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "success"
@@ -1733,6 +1743,23 @@
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
+              }
+            }
+          }
+        ]
+      },
+      "RejectReasonRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RejectReasonRequest"
+          },
+          {
+            "type": "object",
+            "description": "Reject reason",
+            "properties": {
+              "reject_reason": {
+                "type": "string",
+                "description": "content reject reason"
               }
             }
           }

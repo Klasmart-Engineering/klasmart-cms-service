@@ -269,7 +269,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	
+
 	content, err := da.GetDyContentDA().GetContentById(ctx, cid)
 	if err != nil {
 		logger.WithContext(ctx).WithField("subject", "course").Warnf("Can't read contentdata for publishing, error: %v", err)
