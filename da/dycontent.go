@@ -187,6 +187,7 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		PublishStatus: co.PublishStatus,
 		RejectReason:  co.RejectReason,
 		SourceId: co.SourceId,
+		LatestId: co.LatestId,
 		LockedBy: co.LockedBy,
 		Version:       co.Version,
 		CreatedAt:     co.CreatedAt,
@@ -249,6 +250,9 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	}
 	if co.SourceId == "" {
 		co0.SourceId = content.SourceId
+	}
+	if co.LatestId == "" {
+		co0.LatestId = content.LatestId
 	}
 	if co.LockedBy == "" {
 		co0.LockedBy = content.LockedBy
@@ -328,12 +332,12 @@ func (d *DyContentCondition)GetConditions() expression.ConditionBuilder{
 		condition := expression.Name("org").Equal(expression.Value(d.Org))
 		conditions = append(conditions, condition)
 	}
-	var builder expression.ConditionBuilder
+	builder := expression.Name("deleted_at").Equal(expression.Value(nil))
 	for i := range conditions {
-		if i == 0{
-			builder = conditions[i]
-			continue
-		}
+		//if i == 0{
+		//	builder = conditions[i]
+		//	continue
+		//}
 		builder = builder.And(conditions[i])
 	}
 	return builder

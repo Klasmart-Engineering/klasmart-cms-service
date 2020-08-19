@@ -74,6 +74,7 @@ type Content struct {
 	Version  int64                       `gorm:"type:int;NOT NULL;column:version" dynamodbav:"version" json:"version" dynamoupdate:":ve"`
 	LockedBy string 			 `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
 	SourceId string 				`gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
+	LatestId string 			`gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 
 	CreatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
@@ -115,6 +116,7 @@ type UpdateDyContent struct {
 
 	RejectReason string `json:":rr"`
 	SourceId string `json:":si"`
+	LatestId string `json:"lsi"`
 	Version  int64 `json:":ve"`
 
 	CreatedAt *time.Time `json:":ca"`

@@ -4,7 +4,6 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"time"
 )
@@ -31,7 +30,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	authorName := operator.UserID
 
 	return &entity.Content{
-		ID:            utils.NewID(),
+		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
 		Name:          c.Name,
 		Program:       c.Program,
@@ -50,7 +49,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
-		Version:       0,
+		Version:       1,
 		CreatedAt:     &now,
 		UpdatedAt:     &now,
 	}, nil
@@ -114,9 +113,12 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 }
 
 func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
+	content.SourceId = content.ID
+	content.Version = content.Version + 1
 	content.ID = ""
-	content.Author = user.UserID
-	content.Org = user.OrgID
+	content.LockedBy = "-"
+	//content.Author = user.UserID
+	//content.Org = user.OrgID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)
 	return content
 }
