@@ -15,7 +15,7 @@ func (da *lockLogDA) GetByID(ctx context.Context, id string) (*entity.LockLog, e
 	panic("implement me")
 }
 
-func (da *lockLogDA) FindByRecordID(ctx context.Context, userID string) (*entity.LockLog, error) {
+func (da *lockLogDA) GetByRecordID(ctx context.Context, userID string) (*entity.LockLog, error) {
 	panic("implement me")
 }
 
