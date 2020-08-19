@@ -6,8 +6,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
-func ConvertDynamodbError(err error) error{
-	if err!=nil{
+func ConvertDynamodbError(err error) error {
+	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case dynamodb.ErrCodeResourceNotFoundException:
@@ -20,4 +20,3 @@ func ConvertDynamodbError(err error) error{
 
 	return err
 }
-

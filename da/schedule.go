@@ -10,7 +10,7 @@ type IScheduleDA interface {
 	BatchInsert(ctx context.Context, schedule []*entity.Schedule) error
 
 	Update(ctx context.Context, schedule *entity.Schedule) error
-	BatchUpdate(ctx context.Context, schedule []*entity.Schedule) error
+	//BatchUpdate(ctx context.Context, schedule []*entity.Schedule) error
 
 	Query(ctx context.Context, condition *ScheduleCondition) ([]*entity.Schedule, error)
 	Page(ctx context.Context, condition *ScheduleCondition) (int64, []*entity.Schedule, error)

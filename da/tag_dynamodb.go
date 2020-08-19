@@ -15,7 +15,6 @@ import (
 	"time"
 )
 
-
 type tagDynamoDA struct{}
 
 func (tagDynamoDA) Insert(ctx context.Context, tag *entity.Tag) error {
@@ -101,7 +100,7 @@ func (tagDynamoDA) Page(ctx context.Context, condition *TagCondition) (int64, []
 					log.Error(ctx, "dynamodb unmarshalmap error", log.Err(err))
 					return false
 				}
-				result=append(result,tagItem)
+				result = append(result, tagItem)
 			}
 			count = *page.ScannedCount
 		}
@@ -140,9 +139,9 @@ func (tagDynamoDA) Update(ctx context.Context, tag *entity.Tag) error {
 
 	input := &dynamodb.UpdateItemInput{
 		ExpressionAttributeNames: map[string]*string{
-			"#n":  aws.String("name"),
-			"#s":  aws.String("states"),
-			"#up": aws.String("updated_at"),
+			"#n":      aws.String("name"),
+			"#s":      aws.String("states"),
+			"#up":     aws.String("updated_at"),
 			"#upOpID": aws.String("updated_id"),
 		},
 		ExpressionAttributeValues: params,
@@ -218,7 +217,7 @@ func (tagDynamoDA) GetByIDs(ctx context.Context, ids []string) ([]*entity.Tag, e
 	return tags, nil
 }
 
-func (tagDynamoDA) DeleteSoft(ctx context.Context,op *entity.Operator, id string) error{
+func (tagDynamoDA) DeleteSoft(ctx context.Context, op *entity.Operator, id string) error {
 	key := make(map[string]*dynamodb.AttributeValue)
 	key["id"] = &dynamodb.AttributeValue{
 		S: aws.String(id),
@@ -233,8 +232,8 @@ func (tagDynamoDA) DeleteSoft(ctx context.Context,op *entity.Operator, id string
 	}
 	input := &dynamodb.UpdateItemInput{
 		ExpressionAttributeNames: map[string]*string{
-			"#delOpID":  aws.String("deleted_id"),
-			"#delat":  aws.String("deleted_at"),
+			"#delOpID": aws.String("deleted_id"),
+			"#delat":   aws.String("deleted_at"),
 		},
 		ExpressionAttributeValues: params,
 		Key:                       key,
@@ -244,7 +243,7 @@ func (tagDynamoDA) DeleteSoft(ctx context.Context,op *entity.Operator, id string
 	}
 	_, err := dbclient.GetClient().UpdateItem(input)
 	if err != nil {
-		log.Error(ctx, "delete tag error", log.Err(err), log.String("operator_id", op.UserID),log.String("tag_id", id))
+		log.Error(ctx, "delete tag error", log.Err(err), log.String("operator_id", op.UserID), log.String("tag_id", id))
 		return err
 	}
 	return nil
