@@ -41,4 +41,17 @@ func (s Server) registeRoute() {
 		category.PUT("/:id", MustLogin, s.updateCategory)
 		category.DELETE("/:id", MustLogin, s.deleteCategory)
 	}
+	content := s.engine.Group("/v1")
+	{
+		content.POST("/content", s.createContent)
+		content.PUT("/content/:content_id/publish", s.publishContent)
+		content.PUT("/content/review/:content_id/approve", s.approve)
+		content.PUT("/content/review/:content_id/reject", s.reject)
+		content.GET("/content/:content_id", s.GetContent)
+		content.PUT("/content/:content_id", s.updateContent)
+		content.DELETE("/content/:content_id", s.deleteContent)
+		content.GET("/contents", s.QueryContent)
+		content.GET("/contents/private", s.QueryPrivateContent)
+		content.GET("contents/pending", s.QueryPendingContent)
+	}
 }
