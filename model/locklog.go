@@ -6,7 +6,7 @@ import (
 )
 
 type ILockLogModel interface {
-	IsLock(ctx context.Context, recordID string) (bool, error)
+	Allow(ctx context.Context, recordID string, operatorID string) (bool, error)
 	Lock(ctx context.Context, recordID string, operatorID string) error
 	Unlock(ctx context.Context, recordID string) error
 }
@@ -25,7 +25,7 @@ func GetLockLogModel() ILockLogModel {
 
 type lockLogModel struct{}
 
-func (l *lockLogModel) IsLock(ctx context.Context, recordID string) (bool, error) {
+func (l *lockLogModel) Allow(ctx context.Context, recordID string, operatorID string) (bool, error) {
 	panic("implement me")
 }
 
