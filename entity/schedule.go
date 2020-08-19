@@ -157,21 +157,30 @@ type RepeatEnd struct {
 }
 
 type Schedule struct {
-	ID           string   `dynamodbav:"id"`
-	Title        string   `dynamodbav:"title"`
-	ClassID      string   `dynamodbav:"class_id"`
-	LessonPlanID string   `dynamodbav:"lesson_plan_id"`
-	TeacherIDs   []string `dynamodbav:"teacher_ids"`
-	StartAt      int64    `dynamodbav:"start_at"`
-	EndAt        int64    `dynamodbav:"end_at"`
-	ModeType     string   `dynamodbav:"mode_type"`
-	SubjectID    string   `dynamodbav:"subject_id"`
-	ProgramID    string   `dynamodbav:"program_id"`
-	ClassType    string   `dynamodbav:"class_type"`
-	DueAt        int64    `dynamodbav:"due_at"`
-	Description  string   `dynamodbav:"description"`
-	AttachmentID string   `dynamodbav:"attachment_id"`
-	Version      int64    `dynamodbav:"version"`
+	ID           string        `dynamodbav:"id"`
+	Title        string        `dynamodbav:"title"`
+	ClassID      string        `dynamodbav:"class_id"`
+	LessonPlanID string        `dynamodbav:"lesson_plan_id"`
+	TeacherIDs   []string      `dynamodbav:"teacher_ids"`
+	StartAt      int64         `dynamodbav:"start_at"`
+	EndAt        int64         `dynamodbav:"end_at"`
+	ModeType     string        `dynamodbav:"mode_type"`
+	SubjectID    string        `dynamodbav:"subject_id"`
+	ProgramID    string        `dynamodbav:"program_id"`
+	ClassType    string        `dynamodbav:"class_type"`
+	DueAt        int64         `dynamodbav:"due_at"`
+	Description  string        `dynamodbav:"description"`
+	AttachmentID string        `dynamodbav:"attachment_id"`
+	Version      int64         `dynamodbav:"version"`
+	Repeat       RepeatOptions `dynamodbav:"repeat"`
+
+	CreatedID string `dynamodbav:"created_id"`
+	UpdatedID string `dynamodbav:"updated_id"`
+	DeletedID string `dynamodbav:"deleted_id"`
+
+	CreatedAt int64 `dynamodbav:"created_at"`
+	UpdatedAt int64 `dynamodbav:"updated_at"`
+	DeletedAt int64 `dynamodbav:"deleted_at"`
 }
 
 func (Schedule) TableName() string {
