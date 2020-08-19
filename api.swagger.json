@@ -60,9 +60,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "asset list",
+                  "description": "content info",
                   "properties": {
-                    "content_id": {
+                    "total": {
                       "type": "string",
                       "description": "content id",
                       "example": "1"
@@ -71,28 +71,34 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
     },
     "/content/{content_id}/publish": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
       "put": {
         "tags": [
           "content"
         ],
         "description": "Publish content",
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -106,6 +112,49 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "406": {
+            "description": "Content status invalid"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/content/{content_id}/lock": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Lock a content by content_id",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "406": {
+            "description": "content was locked"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -130,13 +179,24 @@
         "description": "Approve a content review by content_id",
         "responses": {
           "200": {
-            "description": "success"
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "$ref": "#/components/schemas/LockContentResponse"
+                }
+              }
+            }
           },
           "403": {
             "description": "no auth to review"
           },
           "412": {
             "description": "content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -178,6 +238,9 @@
           },
           "412": {
             "description": "content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -223,6 +286,12 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       },
@@ -244,6 +313,12 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       },
@@ -255,6 +330,12 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -319,6 +400,15 @@
               "type": "string",
               "nullable": true
             }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "Search key",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
           }
         ],
         "responses": {
@@ -330,6 +420,10 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
+                    "key": {
+                      "type": "string",
+                      "description": "search key"
+                    },
                     "list": {
                       "type": "array",
                       "items": {
@@ -340,6 +434,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -404,6 +501,15 @@
               "type": "string",
               "nullable": true
             }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "Search key",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
           }
         ],
         "responses": {
@@ -415,6 +521,10 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
+                    "key": {
+                      "type": "string",
+                      "description": "search key"
+                    },
                     "list": {
                       "type": "array",
                       "items": {
@@ -425,6 +535,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -489,6 +602,15 @@
               "type": "string",
               "nullable": true
             }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "Search key",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
           }
         ],
         "responses": {
@@ -500,6 +622,10 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
+                    "key": {
+                      "type": "string",
+                      "description": "search key"
+                    },
                     "list": {
                       "type": "array",
                       "items": {
@@ -510,6 +636,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Internal Server Error"
           }
         }
       }
@@ -1702,11 +1831,6 @@
                 "description": "content create & publish",
                 "example": false
               },
-              "publish_scope": {
-                "type": "string",
-                "description": "content publish scope",
-                "example": false
-              },
               "data": {
                 "type": "object",
                 "description": "content data",
@@ -1720,6 +1844,11 @@
                 "example": {
                   "data": "hello"
                 }
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               }
             }
           }
@@ -1736,8 +1865,10 @@
             "properties": {
               "scope": {
                 "type": "string",
-                "description": "content published scope",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "description": "content published scope list",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               }
             }
           }
@@ -1755,6 +1886,23 @@
               "reject_reason": {
                 "type": "string",
                 "description": "content reject reason"
+              }
+            }
+          }
+        ]
+      },
+      "LockContentResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RejectReasonRequest"
+          },
+          {
+            "type": "object",
+            "description": "Lock content response",
+            "properties": {
+              "content_id": {
+                "type": "string",
+                "description": "content id to edit"
               }
             }
           }
