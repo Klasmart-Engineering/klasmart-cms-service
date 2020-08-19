@@ -77,6 +77,8 @@ github.com/go-playground/validator/v10 v10.3.0 h1:nZU+7q+yJoFmwvNgv/LnPUkwPal62+
 github.com/go-playground/validator/v10 v10.3.0/go.mod h1:uOYAAleCW8F/7oMFd6aG0GOhaH6EGOAJShg8Id5JGkI=
 github.com/go-redis/redis v6.15.7+incompatible h1:3skhDh95XQMpnqeqNftPkQD9jL9e5e36z/1SUm6dy1U=
 github.com/go-redis/redis v6.15.7+incompatible/go.mod h1:NAIEuMOZ/fxfXJIrKDQDz8wamY7mA7PouImQ2Jvg6kA=
+github.com/go-redis/redis v6.15.9+incompatible h1:K0pv1D7EQUjfyoMql+r/jZqCLizCGKFlFgcHWWmHQjg=
+github.com/go-redis/redis v6.15.9+incompatible/go.mod h1:NAIEuMOZ/fxfXJIrKDQDz8wamY7mA7PouImQ2Jvg6kA=
 github.com/go-sql-driver/mysql v1.4.1/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
 github.com/go-sql-driver/mysql v1.5.0 h1:ozyZYNQW3x3HtqT1jira07DN2PArx2v7/mN66gGcHOs=
 github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
@@ -297,6 +299,10 @@ gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13 h1:HpobiNbKIrm2oPaHPn
 gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13/go.mod h1:F55wOSQZy1MNmhVZJsHRlnIDkqDtireSDdgbhXwC0Lw=
 gitlab.badanamu.com.cn/calmisland/krypton v1.2.15 h1:eCTuFNNs/ruJZs+3y8ZCHq+5VCwjOydJLJgHd1Iz3sQ=
 gitlab.badanamu.com.cn/calmisland/krypton v1.2.15/go.mod h1:Zm4s/Z+RTUEjW0biT10WALzo22L+K+K6AkACi4xG2iw=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200810054559-aefe91368acc h1:t8Hh4SKZrCq57uu8acqzLxQOEYdL0xzIVb7fDmrBnTs=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200810054559-aefe91368acc/go.mod h1:OxUAHIdVbDLx8YrvTW9IU4SqgQLL4xFXJSoGOU/37/E=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200811073236-069c9cf1a787 h1:GWM7NfapnG9jYdEGwtlxTHRh4bQJDRcNWfb+sW70kWk=
+gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200811073236-069c9cf1a787/go.mod h1:ZtNgdOvY8dqIvXbb6fwDofTuzA3ber18L/qK91mFwg4=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.4/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
 go.etcd.io/etcd v3.3.22+incompatible h1:6rUh61a1ijB5rJec+KAVzch3RqEnTcdwNizcMEeoSxU=

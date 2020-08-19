@@ -1720,11 +1720,6 @@
                 "example": {
                   "data": "hello"
                 }
-              },
-              "publish_scope": {
-                "type": "string",
-                "description": "content publish scope id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               }
             }
           }
