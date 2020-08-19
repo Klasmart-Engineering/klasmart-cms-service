@@ -36,7 +36,8 @@ func (s *Server) reject(c *gin.Context) {
 	if cid == "" {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
 	}
-	err := model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, op)
+	// extract reject reason
+	err := model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, "", op)
 	if err != nil {
 		// TODO: differentiate error types
 		c.JSON(http.StatusInternalServerError, "Internal server error")
