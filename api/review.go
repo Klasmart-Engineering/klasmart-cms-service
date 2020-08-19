@@ -12,6 +12,7 @@ func (s *Server) approve(c *gin.Context) {
 	op, exist := GetOperator(c)
 	if !exist {
 		c.JSON(http.StatusUnauthorized, "get operator failed")
+		return
 	}
 	cid := c.Param("content_id")
 	if cid == "" {
@@ -31,6 +32,7 @@ func (s *Server) reject(c *gin.Context) {
 	op, exist := GetOperator(c)
 	if !exist {
 		c.JSON(http.StatusUnauthorized, "get operator failed")
+		return
 	}
 	cid := c.Param("content_id")
 	if cid == "" {
