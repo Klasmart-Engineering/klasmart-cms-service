@@ -47,12 +47,12 @@ func (l *lockLogModel) Allow(ctx context.Context, recordID string, operatorID st
 			log.Error(ctx, "allow: unlock overtime item failed", log.Err(err))
 			return false, err
 		}
-		return false, nil
+		return true, nil
 	}
-	if item.OperatorID != operatorID {
-		return false, nil
+	if item.OperatorID == operatorID {
+		return true, nil
 	}
-	return true, nil
+	return false, nil
 }
 
 func (l *lockLogModel) Lock(ctx context.Context, recordID string, operatorID string) error {
