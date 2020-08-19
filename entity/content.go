@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"reflect"
 	"strings"
 	"time"
@@ -224,7 +223,7 @@ type ContentData interface {
 	Unmarshal(ctx context.Context, data string) error
 	Marshal(ctx context.Context) (string, error)
 
-	Validate(ctx context.Context, contentType int, tx *dbo.DBContext) error
+	Validate(ctx context.Context, contentType int) error
 	PrepareResult(ctx context.Context) error
 	SubContentIds(ctx context.Context) ([]string ,error)
 }

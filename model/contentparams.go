@@ -16,7 +16,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	if c.Data == nil {
 		return nil, ErrNoContentData
 	}
-	err := c.Data.Validate(ctx, c.ContentType, dbo.MustGetDB(ctx))
+	err := c.Data.Validate(ctx, c.ContentType)
 	if err != nil{
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 
 	//检查data
-	err := data.Data.Validate(ctx, content.ContentType, dbo.MustGetDB(ctx))
+	err := data.Data.Validate(ctx, content.ContentType)
 	if err != nil{
 		return nil, err
 	}

@@ -2,13 +2,27 @@ package contentdata
 
 import (
 	"context"
+	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 )
 
-func CreateContentData(ctx context.Context, fileType int, data string) (entity.ContentData, error) {
-	return nil, nil
+func CreateContentData(ctx context.Context, contentType int, data string) (entity.ContentData, error) {
+	var contentData entity.ContentData
+	switch contentType {
+	case entity.ContentTypeLesson:
+		contentData = new(LessonData)
+	case entity.ContentTypeMaterial:
+		contentData = new(MaterialData)
+	default:
+		return nil, errors.New("unknown content type")
+	}
+	err := contentData.Unmarshal(ctx, data)
+	if err != nil{
+		return nil, err
+	}
+	return contentData, nil
 }
 
 func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.ContentInfo, error) {

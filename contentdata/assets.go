@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"strings"
 )
 
@@ -43,7 +42,7 @@ func (a *AssetsData) SubContentIds(ctx context.Context) ([]string ,error){
 	return nil, nil
 }
 
-func (a *AssetsData) Validate(ctx context.Context,  contentType int, tx *dbo.DBContext) error {
+func (a *AssetsData) Validate(ctx context.Context, contentType int) error {
 	if strings.TrimSpace(a.Source) == "" {
 		log.Error(ctx, "marshal material failed", log.String("source", a.Source))
 		return errors.New("assets: require source")
@@ -55,6 +54,3 @@ func (h *AssetsData) PrepareResult(ctx context.Context) error {
 	return nil
 }
 
-func(h *AssetsData) RelatedContentIds(ctx context.Context) []int64 {
-	return nil
-}

@@ -7,8 +7,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
 
@@ -45,7 +43,7 @@ func (this *MaterialData) Marshal(ctx context.Context) (string, error) {
 	return string(data), nil
 }
 
-func (this *MaterialData) Validate(ctx context.Context,  contentType int, tx *dbo.DBContext) error {
+func (this *MaterialData) Validate(ctx context.Context, contentType int) error {
 	if contentType != entity.ContentTypeMaterial {
 		return ErrInvalidContentType
 	}
@@ -60,9 +58,5 @@ func (h *MaterialData) SubContentIds(ctx context.Context) ([]string ,error){
 	return nil, nil
 }
 func (h *MaterialData) PrepareResult(ctx context.Context) error {
-	return nil
-}
-
-func( h*MaterialData) RelatedContentIds(ctx context.Context) []int64 {
 	return nil
 }
