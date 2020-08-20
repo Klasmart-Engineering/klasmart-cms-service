@@ -106,6 +106,24 @@ func (s *Server) updateContent(c *gin.Context) {
 	c.JSON(http.StatusOK, "ok")
 }
 
+func (s *Server) lockContent(c *gin.Context) {
+	ctx := c.Request.Context()
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusUnauthorized, "get operator failed")
+		return
+	}
+	cid := c.Param("content_id")
+	ncid, err := model.GetContentModel().LockContent(ctx, dbo.MustGetDB(ctx), cid, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"content_id": ncid,
+	})
+}
+
 func (s *Server) deleteContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op, exist := GetOperator(c)
