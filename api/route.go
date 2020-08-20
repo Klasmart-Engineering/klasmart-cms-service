@@ -43,15 +43,15 @@ func (s Server) registeRoute() {
 	}
 	content := s.engine.Group("/v1")
 	{
-		content.POST("/content", s.createContent)
-		content.PUT("/content/:content_id/publish", s.publishContent)
-		content.PUT("/content/:content_id/review/approve", s.approve)
-		content.PUT("/content/:content_id/review/reject", s.reject)
-		content.GET("/content/:content_id", s.GetContent)
-		content.PUT("/content/:content_id", s.updateContent)
-		content.DELETE("/content/:content_id", s.deleteContent)
+		content.POST("/contents", s.createContent)
+		content.PUT("/contents/:content_id/publish", s.publishContent)
+		content.PUT("/contents_review/:content_id/approve", s.approve)
+		content.PUT("/contents_review/:content_id/reject", s.reject)
+		content.GET("/contents/:content_id", s.GetContent)
+		content.PUT("/contents/:content_id", s.updateContent)
+		content.DELETE("/contents/:content_id", s.deleteContent)
 		content.GET("/contents", s.QueryContent)
-		content.GET("/contents/private", s.QueryPrivateContent)
-		content.GET("/contents/pending", s.QueryPendingContent)
+		content.GET("/contents_private", s.QueryPrivateContent)
+		content.GET("/contents_pending", s.QueryPendingContent)
 	}
 }
