@@ -159,7 +159,7 @@
         }
       }
     },
-    "/content/review/{content_id}/approve": {
+    "/content/{content_id}/review/approve": {
       "parameters": [
         {
           "name": "content_id",
@@ -201,7 +201,7 @@
         }
       }
     },
-    "/content/review/{content_id}/reject": {
+    "/content/{content_id}/review/reject": {
       "parameters": [
         {
           "name": "content_id",
