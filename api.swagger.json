@@ -37,309 +37,6 @@
     }
   ],
   "paths": {
-    "/content": {
-      "post": {
-        "tags": [
-          "content"
-        ],
-        "description": "Create content",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateContentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content info",
-                  "properties": {
-                    "total": {
-                      "type": "string",
-                      "description": "content id",
-                      "example": "1"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/content/{content_id}/publish": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Publish content",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishContentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "406": {
-            "description": "Content status invalid"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/content/{content_id}/lock": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Lock a content by content_id",
-        "responses": {
-          "200": {
-            "description": "success"
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "406": {
-            "description": "content was locked"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/content/{content_id}/review/approve": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Approve a content review by content_id",
-        "responses": {
-          "200": {
-            "description": "success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "$ref": "#/components/schemas/LockContentResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "412": {
-            "description": "content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/content/{content_id}/review/reject": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Reject a content review by content_id",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectReasonRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "success"
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "412": {
-            "description": "content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/content/{content_id}": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Get content by content_id",
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "content info",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "$ref": "#/components/schemas/Content"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Update content by content_id",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateContentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "content"
-        ],
-        "description": "Delete content by content_id",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
     "/contents": {
       "get": {
         "tags": [
@@ -434,6 +131,307 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "content"
+        ],
+        "description": "Create content",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content info",
+                  "properties": {
+                    "total": {
+                      "type": "string",
+                      "description": "content id",
+                      "example": "1"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents/{content_id}/publish": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Publish content",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishContentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "406": {
+            "description": "Content status invalid"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents/{content_id}/lock": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Lock a content by content_id",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "406": {
+            "description": "content was locked"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_review/{content_id}/approve": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Approve a content review by content_id",
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "$ref": "#/components/schemas/LockContentResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "412": {
+            "description": "content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_review/{content_id}/reject": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Reject a content review by content_id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectReasonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "412": {
+            "description": "content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents/{content_id}": {
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content by content_id",
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "content info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "$ref": "#/components/schemas/Content"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Update content by content_id",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "description": "Delete content by content_id",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Content not found"
           },
           "500": {
             "description": "Internal Server Error"
