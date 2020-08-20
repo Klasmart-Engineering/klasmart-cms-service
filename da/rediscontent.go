@@ -73,7 +73,7 @@ func (r *RedisContentDA) removeIndex(ctx context.Context, co entity.Content) err
 	if err != nil{
 		return err
 	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentKeywordsBucket, co.AuthorName), co.ID, ).Err()
+	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentKeywordsBucket, co.AuthorName), co.ID).Err()
 	if err != nil{
 		return err
 	}
@@ -85,7 +85,7 @@ func (r *RedisContentDA) removeIndex(ctx context.Context, co entity.Content) err
 	if err != nil{
 		return err
 	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentAuthorBucket, co.AuthorName), co.ID).Err()
+	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentAuthorBucket, co.Author), co.ID).Err()
 	if err != nil{
 		return err
 	}
