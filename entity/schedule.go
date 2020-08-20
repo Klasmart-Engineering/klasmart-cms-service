@@ -188,6 +188,11 @@ func (Schedule) TableName() string {
 	return constant.TableNameSchedule
 }
 
+const (
+	ModeTypeAllDay = "AllDay"
+	ModeTypeRepeat = "Repeat"
+)
+
 type ScheduleAddView struct {
 	Title        string        `json:"title"`
 	ClassID      string        `json:"class_id"`
@@ -203,7 +208,6 @@ type ScheduleAddView struct {
 	DueAt        int64         `json:"due_at"`
 	Description  string        `json:"description"`
 	AttachmentID string        `json:"attachment_id"`
-	Version      int64         `json:"version"`
 	Repeat       RepeatOptions `json:"repeat"`
 }
 
