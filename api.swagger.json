@@ -439,7 +439,7 @@
         }
       }
     },
-    "/contents/private": {
+    "/contents_private": {
       "get": {
         "tags": [
           "content"
@@ -540,7 +540,7 @@
         }
       }
     },
-    "/contents/pending": {
+    "/contents_pending": {
       "get": {
         "tags": [
           "content"
