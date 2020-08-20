@@ -1,6 +1,9 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"time"
+)
 
 type RepeatType string
 
@@ -28,25 +31,45 @@ const (
 	RepeatEndAfterTime  RepeatEndType = "after_time"
 )
 
-type RepeatWeek string
+type RepeatWeekday string
 
 const (
-	RepeatWeekSun RepeatWeek = "sun"
-	RepeatWeekMon RepeatWeek = "mon"
-	RepeatWeekTue RepeatWeek = "tue"
-	RepeatWeekWed RepeatWeek = "wed"
-	RepeatWeekThu RepeatWeek = "thu"
-	RepeatWeekFri RepeatWeek = "fri"
-	RepeatWeekSat RepeatWeek = "sat"
+	RepeatWeekSun RepeatWeekday = "sun"
+	RepeatWeekMon RepeatWeekday = "mon"
+	RepeatWeekTue RepeatWeekday = "tue"
+	RepeatWeekWed RepeatWeekday = "wed"
+	RepeatWeekThu RepeatWeekday = "thu"
+	RepeatWeekFri RepeatWeekday = "fri"
+	RepeatWeekSat RepeatWeekday = "sat"
 )
 
-func (w RepeatWeek) Valid() bool {
+func (w RepeatWeekday) Valid() bool {
 	switch w {
 	case RepeatWeekSun, RepeatWeekMon, RepeatWeekTue, RepeatWeekWed, RepeatWeekThu, RepeatWeekFri, RepeatWeekSat:
 		return true
 	default:
 		return false
 	}
+}
+
+func (w RepeatWeekday) TimeWeekday() time.Weekday {
+	switch w {
+	case RepeatWeekSun:
+		return time.Sunday
+	case RepeatWeekMon:
+		return time.Monday
+	case RepeatWeekTue:
+		return time.Tuesday
+	case RepeatWeekWed:
+		return time.Wednesday
+	case RepeatWeekThu:
+		return time.Thursday
+	case RepeatWeekFri:
+		return time.Friday
+	case RepeatWeekSat:
+		return time.Saturday
+	}
+	return 0
 }
 
 type RepeatMonthlyOnType string
@@ -109,6 +132,22 @@ func (s RepeatWeekSeq) Valid() bool {
 	}
 }
 
+func (s RepeatWeekSeq) Offset() int {
+	switch s {
+	case RepeatWeekSeqFirst:
+		return 1
+	case RepeatWeekSeqSecond:
+		return 2
+	case RepeatWeekSeqThird:
+		return 3
+	case RepeatWeekSeqFourth:
+		return 4
+	case RepeatWeekSeqLast:
+		return -1
+	}
+	return 0
+}
+
 type RepeatOptions struct {
 	ID      string        `json:"id"`
 	Type    RepeatType    `json:"type"`
@@ -124,9 +163,9 @@ type RepeatDaily struct {
 }
 
 type RepeatWeekly struct {
-	Interval int        `json:"interval"`
-	On       RepeatWeek `json:"on"`
-	End      RepeatEnd  `json:"end"`
+	Interval int           `json:"interval"`
+	On       RepeatWeekday `json:"on"`
+	End      RepeatEnd     `json:"end"`
 }
 
 type RepeatMonthly struct {
@@ -134,8 +173,8 @@ type RepeatMonthly struct {
 	OnType    RepeatMonthlyOnType `json:"on_type"`
 	OnDateDay int                 `json:"on_date_day"`
 	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq"`
-	OnWeek    RepeatWeek          `json:"on_week"`
-	End       RepeatEndType       `json:"end"`
+	OnWeek    RepeatWeekday       `json:"on_week"`
+	End       RepeatEnd           `json:"end"`
 }
 
 type RepeatYearly struct {
@@ -145,8 +184,8 @@ type RepeatYearly struct {
 	OnDateDay   int                `json:"on_date_day"`
 	OnWeekMonth int                `json:"on_week_month"`
 	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq"`
-	OnWeek      RepeatWeek         `json:"on_week"`
-	End         RepeatEndType      `json:"end"`
+	OnWeek      RepeatWeekday      `json:"on_week"`
+	End         RepeatEnd          `json:"end"`
 }
 
 type RepeatEnd struct {

@@ -22,6 +22,6 @@ func (LockLog) GlobalSecondIndexes() [][]string {
 	}
 }
 
-func (LockLog) IndexNameWithRecordIDAndCreatedAt() string {
+func (LockLog) IndexNameOfRecordIDAndCreatedAt() string {
 	return "record_id_and_created_at"
 }
