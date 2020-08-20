@@ -253,114 +253,19 @@
                 }
               }
             },
-          "403": {
-            "description": "no auth to review"
-          },
-          "406": {
-            "description": "content was locked"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_review/{content_id}/approve": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Approve a content review by content_id",
-        "responses": {
-          "200": {
-            "description": "success"
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "412": {
-            "description": "content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_review/{content_id}/reject": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Reject a content review by content_id",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectReasonRequest"
-              }
+            "403": {
+              "description": "no auth to review"
+            },
+            "406": {
+              "description": "content was locked"
+            },
+            "500": {
+              "description": "Internal Server Error"
             }
           }
-        },
-        "responses": {
-          "200": {
-            "description": "success"
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "412": {
-            "description": "content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
         }
-      }
-    },
-    "/contents/{content_id}": {
-      "parameters": [
-        {
-          "name": "content_id",
-          "in": "path",
-          "description": "content id",
-          "schema": {
-            "type": "string"
-          },
-          "required": true,
-          "allowEmptyValue": false
-        }
-      ],
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Get content by content_id",
+      },
+      "/contents_review/{content_id}/approve": {
         "parameters": [
           {
             "name": "content_id",
@@ -373,1883 +278,1979 @@
             "allowEmptyValue": false
           }
         ],
-        "responses": {
-          "200": {
-            "description": "content info",
+        "put": {
+          "tags": [
+            "content"
+          ],
+          "description": "Approve a content review by content_id",
+          "responses": {
+            "200": {
+              "description": "success"
+            },
+            "403": {
+              "description": "no auth to review"
+            },
+            "412": {
+              "description": "content status invalid"
+            },
+            "500": {
+              "description": "Internal Server Error"
+            }
+          }
+        }
+      },
+      "/contents_review/{content_id}/reject": {
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "put": {
+          "tags": [
+            "content"
+          ],
+          "description": "Reject a content review by content_id",
+          "requestBody": {
+            "required": true,
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "$ref": "#/components/schemas/Content"
+                  "$ref": "#/components/schemas/RejectReasonRequest"
                 }
               }
             }
           },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
+          "responses": {
+            "200": {
+              "description": "success"
+            },
+            "403": {
+              "description": "no auth to review"
+            },
+            "412": {
+              "description": "content status invalid"
+            },
+            "500": {
+              "description": "Internal Server Error"
+            }
           }
         }
       },
-      "put": {
-        "tags": [
-          "content"
+      "/contents/{content_id}": {
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
         ],
-        "description": "Update content by content_id",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
+        "get": {
+          "tags": [
+            "content"
+          ],
+          "description": "Get content by content_id",
+          "parameters": [
+            {
+              "name": "content_id",
+              "in": "path",
+              "description": "content id",
               "schema": {
-                "$ref": "#/components/schemas/CreateContentRequest"
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "content info",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "$ref": "#/components/schemas/Content"
+                  }
+                }
               }
+            },
+            "404": {
+              "description": "Content not found"
+            },
+            "500": {
+              "description": "Internal Server Error"
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "content"
-        ],
-        "description": "Delete content by content_id",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents/private": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search user's private content with condition",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "description": "Search content by scope",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "key",
-            "in": "query",
-            "description": "Search key",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
+        "put": {
+          "tags": [
+            "content"
+          ],
+          "description": "Update content by content_id",
+          "requestBody": {
+            "required": true,
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
+                  "$ref": "#/components/schemas/CreateContentRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "OK"
+            },
+            "404": {
+              "description": "Content not found"
+            },
+            "500": {
+              "description": "Internal Server Error"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "content"
+          ],
+          "description": "Delete content by content_id",
+          "responses": {
+            "200": {
+              "description": "OK"
+            },
+            "404": {
+              "description": "Content not found"
+            },
+            "500": {
+              "description": "Internal Server Error"
+            }
+          }
+        }
+      },
+      "/contents/private": {
+        "get": {
+          "tags": [
+            "content"
+          ],
+          "description": "Search user's private content with condition",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "description": "Search content by name",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "content_type",
+              "in": "query",
+              "description": "Search content by content type",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "publish_status",
+              "in": "query",
+              "description": "Search content by publish status",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "scope",
+              "in": "query",
+              "description": "Search content by scope",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "author",
+              "in": "query",
+              "description": "Search content by author",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "org",
+              "in": "query",
+              "description": "Search content by org",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "key",
+              "in": "query",
+              "description": "Search key",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "description": "content list",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "description": "search key"
+                      },
+                      "list": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Content"
+                        }
                       }
                     }
                   }
                 }
               }
+            },
+            "500": {
+              "description": "Internal Server Error"
             }
-          },
-          "500": {
-            "description": "Internal Server Error"
           }
         }
-      }
-    },
-    "/contents/pending": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search pending content",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
+      },
+      "/contents/pending": {
+        "get": {
+          "tags": [
+            "content"
+          ],
+          "description": "Search pending content",
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "description": "Search content by name",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "content_type",
+              "in": "query",
+              "description": "Search content by content type",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "publish_status",
+              "in": "query",
+              "description": "Search content by publish status",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "scope",
+              "in": "query",
+              "description": "Search content by scope",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "author",
+              "in": "query",
+              "description": "Search content by author",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "org",
+              "in": "query",
+              "description": "Search content by org",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "key",
+              "in": "query",
+              "description": "Search key",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
             }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "description": "Search content by scope",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "key",
-            "in": "query",
-            "description": "Search key",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "description": "content list",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "description": "search key"
+                      },
+                      "list": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Content"
+                        }
                       }
                     }
                   }
                 }
               }
+            },
+            "500": {
+              "description": "Internal Server Error"
             }
-          },
-          "500": {
-            "description": "Internal Server Error"
           }
         }
-      }
-    },
-    "/assets": {
-      "get": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "query asset",
-        "description": "query asset",
-        "operationId": "queryAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "query",
-            "description": "Search asset by id",
-            "schema": {
-              "type": "string",
-              "nullable": true
+      },
+      "/assets": {
+        "get": {
+          "tags": [
+            "asset"
+          ],
+          "summary": "query asset",
+          "description": "query asset",
+          "operationId": "queryAsset",
+          "security": [
+            {
+              "bearerAuth": []
             }
-          },
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search asset by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "description": "Search asset by category",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "size_min",
-            "in": "query",
-            "description": "Search asset by size_min",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 2
-            }
-          },
-          {
-            "name": "size_max",
-            "in": "query",
-            "description": "Search asset by size_max",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            }
-          },
-          {
-            "name": "tag",
-            "in": "query",
-            "description": "Search asset by tag",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "page index, not paging if page <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "query",
+              "description": "Search asset by id",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
             },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "records per page, not paging if page_size <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 10
+            {
+              "name": "name",
+              "in": "query",
+              "description": "Search asset by name",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
             },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "order by enum",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "-name",
-                "create_at",
-                "-create_at",
-                "last_update_at",
-                "-last_update_at"
-              ],
-              "nullable": true,
-              "default": "create_at"
+            {
+              "name": "category",
+              "in": "query",
+              "description": "Search asset by category",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
             },
-            "required": false,
-            "allowEmptyValue": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "asset list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Asset"
+            {
+              "name": "size_min",
+              "in": "query",
+              "description": "Search asset by size_min",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 2
+              }
+            },
+            {
+              "name": "size_max",
+              "in": "query",
+              "description": "Search asset by size_max",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 1
+              }
+            },
+            {
+              "name": "tag",
+              "in": "query",
+              "description": "Search asset by tag",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "description": "page index, not paging if page <= 0",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 1
+              },
+              "required": false,
+              "allowEmptyValue": true
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "description": "records per page, not paging if page_size <= 0",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 10
+              },
+              "required": false,
+              "allowEmptyValue": true
+            },
+            {
+              "name": "order_by",
+              "in": "query",
+              "description": "order by enum",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "-name",
+                  "create_at",
+                  "-create_at",
+                  "last_update_at",
+                  "-last_update_at"
+                ],
+                "nullable": true,
+                "default": "create_at"
+              },
+              "required": false,
+              "allowEmptyValue": true
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "description": "asset list",
+                    "properties": {
+                      "total": {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "total records",
+                        "example": 1
+                      },
+                      "list": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Asset"
+                        }
                       }
                     }
                   }
                 }
               }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "CreateAsset",
-        "description": "CreateAsset",
-        "operationId": "createAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssetCreateRequest"
-              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "500": {
+              "description": "Server error"
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Success",
+        "post": {
+          "tags": [
+            "asset"
+          ],
+          "summary": "CreateAsset",
+          "description": "CreateAsset",
+          "operationId": "createAsset",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Asset"
+                  "$ref": "#/components/schemas/AssetCreateRequest"
                 }
               }
             }
           },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/assets/{asset_id}": {
-      "get": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "GetAsset",
-        "description": "GetAsset",
-        "operationId": "getAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "asset_id",
-            "in": "path",
-            "description": "AssetID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Asset"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "update asset",
-        "description": "update asset",
-        "operationId": "updateAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "asset_id",
-            "in": "path",
-            "description": "AssetID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssetCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Asset"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "delete asset",
-        "description": "delete asset",
-        "operationId": "deleteAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "asset_id",
-            "in": "path",
-            "description": "AssetID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/assets/{ext}/upload": {
-      "get": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "GetAssetUploadPath",
-        "description": "GetAssetUploadPath",
-        "operationId": "getAssetUploadPath",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ext",
-            "in": "path",
-            "description": "File Extension",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "category list",
-                  "properties": {
-                    "path": {
-                      "type": "string",
-                      "description": "upload asset path",
-                      "example": "https://badanamu.com/upload/bada.mp3"
-                    }
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Asset"
                   }
                 }
               }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "500": {
+              "description": "Server error"
             }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
           }
         }
-      }
-    },
-    "/categories": {
-      "get": {
-        "tags": [
-          "category"
-        ],
-        "summary": "query category",
-        "description": "query category",
-        "operationId": "queryCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ids",
-            "in": "query",
-            "description": "Search category by ids",
-            "schema": {
-              "type": "string",
-              "nullable": true
+      },
+      "/assets/{asset_id}": {
+        "get": {
+          "tags": [
+            "asset"
+          ],
+          "summary": "GetAsset",
+          "description": "GetAsset",
+          "operationId": "getAsset",
+          "security": [
+            {
+              "bearerAuth": []
             }
-          },
-          {
-            "name": "names",
-            "in": "query",
-            "description": "Search category by names",
-            "schema": {
-              "type": "string",
-              "nullable": true
+          ],
+          "parameters": [
+            {
+              "name": "asset_id",
+              "in": "path",
+              "description": "AssetID",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
             }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "page index, not paging if page <=0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Asset"
+                  }
+                }
+              }
             },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "records per page, not paging if page_size <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 10
+            "400": {
+              "description": "Bad request"
             },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "order by enum",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "-name",
-                "create_at",
-                "-create_at",
-                "last_update_at",
-                "last_update_at"
-              ],
-              "nullable": true,
-              "default": "create_at"
+            "401": {
+              "description": "User not login"
             },
-            "required": false,
-            "allowEmptyValue": true
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Recorde not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
+        },
+        "put": {
+          "tags": [
+            "asset"
+          ],
+          "summary": "update asset",
+          "description": "update asset",
+          "operationId": "updateAsset",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "asset_id",
+              "in": "path",
+              "description": "AssetID",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "requestBody": {
+            "required": true,
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "category list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Category"
+                  "$ref": "#/components/schemas/AssetCreateRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Asset"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Recorde not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "asset"
+          ],
+          "summary": "delete asset",
+          "description": "delete asset",
+          "operationId": "deleteAsset",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "asset_id",
+              "in": "path",
+              "description": "AssetID",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success"
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Recorde not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/assets/{ext}/upload": {
+        "get": {
+          "tags": [
+            "asset"
+          ],
+          "summary": "GetAssetUploadPath",
+          "description": "GetAssetUploadPath",
+          "operationId": "getAssetUploadPath",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "ext",
+              "in": "path",
+              "description": "File Extension",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "description": "category list",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "description": "upload asset path",
+                        "example": "https://badanamu.com/upload/bada.mp3"
                       }
                     }
                   }
                 }
               }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Recorde not found"
+            },
+            "500": {
+              "description": "Server error"
             }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
           }
         }
       },
-      "post": {
-        "tags": [
-          "category"
-        ],
-        "summary": "create category",
-        "description": "create category",
-        "operationId": "createCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
+      "/categories": {
+        "get": {
+          "tags": [
+            "category"
+          ],
+          "summary": "query category",
+          "description": "query category",
+          "operationId": "queryCategory",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "ids",
+              "in": "query",
+              "description": "Search category by ids",
               "schema": {
-                "$ref": "#/components/schemas/CategoryCreateRequest"
+                "type": "string",
+                "nullable": true
               }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Category"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "409": {
-            "description": "conflict"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/categories/{category_id}": {
-      "get": {
-        "tags": [
-          "category"
-        ],
-        "summary": "get category",
-        "description": "get category",
-        "operationId": "getCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "category_id",
-            "in": "path",
-            "description": "CategoryID",
-            "schema": {
-              "type": "string"
             },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Category"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Record not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "category"
-        ],
-        "summary": "update category",
-        "description": "update category",
-        "operationId": "updateCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "category_id",
-            "in": "path",
-            "description": "CategoryID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
+            {
+              "name": "names",
+              "in": "query",
+              "description": "Search category by names",
               "schema": {
-                "$ref": "#/components/schemas/CategoryCreateRequest"
+                "type": "string",
+                "nullable": true
               }
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "description": "page index, not paging if page <=0",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 1
+              },
+              "required": false,
+              "allowEmptyValue": true
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "description": "records per page, not paging if page_size <= 0",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 10
+              },
+              "required": false,
+              "allowEmptyValue": true
+            },
+            {
+              "name": "order_by",
+              "in": "query",
+              "description": "order by enum",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "-name",
+                  "create_at",
+                  "-create_at",
+                  "last_update_at",
+                  "last_update_at"
+                ],
+                "nullable": true,
+                "default": "create_at"
+              },
+              "required": false,
+              "allowEmptyValue": true
             }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Category"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Record not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "category"
-        ],
-        "summary": "delete category",
-        "description": "delete category",
-        "operationId": "deleteCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "category_id",
-            "in": "path",
-            "description": "CategoryID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Record not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/tag": {
-      "get": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "query tag",
-        "description": "query tag",
-        "operationId": "queryTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search tag by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "page index, not paging if page <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "records per page, not paging if page_size <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 10
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "order by enum",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "-name",
-                "create_at",
-                "-create_at"
-              ],
-              "nullable": true,
-              "default": "create_at"
-            },
-            "required": false,
-            "allowEmptyValue": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "tag list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Tag"
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "description": "category list",
+                    "properties": {
+                      "total": {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "total records",
+                        "example": 1
+                      },
+                      "list": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Category"
+                        }
                       }
                     }
                   }
                 }
               }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "create tag",
-        "description": "Create Tag",
-        "operationId": "createTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TagCreate"
-              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "500": {
+              "description": "Server error"
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Success",
+        "post": {
+          "tags": [
+            "category"
+          ],
+          "summary": "create category",
+          "description": "create category",
+          "operationId": "createCategory",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
             "content": {
               "application/json": {
                 "schema": {
+                  "$ref": "#/components/schemas/CategoryCreateRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "409": {
+              "description": "conflict"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/categories/{category_id}": {
+        "get": {
+          "tags": [
+            "category"
+          ],
+          "summary": "get category",
+          "description": "get category",
+          "operationId": "getCategory",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "path",
+              "description": "CategoryID",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Record not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "category"
+          ],
+          "summary": "update category",
+          "description": "update category",
+          "operationId": "updateCategory",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "path",
+              "description": "CategoryID",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryCreateRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Record not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "category"
+          ],
+          "summary": "delete category",
+          "description": "delete category",
+          "operationId": "deleteCategory",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "category_id",
+              "in": "path",
+              "description": "CategoryID",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success"
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Record not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/tag": {
+        "get": {
+          "tags": [
+            "tag"
+          ],
+          "summary": "query tag",
+          "description": "query tag",
+          "operationId": "queryTag",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "name",
+              "in": "query",
+              "description": "Search tag by name",
+              "schema": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "description": "page index, not paging if page <= 0",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 1
+              },
+              "required": false,
+              "allowEmptyValue": true
+            },
+            {
+              "name": "page_size",
+              "in": "query",
+              "description": "records per page, not paging if page_size <= 0",
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true,
+                "default": 10
+              },
+              "required": false,
+              "allowEmptyValue": true
+            },
+            {
+              "name": "order_by",
+              "in": "query",
+              "description": "order by enum",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "name",
+                  "-name",
+                  "create_at",
+                  "-create_at"
+                ],
+                "nullable": true,
+                "default": "create_at"
+              },
+              "required": false,
+              "allowEmptyValue": true
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "description": "tag list",
+                    "properties": {
+                      "total": {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "total records",
+                        "example": 1
+                      },
+                      "list": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Tag"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "tag"
+          ],
+          "summary": "create tag",
+          "description": "Create Tag",
+          "operationId": "createTag",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagCreate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "string",
+                    "format": "string",
+                    "description": "tag id"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/tag/{tag_id}": {
+        "get": {
+          "tags": [
+            "tag"
+          ],
+          "summary": "get tag by id",
+          "description": "get tag by id",
+          "operationId": "GetTagByID",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "tag_id",
+              "in": "path",
+              "description": "tag id",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Recorde not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "tag"
+          ],
+          "summary": "update tag",
+          "description": "update tag",
+          "operationId": "updateTag",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "tag_id",
+              "in": "path",
+              "description": "tag id",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagUpdate"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Success",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Recorde not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "tag"
+          ],
+          "summary": "delete tag",
+          "description": "delete tag",
+          "operationId": "deleteTag",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "tag_id",
+              "in": "path",
+              "description": "delete tag",
+              "schema": {
+                "type": "string"
+              },
+              "required": true,
+              "allowEmptyValue": false
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Success"
+            },
+            "400": {
+              "description": "Bad request"
+            },
+            "401": {
+              "description": "User not login"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Recorde not found"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "securitySchemes": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT"
+        }
+      },
+      "schemas": {
+        "AssetCreateRequest": {
+          "type": "object",
+          "description": "Asset",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "asset name",
+              "example": "Asset #1"
+            },
+            "size": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "category": {
+              "$ref": "#/components/schemas/Category"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Tag"
+              }
+            },
+            "url": {
+              "type": "string",
+              "example": "https://badanamu.com/song.mp3"
+            }
+          }
+        },
+        "CreateContentRequest": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/CreateContentRequest"
+            },
+            {
+              "type": "object",
+              "description": "Company",
+              "properties": {
+                "content_type": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "content type",
+                  "example": 1
+                },
+                "name": {
                   "type": "string",
-                  "format": "string",
-                  "description": "tag id"
+                  "description": "content name",
+                  "example": "Content title"
+                },
+                "program": {
+                  "type": "string",
+                  "description": "program id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "subject": {
+                  "type": "string",
+                  "description": "subject id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "developmental": {
+                  "type": "string",
+                  "description": "developmental id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "skills": {
+                  "type": "string",
+                  "description": "skills id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "age": {
+                  "type": "string",
+                  "description": "age id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "keywords": {
+                  "type": "array",
+                  "description": "keywords id",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": [
+                    "ede1995ebdb440ebb9526c53e07a9ff3"
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "description": "content description",
+                  "example": "Content description"
+                },
+                "thumbnail": {
+                  "type": "string",
+                  "description": "content thumbnail",
+                  "example": "Content thumbnail"
+                },
+                "do_publish": {
+                  "type": "boolean",
+                  "description": "content create & publish",
+                  "example": false
+                },
+                "data": {
+                  "type": "object",
+                  "description": "content data",
+                  "example": {
+                    "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
+                  }
+                },
+                "extra": {
+                  "type": "string",
+                  "description": "content extra data",
+                  "example": {
+                    "data": "hello"
+                  }
+                },
+                "publish_scope": {
+                  "type": "string",
+                  "description": "content publish scope id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
                 }
               }
             }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/tag/{tag_id}": {
-      "get": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "get tag by id",
-        "description": "get tag by id",
-        "operationId": "GetTagByID",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tag_id",
-            "in": "path",
-            "description": "tag id",
-            "schema": {
-              "type": "string"
+          ]
+        },
+        "PublishContentRequest": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/PublishContentRequest"
             },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tag"
+            {
+              "type": "object",
+              "description": "Company",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "description": "content published scope list",
+                  "example": [
+                    "ede1995ebdb440ebb9526c53e07a9ff3"
+                  ]
                 }
               }
             }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "update tag",
-        "description": "update tag",
-        "operationId": "updateTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tag_id",
-            "in": "path",
-            "description": "tag id",
-            "schema": {
-              "type": "string"
+          ]
+        },
+        "RejectReasonRequest": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/RejectReasonRequest"
             },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TagUpdate"
+            {
+              "type": "object",
+              "description": "Reject reason",
+              "properties": {
+                "reject_reason": {
+                  "type": "string",
+                  "description": "content reject reason"
+                }
               }
+            }
+          ]
+        },
+        "LockContentResponse": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/RejectReasonRequest"
+            },
+            {
+              "type": "object",
+              "description": "Lock content response",
+              "properties": {
+                "content_id": {
+                  "type": "string",
+                  "description": "content id to edit"
+                }
+              }
+            }
+          ]
+        },
+        "ContentCondition": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ContentCondition"
+            },
+            {
+              "type": "object",
+              "description": "Company",
+              "properties": {
+                "content_type": {
+                  "type": "array",
+                  "description": "content type list",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": [
+                    "ede1995ebdb440ebb9526c53e07a9ff3"
+                  ]
+                },
+                "scope": {
+                  "type": "array",
+                  "description": "content published scope list",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": [
+                    "ede1995ebdb440ebb9526c53e07a9ff3"
+                  ]
+                },
+                "publish_status": {
+                  "type": "array",
+                  "description": "content published status list",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": [
+                    "ede1995ebdb440ebb9526c53e07a9ff3"
+                  ]
+                },
+                "author": {
+                  "type": "string",
+                  "description": "content author id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "org": {
+                  "type": "string",
+                  "description": "content org id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "bookmark": {
+                  "type": "string",
+                  "description": "content bookmark",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                }
+              }
+            }
+          ]
+        },
+        "Content": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/Content"
+            },
+            {
+              "type": "object",
+              "description": "Company",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "content id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "content_type": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "content type",
+                  "example": 1
+                },
+                "name": {
+                  "type": "string",
+                  "description": "content name",
+                  "example": "Content title"
+                },
+                "program": {
+                  "type": "string",
+                  "description": "program id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "subject": {
+                  "type": "string",
+                  "description": "subject id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "developmental": {
+                  "type": "string",
+                  "description": "developmental id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "skills": {
+                  "type": "string",
+                  "description": "skills id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "age": {
+                  "type": "string",
+                  "description": "age id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "keywords": {
+                  "type": "array",
+                  "description": "keywords id",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": [
+                    "ede1995ebdb440ebb9526c53e07a9ff3"
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "description": "content description",
+                  "example": "Content description"
+                },
+                "thumbnail": {
+                  "type": "string",
+                  "description": "content thumbnail",
+                  "example": "Content thumbnail"
+                },
+                "version": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "content version",
+                  "example": 1
+                },
+                "source_id": {
+                  "type": "string",
+                  "description": "content source id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "locked_by": {
+                  "type": "string",
+                  "description": "content locked by others id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "data": {
+                  "type": "object",
+                  "description": "content data",
+                  "example": {
+                    "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
+                  }
+                },
+                "extra": {
+                  "type": "string",
+                  "description": "content extra data",
+                  "example": {
+                    "data": "hello"
+                  }
+                },
+                "author": {
+                  "type": "string",
+                  "description": "content author id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "author_name": {
+                  "type": "string",
+                  "description": "content author name",
+                  "example": "zhangsan"
+                },
+                "org": {
+                  "type": "string",
+                  "description": "content org id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "publish_scope": {
+                  "type": "string",
+                  "description": "content publish scope id",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "publish_status": {
+                  "type": "string",
+                  "description": "content publish status",
+                  "example": "published"
+                },
+                "content_type_name": {
+                  "type": "string",
+                  "description": "content type name",
+                  "example": "lesson"
+                },
+                "program_name": {
+                  "type": "string",
+                  "description": "program name",
+                  "example": "program1"
+                },
+                "subject_name": {
+                  "type": "string",
+                  "description": "subject name",
+                  "example": "subject1"
+                },
+                "developmental_name": {
+                  "type": "string",
+                  "description": "developmental name",
+                  "example": "developmental1"
+                },
+                "skills_name": {
+                  "type": "string",
+                  "description": "skills name",
+                  "example": "skills1"
+                },
+                "age_name": {
+                  "type": "string",
+                  "description": "age name",
+                  "example": "6-9months"
+                },
+                "org_name": {
+                  "type": "string",
+                  "description": "org name",
+                  "example": "school1"
+                }
+              }
+            }
+          ]
+        },
+        "Asset": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/AssetCreateRequest"
+            },
+            {
+              "type": "object",
+              "description": "Company",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "AssetID",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "uploader": {
+                  "type": "string",
+                  "format": "int64",
+                  "description": "asset uploader",
+                  "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                },
+                "created_at": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "create at timestamp in seconds",
+                  "example": 1595916114
+                },
+                "updated_at": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "last updated at timestamp in seconds(秒)",
+                  "example": 1595916114
+                }
+              }
+            }
+          ]
+        },
+        "TagCreate": {
+          "type": "object",
+          "description": "create tag request",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "tag name"
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tag"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "delete tag",
-        "description": "delete tag",
-        "operationId": "deleteTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tag_id",
-            "in": "path",
-            "description": "delete tag",
-            "schema": {
-              "type": "string"
+        "TagUpdate": {
+          "type": "object",
+          "description": "update tag request",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "tag name"
             },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    },
-    "schemas": {
-      "AssetCreateRequest": {
-        "type": "object",
-        "description": "Asset",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "asset name",
-            "example": "Asset #1"
-          },
-          "size": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "category": {
-            "$ref": "#/components/schemas/Category"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Tag"
-            }
-          },
-          "url": {
-            "type": "string",
-            "example": "https://badanamu.com/song.mp3"
-          }
-        }
-      },
-      "CreateContentRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/CreateContentRequest"
-          },
-          {
-            "type": "object",
-            "description": "Company",
-            "properties": {
-              "content_type": {
-                "type": "integer",
-                "format": "int64",
-                "description": "content type",
-                "example": 1
-              },
-              "name": {
-                "type": "string",
-                "description": "content name",
-                "example": "Content title"
-              },
-              "program": {
-                "type": "string",
-                "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "subject": {
-                "type": "string",
-                "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "developmental": {
-                "type": "string",
-                "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "skills": {
-                "type": "string",
-                "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "age": {
-                "type": "string",
-                "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "keywords": {
-                "type": "array",
-                "description": "keywords id",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
-              },
-              "description": {
-                "type": "string",
-                "description": "content description",
-                "example": "Content description"
-              },
-              "thumbnail": {
-                "type": "string",
-                "description": "content thumbnail",
-                "example": "Content thumbnail"
-              },
-              "do_publish": {
-                "type": "boolean",
-                "description": "content create & publish",
-                "example": false
-              },
-              "data": {
-                "type": "object",
-                "description": "content data",
-                "example": {
-                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
-                }
-              },
-              "extra": {
-                "type": "string",
-                "description": "content extra data",
-                "example": {
-                  "data": "hello"
-                }
-              },
-              "publish_scope": {
-                "type": "string",
-                "description": "content publish scope id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              }
+            "states": {
+              "type": "integer",
+              "enum": [
+                1,
+                2
+              ],
+              "description": "\n * 1 - enable \n * 2 - disable\n"
             }
           }
-        ]
-      },
-      "PublishContentRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/PublishContentRequest"
-          },
-          {
-            "type": "object",
-            "description": "Company",
-            "properties": {
-              "scope": {
-                "type": "string",
-                "description": "content published scope list",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
-              }
+        },
+        "Tag": {
+          "type": "object",
+          "description": "Asset",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "tag id"
+            },
+            "name": {
+              "type": "string",
+              "description": "tag name"
+            },
+            "states": {
+              "type": "integer",
+              "enum": [
+                1,
+                2
+              ],
+              "description": "\n * 1 - enable \n * 2 - disable\n"
+            },
+            "created_at": {
+              "type": "integer",
+              "description": "tag create time, timestamp"
             }
           }
-        ]
-      },
-      "RejectReasonRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/RejectReasonRequest"
-          },
-          {
-            "type": "object",
-            "description": "Reject reason",
-            "properties": {
-              "reject_reason": {
-                "type": "string",
-                "description": "content reject reason"
-              }
+        },
+        "CategoryCreateRequest": {
+          "type": "object",
+          "description": "Asset",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "category name",
+              "example": "Category #1"
+            },
+            "parent_id": {
+              "type": "string",
+              "description": "parent category id"
             }
           }
-        ]
-      },
-      "LockContentResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/RejectReasonRequest"
-          },
-          {
-            "type": "object",
-            "description": "Lock content response",
-            "properties": {
-              "content_id": {
-                "type": "string",
-                "description": "content id to edit"
-              }
+        },
+        "Category": {
+          "type": "object",
+          "description": "Category",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "CategoryID",
+              "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+            },
+            "name": {
+              "type": "string",
+              "description": "asset name",
+              "example": "Category #1"
+            },
+            "parent_id": {
+              "type": "string",
+              "description": "ParentCategoryID",
+              "example": "ede1995ebdb440ebb9526c53e07a9ff3"
             }
-          }
-        ]
-      },
-      "ContentCondition": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ContentCondition"
-          },
-          {
-            "type": "object",
-            "description": "Company",
-            "properties": {
-              "content_type": {
-                "type": "array",
-                "description": "content type list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
-              },
-              "scope": {
-                "type": "array",
-                "description": "content published scope list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
-              },
-              "publish_status": {
-                "type": "array",
-                "description": "content published status list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
-              },
-              "author": {
-                "type": "string",
-                "description": "content author id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "org": {
-                "type": "string",
-                "description": "content org id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "bookmark": {
-                "type": "string",
-                "description": "content bookmark",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              }
-            }
-          }
-        ]
-      },
-      "Content": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Content"
-          },
-          {
-            "type": "object",
-            "description": "Company",
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "content id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "content_type": {
-                "type": "integer",
-                "format": "int64",
-                "description": "content type",
-                "example": 1
-              },
-              "name": {
-                "type": "string",
-                "description": "content name",
-                "example": "Content title"
-              },
-              "program": {
-                "type": "string",
-                "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "subject": {
-                "type": "string",
-                "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "developmental": {
-                "type": "string",
-                "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "skills": {
-                "type": "string",
-                "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "age": {
-                "type": "string",
-                "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "keywords": {
-                "type": "array",
-                "description": "keywords id",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
-              },
-              "description": {
-                "type": "string",
-                "description": "content description",
-                "example": "Content description"
-              },
-              "thumbnail": {
-                "type": "string",
-                "description": "content thumbnail",
-                "example": "Content thumbnail"
-              },
-              "version": {
-                "type": "integer",
-                "format": "int64",
-                "description": "content version",
-                "example": 1
-              },
-              "source_id": {
-                "type": "string",
-                "description": "content source id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "locked_by": {
-                "type": "string",
-                "description": "content locked by others id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "data": {
-                "type": "object",
-                "description": "content data",
-                "example": {
-                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
-                }
-              },
-              "extra": {
-                "type": "string",
-                "description": "content extra data",
-                "example": {
-                  "data": "hello"
-                }
-              },
-              "author": {
-                "type": "string",
-                "description": "content author id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "author_name": {
-                "type": "string",
-                "description": "content author name",
-                "example": "zhangsan"
-              },
-              "org": {
-                "type": "string",
-                "description": "content org id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "publish_scope": {
-                "type": "string",
-                "description": "content publish scope id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "publish_status": {
-                "type": "string",
-                "description": "content publish status",
-                "example": "published"
-              },
-              "content_type_name": {
-                "type": "string",
-                "description": "content type name",
-                "example": "lesson"
-              },
-              "program_name": {
-                "type": "string",
-                "description": "program name",
-                "example": "program1"
-              },
-              "subject_name": {
-                "type": "string",
-                "description": "subject name",
-                "example": "subject1"
-              },
-              "developmental_name": {
-                "type": "string",
-                "description": "developmental name",
-                "example": "developmental1"
-              },
-              "skills_name": {
-                "type": "string",
-                "description": "skills name",
-                "example": "skills1"
-              },
-              "age_name": {
-                "type": "string",
-                "description": "age name",
-                "example": "6-9months"
-              },
-              "org_name": {
-                "type": "string",
-                "description": "org name",
-                "example": "school1"
-              }
-            }
-          }
-        ]
-      },
-      "Asset": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/AssetCreateRequest"
-          },
-          {
-            "type": "object",
-            "description": "Company",
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "AssetID",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "uploader": {
-                "type": "string",
-                "format": "int64",
-                "description": "asset uploader",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "created_at": {
-                "type": "integer",
-                "format": "int64",
-                "description": "create at timestamp in seconds",
-                "example": 1595916114
-              },
-              "updated_at": {
-                "type": "integer",
-                "format": "int64",
-                "description": "last updated at timestamp in seconds(秒)",
-                "example": 1595916114
-              }
-            }
-          }
-        ]
-      },
-      "TagCreate": {
-        "type": "object",
-        "description": "create tag request",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "tag name"
-          }
-        }
-      },
-      "TagUpdate": {
-        "type": "object",
-        "description": "update tag request",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "tag name"
-          },
-          "states": {
-            "type": "integer",
-            "enum": [
-              1,
-              2
-            ],
-            "description": "\n * 1 - enable \n * 2 - disable\n"
-          }
-        }
-      },
-      "Tag": {
-        "type": "object",
-        "description": "Asset",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "tag id"
-          },
-          "name": {
-            "type": "string",
-            "description": "tag name"
-          },
-          "states": {
-            "type": "integer",
-            "enum": [
-              1,
-              2
-            ],
-            "description": "\n * 1 - enable \n * 2 - disable\n"
-          },
-          "created_at": {
-            "type": "integer",
-            "description": "tag create time, timestamp"
-          }
-        }
-      },
-      "CategoryCreateRequest": {
-        "type": "object",
-        "description": "Asset",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "category name",
-            "example": "Category #1"
-          },
-          "parent_id": {
-            "type": "string",
-            "description": "parent category id"
-          }
-        }
-      },
-      "Category": {
-        "type": "object",
-        "description": "Category",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "CategoryID",
-            "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-          },
-          "name": {
-            "type": "string",
-            "description": "asset name",
-            "example": "Category #1"
-          },
-          "parent_id": {
-            "type": "string",
-            "description": "ParentCategoryID",
-            "example": "ede1995ebdb440ebb9526c53e07a9ff3"
           }
         }
       }
