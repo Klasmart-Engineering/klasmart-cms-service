@@ -4,7 +4,7 @@ import "errors"
 
 const (
 	TableNameTag      = "tags"
-	TableNameSchedule = "Schedules"
+	TableNameSchedule = "schedules"
 )
 
 var (
