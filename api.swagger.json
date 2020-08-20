@@ -244,8 +244,15 @@
         "description": "Lock a content by content_id",
         "responses": {
           "200": {
-            "description": "success"
-          },
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "$ref": "#/components/schemas/LockContentResponse"
+                }
+              }
+            },
           "403": {
             "description": "no auth to review"
           },
@@ -278,15 +285,7 @@
         "description": "Approve a content review by content_id",
         "responses": {
           "200": {
-            "description": "success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "$ref": "#/components/schemas/LockContentResponse"
-                }
-              }
-            }
+            "description": "success"
           },
           "403": {
             "description": "no auth to review"
