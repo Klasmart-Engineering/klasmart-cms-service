@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 	"os"
 	"os/signal"
 	"syscall"
@@ -41,10 +38,10 @@ func main() {
 	//设置数据库配置
 	//initDBO()
 	dynamodb.GetClient()
-	ro.SetConfig(&redis.Options{
-		Addr:               fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-		Password:           config.Get().RedisConfig.Password,
-	})
+	//ro.SetConfig(&redis.Options{
+	//	Addr:               fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
+	//	Password:           config.Get().RedisConfig.Password,
+	//})
 
 	// init dynamodb connection
 	storage.DefaultStorage()

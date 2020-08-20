@@ -41,7 +41,7 @@ func (r *RedisContentCache) contentKey(id string) string {
 }
 func (r *RedisContentCache) contentConditionKey(condition da.IDyCondition) string {
 	h := md5.New()
-	h.Write([]byte(fmt.Sprintf("%v", condition)))
+	h.Write([]byte(fmt   .Sprintf("%v", condition)))
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return fmt.Sprintf("kidsloop2.content.condition.%v", md5Hash)

@@ -61,8 +61,8 @@ func LoadEnvConfig() {
 	ctx := context.TODO()
 	config = new(Config)
 	loadStorageEnvConfig(ctx)
-	loadDBEnvConfig(ctx)
-	loadRedisEnvConfig(ctx)
+	//loadDBEnvConfig(ctx)
+	//loadRedisEnvConfig(ctx)
 }
 func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
