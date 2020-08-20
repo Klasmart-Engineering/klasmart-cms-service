@@ -6,6 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.33.17
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/jinzhu/gorm v1.9.15 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
