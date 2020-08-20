@@ -126,6 +126,7 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition)
 	if pageSize < 1 {
 		pageSize = 10000
 	}
+
 	input := &dynamodb.ScanInput{
 		TableName: aws.String("content"),
 		ExpressionAttributeNames:  expr.Names(),
