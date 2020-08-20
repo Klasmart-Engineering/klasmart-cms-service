@@ -188,6 +188,12 @@ func (Schedule) TableName() string {
 	return constant.TableNameSchedule
 }
 
+func (s Schedule) Clone() Schedule {
+	newItem := s
+	newItem.TeacherIDs = append([]string{}, s.TeacherIDs...)
+	return newItem
+}
+
 type ScheduleAddView struct {
 	Title        string        `json:"title"`
 	ClassID      string        `json:"class_id"`
