@@ -194,6 +194,11 @@ func (s Schedule) Clone() Schedule {
 	return newItem
 }
 
+const (
+	ModeTypeAllDay = "AllDay"
+	ModeTypeRepeat = "Repeat"
+)
+
 type ScheduleAddView struct {
 	Title        string        `json:"title"`
 	ClassID      string        `json:"class_id"`
