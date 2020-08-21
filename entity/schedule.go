@@ -260,7 +260,6 @@ type ScheduleAddView struct {
 
 func (s *ScheduleAddView) Convert() *Schedule {
 	schedule := &Schedule{
-		ID:           utils.NewID(),
 		Title:        s.Title,
 		ClassID:      s.ClassID,
 		LessonPlanID: s.LessonPlanID,
@@ -279,6 +278,7 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		Repeat:       s.Repeat,
 		CreatedAt:    time.Now().Unix(),
 		UpdatedAt:    0,
+		RepeatID:     utils.NewID(),
 	}
 	return schedule
 }
