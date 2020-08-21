@@ -168,17 +168,15 @@ func (d *DyContentDA) SearchContentByKey(ctx context.Context, condition DyKeyCon
 	if err != nil {
 		return "", nil, err
 	}
-	fmt.Println("KeyCondition:", expr.KeyCondition())
-	fmt.Println("Values:", expr.Values())
 	pageSize := condition.PageSize
 	if pageSize < 1 {
 		pageSize = 10000
 	}
 	input := &dynamodb.QueryInput{
 		TableName:                 aws.String("content"),
+		IndexName:					aws.String("publish_status"),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		KeyConditionExpression:    expr.KeyCondition(),
 		Limit:                     aws.Int64(pageSize),

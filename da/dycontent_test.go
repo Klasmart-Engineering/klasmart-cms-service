@@ -13,7 +13,7 @@ import (
 
 func TestCreateTable(t *testing.T) {
 	tableName := "content"
-	//db.GetClient().DeleteTable(&dynamodb.DeleteTableInput{TableName: aws.String("content")})
+	db.GetClient().DeleteTable(&dynamodb.DeleteTableInput{TableName: aws.String("content")})
 
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
@@ -21,11 +21,34 @@ func TestCreateTable(t *testing.T) {
 				AttributeName: aws.String("content_id"),
 				AttributeType: aws.String("S"),
 			},
+			{
+				AttributeName: aws.String("publish_status"),
+				AttributeType: aws.String("S"),
+			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
 				AttributeName: aws.String("content_id"),
 				KeyType:       aws.String("HASH"),
+			},
+		},
+		GlobalSecondaryIndexes: []*dynamodb.GlobalSecondaryIndex{
+			{
+				IndexName: 	aws.String("publish_status"),
+				KeySchema:  []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("publish_status"),
+						KeyType:       aws.String("HASH"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+					//NonKeyAttributes: []*string{aws.String("id"), aws.String("name")},
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(10),
+					WriteCapacityUnits: aws.Int64(10),
+				},
 			},
 		},
 		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
