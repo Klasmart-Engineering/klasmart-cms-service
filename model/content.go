@@ -33,6 +33,7 @@ type IContentModel interface {
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.DyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.DyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.DyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error)
+	SearchContentByDynamoKey(ctx context.Context, tx *dbo.DBContext, condition da.DyKeyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error)
 
 	GetVisibleContentById(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 }
@@ -148,6 +149,28 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	}
 
 	return nil
+}
+
+func (cm *ContentModel) SearchContentByDynamoKey(ctx context.Context, tx *dbo.DBContext, condition da.DyKeyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error) {
+	key, objs, err := da.GetDyContentDA().SearchContentByKey(ctx, condition)
+	if err != nil {
+		log.Error(ctx, "can't read contentdata", log.Err(err))
+		return "", nil, ErrReadContentFailed
+	}
+	response := make([]*entity.ContentInfo, len(objs))
+	for i := range objs {
+		temp, err := contentdata.ConvertContentObj(ctx, objs[i])
+		if err != nil {
+			log.Error(ctx, "Can't parse contentdata, contentId: %v, error: %v", log.String("id", objs[i].ID), log.Err(err))
+			return "", nil, err
+		}
+		response[i] = temp
+	}
+	contentWithDetails, err := buildContentWithDetails(ctx, response, user)
+	if err != nil {
+		return "", nil, err
+	}
+	return key, contentWithDetails, nil
 }
 
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *da.DyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error) {

@@ -22,6 +22,14 @@ func TestCreateTable(t *testing.T) {
 				AttributeType: aws.String("S"),
 			},
 			{
+				AttributeName: aws.String("org"),
+				AttributeType: aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("author"),
+				AttributeType: aws.String("S"),
+			},
+			{
 				AttributeName: aws.String("publish_status"),
 				AttributeType: aws.String("S"),
 			},
@@ -40,10 +48,33 @@ func TestCreateTable(t *testing.T) {
 						AttributeName: aws.String("publish_status"),
 						KeyType:       aws.String("HASH"),
 					},
+					{
+						AttributeName: aws.String("org"),
+						KeyType:       aws.String("RANGE"),
+					},
 				},
 				Projection: &dynamodb.Projection{
 					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
-					//NonKeyAttributes: []*string{aws.String("id"), aws.String("name")},
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(10),
+					WriteCapacityUnits: aws.Int64(10),
+				},
+			},
+			{
+				IndexName: 	aws.String("author"),
+				KeySchema:  []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("author"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("org"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(10),
@@ -213,10 +244,22 @@ func TestSearchContentKey(t *testing.T) {
 	fmt.Println("ID:", id)
 	sub, contents, err := GetDyContentDA().SearchContentByKey(context.Background(), DyKeyContentCondition{
 		PublishStatus:      "draft",
+		Org: "org1",
 	})
 	if err != nil{
 		panic(err)
 	}
 	fmt.Printf("contents: %#v\n", contents[0])
 	fmt.Printf("sub: %#v\n", sub)
+
+	sub, contents, err = GetDyContentDA().SearchContentByKey(context.Background(), DyKeyContentCondition{
+		Author:        "Author1",
+		Org: "org1",
+	})
+	if err != nil{
+		panic(err)
+	}
+	fmt.Printf("contents: %#v\n", contents[0])
+	fmt.Printf("sub: %#v\n", sub)
+
 }

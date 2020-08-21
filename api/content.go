@@ -141,6 +141,32 @@ func (s *Server) deleteContent(c *gin.Context) {
 	c.JSON(http.StatusOK, "ok")
 }
 
+func (s *Server) QueryDynamoContent(c *gin.Context) {
+	ctx := c.Request.Context()
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusUnauthorized, "get operator failed")
+		return
+	}
+
+	condition := da.DyKeyContentCondition{
+		PublishStatus: c.Query("publish_status"),
+		Author:        c.Query("author"),
+		Org:           c.Query("org"),
+		LastKey:       c.Query("key"),
+	}
+
+	key, results, err := model.GetContentModel().SearchContentByDynamoKey(ctx, dbo.MustGetDB(ctx), condition, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"key":  key,
+		"list": results,
+	})
+}
+
 func (s *Server) QueryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op, exist := GetOperator(c)

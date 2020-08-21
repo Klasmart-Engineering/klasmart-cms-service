@@ -164,7 +164,9 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition)
 }
 
 func (d *DyContentDA) SearchContentByKey(ctx context.Context, condition DyKeyContentCondition) (string, []*entity.Content, error) {
-	expr, err := expression.NewBuilder().WithKeyCondition(condition.GetConditions()).Build()
+	index, cond := condition.GetConditions()
+
+	expr, err := expression.NewBuilder().WithKeyCondition(cond).Build()
 	if err != nil {
 		return "", nil, err
 	}
@@ -174,7 +176,7 @@ func (d *DyContentDA) SearchContentByKey(ctx context.Context, condition DyKeyCon
 	}
 	input := &dynamodb.QueryInput{
 		TableName:                 aws.String("content"),
-		IndexName:					aws.String("publish_status"),
+		IndexName:					aws.String(index),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		ProjectionExpression:      expr.Projection(),
@@ -410,7 +412,6 @@ func (d *DyCombineContentCondition) GetLastKey() string {
 }
 
 type DyKeyContentCondition struct {
-	Name          string `json:"keywords"`
 	PublishStatus string `json:"publish_status"`
 	Author        string `json:"author"`
 	Org           string `json:"org"`
@@ -419,34 +420,26 @@ type DyKeyContentCondition struct {
 	PageSize int64  `json:"page_size"`
 }
 
-func (d *DyKeyContentCondition) GetConditions() expression.KeyConditionBuilder {
-	conditions := make([]expression.KeyConditionBuilder, 0)
-	if d.Name != "" {
-		condition := expression.KeyEqual(expression.Key("name"), expression.Value(d.Name))
-		conditions = append(conditions, condition)
-	}
+func (d *DyKeyContentCondition) GetConditions() (string, expression.KeyConditionBuilder) {
+	var builder expression.KeyConditionBuilder
+	var index string
 	if d.PublishStatus != "" {
-		condition := expression.KeyEqual(expression.Key("publish_status"), expression.Value(d.PublishStatus))
-		conditions = append(conditions, condition)
+		builder = expression.KeyEqual(expression.Key("publish_status"), expression.Value(d.PublishStatus))
+		if d.Org != "" {
+			condition := expression.KeyEqual(expression.Key("org"), expression.Value(d.Org))
+			builder = builder.And(condition)
+		}
+		index = "publish_status"
 	}
 	if d.Author != "" {
-		condition := expression.KeyEqual(expression.Key("author"), expression.Value(d.Author))
-		conditions = append(conditions, condition)
-	}
-	if d.Org != "" {
-		condition := expression.KeyEqual(expression.Key("org"), expression.Value(d.Org))
-		conditions = append(conditions, condition)
-	}
-
-	var builder expression.KeyConditionBuilder
-	for i := range conditions {
-		if i == 0{
-			builder = conditions[i]
-			continue
+		builder = expression.KeyEqual(expression.Key("author"), expression.Value(d.Author))
+		if d.Org != "" {
+			condition := expression.KeyEqual(expression.Key("org"), expression.Value(d.Org))
+			builder = builder.And(condition)
 		}
-		builder = builder.And(conditions[i])
+		index = "author"
 	}
-	return builder
+	return index, builder
 }
 
 type IDyCondition interface {

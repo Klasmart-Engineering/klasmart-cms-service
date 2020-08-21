@@ -52,6 +52,7 @@ func (s Server) registeRoute() {
 		content.PUT("/contents_review/:content_id/reject", s.reject)
 		content.DELETE("/contents/:content_id", s.deleteContent)
 		content.GET("/contents", s.QueryContent)
+		content.GET("/contents_dynamo", s.QueryDynamoContent)
 		content.GET("/contents_private", s.QueryPrivateContent)
 		content.GET("/contents_pending", s.QueryPendingContent)
 	}
