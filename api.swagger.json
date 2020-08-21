@@ -43,6 +43,7 @@
           "content"
         ],
         "description": "Search content with condition",
+        "operationId": "searchContents",
         "parameters": [
           {
             "name": "name",
@@ -142,6 +143,7 @@
           "content"
         ],
         "description": "Create content",
+        "operationId": "createContent",
         "requestBody": {
           "required": true,
           "content": {
@@ -186,6 +188,7 @@
           "content"
         ],
         "description": "Publish content",
+        "operationId": "publishContent",
         "parameters": [
           {
             "name": "content_id",
@@ -242,6 +245,7 @@
           }
         ],
         "description": "Lock a content by content_id",
+        "operationId": "lockContent",
         "responses": {
           "200": {
             "description": "success",
@@ -284,6 +288,7 @@
           }
         ],
         "description": "Approve a content review by content_id",
+        "operationId": "approveContentReview",
         "responses": {
           "200": {
             "description": "success"
@@ -318,6 +323,7 @@
           }
         ],
         "description": "Reject a content review by content_id",
+        "operationId": "rejectContentReview",
         "requestBody": {
           "required": true,
           "content": {
@@ -350,6 +356,7 @@
           "content"
         ],
         "description": "Get content by content_id",
+        "operationId": "getContentById",
         "parameters": [
           {
             "name": "content_id",
@@ -387,6 +394,7 @@
           "content"
         ],
         "description": "Update content by content_id",
+        "operationId": "updateContent",
         "parameters": [
           {
             "name": "content_id",
@@ -426,6 +434,7 @@
           "content"
         ],
         "description": "Delete content by content_id",
+        "operationId": "deleteContent",
         "responses": {
           "200": {
             "description": "OK"
@@ -445,6 +454,7 @@
           "content"
         ],
         "description": "Search user's private content with condition",
+        "operationId": "searchPrivateContents",
         "parameters": [
           {
             "name": "name",
@@ -546,6 +556,7 @@
           "content"
         ],
         "description": "Search pending content",
+        "operationId": "searchPendingContents",
         "parameters": [
           {
             "name": "name",
