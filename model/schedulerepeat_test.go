@@ -180,10 +180,10 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: entity.RepeatWeekly{
 					Interval: 1,
-					On:       []entity.RepeatWeekday{entity.RepeatWeekMon},
+					On:       []entity.RepeatWeekday{entity.RepeatWeekMon, entity.RepeatWeekFri, entity.RepeatWeekSun},
 					End: entity.RepeatEnd{
 						Type:       entity.RepeatEndAfterCount,
-						AfterCount: 20,
+						AfterCount: 3,
 					},
 				},
 			},
