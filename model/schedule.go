@@ -30,27 +30,30 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 		return "", err
 	}
 	teacherSchedules := make([]*entity.TeacherSchedule, len(scheduleList)*len(schedule.TeacherIDs))
+	index := 0
 	for _, item := range scheduleList {
 		item.ID = utils.NewID()
 
-		for i, teacherID := range item.TeacherIDs {
+		for _, teacherID := range item.TeacherIDs {
 			tsItem := &entity.TeacherSchedule{
 				TeacherID:  teacherID,
 				ScheduleID: schedule.ID,
 				StartAt:    schedule.StartAt,
 			}
-			teacherSchedules[i] = tsItem
+			teacherSchedules[index] = tsItem
+			index++
 		}
 	}
 	// add to teachers_schedules
-
 	err = da.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
 	if err != nil {
 		return "", err
 	}
 	// add to schedules
-
-	//
+	err = da.GetScheduleDA().BatchInsert(ctx, scheduleList)
+	if err != nil {
+		return "", err
+	}
 
 	return "", nil
 }
