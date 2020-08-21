@@ -143,8 +143,8 @@ func (t tagModel) GetByIDs(ctx context.Context, ids []string) ([]*entity.TagView
 func (t tagModel) GetByName(ctx context.Context, name string) (*entity.TagView, error) {
 	tags, err := da.GetTagDA().Query(ctx, &da.TagCondition{
 		Name: entity.NullString{
-			Strings: name,
-			Valid:   len(name) != 0,
+			String: name,
+			Valid:  len(name) != 0,
 		},
 	})
 	if err != nil {

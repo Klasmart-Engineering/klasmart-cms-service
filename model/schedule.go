@@ -2,8 +2,10 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
+	"strings"
 	"sync"
 )
 
@@ -18,6 +20,33 @@ type IScheduleModel interface {
 type scheduleModel struct{}
 
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
+	// TODO: verify data
+
+	// convert to schedule
+	schedule := viewdata.Convert()
+	schedule.CreatedID = op.UserID
+
+	// add to teachers_schedules
+	teacherSchedules := make([]*entity.TeacherSchedule, len(schedule.TeacherIDs))
+	for i, teacherID := range schedule.TeacherIDs {
+		if strings.TrimSpace(teacherID) == "" {
+			continue
+		}
+		tsItem := &entity.TeacherSchedule{
+			TeacherID:  teacherID,
+			ScheduleID: schedule.ID,
+			StartAt:    schedule.StartAt,
+		}
+		teacherSchedules[i] = tsItem
+	}
+	err := da.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
+	if err != nil {
+		return "", err
+	}
+	// add to schedules
+
+	//
+
 	return "", nil
 }
 
