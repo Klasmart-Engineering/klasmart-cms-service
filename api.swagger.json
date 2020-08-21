@@ -558,15 +558,6 @@
             }
           },
           {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
             "name": "publish_status",
             "in": "query",
             "description": "Search content by publish status",
@@ -576,18 +567,27 @@
             }
           },
           {
-            "name": "scope",
+            "name": "author",
             "in": "query",
-            "description": "Search content by scope",
+            "description": "Search content by author",
             "schema": {
               "type": "string",
               "nullable": true
             }
           },
           {
-            "name": "author",
+            "name": "description",
             "in": "query",
-            "description": "Search content by author",
+            "description": "Search content by description",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "keywords",
+            "in": "query",
+            "description": "Search content by keywords",
             "schema": {
               "type": "string",
               "nullable": true
