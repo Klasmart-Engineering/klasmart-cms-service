@@ -190,7 +190,6 @@ type RepeatYearly struct {
 
 type RepeatEnd struct {
 	Type       RepeatEndType `json:"type"`
-	Never      bool          `json:"never"`
 	AfterCount int           `json:"after_count"`
 	AfterTime  int64         `json:"after_time"`
 }
