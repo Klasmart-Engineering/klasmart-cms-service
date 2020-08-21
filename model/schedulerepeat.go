@@ -535,11 +535,6 @@ func dateOfWeekday(year int, month time.Month, w entity.RepeatWeekday, seq entit
 	return 0, 0, 0
 }
 
-func isValidDate(year, month, day int) bool {
-	d := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
-	return d.Year() == year && int(d.Month()) == month && d.Day() == day
-}
-
 func startOfYear(year int) time.Time {
 	return time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
 }
