@@ -163,9 +163,9 @@ type RepeatDaily struct {
 }
 
 type RepeatWeekly struct {
-	Interval int           `json:"interval"`
-	On       RepeatWeekday `json:"on"`
-	End      RepeatEnd     `json:"end"`
+	Interval int             `json:"interval"`
+	On       []RepeatWeekday `json:"on"`
+	End      RepeatEnd       `json:"end"`
 }
 
 type RepeatMonthly struct {
