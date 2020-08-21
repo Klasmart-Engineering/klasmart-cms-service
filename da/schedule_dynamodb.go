@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -9,7 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"sync"
 
 	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
@@ -50,7 +51,7 @@ func (s scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule)
 		S: aws.String(schedule.ID),
 	}
 	// expr
-	updateBuilder, err := utils.GetUpdateBuilder(schedule)
+	updateBuilder, err := dynamodbhelper.GetUpdateBuilder(schedule)
 	if err != nil {
 		return err
 	}
@@ -70,11 +71,35 @@ func (s scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule)
 	return err
 }
 
-func (s scheduleDynamoDA) Query(ctx context.Context, condition *ScheduleCondition) ([]*entity.Schedule, error) {
-	panic("implement me")
+func (s scheduleDynamoDA) Query(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
+	keyCond := condition.GetKeyConditionBuilder("")
+	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
+	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
+	input := &dynamodb.QueryInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Filter(),
+		KeyConditionExpression:    expr.KeyCondition(),
+		TableName:                 aws.String(constant.TableNameSchedule),
+		IndexName:                 aws.String(condition.IndexName),
+	}
+	result, err := dbclient.GetClient().Query(input)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	var data []*entity.Schedule
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &data)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	return data, nil
 }
 
-func (s scheduleDynamoDA) Page(ctx context.Context, condition *ScheduleCondition) (int64, []*entity.Schedule, error) {
+func (s scheduleDynamoDA) Page(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
 	panic("implement me")
 }
 
@@ -105,20 +130,30 @@ func (s scheduleDynamoDA) SoftDelete(ctx context.Context, id string) error {
 	panic("implement me")
 }
 
-func (s scheduleDynamoDA) BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *ScheduleCondition) error {
+func (s scheduleDynamoDA) BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *dynamodbhelper.Condition) error {
 	panic("implement me")
 }
 
-type ScheduleCondition struct {
-	TescherID entity.NullString
-	Pager     utils.Pager
-
-	DeleteAt entity.NullInt
-}
-
-func (s ScheduleCondition) GetCondition() (expression.Expression, error) {
-	return expression.Expression{}, nil
-}
+//func (s ScheduleCondition) GetFilterExpr() expression.ConditionBuilder {
+//	//var filt expression.ConditionBuilder
+//	//if s.DeleteAt.Valid {
+//	//	filt = expression.Name("deleted_at").NotEqual(expression.Value(0))
+//	//} else {
+//	//	filt = expression.Name("deleted_at").Equal(expression.Value(0))
+//	//}
+//	//if s.TescherID.Valid {
+//	//	filt = expression.Name("teacher_ids").Contains(s.TescherID.String)
+//	//}
+//	//if s.OrgID.Valid {
+//	//	filt = filt.And(expression.Name("org_id").Equal(expression.Value(s.OrgID.String)))
+//	//}
+//
+//	//expr, err := expression.NewBuilder().WithKeyCondition().WithFilter(filt).Build()
+//	//if err != nil {
+//	//	return expression.Expression{}, err
+//	//}
+//	return filt
+//}
 
 var (
 	_scheduleOnce sync.Once

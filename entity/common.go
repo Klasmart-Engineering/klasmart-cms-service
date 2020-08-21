@@ -11,11 +11,11 @@ type NullStrings struct {
 }
 
 type NullString struct {
-	Strings string
-	Valid   bool
+	String string
+	Valid  bool
 }
 
 type NullInt struct {
-	Int int
-	Valid   bool
+	Int   int
+	Valid bool
 }
