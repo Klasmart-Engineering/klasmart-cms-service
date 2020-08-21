@@ -1758,9 +1758,9 @@
                     "description": "interval days"
                   },
                   "on": {
-                    "type": "string",
+                    "type": "array",
                     "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
-                    "description": "on week"
+                    "description": "on weekdays"
                   },
                   "end": {
                     "$ref": "#/components/schemas/RepeatEnd"
@@ -1952,9 +1952,9 @@
                     "description": "interval days"
                   },
                   "on": {
-                    "type": "string",
+                    "type": "array",
                     "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
-                    "description": "on week"
+                    "description": "on weekdays"
                   },
                   "end": {
                     "$ref": "#/components/schemas/RepeatEnd"
@@ -2142,9 +2142,9 @@
                     "description": "interval days"
                   },
                   "on": {
-                    "type": "string",
+                    "type": "array",
                     "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
-                    "description": "on week"
+                    "description": "on weekdays"
                   },
                   "end": {
                     "$ref": "#/components/schemas/RepeatEnd"
