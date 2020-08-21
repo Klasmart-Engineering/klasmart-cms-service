@@ -160,3 +160,40 @@ func TestSearchContent(t *testing.T) {
 	fmt.Printf("contents: %#v\n", contents[0])
 	fmt.Printf("sub: %#v\n", sub)
 }
+
+
+
+func TestSearchContentKey(t *testing.T) {
+	id, err := GetDyContentDA().CreateContent(context.Background(), entity.Content{
+		ContentType:   0,
+		Name:          "TestContent000",
+		Program:       "Program1",
+		Subject:       "Subject1",
+		Developmental: "Developmental1",
+		Skills:        "Skills1",
+		Age:           "Age1",
+		Keywords:      "Keywords1,Keywords2",
+		Description:   "My Description",
+		Thumbnail:     "/Thumbnail1.png",
+		Data:          "{Source:\"source_data.png\"}",
+		Extra:         "{}",
+		Author:        "Author1",
+		AuthorName:    "Author name",
+		Org:           "org1",
+		PublishScope:  "org0",
+		PublishStatus: "draft",
+		Version:       1,
+	})
+	if err != nil{
+		panic(err)
+	}
+	fmt.Println("ID:", id)
+	sub, contents, err := GetDyContentDA().SearchContentByKey(context.Background(), DyKeyContentCondition{
+		PublishStatus:      "draft",
+	})
+	if err != nil{
+		panic(err)
+	}
+	fmt.Printf("contents: %#v\n", contents[0])
+	fmt.Printf("sub: %#v\n", sub)
+}

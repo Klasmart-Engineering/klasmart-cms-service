@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-var(
-	ErrContentNotFound = errors.New("content not found")
+var (
+	ErrContentNotFound        = errors.New("content not found")
 	ErrUnmarshalContentFailed = errors.New("unmarshal content failed")
 )
 
@@ -27,6 +27,7 @@ type IDyContentDA interface {
 	GetContentById(ctx context.Context, cid string) (*entity.Content, error)
 
 	SearchContent(ctx context.Context, condition IDyCondition) (string, []*entity.Content, error)
+	SearchContentByKey(ctx context.Context, condition DyKeyContentCondition) (string, []*entity.Content, error)
 }
 
 type DyContentDA struct {
@@ -38,7 +39,7 @@ func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (str
 	co.UpdatedAt = now.Unix()
 	co.CreatedAt = now.Unix()
 	dyMap, err := dynamodbattribute.MarshalMap(co)
-	if err != nil{
+	if err != nil {
 		return "", err
 	}
 	_, err = db.GetClient().PutItem(&dynamodb.PutItemInput{
@@ -55,22 +56,22 @@ func (d *DyContentDA) UpdateContent(ctx context.Context, cid string, co0 entity.
 	now := time.Now()
 	co0.UpdatedAt = now.Unix()
 	co, err := d.getContentForUpdateContent(ctx, cid, &co0)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	dyMap, err := dynamodbattribute.MarshalMap(co)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	key, err := dynamodbattribute.Marshal(cid)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	_, err = db.GetClient().UpdateItem(&dynamodb.UpdateItemInput{
-		TableName: aws.String("content"),
+		TableName:                 aws.String("content"),
 		ExpressionAttributeValues: dyMap,
-		UpdateExpression: aws.String(entity.Content{}.UpdateExpress()),
-		Key: map[string]*dynamodb.AttributeValue{"content_id": key},
+		UpdateExpression:          aws.String(entity.Content{}.UpdateExpress()),
+		Key:                       map[string]*dynamodb.AttributeValue{"content_id": key},
 	})
 	if err != nil {
 		return err
@@ -80,12 +81,12 @@ func (d *DyContentDA) UpdateContent(ctx context.Context, cid string, co0 entity.
 
 func (d *DyContentDA) DeleteContent(ctx context.Context, cid string) error {
 	key, err := dynamodbattribute.Marshal(cid)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	_, err = db.GetClient().DeleteItem(&dynamodb.DeleteItemInput{
 		TableName: aws.String("content"),
-		Key: map[string]*dynamodb.AttributeValue{"content_id": key},
+		Key:       map[string]*dynamodb.AttributeValue{"content_id": key},
 	})
 	if err != nil {
 		return err
@@ -95,14 +96,14 @@ func (d *DyContentDA) DeleteContent(ctx context.Context, cid string) error {
 
 func (d *DyContentDA) GetContentById(ctx context.Context, cid string) (*entity.Content, error) {
 	key, err := dynamodbattribute.Marshal(cid)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	result, err := db.GetClient().GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String("content"),
-		Key:                      map[string]*dynamodb.AttributeValue{"content_id": key},
+		Key:       map[string]*dynamodb.AttributeValue{"content_id": key},
 	})
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	if result.Item == nil {
@@ -119,7 +120,7 @@ func (d *DyContentDA) GetContentById(ctx context.Context, cid string) (*entity.C
 
 func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition) (string, []*entity.Content, error) {
 	expr, err := expression.NewBuilder().WithFilter(condition.GetConditions()).Build()
-	if err != nil{
+	if err != nil {
 		return "", nil, err
 	}
 	pageSize := condition.GetPageSize()
@@ -128,48 +129,93 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition)
 	}
 
 	input := &dynamodb.ScanInput{
-		TableName: aws.String("content"),
+		TableName:                 aws.String("content"),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
-		Limit: 			aws.Int64(pageSize),
+		Limit:                     aws.Int64(pageSize),
 	}
 
 	if condition.GetLastKey() != "" {
 		key := &entity.ContentID{ID: condition.GetLastKey()}
 		startKey, err := dynamodbattribute.MarshalMap(key)
-		if err != nil{
+		if err != nil {
 			return "", nil, err
 		}
 		input.ExclusiveStartKey = startKey
 	}
 	result, err := db.GetClient().Scan(input)
-	if err != nil{
+	if err != nil {
 		return "", nil, err
 	}
 	contentList := make([]*entity.Content, 0)
 	for _, v := range result.Items {
 		content := new(entity.Content)
 		err = dynamodbattribute.UnmarshalMap(v, content)
-		if err != nil{
+		if err != nil {
 			return "", nil, err
 		}
 		contentList = append(contentList, content)
 	}
 	key := new(entity.ContentID)
 	dynamodbattribute.UnmarshalMap(result.LastEvaluatedKey, key)
-	return key.ID, contentList ,nil
+	return key.ID, contentList, nil
 }
 
-func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string, co *entity.Content) (*entity.UpdateDyContent, error){
+func (d *DyContentDA) SearchContentByKey(ctx context.Context, condition DyKeyContentCondition) (string, []*entity.Content, error) {
+	expr, err := expression.NewBuilder().WithKeyCondition(condition.GetConditions()).Build()
+	if err != nil {
+		return "", nil, err
+	}
+	fmt.Println("KeyCondition:", expr.KeyCondition())
+	fmt.Println("Values:", expr.Values())
+	pageSize := condition.PageSize
+	if pageSize < 1 {
+		pageSize = 10000
+	}
+	input := &dynamodb.QueryInput{
+		TableName:                 aws.String("content"),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Filter(),
+		ProjectionExpression:      expr.Projection(),
+		KeyConditionExpression:    expr.KeyCondition(),
+		Limit:                     aws.Int64(pageSize),
+	}
+	if condition.LastKey != "" {
+		key := &entity.ContentID{ID: condition.LastKey}
+		startKey, err := dynamodbattribute.MarshalMap(key)
+		if err != nil {
+			return "", nil, err
+		}
+		input.ExclusiveStartKey = startKey
+	}
+	result, err := db.GetClient().Query(input)
+	if err != nil {
+		return "", nil, err
+	}
+	contentList := make([]*entity.Content, 0)
+	for _, v := range result.Items {
+		content := new(entity.Content)
+		err = dynamodbattribute.UnmarshalMap(v, content)
+		if err != nil {
+			return "", nil, err
+		}
+		contentList = append(contentList, content)
+	}
+	key := new(entity.ContentID)
+	dynamodbattribute.UnmarshalMap(result.LastEvaluatedKey, key)
+	return key.ID, contentList, nil
+}
+
+func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string, co *entity.Content) (*entity.UpdateDyContent, error) {
 	content, err := d.GetContentById(ctx, cid)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	co0 := &entity.UpdateDyContent{
-		ContentType:   co.ContentType,
-		Name:          co.Name,
+   		Name:          co.Name,
 		Program:       co.Program,
 		Subject:       co.Subject,
 		Developmental: co.Developmental,
@@ -186,9 +232,9 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		PublishScope:  co.PublishScope,
 		PublishStatus: co.PublishStatus,
 		RejectReason:  co.RejectReason,
-		SourceId: co.SourceId,
-		LatestId: co.LatestId,
-		LockedBy: co.LockedBy,
+		SourceId:      co.SourceId,
+		LatestId:      co.LatestId,
+		LockedBy:      co.LockedBy,
 		Version:       co.Version,
 		CreatedAt:     co.CreatedAt,
 		UpdatedAt:     co.UpdatedAt,
@@ -215,7 +261,7 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	if co.Age == "" {
 		co0.Age = content.Age
 	}
-	if co.Keywords == ""{
+	if co.Keywords == "" {
 		co0.Keywords = content.Keywords
 	}
 	if co.Description == "" {
@@ -272,25 +318,26 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	fmt.Printf("content: %#v\n", co)
 	return co0, nil
 }
-type DyContentCondition struct {
-	IDS          []string `json:"ids"`
-	Name         string `json:"name"`
-	ContentType  []int `json:"content_type"`
-	Scope        []string `json:"scope"`
-	PublishStatus []string `json:"publish_status"`
-	Author      string `json:"author"`
-	Org    		string `json:"org"`
 
-	LastKey string `json:"last_key"`
-	PageSize int64 `json:"page_size"`
+type DyContentCondition struct {
+	IDS           []string `json:"ids"`
+	Name          string   `json:"name"`
+	ContentType   []int    `json:"content_type"`
+	Scope         []string `json:"scope"`
+	PublishStatus []string `json:"publish_status"`
+	Author        string   `json:"author"`
+	Org           string   `json:"org"`
+
+	LastKey  string `json:"last_key"`
+	PageSize int64  `json:"page_size"`
 	//OrderBy  ContentOrderBy `json:"order_by"`
 }
 
-func (d *DyContentCondition)GetConditions() expression.ConditionBuilder{
+func (d *DyContentCondition) GetConditions() expression.ConditionBuilder {
 	conditions := make([]expression.ConditionBuilder, 0)
 	if len(d.IDS) > 0 {
 		var op []expression.OperandBuilder
-		for i := range d.IDS{
+		for i := range d.IDS {
 			op = append(op, expression.Value(d.IDS[i]))
 		}
 		condition := expression.In(expression.Name("content_id"), op[0], op...)
@@ -302,7 +349,7 @@ func (d *DyContentCondition)GetConditions() expression.ConditionBuilder{
 	}
 	if len(d.ContentType) > 0 {
 		var op []expression.OperandBuilder
-		for i := range d.ContentType{
+		for i := range d.ContentType {
 			op = append(op, expression.Value(d.ContentType[i]))
 		}
 		condition := expression.In(expression.Name("content_type"), op[0], op...)
@@ -310,7 +357,7 @@ func (d *DyContentCondition)GetConditions() expression.ConditionBuilder{
 	}
 	if len(d.Scope) > 0 {
 		var op []expression.OperandBuilder
-		for i := range d.Scope{
+		for i := range d.Scope {
 			op = append(op, expression.Value(d.Scope[i]))
 		}
 		condition := expression.In(expression.Name("publish_scope"), op[0], op...)
@@ -318,7 +365,7 @@ func (d *DyContentCondition)GetConditions() expression.ConditionBuilder{
 	}
 	if len(d.PublishStatus) > 0 {
 		var op []expression.OperandBuilder
-		for i := range d.PublishStatus{
+		for i := range d.PublishStatus {
 			op = append(op, expression.Value(d.PublishStatus[i]))
 		}
 		condition := expression.In(expression.Name("publish_status"), op[0], op...)
@@ -334,48 +381,84 @@ func (d *DyContentCondition)GetConditions() expression.ConditionBuilder{
 	}
 	builder := expression.Name("deleted_at").Equal(expression.Value(nil))
 	for i := range conditions {
-		//if i == 0{
-		//	builder = conditions[i]
-		//	continue
-		//}
 		builder = builder.And(conditions[i])
 	}
 	return builder
 }
-func (d *DyContentCondition)GetPageSize() int64{
+func (d *DyContentCondition) GetPageSize() int64 {
 	return d.PageSize
 }
-func (d *DyContentCondition)GetLastKey() string{
+func (d *DyContentCondition) GetLastKey() string {
 	return d.LastKey
 }
 
 type DyCombineContentCondition struct {
 	Condition1 IDyCondition
 	Condition2 IDyCondition
-	PageSize int64
-	LastKey string
+	PageSize   int64
+	LastKey    string
 }
 
-func (d *DyCombineContentCondition)GetConditions() expression.ConditionBuilder{
+func (d *DyCombineContentCondition) GetConditions() expression.ConditionBuilder {
 	var builder expression.ConditionBuilder
 	builder = d.Condition1.GetConditions().Or(d.Condition2.GetConditions())
 	return builder
 }
-func (d *DyCombineContentCondition)GetPageSize() int64{
+func (d *DyCombineContentCondition) GetPageSize() int64 {
 	return d.PageSize
 }
-func (d *DyCombineContentCondition)GetLastKey() string{
+func (d *DyCombineContentCondition) GetLastKey() string {
 	return d.LastKey
 }
 
-type IDyCondition interface{
+type DyKeyContentCondition struct {
+	Name          string `json:"keywords"`
+	PublishStatus string `json:"publish_status"`
+	Author        string `json:"author"`
+	Org           string `json:"org"`
+
+	LastKey  string `json:"last_key"`
+	PageSize int64  `json:"page_size"`
+}
+
+func (d *DyKeyContentCondition) GetConditions() expression.KeyConditionBuilder {
+	conditions := make([]expression.KeyConditionBuilder, 0)
+	if d.Name != "" {
+		condition := expression.KeyEqual(expression.Key("name"), expression.Value(d.Name))
+		conditions = append(conditions, condition)
+	}
+	if d.PublishStatus != "" {
+		condition := expression.KeyEqual(expression.Key("publish_status"), expression.Value(d.PublishStatus))
+		conditions = append(conditions, condition)
+	}
+	if d.Author != "" {
+		condition := expression.KeyEqual(expression.Key("author"), expression.Value(d.Author))
+		conditions = append(conditions, condition)
+	}
+	if d.Org != "" {
+		condition := expression.KeyEqual(expression.Key("org"), expression.Value(d.Org))
+		conditions = append(conditions, condition)
+	}
+
+	var builder expression.KeyConditionBuilder
+	for i := range conditions {
+		if i == 0{
+			builder = conditions[i]
+			continue
+		}
+		builder = builder.And(conditions[i])
+	}
+	return builder
+}
+
+type IDyCondition interface {
 	GetConditions() expression.ConditionBuilder
 	GetPageSize() int64
 	GetLastKey() string
 }
 
-var(
-	_dyContentDA IDyContentDA
+var (
+	_dyContentDA     IDyContentDA
 	_dyContentDAOnce sync.Once
 )
 

@@ -18,9 +18,8 @@ const (
 	ContentStatusArchive    = "archive"
 
 	ContentTypeMaterial = 1
-	ContentTypeLesson = 2
+	ContentTypeLesson   = 2
 )
-
 
 type ContentPublishStatus string
 
@@ -46,55 +45,55 @@ func NewContentPublishStatus(status string) ContentPublishStatus {
 }
 
 type ContentID struct {
-	ID            string   `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
+	ID string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
 }
 
 type Content struct {
-	ID            string   `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
-	ContentType   int 		`gorm:"type:int;NOTNULL; column: content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
-	Name          string   `gorm:"type:char(256);NOT NULL;column:name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
-	Program       string    `gorm:"type:varchar(50);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
-	Subject       string    `gorm:"type:varchar(50);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
-	Developmental string    `gorm:"type:varchar(50);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
-	Skills        string    `gorm:"type:varchar(50);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
-	Age           string    `gorm:"type:varchar(50);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
+	ID            string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
+	ContentType   int    `gorm:"type:int;NOTNULL; column: content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
+	Name          string `gorm:"type:char(256);NOT NULL;column:name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
+	Program       string `gorm:"type:varchar(50);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
+	Subject       string `gorm:"type:varchar(50);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
+	Developmental string `gorm:"type:varchar(50);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
+	Skills        string `gorm:"type:varchar(50);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
+	Age           string `gorm:"type:varchar(50);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
 	Keywords      string `gorm:"type:text;NOT NULL;column:keywords" dynamodbav:"keywords" json:"keywords" dynamoupdate:":ky"`
-	Description   string   `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
-	Thumbnail     string   `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
+	Description   string `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
+	Thumbnail     string `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
 
-	Data string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
-	Extra        string     `gorm:"type:json;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
+	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
+	Extra string `gorm:"type:json;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
-	Author 		string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
-	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
-	Org 		string `gorm:"type:varchar(50);NOT NULL;column:org" dynamodbav:"org" json:"org" dynamoupdate:":og"`
+	Author     string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
+	AuthorName string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
+	Org        string `gorm:"type:varchar(50);NOT NULL;column:org" dynamodbav:"org" json:"org" dynamoupdate:":og"`
 
-	PublishScope  string                       `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index" dynamodbav:"publish_scope" json:"publish_scope" dynamoupdate:":ps"`
+	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index" dynamodbav:"publish_scope" json:"publish_scope" dynamoupdate:":ps"`
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index" dynamodbav:"publish_status" json:"publish_status" dynamoupdate:":pst"`
 
-	RejectReason string 				`gorm:"type:varchar(255);NOT NULL;column:reject_reason" dynamodbav:"reject_reason" json:"reject_reason" dynamoupdate:":rr"`
-	Version  int64                       `gorm:"type:int;NOT NULL;column:version" dynamodbav:"version" json:"version" dynamoupdate:":ve"`
-	LockedBy string 			 `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
-	SourceId string 				`gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
-	LatestId string 			`gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
+	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason" dynamodbav:"reject_reason" json:"reject_reason" dynamoupdate:":rr"`
+	Version      int64  `gorm:"type:int;NOT NULL;column:version" dynamodbav:"version" json:"version" dynamoupdate:":ve"`
+	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
+	SourceId     string `gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
+	LatestId     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 
 	CreatedAt int64 `gorm:"type:bigint;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdatedAt int64 `gorm:"type:bigint;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
 	DeletedAt int64 `gorm:"type:bigint;column:deleted_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
 }
 
-func (u Content)UpdateExpress() string{
+func (u Content) UpdateExpress() string {
 	tags := getDynamoTags(u)
 	updateExpressParts := make([]string, 0)
 	for i := range tags {
-		updateExpressParts = append(updateExpressParts, tags[i].JSONTag + " = " + tags[i].DynamoTag)
+		updateExpressParts = append(updateExpressParts, tags[i].JSONTag+" = "+tags[i].DynamoTag)
 	}
 	updateExpress := strings.Join(updateExpressParts, ",")
 	return "set " + updateExpress
 }
 
 type UpdateDyContent struct {
-	ContentType   int ` json:":ct"`
+	ContentType   int    ` json:":ct"`
 	Name          string `json:":n"`
 	Program       string `json:":p"`
 	Subject       string `json:":su"`
@@ -104,22 +103,22 @@ type UpdateDyContent struct {
 	Keywords      string `json:":ky"`
 	Description   string `json:":de"`
 	Thumbnail     string `json:":th"`
-	LockedBy string `json:":lb"`
+	LockedBy      string `json:":lb"`
 
-	Data string `json:":d"`
-	Extra        string `json:":ex"`
+	Data  string `json:":d"`
+	Extra string `json:":ex"`
 
-	Author 		string `json:":au"`
-	AuthorName  string `json:":aun"`
-	Org 		string `json:":og"`
+	Author     string `json:":au"`
+	AuthorName string `json:":aun"`
+	Org        string `json:":og"`
 
-	PublishScope  string `json:":ps"`
+	PublishScope  string               `json:":ps"`
 	PublishStatus ContentPublishStatus `json:":pst"`
 
 	RejectReason string `json:":rr"`
-	SourceId string `json:":si"`
-	LatestId string `json:"lsi"`
-	Version  int64 `json:":ve"`
+	SourceId     string `json:":si"`
+	LatestId     string `json:"lsi"`
+	Version      int64  `json:":ve"`
 
 	CreatedAt int64 `json:":ca"`
 	UpdatedAt int64 `json:":ua"`
@@ -127,7 +126,7 @@ type UpdateDyContent struct {
 }
 
 type TagValues struct {
-	JSONTag string
+	JSONTag   string
 	DynamoTag string
 }
 
@@ -140,11 +139,11 @@ func getDynamoTags(s interface{}) []TagValues {
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
 		updateTag := f.Tag.Get("dynamoupdate")
-		if updateTag == "-"{
+		if updateTag == "-" {
 			continue
 		}
 		tagValues = append(tagValues, TagValues{
-			JSONTag: f.Tag.Get("json"),
+			JSONTag:   f.Tag.Get("json"),
 			DynamoTag: updateTag,
 		})
 	}
@@ -202,10 +201,10 @@ type ContentInfo struct {
 	Thumbnail     string   `json:"thumbnail"`
 	Version       int64    `json:"version"`
 
-	SourceID string `json:"source_id"`
-	LockedBy string `json:"locked_by"`
+	SourceID     string `json:"source_id"`
+	LockedBy     string `json:"locked_by"`
 	RejectReason string `json:":rr"`
-	LatestID string `json:"latest_id"`
+	LatestID     string `json:"latest_id"`
 
 	Data  ContentData `json:"data"`
 	Extra string      `json:"extra"`
@@ -224,7 +223,7 @@ type ContentData interface {
 
 	Validate(ctx context.Context, contentType int) error
 	PrepareResult(ctx context.Context) error
-	SubContentIds(ctx context.Context) ([]string ,error)
+	SubContentIds(ctx context.Context) ([]string, error)
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {
