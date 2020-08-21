@@ -4,11 +4,19 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"time"
 )
 
-const maxRepeatYear = 2
+var testScheduleRepeatFlag = false
+
+func getMaxRepeatYear() int {
+	if testScheduleRepeatFlag {
+		return 2
+	}
+	return config.Get().Schedule.MaxRepeatYear
+}
 
 func RepeatSchedule(ctx context.Context, template entity.Schedule) ([]entity.Schedule, error) {
 	result := []entity.Schedule{template}
@@ -69,7 +77,7 @@ func repeatSchedule(ctx context.Context, template entity.Schedule, options entit
 func repeatScheduleDaily(ctx context.Context, template entity.Schedule, options entity.RepeatDaily) ([]entity.Schedule, error) {
 	var (
 		result      []entity.Schedule
-		maxEndTime  = time.Now().AddDate(maxRepeatYear, 0, 0)
+		maxEndTime  = time.Now().AddDate(getMaxRepeatYear(), 0, 0)
 		originStart = time.Unix(template.StartAt, 0)
 		originEnd   = time.Unix(template.EndAt, 0)
 	)
@@ -128,7 +136,7 @@ func repeatScheduleDaily(ctx context.Context, template entity.Schedule, options 
 func repeatScheduleWeekly(ctx context.Context, template entity.Schedule, options entity.RepeatWeekly) ([]entity.Schedule, error) {
 	var (
 		result      []entity.Schedule
-		maxEndTime  = time.Now().AddDate(maxRepeatYear, 0, 0)
+		maxEndTime  = time.Now().AddDate(getMaxRepeatYear(), 0, 0)
 		originStart = time.Unix(template.StartAt, 0)
 		originEnd   = time.Unix(template.EndAt, 0)
 	)
@@ -209,7 +217,7 @@ func repeatScheduleWeekly(ctx context.Context, template entity.Schedule, options
 func repeatScheduleMonthly(ctx context.Context, template entity.Schedule, options entity.RepeatMonthly) ([]entity.Schedule, error) {
 	var (
 		result      []entity.Schedule
-		maxEndTime  = time.Now().AddDate(maxRepeatYear, 0, 0)
+		maxEndTime  = time.Now().AddDate(getMaxRepeatYear(), 0, 0)
 		originStart = time.Unix(template.StartAt, 0)
 		originEnd   = time.Unix(template.EndAt, 0)
 	)
@@ -362,7 +370,7 @@ func repeatScheduleMonthly(ctx context.Context, template entity.Schedule, option
 func repeatScheduleYearly(ctx context.Context, template entity.Schedule, options entity.RepeatYearly) ([]entity.Schedule, error) {
 	var (
 		result      []entity.Schedule
-		maxEndTime  = time.Now().AddDate(maxRepeatYear, 0, 0)
+		maxEndTime  = time.Now().AddDate(getMaxRepeatYear(), 0, 0)
 		originStart = time.Unix(template.StartAt, 0)
 		originEnd   = time.Unix(template.EndAt, 0)
 	)

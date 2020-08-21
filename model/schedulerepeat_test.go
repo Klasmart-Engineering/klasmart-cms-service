@@ -3,9 +3,15 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"os"
 	"testing"
 	"time"
 )
+
+func TestMain(m *testing.M) {
+	testScheduleRepeatFlag = true
+	os.Exit(m.Run())
+}
 
 func Test_repeatScheduleDaily(t *testing.T) {
 	const (
