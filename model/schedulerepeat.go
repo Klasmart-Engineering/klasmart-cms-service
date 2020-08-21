@@ -29,13 +29,13 @@ func RepeatSchedule(ctx context.Context, template *entity.Schedule) ([]*entity.S
 		return result, nil
 	}
 	if template.ModeType != entity.ModeTypeRepeat {
-		err := fmt.Errorf("repeat schedule(include template): invalid mode type %q", template.ModeType)
-		log.Error(ctx, err.Error())
+		err := fmt.Errorf("repeat schedule(include template): invalid mode type")
+		log.Error(ctx, err.Error(), log.String("mode_type", template.ModeType))
 		return nil, err
 	}
 	items, err := repeatSchedule(ctx, template, template.Repeat)
 	if err != nil {
-		log.Error(ctx, "repeat schedule(include template): call repeat schedule failed", log.Err(err))
+		log.Error(ctx, "repeat schedule(include template): call repeat schedule failed", log.Err(err), log.Any("template", template))
 		return nil, err
 	}
 	result = append(result, items...)
@@ -91,6 +91,7 @@ func repeatScheduleDaily(ctx context.Context, template *entity.Schedule, options
 		return nil, err
 	}
 	if options.Interval <= 0 {
+		log.Debug(ctx, "repeat schedule daily: options interval less than 0")
 		return nil, nil
 	}
 	var (
@@ -155,6 +156,7 @@ func repeatScheduleWeekly(ctx context.Context, template *entity.Schedule, option
 		return nil, err
 	}
 	if options.Interval <= 0 {
+		log.Debug(ctx, "repeat schedule weekly: options interval less than 0")
 		return nil, nil
 	}
 	var (
@@ -247,6 +249,7 @@ func repeatScheduleMonthly(ctx context.Context, template *entity.Schedule, optio
 		return nil, err
 	}
 	if options.Interval <= 0 {
+		log.Debug(ctx, "repeat schedule monthly: options interval less than 0")
 		return nil, nil
 	}
 	var (
@@ -405,6 +408,7 @@ func repeatScheduleYearly(ctx context.Context, template *entity.Schedule, option
 		return nil, err
 	}
 	if options.Interval <= 0 {
+		log.Debug(ctx, "repeat schedule yearly: options interval less than 0")
 		return nil, nil
 	}
 	var (
