@@ -25,7 +25,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 	// convert to schedule
 	schedule := viewdata.Convert()
 	schedule.CreatedID = op.UserID
-	scheduleList, err := RepeatSchedule(ctx, *schedule)
+	scheduleList, err := RepeatSchedule(ctx, schedule)
 	if err != nil {
 		return "", err
 	}
