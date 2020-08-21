@@ -33,6 +33,26 @@ func TestCreateTable(t *testing.T) {
 				AttributeName: aws.String("publish_status"),
 				AttributeType: aws.String("S"),
 			},
+			{
+				AttributeName: aws.String("org_user_id"),
+				AttributeType: aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("content_name"),
+				AttributeType: aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("author_name"),
+				AttributeType: aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("description"),
+				AttributeType: aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("keywords"),
+				AttributeType: aws.String("S"),
+			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
@@ -70,6 +90,86 @@ func TestCreateTable(t *testing.T) {
 					},
 					{
 						AttributeName: aws.String("org"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(10),
+					WriteCapacityUnits: aws.Int64(10),
+				},
+			},
+			{
+				IndexName: 	aws.String("name"),
+				KeySchema:  []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("content_name"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("org_user_id"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(10),
+					WriteCapacityUnits: aws.Int64(10),
+				},
+			},
+			{
+				IndexName: 	aws.String("author_name"),
+				KeySchema:  []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("author_name"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("org_user_id"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(10),
+					WriteCapacityUnits: aws.Int64(10),
+				},
+			},
+			{
+				IndexName: 	aws.String("description"),
+				KeySchema:  []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("description"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("org_user_id"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(10),
+					WriteCapacityUnits: aws.Int64(10),
+				},
+			},
+			{
+				IndexName: 	aws.String("keywords"),
+				KeySchema:  []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("keywords"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("org_user_id"),
 						KeyType:       aws.String("RANGE"),
 					},
 				},
@@ -216,7 +316,6 @@ func TestSearchContent(t *testing.T) {
 }
 
 
-
 func TestSearchContentKey(t *testing.T) {
 	id, err := GetDyContentDA().CreateContent(context.Background(), entity.Content{
 		ContentType:   0,
@@ -253,8 +352,8 @@ func TestSearchContentKey(t *testing.T) {
 	fmt.Printf("sub: %#v\n", sub)
 
 	sub, contents, err = GetDyContentDA().SearchContentByKey(context.Background(), DyKeyContentCondition{
-		Author:        "Author1",
-		Org: "org1",
+		Description:        "My Description",
+		OrgUserId: "org1" + id,
 	})
 	if err != nil{
 		panic(err)

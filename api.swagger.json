@@ -540,6 +540,108 @@
         }
       }
     },
+
+    "/contents_dynamo": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Search user's private content with condition",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Search content by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "description": "Search content by content type",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search content by publish status",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Search content by scope",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "Search content by author",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "org",
+            "in": "query",
+            "description": "Search content by org",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "Search key",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content list",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "description": "search key"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Content"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/contents/pending": {
       "get": {
         "tags": [

@@ -152,6 +152,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 }
 
 func (cm *ContentModel) SearchContentByDynamoKey(ctx context.Context, tx *dbo.DBContext, condition da.DyKeyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error) {
+	condition.OrgUserId = condition.Org + condition.Author
 	key, objs, err := da.GetDyContentDA().SearchContentByKey(ctx, condition)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err))

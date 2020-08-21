@@ -36,6 +36,7 @@ type DyContentDA struct {
 func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (string, error) {
 	now := time.Now()
 	co.ID = utils.NewID()
+	co.OrgUserId = co.Org + co.ID
 	co.UpdatedAt = now.Unix()
 	co.CreatedAt = now.Unix()
 	dyMap, err := dynamodbattribute.MarshalMap(co)
@@ -165,7 +166,6 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition)
 
 func (d *DyContentDA) SearchContentByKey(ctx context.Context, condition DyKeyContentCondition) (string, []*entity.Content, error) {
 	index, cond := condition.GetConditions()
-
 	expr, err := expression.NewBuilder().WithKeyCondition(cond).Build()
 	if err != nil {
 		return "", nil, err
@@ -240,6 +240,7 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		UpdatedAt:     co.UpdatedAt,
 		DeletedAt:     co.DeletedAt,
 	}
+	co0.OrgUserId = co.Org + co.ID
 	if co.ContentType == 0 {
 		co0.ContentType = content.ContentType
 	}
@@ -305,6 +306,9 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	}
 	if co.Version == 0 {
 		co0.Version = content.Version
+	}
+	if co.OrgUserId == "" {
+		co0.OrgUserId = content.OrgUserId
 	}
 	if co.CreatedAt == 0 {
 		co0.CreatedAt = content.CreatedAt
@@ -412,9 +416,16 @@ func (d *DyCombineContentCondition) GetLastKey() string {
 }
 
 type DyKeyContentCondition struct {
+	Name string `json:"name"`
+	AuthorName string `json:"author_name"`
+	Description string `json:"description"`
+	KeyWords string `json:"key_words"`
+
 	PublishStatus string `json:"publish_status"`
 	Author        string `json:"author"`
 	Org           string `json:"org"`
+
+	OrgUserId	string `json:"org_user_id"`
 
 	LastKey  string `json:"last_key"`
 	PageSize int64  `json:"page_size"`
@@ -439,6 +450,47 @@ func (d *DyKeyContentCondition) GetConditions() (string, expression.KeyCondition
 		}
 		index = "author"
 	}
+
+	if d.Name != "" {
+		builder = expression.KeyEqual(expression.Key("content_name"), expression.Value(d.Name))
+		if d.OrgUserId != "" {
+			fmt.Println(d.OrgUserId)
+			condition := expression.KeyEqual(expression.Key("org_user_id"), expression.Value(d.OrgUserId))
+			builder = builder.And(condition)
+		}
+		index = "name"
+	}
+
+	if d.AuthorName != "" {
+		builder = expression.KeyEqual(expression.Key("author_name"), expression.Value(d.AuthorName))
+		if d.OrgUserId != "" {
+			fmt.Println(d.OrgUserId)
+			condition := expression.KeyEqual(expression.Key("org_user_id"), expression.Value(d.OrgUserId))
+			builder = builder.And(condition)
+		}
+		index = "author_name"
+	}
+
+	if d.Description != "" {
+		builder = expression.KeyEqual(expression.Key("description"), expression.Value(d.Description))
+		if d.OrgUserId != "" {
+			fmt.Println(d.OrgUserId)
+			condition := expression.KeyEqual(expression.Key("org_user_id"), expression.Value(d.OrgUserId))
+			builder = builder.And(condition)
+		}
+		index = "description"
+	}
+
+	if d.KeyWords != "" {
+		builder = expression.KeyEqual(expression.Key("keywords"), expression.Value(d.KeyWords))
+		if d.OrgUserId != "" {
+			fmt.Println(d.OrgUserId)
+			condition := expression.KeyEqual(expression.Key("org_user_id"), expression.Value(d.OrgUserId))
+			builder = builder.And(condition)
+		}
+		index = "keywords"
+	}
+
 	return index, builder
 }
 
