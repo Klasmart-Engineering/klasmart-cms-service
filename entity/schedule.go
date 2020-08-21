@@ -2,6 +2,7 @@ package entity
 
 import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"time"
 )
 
@@ -255,6 +256,31 @@ type ScheduleAddView struct {
 	AttachmentID string        `json:"attachment_id"`
 	Version      int64         `json:"version"`
 	Repeat       RepeatOptions `json:"repeat"`
+}
+
+func (s *ScheduleAddView) Convert() *Schedule {
+	schedule := &Schedule{
+		Title:        s.Title,
+		ClassID:      s.ClassID,
+		LessonPlanID: s.LessonPlanID,
+		TeacherIDs:   s.TeacherIDs,
+		OrgID:        s.OrgID,
+		StartAt:      s.StartAt,
+		EndAt:        s.EndAt,
+		ModeType:     s.ModeType,
+		SubjectID:    s.SubjectID,
+		ProgramID:    s.ProgramID,
+		ClassType:    s.ClassType,
+		DueAt:        s.DueAt,
+		Description:  s.Description,
+		AttachmentID: s.AttachmentID,
+		Version:      0,
+		Repeat:       s.Repeat,
+		CreatedAt:    time.Now().Unix(),
+		UpdatedAt:    0,
+		RepeatID:     utils.NewID(),
+	}
+	return schedule
 }
 
 type ScheduleUpdateView struct {
