@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strconv"
+	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
@@ -11,6 +12,7 @@ import (
 type Config struct {
 	StorageConfig StorageConfig
 	CDNConfig     CDNConfig
+	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
 }
 
 var config *Config
@@ -31,6 +33,10 @@ type CDNConfig struct {
 	CDNPrivateKey string
 
 	CDNServicePath string
+}
+
+type ScheduleConfig struct {
+	MaxRepeatYear int `json:"max_repeat_year" yaml:"max_repeat_year"`
 }
 
 func assertGetEnv(key string) string {
@@ -87,6 +93,17 @@ func LoadEnvConfig() {
 		} else {
 			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
 		}
+	}
+
+	maxRepeatYearStr := strings.TrimSpace(os.Getenv("max_repeat_year"))
+	if maxRepeatYearStr == "" {
+		config.Schedule.MaxRepeatYear = 2
+	} else {
+		i, err := strconv.Atoi(maxRepeatYearStr)
+		if err != nil {
+			log.Panic(ctx, "parse env max_repeat_year failed", log.String("max_repeat_year", maxRepeatYearStr))
+		}
+		config.Schedule.MaxRepeatYear = i
 	}
 }
 
