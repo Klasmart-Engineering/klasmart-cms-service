@@ -149,7 +149,6 @@ func (s RepeatWeekSeq) Offset() int {
 }
 
 type RepeatOptions struct {
-	ID      string        `json:"id"`
 	Type    RepeatType    `json:"type"`
 	Daily   RepeatDaily   `json:"daily"`
 	Weekly  RepeatWeekly  `json:"weekly"`
@@ -195,23 +194,25 @@ type RepeatEnd struct {
 }
 
 type Schedule struct {
-	ID           string        `dynamodbav:"id"`
-	Title        string        `dynamodbav:"title"`
-	ClassID      string        `dynamodbav:"class_id"`
-	LessonPlanID string        `dynamodbav:"lesson_plan_id"`
-	TeacherIDs   []string      `dynamodbav:"teacher_ids"`
-	OrgID        string        `dynamodbav:"org_id"`
-	StartAt      int64         `dynamodbav:"start_at"`
-	EndAt        int64         `dynamodbav:"end_at"`
-	ModeType     string        `dynamodbav:"mode_type"`
-	SubjectID    string        `dynamodbav:"subject_id"`
-	ProgramID    string        `dynamodbav:"program_id"`
-	ClassType    string        `dynamodbav:"class_type"`
-	DueAt        int64         `dynamodbav:"due_at"`
-	Description  string        `dynamodbav:"description"`
-	AttachmentID string        `dynamodbav:"attachment_id"`
-	Version      int64         `dynamodbav:"version"`
-	Repeat       RepeatOptions `dynamodbav:"repeat"`
+	ID           string   `dynamodbav:"id"`
+	Title        string   `dynamodbav:"title"`
+	ClassID      string   `dynamodbav:"class_id"`
+	LessonPlanID string   `dynamodbav:"lesson_plan_id"`
+	TeacherIDs   []string `dynamodbav:"teacher_ids"`
+	OrgID        string   `dynamodbav:"org_id"`
+	StartAt      int64    `dynamodbav:"start_at"`
+	EndAt        int64    `dynamodbav:"end_at"`
+	ModeType     string   `dynamodbav:"mode_type"`
+	SubjectID    string   `dynamodbav:"subject_id"`
+	ProgramID    string   `dynamodbav:"program_id"`
+	ClassType    string   `dynamodbav:"class_type"`
+	DueAt        int64    `dynamodbav:"due_at"`
+	Description  string   `dynamodbav:"description"`
+	AttachmentID string   `dynamodbav:"attachment_id"`
+	Version      int64    `dynamodbav:"version"`
+
+	RepeatID string        `dynamodbav:"repeat_id"`
+	Repeat   RepeatOptions `dynamodbav:"repeat"`
 
 	CreatedID string `dynamodbav:"created_id"`
 	UpdatedID string `dynamodbav:"updated_id"`
