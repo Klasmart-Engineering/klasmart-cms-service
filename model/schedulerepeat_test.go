@@ -90,7 +90,7 @@ func Test_repeatScheduleDaily(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleDaily(tt.args.ctx, tt.args.template, tt.args.options)
+			got, err := repeatScheduleDaily(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleDaily() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -142,7 +142,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: entity.RepeatWeekly{
 					Interval: 1,
-					On:       entity.RepeatWeekMon,
+					On:       []entity.RepeatWeekday{entity.RepeatWeekMon},
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
 					},
@@ -161,7 +161,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: entity.RepeatWeekly{
 					Interval: 3,
-					On:       entity.RepeatWeekMon,
+					On:       []entity.RepeatWeekday{entity.RepeatWeekMon},
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
 					},
@@ -180,7 +180,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: entity.RepeatWeekly{
 					Interval: 1,
-					On:       entity.RepeatWeekMon,
+					On:       []entity.RepeatWeekday{entity.RepeatWeekMon},
 					End: entity.RepeatEnd{
 						Type:       entity.RepeatEndAfterCount,
 						AfterCount: 20,
@@ -200,7 +200,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: entity.RepeatWeekly{
 					Interval: 1,
-					On:       entity.RepeatWeekMon,
+					On:       []entity.RepeatWeekday{entity.RepeatWeekMon},
 					End: entity.RepeatEnd{
 						Type:      entity.RepeatEndAfterTime,
 						AfterTime: time.Date(2020, 10, 1, 0, 0, 0, 0, time.Local).Unix(),
@@ -213,7 +213,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleWeekly(tt.args.ctx, tt.args.template, tt.args.options)
+			got, err := repeatScheduleWeekly(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleWeekly() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -385,7 +385,7 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleMonthly(tt.args.ctx, tt.args.template, tt.args.options)
+			got, err := repeatScheduleMonthly(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleMonthly() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -556,7 +556,7 @@ func Test_repeatScheduleYearly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleYearly(tt.args.ctx, tt.args.template, tt.args.options)
+			got, err := repeatScheduleYearly(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleYearly() error = %v, wantErr %v", err, tt.wantErr)
 				return
