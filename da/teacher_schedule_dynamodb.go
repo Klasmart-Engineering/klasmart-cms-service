@@ -2,6 +2,10 @@ package da
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"sync"
@@ -14,7 +18,26 @@ func (t teacherScheduleDA) Add(ctx context.Context, data *entity.TeacherSchedule
 }
 
 func (t teacherScheduleDA) BatchAdd(ctx context.Context, datalist []*entity.TeacherSchedule) error {
-	panic("implement me")
+	items := make(map[string][]*dynamodb.WriteRequest)
+	itemsWriteRequest := make([]*dynamodb.WriteRequest, len(datalist))
+	for i, item := range datalist {
+		attributeValue, err := dynamodbattribute.MarshalMap(item)
+		if err != nil {
+			return err
+		}
+		request := &dynamodb.WriteRequest{
+			PutRequest: &dynamodb.PutRequest{
+				Item: attributeValue,
+			},
+		}
+		itemsWriteRequest[i] = request
+	}
+	items[constant.TableNameTeacherSchedule] = itemsWriteRequest
+	input := &dynamodb.BatchWriteItemInput{
+		RequestItems: items,
+	}
+	_, err := dbclient.GetClient().BatchWriteItem(input)
+	return err
 }
 
 func (t teacherScheduleDA) Update(ctx context.Context, data *entity.TeacherSchedule) error {

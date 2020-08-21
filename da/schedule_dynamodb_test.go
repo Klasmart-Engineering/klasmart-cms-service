@@ -40,10 +40,9 @@ func TestScheduleDynamoDA_Insert(t *testing.T) {
 			Repeat:       entity.RepeatOptions{},
 			CreatedID:    "1",
 			UpdatedID:    "",
-			DeletedID:    "",
-			CreatedAt:    time.Now().Unix(),
-			UpdatedAt:    0,
-			DeletedAt:    0,
+
+			CreatedAt: time.Now().Unix(),
+			UpdatedAt: 0,
 		}
 		arr = append(arr, s)
 	}

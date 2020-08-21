@@ -50,7 +50,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 		return "", err
 	}
 	// add to schedules
-	err := da.GetScheduleDA().BatchInsert(ctx, scheduleList)
+	err = da.GetScheduleDA().BatchInsert(ctx, scheduleList)
 	if err != nil {
 		return "", err
 	}
