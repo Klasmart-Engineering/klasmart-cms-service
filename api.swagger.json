@@ -1762,9 +1762,6 @@
       "CreateContentRequest": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/CreateContentRequest"
-          },
-          {
             "type": "object",
             "description": "Company",
             "properties": {
@@ -1855,9 +1852,6 @@
       "PublishContentRequest": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/PublishContentRequest"
-          },
-          {
             "type": "object",
             "description": "Company",
             "properties": {
@@ -1875,9 +1869,6 @@
       "RejectReasonRequest": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/RejectReasonRequest"
-          },
-          {
             "type": "object",
             "description": "Reject reason",
             "properties": {
@@ -1892,9 +1883,6 @@
       "LockContentResponse": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/RejectReasonRequest"
-          },
-          {
             "type": "object",
             "description": "Lock content response",
             "properties": {
@@ -1908,9 +1896,6 @@
       },
       "ContentCondition": {
         "allOf": [
-          {
-            "$ref": "#/components/schemas/ContentCondition"
-          },
           {
             "type": "object",
             "description": "Company",
@@ -1966,9 +1951,6 @@
       },
       "Content": {
         "allOf": [
-          {
-            "$ref": "#/components/schemas/Content"
-          },
           {
             "type": "object",
             "description": "Company",
