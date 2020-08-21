@@ -2,8 +2,8 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"sync"
 )
 
@@ -12,7 +12,7 @@ type IScheduleModel interface {
 	Update(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleUpdateView) error
 	Delete(ctx context.Context, op *entity.Operator, id string) error
 
-	Page(ctx context.Context, condition *da.ScheduleCondition) (int64, []*entity.ScheduleListView, error)
+	Page(ctx context.Context, condition *dynamodbhelper.Condition) (int64, []*entity.ScheduleListView, error)
 	GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error)
 }
 type scheduleModel struct{}
@@ -29,7 +29,7 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 	panic("implement me")
 }
 
-func (s *scheduleModel) Page(ctx context.Context, condition *da.ScheduleCondition) (int64, []*entity.ScheduleListView, error) {
+func (s *scheduleModel) Page(ctx context.Context, condition *dynamodbhelper.Condition) (int64, []*entity.ScheduleListView, error) {
 	panic("implement me")
 }
 

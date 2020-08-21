@@ -216,11 +216,11 @@ type Schedule struct {
 
 	CreatedID string `dynamodbav:"created_id"`
 	UpdatedID string `dynamodbav:"updated_id"`
-	DeletedID string `dynamodbav:"deleted_id"`
+	//DeletedID string `dynamodbav:"deleted_id"`
 
 	CreatedAt int64 `dynamodbav:"created_at"`
 	UpdatedAt int64 `dynamodbav:"updated_at"`
-	DeletedAt int64 `dynamodbav:"deleted_at"`
+	//DeletedAt int64 `dynamodbav:"deleted_at"`
 }
 
 func (Schedule) TableName() string {

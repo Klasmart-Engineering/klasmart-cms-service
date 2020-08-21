@@ -3,8 +3,9 @@ package constant
 import "errors"
 
 const (
-	TableNameTag      = "tags"
-	TableNameSchedule = "schedules"
+	TableNameTag             = "tags"
+	TableNameSchedule        = "schedules"
+	TableNameTeacherSchedule = "teachers_schedules"
 )
 
 var (

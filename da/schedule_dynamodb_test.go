@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"math/rand"
 	"testing"
 	"time"
@@ -52,4 +53,26 @@ func TestScheduleDynamoDA_Insert(t *testing.T) {
 		return
 	}
 	fmt.Println("成功")
+}
+
+func TestScheduleCondition_GetCondition(t *testing.T) {
+
+}
+
+func TestScheduleDynamoDA_Query(t *testing.T) {
+	condition := &dynamodbhelper.Condition{
+		PrimaryKey: dynamodbhelper.KeyValue{
+			Key:   "org_id",
+			Value: "1",
+		},
+		IndexName: "OrgID-index",
+	}
+	data, err := GetScheduleDA().Query(context.Background(), condition)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, item := range data {
+		fmt.Println(*item)
+	}
 }
