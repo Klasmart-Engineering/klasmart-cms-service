@@ -62,7 +62,7 @@ func (t *teacherScheduleDA) BatchDelete(ctx context.Context, id []string) error 
 
 func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleCondition) (string, []*entity.TeacherSchedule, error) {
 	keyCond := condition.KeyBuilder()
-	startKey, limit := condition.PageBuilder(constant.GSI_TeacherSchedule_TeacherAtStartAt)
+	startKey, limit := condition.PageBuilder(constant.GSI_TeacherSchedule_TeacherAndStartAt)
 
 	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
@@ -90,7 +90,7 @@ func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleC
 	}
 	var lastkey string
 	if len(data) > 0 {
-		lastkey = t.getLastKey(constant.GSI_TeacherSchedule_TeacherAtStartAt, data[len(data)-1])
+		lastkey = t.getLastKey(constant.GSI_TeacherSchedule_TeacherAndStartAt, data[len(data)-1])
 	}
 
 	return lastkey, data, nil
@@ -101,7 +101,7 @@ func (s *teacherScheduleDA) getLastKey(indexType constant.GSIName, lastData *ent
 	var key string
 	pk := fmt.Sprintf("%s,%s", lastData.TeacherID, lastData.ScheduleID)
 	switch indexType {
-	case constant.GSI_TeacherSchedule_TeacherAtStartAt:
+	case constant.GSI_TeacherSchedule_TeacherAndStartAt:
 		key = fmt.Sprintf("%s,%s,%d", pk, lastData.TeacherID, lastData.StartAt)
 	}
 	return key
@@ -147,7 +147,7 @@ func (s TeacherScheduleCondition) PageBuilder(indexType constant.GSIName) (map[s
 		},
 	}
 	switch indexType {
-	case constant.GSI_TeacherSchedule_TeacherAtStartAt:
+	case constant.GSI_TeacherSchedule_TeacherAndStartAt:
 		if len(keys) >= 4 {
 			lastEvaluatedKey[s.PrimaryKey.Key] = &dynamodb.AttributeValue{
 				S: aws.String(keys[2]),

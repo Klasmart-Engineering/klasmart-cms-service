@@ -11,7 +11,8 @@ const (
 type GSIName string
 
 const (
-	GSI_TeacherSchedule_TeacherAtStartAt GSIName = "teacher_id_and_start_at"
+	GSI_TeacherSchedule_TeacherAndStartAt GSIName = "teacher_id_and_start_at"
+	GSI_Schedule_OrgIDAndStartAt          GSIName = "org_id_and_start_at"
 )
 
 var (

@@ -100,8 +100,48 @@ func (s *scheduleDynamoDA) Query(ctx context.Context, condition *dynamodbhelper.
 	return data, nil
 }
 
-func (s *scheduleDynamoDA) Page(ctx context.Context, condition *ScheduleCondition) ([]*entity.Schedule, error) {
-	panic("implement me")
+func (s *scheduleDynamoDA) Page(ctx context.Context, condition *ScheduleCondition) (string, []*entity.Schedule, error) {
+	keyCond := condition.KeyBuilder()
+	startKey, limit := condition.PageBuilder(constant.GSI_Schedule_OrgIDAndStartAt)
+	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
+	input := &dynamodb.QueryInput{
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		KeyConditionExpression:    expr.KeyCondition(),
+		ExclusiveStartKey:         startKey,
+		Limit:                     limit,
+		IndexName:                 aws.String(condition.IndexName),
+		TableName:                 aws.String(constant.TableNameSchedule),
+	}
+	result, err := dbclient.GetClient().Query(input)
+	if err != nil {
+		fmt.Println(err)
+		return "", nil, err
+	}
+
+	var data []*entity.Schedule
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &data)
+	if err != nil {
+		fmt.Println(err)
+		return "", nil, err
+	}
+	var lastkey string
+	if len(data) > 0 {
+		lastkey = s.getLastKey(constant.GSI_Schedule_OrgIDAndStartAt, data[len(data)-1])
+	}
+
+	return lastkey, data, nil
+}
+
+// TODO：Refactor
+func (s *scheduleDynamoDA) getLastKey(indexType constant.GSIName, lastData *entity.Schedule) string {
+	var key string
+	pk := lastData.ID
+	switch indexType {
+	case constant.GSI_Schedule_OrgIDAndStartAt:
+		key = fmt.Sprintf("%s,%s,%d", pk, lastData.OrgID, lastData.StartAt)
+	}
+	return key
 }
 
 func (s *scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Schedule, error) {
@@ -205,7 +245,7 @@ func (s ScheduleCondition) PageBuilder(indexType constant.GSIName) (map[string]*
 		},
 	}
 	switch indexType {
-	//case constant.GSI_TeacherSchedule_TeacherAtStartAt:
+	//case constant.GSI_TeacherSchedule_TeacherAndStartAt:
 	//	if len(keys) >= 4 {
 	//		lastEvaluatedKey[s.PrimaryKey.Key] = &dynamodb.AttributeValue{
 	//			S: aws.String(keys[2]),
