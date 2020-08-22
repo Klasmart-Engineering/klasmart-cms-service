@@ -319,3 +319,12 @@ const (
 	ScheduleEditOnlyCurrent   ScheduleEditType = "only_current"
 	ScheduleEditWithFollowing ScheduleEditType = "with_following"
 )
+
+func (t ScheduleEditType) Valid() bool {
+	switch t {
+	case ScheduleEditOnlyCurrent, ScheduleEditWithFollowing:
+		return true
+	default:
+		return false
+	}
+}
