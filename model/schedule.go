@@ -20,7 +20,8 @@ type IScheduleModel interface {
 type scheduleModel struct{}
 
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
-	// TODO: verify data
+	// TODO:
+	// 1.verify data
 
 	// convert to schedule
 	schedule := viewdata.Convert()
@@ -44,17 +45,17 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 			index++
 		}
 	}
-	// add to teachers_schedules
-	err = da.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
-	if err != nil {
-		return "", err
-	}
 	// add to schedules
 	err = da.GetScheduleDA().BatchInsert(ctx, scheduleList)
 	if err != nil {
 		return "", err
 	}
 
+	// add to teachers_schedules
+	err = da.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
+	if err != nil {
+		return "", err
+	}
 	return "", nil
 }
 

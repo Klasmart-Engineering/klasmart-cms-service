@@ -14,7 +14,7 @@ import (
 type teacherScheduleDA struct{}
 
 func (t teacherScheduleDA) Add(ctx context.Context, data *entity.TeacherSchedule) error {
-	panic("implement me")
+	return t.BatchAdd(ctx, []*entity.TeacherSchedule{data})
 }
 
 func (t teacherScheduleDA) BatchAdd(ctx context.Context, datalist []*entity.TeacherSchedule) error {
@@ -41,6 +41,7 @@ func (t teacherScheduleDA) BatchAdd(ctx context.Context, datalist []*entity.Teac
 }
 
 func (t teacherScheduleDA) Update(ctx context.Context, data *entity.TeacherSchedule) error {
+
 	panic("implement me")
 }
 
@@ -49,10 +50,11 @@ func (t teacherScheduleDA) BatchUpdate(ctx context.Context, data []*entity.Teach
 }
 
 func (t teacherScheduleDA) Delete(ctx context.Context, id string) error {
+
 	panic("implement me")
 }
 
-func (t teacherScheduleDA) BatchDelete(ctx context.Context, id string) error {
+func (t teacherScheduleDA) BatchDelete(ctx context.Context, id []string) error {
 	panic("implement me")
 }
 
