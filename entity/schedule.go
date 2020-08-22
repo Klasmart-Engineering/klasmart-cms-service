@@ -302,6 +302,28 @@ type ScheduleListView struct {
 }
 
 type ScheduleDetailsView struct {
+	ID          string        `json:"id"`
+	Title       string        `json:"title"`
+	Class       ShortInfo     `json:"class"`
+	LessonPlan  ShortInfo     `json:"lesson_plan"`
+	Teachers    []ShortInfo   `json:"teachers"`
+	Subject     ShortInfo     `json:"subject"`
+	Program     ShortInfo     `json:"program"`
+	Attachment  ShortInfo     `json:"attachment"`
+	OrgID       string        `json:"org_id"`
+	StartAt     int64         `json:"start_at"`
+	EndAt       int64         `json:"end_at"`
+	ModeType    string        `json:"mode_type"`
+	ClassType   string        `json:"class_type"`
+	DueAt       int64         `json:"due_at"`
+	Description string        `json:"description"`
+	Version     int64         `json:"version"`
+	RepeatID    string        `json:"repeat_id"`
+	Repeat      RepeatOptions `json:"repeat"`
+}
+type ShortInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // ScheduleEditType include delete and edit
