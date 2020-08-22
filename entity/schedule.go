@@ -288,7 +288,9 @@ func (s *ScheduleAddView) Convert() *Schedule {
 }
 
 type ScheduleUpdateView struct {
-	ID string `json:"id"`
+	ID       string           `json:"id"`
+	editType ScheduleEditType `json:"edit_type"`
+
 	ScheduleAddView
 }
 
