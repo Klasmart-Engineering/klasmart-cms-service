@@ -17,7 +17,9 @@ type IScheduleModel interface {
 	Page(ctx context.Context, condition *dynamodbhelper.Condition) (int64, []*entity.ScheduleListView, error)
 	GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error)
 }
-type scheduleModel struct{}
+type scheduleModel struct {
+	testScheduleRepeatFlag bool
+}
 
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
 	// TODO:
