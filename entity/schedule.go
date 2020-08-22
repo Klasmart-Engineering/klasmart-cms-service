@@ -227,6 +227,9 @@ type Schedule struct {
 func (Schedule) TableName() string {
 	return constant.TableNameSchedule
 }
+func (Schedule) GetTeacherAndStartAtGSI() string {
+	return "teacher_id_and_start_at"
+}
 
 func (s Schedule) Clone() Schedule {
 	newItem := s

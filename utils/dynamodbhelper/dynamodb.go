@@ -2,11 +2,8 @@ package dynamodbhelper
 
 import (
 	"errors"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"reflect"
-	"strings"
 )
 
 func GetUpdateBuilder(param interface{}) (expression.UpdateBuilder, error) {
@@ -39,8 +36,9 @@ func GetUpdateBuilder(param interface{}) (expression.UpdateBuilder, error) {
 type Condition struct {
 	Pager Pager
 
-	PrimaryKey  KeyValue
-	SortKey     KeyValue
+	PrimaryKey KeyValue
+	SortKey    KeyValue
+
 	CompareType CompareType
 	IndexName   string
 }
@@ -62,33 +60,6 @@ func (s Condition) KeyBuilder() expression.KeyConditionBuilder {
 	return primaryKey.And(sortKey)
 }
 
-func (s Condition) PagerBuilder() (lastKeyAttribute map[string]*dynamodb.AttributeValue, limit *int64) {
-	keys := strings.Split(s.Pager.LastKey, ",")
-	if len(keys) == 0 {
-		return nil, nil
-	}
-
-	var lastEvaluatedKey map[string]*dynamodb.AttributeValue
-	if len(keys) == 1 {
-		lastEvaluatedKey = map[string]*dynamodb.AttributeValue{
-			s.PrimaryKey.Key: &dynamodb.AttributeValue{
-				S: aws.String(keys[0]),
-			},
-		}
-	}
-	if len(keys) == 2 {
-		lastEvaluatedKey = map[string]*dynamodb.AttributeValue{
-			s.PrimaryKey.Key: &dynamodb.AttributeValue{
-				S: aws.String(keys[0]),
-			},
-			s.SortKey.Key: &dynamodb.AttributeValue{
-				S: aws.String(keys[1]),
-			},
-		}
-	}
-	return lastEvaluatedKey, aws.Int64(s.Pager.PageSize)
-}
-
 type KeyValue struct {
 	Key   string
 	Value interface{}
@@ -106,3 +77,7 @@ type Pager struct {
 	PageSize int64
 	LastKey  string
 }
+
+const (
+	DefaultPageSize = 10
+)

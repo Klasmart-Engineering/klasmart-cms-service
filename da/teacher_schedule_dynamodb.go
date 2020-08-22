@@ -11,6 +11,7 @@ import (
 	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
+	"strings"
 	"sync"
 )
 
@@ -59,9 +60,10 @@ func (t *teacherScheduleDA) BatchDelete(ctx context.Context, id []string) error 
 	panic("implement me")
 }
 
-func (t *teacherScheduleDA) Page(ctx context.Context, condition dynamodbhelper.Condition) ([]*entity.TeacherSchedule, error) {
+func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleCondition) ([]*entity.TeacherSchedule, error) {
 	keyCond := condition.KeyBuilder()
-	startKey, limit := condition.PagerBuilder()
+	startKey, limit := condition.PageBuilder("")
+
 	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	input := &dynamodb.QueryInput{
@@ -73,6 +75,7 @@ func (t *teacherScheduleDA) Page(ctx context.Context, condition dynamodbhelper.C
 		IndexName:                 aws.String(condition.IndexName),
 		TableName:                 aws.String(constant.TableNameTeacherSchedule),
 	}
+
 	result, err := dbclient.GetClient().Query(input)
 	if err != nil {
 		fmt.Println(err)
@@ -99,4 +102,45 @@ func GetTeacherScheduleDA() ITeacherScheduleDA {
 		_teacherScheduleDA = &teacherScheduleDA{}
 	})
 	return _teacherScheduleDA
+}
+
+type TeacherScheduleCondition struct {
+	dynamodbhelper.Condition
+}
+
+func (s TeacherScheduleCondition) PageBuilder(indexType string) (map[string]*dynamodb.AttributeValue, *int64) {
+	limit := s.Pager.PageSize
+	if limit <= 0 {
+		limit = dynamodbhelper.DefaultPageSize
+	}
+	if strings.TrimSpace(s.Pager.LastKey) == "" {
+		return nil, aws.Int64(limit)
+	}
+
+	var lastEvaluatedKey map[string]*dynamodb.AttributeValue
+
+	keys := strings.Split(s.Pager.LastKey, ",")
+	if len(keys) < 2 {
+		return nil, aws.Int64(limit)
+	}
+	lastEvaluatedKey = map[string]*dynamodb.AttributeValue{
+		"teacher_id": &dynamodb.AttributeValue{
+			S: aws.String(keys[0]),
+		},
+		"schedule_id": &dynamodb.AttributeValue{
+			S: aws.String(keys[1]),
+		},
+	}
+	switch indexType {
+	case "":
+		if len(keys) >= 4 {
+			lastEvaluatedKey[s.PrimaryKey.Key] = &dynamodb.AttributeValue{
+				S: aws.String(keys[2]),
+			}
+			lastEvaluatedKey[s.SortKey.Key] = &dynamodb.AttributeValue{
+				N: aws.String(keys[3]),
+			}
+		}
+	}
+	return lastEvaluatedKey, aws.Int64(s.Pager.PageSize)
 }

@@ -3,7 +3,6 @@ package da
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 )
 
 type ITeacherScheduleDA interface {
@@ -16,5 +15,5 @@ type ITeacherScheduleDA interface {
 	Delete(ctx context.Context, id string) error
 	BatchDelete(ctx context.Context, id []string) error
 
-	Page(ctx context.Context, condition dynamodbhelper.Condition) ([]*entity.TeacherSchedule, error)
+	Page(ctx context.Context, condition TeacherScheduleCondition) ([]*entity.TeacherSchedule, error)
 }
