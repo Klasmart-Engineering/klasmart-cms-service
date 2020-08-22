@@ -10,7 +10,8 @@ import (
 )
 
 func (s *Server) operator(c *gin.Context) *entity.Operator {
-	panic("not implemented")
+	// TODO: implement
+	return nil
 }
 
 func (s *Server) deleteSchedule(c *gin.Context) {
