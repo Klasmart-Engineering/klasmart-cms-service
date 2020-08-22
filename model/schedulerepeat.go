@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -28,7 +29,9 @@ func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Sch
 		items, err := s.repeatSchedule(ctx, template, template.Repeat)
 		if err != nil {
 			log.Error(ctx, "repeat schedule(include template): call repeat schedule failed",
-				log.Err(err), log.Any("template", template))
+				log.Err(err),
+				log.Any("template", template),
+			)
 			return nil, err
 		}
 		result = append(result, items...)
@@ -47,8 +50,8 @@ func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Sch
 		return nil, err
 	}
 	if !options.Type.Valid() {
-		err := fmt.Errorf("repeat schedule: invalid repeat type %q", string(template.Repeat.Type))
-		log.Error(ctx, err.Error())
+		err := errors.New("repeat schedule: invalid repeat type")
+		log.Error(ctx, err.Error(), log.String("repeat_type", string(options.Type)))
 		return nil, err
 	}
 	var result []*entity.Schedule
@@ -56,24 +59,44 @@ func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Sch
 	case entity.RepeatTypeDaily:
 		items, err := s.repeatScheduleDaily(ctx, template, options.Daily)
 		if err != nil {
+			log.Error(ctx, "repeat schedule: repeat schedule daily failed",
+				log.Err(err),
+				log.Any("template", template),
+				log.Any("daily_options", options.Daily),
+			)
 			return nil, err
 		}
 		result = append(result, items...)
 	case entity.RepeatTypeWeekly:
 		items, err := s.repeatScheduleWeekly(ctx, template, options.Weekly)
 		if err != nil {
+			log.Error(ctx, "repeat schedule: repeat schedule weekly failed",
+				log.Err(err),
+				log.Any("template", template),
+				log.Any("weekly_options", options.Weekly),
+			)
 			return nil, err
 		}
 		result = append(result, items...)
 	case entity.RepeatTypeMonthly:
 		items, err := s.repeatScheduleMonthly(ctx, template, options.Monthly)
 		if err != nil {
+			log.Error(ctx, "repeat schedule: repeat schedule monthly failed",
+				log.Err(err),
+				log.Any("template", template),
+				log.Any("monthly_options", options.Monthly),
+			)
 			return nil, err
 		}
 		result = append(result, items...)
 	case entity.RepeatTypeYearly:
 		items, err := s.repeatScheduleYearly(ctx, template, options.Yearly)
 		if err != nil {
+			log.Error(ctx, "repeat schedule: repeat schedule yearly failed",
+				log.Err(err),
+				log.Any("template", template),
+				log.Any("yearly_options", options.Yearly),
+			)
 			return nil, err
 		}
 		result = append(result, items...)
@@ -89,7 +112,7 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 		return nil, err
 	}
 	if options.Interval <= 0 {
-		log.Debug(ctx, "repeat schedule daily: options interval less than 0")
+		log.Debug(ctx, "repeat schedule daily: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
 	}
 	var (
@@ -140,8 +163,8 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 			end = end.AddDate(0, 0, options.Interval)
 		}
 	default:
-		err := fmt.Errorf("repeat schedule: invalid daily end type %q", string(options.End.Type))
-		log.Error(ctx, err.Error())
+		err := fmt.Errorf("repeat schedule: invalid daily end type")
+		log.Error(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
 		return nil, err
 	}
 	return result, nil
@@ -154,7 +177,7 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 		return nil, err
 	}
 	if options.Interval <= 0 {
-		log.Debug(ctx, "repeat schedule weekly: options interval less than 0")
+		log.Debug(ctx, "repeat schedule weekly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
 	}
 	var (
@@ -247,7 +270,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 		return nil, err
 	}
 	if options.Interval <= 0 {
-		log.Debug(ctx, "repeat schedule monthly: options interval less than 0")
+		log.Debug(ctx, "repeat schedule monthly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
 	}
 	var (
@@ -265,7 +288,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 				timer      = s.startOfMonth(start.Year(), start.Month())
 			)
 			for {
-				start = s.setTimeDate(start, timer.Year(), timer.Month(), options.OnDateDay)
+				start = s.setTimeDatePart(start, timer.Year(), timer.Month(), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -286,7 +309,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			)
 			for {
 				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq)
-				start = s.setTimeDate(start, year, month, day)
+				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -310,7 +333,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 				count      = 0
 			)
 			for count < options.End.AfterCount {
-				start = s.setTimeDate(start, timer.Year(), timer.Month(), options.OnDateDay)
+				start = s.setTimeDatePart(start, timer.Year(), timer.Month(), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -333,7 +356,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			)
 			for count < options.End.AfterCount {
 				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq)
-				start = s.setTimeDate(start, year, month, day)
+				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -358,7 +381,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 				afterTime  = time.Unix(options.End.AfterTime, 0)
 			)
 			for {
-				start = s.setTimeDate(start, timer.Year(), timer.Month(), options.OnDateDay)
+				start = s.setTimeDatePart(start, timer.Year(), timer.Month(), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(afterTime) || end.After(maxEndTime) {
 					break
@@ -380,7 +403,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			)
 			for {
 				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq)
-				start = s.setTimeDate(start, year, month, day)
+				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(afterTime) || end.After(maxEndTime) {
 					break
@@ -406,7 +429,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 		return nil, err
 	}
 	if options.Interval <= 0 {
-		log.Debug(ctx, "repeat schedule yearly: options interval less than 0")
+		log.Debug(ctx, "repeat schedule yearly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
 	}
 	var (
@@ -424,7 +447,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 				timer      = s.startOfYear(start.Year())
 			)
 			for {
-				start = s.setTimeDate(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
+				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -445,7 +468,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			)
 			for {
 				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq)
-				start = s.setTimeDate(start, year, month, day)
+				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -470,7 +493,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 				count      = 0
 			)
 			for count < options.End.AfterCount {
-				start = s.setTimeDate(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
+				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -493,7 +516,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			)
 			for count < options.End.AfterCount {
 				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq)
-				start = s.setTimeDate(start, year, month, day)
+				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
 					break
@@ -519,7 +542,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 				afterTime  = time.Unix(options.End.AfterTime, 0)
 			)
 			for {
-				start = s.setTimeDate(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
+				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(afterTime) || end.After(maxEndTime) {
 					break
@@ -541,7 +564,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			)
 			for {
 				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq)
-				start = s.setTimeDate(start, year, month, day)
+				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(afterTime) || end.After(maxEndTime) {
 					break
@@ -561,7 +584,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 	return result, nil
 }
 
-func (s *scheduleModel) setTimeDate(src time.Time, year int, month time.Month, day int) time.Time {
+func (s *scheduleModel) setTimeDatePart(src time.Time, year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), src.Location())
 }
 

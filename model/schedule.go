@@ -64,7 +64,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 }
 
 func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleUpdateView) error {
-	panic("implement me")
+	// TODO: check permission
 }
 
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
