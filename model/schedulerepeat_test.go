@@ -2,15 +2,16 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"os"
 	"testing"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func TestMain(m *testing.M) {
-	testScheduleRepeatFlag = true
-	os.Exit(m.Run())
+func getScheduleModelForRepeatTest() *scheduleModel {
+	return &scheduleModel{
+		testScheduleRepeatFlag: true,
+	}
 }
 
 func Test_repeatScheduleDaily(t *testing.T) {
@@ -90,7 +91,7 @@ func Test_repeatScheduleDaily(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleDaily(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleDaily(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleDaily() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -213,7 +214,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleWeekly(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleWeekly(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleWeekly() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -385,7 +386,7 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleMonthly(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleMonthly(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleMonthly() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -556,7 +557,7 @@ func Test_repeatScheduleYearly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repeatScheduleYearly(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleYearly(tt.args.ctx, &tt.args.template, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleYearly() error = %v, wantErr %v", err, tt.wantErr)
 				return
