@@ -126,12 +126,47 @@ func (s *scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Sche
 	return schedule, nil
 }
 
-func (s *scheduleDynamoDA) SoftDelete(ctx context.Context, id string) error {
-	panic("implement me")
+func (s *scheduleDynamoDA) Delete(ctx context.Context, id string) error {
+	in := dynamodb.DeleteItemInput{
+		TableName: aws.String(entity.Schedule{}.TableName()),
+		Key:       map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
+	}
+	if _, err := dbclient.GetClient().DeleteItem(&in); err != nil {
+		log.Error(ctx, "delete schedule: delete item failed", log.String("id", id))
+		return err
+	}
+	return nil
 }
 
-func (s *scheduleDynamoDA) BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *dynamodbhelper.Condition) error {
-	panic("implement me")
+func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, op *entity.Operator, ids []string) error {
+	tableName := entity.Schedule{}.TableName()
+	in := dynamodb.BatchWriteItemInput{
+		RequestItems: map[string][]*dynamodb.WriteRequest{},
+	}
+	var requestItems []*dynamodb.WriteRequest
+	for _, id := range ids {
+		requestItems = append(requestItems, &dynamodb.WriteRequest{
+			PutRequest: &dynamodb.PutRequest{Item: map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}}},
+		})
+	}
+	for i := 0; i < len(requestItems); i++ {
+		if (i+1)%25 == 0 {
+			in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems[:25]}
+			if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
+				log.Error(ctx, "batch delete schedule: batch write item failed", log.Strings("ids", ids))
+				return err
+			}
+			requestItems = requestItems[25:]
+		}
+	}
+	if len(requestItems) > 0 {
+		in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems}
+		if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
+			log.Error(ctx, "batch delete schedule: batch write item failed", log.Strings("ids", ids))
+			return err
+		}
+	}
+	return nil
 }
 
 //func (s ScheduleCondition) GetFilterExpr() expression.ConditionBuilder {
