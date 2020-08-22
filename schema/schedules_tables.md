@@ -37,6 +37,17 @@ aws dynamodb update-table \
 --endpoint-url http://192.168.1.234:18000
 ```
 
+### create global-secondary-index teachers_schedules teacher_id_and_start_at
+```shell script
+aws dynamodb update-table \
+    --table-name teachers_schedules \
+    --attribute-definitions AttributeName=teacher_id,AttributeType=S AttributeName=start_at,AttributeType=N \
+    --global-secondary-index-updates \
+    "[{\"Create\":{\"IndexName\": \"teacher_id_and_start_at\",\"KeySchema\":[{\"AttributeName\":\"teacher_id\",\"KeyType\":\"HASH\"},{\"AttributeName\":\"start_at\",\"KeyType\":\"RANGE\"}], \
+    \"ProvisionedThroughput\": {\"ReadCapacityUnits\": 10, \"WriteCapacityUnits\": 5      },\"Projection\":{\"ProjectionType\":\"ALL\"}}}]" \
+--endpoint-url http://192.168.1.234:18000
+```
+
 
 ### delete table template:
 

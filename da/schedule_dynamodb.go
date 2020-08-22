@@ -18,11 +18,11 @@ import (
 
 type scheduleDynamoDA struct{}
 
-func (s scheduleDynamoDA) Insert(ctx context.Context, schedule *entity.Schedule) error {
+func (s *scheduleDynamoDA) Insert(ctx context.Context, schedule *entity.Schedule) error {
 	return s.BatchInsert(ctx, []*entity.Schedule{schedule})
 }
 
-func (s scheduleDynamoDA) BatchInsert(ctx context.Context, schedules []*entity.Schedule) error {
+func (s *scheduleDynamoDA) BatchInsert(ctx context.Context, schedules []*entity.Schedule) error {
 	items := make(map[string][]*dynamodb.WriteRequest)
 	itemsWriteRequest := make([]*dynamodb.WriteRequest, len(schedules))
 	for i, item := range schedules {
@@ -45,7 +45,7 @@ func (s scheduleDynamoDA) BatchInsert(ctx context.Context, schedules []*entity.S
 	return err
 }
 
-func (s scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule) error {
+func (s *scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule) error {
 	key := make(map[string]*dynamodb.AttributeValue)
 	key["id"] = &dynamodb.AttributeValue{
 		S: aws.String(schedule.ID),
@@ -71,17 +71,17 @@ func (s scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule)
 	return err
 }
 
-func (s scheduleDynamoDA) Query(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
-	keyCond := condition.GetKeyConditionBuilder("")
+func (s *scheduleDynamoDA) Query(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
+	keyCond := condition.GetKeyConditionBuilder(dynamodbhelper.BuilderPKEqule)
 	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	input := &dynamodb.QueryInput{
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		FilterExpression:          expr.Filter(),
-		KeyConditionExpression:    expr.KeyCondition(),
-		TableName:                 aws.String(constant.TableNameSchedule),
-		IndexName:                 aws.String(condition.IndexName),
+		//FilterExpression:          expr.Filter(),
+		KeyConditionExpression: expr.KeyCondition(),
+		TableName:              aws.String(constant.TableNameSchedule),
+		IndexName:              aws.String(condition.IndexName),
 	}
 	result, err := dbclient.GetClient().Query(input)
 	if err != nil {
@@ -99,11 +99,11 @@ func (s scheduleDynamoDA) Query(ctx context.Context, condition *dynamodbhelper.C
 	return data, nil
 }
 
-func (s scheduleDynamoDA) Page(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
+func (s *scheduleDynamoDA) Page(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
 	panic("implement me")
 }
 
-func (s scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Schedule, error) {
+func (s *scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Schedule, error) {
 	key := make(map[string]*dynamodb.AttributeValue)
 	key["id"] = &dynamodb.AttributeValue{
 		S: aws.String(id),
@@ -126,11 +126,11 @@ func (s scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Sched
 	return schedule, nil
 }
 
-func (s scheduleDynamoDA) SoftDelete(ctx context.Context, id string) error {
+func (s *scheduleDynamoDA) SoftDelete(ctx context.Context, id string) error {
 	panic("implement me")
 }
 
-func (s scheduleDynamoDA) BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *dynamodbhelper.Condition) error {
+func (s *scheduleDynamoDA) BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *dynamodbhelper.Condition) error {
 	panic("implement me")
 }
 
@@ -162,7 +162,7 @@ var (
 
 func GetScheduleDA() IScheduleDA {
 	_scheduleOnce.Do(func() {
-		_scheduleDA = scheduleDynamoDA{}
+		_scheduleDA = &scheduleDynamoDA{}
 	})
 	return _scheduleDA
 }

@@ -44,9 +44,13 @@ type Condition struct {
 
 func (s Condition) GetKeyConditionBuilder(buildType string) expression.KeyConditionBuilder {
 	switch buildType {
-	case BuilderTypeKeyEqule:
+	case BuilderKeyEqule:
 		primaryKey := expression.Key(s.PrimaryKey.Key).Equal(expression.Value(s.PrimaryKey.Value))
 		sortKey := expression.Key(s.SortKey.Key).Equal(expression.Value(s.SortKey.Value))
+		return expression.KeyAnd(primaryKey, sortKey)
+	case BuilderPKEqualSKLessThanEqual:
+		primaryKey := expression.Key(s.PrimaryKey.Key).Equal(expression.Value(s.PrimaryKey.Value))
+		sortKey := expression.Key(s.SortKey.Key).LessThanEqual(expression.Value(s.SortKey.Value))
 		return expression.KeyAnd(primaryKey, sortKey)
 	default:
 		primaryKey := expression.Key(s.PrimaryKey.Key).Equal(expression.Value(s.PrimaryKey.Value))
@@ -60,5 +64,7 @@ type KeyValue struct {
 }
 
 const (
-	BuilderTypeKeyEqule = "KeyEqule"
+	BuilderPKEqule                = "PKEqule"
+	BuilderKeyEqule               = "KeyEqule"
+	BuilderPKEqualSKLessThanEqual = "PKEqualSKLessThanEqual"
 )
