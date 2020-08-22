@@ -8,6 +8,12 @@ const (
 	TableNameTeacherSchedule = "teachers_schedules"
 )
 
+type GSIName string
+
+const (
+	GSI_TeacherSchedule_TeacherAtStartAt GSIName = "teacher_id_and_start_at"
+)
+
 var (
 	ErrRecordNotFound  = errors.New("record not found")
 	ErrDuplicateRecord = errors.New("duplicate record")

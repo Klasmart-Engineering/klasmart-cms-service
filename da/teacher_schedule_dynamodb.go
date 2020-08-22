@@ -60,9 +60,9 @@ func (t *teacherScheduleDA) BatchDelete(ctx context.Context, id []string) error 
 	panic("implement me")
 }
 
-func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleCondition) ([]*entity.TeacherSchedule, error) {
+func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleCondition) (string, []*entity.TeacherSchedule, error) {
 	keyCond := condition.KeyBuilder()
-	startKey, limit := condition.PageBuilder("")
+	startKey, limit := condition.PageBuilder(constant.GSI_TeacherSchedule_TeacherAtStartAt)
 
 	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
@@ -79,17 +79,32 @@ func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleC
 	result, err := dbclient.GetClient().Query(input)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return "", nil, err
 	}
 
 	var data []*entity.TeacherSchedule
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &data)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return "", nil, err
+	}
+	var lastkey string
+	if len(data) > 0 {
+		lastkey = t.getLastKey(constant.GSI_TeacherSchedule_TeacherAtStartAt, data[len(data)-1])
 	}
 
-	return data, nil
+	return lastkey, data, nil
+}
+
+// TODO：Refactor
+func (s *teacherScheduleDA) getLastKey(indexType constant.GSIName, lastData *entity.TeacherSchedule) string {
+	var key string
+	pk := fmt.Sprintf("%s,%s", lastData.TeacherID, lastData.ScheduleID)
+	switch indexType {
+	case constant.GSI_TeacherSchedule_TeacherAtStartAt:
+		key = fmt.Sprintf("%s,%s,%d", pk, lastData.TeacherID, lastData.StartAt)
+	}
+	return key
 }
 
 var (
@@ -108,7 +123,7 @@ type TeacherScheduleCondition struct {
 	dynamodbhelper.Condition
 }
 
-func (s TeacherScheduleCondition) PageBuilder(indexType string) (map[string]*dynamodb.AttributeValue, *int64) {
+func (s TeacherScheduleCondition) PageBuilder(indexType constant.GSIName) (map[string]*dynamodb.AttributeValue, *int64) {
 	limit := s.Pager.PageSize
 	if limit <= 0 {
 		limit = dynamodbhelper.DefaultPageSize
@@ -118,11 +133,11 @@ func (s TeacherScheduleCondition) PageBuilder(indexType string) (map[string]*dyn
 	}
 
 	var lastEvaluatedKey map[string]*dynamodb.AttributeValue
-
 	keys := strings.Split(s.Pager.LastKey, ",")
 	if len(keys) < 2 {
 		return nil, aws.Int64(limit)
 	}
+
 	lastEvaluatedKey = map[string]*dynamodb.AttributeValue{
 		"teacher_id": &dynamodb.AttributeValue{
 			S: aws.String(keys[0]),
@@ -132,7 +147,7 @@ func (s TeacherScheduleCondition) PageBuilder(indexType string) (map[string]*dyn
 		},
 	}
 	switch indexType {
-	case "":
+	case constant.GSI_TeacherSchedule_TeacherAtStartAt:
 		if len(keys) >= 4 {
 			lastEvaluatedKey[s.PrimaryKey.Key] = &dynamodb.AttributeValue{
 				S: aws.String(keys[2]),

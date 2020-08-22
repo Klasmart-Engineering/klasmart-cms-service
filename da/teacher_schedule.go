@@ -15,5 +15,5 @@ type ITeacherScheduleDA interface {
 	Delete(ctx context.Context, id string) error
 	BatchDelete(ctx context.Context, id []string) error
 
-	Page(ctx context.Context, condition TeacherScheduleCondition) ([]*entity.TeacherSchedule, error)
+	Page(ctx context.Context, condition TeacherScheduleCondition) (string, []*entity.TeacherSchedule, error)
 }

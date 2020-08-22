@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
+	"strings"
 	"sync"
 
 	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
@@ -99,7 +100,7 @@ func (s *scheduleDynamoDA) Query(ctx context.Context, condition *dynamodbhelper.
 	return data, nil
 }
 
-func (s *scheduleDynamoDA) Page(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
+func (s *scheduleDynamoDA) Page(ctx context.Context, condition *ScheduleCondition) ([]*entity.Schedule, error) {
 	panic("implement me")
 }
 
@@ -169,27 +170,6 @@ func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, op *entity.Operator,
 	return nil
 }
 
-//func (s ScheduleCondition) GetFilterExpr() expression.ConditionBuilder {
-//	//var filt expression.ConditionBuilder
-//	//if s.DeleteAt.Valid {
-//	//	filt = expression.Name("deleted_at").NotEqual(expression.Value(0))
-//	//} else {
-//	//	filt = expression.Name("deleted_at").Equal(expression.Value(0))
-//	//}
-//	//if s.TescherID.Valid {
-//	//	filt = expression.Name("teacher_ids").Contains(s.TescherID.String)
-//	//}
-//	//if s.OrgID.Valid {
-//	//	filt = filt.And(expression.Name("org_id").Equal(expression.Value(s.OrgID.String)))
-//	//}
-//
-//	//expr, err := expression.NewBuilder().WithKeyCondition().WithFilter(filt).Build()
-//	//if err != nil {
-//	//	return expression.Expression{}, err
-//	//}
-//	return filt
-//}
-
 var (
 	_scheduleOnce sync.Once
 	_scheduleDA   IScheduleDA
@@ -200,4 +180,40 @@ func GetScheduleDA() IScheduleDA {
 		_scheduleDA = &scheduleDynamoDA{}
 	})
 	return _scheduleDA
+}
+
+type ScheduleCondition struct {
+	dynamodbhelper.Condition
+}
+
+func (s ScheduleCondition) PageBuilder(indexType constant.GSIName) (map[string]*dynamodb.AttributeValue, *int64) {
+	limit := s.Pager.PageSize
+	if limit <= 0 {
+		limit = dynamodbhelper.DefaultPageSize
+	}
+	if strings.TrimSpace(s.Pager.LastKey) == "" {
+		return nil, aws.Int64(limit)
+	}
+	var lastEvaluatedKey map[string]*dynamodb.AttributeValue
+	keys := strings.Split(s.Pager.LastKey, ",")
+	if len(keys) < 1 {
+		return nil, aws.Int64(limit)
+	}
+	lastEvaluatedKey = map[string]*dynamodb.AttributeValue{
+		"id": &dynamodb.AttributeValue{
+			S: aws.String(keys[0]),
+		},
+	}
+	switch indexType {
+	//case constant.GSI_TeacherSchedule_TeacherAtStartAt:
+	//	if len(keys) >= 4 {
+	//		lastEvaluatedKey[s.PrimaryKey.Key] = &dynamodb.AttributeValue{
+	//			S: aws.String(keys[2]),
+	//		}
+	//		lastEvaluatedKey[s.SortKey.Key] = &dynamodb.AttributeValue{
+	//			N: aws.String(keys[3]),
+	//		}
+	//	}
+	}
+	return lastEvaluatedKey, aws.Int64(s.Pager.PageSize)
 }

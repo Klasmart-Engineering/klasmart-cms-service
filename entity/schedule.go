@@ -227,9 +227,6 @@ type Schedule struct {
 func (Schedule) TableName() string {
 	return constant.TableNameSchedule
 }
-func (Schedule) GetTeacherAndStartAtGSI() string {
-	return "teacher_id_and_start_at"
-}
 
 func (Schedule) IndexNameRepeatIDAndStartAt() string {
 	return "repeat_id_and_start_at"
@@ -291,22 +288,8 @@ func (s *ScheduleAddView) Convert() *Schedule {
 }
 
 type ScheduleUpdateView struct {
-	Title        string        `json:"title"`
-	ClassID      string        `json:"class_id"`
-	LessonPlanID string        `json:"lesson_plan_id"`
-	TeacherIDs   []string      `json:"teacher_ids"`
-	OrgID        string        `json:"org_id"`
-	StartAt      int64         `json:"start_at"`
-	EndAt        int64         `json:"end_at"`
-	ModeType     string        `json:"mode_type"`
-	SubjectID    string        `json:"subject_id"`
-	ProgramID    string        `json:"program_id"`
-	ClassType    string        `json:"class_type"`
-	DueAt        int64         `json:"due_at"`
-	Description  string        `json:"description"`
-	AttachmentID string        `json:"attachment_id"`
-	Version      int64         `json:"version"`
-	Repeat       RepeatOptions `json:"repeat"`
+	ID string `json:"id"`
+	ScheduleAddView
 }
 
 type ScheduleListView struct {
