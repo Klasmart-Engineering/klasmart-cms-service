@@ -68,6 +68,7 @@ func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdat
 }
 
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
+	// TODO: check permission
 	switch editType {
 	case entity.ScheduleEditOnlyCurrent:
 		if err := da.GetScheduleDA().Delete(ctx, id); err != nil {
@@ -96,7 +97,7 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		for _, item := range items {
 			ids = append(ids, item.ID)
 		}
-		if err = da.GetScheduleDA().BatchDelete(ctx, op, ids); err != nil {
+		if err = da.GetScheduleDA().BatchDelete(ctx, ids); err != nil {
 			log.Error(ctx, "delete schedule: batch delete failed", log.Err(err))
 			return err
 		}

@@ -138,7 +138,7 @@ func (s *scheduleDynamoDA) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, op *entity.Operator, ids []string) error {
+func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, ids []string) error {
 	tableName := entity.Schedule{}.TableName()
 	in := dynamodb.BatchWriteItemInput{
 		RequestItems: map[string][]*dynamodb.WriteRequest{},

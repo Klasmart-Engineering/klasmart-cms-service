@@ -18,5 +18,5 @@ type IScheduleDA interface {
 	GetByID(ctx context.Context, id string) (*entity.Schedule, error)
 
 	Delete(ctx context.Context, id string) error
-	BatchDelete(ctx context.Context, op *entity.Operator, ids []string) error
+	BatchDelete(ctx context.Context, ids []string) error
 }
