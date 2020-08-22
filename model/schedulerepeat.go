@@ -18,28 +18,28 @@ func getMaxRepeatYear() int {
 	return config.Get().Schedule.MaxRepeatYear
 }
 
-func RepeatSchedule(ctx context.Context, template *entity.Schedule) ([]*entity.Schedule, error) {
+func (*scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule) ([]*entity.Schedule, error) {
 	if template == nil {
 		err := fmt.Errorf("repeat schedule(include template): require not nil template")
 		log.Error(ctx, err.Error())
 		return nil, err
 	}
-	result := []*entity.Schedule{template}
-	if template.ModeType == entity.ModeTypeAllDay {
+	switch template.ModeType {
+	case entity.ModeTypeRepeat:
+		result := []*entity.Schedule{template}
+		items, err := repeatSchedule(ctx, template, template.Repeat)
+		if err != nil {
+			log.Error(ctx, "repeat schedule(include template): call repeat schedule failed",
+				log.Err(err), log.Any("template", template))
+			return nil, err
+		}
+		result = append(result, items...)
 		return result, nil
+	//case entity.ModeTypeAllDay:
+	//	fallthrough
+	default:
+		return []*entity.Schedule{template}, nil
 	}
-	if template.ModeType != entity.ModeTypeRepeat {
-		err := fmt.Errorf("repeat schedule(include template): invalid mode type")
-		log.Error(ctx, err.Error(), log.String("mode_type", template.ModeType))
-		return nil, err
-	}
-	items, err := repeatSchedule(ctx, template, template.Repeat)
-	if err != nil {
-		log.Error(ctx, "repeat schedule(include template): call repeat schedule failed", log.Err(err), log.Any("template", template))
-		return nil, err
-	}
-	result = append(result, items...)
-	return result, nil
 }
 
 func repeatSchedule(ctx context.Context, template *entity.Schedule, options entity.RepeatOptions) ([]*entity.Schedule, error) {
@@ -593,4 +593,12 @@ func startOfMonth(year int, month time.Month) time.Time {
 
 func endOfMonth(year int, month time.Month) time.Time {
 	return time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, time.Local).Add(-time.Millisecond)
+}
+
+func startOfDay(year int, month time.Month, day int) time.Time {
+	return time.Date(year, month, day, 0, 0, 0, 0, time.Local).Add(-time.Millisecond)
+}
+
+func endOfDay(year int, month time.Month, day int) time.Time {
+	return time.Date(year, month, day, 23, 59, 59, 999, time.Local).Add(-time.Millisecond)
 }
