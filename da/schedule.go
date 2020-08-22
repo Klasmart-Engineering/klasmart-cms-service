@@ -17,6 +17,6 @@ type IScheduleDA interface {
 	Page(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error)
 	GetByID(ctx context.Context, id string) (*entity.Schedule, error)
 
-	SoftDelete(ctx context.Context, id string) error
-	BatchSoftDelete(ctx context.Context, op *entity.Operator, condition *dynamodbhelper.Condition) error
+	Delete(ctx context.Context, id string) error
+	BatchDelete(ctx context.Context, op *entity.Operator, ids []string) error
 }

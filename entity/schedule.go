@@ -35,18 +35,18 @@ const (
 type RepeatWeekday string
 
 const (
-	RepeatWeekSun RepeatWeekday = "sun"
-	RepeatWeekMon RepeatWeekday = "mon"
-	RepeatWeekTue RepeatWeekday = "tue"
-	RepeatWeekWed RepeatWeekday = "wed"
-	RepeatWeekThu RepeatWeekday = "thu"
-	RepeatWeekFri RepeatWeekday = "fri"
-	RepeatWeekSat RepeatWeekday = "sat"
+	RepeatWeekdaySun RepeatWeekday = "sun"
+	RepeatWeekdayMon RepeatWeekday = "mon"
+	RepeatWeekdayTue RepeatWeekday = "tue"
+	RepeatWeekdayWed RepeatWeekday = "wed"
+	RepeatWeekdayThu RepeatWeekday = "thu"
+	RepeatWeekdayFri RepeatWeekday = "fri"
+	RepeatWeekdaySat RepeatWeekday = "sat"
 )
 
 func (w RepeatWeekday) Valid() bool {
 	switch w {
-	case RepeatWeekSun, RepeatWeekMon, RepeatWeekTue, RepeatWeekWed, RepeatWeekThu, RepeatWeekFri, RepeatWeekSat:
+	case RepeatWeekdaySun, RepeatWeekdayMon, RepeatWeekdayTue, RepeatWeekdayWed, RepeatWeekdayThu, RepeatWeekdayFri, RepeatWeekdaySat:
 		return true
 	default:
 		return false
@@ -55,19 +55,19 @@ func (w RepeatWeekday) Valid() bool {
 
 func (w RepeatWeekday) TimeWeekday() time.Weekday {
 	switch w {
-	case RepeatWeekSun:
+	case RepeatWeekdaySun:
 		return time.Sunday
-	case RepeatWeekMon:
+	case RepeatWeekdayMon:
 		return time.Monday
-	case RepeatWeekTue:
+	case RepeatWeekdayTue:
 		return time.Tuesday
-	case RepeatWeekWed:
+	case RepeatWeekdayWed:
 		return time.Wednesday
-	case RepeatWeekThu:
+	case RepeatWeekdayThu:
 		return time.Thursday
-	case RepeatWeekFri:
+	case RepeatWeekdayFri:
 		return time.Friday
-	case RepeatWeekSat:
+	case RepeatWeekdaySat:
 		return time.Saturday
 	}
 	return 0
@@ -231,6 +231,10 @@ func (Schedule) GetTeacherAndStartAtGSI() string {
 	return "teacher_id_and_start_at"
 }
 
+func (Schedule) IndexNameRepeatIDAndStartAt() string {
+	return "repeat_id_and_start_at"
+}
+
 func (s Schedule) Clone() Schedule {
 	newItem := s
 	newItem.TeacherIDs = append([]string{}, s.TeacherIDs...)
@@ -310,3 +314,11 @@ type ScheduleListView struct {
 
 type ScheduleDetailsView struct {
 }
+
+// ScheduleEditType include delete and edit
+type ScheduleEditType string
+
+const (
+	ScheduleEditOnlyCurrent   ScheduleEditType = "only_current"
+	ScheduleEditWithFollowing ScheduleEditType = "with_following"
+)
