@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -65,6 +66,27 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 
 func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleUpdateView) error {
 	// TODO: check permission
+	if !viewdata.EditType.Valid() {
+		err := errors.New("update schedule: invalid type")
+		log.Error(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
+		return err
+	}
+	if err := s.Delete(ctx, op, viewdata.ID, viewdata.EditType); err != nil {
+		log.Error(ctx, "update schedule: delete failed",
+			log.Err(err),
+			log.String("id", viewdata.ID),
+			log.String("edit_type", string(viewdata.EditType)),
+		)
+		return err
+	}
+	if _, err := s.Add(ctx, op, &viewdata.ScheduleAddView); err != nil {
+		log.Error(ctx, "update schedule: delete failed",
+			log.Err(err),
+			log.Any("schedule_add_view", viewdata.ScheduleAddView),
+		)
+		return err
+	}
+	return nil
 }
 
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {

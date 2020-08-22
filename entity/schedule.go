@@ -259,6 +259,7 @@ type ScheduleAddView struct {
 	Description  string        `json:"description"`
 	AttachmentID string        `json:"attachment_id"`
 	Version      int64         `json:"version"`
+	RepeatID     string        `json:"repeat_id"`
 	Repeat       RepeatOptions `json:"repeat"`
 }
 
@@ -282,14 +283,17 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		Repeat:       s.Repeat,
 		CreatedAt:    time.Now().Unix(),
 		UpdatedAt:    0,
-		RepeatID:     utils.NewID(),
+		RepeatID:     s.RepeatID,
+	}
+	if schedule.RepeatID == "" {
+		schedule.RepeatID = utils.NewID()
 	}
 	return schedule
 }
 
 type ScheduleUpdateView struct {
 	ID       string           `json:"id"`
-	editType ScheduleEditType `json:"edit_type"`
+	EditType ScheduleEditType `json:"edit_type"`
 
 	ScheduleAddView
 }
