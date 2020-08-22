@@ -2,9 +2,11 @@ package dynamodbhelper
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"reflect"
+	"strings"
 )
 
 func GetUpdateBuilder(param interface{}) (expression.UpdateBuilder, error) {
@@ -35,27 +37,56 @@ func GetUpdateBuilder(param interface{}) (expression.UpdateBuilder, error) {
 }
 
 type Condition struct {
-	Pager utils.Pager
+	Pager Pager
 
-	PrimaryKey KeyValue
-	SortKey    KeyValue
-	IndexName  string
+	PrimaryKey  KeyValue
+	SortKey     KeyValue
+	CompareType CompareType
+	IndexName   string
 }
 
-func (s Condition) GetKeyConditionBuilder(buildType string) expression.KeyConditionBuilder {
-	switch buildType {
-	case BuilderKeyEqule:
-		primaryKey := expression.Key(s.PrimaryKey.Key).Equal(expression.Value(s.PrimaryKey.Value))
-		sortKey := expression.Key(s.SortKey.Key).Equal(expression.Value(s.SortKey.Value))
-		return expression.KeyAnd(primaryKey, sortKey)
-	case BuilderPKEqualSKLessThanEqual:
-		primaryKey := expression.Key(s.PrimaryKey.Key).Equal(expression.Value(s.PrimaryKey.Value))
-		sortKey := expression.Key(s.SortKey.Key).LessThanEqual(expression.Value(s.SortKey.Value))
-		return expression.KeyAnd(primaryKey, sortKey)
-	default:
-		primaryKey := expression.Key(s.PrimaryKey.Key).Equal(expression.Value(s.PrimaryKey.Value))
-		return primaryKey
+func (s Condition) KeyBuilder() expression.KeyConditionBuilder {
+	var (
+		primaryKey expression.KeyConditionBuilder
+		sortKey    expression.KeyConditionBuilder
+	)
+	primaryKey = expression.Key(s.PrimaryKey.Key).Equal(expression.Value(s.PrimaryKey.Value))
+
+	switch s.CompareType {
+	case SortKeyEqual:
+		sortKey = expression.Key(s.SortKey.Key).Equal(expression.Value(s.SortKey.Value))
+	case SortKeyGreaterThanEqual:
+		sortKey = expression.Key(s.SortKey.Key).GreaterThanEqual(expression.Value(s.SortKey.Value))
 	}
+
+	return primaryKey.And(sortKey)
+}
+
+func (s Condition) PagerBuilder() (lastKeyAttribute map[string]*dynamodb.AttributeValue, limit *int64) {
+	keys := strings.Split(s.Pager.LastKey, ",")
+	if len(keys) == 0 {
+		return nil, nil
+	}
+
+	var lastEvaluatedKey map[string]*dynamodb.AttributeValue
+	if len(keys) == 1 {
+		lastEvaluatedKey = map[string]*dynamodb.AttributeValue{
+			s.PrimaryKey.Key: &dynamodb.AttributeValue{
+				S: aws.String(keys[0]),
+			},
+		}
+	}
+	if len(keys) == 2 {
+		lastEvaluatedKey = map[string]*dynamodb.AttributeValue{
+			s.PrimaryKey.Key: &dynamodb.AttributeValue{
+				S: aws.String(keys[0]),
+			},
+			s.SortKey.Key: &dynamodb.AttributeValue{
+				S: aws.String(keys[1]),
+			},
+		}
+	}
+	return lastEvaluatedKey, aws.Int64(s.Pager.PageSize)
 }
 
 type KeyValue struct {
@@ -63,8 +94,15 @@ type KeyValue struct {
 	Value interface{}
 }
 
+type CompareType string
+
 const (
-	BuilderPKEqule                = "PKEqule"
-	BuilderKeyEqule               = "KeyEqule"
-	BuilderPKEqualSKLessThanEqual = "PKEqualSKLessThanEqual"
+	SortKeyNone             CompareType = "None"
+	SortKeyEqual            CompareType = "Equal"
+	SortKeyGreaterThanEqual CompareType = "GreaterThanEqual"
 )
+
+type Pager struct {
+	PageSize int64
+	LastKey  string
+}

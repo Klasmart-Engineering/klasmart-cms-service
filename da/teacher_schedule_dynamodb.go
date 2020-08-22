@@ -60,16 +60,18 @@ func (t *teacherScheduleDA) BatchDelete(ctx context.Context, id []string) error 
 }
 
 func (t *teacherScheduleDA) Page(ctx context.Context, condition dynamodbhelper.Condition) ([]*entity.TeacherSchedule, error) {
-	keyCond := condition.GetKeyConditionBuilder(dynamodbhelper.BuilderPKEqule)
+	keyCond := condition.KeyBuilder()
+	startKey, limit := condition.PagerBuilder()
 	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	input := &dynamodb.QueryInput{
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		//FilterExpression:          expr.Filter(),
-		KeyConditionExpression: expr.KeyCondition(),
-		TableName:              aws.String(constant.TableNameTeacherSchedule),
-		IndexName:              aws.String(condition.IndexName),
+		KeyConditionExpression:    expr.KeyCondition(),
+		ExclusiveStartKey:         startKey,
+		Limit:                     limit,
+		IndexName:                 aws.String(condition.IndexName),
+		TableName:                 aws.String(constant.TableNameTeacherSchedule),
 	}
 	result, err := dbclient.GetClient().Query(input)
 	if err != nil {
@@ -85,7 +87,6 @@ func (t *teacherScheduleDA) Page(ctx context.Context, condition dynamodbhelper.C
 	}
 
 	return data, nil
-	panic("implement me")
 }
 
 var (

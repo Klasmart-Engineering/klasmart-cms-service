@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+// Obsolete
 type Pager struct {
 	PageIndex int64
 	PageSize  int64

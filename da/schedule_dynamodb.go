@@ -72,7 +72,7 @@ func (s *scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule
 }
 
 func (s *scheduleDynamoDA) Query(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error) {
-	keyCond := condition.GetKeyConditionBuilder(dynamodbhelper.BuilderPKEqule)
+	keyCond := condition.KeyBuilder()
 	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	input := &dynamodb.QueryInput{
