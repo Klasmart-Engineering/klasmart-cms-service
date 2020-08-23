@@ -53,6 +53,7 @@ func (s Server) registeRoute() {
 
 	schedule := s.engine.Group("/v1/schedules")
 	{
-		schedule.DELETE("/:schedule_id", s.deleteSchedule)
+		schedule.PUT("/:id", s.updateSchedule)
+		schedule.DELETE("/:id", s.deleteSchedule)
 	}
 }

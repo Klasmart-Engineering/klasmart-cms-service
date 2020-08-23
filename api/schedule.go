@@ -9,16 +9,36 @@ import (
 	"net/http"
 )
 
-func (s *Server) operator(c *gin.Context) *entity.Operator {
-	// TODO: implement
-	return nil
+func (s *Server) updateSchedule(c *gin.Context) {
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	if id == "" {
+		err := errors.New("update schedule: require id")
+		log.Error(ctx, err.Error())
+		c.JSON(http.StatusBadRequest, err.Error())
+		return
+	}
+	data := entity.ScheduleUpdateView{}
+	if err := c.ShouldBind(data); err != nil {
+		log.Error(ctx, "update schedule: should bind body failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, err.Error())
+		return
+	}
+	data.ID = id
+	operator, _ := GetOperator(c)
+	if err := model.GetScheduleModel().Update(ctx, operator, &data); err != nil {
+		log.Error(ctx, "update schedule: update failed", log.Err(err))
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 }
 
 func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
-	id := c.Param("schedule_id")
+	id := c.Param("id")
 	if id == "" {
-		err := errors.New("delete schedule: require param schedule_id")
+		err := errors.New("delete schedule: require param id")
 		log.Error(ctx, err.Error())
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
@@ -28,7 +48,8 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		log.Error(ctx, err.Error(), log.String("repeat_edit_options", string(editType)))
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
-	if err := model.GetScheduleModel().Delete(ctx, s.operator(c), id, editType); err != nil {
+	operator, _ := GetOperator(c)
+	if err := model.GetScheduleModel().Delete(ctx, operator, id, editType); err != nil {
 		log.Error(ctx, "delete schedule: delete failed",
 			log.Err(err),
 			log.String("schedule_id", id),
@@ -36,5 +57,5 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		)
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
-	c.JSON(http.StatusOK, "ok")
+	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 }
