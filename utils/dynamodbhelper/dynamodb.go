@@ -3,6 +3,7 @@ package dynamodbhelper
 import (
 	"errors"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"reflect"
 )
 
@@ -40,7 +41,7 @@ type Condition struct {
 	SortKey    KeyValue
 
 	CompareType CompareType
-	IndexName   string
+	IndexName   constant.GSIName
 }
 
 func (s Condition) KeyBuilder() expression.KeyConditionBuilder {

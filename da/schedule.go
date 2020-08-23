@@ -3,7 +3,6 @@ package da
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 )
 
 type IScheduleDA interface {
@@ -13,9 +12,10 @@ type IScheduleDA interface {
 	Update(ctx context.Context, schedule *entity.Schedule) error
 	//BatchUpdate(ctx context.Context, schedule []*entity.Schedule) error
 
-	Query(ctx context.Context, condition *dynamodbhelper.Condition) ([]*entity.Schedule, error)
+	Query(ctx context.Context, condition *ScheduleCondition) ([]*entity.Schedule, error)
 	Page(ctx context.Context, condition *ScheduleCondition) (string, []*entity.Schedule, error)
 	GetByID(ctx context.Context, id string) (*entity.Schedule, error)
+	BatchGetByIDs(ctx context.Context, ids []string) ([]*entity.Schedule, error)
 
 	Delete(ctx context.Context, id string) error
 	BatchDelete(ctx context.Context, ids []string) error

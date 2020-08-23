@@ -61,8 +61,8 @@ func (t *teacherScheduleDA) BatchDelete(ctx context.Context, id []string) error 
 }
 
 func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleCondition) (string, []*entity.TeacherSchedule, error) {
-	keyCond := condition.KeyBuilder()
-	startKey, limit := condition.PageBuilder(constant.GSI_TeacherSchedule_TeacherAndStartAt)
+	keyCond := condition.QueryBuilder()
+	startKey, limit := condition.PageBuilder()
 
 	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
@@ -72,7 +72,7 @@ func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleC
 		KeyConditionExpression:    expr.KeyCondition(),
 		ExclusiveStartKey:         startKey,
 		Limit:                     limit,
-		IndexName:                 aws.String(condition.IndexName),
+		IndexName:                 aws.String(condition.IndexName.String()),
 		TableName:                 aws.String(constant.TableNameTeacherSchedule),
 	}
 
@@ -120,20 +120,43 @@ func GetTeacherScheduleDA() ITeacherScheduleDA {
 }
 
 type TeacherScheduleCondition struct {
+	TeacherID string
+	StartAt   int64
 	dynamodbhelper.Condition
 }
 
-func (s TeacherScheduleCondition) PageBuilder(indexType constant.GSIName) (map[string]*dynamodb.AttributeValue, *int64) {
-	limit := s.Pager.PageSize
+func (c *TeacherScheduleCondition) Init(gsiName constant.GSIName, compareType dynamodbhelper.CompareType) {
+	c.IndexName = gsiName
+	c.CompareType = compareType
+
+	switch c.IndexName {
+	case constant.GSI_TeacherSchedule_TeacherAndStartAt:
+		c.Condition.PrimaryKey = dynamodbhelper.KeyValue{
+			Key:   "teacher_id",
+			Value: c.TeacherID,
+		}
+		c.Condition.SortKey = dynamodbhelper.KeyValue{
+			Key:   "start_at",
+			Value: c.StartAt,
+		}
+	}
+}
+
+func (c *TeacherScheduleCondition) QueryBuilder() expression.KeyConditionBuilder {
+	return c.KeyBuilder()
+}
+
+func (c *TeacherScheduleCondition) PageBuilder() (map[string]*dynamodb.AttributeValue, *int64) {
+	limit := c.Condition.Pager.PageSize
 	if limit <= 0 {
 		limit = dynamodbhelper.DefaultPageSize
 	}
-	if strings.TrimSpace(s.Pager.LastKey) == "" {
+	if strings.TrimSpace(c.Condition.Pager.LastKey) == "" {
 		return nil, aws.Int64(limit)
 	}
 
 	var lastEvaluatedKey map[string]*dynamodb.AttributeValue
-	keys := strings.Split(s.Pager.LastKey, ",")
+	keys := strings.Split(c.Condition.Pager.LastKey, ",")
 	if len(keys) < 2 {
 		return nil, aws.Int64(limit)
 	}
@@ -146,16 +169,16 @@ func (s TeacherScheduleCondition) PageBuilder(indexType constant.GSIName) (map[s
 			S: aws.String(keys[1]),
 		},
 	}
-	switch indexType {
+	switch c.IndexName {
 	case constant.GSI_TeacherSchedule_TeacherAndStartAt:
 		if len(keys) >= 4 {
-			lastEvaluatedKey[s.PrimaryKey.Key] = &dynamodb.AttributeValue{
+			lastEvaluatedKey[c.Condition.PrimaryKey.Key] = &dynamodb.AttributeValue{
 				S: aws.String(keys[2]),
 			}
-			lastEvaluatedKey[s.SortKey.Key] = &dynamodb.AttributeValue{
+			lastEvaluatedKey[c.Condition.SortKey.Key] = &dynamodb.AttributeValue{
 				N: aws.String(keys[3]),
 			}
 		}
 	}
-	return lastEvaluatedKey, aws.Int64(s.Pager.PageSize)
+	return lastEvaluatedKey, aws.Int64(c.Condition.Pager.PageSize)
 }

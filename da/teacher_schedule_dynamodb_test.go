@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
@@ -82,6 +83,17 @@ func TestTeacherScheduleDA_Page(t *testing.T) {
 	for _, item := range result {
 		fmt.Println(item)
 	}
+}
+
+func TestTeacherScheduleCondition(t *testing.T) {
+	condition := TeacherScheduleCondition{
+		TeacherID: "111",
+		StartAt:   time.Now().Unix(),
+	}
+	condition.Init(constant.GSI_TeacherSchedule_TeacherAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
+	condition.SetQuery()
+	condition.SetPage("lastkey", 100)
+	fmt.Println(condition)
 }
 
 //t_1,s_2_5f40cd5896d5c5712b231260,t_1,1597563992

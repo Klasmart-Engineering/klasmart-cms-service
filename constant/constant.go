@@ -10,9 +10,14 @@ const (
 
 type GSIName string
 
+func (g GSIName) String() string {
+	return string(g)
+}
+
 const (
 	GSI_TeacherSchedule_TeacherAndStartAt GSIName = "teacher_id_and_start_at"
 	GSI_Schedule_OrgIDAndStartAt          GSIName = "org_id_and_start_at"
+	GSI_Schedule_RepeatIDAndStartAt       GSIName = "repeat_id_and_start_at"
 )
 
 var (

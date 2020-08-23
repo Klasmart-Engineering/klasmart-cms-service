@@ -299,17 +299,21 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	StartAt int64  `json:"start_at"`
+	EndAt   int64  `json:"end_at"`
 }
 
 type ScheduleDetailsView struct {
-	ID          string        `json:"id"`
-	Title       string        `json:"title"`
-	Class       ShortInfo     `json:"class"`
-	LessonPlan  ShortInfo     `json:"lesson_plan"`
-	Teachers    []ShortInfo   `json:"teachers"`
-	Subject     ShortInfo     `json:"subject"`
-	Program     ShortInfo     `json:"program"`
-	Attachment  ShortInfo     `json:"attachment"`
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	//Class       ShortInfo     `json:"class"`
+	//LessonPlan  ShortInfo     `json:"lesson_plan"`
+	//Teachers    []ShortInfo   `json:"teachers"`
+	//Subject     ShortInfo     `json:"subject"`
+	//Program     ShortInfo     `json:"program"`
+	//Attachment  ShortInfo     `json:"attachment"`
 	OrgID       string        `json:"org_id"`
 	StartAt     int64         `json:"start_at"`
 	EndAt       int64         `json:"end_at"`
@@ -320,10 +324,31 @@ type ScheduleDetailsView struct {
 	Version     int64         `json:"version"`
 	RepeatID    string        `json:"repeat_id"`
 	Repeat      RepeatOptions `json:"repeat"`
+	ScheduleBasic
+}
+
+type ScheduleSeachView struct {
+	ID      string `json:"id"`
+	StartAt int64  `json:"start_at"`
+	EndAt   int64  `json:"end_at"`
+	ScheduleBasic
+	//LessonPlan ShortInfo   `json:"lesson_plan"`
+	//Class      ShortInfo   `json:"class"`
+	//Subject    ShortInfo   `json:"subject"`
+	//Program    ShortInfo   `json:"program"`
+	//Teachers   []ShortInfo `json:"teachers"`
 }
 type ShortInfo struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type ScheduleBasic struct {
+	Class      ShortInfo   `json:"class"`
+	Subject    ShortInfo   `json:"subject"`
+	Program    ShortInfo   `json:"program"`
+	Teachers   []ShortInfo `json:"teachers"`
+	LessonPlan ShortInfo   `json:"lesson_plan"`
 }
 
 // ScheduleEditType include delete and edit
