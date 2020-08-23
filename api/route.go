@@ -19,6 +19,7 @@ func (s Server) registeRoute() {
 	s.engine.GET("/v1/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
 	})
+	v1 := s.engine.Group("/v1")
 
 	assets := s.engine.Group("/v1/assets")
 	{
@@ -51,12 +52,17 @@ func (s Server) registeRoute() {
 		tag.DELETE("/:id", s.delTag)
 	}
 
-	schedule := s.engine.Group("/v1/schedules")
-	{
-		schedule.PUT("/:id", s.updateSchedule)
-		schedule.DELETE("/:id", s.deleteSchedule)
-		schedule.POST("/", s.addSchedule)
-		schedule.GET("/:id", s.getScheduleByID)
-		schedule.GET("/", s.querySchedule)
-	}
+	//schedule := s.engine.Group("/v1/schedules")
+	//{
+	//	schedule.PUT("/:id", s.updateSchedule)
+	//	schedule.DELETE("/:id", s.deleteSchedule)
+	//	schedule.POST("/", s.addSchedule)
+	//	schedule.GET("/:id", s.getScheduleByID)
+	//}
+	v1.PUT("/schedules/:id", s.updateSchedule)
+	v1.DELETE("/schedules/:id", s.deleteSchedule)
+	v1.POST("/schedules", s.addSchedule)
+	v1.GET("/schedules/:id", s.getScheduleByID)
+	v1.GET("/schedules", s.querySchedule)
+	v1.GET("/schedules_home", s.queryHomeSchedule)
 }

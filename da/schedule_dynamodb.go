@@ -262,7 +262,7 @@ type ScheduleCondition struct {
 	StartAt   int64
 	RepeatID  string
 
-	FilterEndAt entity.NullInt
+	FilterEndAt entity.NullInt64
 
 	dynamodbhelper.Condition
 }
@@ -299,7 +299,7 @@ func (c *ScheduleCondition) QueryKeyBuilder() expression.KeyConditionBuilder {
 func (c *ScheduleCondition) QueryFilterBuilder() expression.ConditionBuilder {
 	var filt expression.ConditionBuilder
 	if c.FilterEndAt.Valid {
-		filt = expression.Name("end_at").LessThanEqual(expression.Value(c.FilterEndAt.Int))
+		filt = expression.Name("end_at").LessThanEqual(expression.Value(c.FilterEndAt.Int64))
 	}
 	return filt
 }

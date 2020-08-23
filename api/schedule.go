@@ -4,10 +4,16 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 )
 
 func (s *Server) updateSchedule(c *gin.Context) {
@@ -90,8 +96,94 @@ func (s *Server) addSchedule(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 func (s *Server) getScheduleByID(c *gin.Context) {
-
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	result, err := model.GetScheduleModel().GetByID(ctx, id)
+	if err == nil {
+		c.JSON(http.StatusOK, result)
+		return
+	}
+	if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, err.Error())
+		return
+	}
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
 func (s *Server) querySchedule(c *gin.Context) {
+	ctx := c.Request.Context()
+	teacherName := c.Query("teacher_name")
+	startTimeStr := c.Query("start_at")
+	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
+	if err != nil {
+		startTime = utils.BeginOfDayByTimeStamp(startTime).Unix()
+	}
+	if strings.TrimSpace(teacherName) == "" {
+		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	teacherService, err := external.GetTeacherServiceProvider()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	teachers, err := teacherService.Query(ctx, teacherName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	if len(teachers) <= 0 {
+		c.JSON(http.StatusNotFound, nil)
+		return
+	}
+	teacher := teachers[0]
+	lastKey, result, err := model.GetScheduleModel().PageByTeacherID(ctx, &da.ScheduleCondition{
+		TeacherID: teacher.ID,
+		StartAt:   startTime,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"last_key": lastKey,
+		"data":     result,
+	})
+}
 
+const (
+	ViewTypeDay      = "Day"
+	ViewTypeWorkweek = "Workweek"
+	ViewTypeWeek     = "Week"
+	ViewTypeMonth    = "Month"
+)
+
+func (s *Server) queryHomeSchedule(c *gin.Context) {
+	ctx := c.Request.Context()
+	viewType := c.Query("view_type")
+	timeAtStr := c.Query("time_at")
+	timeAt, err := strconv.ParseInt(timeAtStr, 10, 64)
+	if err != nil {
+		timeAt = time.Now().Unix()
+	}
+	timeUtil := utils.TimeUtil{TimeStamp: timeAt}
+	var (
+		start int64
+		end   int64
+	)
+	switch viewType {
+	case ViewTypeDay:
+		start = utils.BeginOfDayByTimeStamp(timeAt).Unix()
+		end = utils.EndOfDayByTimeStamp(timeAt).Unix()
+	case ViewTypeWorkweek:
+	case ViewTypeWeek:
+		start, end = timeUtil.FindWeekTimeRange()
+	case ViewTypeMonth:
+	default:
+
+	}
+	model.GetScheduleModel().Query(ctx, &da.ScheduleCondition{
+		OrgID:       "",
+		StartAt:     start,
+		FilterEndAt: entity.NullInt64{Valid: true, Int64: end},
+	})
 }

@@ -296,7 +296,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, id string) (*entity.Schedul
 	}
 	basicInfo, err := s.getBasicInfo(ctx, schedule)
 	if err != nil {
-		return nil, err
+		return nil, utils.ConvertDynamodbError(err)
 	}
 	result.ScheduleBasic = *basicInfo
 	return result, nil
