@@ -15,28 +15,25 @@ import (
 )
 
 type IScheduleModel interface {
-	Add(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error)
+	Add(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleAddView) error
 	Update(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleUpdateView) error
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error)
 	PageByTeacherID(ctx context.Context, condition *da.ScheduleCondition) (string, []*entity.ScheduleSeachView, error)
 	GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error)
-	//PageByTeacherID(ctx context.Context, teacherID string, startTime int64) (*entity.ScheduleSeachView, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
 }
 
-func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
+func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleAddView) error {
 	// TODO:
-	// 1.verify data
-
 	// convert to schedule
 	schedule := viewdata.Convert()
 	schedule.CreatedID = op.UserID
 	scheduleList, err := s.RepeatSchedule(ctx, schedule)
 	if err != nil {
-		return "", err
+		return err
 	}
 	teacherSchedules := make([]*entity.TeacherSchedule, len(scheduleList)*len(schedule.TeacherIDs))
 	index := 0
@@ -56,15 +53,15 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 	// add to schedules
 	err = da.GetScheduleDA().BatchInsert(ctx, scheduleList)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// add to teachers_schedules
 	err = da.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return "", nil
+	return nil
 }
 
 func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdata *entity.ScheduleUpdateView) error {
@@ -82,7 +79,7 @@ func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdat
 		)
 		return err
 	}
-	if _, err := s.Add(ctx, op, &viewdata.ScheduleAddView); err != nil {
+	if err := s.Add(ctx, op, &viewdata.ScheduleAddView); err != nil {
 		log.Error(ctx, "update schedule: delete failed",
 			log.Err(err),
 			log.Any("schedule_add_view", viewdata.ScheduleAddView),
@@ -205,21 +202,6 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 	return result, nil
 }
 
-//func (s *scheduleModel) PageByTeacherID(ctx context.Context, teacherID string, startTime int64) (*entity.ScheduleSeachView, error) {
-//	//da.GetTeacherScheduleDA().Page(ctx, da.TeacherScheduleCondition{
-//	//	Condition: dynamodbhelper.Condition{
-//	//		PrimaryKey: dynamodbhelper.KeyValue{
-//	//			Key:   "teacher_id",
-//	//			Value: teacherID,
-//	//		},
-//	//		SortKey: dynamodbhelper.KeyValue{
-//	//			Key:   "start_at",
-//	//			Value: startTime,
-//	//		},
-//	//	},
-//	//})
-//	return nil, nil
-//}
 func (s *scheduleModel) getBasicInfo(ctx context.Context, schedule *entity.Schedule) (*entity.ScheduleBasic, error) {
 	result := &entity.ScheduleBasic{}
 	if schedule.ClassID != "" {
@@ -291,6 +273,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedule *entity.Sched
 
 	return result, nil
 }
+
 func (s *scheduleModel) GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error) {
 	schedule, err := da.GetScheduleDA().GetByID(ctx, id)
 	if err != nil {

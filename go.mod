@@ -11,5 +11,6 @@ require (
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.3
 	go.mongodb.org/mongo-driver v1.3.5
+	gopkg.in/go-playground/validator.v9 v9.29.1
 	gopkg.in/yaml.v2 v2.2.4 // indirect
 )

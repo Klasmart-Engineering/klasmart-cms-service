@@ -55,5 +55,8 @@ func (s Server) registeRoute() {
 	{
 		schedule.PUT("/:id", s.updateSchedule)
 		schedule.DELETE("/:id", s.deleteSchedule)
+		schedule.POST("/", s.addSchedule)
+		schedule.GET("/:id", s.getScheduleByID)
+		schedule.GET("/", s.querySchedule)
 	}
 }
