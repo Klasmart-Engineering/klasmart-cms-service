@@ -191,7 +191,7 @@ func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, ids []string) error 
 		})
 	}
 	for i := 0; i < len(requestItems); i++ {
-		if (i+1)%25 == 0 {
+		if i != 0 && i%25 == 0 {
 			in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems[:25]}
 			if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
 				log.Error(ctx, "batch delete schedule: batch write item failed", log.Strings("ids", ids))
