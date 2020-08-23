@@ -11,6 +11,3 @@ type TeacherSchedule struct {
 func (TeacherSchedule) TableName() string {
 	return constant.TableNameTeacherSchedule
 }
-
-type DeleteTeacherScheduleViewData struct {
-}
