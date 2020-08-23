@@ -94,12 +94,22 @@ func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdat
 
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
 	// TODO: check permission
+	var deletingTeacherSchedulePKs [][2]string
 	switch editType {
 	case entity.ScheduleEditOnlyCurrent:
+		schedule, err := da.GetScheduleDA().GetByID(ctx, id)
+		if err != nil {
+			log.Error(ctx, "delete schedule: get schedule by id failed",
+				log.String("id", id))
+			return err
+		}
 		if err := da.GetScheduleDA().Delete(ctx, id); err != nil {
 			log.Error(ctx, "delete schedule: delete failed",
 				log.String("id", id), log.String("edit_type", string(editType)))
 			return err
+		}
+		for _, teacherID := range schedule.TeacherIDs {
+			deletingTeacherSchedulePKs = append(deletingTeacherSchedulePKs, [2]string{teacherID, id})
 		}
 	case entity.ScheduleEditWithFollowing:
 		item, err := da.GetScheduleDA().GetByID(ctx, id)
@@ -112,14 +122,17 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 			StartAt:  item.StartAt,
 		}
 		cond.Init(constant.GSI_Schedule_RepeatIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
-		items, err := da.GetScheduleDA().Query(ctx, &cond)
+		schedules, err := da.GetScheduleDA().Query(ctx, &cond)
 		if err != nil {
 			log.Error(ctx, "delete schedule: query failed", log.Any("cond", cond))
 			return err
 		}
 		var ids []string
-		for _, item := range items {
-			ids = append(ids, item.ID)
+		for _, schedule := range schedules {
+			ids = append(ids, schedule.ID)
+			for _, teacherID := range schedule.TeacherIDs {
+				deletingTeacherSchedulePKs = append(deletingTeacherSchedulePKs, [2]string{teacherID, id})
+			}
 		}
 		if err = da.GetScheduleDA().BatchDelete(ctx, ids); err != nil {
 			log.Error(ctx, "delete schedule: batch delete failed", log.Err(err))
@@ -129,6 +142,13 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		err := fmt.Errorf("delete schedule: invalid edit type")
 		log.Error(ctx, err.Error(), log.String("edit_type", string(editType)))
 		return err
+	}
+	if len(deletingTeacherSchedulePKs) > 0 {
+		if err := da.GetTeacherScheduleDA().BatchDelete(ctx, deletingTeacherSchedulePKs); err != nil {
+			log.Error(ctx, "delete schedule: batch delete teacher_schedule failed",
+				log.Any("pks", deletingTeacherSchedulePKs))
+			return err
+		}
 	}
 	return nil
 }

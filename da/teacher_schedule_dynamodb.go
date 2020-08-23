@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	dbclient "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -44,20 +45,58 @@ func (t *teacherScheduleDA) BatchAdd(ctx context.Context, datalist []*entity.Tea
 	return err
 }
 
-func (t *teacherScheduleDA) Update(ctx context.Context, data *entity.TeacherSchedule) error {
-	panic("implement me")
+func (t *teacherScheduleDA) Delete(ctx context.Context, teacherID string, scheduleID string) error {
+	in := dynamodb.DeleteItemInput{
+		TableName: aws.String(entity.TeacherSchedule{}.TableName()),
+		Key: map[string]*dynamodb.AttributeValue{
+			"teacher_id":  {S: aws.String(teacherID)},
+			"schedule_id": {S: aws.String(scheduleID)},
+		},
+	}
+	if _, err := dbclient.GetClient().DeleteItem(&in); err != nil {
+		log.Error(ctx, "delete teacher_schedule: delete item failed",
+			log.String("teacher_id", teacherID),
+			log.String("schedule_id", scheduleID),
+		)
+		return err
+	}
+	return nil
 }
 
-func (t *teacherScheduleDA) BatchUpdate(ctx context.Context, data []*entity.TeacherSchedule) error {
-	panic("implement me")
-}
-
-func (t *teacherScheduleDA) Delete(ctx context.Context, id string) error {
-	panic("implement me")
-}
-
-func (t *teacherScheduleDA) BatchDelete(ctx context.Context, id []string) error {
-	panic("implement me")
+func (t *teacherScheduleDA) BatchDelete(ctx context.Context, pks [][2]string) error {
+	tableName := entity.TeacherSchedule{}.TableName()
+	in := dynamodb.BatchWriteItemInput{
+		RequestItems: map[string][]*dynamodb.WriteRequest{},
+	}
+	var requestItems []*dynamodb.WriteRequest
+	for _, pk := range pks {
+		requestItems = append(requestItems, &dynamodb.WriteRequest{
+			PutRequest: &dynamodb.PutRequest{
+				Item: map[string]*dynamodb.AttributeValue{
+					"teacher_id":  {S: aws.String(pk[0])},
+					"schedule_id": {S: aws.String(pk[1])},
+				},
+			},
+		})
+	}
+	for i := 0; i < len(requestItems); i++ {
+		if i != 0 && i%25 == 0 {
+			in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems[:25]}
+			if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
+				log.Error(ctx, "batch delete teacher_schedule: batch write item failed", log.Any("pks", pks))
+				return err
+			}
+			requestItems = requestItems[25:]
+		}
+	}
+	if len(requestItems) > 0 {
+		in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems}
+		if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
+			log.Error(ctx, "batch delete teacher_schedule: batch write item failed", log.Any("pks", pks))
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleCondition) (string, []*entity.TeacherSchedule, error) {
