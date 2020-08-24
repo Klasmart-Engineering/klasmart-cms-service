@@ -2,6 +2,7 @@ package utils
 
 import (
 	"testing"
+	"time"
 )
 
 func TestSQLBuilder(t *testing.T) {
@@ -21,4 +22,14 @@ func TestSQLBuilder(t *testing.T) {
 	}
 	b.AppendTemplate(values.Join(","))
 	t.Logf("%+v", b.Join())
+}
+
+func TestSQLBatchInsert(t *testing.T) {
+	data := [][]interface{}{
+		{1, "Medivh", time.Now().Unix()},
+		{2, "Kwork", time.Now().Unix()},
+		{3, "Unknown", time.Now().Unix()},
+	}
+	template := SQLBatchInsert("user", []string{"name", "age", "created"}, data)
+	t.Logf("%+v", template)
 }

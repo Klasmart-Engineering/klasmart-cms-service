@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -43,4 +44,19 @@ func (b *SQLBuilder) Join(sep ...string) SQLTemplate {
 		values = append(values, item.Values...)
 	}
 	return SQLTemplate{Format: buffer.String(), Values: values}
+}
+
+func SQLBatchInsert(table string, columns []string, values [][]interface{}) SQLTemplate {
+	b := NewSQLBuilder().Append(fmt.Sprintf("insert %s(%s) values", table, strings.Join(columns, ",")))
+	valuesBuilder := NewSQLBuilder()
+	for _, item := range values {
+		var placeholders []string
+		for i := 0; i < len(columns); i++ {
+			placeholders = append(placeholders, "?")
+		}
+		format := fmt.Sprintf("(%s)", strings.Join(placeholders, ","))
+		valuesBuilder.Append(format, item...)
+	}
+	b.AppendTemplate(valuesBuilder.Join(","))
+	return b.Join()
 }
