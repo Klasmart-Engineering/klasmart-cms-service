@@ -115,6 +115,12 @@ func (s *Server) querySchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	teacherName := c.Query("teacher_name")
 	startTimeStr := c.Query("start_at")
+	pageSizeStr := c.Query("page_size")
+	pageSize, err := strconv.ParseInt(pageSizeStr, 10, 64)
+	if err != nil {
+		pageSize = constant.DefaultPageSize
+	}
+	lastKeyQuery := c.Query("last_key")
 	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
 	if err != nil {
 		startTime = utils.BeginOfDayByTimeStamp(startTime).Unix()
@@ -142,10 +148,15 @@ func (s *Server) querySchedule(c *gin.Context) {
 		return
 	}
 	teacher := teachers[0]
-	lastKey, result, err := model.GetScheduleModel().PageByTeacherID(ctx, &da.ScheduleCondition{
+	condition := &da.ScheduleCondition{
 		TeacherID: teacher.ID,
 		StartAt:   startTime,
-	})
+	}
+	condition.Pager.LastKey = lastKeyQuery
+	condition.Pager.PageSize = pageSize
+	log.Info(ctx, "querySchedule", log.Any("condition", condition))
+
+	lastKey, result, err := model.GetScheduleModel().PageByTeacherID(ctx, condition)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "querySchedule:error", log.Err(err))

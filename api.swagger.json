@@ -1849,9 +1849,9 @@
         ],
         "parameters": [
           {
-            "name": "teacher_id",
+            "name": "teacher_name",
             "in": "query",
-            "description": "Search schedules by teacher_id",
+            "description": "Search schedules by teacher_name",
             "schema": {
               "type": "string",
               "nullable": true
@@ -1970,6 +1970,84 @@
           },
           "409": {
             "description": "Conflict"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/schedules_home": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "query schedules",
+        "description": "query schedules",
+        "operationId": "queryschedules_home",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "view_type",
+            "in": "query",
+            "description": "Search schedules by view_type",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          },
+          {
+            "name": "time_at",
+            "in": "query",
+            "description": "Search schedules by time_at",
+            "schema": {
+              "type": "string",
+              "format": "string",
+              "nullable": true,
+              "default": ""
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "schedule list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ScheduleHome"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Server error"
@@ -2689,11 +2767,42 @@
           "lesson_plan": {
             "$ref": "#/components/schemas/CommonShort"
           },
+          "program": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
+          "class": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
           "teachers": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CommonShort"
             }
+          }
+        }
+      },
+      "ScheduleHome": {
+        "type": "object",
+        "description": "schedule home short info",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "schedule id"
+          },
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
           }
         }
       },
