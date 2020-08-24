@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"math/rand"
 	"testing"
 	"time"
 )
 
 func TestScheduleModel_Add(t *testing.T) {
-	id := utils.NewID()
+	id := "1"
 	start := time.Now().AddDate(0, 0, rand.Intn(10))
 	viewdata := &entity.ScheduleAddView{
-		Title:        fmt.Sprintf("%s_%s", id[0:4], "title"),
+		Title:        fmt.Sprintf("%s_%s", id, "title"),
 		ClassID:      "Class-1",
 		LessonPlanID: fmt.Sprintf("%d", rand.Intn(10)),
 		TeacherIDs:   []string{"Teacher-1", "Teacher-2"},
@@ -38,4 +37,8 @@ func TestScheduleModel_Add(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func TestScheduleModel_GetByID(t *testing.T) {
+
 }
