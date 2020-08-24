@@ -1,9 +1,10 @@
-package da
+package dyschedule
 
 import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/schedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
@@ -49,7 +50,7 @@ func TestScheduleDynamoDA_Insert(t *testing.T) {
 		}
 		arr = append(arr, s)
 	}
-	err := GetScheduleDA().BatchInsert(context.Background(), arr)
+	err := schedule.GetScheduleDA().BatchInsert(context.Background(), arr)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -67,7 +68,7 @@ func TestScheduleDynamoDA_Query(t *testing.T) {
 		StartAt: time.Now().Unix(),
 	}
 	condition.Init(constant.GSI_Schedule_OrgIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
-	data, err := GetScheduleDA().Query(context.Background(), condition)
+	data, err := schedule.GetScheduleDA().Query(context.Background(), condition)
 	if err != nil {
 		fmt.Println(err)
 		return

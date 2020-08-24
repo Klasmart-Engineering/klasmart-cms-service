@@ -5,10 +5,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/dyschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	dymodel "gitlab.badanamu.com.cn/calmisland/kidsloop2/model/dyschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"net/http"
@@ -34,7 +34,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 	data.ID = id
 	operator, _ := GetOperator(c)
-	id, err := model.GetScheduleModel().Update(ctx, operator, &data)
+	id, err := dymodel.GetScheduleModel().Update(ctx, operator, &data)
 	if err != nil {
 		log.Error(ctx, "update schedule: update failed", log.Err(err))
 		switch {
@@ -65,7 +65,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
 	operator, _ := GetOperator(c)
-	if err := model.GetScheduleModel().Delete(ctx, operator, id, editType); err != nil {
+	if err := dymodel.GetScheduleModel().Delete(ctx, operator, id, editType); err != nil {
 		log.Error(ctx, "delete schedule: delete failed",
 			log.Err(err),
 			log.String("schedule_id", id),
@@ -102,7 +102,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 
-	id, err := model.GetScheduleModel().Add(ctx, op, data)
+	id, err := dymodel.GetScheduleModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "add schedule error", log.Err(err))
@@ -116,7 +116,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	log.Info(ctx, "getScheduleByID", log.String("scheduleID", id))
-	result, err := model.GetScheduleModel().GetByID(ctx, id)
+	result, err := dymodel.GetScheduleModel().GetByID(ctx, id)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
@@ -165,7 +165,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 		return
 	}
 	teacher := teachers[0]
-	condition := &da.ScheduleCondition{
+	condition := &dyschedule.ScheduleCondition{
 		TeacherID: teacher.ID,
 		StartAt:   startTime,
 	}
@@ -173,7 +173,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	condition.Pager.PageSize = pageSize
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
-	lastKey, result, err := model.GetScheduleModel().PageByTeacherID(ctx, condition)
+	lastKey, result, err := dymodel.GetScheduleModel().PageByTeacherID(ctx, condition)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "querySchedule:error", log.Err(err))
@@ -219,13 +219,13 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		return
 	}
-	condition := &da.ScheduleCondition{
+	condition := &dyschedule.ScheduleCondition{
 		OrgID:       "1",
 		StartAt:     start,
 		FilterEndAt: entity.NullInt64{Valid: true, Int64: end},
 	}
 	condition.Init(constant.GSI_Schedule_OrgIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
-	result, err := model.GetScheduleModel().Query(ctx, condition)
+	result, err := dymodel.GetScheduleModel().Query(ctx, condition)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return

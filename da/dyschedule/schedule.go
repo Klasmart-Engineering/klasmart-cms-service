@@ -1,4 +1,4 @@
-package da
+package dyschedule
 
 import (
 	"context"
