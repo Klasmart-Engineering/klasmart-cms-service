@@ -80,7 +80,7 @@ func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdat
 		} else {
 			log.Error(ctx, "update schedule: get schedule by id failed", log.String("id", viewdata.ID))
 		}
-		return err
+		return "", err
 	}
 	if err := s.Delete(ctx, op, viewdata.ID, viewdata.EditType); err != nil {
 		log.Error(ctx, "update schedule: delete failed",
@@ -106,7 +106,7 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 	schedule, err := da.GetScheduleDA().GetByID(ctx, id)
 	if err != nil {
 		if err == constant.ErrRecordNotFound {
-			log.Warn(ctx, "delete schedule: record not found")
+			log.Warn(ctx, "delete schedule: record not found", log.String("id", id))
 			return nil
 		}
 		log.Error(ctx, "delete schedule: get schedule by id failed",
