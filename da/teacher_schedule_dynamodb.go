@@ -100,7 +100,8 @@ func (t *teacherScheduleDA) BatchDelete(ctx context.Context, pks [][2]string) er
 			},
 		})
 	}
-	for i := 0; i < len(requestItems); i++ {
+	length := len(requestItems)
+	for i := 0; i < length; i++ {
 		if i != 0 && i%25 == 0 {
 			in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems[:25]}
 			if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
