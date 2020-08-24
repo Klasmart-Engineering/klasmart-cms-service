@@ -2551,26 +2551,7 @@
           }
         ]
       },
-      "PublishContentRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/PublishContentRequest"
-          },
-          {
-            "type": "object",
-            "description": "Company",
-            "properties": {
-              "scope": {
-                "type": "string",
-                "description": "content published scope list",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
-              }
-            }
-          }
-        ]
-      },
+     
       "RejectReasonRequest": {
         "allOf": [
           {
