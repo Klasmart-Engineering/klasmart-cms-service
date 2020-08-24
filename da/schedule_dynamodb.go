@@ -75,9 +75,18 @@ func (s *scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule
 
 func (s *scheduleDynamoDA) Query(ctx context.Context, condition *ScheduleCondition) ([]*entity.Schedule, error) {
 	keyCond := condition.QueryKeyBuilder()
-	filter := condition.QueryFilterBuilder()
-	//proj := expression.NamesList(expression.Name("title"), expression.Name("class_id"), expression.Name("teacher_ids"))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).WithFilter(filter).Build()
+	filter, ok := condition.QueryFilterBuilder()
+	var exprBuilder expression.Builder
+	if ok {
+		exprBuilder = expression.NewBuilder().WithKeyCondition(keyCond).WithFilter(filter)
+	} else {
+		exprBuilder = expression.NewBuilder().WithKeyCondition(keyCond)
+	}
+	expr, err := exprBuilder.Build()
+	if err != nil {
+		log.Error(ctx, "expression build error", log.Err(err))
+		return nil, err
+	}
 	input := &dynamodb.QueryInput{
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -297,12 +306,14 @@ func (c *ScheduleCondition) Init(gsiName constant.GSIName, compareType dynamodbh
 func (c *ScheduleCondition) QueryKeyBuilder() expression.KeyConditionBuilder {
 	return c.KeyBuilder()
 }
-func (c *ScheduleCondition) QueryFilterBuilder() expression.ConditionBuilder {
+func (c *ScheduleCondition) QueryFilterBuilder() (expression.ConditionBuilder, bool) {
 	var filt expression.ConditionBuilder
+	flag := false
 	if c.FilterEndAt.Valid {
 		filt = expression.Name("end_at").LessThanEqual(expression.Value(c.FilterEndAt.Int64))
+		flag = true
 	}
-	return filt
+	return filt, flag
 }
 
 //func (s ScheduleCondition) KeyBuilder(indexType constant.GSIName) expression.KeyConditionBuilder {

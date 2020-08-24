@@ -18,13 +18,14 @@ const (
 	GSI_TeacherSchedule_TeacherAndStartAt GSIName = "teacher_id_and_start_at"
 	GSI_Schedule_OrgIDAndStartAt          GSIName = "org_id_and_start_at"
 	GSI_Schedule_RepeatIDAndStartAt       GSIName = "repeat_id_and_start_at"
+	GSI_Schedule_OrgID                    GSIName = "org_id"
 )
 
 var (
 	ErrRecordNotFound  = errors.New("record not found")
 	ErrDuplicateRecord = errors.New("duplicate record")
 	ErrExceededLimit   = errors.New("exceeded limit")
-	ErrUnauthorized    = errors.New("unauthorized")
+	ErrUnAuthorized    = errors.New("unauthorized")
 	//ErrUnknown = errors.New("unknown error")
 )
 

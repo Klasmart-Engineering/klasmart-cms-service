@@ -1,20 +1,22 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func ExtractSession(c *gin.Context) (string, error) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
-		err := constant.ErrUnauthorized
-		log.Error(c.Request.Context(), "ExtractSession", log.Err(err))
-		return "", err
+		log.Error(c.Request.Context(), "ExtractSession", log.Err(errors.New("no session")))
+		// TODO: for mock
+		//return "", constant.ErrUnAuthorized
+		return "", nil
 	}
 
 	prefix := "Bearer "
@@ -36,7 +38,8 @@ func MustLogin(c *gin.Context) {
 	// TODO: get user info from token
 	log.Info(c.Request.Context(), "MustLogin", log.String("token", token))
 	op := &entity.Operator{
-		UserID: "No.1",
+		UserID: "1",
+		OrgID:  "1",
 		Role:   "admin",
 	}
 	c.Set(Operator, op)
