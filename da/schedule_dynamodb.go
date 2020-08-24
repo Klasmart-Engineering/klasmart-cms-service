@@ -202,7 +202,8 @@ func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, ids []string) error 
 			DeleteRequest: &dynamodb.DeleteRequest{Key: map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}}},
 		})
 	}
-	for i := 0; i < len(requestItems); i++ {
+	length := len(requestItems)
+	for i := 0; i < length; i++ {
 		if i != 0 && i%25 == 0 {
 			in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems[:25]}
 			if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
