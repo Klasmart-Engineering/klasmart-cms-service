@@ -37,7 +37,12 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	id, err := model.GetScheduleModel().Update(ctx, operator, &data)
 	if err != nil {
 		log.Error(ctx, "update schedule: update failed", log.Err(err))
-		c.JSON(http.StatusInternalServerError, err.Error())
+		switch {
+		case entity.IsErrInvalidArgs(err):
+			c.JSON(http.StatusBadRequest, err.Error())
+		default:
+			c.JSON(http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -66,7 +71,13 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 			log.String("schedule_id", id),
 			log.String("repeat_edit_options", string(editType)),
 		)
-		c.JSON(http.StatusInternalServerError, err.Error())
+		switch {
+		case entity.IsErrInvalidArgs(err):
+			c.JSON(http.StatusBadRequest, err.Error())
+		default:
+			c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return
 	}
 	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 }
