@@ -28,13 +28,11 @@ type scheduleModel struct {
 }
 
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
-	// TODO:
-	// convert to schedule
 	schedule := viewdata.Convert()
 	schedule.CreatedID = op.UserID
 	scheduleList, err := s.RepeatSchedule(ctx, schedule)
 	if err != nil {
-		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule))
+		log.Error(ctx, "daschedule repeat error", log.Err(err), log.Any("daschedule", schedule))
 		return "", err
 	}
 	teacherSchedules := make([]*entity.TeacherSchedule, len(scheduleList)*len(schedule.TeacherIDs))
@@ -52,41 +50,41 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 		}
 	}
 	// add to schedules
-	err = dyschedule.GetScheduleDA().BatchInsert(ctx, scheduleList)
-	if err != nil {
-		log.Error(ctx, "schedule batchInsert error", log.Err(err))
-		return "", err
-	}
+	//err = daschedule.GetScheduleDA().Insert()
+	//if err != nil {
+	//	log.Error(ctx, "daschedule batchInsert error", log.Err(err))
+	//	return "", err
+	//}
 
 	// add to teachers_schedules
 	err = dyschedule.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
 	if err != nil {
-		log.Error(ctx, "schedule batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
+		log.Error(ctx, "daschedule batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
 		return "", err
 	}
 	if len(scheduleList) > 0 {
 		return scheduleList[0].ID, nil
 	}
-	return "", errors.New("add schedule error")
+	return "", errors.New("add daschedule error")
 }
 
 func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error) {
 	// TODO: check permission
 	if !viewdata.EditType.Valid() {
-		err := errors.New("update schedule: invalid type")
+		err := errors.New("update daschedule: invalid type")
 		log.Error(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
 		return "", err
 	}
 	if _, err := dyschedule.GetScheduleDA().GetByID(ctx, viewdata.ID); err != nil {
 		if err == constant.ErrRecordNotFound {
-			log.Error(ctx, "update schedule: record not found", log.Err(err))
+			log.Error(ctx, "update daschedule: record not found", log.Err(err))
 		} else {
-			log.Error(ctx, "update schedule: get schedule by id failed", log.String("id", viewdata.ID))
+			log.Error(ctx, "update daschedule: get daschedule by id failed", log.String("id", viewdata.ID))
 		}
 		return "", err
 	}
 	if err := s.Delete(ctx, tx, op, viewdata.ID, viewdata.EditType); err != nil {
-		log.Error(ctx, "update schedule: delete failed",
+		log.Error(ctx, "update daschedule: delete failed",
 			log.Err(err),
 			log.String("id", viewdata.ID),
 			log.String("edit_type", string(viewdata.EditType)),
@@ -95,7 +93,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, op *entit
 	}
 	id, err := s.Add(ctx, tx, op, &viewdata.ScheduleAddView)
 	if err != nil {
-		log.Error(ctx, "update schedule: delete failed",
+		log.Error(ctx, "update daschedule: delete failed",
 			log.Err(err),
 			log.Any("schedule_add_view", viewdata.ScheduleAddView),
 		)
@@ -109,10 +107,10 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 	schedule, err := dyschedule.GetScheduleDA().GetByID(ctx, id)
 	if err != nil {
 		if err == constant.ErrRecordNotFound {
-			log.Warn(ctx, "delete schedule: record not found", log.String("id", id))
+			log.Warn(ctx, "delete daschedule: record not found", log.String("id", id))
 			return nil
 		}
-		log.Error(ctx, "delete schedule: get schedule by id failed",
+		log.Error(ctx, "delete daschedule: get daschedule by id failed",
 			log.String("id", id))
 		return err
 	}
@@ -120,7 +118,7 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 	switch editType {
 	case entity.ScheduleEditOnlyCurrent:
 		if err := dyschedule.GetScheduleDA().Delete(ctx, id); err != nil {
-			log.Error(ctx, "delete schedule: delete failed",
+			log.Error(ctx, "delete daschedule: delete failed",
 				log.String("id", id), log.String("edit_type", string(editType)))
 			return err
 		}
@@ -135,7 +133,7 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 		cond.Init(constant.GSI_Schedule_RepeatIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
 		schedules, err := dyschedule.GetScheduleDA().Query(ctx, &cond)
 		if err != nil {
-			log.Error(ctx, "delete schedule: query failed", log.Any("cond", cond))
+			log.Error(ctx, "delete daschedule: query failed", log.Any("cond", cond))
 			return err
 		}
 		var ids []string
@@ -146,17 +144,17 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 			}
 		}
 		if err = dyschedule.GetScheduleDA().BatchDelete(ctx, ids); err != nil {
-			log.Error(ctx, "delete schedule: batch delete failed", log.Err(err))
+			log.Error(ctx, "delete daschedule: batch delete failed", log.Err(err))
 			return err
 		}
 	default:
-		err := fmt.Errorf("delete schedule: invalid edit type")
+		err := fmt.Errorf("delete daschedule: invalid edit type")
 		log.Error(ctx, err.Error(), log.String("edit_type", string(editType)))
 		return err
 	}
 	if len(deletingTeacherSchedulePKs) > 0 {
 		if err := dyschedule.GetTeacherScheduleDA().BatchDelete(ctx, deletingTeacherSchedulePKs); err != nil {
-			log.Error(ctx, "delete schedule: batch delete teacher_schedule failed",
+			log.Error(ctx, "delete daschedule: batch delete teacher_schedule failed",
 				log.Any("pks", deletingTeacherSchedulePKs))
 			return err
 		}
@@ -178,7 +176,7 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, 
 	}
 	scheduleList, err := dyschedule.GetScheduleDA().BatchGetByIDs(ctx, ids)
 	if err != nil {
-		log.Error(ctx, "PageByTeacherID:batch get by schedule ids error", log.Err(err), log.Strings("ids", ids))
+		log.Error(ctx, "PageByTeacherID:batch get by daschedule ids error", log.Err(err), log.Strings("ids", ids))
 		return "", nil, err
 	}
 
@@ -204,7 +202,7 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, 
 func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition *dyschedule.ScheduleCondition) ([]*entity.ScheduleListView, error) {
 	scheduleList, err := dyschedule.GetScheduleDA().Query(ctx, condition)
 	if err != nil {
-		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "daschedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	result := make([]*entity.ScheduleListView, len(scheduleList))
@@ -224,12 +222,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	if schedule.ClassID != "" {
 		classService, err := external.GetClassServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		classInfos, err := classService.BatchGet(ctx, []string{schedule.ClassID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		if len(classInfos) > 0 {
@@ -243,12 +241,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		result.Teachers = make([]entity.ShortInfo, len(schedule.TeacherIDs))
 		teacherService, err := external.GetTeacherServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		teacherInfos, err := teacherService.BatchGet(ctx, schedule.TeacherIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		for i, item := range teacherInfos {
@@ -261,12 +259,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	if schedule.SubjectID != "" {
 		subjectService, err := external.GetSubjectServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		subjectInfos, err := subjectService.BatchGet(ctx, []string{schedule.SubjectID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		if len(subjectInfos) > 0 {
@@ -279,12 +277,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	if schedule.ProgramID != "" {
 		programService, err := external.GetProgramServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		programInfos, err := programService.BatchGet(ctx, []string{schedule.ProgramID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
 			return nil, err
 		}
 		if len(programInfos) > 0 {

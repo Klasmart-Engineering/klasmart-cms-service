@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/schedule"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/daschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
@@ -39,7 +39,7 @@ func TestScheduleDynamoDA_Insert(t *testing.T) {
 			ClassType:    "ClassType",
 			DueAt:        0,
 			Description:  "深刻理解的连接方式烦死了烦死了副书记",
-			AttachmentID: fmt.Sprintf("%d", rand.Intn(100)),
+			Attachment:   fmt.Sprintf("%d", rand.Intn(100)),
 			Version:      0,
 			Repeat:       entity.RepeatOptions{},
 			CreatedID:    "1",
@@ -50,7 +50,7 @@ func TestScheduleDynamoDA_Insert(t *testing.T) {
 		}
 		arr = append(arr, s)
 	}
-	err := schedule.GetScheduleDA().BatchInsert(context.Background(), arr)
+	err := daschedule.GetScheduleDA().BatchInsert(context.Background(), arr)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -68,7 +68,7 @@ func TestScheduleDynamoDA_Query(t *testing.T) {
 		StartAt: time.Now().Unix(),
 	}
 	condition.Init(constant.GSI_Schedule_OrgIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
-	data, err := schedule.GetScheduleDA().Query(context.Background(), condition)
+	data, err := daschedule.GetScheduleDA().Query(context.Background(), condition)
 	if err != nil {
 		fmt.Println(err)
 		return

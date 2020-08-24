@@ -21,14 +21,14 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	if id == "" {
-		err := errors.New("update schedule: require id")
+		err := errors.New("update daschedule: require id")
 		log.Error(ctx, err.Error())
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 	data := entity.ScheduleUpdateView{}
 	if err := c.ShouldBind(data); err != nil {
-		log.Error(ctx, "update schedule: should bind body failed", log.Err(err))
+		log.Error(ctx, "update daschedule: should bind body failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -36,7 +36,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	operator, _ := GetOperator(c)
 	id, err := dymodel.GetScheduleModel().Update(ctx, operator, &data)
 	if err != nil {
-		log.Error(ctx, "update schedule: update failed", log.Err(err))
+		log.Error(ctx, "update daschedule: update failed", log.Err(err))
 		switch {
 		case entity.IsErrInvalidArgs(err):
 			c.JSON(http.StatusBadRequest, err.Error())
@@ -54,19 +54,19 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	if id == "" {
-		err := errors.New("delete schedule: require param id")
+		err := errors.New("delete daschedule: require param id")
 		log.Error(ctx, err.Error())
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
 	editType := entity.ScheduleEditType(c.Query("repeat_edit_options"))
 	if !editType.Valid() {
-		err := errors.New("delete schedule: invalid edit type")
+		err := errors.New("delete daschedule: invalid edit type")
 		log.Error(ctx, err.Error(), log.String("repeat_edit_options", string(editType)))
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
 	operator, _ := GetOperator(c)
 	if err := dymodel.GetScheduleModel().Delete(ctx, operator, id, editType); err != nil {
-		log.Error(ctx, "delete schedule: delete failed",
+		log.Error(ctx, "delete daschedule: delete failed",
 			log.Err(err),
 			log.String("schedule_id", id),
 			log.String("repeat_edit_options", string(editType)),
@@ -92,20 +92,20 @@ func (s *Server) addSchedule(c *gin.Context) {
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
-		log.Info(ctx, "add schedule: should bind body failed", log.Err(err))
+		log.Info(ctx, "add daschedule: should bind body failed", log.Err(err))
 		return
 	}
 
 	if err := utils.GetValidator().Struct(data); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
-		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
+		log.Info(ctx, "add daschedule: verify data failed", log.Err(err))
 		return
 	}
 
 	id, err := dymodel.GetScheduleModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "add schedule error", log.Err(err))
+		log.Error(ctx, "add daschedule error", log.Err(err))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -126,7 +126,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusInternalServerError, err.Error())
-	log.Error(ctx, "get schedule by id error", log.Err(err))
+	log.Error(ctx, "get daschedule by id error", log.Err(err))
 }
 func (s *Server) querySchedule(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -9,7 +9,7 @@ import (
 func TestGetUpdateBuilder(t *testing.T) {
 	s := entity.Schedule{
 		ID:           "1001",
-		Title:        "schedule",
+		Title:        "daschedule",
 		ClassID:      "1",
 		LessonPlanID: "2",
 		TeacherIDs:   []string{"1", "2"},
@@ -22,7 +22,7 @@ func TestGetUpdateBuilder(t *testing.T) {
 		ClassType:    "",
 		DueAt:        0,
 		Description:  "",
-		AttachmentID: "",
+		Attachment:   "",
 		Version:      0,
 		Repeat:       entity.RepeatOptions{},
 		CreatedID:    "2",

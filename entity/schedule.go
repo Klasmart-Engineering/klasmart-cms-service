@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"encoding/json"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"time"
@@ -195,33 +196,31 @@ type RepeatEnd struct {
 }
 
 type Schedule struct {
-	ID           string   `dynamodbav:"id"`
-	Title        string   `dynamodbav:"title"`
-	ClassID      string   `dynamodbav:"class_id"`
-	LessonPlanID string   `dynamodbav:"lesson_plan_id"`
-	TeacherIDs   []string `dynamodbav:"teacher_ids"`
-	OrgID        string   `dynamodbav:"org_id"`
-	StartAt      int64    `dynamodbav:"start_at"`
-	EndAt        int64    `dynamodbav:"end_at"`
-	ModeType     string   `dynamodbav:"mode_type"`
-	SubjectID    string   `dynamodbav:"subject_id"`
-	ProgramID    string   `dynamodbav:"program_id"`
-	ClassType    string   `dynamodbav:"class_type"`
-	DueAt        int64    `dynamodbav:"due_at"`
-	Description  string   `dynamodbav:"description"`
-	AttachmentID string   `dynamodbav:"attachment_id"`
-	Version      int64    `dynamodbav:"version"`
-
-	RepeatID string        `dynamodbav:"repeat_id"`
-	Repeat   RepeatOptions `dynamodbav:"repeat"`
-
-	CreatedID string `dynamodbav:"created_id"`
-	UpdatedID string `dynamodbav:"updated_id"`
-	//DeletedID string `dynamodbav:"deleted_id"`
-
-	CreatedAt int64 `dynamodbav:"created_at"`
-	UpdatedAt int64 `dynamodbav:"updated_at"`
-	//DeletedAt int64 `dynamodbav:"deleted_at"`
+	ID           string        `gorm:"column:id;PRIMARY_KEY" dynamodbav:"id"`
+	Title        string        `gorm:"column:title;type:varchar(100)" dynamodbav:"title"`
+	ClassID      string        `gorm:"column:class_id;type:varchar(100)" dynamodbav:"class_id"`
+	LessonPlanID string        `gorm:"column:lesson_plan_id;type:varchar(100)" dynamodbav:"lesson_plan_id"`
+	TeacherIDs   []string      `dynamodbav:"teacher_ids"`
+	OrgID        string        `gorm:"column:org_id;type:varchar(100)" dynamodbav:"org_id"`
+	StartAt      int64         `gorm:"column:start_at;type:bigint" dynamodbav:"start_at"`
+	EndAt        int64         `gorm:"column:end_at;type:bigint" dynamodbav:"end_at"`
+	ModeType     string        `gorm:"column:mode_type;type:varchar(100)" dynamodbav:"mode_type"`
+	SubjectID    string        `gorm:"column:subject_id;type:varchar(100)" dynamodbav:"subject_id"`
+	ProgramID    string        `gorm:"column:program_id;type:varchar(100)" dynamodbav:"program_id"`
+	ClassType    string        `gorm:"column:class_type;type:varchar(100)" dynamodbav:"class_type"`
+	DueAt        int64         `gorm:"column:due_at;type:bigint" dynamodbav:"due_at"`
+	Description  string        `gorm:"column:description;type:varchar(500)" dynamodbav:"description"`
+	Attachment   string        `gorm:"column:attachment_id;type:varchar(500)" dynamodbav:"attachment_id"`
+	Version      int64         `gorm:"column:version;type:bigint" dynamodbav:"version"`
+	RepeatID     string        `gorm:"column:repeat_id;type:varchar(100)" dynamodbav:"repeat_id"`
+	Repeat       RepeatOptions `dynamodbav:"repeat"`
+	RepeatJson   string        `gorm:"column:repeat;type:varchar(500)" dynamodbav:"repeat"`
+	CreatedID    string        `gorm:"column:created_id;type:varchar(100)" dynamodbav:"created_id"`
+	UpdatedID    string        `gorm:"column:updated_id;type:varchar(100)" dynamodbav:"updated_id"`
+	DeletedID    string        `gorm:"column:position;type:varchar(100)"`
+	CreatedAt    int64         `gorm:"column:created_at;type:bigint" dynamodbav:"created_at"`
+	UpdatedAt    int64         `gorm:"column:updated_at;type:bigint" dynamodbav:"updated_at"`
+	DeletedAt    int64         `gorm:"column:deleted_at;type:bigint"`
 }
 
 func (Schedule) TableName() string {
@@ -264,6 +263,8 @@ type ScheduleAddView struct {
 }
 
 func (s *ScheduleAddView) Convert() *Schedule {
+	repeatJson, _ := json.Marshal(s.Repeat)
+
 	schedule := &Schedule{
 		Title:        s.Title,
 		ClassID:      s.ClassID,
@@ -278,9 +279,10 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		ClassType:    s.ClassType,
 		DueAt:        s.DueAt,
 		Description:  s.Description,
-		AttachmentID: s.AttachmentID,
+		Attachment:   s.AttachmentID,
 		Version:      0,
 		Repeat:       s.Repeat,
+		RepeatJson:   string(repeatJson),
 		CreatedAt:    time.Now().Unix(),
 		UpdatedAt:    0,
 		RepeatID:     s.RepeatID,

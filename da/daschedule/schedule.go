@@ -1,4 +1,4 @@
-package schedule
+package daschedule
 
 import (
 	"database/sql"

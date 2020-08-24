@@ -48,7 +48,7 @@ func (s *scheduleDynamoDA) BatchInsert(ctx context.Context, schedules []*entity.
 			}
 			_, err := dbclient.GetClient().BatchWriteItem(input)
 			if err != nil {
-				log.Error(ctx, "batch add schedule: batch write item failed", log.Any("scheduleItems", items))
+				log.Error(ctx, "batch add daschedule: batch write item failed", log.Any("scheduleItems", items))
 				return err
 			}
 			itemsWriteRequest = itemsWriteRequest[25:]
@@ -61,7 +61,7 @@ func (s *scheduleDynamoDA) BatchInsert(ctx context.Context, schedules []*entity.
 		}
 		_, err := dbclient.GetClient().BatchWriteItem(input)
 		if err != nil {
-			log.Error(ctx, "batch delete schedule: batch write item failed", log.Any("scheduleItems", items))
+			log.Error(ctx, "batch delete daschedule: batch write item failed", log.Any("scheduleItems", items))
 			return err
 		}
 	}
@@ -206,7 +206,7 @@ func (s *scheduleDynamoDA) Delete(ctx context.Context, id string) error {
 		Key:       map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}},
 	}
 	if _, err := dbclient.GetClient().DeleteItem(&in); err != nil {
-		log.Error(ctx, "delete schedule: delete item failed", log.String("id", id))
+		log.Error(ctx, "delete daschedule: delete item failed", log.String("id", id))
 		return err
 	}
 	return nil
@@ -228,7 +228,7 @@ func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, ids []string) error 
 		if i != 0 && i%25 == 0 {
 			in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems[:25]}
 			if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
-				log.Error(ctx, "batch delete schedule: batch write item failed", log.Strings("ids", ids))
+				log.Error(ctx, "batch delete daschedule: batch write item failed", log.Strings("ids", ids))
 				return err
 			}
 			requestItems = requestItems[25:]
@@ -237,7 +237,7 @@ func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, ids []string) error 
 	if len(requestItems) > 0 {
 		in.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: requestItems}
 		if _, err := dbclient.GetClient().BatchWriteItem(&in); err != nil {
-			log.Error(ctx, "batch delete schedule: batch write item failed", log.Strings("ids", ids))
+			log.Error(ctx, "batch delete daschedule: batch write item failed", log.Strings("ids", ids))
 			return err
 		}
 	}
