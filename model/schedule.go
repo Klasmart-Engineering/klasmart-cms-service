@@ -33,6 +33,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 	schedule.CreatedID = op.UserID
 	scheduleList, err := s.RepeatSchedule(ctx, schedule)
 	if err != nil {
+		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule))
 		return "", err
 	}
 	teacherSchedules := make([]*entity.TeacherSchedule, len(scheduleList)*len(schedule.TeacherIDs))
@@ -52,12 +53,14 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 	// add to schedules
 	err = da.GetScheduleDA().BatchInsert(ctx, scheduleList)
 	if err != nil {
+		log.Error(ctx, "schedule batchInsert error", log.Err(err))
 		return "", err
 	}
 
 	// add to teachers_schedules
 	err = da.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
 	if err != nil {
+		log.Error(ctx, "schedule batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
 		return "", err
 	}
 	if len(scheduleList) > 0 {
@@ -174,6 +177,7 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, condition *da.Sched
 	}
 	scheduleList, err := da.GetScheduleDA().BatchGetByIDs(ctx, ids)
 	if err != nil {
+		log.Error(ctx, "PageByTeacherID:batch get by schedule ids error", log.Err(err), log.Strings("ids", ids))
 		return "", nil, err
 	}
 
@@ -186,6 +190,7 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, condition *da.Sched
 		}
 		basicInfo, err := s.getBasicInfo(ctx, item)
 		if err != nil {
+			log.Error(ctx, "PageByTeacherID:getBasicInfo error", log.Err(err), log.Any("scheduleItem", item))
 			return "", nil, err
 		}
 		viewdata.ScheduleBasic = *basicInfo
@@ -198,6 +203,7 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, condition *da.Sched
 func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error) {
 	scheduleList, err := da.GetScheduleDA().Query(ctx, condition)
 	if err != nil {
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	result := make([]*entity.ScheduleListView, len(scheduleList))
@@ -217,10 +223,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedule *entity.Sched
 	if schedule.ClassID != "" {
 		classService, err := external.GetClassServiceProvider()
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		classInfos, err := classService.BatchGet(ctx, []string{schedule.ClassID})
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		if len(classInfos) > 0 {
@@ -234,10 +242,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedule *entity.Sched
 		result.Teachers = make([]entity.ShortInfo, len(schedule.TeacherIDs))
 		teacherService, err := external.GetTeacherServiceProvider()
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		teacherInfos, err := teacherService.BatchGet(ctx, schedule.TeacherIDs)
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		for i, item := range teacherInfos {
@@ -250,10 +260,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedule *entity.Sched
 	if schedule.SubjectID != "" {
 		subjectService, err := external.GetSubjectServiceProvider()
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		subjectInfos, err := subjectService.BatchGet(ctx, []string{schedule.SubjectID})
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		if len(subjectInfos) > 0 {
@@ -266,10 +278,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedule *entity.Sched
 	if schedule.ProgramID != "" {
 		programService, err := external.GetProgramServiceProvider()
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		programInfos, err := programService.BatchGet(ctx, []string{schedule.ProgramID})
 		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		if len(programInfos) > 0 {
@@ -287,6 +301,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedule *entity.Sched
 func (s *scheduleModel) GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error) {
 	schedule, err := da.GetScheduleDA().GetByID(ctx, id)
 	if err != nil {
+		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
 		return nil, err
 	}
 
@@ -306,6 +321,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, id string) (*entity.Schedul
 	}
 	basicInfo, err := s.getBasicInfo(ctx, schedule)
 	if err != nil {
+		log.Error(ctx, "getBasicInfo error", log.Err(err))
 		return nil, err
 	}
 	result.ScheduleBasic = *basicInfo
