@@ -33,7 +33,7 @@ func (s Server) addTag(c *gin.Context) {
 		return
 	}
 
-	id, err := model.GetTagModel().Add(ctx,op, data)
+	id, err := model.GetTagModel().Add(ctx, op, data)
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"id": id,
@@ -55,7 +55,7 @@ func (s Server) delTag(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	err := model.GetTagModel().DeleteSoft(ctx,op, c.Param("id"))
+	err := model.GetTagModel().DeleteSoft(ctx, op, c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
@@ -84,12 +84,12 @@ func (s Server) updateTag(c *gin.Context) {
 		log.Info(ctx, "tag name is empty")
 		return
 	}
-	if data.States != constant.Enable || data.States != constant.Disabled {
-		c.JSON(http.StatusBadRequest, errors.New("tag states is invalid"))
-		log.Info(ctx, "tag states is invalid")
-		return
-	}
-	err = model.GetTagModel().Update(ctx,op, data)
+	//if data.States != constant.Enable || data.States != constant.Disabled {
+	//	c.JSON(http.StatusBadRequest, errors.New("tag states is invalid"))
+	//	log.Info(ctx, "tag states is invalid")
+	//	return
+	//}
+	err = model.GetTagModel().Update(ctx, op, data)
 
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{

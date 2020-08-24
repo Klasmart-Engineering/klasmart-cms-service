@@ -41,13 +41,20 @@ func (s Server) registeRoute() {
 		category.PUT("/:id", MustLogin, s.updateCategory)
 		category.DELETE("/:id", MustLogin, s.deleteCategory)
 	}
-
-	tag:=s.engine.Group("/v1/tag")
+	content := s.engine.Group("/v1")
 	{
-		tag.GET("/",s.queryTag)
-		tag.GET("/:id",s.getTagByID)
-		tag.POST("/",s.addTag)
-		tag.PUT("/:id",s.updateTag)
-		tag.DELETE("/:id",s.delTag)
+		content.POST("/contents", MustLogin, s.createContent)
+		content.GET("/contents/:content_id", MustLogin, s.GetContent)
+		content.PUT("/contents/:content_id", MustLogin, s.updateContent)
+		content.PUT("/contents/:content_id/lock", MustLogin, s.lockContent)
+		content.PUT("/contents/:content_id/publish", MustLogin, s.publishContent)
+		content.PUT("/contents_review/:content_id/approve", MustLogin, s.approve)
+		content.PUT("/contents_review/:content_id/reject", MustLogin, s.reject)
+		content.DELETE("/contents/:content_id", MustLogin, s.deleteContent)
+		content.GET("/contents", MustLogin, s.QueryContent)
+		content.GET("/contents_dynamo", MustLogin, s.QueryDynamoContent)
+		content.GET("/contents_private", MustLogin, s.QueryPrivateContent)
+		content.GET("/contents_pending", MustLogin, s.QueryPendingContent)
+
 	}
 }

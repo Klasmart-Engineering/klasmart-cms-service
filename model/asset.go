@@ -4,124 +4,179 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 const (
-	Asset_Storage_Partition = "asset"
+	Asset_Storage_Partition     = "asset"
+	Thumbnail_Storage_Partition = "thumbnail"
 )
 
 var (
-	ErrNoSuchURL        = errors.New("no such url")
-	ErrRequestItemIsNil = errors.New("request item is nil")
+	ErrNoSuchURL           = errors.New("no such url")
+	ErrRequestItemIsNil    = errors.New("request item is nil")
+	ErrNoAuth              = errors.New("no auth to operate")
+	ErrCreateContentFailed = errors.New("create contentdata into data access failed")
+
+	ErrNoContentData                 = errors.New("no content data")
+	ErrNoContent                     = errors.New("no content")
+	ErrContentAlreadyLocked          = errors.New("content is already locked")
+	ErrInvalidPublishStatus          = errors.New("invalid publish status")
+	ErrGetUnpublishedContent         = errors.New("unpublished content")
+	ErrGetUnauthorizedContent        = errors.New("unauthorized content")
+	ErrCloneContentFailed            = errors.New("clone content failed")
+	ErrParseContentDataFailed        = errors.New("parse content data failed")
+	ErrParseContentDataDetailsFailed = errors.New("parse content data details failed")
+	ErrUpdateContentFailed           = errors.New("update contentdata into data access failed")
+	ErrInvalidContentStatusToPublish = errors.New("content status is invalid to publish")
+	ErrReadContentFailed             = errors.New("read content failed")
+	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
 )
 
 type IAssetModel interface {
-	CreateAsset(ctx context.Context, data entity.AssetObject) (string, error)
-	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error
-	DeleteAsset(ctx context.Context, id string) error
+	CreateAsset(ctx context.Context, data entity.CreateAssetData, operator entity.Operator) (string, error)
+	UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest, operator entity.Operator) error
+	DeleteAsset(ctx context.Context, id string, operator entity.Operator) error
 
-	GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error)
-	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error)
+	GetAssetByID(ctx context.Context, id string, operator entity.Operator) (*entity.AssetData, error)
+	SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition, operator entity.Operator) (int64, []*entity.AssetData, error)
 
-	GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error)
-	GetAssetResourcePath(ctx context.Context, name string) (string, error)
+	GetAssetUploadPath(ctx context.Context, extension string, operator entity.Operator) (*entity.ResourcePath, error)
+	GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string, error)
 }
 
 type AssetModel struct{}
 
 type AssetEntity struct {
-	Category string
-	Tag      []string
+}
+type AssetSource struct {
+	assetSource     string
+	thumbnailSource string
 }
 
-func (am AssetModel) checkResource(ctx context.Context, url string, must bool) (int64, error) {
-	if must && url == "" {
+func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must bool) (int64, error) {
+	if must && (data.assetSource == "" || data.thumbnailSource == "") {
+
 		return -1, ErrRequestItemIsNil
 	}
-	if url != "" {
-		size, exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, url)
+	size := int64(0)
+	if data.assetSource != "" {
+		tempSize, exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, data.assetSource)
 		if !exist {
 			return -1, ErrNoSuchURL
 		}
-		return size, nil
+		size = tempSize
 	}
-	return 0, nil
+
+	if data.assetSource != "" {
+		_, exist := storage.DefaultStorage().ExitsFile(ctx, Thumbnail_Storage_Partition, data.thumbnailSource)
+		if !exist {
+			return -1, ErrNoSuchURL
+		}
+
+	}
+	return size, nil
 }
 
 func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must bool) error {
-	if must && entity.Category == "" {
-		return ErrRequestItemIsNil
-	}
-
-	//TODO:Check tag & category entity
-	_, err := GetCategoryModel().GetCategoryByID(ctx, nil, entity.Category)
-	if err != nil {
-		log.Error(ctx, "Invalid category ", log.Err(err))
-		return err
-	}
-
 	return nil
 }
 
-func (am *AssetModel) CreateAsset(ctx context.Context, data entity.AssetObject) (string, error) {
-	err := am.checkEntity(ctx, AssetEntity{
-		Category: data.Category,
-		Tag:      data.Tags,
+func (am *AssetModel) CreateAsset(ctx context.Context, req entity.CreateAssetData, operator entity.Operator) (string, error) {
+	err := am.checkEntity(ctx, AssetEntity{}, true)
+
+	if err != nil {
+		return "", err
+	}
+
+	size, err := am.checkResource(ctx, AssetSource{
+		assetSource:     req.Resource,
+		thumbnailSource: req.Thumbnail,
 	}, true)
 	if err != nil {
 		return "", err
 	}
+	data := req.ToAssetObject()
 
-	data.Size = 0
-	size, err := am.checkResource(ctx, data.ResourceName, true)
-	if err != nil {
-		return "", err
-	}
 	data.Size = size
 
-	return da.GetAssetDA().CreateAsset(ctx, data)
+	//TODO: get user name
+	data.Org = operator.OrgID
+	data.Author = operator.UserID
+	data.AuthorName = operator.UserID
+
+	return da.GetAssetDA().CreateAsset(ctx, *data)
 }
 
-func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest) error {
-	err := am.checkEntity(ctx, AssetEntity{
-		Category: data.Category,
-		Tag:      data.Tag,
-	}, false)
+func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest, operator entity.Operator) error {
+	assets, err := am.GetAssetByID(ctx, data.ID, operator)
+
 	if err != nil {
 		return err
 	}
+	if assets.Author != operator.UserID {
+		return ErrNoAuth
+	}
 
-	data.Size = 0
-	if data.ResourceName != "" {
-		size, err := am.checkResource(ctx, data.ResourceName, true)
-		if err != nil {
-			return err
-		}
-		data.Size = size
+	err = am.checkEntity(ctx, AssetEntity{}, false)
+	if err != nil {
+		return err
+
 	}
 
 	return da.GetAssetDA().UpdateAsset(ctx, data)
 }
 
-func (am *AssetModel) DeleteAsset(ctx context.Context, id string) error {
+func (am *AssetModel) DeleteAsset(ctx context.Context, id string, operator entity.Operator) error {
+	assets, err := am.GetAssetByID(ctx, id, operator)
+	if err != nil {
+		return err
+	}
+	if assets.Author != operator.UserID {
+		return ErrNoAuth
+	}
+
 	return da.GetAssetDA().DeleteAsset(ctx, id)
 }
 
-func (am *AssetModel) GetAssetByID(ctx context.Context, id string) (*entity.AssetObject, error) {
-	return da.GetAssetDA().GetAssetByID(ctx, id)
+func (am *AssetModel) GetAssetByID(ctx context.Context, id string, operator entity.Operator) (*entity.AssetData, error) {
+	res, err := da.GetAssetDA().GetAssetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return res.ToAssetData(), nil
 }
 
-func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition) (int64, []*entity.AssetObject, error) {
-	return da.GetAssetDA().SearchAssets(ctx, (*da.SearchAssetCondition)(condition))
+func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.SearchAssetCondition, operator entity.Operator) (int64, []*entity.AssetData, error) {
+	cd := &da.SearchAssetCondition{
+		ID:          condition.ID,
+		SearchWords: condition.SearchWords,
+		FuzzyQuery:  condition.FuzzyQuery,
+		OrgID:       operator.OrgID,
+		OrderBy:     da.NewAssetsOrderBy(condition.OrderBy),
+		PageSize:    condition.PageSize,
+		Page:        condition.Page,
+	}
+	if condition.IsSelf {
+		cd.Author = []string{operator.UserID}
+	}
+	count, res, err := da.GetAssetDA().SearchAssets(ctx, cd)
+	if err != nil {
+		return count, nil, err
+	}
+	data := make([]*entity.AssetData, len(res))
+	for i := range res {
+		data[i] = res[i].ToAssetData()
+	}
+	return count, data, nil
 }
 
-func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) (*entity.ResourcePath, error) {
+func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string, operator entity.Operator) (*entity.ResourcePath, error) {
 	storage := storage.DefaultStorage()
 	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
@@ -135,7 +190,7 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string) 
 	}, nil
 }
 
-func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string) (string, error) {
+func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string, error) {
 	storage := storage.DefaultStorage()
 	return storage.GetFileTempPath(ctx, Asset_Storage_Partition, name)
 }

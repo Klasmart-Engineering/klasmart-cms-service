@@ -163,7 +163,7 @@
                   "type": "object",
                   "description": "content info",
                   "properties": {
-                    "total": {
+                    "id": {
                       "type": "string",
                       "description": "content id",
                       "example": "1"
@@ -477,6 +477,15 @@
             "name": "author",
             "in": "query",
             "description": "Search content by author",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "description": "Search content by content type",
             "schema": {
               "type": "string",
               "nullable": true
@@ -1833,7 +1842,6 @@
         }
       }
     },
-
     "/schedules": {
       "get": {
         "tags": [
@@ -2123,7 +2131,10 @@
             "description": "Search schedules by teacher_id",
             "schema": {
               "type": "string",
-              "enum": ["only_current", "with_following"],
+              "enum": [
+                "only_current",
+                "with_following"
+              ],
               "nullable": true,
               "description": "repeat edit option"
             }
@@ -2540,6 +2551,375 @@
           }
         ]
       },
+      "CreateContentRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateContentRequest"
+          },
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "content_type": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content type",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "string",
+                "description": "program id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "subject": {
+                "type": "string",
+                "description": "subject id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "developmental": {
+                "type": "string",
+                "description": "developmental id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "skills": {
+                "type": "string",
+                "description": "skills id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "age": {
+                "type": "string",
+                "description": "age id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "do_publish": {
+                "type": "boolean",
+                "description": "content create & publish",
+                "example": false
+              },
+              "data": {
+                "type": "object",
+                "description": "content data",
+                "example": {
+                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
+                }
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": {
+                  "data": "hello"
+                }
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "PublishContentRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PublishContentRequest"
+          },
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "description": "content published scope list",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "RejectReasonRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RejectReasonRequest"
+          },
+          {
+            "type": "object",
+            "description": "Reject reason",
+            "properties": {
+              "reject_reason": {
+                "type": "string",
+                "description": "content reject reason"
+              }
+            }
+          }
+        ]
+      },
+      "LockContentResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RejectReasonRequest"
+          },
+          {
+            "type": "object",
+            "description": "Lock content response",
+            "properties": {
+              "content_id": {
+                "type": "string",
+                "description": "content id to edit"
+              }
+            }
+          }
+        ]
+      },
+      "ContentCondition": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ContentCondition"
+          },
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "content_type": {
+                "type": "array",
+                "description": "content type list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "scope": {
+                "type": "array",
+                "description": "content published scope list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "publish_status": {
+                "type": "array",
+                "description": "content published status list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "author": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "org": {
+                "type": "string",
+                "description": "content org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "bookmark": {
+                "type": "string",
+                "description": "content bookmark",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "Content": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Content"
+          },
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "content id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "content_type": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content type",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "string",
+                "description": "program id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "subject": {
+                "type": "string",
+                "description": "subject id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "developmental": {
+                "type": "string",
+                "description": "developmental id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "skills": {
+                "type": "string",
+                "description": "skills id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "age": {
+                "type": "string",
+                "description": "age id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "version": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content version",
+                "example": 1
+              },
+              "source_id": {
+                "type": "string",
+                "description": "content source id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "locked_by": {
+                "type": "string",
+                "description": "content locked by others id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "data": {
+                "type": "object",
+                "description": "content data",
+                "example": {
+                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
+                }
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": {
+                  "data": "hello"
+                }
+              },
+              "author": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "org": {
+                "type": "string",
+                "description": "content org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "content publish status",
+                "example": "published"
+              },
+              "content_type_name": {
+                "type": "string",
+                "description": "content type name",
+                "example": "lesson"
+              },
+              "program_name": {
+                "type": "string",
+                "description": "program name",
+                "example": "program1"
+              },
+              "subject_name": {
+                "type": "string",
+                "description": "subject name",
+                "example": "subject1"
+              },
+              "developmental_name": {
+                "type": "string",
+                "description": "developmental name",
+                "example": "developmental1"
+              },
+              "skills_name": {
+                "type": "string",
+                "description": "skills name",
+                "example": "skills1"
+              },
+              "age_name": {
+                "type": "string",
+                "description": "age name",
+                "example": "6-9months"
+              },
+              "org_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              }
+            }
+          }
+        ]
+      },
       "Asset": {
         "allOf": [
           {
@@ -2698,7 +3078,7 @@
         }
       },
       "ScheduleCreate": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "title": {
@@ -2715,7 +3095,7 @@
           },
           "teacher_ids": {
             "type": "array",
-            "items":{
+            "items": {
               "type": "string"
             },
             "description": "schedule teacher_ids"
@@ -2741,8 +3121,12 @@
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "never",
+                  "after_count",
+                  "after_time"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -2768,7 +3152,15 @@
                   },
                   "on": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -2786,7 +3178,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -2795,12 +3190,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -2818,7 +3227,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -2835,12 +3247,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -2887,7 +3313,7 @@
         }
       },
       "ScheduleUpdate": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "title": {
@@ -2904,7 +3330,7 @@
           },
           "teacher_ids": {
             "type": "array",
-            "items":{
+            "items": {
               "type": "string"
             },
             "description": "schedule lessonPlan name"
@@ -2927,7 +3353,10 @@
           },
           "repeat_edit_options": {
             "type": "string",
-            "enum": ["only_current", "with_following"],
+            "enum": [
+              "only_current",
+              "with_following"
+            ],
             "description": "repeat edit option"
           },
           "repeat": {
@@ -2935,8 +3364,12 @@
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "never",
+                  "after_count",
+                  "after_time"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -2962,7 +3395,15 @@
                   },
                   "on": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -2980,7 +3421,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -2989,12 +3433,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3012,7 +3470,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -3029,12 +3490,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3081,7 +3556,7 @@
         }
       },
       "ScheduleDetailed": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "id": {
@@ -3125,8 +3600,12 @@
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "never",
+                  "after_count",
+                  "after_time"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -3152,7 +3631,15 @@
                   },
                   "on": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3170,7 +3657,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -3179,12 +3669,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3202,7 +3706,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -3219,12 +3726,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3283,7 +3804,11 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["never", "after_count", "after_time"]
+            "enum": [
+              "never",
+              "after_count",
+              "after_time"
+            ]
           },
           "after_count": {
             "type": "integer",
