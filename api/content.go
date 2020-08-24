@@ -183,7 +183,7 @@ func (s *Server) QueryContent(c *gin.Context) {
 		return
 	}
 
-	condition := da.DyContentCondition{}
+	condition := da.ContentCondition{}
 
 	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
@@ -204,7 +204,7 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 		return
 	}
 
-	condition := da.DyContentCondition{}
+	condition := da.ContentCondition{}
 
 	key, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
@@ -226,7 +226,7 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 		return
 	}
 
-	condition := da.DyContentCondition{}
+	condition := da.ContentCondition{}
 
 	key, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {

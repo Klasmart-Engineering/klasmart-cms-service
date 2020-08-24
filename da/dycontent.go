@@ -38,8 +38,8 @@ type DyContentDA struct {
 func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (string, error) {
 	now := time.Now()
 	co.ID = utils.NewID()
-	co.OrgUserId = co.Org + co.ID
-	co.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
+	//co.OrgUserId = co.Org + co.ID
+	//co.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
 	co.UpdatedAt = now.Unix()
 	co.CreatedAt = now.Unix()
 	dyMap, err := dynamodbattribute.MarshalMap(co)
@@ -315,9 +315,9 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	if co.Version == 0 {
 		co0.Version = content.Version
 	}
-	if co.OrgUserId == "" {
-		co0.OrgUserId = content.OrgUserId
-	}
+	//if co.OrgUserId == "" {
+	//	co0.OrgUserId = content.OrgUserId
+	//}
 	if co.CreatedAt == 0 {
 		co0.CreatedAt = content.CreatedAt
 	}
