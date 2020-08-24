@@ -188,7 +188,7 @@ func (s *scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Sche
 	}
 	result, err := dbclient.GetClient().GetItem(input)
 	if err != nil {
-		log.Error(ctx, "update schedule error", log.Err(err), log.String("id", id))
+		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
 		return nil, utils.ConvertDynamodbError(err)
 	}
 	schedule := new(entity.Schedule)
