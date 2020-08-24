@@ -592,6 +592,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 	return result, nil
 }
 
+// setTimeDatePart set time date part, include year, month and day
 func (s *scheduleModel) setTimeDatePart(src time.Time, year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), src.Location())
 }
