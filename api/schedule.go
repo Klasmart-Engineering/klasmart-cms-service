@@ -33,12 +33,15 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 	data.ID = id
 	operator, _ := GetOperator(c)
-	if err := model.GetScheduleModel().Update(ctx, operator, &data); err != nil {
+	id, err := model.GetScheduleModel().Update(ctx, operator, &data)
+	if err != nil {
 		log.Error(ctx, "update schedule: update failed", log.Err(err))
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
+	c.JSON(http.StatusOK, gin.H{
+		"id": id,
+	})
 }
 
 func (s *Server) deleteSchedule(c *gin.Context) {
@@ -87,13 +90,15 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 
-	err := model.GetScheduleModel().Add(ctx, op, data)
+	id, err := model.GetScheduleModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "add schedule error", log.Err(err))
 		return
 	}
-	c.JSON(http.StatusOK, nil)
+	c.JSON(http.StatusOK, gin.H{
+		"id": id,
+	})
 }
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
