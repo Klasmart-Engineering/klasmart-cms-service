@@ -52,13 +52,6 @@ func (s Server) registeRoute() {
 		tag.DELETE("/:id", s.delTag)
 	}
 
-	//schedule := s.engine.Group("/v1/schedules")
-	//{
-	//	schedule.PUT("/:id", s.updateSchedule)
-	//	schedule.DELETE("/:id", s.deleteSchedule)
-	//	schedule.POST("/", s.addSchedule)
-	//	schedule.GET("/:id", s.getScheduleByID)
-	//}
 	v1.PUT("/schedules/:id", s.updateSchedule)
 	v1.DELETE("/schedules/:id", s.deleteSchedule)
 	v1.POST("/schedules", s.addSchedule)

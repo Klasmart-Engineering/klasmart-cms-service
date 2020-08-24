@@ -11,30 +11,17 @@ const (
 	Second string = "2006-01-02 15:04:05"
 )
 
-var (
-	weekDay = map[string]int{
-		"Sunday":    0,
-		"Monday":    1,
-		"Tuesday":   2,
-		"Wednesday": 3,
-		"Thursday":  4,
-		"Friday":    5,
-		"Saturday":  6,
-	}
-)
-
 type TimeUtil struct {
 	TimeStamp int64
 }
 
 func (t TimeUtil) FindWeekTimeRange() (startDay, endDay int64) {
-	now := time.Unix(t.TimeStamp, 0)
-	offset := int(time.Sunday - now.Weekday())
+	tt := time.Unix(t.TimeStamp, 0)
+	offset := int(time.Sunday - tt.Weekday())
+	lastoffset := int(time.Saturday - tt.Weekday())
 
-	lastoffset := int(time.Saturday - now.Weekday())
-
-	firstOfWeek := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, offset)
-	lastOfWeeK := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, lastoffset)
+	firstOfWeek := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, offset)
+	lastOfWeeK := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, lastoffset)
 	startDay = BeginOfDayByTime(firstOfWeek).Unix()
 	endDay = EndOfDayByTime(lastOfWeeK).Unix()
 	return
@@ -47,12 +34,12 @@ func (t TimeUtil) FindWeekTimeRangeFormat(layout string) (start, end string) {
 }
 
 func (t TimeUtil) FindWorkWeekTimeRange() (startDay, endDay int64) {
-	now := time.Unix(t.TimeStamp, 0)
-	offset := int(time.Monday - now.Weekday())
-	lastoffset := int(time.Friday - now.Weekday())
+	tt := time.Unix(t.TimeStamp, 0)
+	offset := int(time.Monday - tt.Weekday())
+	lastoffset := int(time.Friday - tt.Weekday())
 
-	firstOfWeek := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, offset)
-	lastOfWeeK := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, lastoffset)
+	firstOfWeek := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, offset)
+	lastOfWeeK := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, lastoffset)
 	startDay = BeginOfDayByTime(firstOfWeek).Unix()
 	endDay = EndOfDayByTime(lastOfWeeK).Unix()
 	return startDay, endDay
@@ -66,14 +53,20 @@ func (t TimeUtil) FindWorkWeekTimeRangeFormat(layout string) (start, end string)
 }
 
 func (t TimeUtil) FindMonthRange() (startDay, endDay int64) {
-	now := time.Now()
-	currentYear, currentMonth, _ := now.Date()
-	currentLocation := now.Location()
+	tt := time.Unix(t.TimeStamp, 0)
+	currentYear, currentMonth, _ := tt.Date()
+	currentLocation := tt.Location()
 
 	firstOfMonth := time.Date(currentYear, currentMonth, 1, 0, 0, 0, 0, currentLocation)
 	lastOfMonth := firstOfMonth.AddDate(0, 1, -1)
 	startDay = BeginOfDayByTime(firstOfMonth).Unix()
 	endDay = EndOfDayByTime(lastOfMonth).Unix()
+	return
+}
+func (t TimeUtil) FindMonthRangeFormat(layout string) (start, end string) {
+	s, e := t.FindMonthRange()
+	start = time.Unix(s, 0).Format(layout)
+	end = time.Unix(e, 0).Format(layout)
 	return
 }
 

@@ -156,6 +156,7 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, condition *da.Sched
 		StartAt:   condition.StartAt,
 	}
 	tsCondition.Init(constant.GSI_TeacherSchedule_TeacherAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
+
 	lastKey, data, err := da.GetTeacherScheduleDA().Page(ctx, tsCondition)
 	ids := make([]string, len(data))
 	for i, item := range data {
@@ -185,7 +186,6 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, condition *da.Sched
 }
 
 func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error) {
-	// condition.Init(constant.GSI_Schedule_OrgIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
 	scheduleList, err := da.GetScheduleDA().Query(ctx, condition)
 	if err != nil {
 		return nil, err
