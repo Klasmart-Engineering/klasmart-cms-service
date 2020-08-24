@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -46,7 +47,7 @@ func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (str
 		return "", err
 	}
 	_, err = db.GetClient().PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String("content"),
+		TableName: aws.String(os.Getenv("dynamo_table_content")),
 		Item:      dyMap,
 	})
 	if err != nil {
@@ -71,7 +72,7 @@ func (d *DyContentDA) UpdateContent(ctx context.Context, cid string, co0 entity.
 		return err
 	}
 	_, err = db.GetClient().UpdateItem(&dynamodb.UpdateItemInput{
-		TableName:                 aws.String("content"),
+		TableName:                 aws.String(os.Getenv("dynamo_table_content")),
 		ExpressionAttributeValues: dyMap,
 		UpdateExpression:          aws.String(entity.Content{}.UpdateExpress()),
 		Key:                       map[string]*dynamodb.AttributeValue{"content_id": key},
@@ -88,7 +89,7 @@ func (d *DyContentDA) DeleteContent(ctx context.Context, cid string) error {
 		return err
 	}
 	_, err = db.GetClient().DeleteItem(&dynamodb.DeleteItemInput{
-		TableName: aws.String("content"),
+		TableName: aws.String(os.Getenv("dynamo_table_content")),
 		Key:       map[string]*dynamodb.AttributeValue{"content_id": key},
 	})
 	if err != nil {
@@ -103,7 +104,7 @@ func (d *DyContentDA) GetContentById(ctx context.Context, cid string) (*entity.C
 		return nil, err
 	}
 	result, err := db.GetClient().GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String("content"),
+		TableName: aws.String(os.Getenv("dynamo_table_content")),
 		Key:       map[string]*dynamodb.AttributeValue{"content_id": key},
 	})
 	if err != nil {
@@ -132,7 +133,7 @@ func (d *DyContentDA) SearchContent(ctx context.Context, condition IDyCondition)
 	}
 
 	input := &dynamodb.ScanInput{
-		TableName:                 aws.String("content"),
+		TableName:                 aws.String(os.Getenv("dynamo_table_content")),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
@@ -177,7 +178,7 @@ func (d *DyContentDA) SearchContentByKey(ctx context.Context, condition DyKeyCon
 		pageSize = 10000
 	}
 	input := &dynamodb.QueryInput{
-		TableName:                 aws.String("content"),
+		TableName:                 aws.String(os.Getenv("dynamo_table_content")),
 		IndexName:                 aws.String(index),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
