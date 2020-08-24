@@ -3,13 +3,15 @@ package model
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func TestCategoryModel_CreateCategory(t *testing.T) {
 	type args struct {
 		ctx  context.Context
+		op   *entity.Operator
 		data entity.CategoryObject
 	}
 	tests := []struct {
@@ -22,8 +24,9 @@ func TestCategoryModel_CreateCategory(t *testing.T) {
 			name: "",
 			args: args{
 				ctx: context.Background(),
+				op:  &entity.Operator{UserID: "No.1", Role: "admin"},
 				data: entity.CategoryObject{
-					Name: "name",
+					Name: "name2",
 				},
 			},
 			want:    "ok",
@@ -33,7 +36,7 @@ func TestCategoryModel_CreateCategory(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cm := &CategoryModel{}
-			got, err := cm.CreateCategory(tt.args.ctx, tt.args.data)
+			got, err := cm.CreateCategory(tt.args.ctx, tt.args.op, tt.args.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateCategory() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -46,6 +49,7 @@ func TestCategoryModel_CreateCategory(t *testing.T) {
 func TestCategoryModel_DeleteCategory(t *testing.T) {
 	type args struct {
 		ctx context.Context
+		op  *entity.Operator
 		id  string
 	}
 	tests := []struct {
@@ -55,14 +59,14 @@ func TestCategoryModel_DeleteCategory(t *testing.T) {
 	}{
 		{
 			name:    "delete category",
-			args:    args{context.Background(), "id_test1"},
+			args:    args{context.Background(), &entity.Operator{UserID: "No.1", Role: "admin"}, "3bdec1625fd64878"},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cm := &CategoryModel{}
-			if err := cm.DeleteCategory(tt.args.ctx, tt.args.id); (err != nil) != tt.wantErr {
+			if err := cm.DeleteCategory(tt.args.ctx, tt.args.op, tt.args.id); (err != nil) != tt.wantErr {
 				t.Errorf("DeleteCategory() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -72,6 +76,7 @@ func TestCategoryModel_DeleteCategory(t *testing.T) {
 func TestCategoryModel_GetCategoryById(t *testing.T) {
 	type args struct {
 		ctx context.Context
+		op  *entity.Operator
 		id  string
 	}
 	tests := []struct {
@@ -82,7 +87,7 @@ func TestCategoryModel_GetCategoryById(t *testing.T) {
 	}{
 		{
 			name:    "getById",
-			args:    args{context.Background(), "id_test1"},
+			args:    args{ctx: context.Background(), op: &entity.Operator{UserID: "No.1", Role: "admin"}, id: "id_test1"},
 			want:    nil,
 			wantErr: false,
 		},
@@ -90,18 +95,19 @@ func TestCategoryModel_GetCategoryById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cm := &CategoryModel{}
-			got, err := cm.GetCategoryById(tt.args.ctx, tt.args.id)
+			got, err := cm.GetCategoryByID(tt.args.ctx, tt.args.op, tt.args.id)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetCategoryById() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetCategoryByID() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			//if !reflect.DeepEqual(got, tt.want) {
-			//	t.Errorf("GetCategoryById() got = %v, want %v", got, tt.want)
+			//	t.Errorf("GetCategoryByID() got = %v, want %v", got, tt.want)
 			//}
 			fmt.Println(got)
 		})
 	}
 }
+
 //
 //func TestCategoryModel_SearchCategories(t *testing.T) {
 //	type args struct {

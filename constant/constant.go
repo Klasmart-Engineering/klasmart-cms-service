@@ -12,3 +12,14 @@ var (
 	ErrExceededLimit   = errors.New("exceeded limit")
 	ErrUnAuthorized    = errors.New("unauthorized")
 )
+
+// tag States
+const (
+	Enable   = 1
+	Disabled = 2
+)
+
+const (
+	DefaultPageSize  = 10
+	DefaultPageIndex = 1
+)

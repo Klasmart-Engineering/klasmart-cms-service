@@ -11,6 +11,7 @@ require (
 	github.com/jinzhu/gorm v1.9.15 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
+
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9 // indirect
 	github.com/tidwall/gjson v1.6.0 // indirect
@@ -34,4 +35,5 @@ require (
 replace (
 	github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.4
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
+
 )

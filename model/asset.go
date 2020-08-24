@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 const (
@@ -22,20 +23,19 @@ var (
 	ErrNoAuth              = errors.New("no auth to operate")
 	ErrCreateContentFailed = errors.New("create contentdata into data access failed")
 
-	ErrNoContentData = errors.New("no content data")
-	ErrNoContent     = errors.New("no content")
-	ErrContentAlreadyLocked     = errors.New("content is already locked")
-	ErrInvalidPublishStatus            = errors.New("invalid publish status")
-	ErrGetUnpublishedContent           = errors.New("unpublished content")
-	ErrGetUnauthorizedContent          = errors.New("unauthorized content")
-	ErrCloneContentFailed              = errors.New("clone content failed")
-	ErrParseContentDataFailed = errors.New("parse content data failed")
+	ErrNoContentData                 = errors.New("no content data")
+	ErrNoContent                     = errors.New("no content")
+	ErrContentAlreadyLocked          = errors.New("content is already locked")
+	ErrInvalidPublishStatus          = errors.New("invalid publish status")
+	ErrGetUnpublishedContent         = errors.New("unpublished content")
+	ErrGetUnauthorizedContent        = errors.New("unauthorized content")
+	ErrCloneContentFailed            = errors.New("clone content failed")
+	ErrParseContentDataFailed        = errors.New("parse content data failed")
 	ErrParseContentDataDetailsFailed = errors.New("parse content data details failed")
-	ErrUpdateContentFailed             = errors.New("update contentdata into data access failed")
-	ErrInvalidContentStatusToPublish         = errors.New("content status is invalid to publish")
-	ErrReadContentFailed               = errors.New("read content failed")
-	ErrDeleteContentFailed             = errors.New("delete contentdata into data access failed")
-
+	ErrUpdateContentFailed           = errors.New("update contentdata into data access failed")
+	ErrInvalidContentStatusToPublish = errors.New("content status is invalid to publish")
+	ErrReadContentFailed             = errors.New("read content failed")
+	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
 )
 
 type IAssetModel interface {
@@ -61,6 +61,7 @@ type AssetSource struct {
 
 func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must bool) (int64, error) {
 	if must && (data.assetSource == "" || data.thumbnailSource == "") {
+
 		return -1, ErrRequestItemIsNil
 	}
 	size := int64(0)
@@ -77,6 +78,7 @@ func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must b
 		if !exist {
 			return -1, ErrNoSuchURL
 		}
+
 	}
 	return size, nil
 }
@@ -87,6 +89,7 @@ func (am AssetModel) checkEntity(ctx context.Context, entity AssetEntity, must b
 
 func (am *AssetModel) CreateAsset(ctx context.Context, req entity.CreateAssetData, operator entity.Operator) (string, error) {
 	err := am.checkEntity(ctx, AssetEntity{}, true)
+
 	if err != nil {
 		return "", err
 	}
@@ -112,6 +115,7 @@ func (am *AssetModel) CreateAsset(ctx context.Context, req entity.CreateAssetDat
 
 func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRequest, operator entity.Operator) error {
 	assets, err := am.GetAssetByID(ctx, data.ID, operator)
+
 	if err != nil {
 		return err
 	}
@@ -122,6 +126,7 @@ func (am *AssetModel) UpdateAsset(ctx context.Context, data entity.UpdateAssetRe
 	err = am.checkEntity(ctx, AssetEntity{}, false)
 	if err != nil {
 		return err
+
 	}
 
 	return da.GetAssetDA().UpdateAsset(ctx, data)

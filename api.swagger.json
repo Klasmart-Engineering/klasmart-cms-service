@@ -43,6 +43,7 @@
           "content"
         ],
         "description": "Search content with condition",
+        "operationId": "searchContents",
         "parameters": [
           {
             "name": "name",
@@ -142,6 +143,7 @@
           "content"
         ],
         "description": "Create content",
+        "operationId": "createContent",
         "requestBody": {
           "required": true,
           "content": {
@@ -186,6 +188,7 @@
           "content"
         ],
         "description": "Publish content",
+        "operationId": "publishContent",
         "parameters": [
           {
             "name": "content_id",
@@ -242,6 +245,7 @@
           }
         ],
         "description": "Lock a content by content_id",
+        "operationId": "lockContent",
         "responses": {
           "200": {
             "description": "success",
@@ -284,6 +288,7 @@
           }
         ],
         "description": "Approve a content review by content_id",
+        "operationId": "approveContentReview",
         "responses": {
           "200": {
             "description": "success"
@@ -318,6 +323,7 @@
           }
         ],
         "description": "Reject a content review by content_id",
+        "operationId": "rejectContentReview",
         "requestBody": {
           "required": true,
           "content": {
@@ -350,6 +356,7 @@
           "content"
         ],
         "description": "Get content by content_id",
+        "operationId": "getContentById",
         "parameters": [
           {
             "name": "content_id",
@@ -387,6 +394,7 @@
           "content"
         ],
         "description": "Update content by content_id",
+        "operationId": "updateContent",
         "parameters": [
           {
             "name": "content_id",
@@ -426,6 +434,7 @@
           "content"
         ],
         "description": "Delete content by content_id",
+        "operationId": "deleteContent",
         "responses": {
           "200": {
             "description": "OK"
@@ -439,108 +448,6 @@
         }
       }
     },
-    "/contents/private": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search user's private content with condition",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "description": "Search content by scope",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "key",
-            "in": "query",
-            "description": "Search key",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-
     "/contents_dynamo": {
       "get": {
         "tags": [
@@ -642,12 +549,115 @@
         }
       }
     },
-    "/contents/pending": {
+    "/contents_private": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Search user's private content with condition",
+        "operationId": "searchPrivateContents",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Search content by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "description": "Search content by content type",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search content by publish status",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Search content by scope",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "Search content by author",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "org",
+            "in": "query",
+            "description": "Search content by org",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "Search key",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content list",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "description": "search key"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Content"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_pending": {
       "get": {
         "tags": [
           "content"
         ],
         "description": "Search pending content",
+        "operationId": "searchPendingContents",
         "parameters": [
           {
             "name": "name",
@@ -1822,6 +1832,324 @@
           }
         }
       }
+    },
+
+    "/schedules": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "query schedules",
+        "description": "query schedules",
+        "operationId": "queryschedules",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "teacher_id",
+            "in": "query",
+            "description": "Search schedules by teacher_id",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "last_key",
+            "in": "query",
+            "description": "The key value of the last record",
+            "schema": {
+              "type": "string",
+              "format": "string",
+              "nullable": true,
+              "default": ""
+            },
+            "required": false,
+            "allowEmptyValue": true
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if pageSize <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 10
+            },
+            "required": false,
+            "allowEmptyValue": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "schedule list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Schedule"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "create schedule",
+        "description": "Create schedule",
+        "operationId": "createSchedule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "string",
+                  "description": "schedule id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/schedules/{schedule_id}": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "get schedules by id",
+        "description": "get schedules by id",
+        "operationId": "GetSchedulesByID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "description": "schedule id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleDetailed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "update schedule",
+        "description": "update schedule",
+        "operationId": "updateSchedule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "description": "schedule id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "string",
+                  "description": "schedule id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "delete schedule",
+        "description": "delete schedule",
+        "operationId": "deleteSchedule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "description": "delete schedule",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          },
+          {
+            "name": "repeat_edit_options",
+            "in": "query",
+            "description": "Search schedules by teacher_id",
+            "schema": {
+              "type": "string",
+              "enum": ["only_current", "with_following"],
+              "nullable": true,
+              "description": "repeat edit option"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1860,6 +2188,357 @@
             "example": "https://badanamu.com/song.mp3"
           }
         }
+      },
+      "CreateContentRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "content_type": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content type",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "string",
+                "description": "program id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "subject": {
+                "type": "string",
+                "description": "subject id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "developmental": {
+                "type": "string",
+                "description": "developmental id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "skills": {
+                "type": "string",
+                "description": "skills id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "age": {
+                "type": "string",
+                "description": "age id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "do_publish": {
+                "type": "boolean",
+                "description": "content create & publish",
+                "example": false
+              },
+              "data": {
+                "type": "object",
+                "description": "content data",
+                "example": {
+                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
+                }
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": {
+                  "data": "hello"
+                }
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "PublishContentRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "description": "content published scope list",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "RejectReasonRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Reject reason",
+            "properties": {
+              "reject_reason": {
+                "type": "string",
+                "description": "content reject reason"
+              }
+            }
+          }
+        ]
+      },
+      "LockContentResponse": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Lock content response",
+            "properties": {
+              "content_id": {
+                "type": "string",
+                "description": "content id to edit"
+              }
+            }
+          }
+        ]
+      },
+      "ContentCondition": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "content_type": {
+                "type": "array",
+                "description": "content type list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "scope": {
+                "type": "array",
+                "description": "content published scope list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "publish_status": {
+                "type": "array",
+                "description": "content published status list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "author": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "org": {
+                "type": "string",
+                "description": "content org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "bookmark": {
+                "type": "string",
+                "description": "content bookmark",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "Content": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "content id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "content_type": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content type",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "string",
+                "description": "program id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "subject": {
+                "type": "string",
+                "description": "subject id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "developmental": {
+                "type": "string",
+                "description": "developmental id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "skills": {
+                "type": "string",
+                "description": "skills id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "age": {
+                "type": "string",
+                "description": "age id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "version": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content version",
+                "example": 1
+              },
+              "source_id": {
+                "type": "string",
+                "description": "content source id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "locked_by": {
+                "type": "string",
+                "description": "content locked by others id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "data": {
+                "type": "object",
+                "description": "content data",
+                "example": {
+                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
+                }
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": {
+                  "data": "hello"
+                }
+              },
+              "author": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "org": {
+                "type": "string",
+                "description": "content org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "content publish status",
+                "example": "published"
+              },
+              "content_type_name": {
+                "type": "string",
+                "description": "content type name",
+                "example": "lesson"
+              },
+              "program_name": {
+                "type": "string",
+                "description": "program name",
+                "example": "program1"
+              },
+              "subject_name": {
+                "type": "string",
+                "description": "subject name",
+                "example": "subject1"
+              },
+              "developmental_name": {
+                "type": "string",
+                "description": "developmental name",
+                "example": "developmental1"
+              },
+              "skills_name": {
+                "type": "string",
+                "description": "skills name",
+                "example": "skills1"
+              },
+              "age_name": {
+                "type": "string",
+                "description": "age name",
+                "example": "6-9months"
+              },
+              "org_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              }
+            }
+          }
+        ]
       },
       "CreateContentRequest": {
         "allOf": [
@@ -2353,6 +3032,635 @@
             "type": "string",
             "description": "ParentCategoryID",
             "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+          }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "description": "schedule short info",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "schedule id"
+          },
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "lesson_plan": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
+          "teachers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommonShort"
+            }
+          }
+        }
+      },
+      "ScheduleCreate": {
+        "type":"object",
+        "description": "schedule create info",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "class_id": {
+            "type": "string",
+            "description": "schedule class id"
+          },
+          "lesson_plan_id": {
+            "type": "string",
+            "description": "schedule lesson_plan_id"
+          },
+          "teacher_ids": {
+            "type": "array",
+            "items":{
+              "type": "string"
+            },
+            "description": "schedule teacher_ids"
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "mode_type": {
+            "type": "string",
+            "enum": [
+              "AllDay",
+              "Repeat"
+            ],
+            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
+          },
+          "repeat": {
+            "type": "object",
+            "description": "repeat options, only work when mode_type equal Repeat,",
+            "properties": {
+              "type": {
+                "type":"string",
+                "enum": ["never", "after_count", "after_time"],
+                "description": "repeat type"
+              },
+              "daily": {
+                "type": "object",
+                "description": "repeat daily options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "weekly": {
+                "type": "object",
+                "description": "repeat weekly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "on": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "monthly": {
+                "type": "object",
+                "description": "repeat monthly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval months"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "yearly": {
+                "type": "object",
+                "description": "repeat yearly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval years (less or equal than 2 years)"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_month": {
+                    "type": "integer",
+                    "description": "on date month"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_month": {
+                    "type": "integer",
+                    "description": "on week month"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              }
+            }
+          },
+          "subject_id": {
+            "type": "string",
+            "description": "schedule SubjectID"
+          },
+          "program_id": {
+            "type": "string",
+            "description": "schedule ProgramID"
+          },
+          "class_type": {
+            "type": "string",
+            "enum": [
+              "OnlineClass",
+              "OfflineClass",
+              "Homework",
+              "Task"
+            ],
+            "description": "schedule class_type"
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "If I schedule the time as homework or task, then I should be able to set a due date. This is optional for me. The due date cannot be earlier than class end time."
+          },
+          "description": {
+            "type": "string",
+            "description": "schedule description"
+          },
+          "attachment_id": {
+            "type": "string",
+            "description": "schedule attachment id"
+          },
+          "is_force": {
+            "type": "boolean",
+            "description": "If true, skip the conflict detection"
+          }
+        }
+      },
+      "ScheduleUpdate": {
+        "type":"object",
+        "description": "schedule create info",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "class_id": {
+            "type": "string",
+            "description": "schedule lessonPlan name"
+          },
+          "lesson_plan_id": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "teacher_ids": {
+            "type": "array",
+            "items":{
+              "type": "string"
+            },
+            "description": "schedule lessonPlan name"
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "mode_type": {
+            "type": "string",
+            "enum": [
+              "AllDay",
+              "Repeat"
+            ],
+            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
+          },
+          "repeat_edit_options": {
+            "type": "string",
+            "enum": ["only_current", "with_following"],
+            "description": "repeat edit option"
+          },
+          "repeat": {
+            "type": "object",
+            "description": "repeat options, only work when mode_type equal Repeat,",
+            "properties": {
+              "type": {
+                "type":"string",
+                "enum": ["never", "after_count", "after_time"],
+                "description": "repeat type"
+              },
+              "daily": {
+                "type": "object",
+                "description": "repeat daily options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "weekly": {
+                "type": "object",
+                "description": "repeat weekly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "on": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "monthly": {
+                "type": "object",
+                "description": "repeat monthly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval months"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "yearly": {
+                "type": "object",
+                "description": "repeat yearly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval years (less or equal than 2 years)"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_month": {
+                    "type": "integer",
+                    "description": "on date month"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_month": {
+                    "type": "integer",
+                    "description": "on week month"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              }
+            }
+          },
+          "subject_id": {
+            "type": "string",
+            "description": "schedule SubjectID"
+          },
+          "program_id": {
+            "type": "string",
+            "description": "schedule ProgramID"
+          },
+          "class_type": {
+            "type": "string",
+            "enum": [
+              "OnlineClass",
+              "OfflineClass",
+              "Homework",
+              "Task"
+            ],
+            "description": "schedule class_type"
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "If I schedule the time as homework or task, then I should be able to set a due date. This is optional for me. The due date cannot be earlier than class end time."
+          },
+          "description": {
+            "type": "string",
+            "description": "schedule description"
+          },
+          "attachment_id": {
+            "type": "string",
+            "description": "schedule attachment id"
+          },
+          "is_force": {
+            "type": "boolean",
+            "description": "If true, skip the conflict detection"
+          }
+        }
+      },
+      "ScheduleDetailed": {
+        "type":"object",
+        "description": "schedule create info",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "schedule id"
+          },
+          "title": {
+            "type": "string",
+            "description": "schedule title"
+          },
+          "class": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
+          "lesson_plan": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
+          "teachers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommonShort"
+            }
+          },
+          "start_at": {
+            "type": "integer",
+            "description": "schedule start time, timestamp"
+          },
+          "end_at": {
+            "type": "integer",
+            "description": "schedule end time, timestamp"
+          },
+          "mode_type": {
+            "type": "string",
+            "enum": [
+              "AllDay",
+              "Repeat"
+            ],
+            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
+          },
+          "repeat": {
+            "type": "object",
+            "description": "repeat options, only work when mode_type equal Repeat,",
+            "properties": {
+              "type": {
+                "type":"string",
+                "enum": ["never", "after_count", "after_time"],
+                "description": "repeat type"
+              },
+              "daily": {
+                "type": "object",
+                "description": "repeat daily options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "weekly": {
+                "type": "object",
+                "description": "repeat weekly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval days"
+                  },
+                  "on": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "monthly": {
+                "type": "object",
+                "description": "repeat monthly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval months"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              },
+              "yearly": {
+                "type": "object",
+                "description": "repeat yearly options",
+                "properties": {
+                  "interval": {
+                    "type": "integer",
+                    "description": "interval years (less or equal than 2 years)"
+                  },
+                  "on_type": {
+                    "type": "string",
+                    "enum": ["date", "week"],
+                    "description": "on type"
+                  },
+                  "on_date_month": {
+                    "type": "integer",
+                    "description": "on date month"
+                  },
+                  "on_date_day": {
+                    "type": "integer",
+                    "description": "on date day"
+                  },
+                  "on_week_month": {
+                    "type": "integer",
+                    "description": "on week month"
+                  },
+                  "on_week_seq": {
+                    "type": "string",
+                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "description": "on week seq"
+                  },
+                  "on_week": {
+                    "type": "string",
+                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "description": "on week"
+                  },
+                  "end": {
+                    "$ref": "#/components/schemas/RepeatEnd"
+                  }
+                }
+              }
+            }
+          },
+          "subject": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
+          "program": {
+            "$ref": "#/components/schemas/CommonShort"
+          },
+          "class_type": {
+            "type": "string",
+            "enum": [
+              "OnlineClass",
+              "OfflineClass",
+              "Homework",
+              "Task"
+            ],
+            "description": "schedule class_type"
+          },
+          "due_at": {
+            "type": "integer",
+            "description": "If I schedule the time as homework or task, then I should be able to set a due date. This is optional for me. The due date cannot be earlier than class end time."
+          },
+          "description": {
+            "type": "string",
+            "description": "schedule description"
+          },
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
+          }
+        }
+      },
+      "CommonShort": {
+        "type": "object",
+        "description": "short info",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "id"
+          },
+          "name": {
+            "type": "string",
+            "description": "name"
+          }
+        }
+      },
+      "RepeatEnd": {
+        "type": "object",
+        "description": "repeat end options",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["never", "after_count", "after_time"]
+          },
+          "after_count": {
+            "type": "integer",
+            "description": "end after N count"
+          },
+          "after_time": {
+            "type": "integer",
+            "description": "end after the time(unix timestamp)"
           }
         }
       }

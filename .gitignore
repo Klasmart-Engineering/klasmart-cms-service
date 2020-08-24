@@ -1,4 +1,3 @@
-.idea
 .vscode/
 .DS_Store
 dist
@@ -6,3 +5,5 @@ debug
 .run
 kidsloop2
 kidsloop2.exe
+.idea
+dist

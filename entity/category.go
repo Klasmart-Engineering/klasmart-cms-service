@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type CategoryObject struct {
@@ -14,9 +13,12 @@ type CategoryObject struct {
 	Name     string `json:"name" dynamodbav:"name"`
 	ParentID string `json:"parent_id" dynamodbav:"parent_id"`
 
-	CreatedAt int64 `json:"-" dynamodbav:"created_at"`
-	UpdatedAt int64 `json:"-" dynamodbav:"updated_at"`
-	DeletedAt int64 `json:"-" dynamodbav:"deleted_at"`
+	CreatedID string `json:"-" dynamodbav:"created_id"`
+	UpdatedID string `json:"-" dynamodbav:"updated_id"`
+	DeletedID string `json:"-" dynamodbav:"deleted_id"`
+	CreatedAt int64  `json:"-" dynamodbav:"created_at"`
+	UpdatedAt int64  `json:"-" dynamodbav:"updated_at"`
+	DeletedAt int64  `json:"-" dynamodbav:"deleted_at"`
 }
 
 func (CategoryObject) TableName() string {
@@ -46,16 +48,20 @@ func (co CategoryObject) ToUpdateParam() (upExpr string, exprAttrNames map[strin
 		exprAttrNames["#cat_name"] = aws.String("name")
 		exprAttrValues[":nm"] = &dynamodb.AttributeValue{S: aws.String(co.Name)}
 	}
+
+	upExprs = append(upExprs, "updated_id = :uid")
+	exprAttrValues[":uid"] = &dynamodb.AttributeValue{S: aws.String(co.UpdatedID)}
+
 	upExprs = append(upExprs, "updated_at = :uat")
-	exprAttrValues[":uat"] = &dynamodb.AttributeValue{S: aws.String(strconv.FormatInt(time.Now().Unix(), 10))}
+	exprAttrValues[":uat"] = &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(co.UpdatedAt, 10))}
 
 	upExpr = "set " + strings.Join(upExprs, ",")
 	return
 }
 
 type SearchCategoryCondition struct {
-	IDs   []string `json:"ids"`
-	Names []string `json:"names"`
+	IDs   NullStrings `json:"ids"`
+	Names NullStrings `json:"names"`
 
 	PageSize int64  `json:"page_size"`
 	Page     int64  `json:"page"`
@@ -64,21 +70,24 @@ type SearchCategoryCondition struct {
 
 func (s *SearchCategoryCondition) ToExpr() (expression.Expression, error) {
 	condition := expression.Name("deleted_at").Equal(expression.Value(0))
-	if len(s.IDs) > 0 {
+	if s.IDs.Valid {
 		var exprValues []expression.OperandBuilder
-		for _, id := range s.IDs {
+		for _, id := range s.IDs.Strings {
 			exprValues = append(exprValues, expression.Value(id))
 		}
 		condition = condition.And(expression.Name("id").In(exprValues[0], exprValues...))
 	}
-	if len(s.Names) > 0 {
+	if s.Names.Valid {
 		var exprValues []expression.OperandBuilder
-		for _, name := range s.Names {
+		for _, name := range s.Names.Strings {
 			exprValues = append(exprValues, expression.Value(name))
 		}
 		condition = condition.And(expression.Name("name").In(exprValues[0], exprValues...))
 	}
 
+	if s.PageSize == 0 {
+		s.PageSize = 10
+	}
 	expr, err := expression.NewBuilder().WithFilter(condition).Build()
 	return expr, err
 }

@@ -2,12 +2,13 @@ package api
 
 import (
 	"errors"
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"net/http"
-	"strings"
 )
 
 func ExtractSession(c *gin.Context) (string, error) {
@@ -15,6 +16,7 @@ func ExtractSession(c *gin.Context) (string, error) {
 	if token == "" {
 		log.Error(c.Request.Context(), "ExtractSession", log.Err(errors.New("no session")))
 		return "", constant.ErrUnAuthorized
+
 	}
 
 	prefix := "Bearer "

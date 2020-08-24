@@ -55,5 +55,6 @@ func (s Server) registeRoute() {
 		content.GET("/contents_dynamo", s.QueryDynamoContent)
 		content.GET("/contents_private", s.QueryPrivateContent)
 		content.GET("/contents_pending", s.QueryPendingContent)
+
 	}
 }

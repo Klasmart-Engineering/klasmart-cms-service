@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
@@ -9,6 +10,11 @@ import (
 )
 
 func (s *Server) createCategory(c *gin.Context) {
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
+		return
+	}
 	data := new(entity.CategoryObject)
 	err := c.ShouldBind(data)
 	if err != nil {
@@ -16,7 +22,7 @@ func (s *Server) createCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := model.GetCategoryModel().CreateCategory(c.Request.Context(), *data)
+	category, err := model.GetCategoryModel().CreateCategory(c.Request.Context(), op, *data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -34,7 +40,7 @@ func (s *Server) updateCategory(c *gin.Context) {
 	}
 	data.ID = id
 
-	err = model.GetCategoryModel().UpdateCategory(c.Request.Context(), *data)
+	err = model.GetCategoryModel().UpdateCategory(c.Request.Context(), nil, *data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -43,7 +49,7 @@ func (s *Server) updateCategory(c *gin.Context) {
 }
 func (s *Server) deleteCategory(c *gin.Context) {
 	id := c.Param("id")
-	err := model.GetCategoryModel().DeleteCategory(c.Request.Context(), id)
+	err := model.GetCategoryModel().DeleteCategory(c.Request.Context(), nil, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -54,9 +60,16 @@ func (s *Server) deleteCategory(c *gin.Context) {
 
 func (s *Server) getCategoryByID(c *gin.Context) {
 	id := c.Param("id")
-	category, err := model.GetCategoryModel().GetCategoryById(c.Request.Context(), id)
-	if err != nil {
+	if id == "" {
+		c.JSON(http.StatusBadRequest, "id illegal")
+		return
+	}
+	category, err := model.GetCategoryModel().GetCategoryByID(c.Request.Context(), nil, id)
+	if err != nil && err != constant.ErrRecordNotFound {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	} else if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 		return
 	}
 
@@ -64,7 +77,7 @@ func (s *Server) getCategoryByID(c *gin.Context) {
 }
 func (s *Server) searchCategories(c *gin.Context) {
 	data := buildCategorySearchCondition(c)
-	total, categories, err := model.GetCategoryModel().PageCategories(c.Request.Context(), data)
+	total, categories, err := model.GetCategoryModel().PageCategories(c.Request.Context(), nil, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -77,14 +90,13 @@ func (s *Server) searchCategories(c *gin.Context) {
 
 func buildCategorySearchCondition(c *gin.Context) *entity.SearchCategoryCondition {
 	ids := c.QueryArray("ids")
-	name := c.Query("name")
+	names := c.QueryArray("names")
 	pageSize, _ := strconv.Atoi(c.Query("page_size"))
 	page, _ := strconv.Atoi(c.Query("page"))
 
-	// TODO: get ids names
 	data := &entity.SearchCategoryCondition{
-		IDs:      ids,
-		Names:    []string{name},
+		IDs:      entity.NullStrings{Strings: ids, Valid: len(ids) > 0},
+		Names:    entity.NullStrings{Strings: names, Valid: len(names) > 0},
 		PageSize: int64(pageSize),
 		Page:     int64(page),
 		//OrderBy: "",

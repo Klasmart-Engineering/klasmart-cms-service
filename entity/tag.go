@@ -1,25 +1,25 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-
+import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+)
 
 type Tag struct {
-	ID     string `dynamodbav:"id"`
-	Name   string `dynamodbav:"name"`
-	States int    `dynamodbav:"states"`
+	ID     string `json:"id" dynamodbav:"id"`
+	Name   string `json:"name" dynamodbav:"name"`
+	States int    `json:"states" dynamodbav:"states"`
 
-	CreatedAt int64 `dynamodbav:"createdAt"`
-	DeletedAt int64 `dynamodbav:"deletedAt"`
+	CreatedID string `json:"-" dynamodbav:"created_id"`
+	UpdatedID string `json:"-" dynamodbav:"updated_id"`
+	DeletedID string `json:"-" dynamodbav:"deleted_id"`
+
+	CreatedAt int64 `json:"-" dynamodbav:"created_at"`
+	UpdatedAt int64 `json:"-" dynamodbav:"updated_at"`
+	DeletedAt int64 `json:"-" dynamodbav:"deleted_at"`
 }
 
 func (t Tag) TableName() string {
 	return constant.TableNameTag
-}
-
-type TagCondition struct {
-	Name     string `json:"name"`
-	PageSize int64  `json:"page_size"`
-	Page     int64  `json:"page"`
 }
 
 type TagAddView struct {
@@ -28,6 +28,7 @@ type TagAddView struct {
 type TagUpdateView struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	States   int    `json:"states"`
 }
 type TagView struct {
 	ID       string `json:"id"`
