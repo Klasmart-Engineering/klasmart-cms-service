@@ -77,7 +77,8 @@ type Content struct {
 	SourceId     string `gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
 	LatestId     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 
-	OrgUserId string `dynamodbav:"org_user_id" json:"org_user_id" dynamoupdate:":ouid"`
+	OrgUserId                     string `dynamodbav:"org_user_id" json:"org_user_id" dynamoupdate:":ouid"`
+	ContentTypeOrgIdPublishStatus string `dynamodbav:"ctoips" json:"ctoips" dynamoupdate:":cps"`
 
 	CreatedAt int64 `gorm:"type:bigint;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdatedAt int64 `gorm:"type:bigint;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
@@ -122,7 +123,8 @@ type UpdateDyContent struct {
 	LatestId     string `json:"lsi"`
 	Version      int64  `json:":ve"`
 
-	OrgUserId string `json:"org_user_id"`
+	OrgUserId                     string `json:":ouid"`
+	ContentTypeOrgIdPublishStatus string `json:":cps"`
 
 	CreatedAt int64 `json:":ca"`
 	UpdatedAt int64 `json:":ua"`

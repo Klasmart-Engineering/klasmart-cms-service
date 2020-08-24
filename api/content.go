@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 func (s *Server) createContent(c *gin.Context) {
@@ -148,12 +149,18 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, "get operator failed")
 		return
 	}
+	ctoips := ""
+	if c.Query("content_type") != "" {
+		ctoips = c.Query("cotnent_type") + c.Query("org") + c.Query("publish_status")
+	}
 
 	condition := da.DyKeyContentCondition{
-		PublishStatus: c.Query("publish_status"),
-		Author:        c.Query("author"),
-		Org:           c.Query("org"),
-		LastKey:       c.Query("key"),
+		PublishStatus:                 c.Query("publish_status"),
+		Author:                        c.Query("author"),
+		ContentTypeOrgIdPublishStatus: ctoips,
+		Name:                          c.Query("name"),
+		Org:                           c.Query("org"),
+		LastKey:                       c.Query("key"),
 	}
 
 	key, results, err := model.GetContentModel().SearchContentByDynamoKey(ctx, dbo.MustGetDB(ctx), condition, op)

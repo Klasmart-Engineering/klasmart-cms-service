@@ -3,12 +3,13 @@ package da
 import (
 	"context"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	db "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"os"
-	"testing"
 )
 
 func TestCreateTable(t *testing.T) {
@@ -53,6 +54,10 @@ func TestCreateTable(t *testing.T) {
 				AttributeName: aws.String("keywords"),
 				AttributeType: aws.String("S"),
 			},
+			{
+				AttributeName: aws.String("ctoips"),
+				AttributeType: aws.String("S"),
+			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
@@ -62,8 +67,8 @@ func TestCreateTable(t *testing.T) {
 		},
 		GlobalSecondaryIndexes: []*dynamodb.GlobalSecondaryIndex{
 			{
-				IndexName: 	aws.String("publish_status"),
-				KeySchema:  []*dynamodb.KeySchemaElement{
+				IndexName: aws.String("publish_status"),
+				KeySchema: []*dynamodb.KeySchemaElement{
 					{
 						AttributeName: aws.String("publish_status"),
 						KeyType:       aws.String("HASH"),
@@ -74,7 +79,7 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 				Projection: &dynamodb.Projection{
-					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(10),
@@ -82,8 +87,8 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
-				IndexName: 	aws.String("author"),
-				KeySchema:  []*dynamodb.KeySchemaElement{
+				IndexName: aws.String("author"),
+				KeySchema: []*dynamodb.KeySchemaElement{
 					{
 						AttributeName: aws.String("author"),
 						KeyType:       aws.String("HASH"),
@@ -94,7 +99,7 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 				Projection: &dynamodb.Projection{
-					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(10),
@@ -102,8 +107,8 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
-				IndexName: 	aws.String("name"),
-				KeySchema:  []*dynamodb.KeySchemaElement{
+				IndexName: aws.String("name"),
+				KeySchema: []*dynamodb.KeySchemaElement{
 					{
 						AttributeName: aws.String("content_name"),
 						KeyType:       aws.String("HASH"),
@@ -114,7 +119,7 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 				Projection: &dynamodb.Projection{
-					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(10),
@@ -122,8 +127,8 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
-				IndexName: 	aws.String("author_name"),
-				KeySchema:  []*dynamodb.KeySchemaElement{
+				IndexName: aws.String("author_name"),
+				KeySchema: []*dynamodb.KeySchemaElement{
 					{
 						AttributeName: aws.String("author_name"),
 						KeyType:       aws.String("HASH"),
@@ -134,7 +139,7 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 				Projection: &dynamodb.Projection{
-					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(10),
@@ -142,8 +147,8 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
-				IndexName: 	aws.String("description"),
-				KeySchema:  []*dynamodb.KeySchemaElement{
+				IndexName: aws.String("description"),
+				KeySchema: []*dynamodb.KeySchemaElement{
 					{
 						AttributeName: aws.String("description"),
 						KeyType:       aws.String("HASH"),
@@ -154,7 +159,7 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 				Projection: &dynamodb.Projection{
-					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(10),
@@ -162,8 +167,8 @@ func TestCreateTable(t *testing.T) {
 				},
 			},
 			{
-				IndexName: 	aws.String("keywords"),
-				KeySchema:  []*dynamodb.KeySchemaElement{
+				IndexName: aws.String("keywords"),
+				KeySchema: []*dynamodb.KeySchemaElement{
 					{
 						AttributeName: aws.String("keywords"),
 						KeyType:       aws.String("HASH"),
@@ -174,7 +179,27 @@ func TestCreateTable(t *testing.T) {
 					},
 				},
 				Projection: &dynamodb.Projection{
-					ProjectionType:   aws.String(dynamodb.ProjectionTypeAll),
+					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
+				},
+				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(10),
+					WriteCapacityUnits: aws.Int64(10),
+				},
+			},
+			{
+				IndexName: aws.String("ctoips"),
+				KeySchema: []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("content_name"),
+						KeyType:       aws.String("HASH"),
+					},
+					{
+						AttributeName: aws.String("ctoips"),
+						KeyType:       aws.String("RANGE"),
+					},
+				},
+				Projection: &dynamodb.Projection{
+					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
 				},
 				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 					ReadCapacityUnits:  aws.Int64(10),
@@ -220,22 +245,22 @@ func TestCreateContent(t *testing.T) {
 		PublishStatus: "draft",
 		Version:       1,
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Println("ID:", id)
 
 	content, err := GetDyContentDA().GetContentById(context.Background(), id)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("%#v\n", content)
 }
 
-func TestGetContent(t *testing.T){
+func TestGetContent(t *testing.T) {
 	id := "5f3b8a9159eb66924f94ad1c"
 	content, err := GetDyContentDA().GetContentById(context.Background(), id)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("%#v\n", content)
@@ -249,11 +274,11 @@ func TestUpdateContent(t *testing.T) {
 		PublishStatus: "draft",
 		Version:       2,
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	content, err := GetDyContentDA().GetContentById(context.Background(), id)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("%#v\n", content)
@@ -262,11 +287,11 @@ func TestUpdateContent(t *testing.T) {
 func TestDeleteContent(t *testing.T) {
 	id := "5f3b8adee5eef1ee75e97532"
 	err := GetDyContentDA().DeleteContent(context.Background(), id)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	content, err := GetDyContentDA().GetContentById(context.Background(), id)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("%#v\n", content)
@@ -293,7 +318,7 @@ func TestSearchContent(t *testing.T) {
 		PublishStatus: "draft",
 		Version:       1,
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Println("ID:", id)
@@ -303,18 +328,17 @@ func TestSearchContent(t *testing.T) {
 		//ContentType:   nil,
 		//Scope:         nil,
 		PublishStatus: []string{"draft"},
-		LastKey: "5f3b90b291fa8fed55d310a0",
+		LastKey:       "5f3b90b291fa8fed55d310a0",
 		//Author:        "",
 		//Org:           "",
 		PageSize: 1,
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("contents: %#v\n", contents[0])
 	fmt.Printf("sub: %#v\n", sub)
 }
-
 
 func TestSearchContentKey(t *testing.T) {
 	id, err := GetDyContentDA().CreateContent(context.Background(), entity.Content{
@@ -337,25 +361,25 @@ func TestSearchContentKey(t *testing.T) {
 		PublishStatus: "draft",
 		Version:       1,
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Println("ID:", id)
 	sub, contents, err := GetDyContentDA().SearchContentByKey(context.Background(), DyKeyContentCondition{
-		PublishStatus:      "draft",
-		Org: "org1",
+		PublishStatus: "draft",
+		Org:           "org1",
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("contents: %#v\n", contents[0])
 	fmt.Printf("sub: %#v\n", sub)
 
 	sub, contents, err = GetDyContentDA().SearchContentByKey(context.Background(), DyKeyContentCondition{
-		Description:        "My Description",
-		OrgUserId: "org1" + id,
+		Description: "My Description",
+		OrgUserId:   "org1" + id,
 	})
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Printf("contents: %#v\n", contents[0])

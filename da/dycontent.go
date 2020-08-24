@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -11,8 +14,6 @@ import (
 	db "gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 var (
@@ -37,6 +38,7 @@ func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (str
 	now := time.Now()
 	co.ID = utils.NewID()
 	co.OrgUserId = co.Org + co.ID
+	co.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
 	co.UpdatedAt = now.Unix()
 	co.CreatedAt = now.Unix()
 	dyMap, err := dynamodbattribute.MarshalMap(co)
@@ -176,7 +178,7 @@ func (d *DyContentDA) SearchContentByKey(ctx context.Context, condition DyKeyCon
 	}
 	input := &dynamodb.QueryInput{
 		TableName:                 aws.String("content"),
-		IndexName:					aws.String(index),
+		IndexName:                 aws.String(index),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		ProjectionExpression:      expr.Projection(),
@@ -215,7 +217,7 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		return nil, err
 	}
 	co0 := &entity.UpdateDyContent{
-   		Name:          co.Name,
+		Name:          co.Name,
 		Program:       co.Program,
 		Subject:       co.Subject,
 		Developmental: co.Developmental,
@@ -241,6 +243,7 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		DeletedAt:     co.DeletedAt,
 	}
 	co0.OrgUserId = co.Org + co.ID
+	co0.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
 	if co.ContentType == 0 {
 		co0.ContentType = content.ContentType
 	}
@@ -416,16 +419,18 @@ func (d *DyCombineContentCondition) GetLastKey() string {
 }
 
 type DyKeyContentCondition struct {
-	Name string `json:"name"`
-	AuthorName string `json:"author_name"`
+	Name        string `json:"name"`
+	AuthorName  string `json:"author_name"`
 	Description string `json:"description"`
-	KeyWords string `json:"key_words"`
+	KeyWords    string `json:"key_words"`
 
 	PublishStatus string `json:"publish_status"`
 	Author        string `json:"author"`
 	Org           string `json:"org"`
 
-	OrgUserId	string `json:"org_user_id"`
+	OrgUserId string `json:"org_user_id"`
+
+	ContentTypeOrgIdPublishStatus string `json:"content_type_org_id_publish_status"`
 
 	LastKey  string `json:"last_key"`
 	PageSize int64  `json:"page_size"`
@@ -484,11 +489,19 @@ func (d *DyKeyContentCondition) GetConditions() (string, expression.KeyCondition
 	if d.KeyWords != "" {
 		builder = expression.KeyEqual(expression.Key("keywords"), expression.Value(d.KeyWords))
 		if d.OrgUserId != "" {
-			fmt.Println(d.OrgUserId)
 			condition := expression.KeyEqual(expression.Key("org_user_id"), expression.Value(d.OrgUserId))
 			builder = builder.And(condition)
 		}
 		index = "keywords"
+	}
+
+	if d.ContentTypeOrgIdPublishStatus != "" {
+		builder = expression.KeyEqual(expression.Key("ctoips"), expression.Value(d.ContentTypeOrgIdPublishStatus))
+		if d.Name != "" {
+			condition := expression.KeyEqual(expression.Key("content_name"), expression.Value(d.Name))
+			builder = builder.And(condition)
+		}
+		index = "ctoips"
 	}
 
 	return index, builder
