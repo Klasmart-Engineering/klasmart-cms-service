@@ -2281,9 +2281,6 @@
       "CreateContentRequest": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/CreateContentRequest"
-          },
-          {
             "type": "object",
             "description": "Company",
             "properties": {
@@ -2322,6 +2319,11 @@
                 "type": "string",
                 "description": "age id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 1
               },
               "keywords": {
                 "type": "array",
@@ -2374,9 +2376,6 @@
       "PublishContentRequest": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/PublishContentRequest"
-          },
-          {
             "type": "object",
             "description": "Company",
             "properties": {
@@ -2394,9 +2393,6 @@
       "RejectReasonRequest": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/RejectReasonRequest"
-          },
-          {
             "type": "object",
             "description": "Reject reason",
             "properties": {
@@ -2411,9 +2407,6 @@
       "LockContentResponse": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/RejectReasonRequest"
-          },
-          {
             "type": "object",
             "description": "Lock content response",
             "properties": {
@@ -2427,9 +2420,6 @@
       },
       "ContentCondition": {
         "allOf": [
-          {
-            "$ref": "#/components/schemas/ContentCondition"
-          },
           {
             "type": "object",
             "description": "Company",
@@ -2486,9 +2476,6 @@
       "Content": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/Content"
-          },
-          {
             "type": "object",
             "description": "Company",
             "properties": {
@@ -2517,6 +2504,11 @@
                 "type": "string",
                 "description": "subject id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 1
               },
               "developmental": {
                 "type": "string",
@@ -2647,6 +2639,7 @@
           }
         ]
       },
+
       "Asset": {
         "allOf": [
           {

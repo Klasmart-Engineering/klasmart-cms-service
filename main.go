@@ -36,7 +36,6 @@ func initDB(){
 	}else{
 		dynamodb.GetClient()
 	}
-
 }
 func initCache(){
 	if config.Get().RedisConfig.OpenCache {
