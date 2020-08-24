@@ -43,18 +43,18 @@ func (s Server) registeRoute() {
 	}
 	content := s.engine.Group("/v1")
 	{
-		content.POST("/contents", s.createContent)
-		content.GET("/contents/:content_id", s.GetContent)
-		content.PUT("/contents/:content_id", s.updateContent)
-		content.PUT("/contents/:content_id/lock", s.lockContent)
-		content.PUT("/contents/:content_id/publish", s.publishContent)
-		content.PUT("/contents_review/:content_id/approve", s.approve)
-		content.PUT("/contents_review/:content_id/reject", s.reject)
-		content.DELETE("/contents/:content_id", s.deleteContent)
-		content.GET("/contents", s.QueryContent)
-		content.GET("/contents_dynamo", s.QueryDynamoContent)
-		content.GET("/contents_private", s.QueryPrivateContent)
-		content.GET("/contents_pending", s.QueryPendingContent)
+		content.POST("/contents", MustLogin, s.createContent)
+		content.GET("/contents/:content_id", MustLogin, s.GetContent)
+		content.PUT("/contents/:content_id", MustLogin, s.updateContent)
+		content.PUT("/contents/:content_id/lock", MustLogin, s.lockContent)
+		content.PUT("/contents/:content_id/publish", MustLogin, s.publishContent)
+		content.PUT("/contents_review/:content_id/approve", MustLogin, s.approve)
+		content.PUT("/contents_review/:content_id/reject", MustLogin, s.reject)
+		content.DELETE("/contents/:content_id", MustLogin, s.deleteContent)
+		content.GET("/contents", MustLogin, s.QueryContent)
+		content.GET("/contents_dynamo", MustLogin, s.QueryDynamoContent)
+		content.GET("/contents_private", MustLogin, s.QueryPrivateContent)
+		content.GET("/contents_pending", MustLogin, s.QueryPendingContent)
 
 	}
 }

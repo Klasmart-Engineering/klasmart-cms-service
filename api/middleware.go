@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -15,8 +14,9 @@ func ExtractSession(c *gin.Context) (string, error) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
 		log.Error(c.Request.Context(), "ExtractSession", log.Err(errors.New("no session")))
-		return "", constant.ErrUnAuthorized
-
+		// TODO: for mock
+		//return "", constant.ErrUnAuthorized
+		return "", nil
 	}
 
 	prefix := "Bearer "
@@ -38,7 +38,8 @@ func MustLogin(c *gin.Context) {
 	// TODO: get user info from token
 	log.Info(c.Request.Context(), "MustLogin", log.String("token", token))
 	op := &entity.Operator{
-		UserID: "No.1",
+		UserID: "1",
+		OrgID:  "1",
 		Role:   "admin",
 	}
 	c.Set(Operator, op)
