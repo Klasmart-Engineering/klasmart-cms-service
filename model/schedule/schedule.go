@@ -2,6 +2,7 @@ package dyschedule
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -20,12 +21,35 @@ type IScheduleModel interface {
 	Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
-	Query(ctx context.Context, tx *dbo.DBContext, condition *dyschedule.ScheduleCondition) ([]*entity.ScheduleListView, error)
-	PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *dyschedule.ScheduleCondition) (string, []*entity.ScheduleSeachView, error)
+	Query(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) ([]*entity.ScheduleListView, error)
+	Page(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
+	//PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *dyschedule.ScheduleCondition) (string, []*entity.ScheduleSeachView, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
+}
+
+func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
+	var scheduleList []*entity.Schedule
+	total, err := daschedule.GetScheduleTeacherDA().Page(ctx, condition, &scheduleList)
+	if err != nil {
+		return 0, nil, err
+	}
+	var result = make([]*entity.ScheduleSeachView, len(scheduleList))
+	for i, item := range scheduleList {
+		baseinfo, err := s.getBasicInfo(ctx, tx, item)
+		if err != nil {
+			return 0, nil, err
+		}
+		result[i] = &entity.ScheduleSeachView{
+			ID:            item.ID,
+			StartAt:       item.StartAt,
+			EndAt:         item.EndAt,
+			ScheduleBasic: *baseinfo,
+		}
+	}
+	return total, result, nil
 }
 
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule) (string, error) {
@@ -52,14 +76,14 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 		// add to schedules
 		_, err = daschedule.GetScheduleDA().BatchInsert(ctx, tx, scheduleList)
 		if err != nil {
-			log.Error(ctx, "daschedule batchInsert error", log.Err(err))
+			log.Error(ctx, "schedule batchInsert error", log.Err(err))
 			return err
 		}
 
 		// add to teachers_schedules
-		err = dyschedule.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
+		_, err = daschedule.GetScheduleTeacherDA().BatchInsert(ctx, tx, teacherSchedules)
 		if err != nil {
-			log.Error(ctx, "daschedule batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
+			log.Error(ctx, "teachers_schedules batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
 			return err
 		}
 		return nil
@@ -76,12 +100,37 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 	schedule := viewdata.Convert()
 	schedule.CreatedID = op.UserID
 	if viewdata.ModeType == entity.ModeTypeRepeat {
-		s.addRepeatSchedule(ctx, tx, schedule)
+		return s.addRepeatSchedule(ctx, tx, schedule)
 	} else {
-
+		schedule.ID = utils.NewID()
+		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+			_, err := daschedule.GetScheduleDA().InsertTx(ctx, tx, schedule)
+			if err != nil {
+				return err
+			}
+			teacherSchedules := make([]*entity.TeacherSchedule, len(schedule.TeacherIDs))
+			for i, item := range viewdata.TeacherIDs {
+				teacherSchedule := &entity.TeacherSchedule{
+					ID:         utils.NewID(),
+					TeacherID:  item,
+					ScheduleID: schedule.ID,
+					DeletedAt:  0,
+				}
+				teacherSchedules[i] = teacherSchedule
+			}
+			// add to teachers_schedules
+			_, err = daschedule.GetScheduleTeacherDA().BatchInsert(ctx, tx, teacherSchedules)
+			if err != nil {
+				log.Error(ctx, "teachers_schedules batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+		return schedule.ID, nil
 	}
-
-	return "", errors.New("add daschedule error")
 }
 
 func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error) {
@@ -215,8 +264,9 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, 
 	return lastKey, result, nil
 }
 
-func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition *dyschedule.ScheduleCondition) ([]*entity.ScheduleListView, error) {
-	scheduleList, err := dyschedule.GetScheduleDA().Query(ctx, condition)
+func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) ([]*entity.ScheduleListView, error) {
+	var scheduleList []*entity.Schedule
+	err := daschedule.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
 		log.Error(ctx, "daschedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
@@ -253,25 +303,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
-	if len(schedule.TeacherIDs) != 0 {
-		result.Teachers = make([]entity.ShortInfo, len(schedule.TeacherIDs))
-		teacherService, err := external.GetTeacherServiceProvider()
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
-			return nil, err
-		}
-		teacherInfos, err := teacherService.BatchGet(ctx, schedule.TeacherIDs)
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
-			return nil, err
-		}
-		for i, item := range teacherInfos {
-			result.Teachers[i] = entity.ShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
-			}
-		}
-	}
+
 	if schedule.SubjectID != "" {
 		subjectService, err := external.GetSubjectServiceProvider()
 		if err != nil {
@@ -308,13 +340,47 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
+	var scheduleTeacherList []*entity.TeacherSchedule
+	err := daschedule.GetScheduleTeacherDA().Query(ctx, &daschedule.ScheduleTeacherCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleTeacherList)
+	if err != nil {
+		return nil, err
+	}
+	if len(scheduleTeacherList) != 0 {
+		teacherIDs := make([]string, len(scheduleTeacherList))
+		for _, item := range scheduleTeacherList {
+			teacherIDs = append(teacherIDs, item.TeacherID)
+		}
+		result.Teachers = make([]entity.ShortInfo, len(teacherIDs))
+		teacherService, err := external.GetTeacherServiceProvider()
+		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
+			return nil, err
+		}
+		teacherInfos, err := teacherService.BatchGet(ctx, teacherIDs)
+		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
+			return nil, err
+		}
+		for i, item := range teacherInfos {
+			result.Teachers[i] = entity.ShortInfo{
+				ID:   item.ID,
+				Name: item.Name,
+			}
+		}
+	}
 	// TODO LessonPlan Attachment
 
 	return result, nil
 }
 
 func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error) {
-	schedule, err := dyschedule.GetScheduleDA().GetByID(ctx, id)
+	var schedule *entity.Schedule
+	err := daschedule.GetScheduleDA().Get(ctx, id, schedule)
 	if err != nil {
 		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
 		return nil, err

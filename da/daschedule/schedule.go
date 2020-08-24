@@ -15,10 +15,16 @@ import (
 type IScheduleDA interface {
 	dbo.DataAccesser
 	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int, error)
+	PageByTeacherID(context.Context, *dbo.DBContext) (int, []*entity.Schedule, error)
 }
 
 type scheduleDA struct {
 	dbo.BaseDA
+}
+
+func (s scheduleDA) PageByTeacherID(ctx context.Context, dbContext *dbo.DBContext) (int, []*entity.Schedule, error) {
+	//dbContext.Table(constant.TableNameSchedule).Select("").Joins()
+	return 0, nil, nil
 }
 
 func (s scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.Schedule) (int, error) {
@@ -52,6 +58,10 @@ func GetScheduleDA() IScheduleDA {
 }
 
 type ScheduleCondition struct {
+	OrgID   sql.NullInt64
+	StartAt sql.NullInt64
+	EndAt   sql.NullInt64
+
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
 
@@ -61,6 +71,17 @@ type ScheduleCondition struct {
 func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	var wheres []string
 	var params []interface{}
+
+	if c.OrgID.Valid {
+
+	}
+
+	if c.StartAt.Valid {
+
+	}
+	if c.EndAt.Valid {
+
+	}
 
 	if c.DeleteAt.Valid {
 		wheres = append(wheres, "delete_at>0")

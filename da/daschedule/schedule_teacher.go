@@ -1,17 +1,44 @@
 package daschedule
 
 import (
+	"context"
 	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
 type IScheduleTeacherDA interface {
 	dbo.DataAccesser
+	BatchInsert(context.Context, *dbo.DBContext, []*entity.TeacherSchedule) (int, error)
 }
 
 type scheduleTeacherDA struct {
 	dbo.BaseDA
+}
+
+func (s scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.TeacherSchedule) (int, error) {
+	var data [][]interface{}
+	for _, item := range schedules {
+		data = append(data, []interface{}{
+			item.ID,
+			item.ScheduleID,
+			item.TeacherID,
+			item.DeletedAt,
+		})
+	}
+	sql := utils.SQLBatchInsert(constant.TableNameTeacherSchedule, []string{"id", "schedule_id", "teacher_id", "deleted_at"}, data)
+	execResult := dbContext.Exec(sql.Format, sql.Values...)
+	if execResult.Error != nil {
+		logger.Error(ctx, "db exec sql error", log.Any("sql", sql))
+		return 0, execResult.Error
+	}
+	total := int(execResult.RowsAffected)
+	return total, nil
 }
 
 var (
@@ -27,8 +54,9 @@ func GetScheduleTeacherDA() IScheduleTeacherDA {
 }
 
 type ScheduleTeacherCondition struct {
-	OrderBy ScheduleTeacherOrderBy
-	Pager   dbo.Pager
+	ScheduleID sql.NullString
+	OrderBy    ScheduleTeacherOrderBy
+	Pager      dbo.Pager
 
 	DeleteAt sql.NullInt64
 }
@@ -36,6 +64,11 @@ type ScheduleTeacherCondition struct {
 func (c ScheduleTeacherCondition) GetConditions() ([]string, []interface{}) {
 	var wheres []string
 	var params []interface{}
+
+	if c.ScheduleID.Valid {
+		wheres = append(wheres, "schedule_id = ?")
+		params = append(params, c.ScheduleID.String)
+	}
 
 	if c.DeleteAt.Valid {
 		wheres = append(wheres, "delete_at>0")
