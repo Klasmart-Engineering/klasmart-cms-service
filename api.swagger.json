@@ -2767,9 +2767,12 @@
                     "description": "interval days"
                   },
                   "on": {
-                    "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
-                    "description": "on week"
+                    "type": "array",
+                    "items":{
+                      "type": "string",
+                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                    },
+                    "description": "on weekdays"
                   },
                   "end": {
                     "$ref": "#/components/schemas/RepeatEnd"
@@ -2961,9 +2964,12 @@
                     "description": "interval days"
                   },
                   "on": {
-                    "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
-                    "description": "on week"
+                    "type": "array",
+                    "items":{
+                      "type": "string",
+                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                    },
+                    "description": "on weekdays"
                   },
                   "end": {
                     "$ref": "#/components/schemas/RepeatEnd"
@@ -3151,9 +3157,12 @@
                     "description": "interval days"
                   },
                   "on": {
-                    "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
-                    "description": "on week"
+                    "type": "array",
+                    "items":{
+                      "type": "string",
+                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                    },
+                    "description": "on weekdays"
                   },
                   "end": {
                     "$ref": "#/components/schemas/RepeatEnd"
