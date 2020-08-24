@@ -18,16 +18,22 @@ type Config struct {
 var config *Config
 
 type RedisConfig struct {
+	OpenCache bool
 	Host string
 	Port int
 	Password string
 }
 type DBConfig struct {
+	DBMode string `json:"db_mode"`
+
 	ConnectionString string `json:"connection_string"`
 	MaxOpenConns     int `json:"max_open_conns"`
 	MaxIdleConns     int `json:"max_idle_conns"`
 	ShowLog          bool `json:"show_log"`
 	ShowSQL          bool `json:"show_sql"`
+
+	DynamoEndPoint string `json:"dynamo_end_point"`
+	DynamoRegion string `json:"dynamo_region"`
 }
 
 type StorageConfig struct {
@@ -61,7 +67,7 @@ func LoadEnvConfig() {
 	ctx := context.TODO()
 	config = new(Config)
 	loadStorageEnvConfig(ctx)
-	//loadDBEnvConfig(ctx)
+	loadDBEnvConfig(ctx)
 	loadRedisEnvConfig(ctx)
 }
 func loadStorageEnvConfig(ctx context.Context) {
@@ -105,53 +111,66 @@ func loadStorageEnvConfig(ctx context.Context) {
 }
 
 func loadRedisEnvConfig(ctx context.Context) {
-	host := assertGetEnv("redis_host")
-	portStr := assertGetEnv("redis_port")
-	password := os.Getenv("redis_password")
-	config.RedisConfig.Host = host
-	port ,err := strconv.Atoi(portStr)
-	if err != nil{
-		log.Error(ctx, "Can't parse redis_port")
-		port = 3306
+	openCacheStr := os.Getenv("open_cache")
+	openCache, _ := strconv.ParseBool(openCacheStr)
+	config.RedisConfig.OpenCache = openCache
+	if openCache {
+		host := assertGetEnv("redis_host")
+		portStr := assertGetEnv("redis_port")
+		password := os.Getenv("redis_password")
+		config.RedisConfig.Host = host
+		port ,err := strconv.Atoi(portStr)
+		if err != nil{
+			log.Error(ctx, "Can't parse redis_port")
+			port = 3306
+		}
+		config.RedisConfig.Port = port
+		config.RedisConfig.Password = password
 	}
-	config.RedisConfig.Port = port
-	config.RedisConfig.Password = password
 }
 
 func loadDBEnvConfig(ctx context.Context){
-	config.DBConfig.ConnectionString = assertGetEnv("connection_string")
-	maxOpenConnsStr := assertGetEnv("max_open_conns")
-	maxIdleConnsStr := assertGetEnv("max_idle_conns")
-	showLogStr := assertGetEnv("show_log")
-	showSQLStr := assertGetEnv("show_sql")
+	config.DBConfig.DBMode = os.Getenv("db_env")
 
-	maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
-	if err != nil{
-		log.Error(ctx, "Can't parse max_open_conns")
-		maxOpenConns = 16
-	}
-	config.DBConfig.MaxOpenConns = maxOpenConns
+	if config.DBConfig.DBMode == "mysql" {
+		config.DBConfig.ConnectionString = assertGetEnv("connection_string")
+		maxOpenConnsStr := assertGetEnv("max_open_conns")
+		maxIdleConnsStr := assertGetEnv("max_idle_conns")
+		showLogStr := assertGetEnv("show_log")
+		showSQLStr := assertGetEnv("show_sql")
 
-	maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
-	if err != nil{
-		log.Error(ctx, "Can't parse max_idle_conns")
-		maxOpenConns = 16
-	}
-	config.DBConfig.MaxIdleConns = maxIdleConns
+		maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
+		if err != nil{
+			log.Error(ctx, "Can't parse max_open_conns")
+			maxOpenConns = 16
+		}
+		config.DBConfig.MaxOpenConns = maxOpenConns
 
-	showLog, err := strconv.ParseBool(showLogStr)
-	if err != nil{
-		log.Error(ctx, "Can't parse show_log")
-		showLog = true
-	}
-	config.DBConfig.ShowLog = showLog
+		maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
+		if err != nil{
+			log.Error(ctx, "Can't parse max_idle_conns")
+			maxOpenConns = 16
+		}
+		config.DBConfig.MaxIdleConns = maxIdleConns
 
-	showSQL, err := strconv.ParseBool(showSQLStr)
-	if err != nil{
-		log.Error(ctx, "Can't parse show_sql")
-		showLog = true
+		showLog, err := strconv.ParseBool(showLogStr)
+		if err != nil{
+			log.Error(ctx, "Can't parse show_log")
+			showLog = true
+		}
+		config.DBConfig.ShowLog = showLog
+
+		showSQL, err := strconv.ParseBool(showSQLStr)
+		if err != nil{
+			log.Error(ctx, "Can't parse show_sql")
+			showLog = true
+		}
+		config.DBConfig.ShowSQL = showSQL
+	}else{
+		config.DBConfig.DynamoEndPoint = assertGetEnv("dynamo_end_point")
+		config.DBConfig.DynamoRegion = assertGetEnv("dynamo_region")
 	}
-	config.DBConfig.ShowSQL = showSQL
+
 }
 
 func Get() *Config {
