@@ -151,7 +151,7 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 	}
 	ctoips := ""
 	if c.Query("content_type") != "" {
-		ctoips = c.Query("cotnent_type") + c.Query("org") + c.Query("publish_status")
+		ctoips = c.Query("content_type") + c.Query("org") + c.Query("publish_status")
 	}
 
 	condition := da.DyKeyContentCondition{
@@ -160,6 +160,7 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 		ContentTypeOrgIdPublishStatus: ctoips,
 		Name:                          c.Query("name"),
 		Org:                           c.Query("org"),
+		KeyWords:                      c.Query("keywords"),
 		LastKey:                       c.Query("key"),
 	}
 

@@ -483,6 +483,15 @@
             }
           },
           {
+            "name": "content_type",
+            "in": "query",
+            "description": "Search content by content type",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
             "name": "description",
             "in": "query",
             "description": "Search content by description",
