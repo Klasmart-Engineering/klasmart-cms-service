@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -20,6 +21,10 @@ const (
 var (
 	doOnce         sync.Once
 	defaultStorage IStorage
+)
+
+var(
+	ErrInvalidCDNSignatureServiceResponse = errors.New("invalid cdn signature service response")
 )
 
 type IStorage interface {

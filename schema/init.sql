@@ -1,0 +1,22 @@
+CREATE TABLE `kidsloop2`.`assets` (
+    `id` VARCHAR(50) NOT NULL,
+    `name` VARCHAR(256) NOT NULL,
+    `program` VARCHAR(50) NOT NULL,
+    `subject` VARCHAR(50) NOT NULL,
+    `developmental` VARCHAR(50) NOT NULL,
+    `skills` VARCHAR(50) NOT NULL,
+    `age` VARCHAR(50) NOT NULL,
+    `keywords` TEXT NULL,
+    `description` TEXT NULL,
+    `thumbnail` TEXT NOT NULL,
+    `size` BIGINT NOT NULL DEFAULT 0,
+    `resource` TEXT NOT NULL,
+    `author` VARCHAR(50) NOT NULL,
+    `author_name` VARCHAR(128) NOT NULL,
+    `org` VARCHAR(50) NOT NULL,
+    `created_at` DATETIME NOT NULL,
+    `updated_at` DATETIME NOT NULL,
+    `deleted_at` DATETIME NULL,
+    PRIMARY KEY (`id`),
+    FULLTEXT INDEX `name_description_keywords_author_index` (`name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
+);
