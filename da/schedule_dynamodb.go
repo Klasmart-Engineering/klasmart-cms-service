@@ -39,12 +39,33 @@ func (s *scheduleDynamoDA) BatchInsert(ctx context.Context, schedules []*entity.
 		}
 		itemsWriteRequest[i] = request
 	}
-	items[constant.TableNameSchedule] = itemsWriteRequest
-	input := &dynamodb.BatchWriteItemInput{
-		RequestItems: items,
+	length := len(itemsWriteRequest)
+	for i := 0; i < length; i++ {
+		if i != 0 && i%25 == 0 {
+			items[constant.TableNameSchedule] = itemsWriteRequest[:25]
+			input := &dynamodb.BatchWriteItemInput{
+				RequestItems: items,
+			}
+			_, err := dbclient.GetClient().BatchWriteItem(input)
+			if err != nil {
+				log.Error(ctx, "batch add schedule: batch write item failed", log.Any("scheduleItems", items))
+				return err
+			}
+			itemsWriteRequest = itemsWriteRequest[25:]
+		}
 	}
-	_, err := dbclient.GetClient().BatchWriteItem(input)
-	return err
+	if len(itemsWriteRequest) > 0 {
+		items[constant.TableNameSchedule] = itemsWriteRequest
+		input := &dynamodb.BatchWriteItemInput{
+			RequestItems: items,
+		}
+		_, err := dbclient.GetClient().BatchWriteItem(input)
+		if err != nil {
+			log.Error(ctx, "batch delete schedule: batch write item failed", log.Any("scheduleItems", items))
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *scheduleDynamoDA) Update(ctx context.Context, schedule *entity.Schedule) error {
@@ -97,14 +118,14 @@ func (s *scheduleDynamoDA) Query(ctx context.Context, condition *ScheduleConditi
 	}
 	result, err := dbclient.GetClient().Query(input)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(ctx, "dbclient query error", log.Err(err))
 		return nil, err
 	}
 
 	var data []*entity.Schedule
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &data)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(ctx, "UnmarshalListOfMaps error", log.Err(err))
 		return nil, err
 	}
 
@@ -167,7 +188,7 @@ func (s *scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Sche
 	}
 	result, err := dbclient.GetClient().GetItem(input)
 	if err != nil {
-		log.Error(ctx, "update schedule error", log.Err(err), log.String("id", id))
+		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
 		return nil, utils.ConvertDynamodbError(err)
 	}
 	schedule := new(entity.Schedule)

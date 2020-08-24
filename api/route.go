@@ -19,7 +19,6 @@ func (s Server) registeRoute() {
 	s.engine.GET("/v1/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
 	})
-	v1 := s.engine.Group("/v1")
 
 	assets := s.engine.Group("/v1/assets")
 	{
@@ -67,11 +66,14 @@ func (s Server) registeRoute() {
 		content.GET("/contents_pending", MustLogin, s.QueryPendingContent)
 
 	}
+	schedules := s.engine.Group("/v1")
+	{
+		schedules.PUT("/schedules/:id", s.updateSchedule)
+		schedules.DELETE("/schedules/:id", s.deleteSchedule)
+		schedules.POST("/schedules", s.addSchedule)
+		schedules.GET("/schedules/:id", s.getScheduleByID)
+		schedules.GET("/schedules", s.querySchedule)
+		schedules.GET("/schedules_home", s.queryHomeSchedule)
+	}
 
-	v1.PUT("/schedules/:id", s.updateSchedule)
-	v1.DELETE("/schedules/:id", s.deleteSchedule)
-	v1.POST("/schedules", s.addSchedule)
-	v1.GET("/schedules/:id", s.getScheduleByID)
-	v1.GET("/schedules", s.querySchedule)
-	v1.GET("/schedules_home", s.queryHomeSchedule)
 }

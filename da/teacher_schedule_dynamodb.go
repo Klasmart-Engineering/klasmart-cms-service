@@ -37,12 +37,33 @@ func (t *teacherScheduleDA) BatchAdd(ctx context.Context, datalist []*entity.Tea
 		}
 		itemsWriteRequest[i] = request
 	}
-	items[constant.TableNameTeacherSchedule] = itemsWriteRequest
-	input := &dynamodb.BatchWriteItemInput{
-		RequestItems: items,
+	length := len(itemsWriteRequest)
+	for i := 0; i < length; i++ {
+		if i != 0 && i%25 == 0 {
+			items[constant.TableNameTeacherSchedule] = itemsWriteRequest[:25]
+			input := &dynamodb.BatchWriteItemInput{
+				RequestItems: items,
+			}
+			_, err := dbclient.GetClient().BatchWriteItem(input)
+			if err != nil {
+				log.Error(ctx, "batch add teacher_schedule: batch write item failed", log.Any("items", items))
+				return err
+			}
+			itemsWriteRequest = itemsWriteRequest[25:]
+		}
 	}
-	_, err := dbclient.GetClient().BatchWriteItem(input)
-	return err
+	if len(itemsWriteRequest) > 0 {
+		items[constant.TableNameTeacherSchedule] = itemsWriteRequest
+		input := &dynamodb.BatchWriteItemInput{
+			RequestItems: items,
+		}
+		_, err := dbclient.GetClient().BatchWriteItem(input)
+		if err != nil {
+			log.Error(ctx, "batch add teacher_schedule: batch write item failed", log.Any("items", items))
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *teacherScheduleDA) Delete(ctx context.Context, teacherID string, scheduleID string) error {
@@ -118,14 +139,14 @@ func (t *teacherScheduleDA) Page(ctx context.Context, condition TeacherScheduleC
 
 	result, err := dbclient.GetClient().Query(input)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(ctx, "query error", log.Any("input", input))
 		return "", nil, err
 	}
 
 	var data []*entity.TeacherSchedule
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &data)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(ctx, "UnmarshalListOfMaps error", log.Any("data", data))
 		return "", nil, err
 	}
 	var lastkey string
