@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"strings"
 	"sync"
@@ -158,7 +159,7 @@ func (s *scheduleDynamoDA) GetByID(ctx context.Context, id string) (*entity.Sche
 	result, err := dbclient.GetClient().GetItem(input)
 	if err != nil {
 		log.Error(ctx, "update schedule error", log.Err(err), log.String("id", id))
-		return nil, err
+		return nil, utils.ConvertDynamodbError(err)
 	}
 	schedule := new(entity.Schedule)
 	err = dynamodbattribute.UnmarshalMap(result.Item, schedule)
@@ -232,7 +233,7 @@ func (s *scheduleDynamoDA) BatchGetByIDs(ctx context.Context, ids []string) ([]*
 	result, err := dbclient.GetClient().BatchGetItem(input)
 	if err != nil {
 		log.Error(ctx, "get tag by ids", log.Err(err), log.Strings("id", ids))
-		return nil, err
+		return nil, utils.ConvertDynamodbError(err)
 	}
 	scheduleList := result.Responses[constant.TableNameSchedule]
 	schedules := make([]*entity.Schedule, len(scheduleList))
