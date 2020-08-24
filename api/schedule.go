@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"net/http"
 	"strconv"
 	"strings"
@@ -207,11 +208,13 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		return
 	}
-	result, err := model.GetScheduleModel().Query(ctx, &da.ScheduleCondition{
-		OrgID:       "",
+	condition := &da.ScheduleCondition{
+		OrgID:       "1",
 		StartAt:     start,
 		FilterEndAt: entity.NullInt64{Valid: true, Int64: end},
-	})
+	}
+	condition.Init(constant.GSI_Schedule_OrgIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
+	result, err := model.GetScheduleModel().Query(ctx, condition)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return

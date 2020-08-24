@@ -3,8 +3,10 @@ package da
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"math/rand"
 	"testing"
 	"time"
@@ -58,7 +60,11 @@ func TestScheduleCondition_GetCondition(t *testing.T) {
 }
 
 func TestScheduleDynamoDA_Query(t *testing.T) {
-	condition := &ScheduleCondition{}
+	condition := &ScheduleCondition{
+		OrgID:   "1",
+		StartAt: time.Now().Unix(),
+	}
+	condition.Init(constant.GSI_Schedule_OrgIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
 	data, err := GetScheduleDA().Query(context.Background(), condition)
 	if err != nil {
 		fmt.Println(err)

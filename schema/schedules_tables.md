@@ -32,7 +32,7 @@ aws dynamodb update-table \
     --table-name schedules \
     --attribute-definitions AttributeName=org_id,AttributeType=S AttributeName=start_at,AttributeType=N \
     --global-secondary-index-updates \
-    "[{\"Create\":{\"IndexName\": \"OrgIDAndStartAt\",\"KeySchema\":[{\"AttributeName\":\"org_id\",\"KeyType\":\"HASH\"},{\"AttributeName\":\"start_at\",\"KeyType\":\"RANGE\"}], \
+    "[{\"Create\":{\"IndexName\": \"org_id_and_start_at\",\"KeySchema\":[{\"AttributeName\":\"org_id\",\"KeyType\":\"HASH\"},{\"AttributeName\":\"start_at\",\"KeyType\":\"RANGE\"}], \
     \"ProvisionedThroughput\": {\"ReadCapacityUnits\": 10, \"WriteCapacityUnits\": 5      },\"Projection\":{\"ProjectionType\":\"ALL\"}}}]" \
 --endpoint-url http://192.168.1.234:18000
 ```

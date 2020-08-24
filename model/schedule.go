@@ -39,7 +39,6 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewdata *
 	index := 0
 	for _, item := range scheduleList {
 		item.ID = utils.NewID()
-
 		for _, teacherID := range item.TeacherIDs {
 			tsItem := &entity.TeacherSchedule{
 				TeacherID:  teacherID,
