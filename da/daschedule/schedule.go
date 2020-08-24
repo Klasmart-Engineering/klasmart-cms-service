@@ -1,17 +1,42 @@
 package daschedule
 
 import (
+	"context"
 	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
 type IScheduleDA interface {
 	dbo.DataAccesser
+	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int, error)
 }
 
 type scheduleDA struct {
 	dbo.BaseDA
+}
+
+func (s scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.Schedule) (int, error) {
+	var data [][]interface{}
+	for _, item := range schedules {
+		data = append(data, []interface{}{
+			item.ID,
+			item.Title,
+		})
+	}
+	sql := utils.SQLBatchInsert(constant.TableNameSchedule, []string{"id", "title"}, data)
+	execResult := dbContext.Exec(sql.Format, sql.Values...)
+	if execResult.Error != nil {
+		logger.Error(ctx, "db exec sql error", log.Any("sql", sql))
+		return 0, execResult.Error
+	}
+	total := int(execResult.RowsAffected)
+	return total, nil
 }
 
 var (

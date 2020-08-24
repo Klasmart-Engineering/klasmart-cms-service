@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/daschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/dyschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -27,9 +28,7 @@ type scheduleModel struct {
 	testScheduleRepeatFlag bool
 }
 
-func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
-	schedule := viewdata.Convert()
-	schedule.CreatedID = op.UserID
+func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule) (string, error) {
 	scheduleList, err := s.RepeatSchedule(ctx, schedule)
 	if err != nil {
 		log.Error(ctx, "daschedule repeat error", log.Err(err), log.Any("daschedule", schedule))
@@ -49,22 +48,39 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 			index++
 		}
 	}
-	// add to schedules
-	//err = daschedule.GetScheduleDA().Insert()
-	//if err != nil {
-	//	log.Error(ctx, "daschedule batchInsert error", log.Err(err))
-	//	return "", err
-	//}
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		// add to schedules
+		_, err = daschedule.GetScheduleDA().BatchInsert(ctx, tx, scheduleList)
+		if err != nil {
+			log.Error(ctx, "daschedule batchInsert error", log.Err(err))
+			return err
+		}
 
-	// add to teachers_schedules
-	err = dyschedule.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
+		// add to teachers_schedules
+		err = dyschedule.GetTeacherScheduleDA().BatchAdd(ctx, teacherSchedules)
+		if err != nil {
+			log.Error(ctx, "daschedule batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		log.Error(ctx, "daschedule batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
 		return "", err
 	}
 	if len(scheduleList) > 0 {
-		return scheduleList[0].ID, nil
+		return scheduleList[0].ID, errors.New("")
 	}
+	return "", errors.New("")
+}
+func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
+	schedule := viewdata.Convert()
+	schedule.CreatedID = op.UserID
+	if viewdata.ModeType == entity.ModeTypeRepeat {
+		s.addRepeatSchedule(ctx, tx, schedule)
+	} else {
+
+	}
+
 	return "", errors.New("add daschedule error")
 }
 

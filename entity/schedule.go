@@ -240,6 +240,7 @@ func (s Schedule) Clone() Schedule {
 const (
 	ModeTypeAllDay = "AllDay"
 	ModeTypeRepeat = "Repeat"
+	ModeTypeNone   = "None"
 )
 
 type ScheduleAddView struct {
