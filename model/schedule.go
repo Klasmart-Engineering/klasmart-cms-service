@@ -71,6 +71,14 @@ func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdat
 		log.Error(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
 		return err
 	}
+	if _, err := da.GetScheduleDA().GetByID(ctx, viewdata.ID); err != nil {
+		if err == constant.ErrRecordNotFound {
+			log.Error(ctx, "update schedule: record not found", log.Err(err))
+		} else {
+			log.Error(ctx, "update schedule: get schedule by id failed", log.String("id", viewdata.ID))
+		}
+		return err
+	}
 	if err := s.Delete(ctx, op, viewdata.ID, viewdata.EditType); err != nil {
 		log.Error(ctx, "update schedule: delete failed",
 			log.Err(err),
@@ -91,15 +99,19 @@ func (s *scheduleModel) Update(ctx context.Context, op *entity.Operator, viewdat
 
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
 	// TODO: check permission
+	schedule, err := da.GetScheduleDA().GetByID(ctx, id)
+	if err != nil {
+		if err == constant.ErrRecordNotFound {
+			log.Warn(ctx, "delete schedule: record not found")
+			return nil
+		}
+		log.Error(ctx, "delete schedule: get schedule by id failed",
+			log.String("id", id))
+		return err
+	}
 	var deletingTeacherSchedulePKs [][2]string
 	switch editType {
 	case entity.ScheduleEditOnlyCurrent:
-		schedule, err := da.GetScheduleDA().GetByID(ctx, id)
-		if err != nil {
-			log.Error(ctx, "delete schedule: get schedule by id failed",
-				log.String("id", id))
-			return err
-		}
 		if err := da.GetScheduleDA().Delete(ctx, id); err != nil {
 			log.Error(ctx, "delete schedule: delete failed",
 				log.String("id", id), log.String("edit_type", string(editType)))
@@ -109,14 +121,9 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 			deletingTeacherSchedulePKs = append(deletingTeacherSchedulePKs, [2]string{teacherID, id})
 		}
 	case entity.ScheduleEditWithFollowing:
-		item, err := da.GetScheduleDA().GetByID(ctx, id)
-		if err != nil {
-			log.Error(ctx, "delete schedule: get by id failed", log.String("id", id))
-			return err
-		}
 		cond := da.ScheduleCondition{
-			RepeatID: item.RepeatID,
-			StartAt:  item.StartAt,
+			RepeatID: schedule.RepeatID,
+			StartAt:  schedule.StartAt,
 		}
 		cond.Init(constant.GSI_Schedule_RepeatIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
 		schedules, err := da.GetScheduleDA().Query(ctx, &cond)
