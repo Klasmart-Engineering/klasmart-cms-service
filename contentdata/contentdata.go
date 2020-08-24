@@ -42,6 +42,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Skills:        obj.Skills,
 		Age:           obj.Age,
 		Keywords:      strings.Split(obj.Keywords, ","),
+		SuggestTime: 	obj.SuggestTime,
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
 		Data:          contentData,
