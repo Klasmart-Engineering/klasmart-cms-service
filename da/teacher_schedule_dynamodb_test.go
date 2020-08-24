@@ -91,14 +91,5 @@ func TestTeacherScheduleCondition(t *testing.T) {
 		StartAt:   time.Now().Unix(),
 	}
 	condition.Init(constant.GSI_TeacherSchedule_TeacherAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
-	condition.SetQuery()
-	condition.SetPage("lastkey", 100)
 	fmt.Println(condition)
 }
-
-//t_1,s_2_5f40cd5896d5c5712b231260,t_1,1597563992
-//&{t_1 s_0_5f40cd5896d5c5712b23125e 1596872792}
-//&{t_1 s_6_5f40cd5896d5c5712b231264 1597304792}
-//&{t_1 s_7_5f40cd5896d5c5712b231265 1597563992}
-//&{t_1 s_5_5f40cd5896d5c5712b231263 1597563992}
-//&{t_1 s_2_5f40cd5896d5c5712b231260 1597563992}

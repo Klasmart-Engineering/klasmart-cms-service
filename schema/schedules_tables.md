@@ -7,7 +7,7 @@ aws dynamodb create-table \
 AttributeName=id,AttributeType=S \
 --key-schema \
 AttributeName=id,KeyType=HASH \
---provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+--provisioned-throughput ReadCapacityUnits=10,WriteCapacityUnits=5 \
 --endpoint-url http://192.168.1.234:18000
 ```
 
