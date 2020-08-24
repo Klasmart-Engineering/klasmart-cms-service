@@ -64,6 +64,7 @@ type Content struct {
 	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
 	Extra string `gorm:"type:json;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
+	SuggestTime int `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
 	Author     string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
 	AuthorName string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
 	Org        string `gorm:"type:varchar(50);NOT NULL;column:org" dynamodbav:"org" json:"org" dynamoupdate:":og"`
@@ -114,6 +115,7 @@ type UpdateDyContent struct {
 	Author     string `json:":au"`
 	AuthorName string `json:":aun"`
 	Org        string `json:":og"`
+	SuggestTime int `json:":sut"`
 
 	PublishScope  string               `json:":ps"`
 	PublishStatus ContentPublishStatus `json:":pst"`
@@ -174,6 +176,7 @@ type CreateContentRequest struct {
 	Keywords      []string `json:"keywords"`
 	Description   string   `json:"description"`
 	Thumbnail     string   `json:"thumbnail"`
+	SuggestTime int `json:"suggest_time"`
 
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
@@ -206,6 +209,7 @@ type ContentInfo struct {
 	Description   string   `json:"description"`
 	Thumbnail     string   `json:"thumbnail"`
 	Version       int64    `json:"version"`
+	SuggestTime int `json:"suggest_time"`
 
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`

@@ -2581,6 +2581,11 @@
                 "description": "subject id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": "1"
+              },
               "developmental": {
                 "type": "string",
                 "description": "developmental id",
@@ -2780,6 +2785,11 @@
                 "type": "string",
                 "description": "content name",
                 "example": "Content title"
+              },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": "1"
               },
               "program": {
                 "type": "string",

@@ -233,6 +233,7 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		AuthorName:    co.AuthorName,
 		Org:           co.Org,
 		PublishScope:  co.PublishScope,
+		SuggestTime: 	co.SuggestTime,
 		PublishStatus: co.PublishStatus,
 		RejectReason:  co.RejectReason,
 		SourceId:      co.SourceId,
@@ -256,6 +257,9 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	}
 	if co.Subject == "" {
 		co0.Subject = content.Subject
+	}
+	if co.SuggestTime == 0 {
+		co0.SuggestTime = content.SuggestTime
 	}
 	if co.Developmental == "" {
 		co0.Developmental = content.Developmental

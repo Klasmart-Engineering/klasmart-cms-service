@@ -39,6 +39,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Keywords:      strings.Join(c.Keywords, ","),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
+		SuggestTime: c.SuggestTime,
 		Data:          dataJSON,
 		Extra:         c.Extra,
 		Author:        operator.UserID,
@@ -85,6 +86,9 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 	if len(data.Keywords) > 0 {
 		content.Keywords = strings.Join(data.Keywords, ",")
+	}
+	if data.SuggestTime > 0 {
+		content.SuggestTime = data.SuggestTime
 	}
 	if data.Data != nil{
 		data.Data.Marshal(ctx)
