@@ -163,7 +163,7 @@
                   "type": "object",
                   "description": "content info",
                   "properties": {
-                    "total": {
+                    "id": {
                       "type": "string",
                       "description": "content id",
                       "example": "1"
@@ -1833,7 +1833,6 @@
         }
       }
     },
-
     "/schedules": {
       "get": {
         "tags": [
@@ -2123,7 +2122,10 @@
             "description": "Search schedules by teacher_id",
             "schema": {
               "type": "string",
-              "enum": ["only_current", "with_following"],
+              "enum": [
+                "only_current",
+                "with_following"
+              ],
               "nullable": true,
               "description": "repeat edit option"
             }
@@ -3067,7 +3069,7 @@
         }
       },
       "ScheduleCreate": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "title": {
@@ -3084,7 +3086,7 @@
           },
           "teacher_ids": {
             "type": "array",
-            "items":{
+            "items": {
               "type": "string"
             },
             "description": "schedule teacher_ids"
@@ -3110,8 +3112,12 @@
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "never",
+                  "after_count",
+                  "after_time"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -3137,7 +3143,15 @@
                   },
                   "on": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3155,7 +3169,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -3164,12 +3181,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3187,7 +3218,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -3204,12 +3238,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3256,7 +3304,7 @@
         }
       },
       "ScheduleUpdate": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "title": {
@@ -3273,7 +3321,7 @@
           },
           "teacher_ids": {
             "type": "array",
-            "items":{
+            "items": {
               "type": "string"
             },
             "description": "schedule lessonPlan name"
@@ -3296,7 +3344,10 @@
           },
           "repeat_edit_options": {
             "type": "string",
-            "enum": ["only_current", "with_following"],
+            "enum": [
+              "only_current",
+              "with_following"
+            ],
             "description": "repeat edit option"
           },
           "repeat": {
@@ -3304,8 +3355,12 @@
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "never",
+                  "after_count",
+                  "after_time"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -3331,7 +3386,15 @@
                   },
                   "on": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3349,7 +3412,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -3358,12 +3424,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3381,7 +3461,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -3398,12 +3481,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3450,7 +3547,7 @@
         }
       },
       "ScheduleDetailed": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "id": {
@@ -3494,8 +3591,12 @@
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "never",
+                  "after_count",
+                  "after_time"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -3521,7 +3622,15 @@
                   },
                   "on": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3539,7 +3648,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -3548,12 +3660,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3571,7 +3697,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -3588,12 +3717,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "sun",
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3652,7 +3795,11 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["never", "after_count", "after_time"]
+            "enum": [
+              "never",
+              "after_count",
+              "after_time"
+            ]
           },
           "after_count": {
             "type": "integer",
