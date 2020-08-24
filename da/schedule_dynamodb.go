@@ -190,7 +190,7 @@ func (s *scheduleDynamoDA) BatchDelete(ctx context.Context, ids []string) error 
 	var requestItems []*dynamodb.WriteRequest
 	for _, id := range ids {
 		requestItems = append(requestItems, &dynamodb.WriteRequest{
-			PutRequest: &dynamodb.PutRequest{Item: map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}}},
+			DeleteRequest: &dynamodb.DeleteRequest{Key: map[string]*dynamodb.AttributeValue{"id": {S: aws.String(id)}}},
 		})
 	}
 	for i := 0; i < len(requestItems); i++ {

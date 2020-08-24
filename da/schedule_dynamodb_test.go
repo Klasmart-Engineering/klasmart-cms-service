@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -16,12 +17,13 @@ func init() {
 func TestScheduleDynamoDA_Insert(t *testing.T) {
 	arr := make([]*entity.Schedule, 0)
 
-	for i := 0; i < 10; i++ {
-		id := utils.NewID()
+	for i := 0; i < 50; i++ {
+		id := strconv.Itoa(i)
 		start := time.Now().AddDate(0, 0, rand.Intn(10))
 		s := &entity.Schedule{
 			ID:           id,
-			Title:        fmt.Sprintf("%s_%s", id[0:4], "title"),
+			RepeatID:     utils.NewID(),
+			Title:        fmt.Sprintf("%s_%s", id, "title"),
 			ClassID:      fmt.Sprintf("%d", rand.Intn(10)),
 			LessonPlanID: fmt.Sprintf("%d", rand.Intn(10)),
 			TeacherIDs:   []string{"1", "2", "3"},
@@ -66,5 +68,68 @@ func TestScheduleDynamoDA_Query(t *testing.T) {
 	}
 	for _, item := range data {
 		fmt.Println(*item)
+	}
+}
+
+func Test_scheduleDynamoDA_Delete(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		id  string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name:    "delete",
+			args:    args{ctx: context.Background(), id: "0"},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &scheduleDynamoDA{}
+			if err := s.Delete(tt.args.ctx, tt.args.id); (err != nil) != tt.wantErr {
+				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_scheduleDynamoDA_BatchDelete(t *testing.T) {
+	rangeInts := func(start, end int) []string {
+		var result []string
+		for num := start; num < end; num++ {
+			result = append(result, strconv.Itoa(num))
+		}
+		return result
+	}
+	type args struct {
+		ctx context.Context
+		ids []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{
+			name: "batch delete",
+			args: args{
+				ctx: context.Background(),
+				ids: rangeInts(0, 50),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &scheduleDynamoDA{}
+			if err := s.BatchDelete(tt.args.ctx, tt.args.ids); (err != nil) != tt.wantErr {
+				t.Errorf("BatchDelete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

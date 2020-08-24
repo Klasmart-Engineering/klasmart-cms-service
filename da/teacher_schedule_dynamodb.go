@@ -71,8 +71,8 @@ func (t *teacherScheduleDA) BatchDelete(ctx context.Context, pks [][2]string) er
 	var requestItems []*dynamodb.WriteRequest
 	for _, pk := range pks {
 		requestItems = append(requestItems, &dynamodb.WriteRequest{
-			PutRequest: &dynamodb.PutRequest{
-				Item: map[string]*dynamodb.AttributeValue{
+			DeleteRequest: &dynamodb.DeleteRequest{
+				Key: map[string]*dynamodb.AttributeValue{
 					"teacher_id":  {S: aws.String(pk[0])},
 					"schedule_id": {S: aws.String(pk[1])},
 				},
