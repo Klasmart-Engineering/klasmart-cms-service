@@ -98,10 +98,11 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 	if err != nil {
 		return "", err
 	}
-	if len(scheduleList) > 0 {
-		return scheduleList[0].ID, errors.New("")
+	if len(scheduleList) <= 0 {
+		log.Error(ctx, "schedules batchInsert error", log.Any("scheduleList", scheduleList))
+		return "", errors.New("schedules is empty")
 	}
-	return "", errors.New("")
+	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	schedule := viewData.Convert()
@@ -129,7 +130,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 				log.Int64("start_at", viewData.StartAt),
 				log.Int64("end_at", viewData.EndAt),
 			)
-			return "", constant.ErrDuplicateRecord
+			return "", constant.ErrConflict
 		}
 	}
 	if viewData.ModeType == entity.ModeTypeRepeat {

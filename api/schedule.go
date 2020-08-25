@@ -103,15 +103,24 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	// add schedule
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", data))
+	if err == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"id": id,
+		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id": id,
-	})
+	if err == constant.ErrFileNotFound {
+		c.JSON(http.StatusBadRequest, err.Error())
+		log.Info(ctx, "add schedule: verify data failed", log.Err(err), log.Any("requestData", data))
+		return
+	}
+	if err == constant.ErrConflict {
+		c.JSON(http.StatusConflict, err.Error())
+		log.Info(ctx, "add schedule: schedule start_at or end_at conflict", log.Err(err), log.Any("requestData", data))
+		return
+	}
+	c.JSON(http.StatusInternalServerError, err.Error())
+	log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", data))
 }
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
