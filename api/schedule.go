@@ -230,7 +230,7 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 			Int64: start,
 			Valid: start != 0,
 		},
-		EndAt: sql.NullInt64{Valid: true, Int64: end},
+		EndAtLe: sql.NullInt64{Valid: true, Int64: end},
 	}
 
 	result, err := model.GetScheduleModel().Query(ctx, dbo.MustGetDB(ctx), condition)
