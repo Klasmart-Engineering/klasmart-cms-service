@@ -56,8 +56,8 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	return false, nil
 }
 
-func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule) (string, error) {
-	scheduleList, err := s.RepeatSchedule(ctx, schedule)
+func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options entity.RepeatOptions) (string, error) {
+	scheduleList, err := s.RepeatSchedule(ctx, schedule, options)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule))
 		return "", err
@@ -104,7 +104,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 	schedule := viewData.Convert()
 	schedule.CreatedID = op.UserID
 	if viewData.ModeType == entity.ModeTypeRepeat {
-		return s.addRepeatSchedule(ctx, tx, schedule)
+		return s.addRepeatSchedule(ctx, tx, schedule, viewData.Repeat)
 	} else {
 		schedule.ID = utils.NewID()
 		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
