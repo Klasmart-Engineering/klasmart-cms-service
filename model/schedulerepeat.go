@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -18,15 +19,21 @@ func (s *scheduleModel) getMaxRepeatYear() int {
 }
 
 func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule) ([]*entity.Schedule, error) {
-	if template == nil {
+	if template == nil || template.RepeatJson == "" {
 		err := fmt.Errorf("repeat daschedule(include template): require not nil template")
 		log.Error(ctx, err.Error())
 		return nil, entity.ErrInvalidArgs(err)
 	}
+	var repeat entity.RepeatOptions
+	err := json.Unmarshal([]byte(template.RepeatJson), repeat)
+	if err != nil {
+		log.Error(ctx, "Unmarshal schedule.RepeatJson error", log.Err(err), log.String("schedule.RepeatJson", template.RepeatJson))
+		return nil, err
+	}
 	switch template.ModeType {
 	case entity.ModeTypeRepeat:
 		result := []*entity.Schedule{template}
-		items, err := s.repeatSchedule(ctx, template, template.Repeat)
+		items, err := s.repeatSchedule(ctx, template, repeat)
 		if err != nil {
 			log.Error(ctx, "repeat daschedule(include template): call repeat daschedule failed",
 				log.Err(err),

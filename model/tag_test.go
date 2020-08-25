@@ -80,25 +80,7 @@ func TestTagModel_Query(t *testing.T) {
 	fmt.Println(len(resut))
 }
 func TestTagModel_Page(t *testing.T) {
-	total, resut, err := GetTagModel().Page(context.Background(), &da.TagCondition{
-		Name: entity.NullString{
-			String: "",
-			Valid:  false,
-		},
-		Pager: utils.Pager{
-			PageIndex: 1,
-			PageSize:  12,
-		},
-	})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
-	fmt.Println("total:", total)
-	for _, item := range resut {
-		fmt.Println(*item)
-	}
 }
 
 func TestTagModel_GetByIDs(t *testing.T) {

@@ -191,7 +191,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	if err != nil {
 		startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
 	}
-	condition.StartAtGe = sql.NullInt64{
+	condition.StartAtLe = sql.NullInt64{
 		Int64: startAt,
 		Valid: startAt == 0,
 	}
@@ -244,7 +244,12 @@ const (
 	ViewTypeMonth    = "Month"
 )
 
-func (s *Server) queryHomeSchedule(c *gin.Context) {
+func (s *Server) getScheduleTimeView(c *gin.Context) {
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
+		return
+	}
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
 	timeAtStr := c.Query("time_at")
@@ -273,14 +278,17 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 	}
 	condition := &da.ScheduleCondition{
 		OrgID: sql.NullString{
-			String: "1",
-			Valid:  true,
+			String: op.OrgID,
+			Valid:  op.OrgID != "",
 		},
-		StartAtGe: sql.NullInt64{
+		StartAtLe: sql.NullInt64{
 			Int64: start,
-			Valid: start != 0,
+			Valid: start > 0,
 		},
-		EndAtLe: sql.NullInt64{Valid: true, Int64: end},
+		EndAtGe: sql.NullInt64{
+			Valid: end > 0,
+			Int64: end,
+		},
 	}
 
 	result, err := model.GetScheduleModel().Query(ctx, dbo.MustGetDB(ctx), condition)

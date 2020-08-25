@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -130,6 +131,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 			return nil
 		})
 		if err != nil {
+			log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", schedule))
 			return "", err
 		}
 		return schedule.ID, nil
@@ -266,7 +268,7 @@ func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition 
 	var scheduleList []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "daschedule query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	result := make([]*entity.ScheduleListView, len(scheduleList))
@@ -286,12 +288,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	if schedule.ClassID != "" {
 		classService, err := external.GetClassServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		classInfos, err := classService.BatchGet(ctx, []string{schedule.ClassID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		if len(classInfos) > 0 {
@@ -396,7 +398,15 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		Description: schedule.Description,
 		Version:     schedule.Version,
 		RepeatID:    schedule.RepeatID,
-		Repeat:      schedule.Repeat,
+	}
+	if schedule.RepeatJson != "" {
+		var repeat entity.RepeatOptions
+		err := json.Unmarshal([]byte(schedule.RepeatJson), repeat)
+		if err != nil {
+			log.Error(ctx, "Unmarshal schedule.RepeatJson error", log.Err(err), log.String("schedule.RepeatJson", schedule.RepeatJson))
+			return nil, err
+		}
+		result.Repeat = repeat
 	}
 	basicInfo, err := s.getBasicInfo(ctx, tx, schedule)
 	if err != nil {
