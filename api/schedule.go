@@ -7,7 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/daschedule"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
@@ -132,8 +132,8 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 }
 func (s *Server) querySchedule(c *gin.Context) {
 	ctx := c.Request.Context()
-	condition := new(daschedule.ScheduleCondition)
-	condition.OrderBy = daschedule.NewScheduleOrderBy(c.Query("order_by"))
+	condition := new(da.ScheduleCondition)
+	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
 	teacherName := c.Query("teacher_name")
 	if strings.TrimSpace(teacherName) == "" {
 		c.JSON(http.StatusBadRequest, errors.New("teacherName is empty"))
@@ -175,7 +175,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
-	total, result, err := daschedule.GetScheduleDA().PageByTeacherID(ctx, dbo.MustGetDB(ctx), condition)
+	total, result, err := da.GetScheduleDA().PageByTeacherID(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "querySchedule:error", log.Err(err))
@@ -221,7 +221,7 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		return
 	}
-	condition := &daschedule.ScheduleCondition{
+	condition := &da.ScheduleCondition{
 		OrgID: sql.NullString{
 			String: "1",
 			Valid:  true,

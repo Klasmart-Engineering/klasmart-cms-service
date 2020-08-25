@@ -1,4 +1,4 @@
-package daschedule
+package da
 
 import (
 	"context"
@@ -54,6 +54,7 @@ func GetScheduleTeacherDA() IScheduleTeacherDA {
 }
 
 type ScheduleTeacherCondition struct {
+	TeacherID  sql.NullString
 	ScheduleID sql.NullString
 	OrderBy    ScheduleTeacherOrderBy
 	Pager      dbo.Pager

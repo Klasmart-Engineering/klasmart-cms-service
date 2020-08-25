@@ -1,4 +1,4 @@
-package daschedule
+package da
 
 import (
 	"context"
@@ -23,7 +23,6 @@ type scheduleDA struct {
 }
 
 func (s scheduleDA) PageByTeacherID(ctx context.Context, dbContext *dbo.DBContext, condition *ScheduleCondition) (int, []*entity.Schedule, error) {
-	//dbContext.Table(constant.TableNameSchedule).Select("").Joins()
 	return 0, nil, nil
 }
 
@@ -62,6 +61,7 @@ type ScheduleCondition struct {
 	StartAt   sql.NullInt64
 	EndAt     sql.NullInt64
 	TeacherID sql.NullString
+	//ScheduleIDs entity.NullStrings
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -82,6 +82,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if c.EndAt.Valid {
 
+	}
+	if c.TeacherID.Valid {
+		wheres = append(wheres, "id ")
+		params = append(params, "")
 	}
 
 	if c.DeleteAt.Valid {
