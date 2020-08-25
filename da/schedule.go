@@ -89,8 +89,8 @@ func GetScheduleDA() IScheduleDA {
 
 type ScheduleCondition struct {
 	OrgID            sql.NullString
-	StartAtGe        sql.NullInt64
-	EndAtLe          sql.NullInt64
+	StartAtLe        sql.NullInt64
+	EndAtGe          sql.NullInt64
 	TeacherID        sql.NullString
 	StartAndEndRange []sql.NullInt64
 	//ScheduleIDs entity.NullStrings
@@ -110,9 +110,9 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.OrgID.String)
 	}
 
-	if c.StartAtGe.Valid {
-		wheres = append(wheres, "start_at >= ?")
-		params = append(params, c.StartAtGe.Int64)
+	if c.StartAtLe.Valid {
+		wheres = append(wheres, "start_at <= ?")
+		params = append(params, c.StartAtLe.Int64)
 	}
 	if len(c.StartAndEndRange) == 2 {
 		startRange := c.StartAndEndRange[0]
@@ -127,20 +127,20 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		}
 
 	}
-	if c.EndAtLe.Valid {
+	if c.EndAtGe.Valid {
 		wheres = append(wheres, "end_at >= ?")
-		params = append(params, c.EndAtLe.Int64)
+		params = append(params, c.EndAtGe.Int64)
 	}
 	if c.TeacherID.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0 || delete_at is null) and %s.id = %s.schedule_id)", constant.TableNameTeacherSchedule, constant.TableNameTeacherSchedule, constant.TableNameSchedule)
+		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (deleted_at=0 || deleted_at is null) and %s.id = %s.schedule_id)", constant.TableNameTeacherSchedule, constant.TableNameTeacherSchedule, constant.TableNameSchedule)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherID.String)
 	}
 
 	if c.DeleteAt.Valid {
-		wheres = append(wheres, "delete_at>0")
+		wheres = append(wheres, "deleted_at>0")
 	} else {
-		wheres = append(wheres, "(delete_at=0 || delete_at is null)")
+		wheres = append(wheres, "(deleted_at=0 || deleted_at is null)")
 	}
 
 	return wheres, params
@@ -159,6 +159,8 @@ type ScheduleOrderBy int
 const (
 	ScheduleOrderByCreateAtDesc = iota + 1
 	ScheduleOrderByCreateAtAsc
+	ScheduleOrderByStartAtAsc
+	ScheduleOrderByStartAtDesc
 )
 
 func NewScheduleOrderBy(orderby string) ScheduleOrderBy {
@@ -167,8 +169,12 @@ func NewScheduleOrderBy(orderby string) ScheduleOrderBy {
 		return ScheduleOrderByCreateAtAsc
 	case "-create_at":
 		return ScheduleOrderByCreateAtDesc
+	case "start_at":
+		return ScheduleOrderByStartAtAsc
+	case "-start_at":
+		return ScheduleOrderByStartAtDesc
 	default:
-		return ScheduleOrderByCreateAtDesc
+		return ScheduleOrderByStartAtAsc
 	}
 }
 
@@ -178,7 +184,11 @@ func (c ScheduleOrderBy) ToSQL() string {
 		return "create_at"
 	case ScheduleOrderByCreateAtDesc:
 		return "create_at desc"
+	case ScheduleOrderByStartAtAsc:
+		return "start_at"
+	case ScheduleOrderByStartAtDesc:
+		return "start_at desc"
 	default:
-		return "create_at desc"
+		return "start_at"
 	}
 }

@@ -12,7 +12,7 @@ import (
 type Config struct {
 	StorageConfig StorageConfig
 	CDNConfig     CDNConfig
-	Schedule      ScheduleConfig `json:"daschedule" yaml:"daschedule"`
+	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
 	DBConfig      DBConfig
 	RedisConfig   RedisConfig
 }

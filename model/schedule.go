@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -31,11 +32,11 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	var scheduleList []*entity.Schedule
 	StartAndEndRange := make([]sql.NullInt64, 2)
 	StartAndEndRange[0] = sql.NullInt64{
-		Valid: true,
+		Valid: startAt <= 0,
 		Int64: startAt,
 	}
 	StartAndEndRange[1] = sql.NullInt64{
-		Valid: true,
+		Valid: endAt <= 0,
 		Int64: endAt,
 	}
 	err := da.GetScheduleDA().Query(ctx, &da.ScheduleCondition{
@@ -54,10 +55,10 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	return false, nil
 }
 
-func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule) (string, error) {
-	scheduleList, err := s.RepeatSchedule(ctx, schedule)
+func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options entity.RepeatOptions) (string, error) {
+	scheduleList, err := s.RepeatSchedule(ctx, schedule, options)
 	if err != nil {
-		log.Error(ctx, "daschedule repeat error", log.Err(err), log.Any("daschedule", schedule))
+		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule))
 		return "", err
 	}
 	teacherSchedules := make([]*entity.TeacherSchedule, len(scheduleList)*len(schedule.TeacherIDs))
@@ -102,7 +103,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 	schedule := viewData.Convert()
 	schedule.CreatedID = op.UserID
 	if viewData.ModeType == entity.ModeTypeRepeat {
-		return s.addRepeatSchedule(ctx, tx, schedule)
+		return s.addRepeatSchedule(ctx, tx, schedule, viewData.Repeat)
 	} else {
 		schedule.ID = utils.NewID()
 		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
@@ -129,6 +130,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 			return nil
 		})
 		if err != nil {
+			log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", schedule))
 			return "", err
 		}
 		return schedule.ID, nil
@@ -238,7 +240,7 @@ func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *
 	var scheduleList []*entity.Schedule
 	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "PageByTeacherID error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "Page: schedule query error", log.Err(err), log.Any("condition", condition))
 		return 0, nil, err
 	}
 
@@ -251,7 +253,7 @@ func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *
 		}
 		basicInfo, err := s.getBasicInfo(ctx, tx, item)
 		if err != nil {
-			log.Error(ctx, "PageByTeacherID:getBasicInfo error", log.Err(err), log.Any("scheduleItem", item))
+			log.Error(ctx, "Page:getBasicInfo error", log.Err(err), log.Any("scheduleItem", item))
 			return 0, nil, err
 		}
 		viewData.ScheduleBasic = *basicInfo
@@ -265,7 +267,7 @@ func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition 
 	var scheduleList []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "daschedule query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	result := make([]*entity.ScheduleListView, len(scheduleList))
@@ -285,12 +287,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	if schedule.ClassID != "" {
 		classService, err := external.GetClassServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		classInfos, err := classService.BatchGet(ctx, []string{schedule.ClassID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		if len(classInfos) > 0 {
@@ -304,12 +306,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	if schedule.SubjectID != "" {
 		subjectService, err := external.GetSubjectServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		subjectInfos, err := subjectService.BatchGet(ctx, []string{schedule.SubjectID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		if len(subjectInfos) > 0 {
@@ -322,12 +324,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	if schedule.ProgramID != "" {
 		programService, err := external.GetProgramServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		programInfos, err := programService.BatchGet(ctx, []string{schedule.ProgramID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		if len(programInfos) > 0 {
@@ -355,12 +357,12 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		result.Teachers = make([]entity.ShortInfo, len(teacherIDs))
 		teacherService, err := external.GetTeacherServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		teacherInfos, err := teacherService.BatchGet(ctx, teacherIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("daschedule", schedule))
+			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedule", schedule))
 			return nil, err
 		}
 		for i, item := range teacherInfos {
@@ -370,7 +372,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
-	// TODO LessonPlan Attachment
+	// TODO LessonPlan
 
 	return result, nil
 }
@@ -395,7 +397,15 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		Description: schedule.Description,
 		Version:     schedule.Version,
 		RepeatID:    schedule.RepeatID,
-		Repeat:      schedule.Repeat,
+	}
+	if schedule.RepeatJson != "" {
+		var repeat entity.RepeatOptions
+		err := json.Unmarshal([]byte(schedule.RepeatJson), repeat)
+		if err != nil {
+			log.Error(ctx, "Unmarshal schedule.RepeatJson error", log.Err(err), log.String("schedule.RepeatJson", schedule.RepeatJson))
+			return nil, err
+		}
+		result.Repeat = repeat
 	}
 	basicInfo, err := s.getBasicInfo(ctx, tx, schedule)
 	if err != nil {

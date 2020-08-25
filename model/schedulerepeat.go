@@ -17,7 +17,7 @@ func (s *scheduleModel) getMaxRepeatYear() int {
 	return config.Get().Schedule.MaxRepeatYear
 }
 
-func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule) ([]*entity.Schedule, error) {
+func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule, options entity.RepeatOptions) ([]*entity.Schedule, error) {
 	if template == nil {
 		err := errors.New("repeat schedule(include template): require not nil template")
 		log.Info(ctx, err.Error())
@@ -26,7 +26,7 @@ func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Sch
 	switch template.ModeType {
 	case entity.ModeTypeRepeat:
 		result := []*entity.Schedule{template}
-		items, err := s.repeatSchedule(ctx, template, template.Repeat)
+		items, err := s.repeatSchedule(ctx, template, options)
 		if err != nil {
 			log.Error(ctx, "repeat schedule(include template): call repeat schedule failed",
 				log.Err(err),

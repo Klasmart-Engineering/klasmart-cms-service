@@ -73,7 +73,8 @@ func (s Server) registeRoute() {
 		schedules.POST("/schedules", s.addSchedule)
 		schedules.GET("/schedules/:id", s.getScheduleByID)
 		schedules.GET("/schedules", s.querySchedule)
-		schedules.GET("/schedules_home", s.queryHomeSchedule)
+		schedules.GET("/schedules_time_view", s.getScheduleTimeView)
+		schedules.GET("/schedule_attachment_upload/:ext", s.getAttachmentUploadPath)
 	}
 
 }

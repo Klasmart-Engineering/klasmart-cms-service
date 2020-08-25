@@ -1866,14 +1866,40 @@
             }
           },
           {
-            "name": "last_key",
+            "name": "start_at",
             "in": "query",
-            "description": "The key value of the last record",
+            "description": "Search schedules by start_at",
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "default": "datetime now"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by enum",
             "schema": {
               "type": "string",
-              "format": "string",
+              "enum": [
+                "create_at",
+                "-create_at",
+                "start_at",
+                "-start_at"
+              ],
               "nullable": true,
-              "default": ""
+              "default": "start_at"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <=0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 1
             },
             "required": false,
             "allowEmptyValue": true
@@ -1881,7 +1907,7 @@
           {
             "name": "page_size",
             "in": "query",
-            "description": "records per page, not paging if pageSize <= 0",
+            "description": "records per page, not paging if page_size <= 0",
             "schema": {
               "type": "integer",
               "format": "int32",
@@ -1985,14 +2011,14 @@
         }
       }
     },
-    "/schedules_home": {
+    "/schedules_time_view": {
       "get": {
         "tags": [
           "schedule"
         ],
-        "summary": "query schedules",
+        "summary": "query schedules time view",
         "description": "query schedules",
-        "operationId": "queryschedules_home",
+        "operationId": "schedules_time_view",
         "security": [
           {
             "bearerAuth": []
@@ -2031,16 +2057,10 @@
                   "type": "object",
                   "description": "schedule list",
                   "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "data": {
+                    "list": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/ScheduleHome"
+                        "$ref": "#/components/schemas/ScheduleTimeView"
                       }
                     }
                   }
@@ -2156,9 +2176,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "string",
-                  "description": "schedule id"
+                  "type": "object",
+                  "description": "new schedule id",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "string",
+                      "description": "new schedule id"
+                    }
+                  }
                 }
               }
             }
@@ -2233,6 +2259,65 @@
           },
           "404": {
             "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/schedule_attachment_upload/{ext}": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "get schedules attachment upload path",
+        "description": "get schedules attachment upload path",
+        "operationId": "getAttachmentUploadPath",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ext",
+            "in": "path",
+            "description": "attachment ext",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "new schedule id",
+                  "properties": {
+                    "attachment_url": {
+                      "type": "string",
+                      "format": "string",
+                      "description": "attachment upload url"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "500": {
             "description": "Server error"
@@ -2806,7 +2891,7 @@
           }
         }
       },
-      "ScheduleHome": {
+      "ScheduleTimeView": {
         "type": "object",
         "description": "schedule home short info",
         "properties": {

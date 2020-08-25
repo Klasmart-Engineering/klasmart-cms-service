@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -11,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
@@ -110,12 +112,40 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	data.OrgID = op.OrgID
 
+	// validate data
 	if err := utils.GetValidator().Struct(data); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
 		return
 	}
+	// validate attachment
+	_, exits := storage.DefaultStorage().ExitsFile(ctx, model.ScheduleAttachment_Storage_Partition, data.Attachment)
+	if !exits {
+		c.JSON(http.StatusBadRequest, errors.New("attachment is not exits"))
+		log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", data))
+	}
 
+	// is force add
+	if !data.IsForce {
+		conflict, err := model.GetScheduleModel().IsScheduleConflict(ctx, op, data.StartAt, data.EndAt)
+		if err != nil {
+			log.Error(ctx, "add schedule: check conflict failed",
+				log.Int64("start_at", data.StartAt),
+				log.Int64("end_at", data.EndAt),
+			)
+			c.JSON(http.StatusInternalServerError, err.Error())
+			return
+		}
+		if conflict {
+			log.Warn(ctx, "add schedule: time conflict",
+				log.Int64("start_at", data.StartAt),
+				log.Int64("end_at", data.EndAt),
+			)
+			c.JSON(http.StatusConflict, "add schedule: time conflict")
+			return
+		}
+	}
+	// add schedule
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
@@ -160,9 +190,10 @@ func (s *Server) querySchedule(c *gin.Context) {
 	startAtStr := c.Query("start_at")
 	startAt, err := strconv.ParseInt(startAtStr, 10, 64)
 	if err != nil {
-		startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
+		startAt = utils.BeginOfDayByTimeStamp(time.Now().Unix()).Unix()
 	}
-	condition.StartAtGe = sql.NullInt64{
+	startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
+	condition.StartAtLe = sql.NullInt64{
 		Int64: startAt,
 		Valid: startAt == 0,
 	}
@@ -215,7 +246,12 @@ const (
 	ViewTypeMonth    = "Month"
 )
 
-func (s *Server) queryHomeSchedule(c *gin.Context) {
+func (s *Server) getScheduleTimeView(c *gin.Context) {
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
+		return
+	}
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
 	timeAtStr := c.Query("time_at")
@@ -244,14 +280,17 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 	}
 	condition := &da.ScheduleCondition{
 		OrgID: sql.NullString{
-			String: "1",
-			Valid:  true,
+			String: op.OrgID,
+			Valid:  op.OrgID != "",
 		},
-		StartAtGe: sql.NullInt64{
+		StartAtLe: sql.NullInt64{
 			Int64: start,
-			Valid: start != 0,
+			Valid: start > 0,
 		},
-		EndAtLe: sql.NullInt64{Valid: true, Int64: end},
+		EndAtGe: sql.NullInt64{
+			Valid: end > 0,
+			Int64: end,
+		},
 	}
 
 	result, err := model.GetScheduleModel().Query(ctx, dbo.MustGetDB(ctx), condition)
@@ -264,4 +303,19 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusInternalServerError, err.Error())
+}
+
+func (s *Server) getAttachmentUploadPath(c *gin.Context) {
+	ctx := c.Request.Context()
+	ext := c.Param("ext")
+	name := fmt.Sprintf("%s.%s", utils.NewID(), ext)
+	url, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, model.ScheduleAttachment_Storage_Partition, name)
+	if err != nil {
+		log.Error(ctx, "uploadAttachment:get upload file path error", log.Err(err))
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"attachment_url": url,
+	})
 }
