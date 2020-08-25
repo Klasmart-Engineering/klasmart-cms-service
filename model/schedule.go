@@ -27,27 +27,32 @@ type scheduleModel struct {
 	testScheduleRepeatFlag bool
 }
 
-//func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
-//	var scheduleList []*entity.Schedule
-//	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
-//	if err != nil {
-//		return 0, nil, err
-//	}
-//	var result = make([]*entity.ScheduleSeachView, len(scheduleList))
-//	for i, item := range scheduleList {
-//		baseInfo, err := s.getBasicInfo(ctx, tx, item)
-//		if err != nil {
-//			return 0, nil, err
-//		}
-//		result[i] = &entity.ScheduleSeachView{
-//			ID:            item.ID,
-//			StartAt:       item.StartAt,
-//			EndAt:         item.EndAt,
-//			ScheduleBasic: *baseInfo,
-//		}
-//	}
-//	return total, result, nil
-//}
+func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error) {
+	var scheduleList []*entity.Schedule
+	StartAndEndRange := make([]sql.NullInt64, 2)
+	StartAndEndRange[0] = sql.NullInt64{
+		Valid: true,
+		Int64: startAt,
+	}
+	StartAndEndRange[1] = sql.NullInt64{
+		Valid: true,
+		Int64: endAt,
+	}
+	err := da.GetScheduleDA().Query(ctx, &da.ScheduleCondition{
+		OrgID: sql.NullString{
+			String: op.OrgID,
+			Valid:  op.OrgID != "",
+		},
+		StartAndEndRange: StartAndEndRange,
+	}, &scheduleList)
+	if err != nil {
+		return false, err
+	}
+	if len(scheduleList) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
 
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule) (string, error) {
 	scheduleList, err := s.RepeatSchedule(ctx, schedule)
@@ -401,6 +406,27 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	return result, nil
 }
 
+//func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
+//	var scheduleList []*entity.Schedule
+//	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
+//	if err != nil {
+//		return 0, nil, err
+//	}
+//	var result = make([]*entity.ScheduleSeachView, len(scheduleList))
+//	for i, item := range scheduleList {
+//		baseInfo, err := s.getBasicInfo(ctx, tx, item)
+//		if err != nil {
+//			return 0, nil, err
+//		}
+//		result[i] = &entity.ScheduleSeachView{
+//			ID:            item.ID,
+//			StartAt:       item.StartAt,
+//			EndAt:         item.EndAt,
+//			ScheduleBasic: *baseInfo,
+//		}
+//	}
+//	return total, result, nil
+//}
 var (
 	_scheduleOnce  sync.Once
 	_scheduleModel IScheduleModel
