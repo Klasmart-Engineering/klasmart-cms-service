@@ -22,6 +22,7 @@ type IScheduleModel interface {
 	Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
 	//PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
+	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
