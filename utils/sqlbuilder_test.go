@@ -15,7 +15,7 @@ func TestSQLBuilder(t *testing.T) {
 		{"2", "Kwork"},
 		{"3", "Unknown"},
 	}
-	b := NewSQLBuilder().Append("insert user(id, name) values")
+	b := NewSQLBuilder().Append("insert into user(id, name) values")
 	values := NewSQLBuilder()
 	for _, item := range data {
 		values.Append("(?,?)", item.id, item.name)

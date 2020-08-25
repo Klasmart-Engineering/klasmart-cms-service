@@ -47,14 +47,14 @@ func (b *SQLBuilder) Join(sep ...string) SQLTemplate {
 }
 
 func SQLBatchInsert(table string, columns []string, values [][]interface{}) SQLTemplate {
-	b := NewSQLBuilder().Append(fmt.Sprintf("insert %s(%s) values", table, strings.Join(columns, ",")))
+	b := NewSQLBuilder().Append(fmt.Sprintf("insert into %s(%s) values", table, strings.Join(columns, ",")))
+	var placeholders []string
+	for i := 0; i < len(columns); i++ {
+		placeholders = append(placeholders, "?")
+	}
+	format := fmt.Sprintf("(%s)", strings.Join(placeholders, ","))
 	valuesBuilder := NewSQLBuilder()
 	for _, item := range values {
-		var placeholders []string
-		for i := 0; i < len(columns); i++ {
-			placeholders = append(placeholders, "?")
-		}
-		format := fmt.Sprintf("(%s)", strings.Join(placeholders, ","))
 		valuesBuilder.Append(format, item...)
 	}
 	b.AppendTemplate(valuesBuilder.Join(","))
