@@ -24,6 +24,7 @@ type IContentModel interface {
 
 	GetContentById(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
+	GetContentNameById(ctx context.Context, tx *dbo.DBContext, cid string)(string ,error)
 
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
@@ -500,6 +501,19 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	//TODO: Check org scope
 
 	return ErrGetUnauthorizedContent
+}
+
+func (cm *ContentModel) GetContentNameById(ctx context.Context, tx *dbo.DBContext, cid string)(string ,error){
+	cachedContent := cache.GetRedisContentCache().GetContentCacheById(ctx, cid)
+	if cachedContent != nil {
+		return cachedContent.Name, nil
+	}
+	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "can't read contentdata", log.Err(err))
+		return "", ErrNoContent
+	}
+	return obj.Name, nil
 }
 
 func (cm *ContentModel) GetContentById(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
