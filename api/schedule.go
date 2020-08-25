@@ -76,6 +76,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		errMsg := "delete schedule: invalid edit type"
 		log.Info(ctx, errMsg, log.String("repeat_edit_options", string(editType)))
 		c.JSON(http.StatusBadRequest, errMsg)
+		return
 	}
 	operator, _ := GetOperator(c)
 	if err := model.GetScheduleModel().Delete(ctx, dbo.MustGetDB(ctx), operator, id, editType); err != nil {
