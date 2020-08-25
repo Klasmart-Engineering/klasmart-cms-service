@@ -241,6 +241,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		start, end = timeUtil.FindMonthRange()
 	default:
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
+		log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
 		return
 	}
 	condition := &da.ScheduleCondition{
