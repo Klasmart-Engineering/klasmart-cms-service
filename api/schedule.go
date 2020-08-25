@@ -1,16 +1,18 @@
 package api
 
 import (
+	"database/sql"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/dyschedule"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da/daschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	dymodel "gitlab.badanamu.com.cn/calmisland/kidsloop2/model/dyschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils/dynamodbhelper"
 	"net/http"
 	"strconv"
 	"strings"
@@ -92,20 +94,20 @@ func (s *Server) addSchedule(c *gin.Context) {
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
-		log.Info(ctx, "add daschedule: should bind body failed", log.Err(err))
+		log.Info(ctx, "add schedule: should bind body failed", log.Err(err))
 		return
 	}
 
 	if err := utils.GetValidator().Struct(data); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
-		log.Info(ctx, "add daschedule: verify data failed", log.Err(err))
+		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
 		return
 	}
 
-	id, err := dymodel.GetScheduleModel().Add(ctx, op, data)
+	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "add daschedule error", log.Err(err))
+		log.Error(ctx, "add schedule error", log.Err(err))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -116,7 +118,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	log.Info(ctx, "getScheduleByID", log.String("scheduleID", id))
-	result, err := dymodel.GetScheduleModel().GetByID(ctx, id)
+	result, err := model.GetScheduleModel().GetByID(ctx, dbo.MustGetDB(ctx), id)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
@@ -130,23 +132,25 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 }
 func (s *Server) querySchedule(c *gin.Context) {
 	ctx := c.Request.Context()
+	condition := new(daschedule.ScheduleCondition)
+	condition.OrderBy = daschedule.NewScheduleOrderBy(c.Query("order_by"))
 	teacherName := c.Query("teacher_name")
-	startTimeStr := c.Query("start_at")
-	pageSizeStr := c.Query("page_size")
-	pageSize, err := strconv.ParseInt(pageSizeStr, 10, 64)
-	if err != nil {
-		pageSize = constant.DefaultPageSize
-	}
-	lastKeyQuery := c.Query("last_key")
-	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
-	if err != nil {
-		startTime = utils.BeginOfDayByTimeStamp(startTime).Unix()
-	}
-	log.Info(ctx, "querySchedule", log.String("teacherName", teacherName), log.Int64("start_at", startTime))
 	if strings.TrimSpace(teacherName) == "" {
 		c.JSON(http.StatusBadRequest, errors.New("teacherName is empty"))
 		return
 	}
+	condition.Pager = utils.GetPager(c.Query("page"), c.Query("page_size"))
+	startAtStr := c.Query("start_at")
+	startAt, err := strconv.ParseInt(startAtStr, 10, 64)
+	if err != nil {
+		startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
+	}
+	condition.StartAt = sql.NullInt64{
+		Int64: startAt,
+		Valid: startAt == 0,
+	}
+	log.Info(ctx, "querySchedule", log.Any("condition", condition))
+
 	teacherService, err := external.GetTeacherServiceProvider()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
@@ -165,23 +169,21 @@ func (s *Server) querySchedule(c *gin.Context) {
 		return
 	}
 	teacher := teachers[0]
-	condition := &dyschedule.ScheduleCondition{
-		TeacherID: teacher.ID,
-		StartAt:   startTime,
+	condition.TeacherID = sql.NullString{
+		String: teacher.ID,
+		Valid:  true,
 	}
-	condition.Pager.LastKey = lastKeyQuery
-	condition.Pager.PageSize = pageSize
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
-	lastKey, result, err := dymodel.GetScheduleModel().PageByTeacherID(ctx, condition)
+	total, result, err := daschedule.GetScheduleDA().PageByTeacherID(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "querySchedule:error", log.Err(err))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"last_key": lastKey,
-		"data":     result,
+		"total": total,
+		"data":  result,
 	})
 }
 
@@ -219,13 +221,19 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		return
 	}
-	condition := &dyschedule.ScheduleCondition{
-		OrgID:       "1",
-		StartAt:     start,
-		FilterEndAt: entity.NullInt64{Valid: true, Int64: end},
+	condition := &daschedule.ScheduleCondition{
+		OrgID: sql.NullString{
+			String: "1",
+			Valid:  true,
+		},
+		StartAt: sql.NullInt64{
+			Int64: start,
+			Valid: start != 0,
+		},
+		EndAt: sql.NullInt64{Valid: true, Int64: end},
 	}
-	condition.Init(constant.GSI_Schedule_OrgIDAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
-	result, err := dymodel.GetScheduleModel().Query(ctx, condition)
+
+	result, err := model.GetScheduleModel().Query(ctx, dbo.MustGetDB(ctx), condition)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return

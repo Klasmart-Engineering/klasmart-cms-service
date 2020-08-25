@@ -1,4 +1,4 @@
-package dyschedule
+package model
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type IScheduleModel interface {
 	Delete(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) ([]*entity.ScheduleListView, error)
 	Page(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
-	//PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *dyschedule.ScheduleCondition) (string, []*entity.ScheduleSeachView, error)
+	PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
 }
 type scheduleModel struct {
@@ -227,22 +227,11 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 	return nil
 }
 
-func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *dyschedule.ScheduleCondition) (string, []*entity.ScheduleSeachView, error) {
-	tsCondition := dyschedule.TeacherScheduleCondition{
-		TeacherID: condition.TeacherID,
-		StartAt:   condition.StartAt,
-	}
-	tsCondition.Init(constant.GSI_TeacherSchedule_TeacherAndStartAt, dynamodbhelper.SortKeyGreaterThanEqual)
-
-	lastKey, data, err := dyschedule.GetTeacherScheduleDA().Page(ctx, tsCondition)
-	ids := make([]string, len(data))
-	for i, item := range data {
-		ids[i] = item.ScheduleID
-	}
-	scheduleList, err := dyschedule.GetScheduleDA().BatchGetByIDs(ctx, ids)
+func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
+	total, scheduleList, err := daschedule.GetScheduleDA().PageByTeacherID(ctx, tx, condition)
 	if err != nil {
-		log.Error(ctx, "PageByTeacherID:batch get by daschedule ids error", log.Err(err), log.Strings("ids", ids))
-		return "", nil, err
+		log.Error(ctx, "PageByTeacherID error", log.Err(err), log.Any("condition", condition))
+		return 0, nil, err
 	}
 
 	result := make([]*entity.ScheduleSeachView, len(scheduleList))
@@ -255,13 +244,13 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, 
 		basicInfo, err := s.getBasicInfo(ctx, tx, item)
 		if err != nil {
 			log.Error(ctx, "PageByTeacherID:getBasicInfo error", log.Err(err), log.Any("scheduleItem", item))
-			return "", nil, err
+			return 0, nil, err
 		}
 		viewdata.ScheduleBasic = *basicInfo
 		result[i] = viewdata
 	}
 
-	return lastKey, result, nil
+	return total, result, nil
 }
 
 func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition *daschedule.ScheduleCondition) ([]*entity.ScheduleListView, error) {

@@ -144,7 +144,7 @@ func (s Server) queryTag(c *gin.Context) {
 		result []*entity.TagView
 		err    error
 	)
-	if condition.Pager.PageIndex == 0 || condition.Pager.PageSize == 0 {
+	if condition.Pager.Page == 0 || condition.Pager.PageSize == 0 {
 		result, err = model.GetTagModel().Query(ctx, condition)
 		total = int64(len(result))
 	} else {

@@ -85,14 +85,14 @@ func (tagDynamoDA) Page(ctx context.Context, condition *TagCondition) (int64, []
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(constant.TableNameTag),
-		Limit:                     aws.Int64(condition.Pager.PageSize),
+		Limit:                     aws.Int64(int64(condition.Pager.PageSize)),
 	}
 	result := make([]*entity.Tag, 0)
 
 	var pageIndex int64 = 1
 	var count int64
 	err = dbclient.GetClient().ScanPages(params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
-		if pageIndex == condition.Pager.PageIndex {
+		if pageIndex == int64(condition.Pager.Page) {
 			for _, item := range page.Items {
 				tagItem := &entity.Tag{}
 				err = dynamodbattribute.UnmarshalMap(item, tagItem)

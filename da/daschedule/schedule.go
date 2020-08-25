@@ -15,14 +15,14 @@ import (
 type IScheduleDA interface {
 	dbo.DataAccesser
 	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int, error)
-	PageByTeacherID(context.Context, *dbo.DBContext) (int, []*entity.Schedule, error)
+	PageByTeacherID(context.Context, *dbo.DBContext, *ScheduleCondition) (int, []*entity.Schedule, error)
 }
 
 type scheduleDA struct {
 	dbo.BaseDA
 }
 
-func (s scheduleDA) PageByTeacherID(ctx context.Context, dbContext *dbo.DBContext) (int, []*entity.Schedule, error) {
+func (s scheduleDA) PageByTeacherID(ctx context.Context, dbContext *dbo.DBContext, condition *ScheduleCondition) (int, []*entity.Schedule, error) {
 	//dbContext.Table(constant.TableNameSchedule).Select("").Joins()
 	return 0, nil, nil
 }
@@ -58,9 +58,10 @@ func GetScheduleDA() IScheduleDA {
 }
 
 type ScheduleCondition struct {
-	OrgID   sql.NullInt64
-	StartAt sql.NullInt64
-	EndAt   sql.NullInt64
+	OrgID     sql.NullString
+	StartAt   sql.NullInt64
+	EndAt     sql.NullInt64
+	TeacherID sql.NullString
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager

@@ -1,4 +1,4 @@
-package dyschedule
+package model
 
 import (
 	"context"
