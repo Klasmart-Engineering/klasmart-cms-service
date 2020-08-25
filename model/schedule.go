@@ -54,6 +54,7 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 		return false, err
 	}
 	if len(scheduleList) > 0 {
+		log.Debug(ctx, "conflict schedule data", log.Any("scheduleList", scheduleList))
 		return true, nil
 	}
 	return false, nil
