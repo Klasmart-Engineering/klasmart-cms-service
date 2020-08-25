@@ -192,7 +192,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
-	total, result, err := da.GetScheduleDA().PageByTeacherID(ctx, dbo.MustGetDB(ctx), condition)
+	total, result, err := model.GetScheduleModel().Page(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "querySchedule:error", log.Any("condition", condition), log.Err(err))

@@ -13,7 +13,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 	"sync"
 )
 
@@ -25,7 +24,6 @@ type IScheduleModel interface {
 	Delete(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error)
 	Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
-	//PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
 	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
@@ -471,12 +469,12 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 func (s *scheduleModel) GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error) {
 	teacherService, err := external.GetTeacherServiceProvider()
 	if err != nil {
-		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.Any("name", name))
 		return nil, err
 	}
 	teachers, err := teacherService.Query(ctx, name)
 	if err != nil {
-		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err), log.String("teacher", teacherName))
+		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err), log.String("name", name))
 		return nil, err
 	}
 

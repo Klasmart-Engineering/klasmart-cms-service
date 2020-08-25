@@ -16,17 +16,12 @@ import (
 type IScheduleDA interface {
 	dbo.DataAccesser
 	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int, error)
-	PageByTeacherID(context.Context, *dbo.DBContext, *ScheduleCondition) (int, []*entity.Schedule, error)
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
 }
 
 type scheduleDA struct {
 	dbo.BaseDA
-}
-
-func (s *scheduleDA) PageByTeacherID(ctx context.Context, dbContext *dbo.DBContext, condition *ScheduleCondition) (int, []*entity.Schedule, error) {
-	return 0, nil, nil
 }
 
 func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.Schedule) (int, error) {
