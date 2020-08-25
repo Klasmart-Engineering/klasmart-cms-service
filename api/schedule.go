@@ -201,8 +201,9 @@ func (s *Server) querySchedule(c *gin.Context) {
 	startAtStr := c.Query("start_at")
 	startAt, err := strconv.ParseInt(startAtStr, 10, 64)
 	if err != nil {
-		startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
+		startAt = utils.BeginOfDayByTimeStamp(time.Now().Unix()).Unix()
 	}
+	startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
 	condition.StartAtLe = sql.NullInt64{
 		Int64: startAt,
 		Valid: startAt == 0,

@@ -159,6 +159,8 @@ type ScheduleOrderBy int
 const (
 	ScheduleOrderByCreateAtDesc = iota + 1
 	ScheduleOrderByCreateAtAsc
+	ScheduleOrderByStartAtAsc
+	ScheduleOrderByStartAtDesc
 )
 
 func NewScheduleOrderBy(orderby string) ScheduleOrderBy {
@@ -167,8 +169,12 @@ func NewScheduleOrderBy(orderby string) ScheduleOrderBy {
 		return ScheduleOrderByCreateAtAsc
 	case "-create_at":
 		return ScheduleOrderByCreateAtDesc
+	case "start_at":
+		return ScheduleOrderByStartAtAsc
+	case "-start_at":
+		return ScheduleOrderByStartAtDesc
 	default:
-		return ScheduleOrderByCreateAtDesc
+		return ScheduleOrderByStartAtAsc
 	}
 }
 
@@ -178,7 +184,11 @@ func (c ScheduleOrderBy) ToSQL() string {
 		return "create_at"
 	case ScheduleOrderByCreateAtDesc:
 		return "create_at desc"
+	case ScheduleOrderByStartAtAsc:
+		return "start_at"
+	case ScheduleOrderByStartAtDesc:
+		return "start_at desc"
 	default:
-		return "create_at desc"
+		return "start_at"
 	}
 }
