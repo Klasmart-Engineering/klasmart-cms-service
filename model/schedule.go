@@ -66,17 +66,17 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
 	}
-	teacherSchedules := make([]*entity.TeacherSchedule, len(scheduleList)*len(schedule.TeacherIDs))
+	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(schedule.TeacherIDs))
 	index := 0
 	for _, item := range scheduleList {
 		item.ID = utils.NewID()
 		for _, teacherID := range item.TeacherIDs {
-			tsItem := &entity.TeacherSchedule{
+			tsItem := &entity.ScheduleTeacher{
 				TeacherID:  teacherID,
 				ScheduleID: schedule.ID,
 				StartAt:    schedule.StartAt,
 			}
-			teacherSchedules[index] = tsItem
+			scheduleTeachers[index] = tsItem
 			index++
 		}
 	}
@@ -89,9 +89,9 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 		}
 
 		// add to teachers_schedules
-		_, err = da.GetScheduleTeacherDA().BatchInsert(ctx, tx, teacherSchedules)
+		_, err = da.GetScheduleTeacherDA().BatchInsert(ctx, tx, scheduleTeachers)
 		if err != nil {
-			log.Error(ctx, "teachers_schedules batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
+			log.Error(ctx, "teachers_schedules batchInsert error", log.Err(err), log.Any("scheduleTeachers", scheduleTeachers))
 			return err
 		}
 		return nil
@@ -143,20 +143,20 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 			if err != nil {
 				return err
 			}
-			teacherSchedules := make([]*entity.TeacherSchedule, len(schedule.TeacherIDs))
+			scheduleTeachers := make([]*entity.ScheduleTeacher, len(schedule.TeacherIDs))
 			for i, item := range viewData.TeacherIDs {
-				teacherSchedule := &entity.TeacherSchedule{
+				scheduleTeacher := &entity.ScheduleTeacher{
 					ID:         utils.NewID(),
 					TeacherID:  item,
 					ScheduleID: schedule.ID,
 					DeletedAt:  0,
 				}
-				teacherSchedules[i] = teacherSchedule
+				scheduleTeachers[i] = scheduleTeacher
 			}
 			// add to teachers_schedules
-			_, err = da.GetScheduleTeacherDA().BatchInsert(ctx, tx, teacherSchedules)
+			_, err = da.GetScheduleTeacherDA().BatchInsert(ctx, tx, scheduleTeachers)
 			if err != nil {
-				log.Error(ctx, "teachers_schedules batchInsert error", log.Err(err), log.Any("teacherSchedules", teacherSchedules))
+				log.Error(ctx, "schedules_teachers batchInsert error", log.Err(err), log.Any("scheduleTeachers", scheduleTeachers))
 				return err
 			}
 			return nil
@@ -390,7 +390,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
-	var scheduleTeacherList []*entity.TeacherSchedule
+	var scheduleTeacherList []*entity.ScheduleTeacher
 	err := da.GetScheduleTeacherDA().Query(ctx, &da.ScheduleTeacherCondition{
 		ScheduleID: sql.NullString{
 			String: schedule.ID,
@@ -402,8 +402,8 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	}
 	if len(scheduleTeacherList) != 0 {
 		teacherIDs := make([]string, len(scheduleTeacherList))
-		for _, item := range scheduleTeacherList {
-			teacherIDs = append(teacherIDs, item.TeacherID)
+		for i, item := range scheduleTeacherList {
+			teacherIDs[i] = item.ID
 		}
 		result.Teachers = make([]entity.ScheduleShortInfo, len(teacherIDs))
 		teacherService, err := external.GetTeacherServiceProvider()

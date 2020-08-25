@@ -13,7 +13,7 @@ import (
 
 type IScheduleTeacherDA interface {
 	dbo.DataAccesser
-	BatchInsert(context.Context, *dbo.DBContext, []*entity.TeacherSchedule) (int, error)
+	BatchInsert(context.Context, *dbo.DBContext, []*entity.ScheduleTeacher) (int, error)
 	DeleteByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
 }
 
@@ -21,7 +21,7 @@ type scheduleTeacherDA struct {
 	dbo.BaseDA
 }
 
-func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.TeacherSchedule) (int, error) {
+func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.ScheduleTeacher) (int, error) {
 	var data [][]interface{}
 	for _, item := range schedules {
 		data = append(data, []interface{}{
@@ -31,7 +31,7 @@ func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBCo
 			item.DeletedAt,
 		})
 	}
-	sql := SQLBatchInsert(constant.TableNameTeacherSchedule, []string{"id", "schedule_id", "teacher_id", "deleted_at"}, data)
+	sql := SQLBatchInsert(constant.TableNameScheduleTeacher, []string{"id", "schedule_id", "teacher_id", "deleted_at"}, data)
 	execResult := dbContext.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
 		logger.Error(ctx, "db exec sql error", log.Any("sql", sql))
@@ -44,7 +44,7 @@ func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBCo
 func (s *scheduleTeacherDA) DeleteByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) error {
 	if err := tx.Unscoped().
 		Where("schedule_id = ?", scheduleID).
-		Delete(&entity.TeacherSchedule{}).Error; err != nil {
+		Delete(&entity.ScheduleTeacher{}).Error; err != nil {
 		log.Error(ctx, "delete teacher_schedule by schedule id: delete failed",
 			log.Err(err),
 			log.String("schedule_id", scheduleID),
