@@ -96,39 +96,6 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	data.OrgID = op.OrgID
 
-	// validate data
-	if err := utils.GetValidator().Struct(data); err != nil {
-		c.JSON(http.StatusBadRequest, err.Error())
-		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
-		return
-	}
-	// validate attachment
-	_, exits := storage.DefaultStorage().ExitsFile(ctx, model.ScheduleAttachment_Storage_Partition, data.Attachment)
-	if !exits {
-		c.JSON(http.StatusBadRequest, errors.New("attachment is not exits"))
-		log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", data))
-	}
-
-	// is force add
-	if !data.IsForce {
-		conflict, err := model.GetScheduleModel().IsScheduleConflict(ctx, op, data.StartAt, data.EndAt)
-		if err != nil {
-			log.Error(ctx, "add schedule: check conflict failed",
-				log.Int64("start_at", data.StartAt),
-				log.Int64("end_at", data.EndAt),
-			)
-			c.JSON(http.StatusInternalServerError, err.Error())
-			return
-		}
-		if conflict {
-			log.Warn(ctx, "add schedule: time conflict",
-				log.Int64("start_at", data.StartAt),
-				log.Int64("end_at", data.EndAt),
-			)
-			c.JSON(http.StatusConflict, "add schedule: time conflict")
-			return
-		}
-	}
 	// add schedule
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
 	if err != nil {

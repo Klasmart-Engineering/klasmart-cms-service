@@ -10,9 +10,12 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
+
+const ()
 
 type IScheduleModel interface {
 	Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
@@ -102,6 +105,40 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	schedule := viewData.Convert()
 	schedule.CreatedID = op.UserID
+	// validate data
+	if err := utils.GetValidator().Struct(viewData); err != nil {
+		//c.JSON(http.StatusBadRequest, err.Error())
+		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
+		return "", err
+	}
+	// validate attachment
+	_, exits := storage.DefaultStorage().ExitsFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
+	if !exits {
+		//c.JSON(http.StatusBadRequest, errors.New("attachment is not exits"))
+		log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", viewData))
+		return "", errors.New("")
+	}
+
+	// is force add
+	if !viewData.IsForce {
+		conflict, err := GetScheduleModel().IsScheduleConflict(ctx, op, viewData.StartAt, viewData.EndAt)
+		if err != nil {
+			log.Error(ctx, "add schedule: check conflict failed",
+				log.Int64("start_at", viewData.StartAt),
+				log.Int64("end_at", viewData.EndAt),
+			)
+			//c.JSON(http.StatusInternalServerError, err.Error())
+			return "", err
+		}
+		if conflict {
+			log.Warn(ctx, "add schedule: time conflict",
+				log.Int64("start_at", viewData.StartAt),
+				log.Int64("end_at", viewData.EndAt),
+			)
+			//c.JSON(http.StatusConflict, "add schedule: time conflict")
+			return "", err
+		}
+	}
 	if viewData.ModeType == entity.ModeTypeRepeat {
 		return s.addRepeatSchedule(ctx, tx, schedule, viewData.Repeat)
 	} else {

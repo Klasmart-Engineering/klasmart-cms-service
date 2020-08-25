@@ -131,7 +131,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.EndAtGe.Int64)
 	}
 	if c.TeacherID.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (deleted_at=0 || deleted_at is null) and %s.id = %s.schedule_id)", constant.TableNameTeacherSchedule, constant.TableNameTeacherSchedule, constant.TableNameSchedule)
+		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (deleted_at=0) and %s.id = %s.schedule_id)", constant.TableNameTeacherSchedule, constant.TableNameTeacherSchedule, constant.TableNameSchedule)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherID.String)
 	}
@@ -139,7 +139,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.DeleteAt.Valid {
 		wheres = append(wheres, "deleted_at>0")
 	} else {
-		wheres = append(wheres, "(deleted_at=0 || deleted_at is null)")
+		wheres = append(wheres, "(deleted_at=0)")
 	}
 
 	return wheres, params
