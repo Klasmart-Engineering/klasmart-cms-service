@@ -690,19 +690,22 @@ func buildContentWithDetails(ctx context.Context, contentList []*entity.ContentI
 	developmentalNameMap := make(map[string]string)
 	skillsNameMap := make(map[string]string)
 	ageNameMap := make(map[string]string)
+	gradeNameMap := make(map[string]string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
 	developmentalIds := make([]string, 0)
 	skillsIds := make([]string, 0)
 	ageIds := make([]string, 0)
+	gradeIds := make([]string, 0)
 
 	for i := range contentList {
-		programIds = append(programIds, contentList[i].Program)
-		subjectIds = append(subjectIds, contentList[i].Subject)
-		developmentalIds = append(developmentalIds, contentList[i].Developmental)
-		skillsIds = append(skillsIds, contentList[i].Skills)
-		ageIds = append(ageIds, contentList[i].Age)
+		programIds = append(programIds, contentList[i].Program...)
+		subjectIds = append(subjectIds, contentList[i].Subject...)
+		developmentalIds = append(developmentalIds, contentList[i].Developmental...)
+		skillsIds = append(skillsIds, contentList[i].Skills...)
+		ageIds = append(ageIds, contentList[i].Age...)
+		gradeIds = append(gradeIds, contentList[i].Grade...)
 	}
 
 	//Program
@@ -780,16 +783,58 @@ func buildContentWithDetails(ctx context.Context, contentList []*entity.ContentI
 		}
 	}
 
+	//grade
+	gradeProvider, err := external.GetGradeServiceProvider()
+	if err != nil {
+		log.Error(ctx, "can't get gradeProvider", log.Err(err))
+	} else {
+		grades, err := gradeProvider.BatchGet(ctx, gradeIds)
+		if err != nil {
+			log.Error(ctx, "can't get grade info", log.Err(err))
+		} else {
+			for i := range grades {
+				gradeNameMap[grades[i].ID] = grades[i].Name
+			}
+		}
+	}
+
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
+		programNames := make([]string, len(contentList[i].Program))
+		subjectNames := make([]string, len(contentList[i].Subject))
+		developmentalNames := make([]string, len(contentList[i].Developmental))
+		skillsNames := make([]string, len(contentList[i].Skills))
+		ageNames := make([]string, len(contentList[i].Age))
+		gradeNames := make([]string, len(contentList[i].Grade))
+
+		for j := range contentList[i].Program {
+			programNames[j] = programNameMap[contentList[i].Program[j]]
+		}
+		for j := range contentList[i].Subject {
+			subjectNames[j] = subjectNameMap[contentList[i].Subject[j]]
+		}
+		for j := range contentList[i].Developmental {
+			developmentalNames[j] = developmentalNameMap[contentList[i].Developmental[j]]
+		}
+		for j := range contentList[i].Skills {
+			skillsNames[j] = skillsNameMap[contentList[i].Skills[j]]
+		}
+		for j := range contentList[i].Age {
+			ageNames[j] = ageNameMap[contentList[i].Age[j]]
+		}
+		for j := range contentList[i].Grade {
+			gradeNames[j] = gradeNameMap[contentList[i].Grade[j]]
+		}
+
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:       *contentList[i],
 			ContentTypeName:   entity.GetContentTypeName(contentList[i].ContentType),
-			ProgramName:       programNameMap[contentList[i].Program],
-			SubjectName:       subjectNameMap[contentList[i].Subject],
-			DevelopmentalName: developmentalNameMap[contentList[i].Developmental],
-			SkillsName:        skillsNameMap[contentList[i].Skills],
-			AgeName:           ageNameMap[contentList[i].Age],
+			ProgramName:       programNames,
+			SubjectName:       subjectNames,
+			DevelopmentalName: developmentalNames,
+			SkillsName:        skillsNames,
+			AgeName:           ageNames,
+			GradeName:         gradeNames,
 			OrgName:           orgName,
 		}
 	}

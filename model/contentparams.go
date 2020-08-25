@@ -31,11 +31,11 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
 		Name:          c.Name,
-		Program:       c.Program,
-		Subject:       c.Subject,
-		Developmental: c.Developmental,
-		Skills:        c.Skills,
-		Age:           c.Age,
+		Program:       strings.Join(c.Program, ","),
+		Subject:       strings.Join(c.Subject, ","),
+		Developmental: strings.Join(c.Developmental, ","),
+		Skills:        strings.Join(c.Skills, ","),
+		Age:           strings.Join(c.Age, ","),
 		Keywords:      strings.Join(c.Keywords, ","),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
@@ -60,20 +60,20 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.ContentType > 0 && data.Data != nil{
 		content.ContentType = data.ContentType
 	}
-	if data.Program != "" {
-		content.Program = data.Program
+	if data.Program != nil {
+		content.Program = strings.Join(data.Program, ",")
 	}
-	if data.Subject != "" {
-		content.Subject = data.Subject
+	if data.Subject != nil {
+		content.Subject = strings.Join(data.Subject, ",")
 	}
-	if data.Developmental != "" {
-		content.Developmental = data.Developmental
+	if data.Developmental != nil {
+		content.Developmental = strings.Join(data.Developmental, ",")
 	}
-	if data.Skills != "" {
-		content.Skills = data.Skills
+	if data.Skills != nil {
+		content.Skills = strings.Join(data.Skills, ",")
 	}
-	if data.Age != "" {
-		content.Age = data.Age
+	if data.Age != nil {
+		content.Age = strings.Join(data.Age, ",")
 	}
 	if data.Description != "" {
 		content.Description = data.Description
