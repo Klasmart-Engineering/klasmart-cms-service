@@ -2,8 +2,6 @@ package model
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -18,100 +16,52 @@ func (s *scheduleModel) getMaxRepeatYear() int {
 	return config.Get().Schedule.MaxRepeatYear
 }
 
-func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule, options entity.RepeatOptions) ([]*entity.Schedule, error) {
-	if template == nil {
-		err := errors.New("repeat schedule(include template): require not nil template")
-		log.Info(ctx, err.Error())
-		return nil, constant.ErrInvalidArgs
-	}
-	switch template.ModeType {
-	case entity.ModeTypeRepeat:
-		result := []*entity.Schedule{template}
-		items, err := s.repeatSchedule(ctx, template, options)
-		if err != nil {
-			log.Error(ctx, "repeat schedule(include template): call repeat schedule failed",
-				log.Err(err),
-				log.Any("template", template),
-			)
-			return nil, err
-		}
-		result = append(result, items...)
-		return result, nil
-	default:
+func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions) ([]*entity.Schedule, error) {
+	if template.ModeType != entity.ModeTypeRepeat {
 		return []*entity.Schedule{template}, nil
 	}
-}
-
-func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Schedule, options entity.RepeatOptions) ([]*entity.Schedule, error) {
-	if template == nil {
-		err := errors.New("repeat schedule: require not nil template")
-		log.Info(ctx, err.Error())
-		return nil, constant.ErrInvalidArgs
+	result := []*entity.Schedule{template}
+	items, err := s.repeatSchedule(ctx, template, options)
+	if err != nil {
+		log.Error(ctx, "repeat schedule(include template): call repeat schedule failed",
+			log.Err(err),
+			log.Any("template", template),
+		)
+		return nil, err
 	}
-	var result []*entity.Schedule
-	switch options.Type {
-	case entity.RepeatTypeDaily:
-		items, err := s.repeatScheduleDaily(ctx, template, options.Daily)
-		if err != nil {
-			log.Error(ctx, "repeat schedule: repeat schedule daily failed",
-				log.Err(err),
-				log.Any("template", template),
-				log.Any("daily_options", options.Daily),
-			)
-			return nil, err
-		}
-		result = append(result, items...)
-	case entity.RepeatTypeWeekly:
-		items, err := s.repeatScheduleWeekly(ctx, template, options.Weekly)
-		if err != nil {
-			log.Error(ctx, "repeat schedule: repeat schedule weekly failed",
-				log.Err(err),
-				log.Any("template", template),
-				log.Any("weekly_options", options.Weekly),
-			)
-			return nil, err
-		}
-		result = append(result, items...)
-	case entity.RepeatTypeMonthly:
-		items, err := s.repeatScheduleMonthly(ctx, template, options.Monthly)
-		if err != nil {
-			log.Error(ctx, "repeat schedule: repeat schedule monthly failed",
-				log.Err(err),
-				log.Any("template", template),
-				log.Any("monthly_options", options.Monthly),
-			)
-			return nil, err
-		}
-		result = append(result, items...)
-	case entity.RepeatTypeYearly:
-		items, err := s.repeatScheduleYearly(ctx, template, options.Yearly)
-		if err != nil {
-			log.Error(ctx, "repeat schedule: repeat schedule yearly failed",
-				log.Err(err),
-				log.Any("template", template),
-				log.Any("yearly_options", options.Yearly),
-			)
-			return nil, err
-		}
-		result = append(result, items...)
-	default:
-		err := errors.New("repeat schedule: invalid repeat type")
-		log.Info(ctx, err.Error(), log.String("repeat_type", string(options.Type)))
-		return nil, constant.ErrInvalidArgs
-	}
+	result = append(result, items...)
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entity.Schedule, options entity.RepeatDaily) ([]*entity.Schedule, error) {
-	if template == nil {
-		err := fmt.Errorf("repeat schedule daily: require not nil template")
-		log.Info(ctx, err.Error())
-		return nil, constant.ErrInvalidArgs
+func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions) ([]*entity.Schedule, error) {
+	var (
+		result []*entity.Schedule
+		items  []*entity.Schedule
+		err    error
+	)
+	switch options.Type {
+	case entity.RepeatTypeDaily:
+		items, err = s.repeatScheduleDaily(ctx, template, &options.Daily)
+	case entity.RepeatTypeWeekly:
+		items, err = s.repeatScheduleWeekly(ctx, template, &options.Weekly)
+	case entity.RepeatTypeMonthly:
+		items, err = s.repeatScheduleMonthly(ctx, template, &options.Monthly)
+	case entity.RepeatTypeYearly:
+		items, err = s.repeatScheduleYearly(ctx, template, &options.Yearly)
 	}
-	if options.Interval <= 0 {
-		log.Info(ctx, "repeat schedule daily: options interval less than 0", log.Int("interval", options.Interval))
-		return nil, nil
+	if err != nil {
+		log.Error(ctx, "repeat schedule failed",
+			log.Err(err),
+			log.Any("template", template),
+			log.Any("options", options),
+		)
+		return nil, err
 	}
+	result = append(result, items...)
+	return result, nil
+}
+
+func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entity.Schedule, options *entity.RepeatDaily) ([]*entity.Schedule, error) {
 	var (
 		result      []*entity.Schedule
 		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0)
@@ -160,19 +110,13 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 			end = end.AddDate(0, 0, options.Interval)
 		}
 	default:
-		err := fmt.Errorf("repeat schedule: invalid daily end type")
-		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
+		log.Info(ctx, "repeat schedule: invalid daily end type", log.String("end_type", string(options.End.Type)))
 		return nil, constant.ErrInvalidArgs
 	}
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *entity.Schedule, options entity.RepeatWeekly) ([]*entity.Schedule, error) {
-	if template == nil {
-		err := fmt.Errorf("repeat schedule weekly: require not nil template")
-		log.Info(ctx, err.Error())
-		return nil, constant.ErrInvalidArgs
-	}
+func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *entity.Schedule, options *entity.RepeatWeekly) ([]*entity.Schedule, error) {
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule weekly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
@@ -211,15 +155,13 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 		for _, onWeekday := range options.On {
 			var (
 				start, end = originStart, originEnd
-				count      = 0
 				first      = true
 			)
-			for count < options.End.AfterCount && end.Before(maxEndTime) {
+			for len(result) < options.End.AfterCount && end.Before(maxEndTime) {
 				if start.After(originStart) && start.Weekday() == onWeekday.TimeWeekday() {
 					item := template.Clone()
 					item.StartAt, item.EndAt = start.Unix(), end.Unix()
 					result = append(result, &item)
-					count++
 				}
 				var offset int
 				if first {
@@ -257,19 +199,13 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 			}
 		}
 	default:
-		err := fmt.Errorf("repeat schedule: invalid weekly end type")
-		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
+		log.Info(ctx, "repeat schedule: invalid weekly end type", log.String("end_type", string(options.End.Type)))
 		return nil, constant.ErrInvalidArgs
 	}
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *entity.Schedule, options entity.RepeatMonthly) ([]*entity.Schedule, error) {
-	if template == nil {
-		err := errors.New("repeat schedule monthly: require not nil template")
-		log.Info(ctx, err.Error())
-		return nil, err
-	}
+func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *entity.Schedule, options *entity.RepeatMonthly) ([]*entity.Schedule, error) {
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule monthly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
@@ -331,9 +267,8 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			var (
 				start, end = originStart, originEnd
 				timer      = s.startOfMonth(start.Year(), start.Month())
-				count      = 0
 			)
-			for count < options.End.AfterCount {
+			for len(result) < options.End.AfterCount {
 				start = s.setTimeDatePart(start, timer.Year(), timer.Month(), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
@@ -345,7 +280,6 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 					item := template.Clone()
 					item.StartAt, item.EndAt = start.Unix(), end.Unix()
 					result = append(result, &item)
-					count++
 				}
 				timer = timer.AddDate(0, options.Interval, 0)
 			}
@@ -353,9 +287,8 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			var (
 				start, end = originStart, originEnd
 				timer      = s.startOfMonth(start.Year(), start.Month())
-				count      = 0
 			)
-			for count < options.End.AfterCount {
+			for len(result) < options.End.AfterCount {
 				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
@@ -368,7 +301,6 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 					item := template.Clone()
 					item.StartAt, item.EndAt = start.Unix(), end.Unix()
 					result = append(result, &item)
-					count++
 				}
 				timer = timer.AddDate(0, options.Interval, 0)
 			}
@@ -420,19 +352,13 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			}
 		}
 	default:
-		err := errors.New("repeat schedule: invalid monthly end type")
-		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
+		log.Info(ctx, "repeat schedule: invalid monthly end type", log.String("end_type", string(options.End.Type)))
 		return nil, constant.ErrInvalidArgs
 	}
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *entity.Schedule, options entity.RepeatYearly) ([]*entity.Schedule, error) {
-	if template == nil {
-		err := fmt.Errorf("repeat schedule yearly: require not nil template")
-		log.Info(ctx, err.Error())
-		return nil, constant.ErrInvalidArgs
-	}
+func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *entity.Schedule, options *entity.RepeatYearly) ([]*entity.Schedule, error) {
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule yearly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
@@ -495,9 +421,8 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			var (
 				start, end = originStart, originEnd
 				timer      = s.startOfYear(start.Year())
-				count      = 0
 			)
-			for count < options.End.AfterCount {
+			for len(result) < options.End.AfterCount {
 				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
@@ -509,7 +434,6 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 					item := template.Clone()
 					item.StartAt, item.EndAt = start.Unix(), end.Unix()
 					result = append(result, &item)
-					count++
 				}
 				timer = timer.AddDate(options.Interval, 0, 0)
 			}
@@ -517,9 +441,8 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			var (
 				start, end = originStart, originEnd
 				timer      = s.startOfYear(start.Year())
-				count      = 0
 			)
-			for count < options.End.AfterCount {
+			for len(result) < options.End.AfterCount {
 				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
@@ -533,7 +456,6 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 					item := template.Clone()
 					item.StartAt, item.EndAt = start.Unix(), end.Unix()
 					result = append(result, &item)
-					count++
 				}
 				timer = timer.AddDate(options.Interval, 0, 0)
 			}
@@ -586,8 +508,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			}
 		}
 	default:
-		err := fmt.Errorf("repeat schedule: invalid daily end type")
-		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
+		log.Info(ctx, "repeat schedule: invalid daily end type", log.String("end_type", string(options.End.Type)))
 		return nil, constant.ErrInvalidArgs
 	}
 	return result, nil

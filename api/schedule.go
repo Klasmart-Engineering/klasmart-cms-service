@@ -29,6 +29,12 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		return
 	}
 	data.ID = id
+	if !data.EditType.Valid() {
+		errMsg := "update schedule: invalid edit type"
+		log.Info(ctx, errMsg, log.String("edit_type", string(data.EditType)))
+		c.JSON(http.StatusBadRequest, errMsg)
+		return
+	}
 	operator, _ := GetOperator(c)
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
 	if err != nil {
@@ -60,7 +66,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	editType := entity.ScheduleEditType(c.Query("repeat_edit_options"))
 	if !editType.Valid() {
 		errMsg := "delete schedule: invalid edit type"
-		log.Info(ctx, errMsg, log.String("repeat_edit_options", string(editType)))
+		log.Info(ctx, errMsg, log.String("edit_type", string(editType)))
 		c.JSON(http.StatusBadRequest, errMsg)
 		return
 	}
