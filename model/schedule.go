@@ -137,12 +137,31 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 	}
 }
 
-func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error) {
+func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error) {
 	// TODO: check permission
 	if !viewdata.EditType.Valid() {
 		err := errors.New("update schedule: invalid type")
 		log.Info(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
-		return "", entity.ErrInvalidArgs(err)
+		return "", entity.InvalidArgsError(err)
+	}
+	if !viewdata.IsForce {
+		conflict, err := s.IsScheduleConflict(ctx, operator, viewdata.StartAt, viewdata.EndAt)
+		if err != nil {
+			log.Error(ctx, "update schedule: check time conflict failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("viewdata", viewdata),
+			)
+			return "", err
+		}
+		if conflict {
+			err := errors.New("update schedule: time conflict")
+			log.Info(ctx, err.Error(),
+				log.Any("operator", operator),
+				log.Any("viewdata", viewdata),
+			)
+			return "", entity.ConflictError(err)
+		}
 	}
 	var schedule entity.Schedule
 	if err := da.GetScheduleDA().Get(ctx, viewdata.ID, &schedule); err != nil {
@@ -156,7 +175,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, op *entit
 	var id string
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
-		if err = s.Delete(ctx, tx, op, viewdata.ID, viewdata.EditType); err != nil {
+		if err = s.Delete(ctx, tx, operator, viewdata.ID, viewdata.EditType); err != nil {
 			log.Error(ctx, "update schedule: delete failed",
 				log.Err(err),
 				log.String("id", viewdata.ID),
@@ -164,7 +183,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, op *entit
 			)
 			return err
 		}
-		id, err = s.Add(ctx, tx, op, &viewdata.ScheduleAddView)
+		id, err = s.Add(ctx, tx, operator, &viewdata.ScheduleAddView)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
 				log.Err(err),

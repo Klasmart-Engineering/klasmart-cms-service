@@ -9,7 +9,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 	"time"
 )
@@ -38,7 +37,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 			item.Title,
 		})
 	}
-	sql := utils.SQLBatchInsert(constant.TableNameSchedule, []string{"id", "title"}, data)
+	sql := SQLBatchInsert(constant.TableNameSchedule, []string{"id", "title"}, data)
 	execResult := dbContext.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
 		logger.Error(ctx, "db exec sql error", log.Any("sql", sql))

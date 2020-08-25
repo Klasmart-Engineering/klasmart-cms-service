@@ -21,7 +21,7 @@ func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Sch
 	if template == nil {
 		err := errors.New("repeat schedule(include template): require not nil template")
 		log.Info(ctx, err.Error())
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	switch template.ModeType {
 	case entity.ModeTypeRepeat:
@@ -45,7 +45,7 @@ func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Sch
 	if template == nil {
 		err := errors.New("repeat schedule: require not nil template")
 		log.Info(ctx, err.Error())
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	var result []*entity.Schedule
 	switch options.Type {
@@ -96,7 +96,7 @@ func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Sch
 	default:
 		err := errors.New("repeat schedule: invalid repeat type")
 		log.Info(ctx, err.Error(), log.String("repeat_type", string(options.Type)))
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	return result, nil
 }
@@ -105,7 +105,7 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 	if template == nil {
 		err := fmt.Errorf("repeat schedule daily: require not nil template")
 		log.Info(ctx, err.Error())
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule daily: options interval less than 0", log.Int("interval", options.Interval))
@@ -161,7 +161,7 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 	default:
 		err := fmt.Errorf("repeat schedule: invalid daily end type")
 		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	return result, nil
 }
@@ -170,7 +170,7 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 	if template == nil {
 		err := fmt.Errorf("repeat schedule weekly: require not nil template")
 		log.Info(ctx, err.Error())
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule weekly: options interval less than 0", log.Int("interval", options.Interval))
@@ -258,7 +258,7 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 	default:
 		err := fmt.Errorf("repeat schedule: invalid weekly end type")
 		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	return result, nil
 }
@@ -421,7 +421,7 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 	default:
 		err := errors.New("repeat schedule: invalid monthly end type")
 		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	return result, nil
 }
@@ -430,7 +430,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 	if template == nil {
 		err := fmt.Errorf("repeat schedule yearly: require not nil template")
 		log.Info(ctx, err.Error())
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule yearly: options interval less than 0", log.Int("interval", options.Interval))
@@ -587,7 +587,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 	default:
 		err := fmt.Errorf("repeat schedule: invalid daily end type")
 		log.Info(ctx, err.Error(), log.String("end_type", string(options.End.Type)))
-		return nil, entity.ErrInvalidArgs(err)
+		return nil, entity.InvalidArgsError(err)
 	}
 	return result, nil
 }
