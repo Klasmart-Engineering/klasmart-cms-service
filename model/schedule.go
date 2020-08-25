@@ -14,13 +14,14 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
+	"time"
 )
 
 const ()
 
 type IScheduleModel interface {
-	Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
-	Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
+	Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView, location *time.Location) (string, error)
+	Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleUpdateView, location *time.Location) (string, error)
 	Delete(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error)
 	Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
@@ -60,8 +61,8 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	return false, nil
 }
 
-func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions) (string, error) {
-	scheduleList, err := s.RepeatSchedule(ctx, schedule, options)
+func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location) (string, error) {
+	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
@@ -105,7 +106,7 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 	}
 	return scheduleList[0].ID, nil
 }
-func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
+func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView, location *time.Location) (string, error) {
 	schedule := viewData.Convert()
 	schedule.CreatedID = op.UserID
 
@@ -135,7 +136,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 		}
 	}
 	if viewData.ModeType == entity.ModeTypeRepeat {
-		return s.addRepeatSchedule(ctx, tx, schedule, &viewData.Repeat)
+		return s.addRepeatSchedule(ctx, tx, schedule, &viewData.Repeat, location)
 	} else {
 		schedule.ID = utils.NewID()
 		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
@@ -169,7 +170,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 	}
 }
 
-func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error) {
+func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, viewdata *entity.ScheduleUpdateView, location *time.Location) (string, error) {
 	// TODO: check permission
 	if !viewdata.IsForce {
 		conflict, err := s.IsScheduleConflict(ctx, operator, viewdata.StartAt, viewdata.EndAt)
@@ -210,7 +211,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			)
 			return err
 		}
-		id, err = s.Add(ctx, tx, operator, &viewdata.ScheduleAddView)
+		id, err = s.Add(ctx, tx, operator, &viewdata.ScheduleAddView, location)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
 				log.Err(err),

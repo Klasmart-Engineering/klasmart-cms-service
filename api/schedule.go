@@ -36,7 +36,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		return
 	}
 	operator, _ := GetOperator(c)
-	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
+	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data, s.getLocation(c))
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed",
 			log.Err(err),
@@ -106,7 +106,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	data.OrgID = op.OrgID
 
 	// add schedule
-	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
+	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data, s.getLocation(c))
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"id": id,
@@ -203,6 +203,10 @@ func (s *Server) querySchedule(c *gin.Context) {
 		"total": total,
 		"data":  result,
 	})
+}
+
+func (s *Server) getLocation(c *gin.Context) *time.Location {
+	return time.Local
 }
 
 const (
