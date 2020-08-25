@@ -15,13 +15,14 @@ import (
 type IScheduleTeacherDA interface {
 	dbo.DataAccesser
 	BatchInsert(context.Context, *dbo.DBContext, []*entity.TeacherSchedule) (int, error)
+	DeleteByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
 }
 
 type scheduleTeacherDA struct {
 	dbo.BaseDA
 }
 
-func (s scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.TeacherSchedule) (int, error) {
+func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.TeacherSchedule) (int, error) {
 	var data [][]interface{}
 	for _, item := range schedules {
 		data = append(data, []interface{}{
@@ -39,6 +40,16 @@ func (s scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBCon
 	}
 	total := int(execResult.RowsAffected)
 	return total, nil
+}
+
+func (s *scheduleTeacherDA) DeleteByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) error {
+	if err := tx.Unscoped().
+		Where("schedule_id = ?", scheduleID).
+		Delete(&entity.TeacherSchedule{}).Error; err != nil {
+		log.Error(ctx, "delete teacher_schedule by schedule id: delete failed", log.Err(err))
+		return err
+	}
+	return nil
 }
 
 var (
