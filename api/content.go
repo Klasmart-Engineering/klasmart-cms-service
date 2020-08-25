@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -54,6 +55,11 @@ func (s *Server) publishContent(c *gin.Context) {
 	}
 
 	err = model.GetContentModel().PublishContent(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
+	switch err {
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -78,7 +84,7 @@ func (s *Server) GetContent(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetContentModel().GetContentById(ctx, dbo.MustGetDB(ctx), cid, op)
+	result, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -101,6 +107,11 @@ func (s *Server) updateContent(c *gin.Context) {
 		return
 	}
 	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
+	switch err {
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -117,6 +128,11 @@ func (s *Server) lockContent(c *gin.Context) {
 	}
 	cid := c.Param("content_id")
 	ncid, err := model.GetContentModel().LockContent(ctx, dbo.MustGetDB(ctx), cid, op)
+	switch err {
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -136,6 +152,11 @@ func (s *Server) deleteContent(c *gin.Context) {
 	cid := c.Param("content_id")
 
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
+	switch err{
+	case model.ErrReadContentFailed:
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -185,17 +206,19 @@ func (s *Server) QueryContent(c *gin.Context) {
 	}
 
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	orderBy, _ := strconv.Atoi(c.Query("order_by"))
 	page, _ := strconv.Atoi(c.Query("page"))
 	pageSize, err := strconv.Atoi(c.Query("page_size"))
+
+
+	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	condition := da.ContentCondition{
-		Name:          c.Query("name"),
+		Name:          keywords,
 		ContentType:   []int{contentType},
 		PublishStatus: []string{c.Query("publish_status")},
 		Scope:         []string{c.Query("scope")},
 		Author:        c.Query("author"),
 		Org:           c.Query("org"),
-		OrderBy:       da.ContentOrderBy(orderBy),
+		OrderBy:       da.NewContentOrderBy(c.Query("order_by")),
 		Page:          page,
 		PageSize:      pageSize,
 	}
@@ -220,17 +243,17 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 	}
 
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	orderBy, _ := strconv.Atoi(c.Query("order_by"))
 	page, _ := strconv.Atoi(c.Query("page"))
 	pageSize, err := strconv.Atoi(c.Query("page_size"))
+	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	condition := da.ContentCondition{
-		Name:          c.Query("name"),
+		Name:         keywords,
 		ContentType:   []int{contentType},
 		PublishStatus: []string{c.Query("publish_status")},
 		Scope:         []string{c.Query("scope")},
 		Author:        c.Query("author"),
 		Org:           c.Query("org"),
-		OrderBy:       da.ContentOrderBy(orderBy),
+		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
 		Page:          page,
 		PageSize:      pageSize,
 	}
@@ -256,17 +279,17 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 	}
 
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	orderBy, _ := strconv.Atoi(c.Query("order_by"))
 	page, _ := strconv.Atoi(c.Query("page"))
 	pageSize, err := strconv.Atoi(c.Query("page_size"))
+	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	condition := da.ContentCondition{
-		Name:          c.Query("name"),
+		Name:          keywords,
 		ContentType:   []int{contentType},
 		PublishStatus: []string{c.Query("publish_status")},
 		Scope:         []string{c.Query("scope")},
 		Author:        c.Query("author"),
 		Org:           c.Query("org"),
-		OrderBy:       da.ContentOrderBy(orderBy),
+		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
 		Page:          page,
 		PageSize:      pageSize,
 	}

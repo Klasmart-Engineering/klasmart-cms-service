@@ -9,11 +9,11 @@ import (
 )
 
 type LessonData struct {
-	SegmentId int `json:"segmentId"`
-	Condition string `json:"condition"`
-	MaterialId string `json:"materialId"`
+	SegmentId int               `json:"segmentId"`
+	Condition string            `json:"condition"`
+	MaterialId string           `json:"materialId"`
 	Material 	*entity.Content `json:"material"`
-	NextNode 	[]*LessonData `json:"next"`
+	NextNode 	[]*LessonData   `json:"next"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {

@@ -100,9 +100,27 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
             "schema": {
               "type": "string",
               "nullable": true
@@ -621,9 +639,27 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
             "schema": {
               "type": "string",
               "nullable": true
@@ -723,9 +759,27 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
             "schema": {
               "type": "string",
               "nullable": true
@@ -2365,34 +2419,19 @@
             "description": "Company",
             "properties": {
               "content_type": {
-                "type": "array",
+                "type": "string",
                 "description": "content type list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "scope": {
-                "type": "array",
+                "type": "string",
                 "description": "content published scope list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "publish_status": {
-                "type": "array",
+                "type": "string",
                 "description": "content published status list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "author": {
                 "type": "string",

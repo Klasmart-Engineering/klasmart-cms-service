@@ -64,7 +64,7 @@ func (s *CombineConditions) GetOrderBy() string {
 
 type ContentCondition struct {
 	IDS          []string `json:"ids"`
-	Name         string `json:"name"`
+	Name         []string `json:"name"`
 	ContentType  []int `json:"content_type"`
 	Scope        []string `json:"scope"`
 	PublishStatus []string `json:"publish_status"`
@@ -84,12 +84,11 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.IDS)
 	}
-	if s.Name != "" {
+	if len(s.Name) != 0 {
 		var fullparam string
-		keywords := strings.Split(strings.TrimSpace(s.Name), " ")
-		for i := range keywords {
-			if keywords[i] != " " && keywords[i] != "" {
-				fullparam = fullparam + "+" + keywords[i] + " "
+		for i := range s.Name {
+			if s.Name[i] != " " && s.Name[i] != "" {
+				fullparam = fullparam + "+" + s.Name[i] + " "
 			}
 		}
 		fullparam = strings.TrimSuffix(fullparam, " ")
@@ -130,6 +129,9 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	return conditions, params
 }
 func (s *ContentCondition) GetPager() *dbo.Pager {
+	if s.PageSize < 1 {
+		s.PageSize = 20
+	}
 	return &dbo.Pager{
 		Page:     s.Page,
 		PageSize: s.PageSize,

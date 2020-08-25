@@ -233,11 +233,11 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		AuthorName:    co.AuthorName,
 		Org:           co.Org,
 		PublishScope:  co.PublishScope,
-		SuggestTime: 	co.SuggestTime,
+		SuggestTime:   co.SuggestTime,
 		PublishStatus: co.PublishStatus,
 		RejectReason:  co.RejectReason,
-		SourceId:      co.SourceId,
-		LatestId:      co.LatestId,
+		SourceID:      co.SourceID,
+		LatestID:      co.LatestID,
 		LockedBy:      co.LockedBy,
 		Version:       co.Version,
 		CreatedAt:     co.CreatedAt,
@@ -303,11 +303,11 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	if co.RejectReason == "" {
 		co0.RejectReason = content.RejectReason
 	}
-	if co.SourceId == "" {
-		co0.SourceId = content.SourceId
+	if co.SourceID == "" {
+		co0.SourceID = content.SourceID
 	}
-	if co.LatestId == "" {
-		co0.LatestId = content.LatestId
+	if co.LatestID == "" {
+		co0.LatestID = content.LatestID
 	}
 	if co.LockedBy == "" {
 		co0.LockedBy = content.LockedBy

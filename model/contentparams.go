@@ -23,7 +23,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		return nil, err
 	}
 
-	//获取publishScope&authorName
+	//get publishScope&authorName
 	publishScope := operator.OrgID
 	authorName := operator.UserID
 
@@ -113,7 +113,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 }
 
 func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
-	content.SourceId = content.ID
+	content.SourceID = content.ID
 	content.Version = content.Version + 1
 	content.ID = ""
 	content.LockedBy = "-"
@@ -124,7 +124,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 }
 
 
-func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) (*entity.Content, error) {
+func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) *entity.Content {
 	switch publishStatus {
 	case entity.ContentStatusPublished:
 		content.PublishStatus = entity.ContentStatusArchive
@@ -134,5 +134,5 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 		now := time.Now()
 		content.DeletedAt = now.Unix()
 	}
-	return content, nil
+	return content
 }
