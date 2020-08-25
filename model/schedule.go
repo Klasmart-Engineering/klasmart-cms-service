@@ -373,7 +373,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
-	// TODO LessonPlan Attachment
+	// TODO LessonPlan
 
 	return result, nil
 }

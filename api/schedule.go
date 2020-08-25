@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -11,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
@@ -121,11 +123,20 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	data.OrgID = op.OrgID
 
+	// validate data
 	if err := utils.GetValidator().Struct(data); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
 		return
 	}
+	// validate attachment
+	_, exits := storage.DefaultStorage().ExitsFile(ctx, model.ScheduleAttachment_Storage_Partition, data.Attachment)
+	if !exits {
+		c.JSON(http.StatusBadRequest, errors.New("attachment is not exits"))
+		log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", data))
+	}
+
+	// is force add
 	if !data.IsForce {
 		conflict, err := model.GetScheduleModel().IsScheduleConflict(ctx, op, data.StartAt, data.EndAt)
 		if err != nil {
@@ -145,6 +156,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 			return
 		}
 	}
+	// add schedule
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
@@ -301,4 +313,19 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusInternalServerError, err.Error())
+}
+
+func (s *Server) getAttachmentUploadPath(c *gin.Context) {
+	ctx := c.Request.Context()
+	ext := c.Param("ext")
+	name := fmt.Sprintf("%s.%s", utils.NewID(), ext)
+	url, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, model.ScheduleAttachment_Storage_Partition, name)
+	if err != nil {
+		log.Error(ctx, "uploadAttachment:get upload file path error", log.Err(err))
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"attachment_url": url,
+	})
 }

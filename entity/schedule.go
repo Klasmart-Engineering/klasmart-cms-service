@@ -257,7 +257,7 @@ type ScheduleAddView struct {
 	ClassType    string        `json:"class_type"`
 	DueAt        int64         `json:"due_at"`
 	Description  string        `json:"description"`
-	AttachmentID string        `json:"attachment_id"`
+	Attachment   string        `json:"attachment_path"`
 	Version      int64         `json:"version"`
 	RepeatID     string        `json:"repeat_id"`
 	Repeat       RepeatOptions `json:"repeat"`
@@ -281,7 +281,7 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		ClassType:    s.ClassType,
 		DueAt:        s.DueAt,
 		Description:  s.Description,
-		Attachment:   s.AttachmentID,
+		Attachment:   s.Attachment,
 		Version:      0,
 		RepeatJson:   string(repeatJson),
 		CreatedAt:    time.Now().Unix(),
@@ -316,7 +316,7 @@ type ScheduleDetailsView struct {
 	//Teachers    []ShortInfo   `json:"teachers"`
 	//Subject     ShortInfo     `json:"subject"`
 	//Program     ShortInfo     `json:"program"`
-	//Attachment  ShortInfo     `json:"attachment"`
+	Attachment  string        `json:"attachment"`
 	OrgID       string        `json:"org_id"`
 	StartAt     int64         `json:"start_at"`
 	EndAt       int64         `json:"end_at"`
