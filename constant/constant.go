@@ -26,6 +26,7 @@ var (
 	ErrDuplicateRecord = errors.New("duplicate record")
 	ErrExceededLimit   = errors.New("exceeded limit")
 	ErrUnAuthorized    = errors.New("unauthorized")
+	ErrFileNotFound    = errors.New("file not found")
 	//ErrUnknown = errors.New("unknown error")
 )
 
