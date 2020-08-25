@@ -27,6 +27,8 @@ var (
 	ErrExceededLimit   = errors.New("exceeded limit")
 	ErrUnAuthorized    = errors.New("unauthorized")
 	//ErrUnknown = errors.New("unknown error")
+	ErrInvalidArgs = errors.New("invalid args")
+	ErrConflict    = errors.New("conflict")
 )
 
 // tag States

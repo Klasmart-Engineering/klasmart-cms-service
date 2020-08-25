@@ -34,12 +34,12 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed", log.Err(err))
-		switch {
-		case entity.IsInvalidArgsError(err):
+		switch err {
+		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, err.Error())
-		case entity.IsConflictError(err):
+		case constant.ErrConflict:
 			c.JSON(http.StatusConflict, err.Error())
-		case err == dbo.ErrRecordNotFound:
+		case dbo.ErrRecordNotFound:
 			c.JSON(http.StatusNotFound, err.Error())
 		default:
 			c.JSON(http.StatusInternalServerError, err.Error())
@@ -68,10 +68,10 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 			log.String("schedule_id", id),
 			log.String("repeat_edit_options", string(editType)),
 		)
-		switch {
-		case entity.IsInvalidArgsError(err):
+		switch err {
+		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, err.Error())
-		case err == dbo.ErrRecordNotFound:
+		case dbo.ErrRecordNotFound:
 			c.JSON(http.StatusNotFound, err.Error())
 		default:
 			c.JSON(http.StatusInternalServerError, err.Error())

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -179,7 +180,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 	if !viewdata.EditType.Valid() {
 		err := errors.New("update schedule: invalid type")
 		log.Info(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
-		return "", entity.InvalidArgsError(err)
+		return "", constant.ErrInvalidArgs
 	}
 	if !viewdata.IsForce {
 		conflict, err := s.IsScheduleConflict(ctx, operator, viewdata.StartAt, viewdata.EndAt)
@@ -197,7 +198,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 				log.Any("operator", operator),
 				log.Any("viewdata", viewdata),
 			)
-			return "", entity.ConflictError(err)
+			return "", constant.ErrConflict
 		}
 	}
 	var schedule entity.Schedule
