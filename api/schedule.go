@@ -35,7 +35,26 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 	data.ID = id
 	operator, _ := GetOperator(c)
-	id, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
+	if !data.IsForce {
+		conflict, err := model.GetScheduleModel().IsScheduleConflict(ctx, operator, data.StartAt, data.EndAt)
+		if err != nil {
+			log.Error(ctx, "update schedule: check conflict failed",
+				log.Int64("start_at", data.StartAt),
+				log.Int64("end_at", data.EndAt),
+			)
+			c.JSON(http.StatusInternalServerError, err.Error())
+			return
+		}
+		if conflict {
+			log.Warn(ctx, "update schedule: time conflict",
+				log.Int64("start_at", data.StartAt),
+				log.Int64("end_at", data.EndAt),
+			)
+			c.JSON(http.StatusConflict, "update schedule: time conflict")
+			return
+		}
+	}
+	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
 	if err != nil {
 		log.Error(ctx, "update schedule: update failed", log.Err(err))
 		switch {
@@ -49,7 +68,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"id": id,
+		"id": newID,
 	})
 }
 

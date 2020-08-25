@@ -261,6 +261,7 @@ type ScheduleAddView struct {
 	Version      int64         `json:"version"`
 	RepeatID     string        `json:"repeat_id"`
 	Repeat       RepeatOptions `json:"repeat"`
+	IsForce      bool          `json:"is_force"`
 }
 
 func (s *ScheduleAddView) Convert() *Schedule {
