@@ -100,7 +100,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		log.Info(ctx, "add schedule: should bind body failed", log.Err(err))
 		return
 	}
-
+	data.OrgID = op.OrgID
 	if err := utils.GetValidator().Struct(data); err != nil {
 		c.JSON(http.StatusBadRequest, err.Error())
 		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
@@ -134,6 +134,11 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	log.Error(ctx, "get daschedule by id error", log.Err(err))
 }
 func (s *Server) querySchedule(c *gin.Context) {
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
+		return
+	}
 	ctx := c.Request.Context()
 	condition := new(da.ScheduleCondition)
 	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
@@ -148,9 +153,13 @@ func (s *Server) querySchedule(c *gin.Context) {
 	if err != nil {
 		startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
 	}
-	condition.StartAt = sql.NullInt64{
+	condition.StartAtGe = sql.NullInt64{
 		Int64: startAt,
 		Valid: startAt == 0,
+	}
+	condition.OrgID = sql.NullString{
+		String: op.OrgID,
+		Valid:  op.OrgID != "",
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
@@ -229,11 +238,11 @@ func (s *Server) queryHomeSchedule(c *gin.Context) {
 			String: "1",
 			Valid:  true,
 		},
-		StartAt: sql.NullInt64{
+		StartAtGe: sql.NullInt64{
 			Int64: start,
 			Valid: start != 0,
 		},
-		EndAt: sql.NullInt64{Valid: true, Int64: end},
+		EndAtLe: sql.NullInt64{Valid: true, Int64: end},
 	}
 
 	result, err := model.GetScheduleModel().Query(ctx, dbo.MustGetDB(ctx), condition)

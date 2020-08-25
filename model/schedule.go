@@ -15,39 +15,39 @@ import (
 )
 
 type IScheduleModel interface {
-	Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error)
-	Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error)
+	Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
+	Update(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error)
 	Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
-	PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
+	//PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
 }
 
-func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
-	var scheduleList []*entity.Schedule
-	total, err := da.GetScheduleTeacherDA().Page(ctx, condition, &scheduleList)
-	if err != nil {
-		return 0, nil, err
-	}
-	var result = make([]*entity.ScheduleSeachView, len(scheduleList))
-	for i, item := range scheduleList {
-		baseinfo, err := s.getBasicInfo(ctx, tx, item)
-		if err != nil {
-			return 0, nil, err
-		}
-		result[i] = &entity.ScheduleSeachView{
-			ID:            item.ID,
-			StartAt:       item.StartAt,
-			EndAt:         item.EndAt,
-			ScheduleBasic: *baseinfo,
-		}
-	}
-	return total, result, nil
-}
+//func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
+//	var scheduleList []*entity.Schedule
+//	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
+//	if err != nil {
+//		return 0, nil, err
+//	}
+//	var result = make([]*entity.ScheduleSeachView, len(scheduleList))
+//	for i, item := range scheduleList {
+//		baseInfo, err := s.getBasicInfo(ctx, tx, item)
+//		if err != nil {
+//			return 0, nil, err
+//		}
+//		result[i] = &entity.ScheduleSeachView{
+//			ID:            item.ID,
+//			StartAt:       item.StartAt,
+//			EndAt:         item.EndAt,
+//			ScheduleBasic: *baseInfo,
+//		}
+//	}
+//	return total, result, nil
+//}
 
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule) (string, error) {
 	scheduleList, err := s.RepeatSchedule(ctx, schedule)
@@ -93,10 +93,10 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 	}
 	return "", errors.New("")
 }
-func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewdata *entity.ScheduleAddView) (string, error) {
-	schedule := viewdata.Convert()
+func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
+	schedule := viewData.Convert()
 	schedule.CreatedID = op.UserID
-	if viewdata.ModeType == entity.ModeTypeRepeat {
+	if viewData.ModeType == entity.ModeTypeRepeat {
 		return s.addRepeatSchedule(ctx, tx, schedule)
 	} else {
 		schedule.ID = utils.NewID()
@@ -106,7 +106,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 				return err
 			}
 			teacherSchedules := make([]*entity.TeacherSchedule, len(schedule.TeacherIDs))
-			for i, item := range viewdata.TeacherIDs {
+			for i, item := range viewData.TeacherIDs {
 				teacherSchedule := &entity.TeacherSchedule{
 					ID:         utils.NewID(),
 					TeacherID:  item,
@@ -229,16 +229,9 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 	return nil
 }
 
-func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
-	//var scheduleTeacherList []*entity.TeacherSchedule
-	//err := daschedule.GetScheduleTeacherDA().Query(ctx, daschedule.ScheduleTeacherCondition{
-	//	TeacherID: condition.TeacherID,
-	//	OrderBy:   0,
-	//}, &scheduleTeacherList)
-	//
-	//scheduleIDs := make([]string, len(scheduleTeacherList))
-
-	total, scheduleList, err := da.GetScheduleDA().PageByTeacherID(ctx, tx, condition)
+func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
+	var scheduleList []*entity.Schedule
+	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
 	if err != nil {
 		log.Error(ctx, "PageByTeacherID error", log.Err(err), log.Any("condition", condition))
 		return 0, nil, err
@@ -246,7 +239,7 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, 
 
 	result := make([]*entity.ScheduleSeachView, len(scheduleList))
 	for i, item := range scheduleList {
-		viewdata := &entity.ScheduleSeachView{
+		viewData := &entity.ScheduleSeachView{
 			ID:      item.ID,
 			StartAt: item.StartAt,
 			EndAt:   item.EndAt,
@@ -256,8 +249,8 @@ func (s *scheduleModel) PageByTeacherID(ctx context.Context, tx *dbo.DBContext, 
 			log.Error(ctx, "PageByTeacherID:getBasicInfo error", log.Err(err), log.Any("scheduleItem", item))
 			return 0, nil, err
 		}
-		viewdata.ScheduleBasic = *basicInfo
-		result[i] = viewdata
+		viewData.ScheduleBasic = *basicInfo
+		result[i] = viewData
 	}
 
 	return total, result, nil

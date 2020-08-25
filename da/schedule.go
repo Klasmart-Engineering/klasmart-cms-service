@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -88,8 +89,8 @@ func GetScheduleDA() IScheduleDA {
 
 type ScheduleCondition struct {
 	OrgID     sql.NullString
-	StartAt   sql.NullInt64
-	EndAt     sql.NullInt64
+	StartAtGe sql.NullInt64
+	EndAtLe   sql.NullInt64
 	TeacherID sql.NullString
 	//ScheduleIDs entity.NullStrings
 
@@ -104,18 +105,22 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	var params []interface{}
 
 	if c.OrgID.Valid {
-
+		wheres = append(wheres, "org_id = ?")
+		params = append(params, c.OrgID.String)
 	}
 
-	if c.StartAt.Valid {
-
+	if c.StartAtGe.Valid {
+		wheres = append(wheres, "start_at >= ?")
+		params = append(params, c.StartAtGe.Int64)
 	}
-	if c.EndAt.Valid {
-
+	if c.EndAtLe.Valid {
+		wheres = append(wheres, "end_at >= ?")
+		params = append(params, c.EndAtLe.Int64)
 	}
 	if c.TeacherID.Valid {
-		wheres = append(wheres, "id ")
-		params = append(params, "")
+		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0 || delete_at is null) and %s.id = %s.schedule_id)", constant.TableNameTeacherSchedule, constant.TableNameTeacherSchedule, constant.TableNameSchedule)
+		wheres = append(wheres, sql)
+		params = append(params, c.TeacherID.String)
 	}
 
 	if c.DeleteAt.Valid {
