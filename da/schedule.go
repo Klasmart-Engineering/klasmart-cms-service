@@ -134,7 +134,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.TeacherIDs.Valid {
 		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id in (%s) and (deleted_at=0) and %s.id = %s.schedule_id)", constant.TableNameScheduleTeacher, c.TeacherIDs.SQLPlaceHolder(), constant.TableNameScheduleTeacher, constant.TableNameSchedule)
 		wheres = append(wheres, sql)
-		params = append(params, c.TeacherID.String)
+		params = append(params, c.TeacherIDs.ToInterfaceSlice()...)
 	}
 
 	if c.DeleteAt.Valid {

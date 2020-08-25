@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -67,8 +68,9 @@ func GetScheduleTeacherDA() IScheduleTeacherDA {
 }
 
 type ScheduleTeacherCondition struct {
-	TeacherID  sql.NullString
-	ScheduleID sql.NullString
+	TeacherID   sql.NullString
+	ScheduleID  sql.NullString
+	ScheduleIDs entity.NullStrings
 	//OrderBy    ScheduleTeacherOrderBy
 	Pager dbo.Pager
 
@@ -83,11 +85,16 @@ func (c ScheduleTeacherCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "schedule_id = ?")
 		params = append(params, c.ScheduleID.String)
 	}
+	if c.ScheduleIDs.Valid {
+		sql := fmt.Sprintf("schedule_id in (%s)", c.ScheduleIDs.SQLPlaceHolder())
+		wheres = append(wheres, sql)
+		params = append(params, c.ScheduleIDs.ToInterfaceSlice()...)
+	}
 
 	if c.DeleteAt.Valid {
 		wheres = append(wheres, "delete_at>0")
 	} else {
-		wheres = append(wheres, "(delete_at=0 || delete_at is null)")
+		wheres = append(wheres, "delete_at=0")
 	}
 
 	return wheres, params

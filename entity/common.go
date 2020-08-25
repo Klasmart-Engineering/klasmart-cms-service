@@ -19,6 +19,14 @@ func (s NullStrings) SQLPlaceHolder() string {
 
 	return strings.TrimSuffix(strings.Repeat("?,", len(s.Strings)), ",")
 }
+func (s NullStrings) ToInterfaceSlice() []interface{} {
+	slice := make([]interface{}, len(s.Strings))
+	for index, value := range s.Strings {
+		slice[index] = value
+	}
+
+	return slice
+}
 
 type NullString struct {
 	String string
