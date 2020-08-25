@@ -11,7 +11,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	dymodel "gitlab.badanamu.com.cn/calmisland/kidsloop2/model/dyschedule"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
@@ -30,18 +29,20 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 	data := entity.ScheduleUpdateView{}
 	if err := c.ShouldBind(data); err != nil {
-		log.Error(ctx, "update daschedule: should bind body failed", log.Err(err))
+		log.Error(ctx, "update schedule: should bind body failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 	data.ID = id
 	operator, _ := GetOperator(c)
-	id, err := dymodel.GetScheduleModel().Update(ctx, operator, &data)
+	id, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
 	if err != nil {
-		log.Error(ctx, "update daschedule: update failed", log.Err(err))
+		log.Error(ctx, "update schedule: update failed", log.Err(err))
 		switch {
 		case entity.IsErrInvalidArgs(err):
 			c.JSON(http.StatusBadRequest, err.Error())
+		case err == dbo.ErrRecordNotFound:
+			c.JSON(http.StatusNotFound, err.Error())
 		default:
 			c.JSON(http.StatusInternalServerError, err.Error())
 		}
@@ -56,19 +57,19 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	if id == "" {
-		err := errors.New("delete daschedule: require param id")
+		err := errors.New("delete schedule: require param id")
 		log.Error(ctx, err.Error())
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
 	editType := entity.ScheduleEditType(c.Query("repeat_edit_options"))
 	if !editType.Valid() {
-		err := errors.New("delete daschedule: invalid edit type")
+		err := errors.New("delete schedule: invalid edit type")
 		log.Error(ctx, err.Error(), log.String("repeat_edit_options", string(editType)))
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
 	operator, _ := GetOperator(c)
-	if err := dymodel.GetScheduleModel().Delete(ctx, operator, id, editType); err != nil {
-		log.Error(ctx, "delete daschedule: delete failed",
+	if err := model.GetScheduleModel().Delete(ctx, dbo.MustGetDB(ctx), operator, id, editType); err != nil {
+		log.Error(ctx, "delete schedule: delete failed",
 			log.Err(err),
 			log.String("schedule_id", id),
 			log.String("repeat_edit_options", string(editType)),
@@ -76,6 +77,8 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		switch {
 		case entity.IsErrInvalidArgs(err):
 			c.JSON(http.StatusBadRequest, err.Error())
+		case err == dbo.ErrRecordNotFound:
+			c.JSON(http.StatusNotFound, err.Error())
 		default:
 			c.JSON(http.StatusInternalServerError, err.Error())
 		}

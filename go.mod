@@ -7,9 +7,8 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/jinzhu/gorm v1.9.15 // indirect
+	github.com/jinzhu/gorm v1.9.15
 	github.com/onsi/ginkgo v1.14.0 // indirect
-
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9 // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
