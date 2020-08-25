@@ -69,8 +69,8 @@ func GetScheduleTeacherDA() IScheduleTeacherDA {
 type ScheduleTeacherCondition struct {
 	TeacherID  sql.NullString
 	ScheduleID sql.NullString
-	OrderBy    ScheduleTeacherOrderBy
-	Pager      dbo.Pager
+	//OrderBy    ScheduleTeacherOrderBy
+	Pager dbo.Pager
 
 	DeleteAt sql.NullInt64
 }

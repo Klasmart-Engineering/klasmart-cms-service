@@ -311,11 +311,11 @@ type ScheduleListView struct {
 type ScheduleDetailsView struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
-	//Class       ShortInfo     `json:"class"`
-	//LessonPlan  ShortInfo     `json:"lesson_plan"`
-	//Teachers    []ShortInfo   `json:"teachers"`
-	//Subject     ShortInfo     `json:"subject"`
-	//Program     ShortInfo     `json:"program"`
+	//Class       ScheduleShortInfo     `json:"class"`
+	//LessonPlan  ScheduleShortInfo     `json:"lesson_plan"`
+	//Teachers    []ScheduleShortInfo   `json:"teachers"`
+	//Subject     ScheduleShortInfo     `json:"subject"`
+	//Program     ScheduleShortInfo     `json:"program"`
 	Attachment  string        `json:"attachment"`
 	OrgID       string        `json:"org_id"`
 	StartAt     int64         `json:"start_at"`
@@ -335,23 +335,23 @@ type ScheduleSeachView struct {
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
 	ScheduleBasic
-	//LessonPlan ShortInfo   `json:"lesson_plan"`
-	//Class      ShortInfo   `json:"class"`
-	//Subject    ShortInfo   `json:"subject"`
-	//Program    ShortInfo   `json:"program"`
-	//Teachers   []ShortInfo `json:"teachers"`
+	//LessonPlan ScheduleShortInfo   `json:"lesson_plan"`
+	//Class      ScheduleShortInfo   `json:"class"`
+	//Subject    ScheduleShortInfo   `json:"subject"`
+	//Program    ScheduleShortInfo   `json:"program"`
+	//Teachers   []ScheduleShortInfo `json:"teachers"`
 }
-type ShortInfo struct {
+type ScheduleShortInfo struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
 type ScheduleBasic struct {
-	Class      ShortInfo   `json:"class"`
-	Subject    ShortInfo   `json:"subject"`
-	Program    ShortInfo   `json:"program"`
-	Teachers   []ShortInfo `json:"teachers"`
-	LessonPlan ShortInfo   `json:"lesson_plan"`
+	Class      ScheduleShortInfo   `json:"class"`
+	Subject    ScheduleShortInfo   `json:"subject"`
+	Program    ScheduleShortInfo   `json:"program"`
+	Teachers   []ScheduleShortInfo `json:"teachers"`
+	LessonPlan ScheduleShortInfo   `json:"lesson_plan"`
 }
 
 // ScheduleEditType include delete and edit

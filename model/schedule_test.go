@@ -13,7 +13,7 @@ func TestScheduleModel_Add(t *testing.T) {
 		OrgID:  "2",
 		Repeat: entity.RepeatOptions{},
 		ScheduleBasic: entity.ScheduleBasic{
-			Class: entity.ShortInfo{
+			Class: entity.ScheduleShortInfo{
 				ID:   "1",
 				Name: "班級",
 			},

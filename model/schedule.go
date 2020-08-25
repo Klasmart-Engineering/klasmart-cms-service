@@ -346,7 +346,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			return nil, err
 		}
 		if len(classInfos) > 0 {
-			result.Class = entity.ShortInfo{
+			result.Class = entity.ScheduleShortInfo{
 				ID:   classInfos[0].ID,
 				Name: classInfos[0].Name,
 			}
@@ -365,7 +365,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			return nil, err
 		}
 		if len(subjectInfos) > 0 {
-			result.Subject = entity.ShortInfo{
+			result.Subject = entity.ScheduleShortInfo{
 				ID:   subjectInfos[0].ID,
 				Name: subjectInfos[0].Name,
 			}
@@ -383,7 +383,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			return nil, err
 		}
 		if len(programInfos) > 0 {
-			result.Program = entity.ShortInfo{
+			result.Program = entity.ScheduleShortInfo{
 				ID:   programInfos[0].ID,
 				Name: programInfos[0].Name,
 			}
@@ -404,7 +404,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		for _, item := range scheduleTeacherList {
 			teacherIDs = append(teacherIDs, item.TeacherID)
 		}
-		result.Teachers = make([]entity.ShortInfo, len(teacherIDs))
+		result.Teachers = make([]entity.ScheduleShortInfo, len(teacherIDs))
 		teacherService, err := external.GetTeacherServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("schedule", schedule))
@@ -416,7 +416,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			return nil, err
 		}
 		for i, item := range teacherInfos {
-			result.Teachers[i] = entity.ShortInfo{
+			result.Teachers[i] = entity.ScheduleShortInfo{
 				ID:   item.ID,
 				Name: item.Name,
 			}
