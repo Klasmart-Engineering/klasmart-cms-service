@@ -31,31 +31,14 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 	data.ID = id
 	operator, _ := GetOperator(c)
-	if !data.IsForce {
-		conflict, err := model.GetScheduleModel().IsScheduleConflict(ctx, operator, data.StartAt, data.EndAt)
-		if err != nil {
-			log.Error(ctx, "update schedule: check conflict failed",
-				log.Int64("start_at", data.StartAt),
-				log.Int64("end_at", data.EndAt),
-			)
-			c.JSON(http.StatusInternalServerError, err.Error())
-			return
-		}
-		if conflict {
-			log.Info(ctx, "update schedule: time conflict",
-				log.Int64("start_at", data.StartAt),
-				log.Int64("end_at", data.EndAt),
-			)
-			c.JSON(http.StatusConflict, "update schedule: time conflict")
-			return
-		}
-	}
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed", log.Err(err))
 		switch {
-		case entity.IsErrInvalidArgs(err):
+		case entity.IsInvalidArgsError(err):
 			c.JSON(http.StatusBadRequest, err.Error())
+		case entity.IsConflictError(err):
+			c.JSON(http.StatusConflict, err.Error())
 		case err == dbo.ErrRecordNotFound:
 			c.JSON(http.StatusNotFound, err.Error())
 		default:
@@ -86,7 +69,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 			log.String("repeat_edit_options", string(editType)),
 		)
 		switch {
-		case entity.IsErrInvalidArgs(err):
+		case entity.IsInvalidArgsError(err):
 			c.JSON(http.StatusBadRequest, err.Error())
 		case err == dbo.ErrRecordNotFound:
 			c.JSON(http.StatusNotFound, err.Error())

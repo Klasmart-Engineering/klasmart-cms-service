@@ -1,8 +1,15 @@
 package entity
 
-type ErrInvalidArgs error
+type InvalidArgsError error
 
-func IsErrInvalidArgs(err error) bool {
-	_, ok := err.(ErrInvalidArgs)
+func IsInvalidArgsError(err error) bool {
+	_, ok := err.(InvalidArgsError)
+	return ok
+}
+
+type ConflictError error
+
+func IsConflictError(err error) bool {
+	_, ok := err.(ConflictError)
 	return ok
 }

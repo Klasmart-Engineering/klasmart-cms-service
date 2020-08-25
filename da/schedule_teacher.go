@@ -8,7 +8,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
@@ -32,7 +31,7 @@ func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBCo
 			item.DeletedAt,
 		})
 	}
-	sql := utils.SQLBatchInsert(constant.TableNameTeacherSchedule, []string{"id", "schedule_id", "teacher_id", "deleted_at"}, data)
+	sql := SQLBatchInsert(constant.TableNameTeacherSchedule, []string{"id", "schedule_id", "teacher_id", "deleted_at"}, data)
 	execResult := dbContext.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
 		logger.Error(ctx, "db exec sql error", log.Any("sql", sql))
