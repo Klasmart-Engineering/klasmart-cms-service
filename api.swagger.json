@@ -2218,29 +2218,52 @@
                 "example": "Content title"
               },
               "program": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "subject": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "developmental": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "skills": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "age": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "suggest_time": {
                 "type": "integer",
@@ -2266,11 +2289,6 @@
                 "type": "string",
                 "description": "content thumbnail",
                 "example": "Content thumbnail"
-              },
-              "do_publish": {
-                "type": "boolean",
-                "description": "content create & publish",
-                "example": false
               },
               "data": {
                 "type": "object",
@@ -2418,14 +2436,20 @@
                 "example": "Content title"
               },
               "program": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "subject": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "suggest_time": {
                 "type": "integer",
@@ -2433,19 +2457,36 @@
                 "example": 1
               },
               "developmental": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "skills": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "age": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
               },
               "keywords": {
                 "type": "array",
