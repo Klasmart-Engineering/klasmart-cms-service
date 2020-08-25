@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -183,7 +184,21 @@ func (s *Server) QueryContent(c *gin.Context) {
 		return
 	}
 
-	condition := da.ContentCondition{}
+	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	orderBy, _ := strconv.Atoi(c.Query("order_by"))
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize, err := strconv.Atoi(c.Query("page_size"))
+	condition := da.ContentCondition{
+		Name:          c.Query("name"),
+		ContentType:   []int{contentType},
+		PublishStatus: []string{c.Query("publish_status")},
+		Scope:         []string{c.Query("scope")},
+		Author:        c.Query("author"),
+		Org:           c.Query("org"),
+		OrderBy:       da.ContentOrderBy(orderBy),
+		Page:          page,
+		PageSize:      pageSize,
+	}
 
 	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
@@ -204,7 +219,21 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 		return
 	}
 
-	condition := da.ContentCondition{}
+	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	orderBy, _ := strconv.Atoi(c.Query("order_by"))
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize, err := strconv.Atoi(c.Query("page_size"))
+	condition := da.ContentCondition{
+		Name:          c.Query("name"),
+		ContentType:   []int{contentType},
+		PublishStatus: []string{c.Query("publish_status")},
+		Scope:         []string{c.Query("scope")},
+		Author:        c.Query("author"),
+		Org:           c.Query("org"),
+		OrderBy:       da.ContentOrderBy(orderBy),
+		Page:          page,
+		PageSize:      pageSize,
+	}
 
 	key, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
@@ -226,7 +255,21 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 		return
 	}
 
-	condition := da.ContentCondition{}
+	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	orderBy, _ := strconv.Atoi(c.Query("order_by"))
+	page, _ := strconv.Atoi(c.Query("page"))
+	pageSize, err := strconv.Atoi(c.Query("page_size"))
+	condition := da.ContentCondition{
+		Name:          c.Query("name"),
+		ContentType:   []int{contentType},
+		PublishStatus: []string{c.Query("publish_status")},
+		Scope:         []string{c.Query("scope")},
+		Author:        c.Query("author"),
+		Org:           c.Query("org"),
+		OrderBy:       da.ContentOrderBy(orderBy),
+		Page:          page,
+		PageSize:      pageSize,
+	}
 
 	key, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
