@@ -32,11 +32,11 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	var scheduleList []*entity.Schedule
 	StartAndEndRange := make([]sql.NullInt64, 2)
 	StartAndEndRange[0] = sql.NullInt64{
-		Valid: true,
+		Valid: startAt <= 0,
 		Int64: startAt,
 	}
 	StartAndEndRange[1] = sql.NullInt64{
-		Valid: true,
+		Valid: endAt <= 0,
 		Int64: endAt,
 	}
 	err := da.GetScheduleDA().Query(ctx, &da.ScheduleCondition{

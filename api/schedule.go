@@ -126,7 +126,25 @@ func (s *Server) addSchedule(c *gin.Context) {
 		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
 		return
 	}
-
+	if !data.IsForce {
+		conflict, err := model.GetScheduleModel().IsScheduleConflict(ctx, op, data.StartAt, data.EndAt)
+		if err != nil {
+			log.Error(ctx, "add schedule: check conflict failed",
+				log.Int64("start_at", data.StartAt),
+				log.Int64("end_at", data.EndAt),
+			)
+			c.JSON(http.StatusInternalServerError, err.Error())
+			return
+		}
+		if conflict {
+			log.Warn(ctx, "add schedule: time conflict",
+				log.Int64("start_at", data.StartAt),
+				log.Int64("end_at", data.EndAt),
+			)
+			c.JSON(http.StatusConflict, "add schedule: time conflict")
+			return
+		}
+	}
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
