@@ -66,21 +66,22 @@ func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBCon
 		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
 		return err
 	}
-	if user.OrgID == content.Org && user.Role != "teacher" {
-		content.PublishStatus = entity.ContentStatusPublished
-		//直接发布，则顶替旧
-		if content.SourceId != "" {
-			//存在前序content，则隐藏前序
-			err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceId)
-			if err != nil {
-				return err
-			}
-		}
-
-	} else {
-		//TODO:更新发布状态
-		content.PublishStatus = entity.ContentStatusPending
-	}
+	//if user.OrgID == content.Org && user.Role != "teacher" {
+	//	content.PublishStatus = entity.ContentStatusPublished
+	//	//直接发布，则顶替旧
+	//	if content.SourceId != "" {
+	//		//存在前序content，则隐藏前序
+	//		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceId)
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
+	//
+	//} else {
+	//	//TODO:更新发布状态
+	//	content.PublishStatus = entity.ContentStatusPending
+	//}
+	content.PublishStatus = entity.ContentStatusPending
 	return nil
 }
 
@@ -377,7 +378,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	if content.LockedBy != "" && content.LockedBy != "-" {
 		return "", ErrContentAlreadyLocked
 	}
-	content.LockedBy = cid
+	content.LockedBy = user.UserID
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 	if err != nil {
 		return "", err
