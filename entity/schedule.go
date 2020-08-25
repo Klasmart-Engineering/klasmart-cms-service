@@ -244,13 +244,13 @@ const (
 )
 
 type ScheduleAddView struct {
-	Title        string        `json:"title" validate:"required"`
+	Title        string        `json:"title" binding:"required"`
 	ClassID      string        `json:"class_id"`
 	LessonPlanID string        `json:"lesson_plan_id"`
 	TeacherIDs   []string      `json:"teacher_ids"`
-	OrgID        string        `json:"org_id" validate:"required"`
-	StartAt      int64         `json:"start_at" validate:"required"`
-	EndAt        int64         `json:"end_at" validate:"required"`
+	OrgID        string        `json:"org_id" binding:"required"`
+	StartAt      int64         `json:"start_at" binding:"required"`
+	EndAt        int64         `json:"end_at" binding:"required"`
 	ModeType     string        `json:"mode_type"`
 	SubjectID    string        `json:"subject_id"`
 	ProgramID    string        `json:"program_id"`

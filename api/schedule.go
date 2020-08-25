@@ -98,12 +98,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 	data.OrgID = op.OrgID
-	// validate data
-	if err := utils.GetValidator().Struct(data); err != nil {
-		c.JSON(http.StatusBadRequest, err.Error())
-		log.Info(ctx, "add schedule: verify data failed", log.Err(err))
-		return
-	}
+
 	// add schedule
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
 	if err == nil {
