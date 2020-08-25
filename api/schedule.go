@@ -117,7 +117,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "add schedule error", log.Err(err))
+		log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", data))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -138,7 +138,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusInternalServerError, err.Error())
-	log.Error(ctx, "get schedule by id error", log.Err(err))
+	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
 }
 func (s *Server) querySchedule(c *gin.Context) {
 	op, exist := GetOperator(c)
@@ -174,13 +174,13 @@ func (s *Server) querySchedule(c *gin.Context) {
 	teacherService, err := external.GetTeacherServiceProvider()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err))
+		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.Any("condition", condition))
 		return
 	}
 	teachers, err := teacherService.Query(ctx, teacherName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err))
+		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err), log.String("teacher", teacherName))
 		return
 	}
 	if len(teachers) <= 0 {
@@ -198,7 +198,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	total, result, err := da.GetScheduleDA().PageByTeacherID(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "querySchedule:error", log.Err(err))
+		log.Error(ctx, "querySchedule:error", log.Any("condition", condition), log.Err(err))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -279,7 +279,7 @@ func (s *Server) getAttachmentUploadPath(c *gin.Context) {
 	name := fmt.Sprintf("%s.%s", utils.NewID(), ext)
 	url, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, model.ScheduleAttachment_Storage_Partition, name)
 	if err != nil {
-		log.Error(ctx, "uploadAttachment:get upload file path error", log.Err(err))
+		log.Error(ctx, "uploadAttachment:get upload file path error", log.Err(err), log.String("fileName", name), log.String("partition", model.ScheduleAttachment_Storage_Partition))
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
