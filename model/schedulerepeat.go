@@ -16,12 +16,12 @@ func (s *scheduleModel) getMaxRepeatYear() int {
 	return config.Get().Schedule.MaxRepeatYear
 }
 
-func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions) ([]*entity.Schedule, error) {
+func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
 	if template.ModeType != entity.ModeTypeRepeat {
 		return []*entity.Schedule{template}, nil
 	}
 	result := []*entity.Schedule{template}
-	items, err := s.repeatSchedule(ctx, template, options)
+	items, err := s.repeatSchedule(ctx, template, options, location)
 	if err != nil {
 		log.Error(ctx, "repeat schedule(include template): call repeat schedule failed",
 			log.Err(err),
@@ -33,7 +33,7 @@ func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Sch
 	return result, nil
 }
 
-func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions) ([]*entity.Schedule, error) {
+func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
 	var (
 		result []*entity.Schedule
 		items  []*entity.Schedule
@@ -41,13 +41,13 @@ func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Sch
 	)
 	switch options.Type {
 	case entity.RepeatTypeDaily:
-		items, err = s.repeatScheduleDaily(ctx, template, &options.Daily)
+		items, err = s.repeatScheduleDaily(ctx, template, &options.Daily, location)
 	case entity.RepeatTypeWeekly:
-		items, err = s.repeatScheduleWeekly(ctx, template, &options.Weekly)
+		items, err = s.repeatScheduleWeekly(ctx, template, &options.Weekly, location)
 	case entity.RepeatTypeMonthly:
-		items, err = s.repeatScheduleMonthly(ctx, template, &options.Monthly)
+		items, err = s.repeatScheduleMonthly(ctx, template, &options.Monthly, location)
 	case entity.RepeatTypeYearly:
-		items, err = s.repeatScheduleYearly(ctx, template, &options.Yearly)
+		items, err = s.repeatScheduleYearly(ctx, template, &options.Yearly, location)
 	}
 	if err != nil {
 		log.Error(ctx, "repeat schedule failed",
@@ -61,12 +61,12 @@ func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Sch
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entity.Schedule, options *entity.RepeatDaily) ([]*entity.Schedule, error) {
+func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entity.Schedule, options *entity.RepeatDaily, location *time.Location) ([]*entity.Schedule, error) {
 	var (
 		result      []*entity.Schedule
-		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0)
-		originStart = time.Unix(template.StartAt, 0)
-		originEnd   = time.Unix(template.EndAt, 0)
+		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0).In(location)
+		originStart = time.Unix(template.StartAt, 0).In(location)
+		originEnd   = time.Unix(template.EndAt, 0).In(location)
 	)
 	switch options.End.Type {
 	case entity.RepeatEndNever:
@@ -98,7 +98,7 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 	case entity.RepeatEndAfterTime:
 		var (
 			start, end = originStart, originEnd
-			afterTime  = time.Unix(options.End.AfterTime, 0)
+			afterTime  = time.Unix(options.End.AfterTime, 0).In(location)
 		)
 		for end.Before(afterTime) && end.Before(maxEndTime) {
 			if start.After(originStart) {
@@ -116,16 +116,16 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *entity.Schedule, options *entity.RepeatWeekly) ([]*entity.Schedule, error) {
+func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *entity.Schedule, options *entity.RepeatWeekly, location *time.Location) ([]*entity.Schedule, error) {
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule weekly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
 	}
 	var (
 		result      []*entity.Schedule
-		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0)
-		originStart = time.Unix(template.StartAt, 0)
-		originEnd   = time.Unix(template.EndAt, 0)
+		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0).In(location)
+		originStart = time.Unix(template.StartAt, 0).In(location)
+		originEnd   = time.Unix(template.EndAt, 0).In(location)
 	)
 	switch options.End.Type {
 	case entity.RepeatEndNever:
@@ -178,7 +178,7 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 		for _, onWeekday := range options.On {
 			var (
 				start, end = originStart, originEnd
-				afterTime  = time.Unix(options.End.AfterTime, 0)
+				afterTime  = time.Unix(options.End.AfterTime, 0).In(location)
 				first      = true
 			)
 			for end.Before(afterTime) && end.Before(maxEndTime) {
@@ -205,25 +205,25 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *entity.Schedule, options *entity.RepeatMonthly) ([]*entity.Schedule, error) {
+func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *entity.Schedule, options *entity.RepeatMonthly, location *time.Location) ([]*entity.Schedule, error) {
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule monthly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
 	}
 	var (
 		result      []*entity.Schedule
-		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0)
-		originStart = time.Unix(template.StartAt, 0)
-		originEnd   = time.Unix(template.EndAt, 0)
+		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0).In(location)
+		originStart = time.Unix(template.StartAt, 0).In(location)
+		originEnd   = time.Unix(template.EndAt, 0).In(location)
 	)
 	switch options.End.Type {
 	case entity.RepeatEndNever:
+		var (
+			start, end = originStart, originEnd
+			timer      = s.startOfMonth(start.Year(), start.Month(), location)
+		)
 		switch options.OnType {
 		case entity.RepeatMonthlyOnDate:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfMonth(start.Year(), start.Month())
-			)
 			for {
 				start = s.setTimeDatePart(start, timer.Year(), timer.Month(), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -240,12 +240,8 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 				timer = timer.AddDate(0, options.Interval, 0)
 			}
 		case entity.RepeatMonthlyOnWeek:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfMonth(start.Year(), start.Month())
-			)
 			for {
-				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq)
+				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq, location)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
@@ -262,12 +258,12 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			}
 		}
 	case entity.RepeatEndAfterCount:
+		var (
+			start, end = originStart, originEnd
+			timer      = s.startOfMonth(start.Year(), start.Month(), location)
+		)
 		switch options.OnType {
 		case entity.RepeatMonthlyOnDate:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfMonth(start.Year(), start.Month())
-			)
 			for len(result) < options.End.AfterCount {
 				start = s.setTimeDatePart(start, timer.Year(), timer.Month(), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -284,12 +280,8 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 				timer = timer.AddDate(0, options.Interval, 0)
 			}
 		case entity.RepeatMonthlyOnWeek:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfMonth(start.Year(), start.Month())
-			)
 			for len(result) < options.End.AfterCount {
-				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq)
+				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq, location)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
@@ -306,13 +298,13 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 			}
 		}
 	case entity.RepeatEndAfterTime:
+		var (
+			start, end = originStart, originEnd
+			timer      = s.startOfMonth(start.Year(), start.Month(), location)
+			afterTime  = time.Unix(options.End.AfterTime, 0).In(location)
+		)
 		switch options.OnType {
 		case entity.RepeatMonthlyOnDate:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfMonth(start.Year(), start.Month())
-				afterTime  = time.Unix(options.End.AfterTime, 0)
-			)
 			for {
 				start = s.setTimeDatePart(start, timer.Year(), timer.Month(), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -329,13 +321,8 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 				timer = timer.AddDate(0, options.Interval, 0)
 			}
 		case entity.RepeatMonthlyOnWeek:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfMonth(start.Year(), start.Month())
-				afterTime  = time.Unix(options.End.AfterTime, 0)
-			)
 			for {
-				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq)
+				year, month, day := s.dateOfWeekday(timer.Year(), timer.Month(), options.OnWeek, options.OnWeekSeq, location)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(afterTime) || end.After(maxEndTime) {
@@ -358,25 +345,25 @@ func (s *scheduleModel) repeatScheduleMonthly(ctx context.Context, template *ent
 	return result, nil
 }
 
-func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *entity.Schedule, options *entity.RepeatYearly) ([]*entity.Schedule, error) {
+func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *entity.Schedule, options *entity.RepeatYearly, location *time.Location) ([]*entity.Schedule, error) {
 	if options.Interval <= 0 {
 		log.Info(ctx, "repeat schedule yearly: options interval less than 0", log.Int("interval", options.Interval))
 		return nil, nil
 	}
 	var (
 		result      []*entity.Schedule
-		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0)
-		originStart = time.Unix(template.StartAt, 0)
-		originEnd   = time.Unix(template.EndAt, 0)
+		maxEndTime  = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0).In(location)
+		originStart = time.Unix(template.StartAt, 0).In(location)
+		originEnd   = time.Unix(template.EndAt, 0).In(location)
 	)
 	switch options.End.Type {
 	case entity.RepeatEndNever:
+		var (
+			start, end = originStart, originEnd
+			timer      = s.startOfYear(start.Year(), location)
+		)
 		switch options.OnType {
 		case entity.RepeatYearlyOnDate:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfYear(start.Year())
-			)
 			for {
 				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -393,12 +380,8 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 				timer = timer.AddDate(options.Interval, 0, 0)
 			}
 		case entity.RepeatYearlyOnWeek:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfYear(start.Year())
-			)
 			for {
-				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq)
+				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq, location)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
@@ -416,12 +399,12 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			}
 		}
 	case entity.RepeatEndAfterCount:
+		var (
+			start, end = originStart, originEnd
+			timer      = s.startOfYear(start.Year(), location)
+		)
 		switch options.OnType {
 		case entity.RepeatYearlyOnDate:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfYear(start.Year())
-			)
 			for len(result) < options.End.AfterCount {
 				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -438,12 +421,8 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 				timer = timer.AddDate(options.Interval, 0, 0)
 			}
 		case entity.RepeatYearlyOnWeek:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfYear(start.Year())
-			)
 			for len(result) < options.End.AfterCount {
-				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq)
+				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq, location)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(maxEndTime) {
@@ -461,13 +440,13 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 			}
 		}
 	case entity.RepeatEndAfterTime:
+		var (
+			start, end = originStart, originEnd
+			timer      = s.startOfYear(start.Year(), location)
+			afterTime  = time.Unix(options.End.AfterTime, 0).In(location)
+		)
 		switch options.OnType {
 		case entity.RepeatYearlyOnDate:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfYear(start.Year())
-				afterTime  = time.Unix(options.End.AfterTime, 0)
-			)
 			for {
 				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -484,13 +463,8 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 				timer = timer.AddDate(options.Interval, 0, 0)
 			}
 		case entity.RepeatYearlyOnWeek:
-			var (
-				start, end = originStart, originEnd
-				timer      = s.startOfYear(start.Year())
-				afterTime  = time.Unix(options.End.AfterTime, 0)
-			)
 			for {
-				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq)
+				year, month, day := s.dateOfWeekday(timer.Year(), time.Month(options.OnWeekMonth), options.OnWeek, options.OnWeekSeq, location)
 				start = s.setTimeDatePart(start, year, month, day)
 				end = originEnd.Add(start.Sub(originStart))
 				if end.After(afterTime) || end.After(maxEndTime) {
@@ -519,15 +493,15 @@ func (s *scheduleModel) setTimeDatePart(src time.Time, year int, month time.Mont
 	return time.Date(year, month, day, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), src.Location())
 }
 
-func (s *scheduleModel) dateOfWeekday(year int, month time.Month, w entity.RepeatWeekday, seq entity.RepeatWeekSeq) (int, time.Month, int) {
+func (s *scheduleModel) dateOfWeekday(year int, month time.Month, w entity.RepeatWeekday, seq entity.RepeatWeekSeq, location *time.Location) (int, time.Month, int) {
 	switch seq {
 	case entity.RepeatWeekSeqFirst, entity.RepeatWeekSeqSecond, entity.RepeatWeekSeqThird, entity.RepeatWeekSeqFourth:
-		start := s.startOfMonth(year, month)
+		start := s.startOfMonth(year, month, location)
 		offset := int(w.TimeWeekday()-start.Weekday()+7)%7 + 7*(seq.Offset()-1)
 		result := start.AddDate(0, 0, offset)
 		return result.Year(), result.Month(), result.Day()
 	case entity.RepeatWeekSeqLast:
-		end := s.endOfMonth(year, month)
+		end := s.endOfMonth(year, month, location)
 		offset := int(end.Weekday()-w.TimeWeekday()+7) % 7
 		result := end.AddDate(0, 0, -offset)
 		return result.Year(), result.Month(), result.Day()
@@ -535,22 +509,22 @@ func (s *scheduleModel) dateOfWeekday(year int, month time.Month, w entity.Repea
 	return 0, 0, 0
 }
 
-func (s *scheduleModel) startOfYear(year int) time.Time {
-	return time.Date(year, 1, 1, 0, 0, 0, 0, time.Local)
+func (s *scheduleModel) startOfYear(year int, location *time.Location) time.Time {
+	return time.Date(year, 1, 1, 0, 0, 0, 0, location)
 }
 
-func (s *scheduleModel) startOfMonth(year int, month time.Month) time.Time {
-	return time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
+func (s *scheduleModel) startOfMonth(year int, month time.Month, location *time.Location) time.Time {
+	return time.Date(year, month, 1, 0, 0, 0, 0, location)
 }
 
-func (s *scheduleModel) endOfMonth(year int, month time.Month) time.Time {
-	return time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, time.Local).Add(-time.Millisecond)
+func (s *scheduleModel) endOfMonth(year int, month time.Month, location *time.Location) time.Time {
+	return time.Date(year, time.Month(month)+1, 1, 0, 0, 0, 0, location).Add(-time.Millisecond)
 }
 
-func (s *scheduleModel) startOfDay(year int, month time.Month, day int) time.Time {
-	return time.Date(year, month, day, 0, 0, 0, 0, time.Local).Add(-time.Millisecond)
+func (s *scheduleModel) startOfDay(year int, month time.Month, day int, location *time.Location) time.Time {
+	return time.Date(year, month, day, 0, 0, 0, 0, location).Add(-time.Millisecond)
 }
 
-func (s *scheduleModel) endOfDay(year int, month time.Month, day int) time.Time {
-	return time.Date(year, month, day, 23, 59, 59, 999, time.Local).Add(-time.Millisecond)
+func (s *scheduleModel) endOfDay(year int, month time.Month, day int, location *time.Location) time.Time {
+	return time.Date(year, month, day, 23, 59, 59, 999, location).Add(-time.Millisecond)
 }
