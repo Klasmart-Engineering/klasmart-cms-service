@@ -35,7 +35,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 	sql := SQLBatchInsert(constant.TableNameSchedule, []string{"id", "title"}, data)
 	execResult := dbContext.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("sql", sql))
+		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
 		return 0, execResult.Error
 	}
 	total := int(execResult.RowsAffected)
