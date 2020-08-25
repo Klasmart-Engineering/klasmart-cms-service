@@ -28,6 +28,8 @@ var (
 	ErrUnAuthorized    = errors.New("unauthorized")
 	ErrFileNotFound    = errors.New("file not found")
 	//ErrUnknown = errors.New("unknown error")
+	ErrInvalidArgs = errors.New("invalid args")
+	ErrConflict    = errors.New("conflict")
 )
 
 // tag States
