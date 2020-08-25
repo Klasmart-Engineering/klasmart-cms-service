@@ -21,15 +21,9 @@ import (
 func (s *Server) updateSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	if id == "" {
-		err := errors.New("update schedule: require id")
-		log.Error(ctx, err.Error())
-		c.JSON(http.StatusBadRequest, err.Error())
-		return
-	}
 	data := entity.ScheduleUpdateView{}
 	if err := c.ShouldBind(data); err != nil {
-		log.Error(ctx, "update schedule: should bind body failed", log.Err(err))
+		log.Info(ctx, "update schedule: should bind body failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -46,7 +40,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 		if conflict {
-			log.Warn(ctx, "update schedule: time conflict",
+			log.Info(ctx, "update schedule: time conflict",
 				log.Int64("start_at", data.StartAt),
 				log.Int64("end_at", data.EndAt),
 			)
@@ -56,7 +50,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	}
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
 	if err != nil {
-		log.Error(ctx, "update schedule: update failed", log.Err(err))
+		log.Info(ctx, "update schedule: update failed", log.Err(err))
 		switch {
 		case entity.IsErrInvalidArgs(err):
 			c.JSON(http.StatusBadRequest, err.Error())
@@ -75,20 +69,15 @@ func (s *Server) updateSchedule(c *gin.Context) {
 func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	if id == "" {
-		err := errors.New("delete schedule: require param id")
-		log.Error(ctx, err.Error())
-		c.JSON(http.StatusBadRequest, err.Error())
-	}
 	editType := entity.ScheduleEditType(c.Query("repeat_edit_options"))
 	if !editType.Valid() {
-		err := errors.New("delete schedule: invalid edit type")
-		log.Error(ctx, err.Error(), log.String("repeat_edit_options", string(editType)))
-		c.JSON(http.StatusBadRequest, err.Error())
+		errMsg := "delete schedule: invalid edit type"
+		log.Info(ctx, errMsg, log.String("repeat_edit_options", string(editType)))
+		c.JSON(http.StatusBadRequest, errMsg)
 	}
 	operator, _ := GetOperator(c)
 	if err := model.GetScheduleModel().Delete(ctx, dbo.MustGetDB(ctx), operator, id, editType); err != nil {
-		log.Error(ctx, "delete schedule: delete failed",
+		log.Info(ctx, "delete schedule: delete failed",
 			log.Err(err),
 			log.String("schedule_id", id),
 			log.String("repeat_edit_options", string(editType)),
