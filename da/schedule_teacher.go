@@ -45,7 +45,10 @@ func (s *scheduleTeacherDA) DeleteByScheduleID(ctx context.Context, tx *dbo.DBCo
 	if err := tx.Unscoped().
 		Where("schedule_id = ?", scheduleID).
 		Delete(&entity.TeacherSchedule{}).Error; err != nil {
-		log.Error(ctx, "delete teacher_schedule by schedule id: delete failed", log.Err(err))
+		log.Error(ctx, "delete teacher_schedule by schedule id: delete failed",
+			log.Err(err),
+			log.String("schedule_id", scheduleID),
+		)
 		return err
 	}
 	return nil
