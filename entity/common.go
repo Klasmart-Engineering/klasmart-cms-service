@@ -1,5 +1,7 @@
 package entity
 
+import "strings"
+
 type NullInts struct {
 	Ints  []int
 	Valid bool
@@ -8,6 +10,14 @@ type NullInts struct {
 type NullStrings struct {
 	Strings []string
 	Valid   bool
+}
+
+func (s NullStrings) SQLPlaceHolder() string {
+	if len(s.Strings) == 0 && s.Valid {
+		return "null"
+	}
+
+	return strings.TrimSuffix(strings.Repeat("?,", len(s.Strings)), ",")
 }
 
 type NullString struct {

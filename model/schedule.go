@@ -13,6 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"net/http"
 	"sync"
 )
 
@@ -27,6 +28,7 @@ type IScheduleModel interface {
 	//PageByTeacherID(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
+	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -466,27 +468,21 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	return result, nil
 }
 
-//func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
-//	var scheduleList []*entity.Schedule
-//	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
-//	if err != nil {
-//		return 0, nil, err
-//	}
-//	var result = make([]*entity.ScheduleSeachView, len(scheduleList))
-//	for i, item := range scheduleList {
-//		baseInfo, err := s.getBasicInfo(ctx, tx, item)
-//		if err != nil {
-//			return 0, nil, err
-//		}
-//		result[i] = &entity.ScheduleSeachView{
-//			ID:            item.ID,
-//			StartAt:       item.StartAt,
-//			EndAt:         item.EndAt,
-//			ScheduleBasic: *baseInfo,
-//		}
-//	}
-//	return total, result, nil
-//}
+func (s *scheduleModel) GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error) {
+	teacherService, err := external.GetTeacherServiceProvider()
+	if err != nil {
+		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+	teachers, err := teacherService.Query(ctx, name)
+	if err != nil {
+		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err), log.String("teacher", teacherName))
+		return nil, err
+	}
+
+	return teachers, nil
+}
+
 var (
 	_scheduleOnce  sync.Once
 	_scheduleModel IScheduleModel

@@ -91,6 +91,7 @@ type ScheduleCondition struct {
 	StartAtLe        sql.NullInt64
 	EndAtGe          sql.NullInt64
 	TeacherID        sql.NullString
+	TeacherIDs       entity.NullStrings
 	StartAndEndRange []sql.NullInt64
 	//ScheduleIDs entity.NullStrings
 
@@ -132,6 +133,11 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if c.TeacherID.Valid {
 		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (deleted_at=0) and %s.id = %s.schedule_id)", constant.TableNameTeacherSchedule, constant.TableNameTeacherSchedule, constant.TableNameSchedule)
+		wheres = append(wheres, sql)
+		params = append(params, c.TeacherID.String)
+	}
+	if c.TeacherIDs.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id in (%s) and (deleted_at=0) and %s.id = %s.schedule_id)", constant.TableNameTeacherSchedule, c.TeacherIDs.SQLPlaceHolder(), constant.TableNameTeacherSchedule, constant.TableNameSchedule)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherID.String)
 	}

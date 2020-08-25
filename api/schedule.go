@@ -10,7 +10,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -173,27 +172,23 @@ func (s *Server) querySchedule(c *gin.Context) {
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
-	teacherService, err := external.GetTeacherServiceProvider()
+	teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, teacherName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.Any("condition", condition))
-		return
-	}
-	teachers, err := teacherService.Query(ctx, teacherName)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err), log.String("teacher", teacherName))
 		return
 	}
 	if len(teachers) <= 0 {
-		c.JSON(http.StatusNotFound, errors.New("teacher info not found"))
 		log.Info(ctx, "querySchedule:teacher info not found")
+		c.JSON(http.StatusBadRequest, "teacher info not found")
 		return
 	}
-	teacher := teachers[0]
-	condition.TeacherID = sql.NullString{
-		String: teacher.ID,
-		Valid:  true,
+	teacherIDs := make([]string, len(teachers))
+	for i, item := range teachers {
+		teacherIDs[i] = item.ID
+	}
+	condition.TeacherIDs = entity.NullStrings{
+		Valid:   len(teacherIDs) > 0,
+		Strings: teacherIDs,
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
