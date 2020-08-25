@@ -94,40 +94,40 @@ func (c ScheduleTeacherCondition) GetConditions() ([]string, []interface{}) {
 }
 
 func (c ScheduleTeacherCondition) GetOrderBy() string {
-	return c.OrderBy.ToSQL()
+	return ""
 }
 
 func (c ScheduleTeacherCondition) GetPager() *dbo.Pager {
 	return &c.Pager
 }
 
-type ScheduleTeacherOrderBy int
-
-const (
-	ScheduleTeacherOrderByCreateAtDesc = iota + 1
-	ScheduleTeacherOrderByCreateAtAsc
-)
-
-func NewScheduleTeacherOrderBy(orderby string) ScheduleTeacherOrderBy {
-	//switch orderby {
-	//case "create_at":
-	//	return ScheduleTeacherOrderByCreateAtAsc
-	//case "-create_at":
-	//	return ScheduleTeacherOrderByCreateAtDesc
-	//default:
-	//	return ScheduleTeacherOrderByCreateAtDesc
-	//}
-	return ScheduleTeacherOrderByCreateAtDesc
-}
-
-func (c ScheduleTeacherOrderBy) ToSQL() string {
-	return ""
-	//switch c {
-	//case ScheduleTeacherOrderByCreateAtAsc:
-	//	return "create_at"
-	//case ScheduleTeacherOrderByCreateAtDesc:
-	//	return "create_at desc"
-	//default:
-	//	return "create_at desc"
-	//}
-}
+//type ScheduleTeacherOrderBy int
+//
+//const (
+//	ScheduleTeacherOrderByCreateAtDesc = iota + 1
+//	ScheduleTeacherOrderByCreateAtAsc
+//)
+//
+//func NewScheduleTeacherOrderBy(orderby string) ScheduleTeacherOrderBy {
+//	//switch orderby {
+//	//case "create_at":
+//	//	return ScheduleTeacherOrderByCreateAtAsc
+//	//case "-create_at":
+//	//	return ScheduleTeacherOrderByCreateAtDesc
+//	//default:
+//	//	return ScheduleTeacherOrderByCreateAtDesc
+//	//}
+//	return ScheduleTeacherOrderByCreateAtDesc
+//}
+//
+//func (c ScheduleTeacherOrderBy) ToSQL() string {
+//	return ""
+//	//switch c {
+//	//case ScheduleTeacherOrderByCreateAtAsc:
+//	//	return "create_at"
+//	//case ScheduleTeacherOrderByCreateAtDesc:
+//	//	return "create_at desc"
+//	//default:
+//	//	return "create_at desc"
+//	//}
+//}
