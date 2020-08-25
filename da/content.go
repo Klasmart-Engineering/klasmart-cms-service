@@ -93,7 +93,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 			}
 		}
 		fullparam = strings.TrimSuffix(fullparam, " ")
-		conditions = append(conditions, "match(name) against(? in boolean mode)")
+		conditions = append(conditions, "match(name, description, author_name, keywords) against(? in boolean mode)")
 		params = append(params, fullparam)
 	}
 	if len(s.ContentType) > 0 {
