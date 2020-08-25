@@ -22,7 +22,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	if id == "" {
-		err := errors.New("update daschedule: require id")
+		err := errors.New("update schedule: require id")
 		log.Error(ctx, err.Error())
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
@@ -169,7 +169,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusInternalServerError, err.Error())
-	log.Error(ctx, "get daschedule by id error", log.Err(err))
+	log.Error(ctx, "get schedule by id error", log.Err(err))
 }
 func (s *Server) querySchedule(c *gin.Context) {
 	op, exist := GetOperator(c)
