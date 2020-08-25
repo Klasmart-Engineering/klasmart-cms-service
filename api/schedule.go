@@ -33,7 +33,11 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	operator, _ := GetOperator(c)
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data)
 	if err != nil {
-		log.Info(ctx, "update schedule: update failed", log.Err(err))
+		log.Info(ctx, "update schedule: update failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("data", data),
+		)
 		switch err {
 		case constant.ErrInvalidArgs:
 			c.JSON(http.StatusBadRequest, err.Error())
