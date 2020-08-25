@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -179,7 +178,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, op *entit
 	// TODO: check permission
 	if !viewdata.EditType.Valid() {
 		err := errors.New("update schedule: invalid type")
-		log.Error(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
+		log.Info(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
 		return "", entity.ErrInvalidArgs(err)
 	}
 	var schedule entity.Schedule
@@ -257,8 +256,8 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 				)
 			}
 		default:
-			err := fmt.Errorf("delete schedule: invalid edit type")
-			log.Error(ctx, err.Error(), log.String("edit_type", string(editType)))
+			err := errors.New("delete schedule: invalid edit type")
+			log.Info(ctx, err.Error(), log.String("edit_type", string(editType)))
 			return err
 		}
 		if err := da.GetScheduleTeacherDA().DeleteByScheduleID(ctx, tx, id); err != nil {
