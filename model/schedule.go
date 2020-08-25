@@ -63,7 +63,7 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options entity.RepeatOptions) (string, error) {
 	scheduleList, err := s.RepeatSchedule(ctx, schedule, options)
 	if err != nil {
-		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule))
+		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
 	}
 	teacherSchedules := make([]*entity.TeacherSchedule, len(scheduleList)*len(schedule.TeacherIDs))
@@ -84,7 +84,7 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 		// add to schedules
 		_, err = da.GetScheduleDA().BatchInsert(ctx, tx, scheduleList)
 		if err != nil {
-			log.Error(ctx, "schedule batchInsert error", log.Err(err))
+			log.Error(ctx, "schedule batchInsert error", log.Err(err), log.Any("scheduleList", scheduleList))
 			return err
 		}
 
@@ -100,7 +100,7 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 		return "", err
 	}
 	if len(scheduleList) <= 0 {
-		log.Error(ctx, "schedules batchInsert error", log.Any("scheduleList", scheduleList))
+		log.Error(ctx, "schedules batchInsert error,schedules is empty", log.Any("schedule", schedule), log.Any("options", options))
 		return "", errors.New("schedules is empty")
 	}
 	return scheduleList[0].ID, nil
