@@ -23,8 +23,9 @@ func Test_repeatScheduleDaily(t *testing.T) {
 
 	type args struct {
 		ctx      context.Context
-		template entity.Schedule
-		options  entity.RepeatDaily
+		template *entity.Schedule
+		options  *entity.RepeatDaily
+		location *time.Location
 	}
 	tests := []struct {
 		name    string
@@ -36,11 +37,11 @@ func Test_repeatScheduleDaily(t *testing.T) {
 			name: "daily end never",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatDaily{
+				options: &entity.RepeatDaily{
 					Interval: 1,
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
@@ -54,11 +55,11 @@ func Test_repeatScheduleDaily(t *testing.T) {
 			name: "daily end after count",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatDaily{
+				options: &entity.RepeatDaily{
 					Interval: 1,
 					End: entity.RepeatEnd{
 						Type:       entity.RepeatEndAfterCount,
@@ -73,11 +74,11 @@ func Test_repeatScheduleDaily(t *testing.T) {
 			name: "daily end after time",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatDaily{
+				options: &entity.RepeatDaily{
 					Interval: 1,
 					End: entity.RepeatEnd{
 						Type:      entity.RepeatEndAfterTime,
@@ -91,7 +92,7 @@ func Test_repeatScheduleDaily(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getScheduleModelForRepeatTest().repeatScheduleDaily(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleDaily(tt.args.ctx, tt.args.template, tt.args.options, tt.args.location)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleDaily() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -124,8 +125,9 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 
 	type args struct {
 		ctx      context.Context
-		template entity.Schedule
-		options  entity.RepeatWeekly
+		template *entity.Schedule
+		options  *entity.RepeatWeekly
+		location *time.Location
 	}
 	tests := []struct {
 		name    string
@@ -137,11 +139,11 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 			name: "weekly end never",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatWeekly{
+				options: &entity.RepeatWeekly{
 					Interval: 1,
 					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon, entity.RepeatWeekdayTue, entity.RepeatWeekdaySat},
 					End: entity.RepeatEnd{
@@ -156,11 +158,11 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 			name: "weekly bigger interval and end never",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatWeekly{
+				options: &entity.RepeatWeekly{
 					Interval: 3,
 					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon},
 					End: entity.RepeatEnd{
@@ -175,11 +177,11 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 			name: "weekly end after count",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatWeekly{
+				options: &entity.RepeatWeekly{
 					Interval: 1,
 					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon, entity.RepeatWeekdayFri, entity.RepeatWeekdaySun},
 					End: entity.RepeatEnd{
@@ -195,11 +197,11 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 			name: "weekly end after time",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatWeekly{
+				options: &entity.RepeatWeekly{
 					Interval: 1,
 					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon},
 					End: entity.RepeatEnd{
@@ -214,7 +216,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getScheduleModelForRepeatTest().repeatScheduleWeekly(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleWeekly(tt.args.ctx, tt.args.template, tt.args.options, tt.args.location)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleWeekly() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -247,8 +249,9 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 
 	type args struct {
 		ctx      context.Context
-		template entity.Schedule
-		options  entity.RepeatMonthly
+		template *entity.Schedule
+		options  *entity.RepeatMonthly
+		location *time.Location
 	}
 	tests := []struct {
 		name    string
@@ -260,11 +263,11 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 			name: "monthly end never on date",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatMonthly{
+				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnDate,
 					OnDateDay: 1,
@@ -280,11 +283,11 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 			name: "monthly end never on week",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatMonthly{
+				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnWeek,
 					OnWeek:    entity.RepeatWeekdayMon,
@@ -301,11 +304,11 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 			name: "monthly end after count on date",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatMonthly{
+				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnDate,
 					OnDateDay: 1,
@@ -322,11 +325,11 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 			name: "monthly end after count on week",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatMonthly{
+				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnWeek,
 					OnWeek:    entity.RepeatWeekdayMon,
@@ -344,11 +347,11 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 			name: "monthly end after time on date",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatMonthly{
+				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnDate,
 					OnDateDay: 1,
@@ -365,11 +368,11 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 			name: "monthly end after time on week",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatMonthly{
+				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnWeek,
 					OnWeek:    entity.RepeatWeekdayMon,
@@ -386,7 +389,7 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getScheduleModelForRepeatTest().repeatScheduleMonthly(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleMonthly(tt.args.ctx, tt.args.template, tt.args.options, tt.args.location)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleMonthly() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -419,8 +422,9 @@ func Test_repeatScheduleYearly(t *testing.T) {
 
 	type args struct {
 		ctx      context.Context
-		template entity.Schedule
-		options  entity.RepeatYearly
+		template *entity.Schedule
+		options  *entity.RepeatYearly
+		location *time.Location
 	}
 	tests := []struct {
 		name    string
@@ -431,11 +435,11 @@ func Test_repeatScheduleYearly(t *testing.T) {
 			name: "yearly end never on date",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 2, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatYearly{
+				options: &entity.RepeatYearly{
 					Interval:    1,
 					OnType:      entity.RepeatYearlyOnDate,
 					OnDateMonth: 11,
@@ -451,11 +455,11 @@ func Test_repeatScheduleYearly(t *testing.T) {
 			name: "yearly end never on week",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 2, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatYearly{
+				options: &entity.RepeatYearly{
 					Interval:    1,
 					OnType:      entity.RepeatYearlyOnWeek,
 					OnWeekMonth: 11,
@@ -472,11 +476,11 @@ func Test_repeatScheduleYearly(t *testing.T) {
 			name: "yearly end after count on date",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatYearly{
+				options: &entity.RepeatYearly{
 					Interval:    1,
 					OnType:      entity.RepeatYearlyOnDate,
 					OnDateMonth: 11,
@@ -493,11 +497,11 @@ func Test_repeatScheduleYearly(t *testing.T) {
 			name: "yearly end after count on week",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatYearly{
+				options: &entity.RepeatYearly{
 					Interval:    1,
 					OnType:      entity.RepeatYearlyOnWeek,
 					OnWeekMonth: 11,
@@ -515,11 +519,11 @@ func Test_repeatScheduleYearly(t *testing.T) {
 			name: "yearly end never after time on date",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatYearly{
+				options: &entity.RepeatYearly{
 					Interval:    1,
 					OnType:      entity.RepeatYearlyOnDate,
 					OnDateMonth: 11,
@@ -536,11 +540,11 @@ func Test_repeatScheduleYearly(t *testing.T) {
 			name: "yearly end never after time on week",
 			args: args{
 				ctx: context.Background(),
-				template: entity.Schedule{
+				template: &entity.Schedule{
 					StartAt: time.Date(2020, 9, 1, 9, 0, 0, 0, time.Local).Unix(),
 					EndAt:   time.Date(2020, 9, 1, 10, 0, 0, 0, time.Local).Unix(),
 				},
-				options: entity.RepeatYearly{
+				options: &entity.RepeatYearly{
 					Interval:    1,
 					OnType:      entity.RepeatYearlyOnWeek,
 					OnWeekMonth: 11,
@@ -557,7 +561,7 @@ func Test_repeatScheduleYearly(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getScheduleModelForRepeatTest().repeatScheduleYearly(tt.args.ctx, &tt.args.template, tt.args.options)
+			got, err := getScheduleModelForRepeatTest().repeatScheduleYearly(tt.args.ctx, tt.args.template, tt.args.options, tt.args.location)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repeatScheduleYearly() error = %v, wantErr %v", err, tt.wantErr)
 				return

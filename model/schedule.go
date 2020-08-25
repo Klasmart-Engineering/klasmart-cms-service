@@ -60,7 +60,7 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	return false, nil
 }
 
-func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options entity.RepeatOptions) (string, error) {
+func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions) (string, error) {
 	scheduleList, err := s.RepeatSchedule(ctx, schedule, options)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
@@ -135,7 +135,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 		}
 	}
 	if viewData.ModeType == entity.ModeTypeRepeat {
-		return s.addRepeatSchedule(ctx, tx, schedule, viewData.Repeat)
+		return s.addRepeatSchedule(ctx, tx, schedule, &viewData.Repeat)
 	} else {
 		schedule.ID = utils.NewID()
 		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
@@ -171,11 +171,6 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 
 func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error) {
 	// TODO: check permission
-	if !viewdata.EditType.Valid() {
-		err := errors.New("update schedule: invalid type")
-		log.Info(ctx, err.Error(), log.String("edit_type", string(viewdata.EditType)))
-		return "", constant.ErrInvalidArgs
-	}
 	if !viewdata.IsForce {
 		conflict, err := s.IsScheduleConflict(ctx, operator, viewdata.StartAt, viewdata.EndAt)
 		if err != nil {
@@ -247,7 +242,7 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 			var schedule entity.Schedule
 			if err := da.GetScheduleDA().Get(ctx, id, &schedule); err != nil {
 				if err == dbo.ErrRecordNotFound {
-					log.Warn(ctx, "delete schedule: get schedule by id failed",
+					log.Info(ctx, "delete schedule: get schedule by id failed",
 						log.Err(err),
 						log.String("id", id),
 						log.String("edit_type", string(editType)),
@@ -269,10 +264,6 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 					log.String("edit_type", string(editType)),
 				)
 			}
-		default:
-			err := errors.New("delete schedule: invalid edit type")
-			log.Info(ctx, err.Error(), log.String("edit_type", string(editType)))
-			return err
 		}
 		if err := da.GetScheduleTeacherDA().DeleteByScheduleID(ctx, tx, id); err != nil {
 			log.Error(ctx, "delete schedule: delete by schedule id failed",
