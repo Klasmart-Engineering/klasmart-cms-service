@@ -3327,6 +3327,10 @@
           "is_repeat": {
             "type": "boolean",
             "description": "If true, schedule will repeat"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
           }
         }
       },
@@ -3569,6 +3573,10 @@
           "is_repeat": {
             "type": "boolean",
             "description": "If true, schedule will repeat"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
           }
         }
       },
