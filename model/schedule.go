@@ -345,18 +345,18 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	}
 	classMap, err := s.getClassInfoMapByClassIDs(ctx, classIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get class info error", log.Err(err), log.Any("classIDs", classIDs))
+		log.Error(ctx, "getBasicInfo:get class info error", log.Err(err), log.Strings("classIDs", classIDs))
 		return nil, err
 	}
 	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, subjectIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get subject info error", log.Err(err), log.Any("subjectIDs", subjectIDs))
+		log.Error(ctx, "getBasicInfo:get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 		return nil, err
 	}
 
 	programMap, err = s.getProgramInfoMapByProgramIDs(ctx, programIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Any("programIDs", programIDs))
+		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Strings("programIDs", programIDs))
 		return nil, err
 	}
 
@@ -534,7 +534,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 func (s *scheduleModel) GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error) {
 	teacherService, err := external.GetTeacherServiceProvider()
 	if err != nil {
-		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.Any("name", name))
+		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.String("name", name))
 		return nil, err
 	}
 	teachers, err := teacherService.Query(ctx, name)
