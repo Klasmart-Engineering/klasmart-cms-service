@@ -35,7 +35,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errMsg)
 		return
 	}
-	operator, _ := GetOperator(c)
+	operator := GetOperator(c)
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data, s.getLocation(c))
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed",
@@ -70,7 +70,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errMsg)
 		return
 	}
-	operator, _ := GetOperator(c)
+	operator := GetOperator(c)
 	if err := model.GetScheduleModel().Delete(ctx, dbo.MustGetDB(ctx), operator, id, editType); err != nil {
 		log.Info(ctx, "delete schedule: delete failed",
 			log.Err(err),
@@ -91,11 +91,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 }
 
 func (s *Server) addSchedule(c *gin.Context) {
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
-		return
-	}
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
@@ -143,11 +139,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
 }
 func (s *Server) querySchedule(c *gin.Context) {
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
-		return
-	}
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	condition := new(da.ScheduleCondition)
 	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
@@ -207,7 +199,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 }
 
 func (s *Server) getLocation(c *gin.Context) *time.Location {
-	return time.Local
+	return GetTimeLocation(c)
 }
 
 const (
@@ -218,11 +210,7 @@ const (
 )
 
 func (s *Server) getScheduleTimeView(c *gin.Context) {
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
-		return
-	}
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
 	timeAtStr := c.Query("time_at")
