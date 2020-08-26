@@ -36,5 +36,8 @@ func TestApprove(t *testing.T) {
 }
 
 func TestGetTimeLocation(t *testing.T) {
-	fmt.Println(time.LoadLocation("America/Los_Angeles"))
+	//fmt.Println(time.LoadLocation("America/Los_Angeles"))
+	loc := time.Local
+	time.ParseInLocation("", "", loc)
+	//fmt.Println(time.Local)
 }

@@ -56,6 +56,14 @@ func GetOperator(c *gin.Context) *entity.Operator {
 
 func GetTimeLocation(c *gin.Context) *time.Location {
 	tz := c.GetHeader("CloudFront-Viewer-Time-Zone")
-	loc, _ := time.LoadLocation(tz)
+	if tz == "" {
+		log.Debug(c.Request.Context(), "GetTimeLocation: get header failed")
+		return time.Local
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		log.Debug(c.Request.Context(), "GetTimeLocation: load location failed", log.Err(err))
+		return time.Local
+	}
 	return loc
 }
