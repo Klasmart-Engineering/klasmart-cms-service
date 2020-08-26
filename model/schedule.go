@@ -183,8 +183,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			return "", err
 		}
 		if conflict {
-			err := errors.New("update schedule: time conflict")
-			log.Info(ctx, err.Error(),
+			log.Info(ctx, "update schedule: time conflict",
 				log.Any("operator", operator),
 				log.Any("viewdata", viewdata),
 			)
@@ -264,6 +263,7 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 					log.Int64("start_at", schedule.StartAt),
 					log.String("edit_type", string(editType)),
 				)
+				return err
 			}
 		}
 		if err := da.GetScheduleTeacherDA().DeleteByScheduleID(ctx, tx, id); err != nil {
@@ -271,6 +271,7 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 				log.Err(err),
 				log.String("id", id),
 			)
+			return err
 		}
 		return nil
 	}); err != nil {

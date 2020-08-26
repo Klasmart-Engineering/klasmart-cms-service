@@ -9,15 +9,8 @@ import (
 	"time"
 )
 
-func (s *scheduleModel) getMaxRepeatYear() int {
-	if s.testScheduleRepeatFlag {
-		return 2
-	}
-	return config.Get().Schedule.MaxRepeatYear
-}
-
 func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
-	if template.ModeType != entity.ModeTypeRepeat {
+	if options == nil || !options.Type.Valid() {
 		return []*entity.Schedule{template}, nil
 	}
 	result := []*entity.Schedule{template}
@@ -31,6 +24,13 @@ func (s *scheduleModel) RepeatSchedule(ctx context.Context, template *entity.Sch
 	}
 	result = append(result, items...)
 	return result, nil
+}
+
+func (s *scheduleModel) getMaxRepeatYear() int {
+	if s.testScheduleRepeatFlag {
+		return 2
+	}
+	return config.Get().Schedule.MaxRepeatYear
 }
 
 func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
