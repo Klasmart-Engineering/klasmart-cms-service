@@ -21,7 +21,7 @@ CREATE TABLE `kidsloop2`.`assets` (
     FULLTEXT INDEX `name_description_keywords_author_index` (`name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
 );
 
-CREATE TABLE IF NOT EXISTS `kidsloop2`.`schedules` (
+CREATE TABLE IF NOT EXISTS `schedules` (
   `id` varchar(50) NOT NULL COMMENT 'id',
   `title` varchar(100) NOT NULL COMMENT 'title',
   `class_id` varchar(100) NOT NULL COMMENT 'class_id',
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS `kidsloop2`.`schedules` (
   KEY `schedules_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='schedules';
 
-CREATE TABLE IF NOT EXISTS `kidsloop2`.`schedules_teachers` (
+CREATE TABLE IF NOT EXISTS `schedules_teachers` (
   `id` varchar(50) NOT NULL COMMENT 'id',
   `teacher_id` varchar(100) NOT NULL COMMENT 'teacher_id',
   `schedule_id` varchar(100) NOT NULL COMMENT 'schedule_id',
