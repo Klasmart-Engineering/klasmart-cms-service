@@ -27,7 +27,8 @@ type IContentModel interface {
 
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
-	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string)(string ,error)
+	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string)(*entity.ContentName ,error)
+	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
@@ -570,17 +571,23 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	return ErrGetUnauthorizedContent
 }
 
-func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string)(string ,error){
+func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string)(*entity.ContentName ,error){
 	cachedContent := cache.GetRedisContentCache().GetContentCacheById(ctx, cid)
 	if cachedContent != nil {
-		return cachedContent.Name, nil
+		return &entity.ContentName{
+			ID:   cid,
+			Name: cachedContent.Name,
+		}, nil
 	}
 	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err))
-		return "", ErrNoContent
+		return nil, ErrNoContent
 	}
-	return obj.Name, nil
+	return &entity.ContentName{
+		ID:   cid,
+		Name: obj.Name,
+	}, nil
 }
 
 func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
@@ -622,15 +629,49 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	return contentWithDetails[0], nil
 }
 
+func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentName, error){
+	if len(cids) < 1 {
+		return nil, nil
+	}
+	resp := make([]*entity.ContentName, 0)
+
+	nid, cachedContent := cache.GetRedisContentCache().GetContentCacheByIdList(ctx, cids)
+	for i := range cachedContent {
+		resp = append(resp, &entity.ContentName{
+			ID:   cachedContent[i].ID,
+			Name: cachedContent[i].Name,
+		})
+	}
+	if len(nid) < 1 {
+		return resp, nil
+	}
+
+	_, data, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+		IDS: cids,
+	})
+	if err != nil {
+		log.Error(ctx, "can't read contentdata", log.Err(err))
+		return nil, ErrReadContentFailed
+	}
+	for i := range data {
+		resp = append(resp, &entity.ContentName{
+			ID:   data[i].ID,
+			Name: data[i].Name,
+		})
+	}
+	return resp, nil
+}
+
 func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
+	if len(cids) < 1 {
+		return nil, nil
+	}
+
 	nid, cachedContent := cache.GetRedisContentCache().GetContentCacheByIdList(ctx, cids)
 	if len(nid) < 1 {
 		return cachedContent, nil
 	}
 
-	if len(cids) < 1 {
-		return nil, nil
-	}
 	_, data, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		IDS: cids,
 	})

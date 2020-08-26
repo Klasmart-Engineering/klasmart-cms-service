@@ -200,6 +200,11 @@ type ContentInfoWithDetails struct {
 	OrgName           string `json:"org_name"`
 }
 
+type ContentName struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+}
+
 type ContentInfo struct {
 	ID            string   `json:"id"`
 	ContentType   int      `json:"content_type"`
