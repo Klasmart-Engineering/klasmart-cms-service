@@ -72,11 +72,11 @@ func (s Server) updateTag(c *gin.Context) {
 		log.Info(ctx, "tag name is empty")
 		return
 	}
-	//if data.States != constant.Enable || data.States != constant.Disabled {
-	//	c.JSON(http.StatusBadRequest, errors.New("tag states is invalid"))
-	//	log.Info(ctx, "tag states is invalid")
-	//	return
-	//}
+	if data.States != constant.Enable || data.States != constant.Disabled {
+		c.JSON(http.StatusBadRequest, errors.New("tag states is invalid"))
+		log.Info(ctx, "tag states is invalid")
+		return
+	}
 	err = model.GetTagModel().Update(ctx, op, data)
 
 	if err == nil {
@@ -115,18 +115,18 @@ func (s Server) getTagByID(c *gin.Context) {
 func (s Server) queryTag(c *gin.Context) {
 	ctx := c.Request.Context()
 	condition := new(da.TagCondition)
-	condition.Pager = utils.GetPager(c.Query("page"), c.Query("page_size"))
+	condition.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 	name := c.Query("name")
 	condition.Name = entity.NullString{
-		Strings: name,
-		Valid:   len(name) != 0,
+		String: name,
+		Valid:  len(name) != 0,
 	}
 	var (
 		total  int64
 		result []*entity.TagView
 		err    error
 	)
-	if condition.Pager.PageIndex == 0 || condition.Pager.PageSize == 0 {
+	if condition.Pager.Page == 0 || condition.Pager.PageSize == 0 {
 		result, err = model.GetTagModel().Query(ctx, condition)
 		total = int64(len(result))
 	} else {

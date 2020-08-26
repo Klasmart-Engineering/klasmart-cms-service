@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	Asset_Storage_Partition     = "asset"
-	Thumbnail_Storage_Partition = "thumbnail"
+	Asset_Storage_Partition              = "asset"
+	Thumbnail_Storage_Partition          = "thumbnail"
+	ScheduleAttachment_Storage_Partition = "schedule_attachment"
 )
 
 var (

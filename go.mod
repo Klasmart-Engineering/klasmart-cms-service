@@ -7,14 +7,10 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/jinzhu/gorm v1.9.15 // indirect
-	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/sirupsen/logrus v1.6.0 // indirect
-
+	github.com/jinzhu/gorm v1.9.15
+	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9 // indirect
-	github.com/tidwall/gjson v1.6.0 // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.3
@@ -27,8 +23,7 @@ require (
 	google.golang.org/genproto v0.0.0-20200808173500-a06252235341 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
-	gopkg.in/go-playground/validator.v9 v9.31.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
+	gopkg.in/go-playground/validator.v9 v9.31.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
 

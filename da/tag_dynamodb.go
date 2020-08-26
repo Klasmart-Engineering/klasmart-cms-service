@@ -15,7 +15,6 @@ import (
 	"time"
 )
 
-
 type tagDynamoDA struct{}
 
 func (tagDynamoDA) Insert(ctx context.Context, tag *entity.Tag) error {
@@ -86,14 +85,14 @@ func (tagDynamoDA) Page(ctx context.Context, condition *TagCondition) (int64, []
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
 		TableName:                 aws.String(constant.TableNameTag),
-		Limit:                     aws.Int64(condition.Pager.PageSize),
+		Limit:                     aws.Int64(int64(condition.Pager.PageSize)),
 	}
 	result := make([]*entity.Tag, 0)
 
 	var pageIndex int64 = 1
 	var count int64
 	err = dbclient.GetClient().ScanPages(params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
-		if pageIndex == condition.Pager.PageIndex {
+		if pageIndex == int64(condition.Pager.Page) {
 			for _, item := range page.Items {
 				tagItem := &entity.Tag{}
 				err = dynamodbattribute.UnmarshalMap(item, tagItem)
@@ -101,7 +100,7 @@ func (tagDynamoDA) Page(ctx context.Context, condition *TagCondition) (int64, []
 					log.Error(ctx, "dynamodb unmarshalmap error", log.Err(err))
 					return false
 				}
-				result=append(result,tagItem)
+				result = append(result, tagItem)
 			}
 			count = *page.ScannedCount
 		}
@@ -140,9 +139,9 @@ func (tagDynamoDA) Update(ctx context.Context, tag *entity.Tag) error {
 
 	input := &dynamodb.UpdateItemInput{
 		ExpressionAttributeNames: map[string]*string{
-			"#n":  aws.String("name"),
-			"#s":  aws.String("states"),
-			"#up": aws.String("updated_at"),
+			"#n":      aws.String("name"),
+			"#s":      aws.String("states"),
+			"#up":     aws.String("updated_at"),
 			"#upOpID": aws.String("updated_id"),
 		},
 		ExpressionAttributeValues: params,
@@ -218,7 +217,7 @@ func (tagDynamoDA) GetByIDs(ctx context.Context, ids []string) ([]*entity.Tag, e
 	return tags, nil
 }
 
-func (tagDynamoDA) DeleteSoft(ctx context.Context,op *entity.Operator, id string) error{
+func (tagDynamoDA) DeleteSoft(ctx context.Context, op *entity.Operator, id string) error {
 	key := make(map[string]*dynamodb.AttributeValue)
 	key["id"] = &dynamodb.AttributeValue{
 		S: aws.String(id),
@@ -233,8 +232,8 @@ func (tagDynamoDA) DeleteSoft(ctx context.Context,op *entity.Operator, id string
 	}
 	input := &dynamodb.UpdateItemInput{
 		ExpressionAttributeNames: map[string]*string{
-			"#delOpID":  aws.String("deleted_id"),
-			"#delat":  aws.String("deleted_at"),
+			"#delOpID": aws.String("deleted_id"),
+			"#delat":   aws.String("deleted_at"),
 		},
 		ExpressionAttributeValues: params,
 		Key:                       key,
@@ -244,7 +243,7 @@ func (tagDynamoDA) DeleteSoft(ctx context.Context,op *entity.Operator, id string
 	}
 	_, err := dbclient.GetClient().UpdateItem(input)
 	if err != nil {
-		log.Error(ctx, "delete tag error", log.Err(err), log.String("operator_id", op.UserID),log.String("tag_id", id))
+		log.Error(ctx, "delete tag error", log.Err(err), log.String("operator_id", op.UserID), log.String("tag_id", id))
 		return err
 	}
 	return nil
@@ -278,25 +277,3 @@ func GetTagDA() ITagDA {
 	})
 	return _tagDA
 }
-
-//aws dynamodb create-table \
-//--endpoint-url http://192.168.1.234:18000 \
-//--table-name tags \
-//--attribute-definitions \
-//AttributeName=id,AttributeType=S \
-//--key-schema \
-//AttributeName=id,KeyType=HASH \
-//--provisioned-  \
-//ReadCapacityUnits=10,WriteCapacityUnits=5
-
-//aws dynamodb update-table \
-//--table-name tags \
-//--attribute-definitions AttributeName=name,AttributeType=S \
-//--global-secondary-index-updates \
-//"[{\"Create\":{\"IndexName\": \"name-index\",\"KeySchema\":[{\"AttributeName\":\"name\",\"KeyType\":\"HASH\"}], \
-//\"ProvisionedThroughput\": {\"ReadCapacityUnits\": 10, \"WriteCapacityUnits\": 5      },\"Projection\":{\"ProjectionType\":\"ALL\"}}}]"
-
-//aws dynamodb put-item \
-//--table-name tags  \
-//--item \
-//'{"id": {"N": "2"}, "name": {"S": "Call Me Today"}, "states": {"N": "1"}, "createdAt": {"N": "0"},"updated_at": {"N": "0"},"deletedAt": {"N": "0"}}'
