@@ -28,7 +28,7 @@ type IContentModel interface {
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string)(*entity.ContentName ,error)
-	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentName, error)
+	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
@@ -581,8 +581,8 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 	}
 	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
 	if err != nil {
-		log.Error(ctx, "can't read contentdata", log.Err(err))
-		return nil, ErrNoContent
+		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
+		return nil, err
 	}
 	return &entity.ContentName{
 		ID:   cid,
@@ -629,7 +629,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	return contentWithDetails[0], nil
 }
 
-func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentName, error){
+func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error){
 	if len(cids) < 1 {
 		return nil, nil
 	}
@@ -650,7 +650,7 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 		IDS: cids,
 	})
 	if err != nil {
-		log.Error(ctx, "can't read contentdata", log.Err(err))
+		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
 		return nil, ErrReadContentFailed
 	}
 	for i := range data {
