@@ -467,6 +467,66 @@
         }
       }
     },
+    "/contents_bulk/publish": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Publish content bulk",
+        "operationId": "publishContentBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_bulk": {
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "description": "Delete content bulk",
+        "operationId": "deleteContentBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/contents_dynamo": {
       "get": {
         "tags": [
@@ -611,66 +671,6 @@
               }
             }
           }
-        },
-        "400": {
-          "description": "Bad request"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
-      }
-    }
-  },
-  "/contents_bulk/publish": {
-    "put": {
-      "tags": [
-        "content"
-      ],
-      "description": "Publish content bulk",
-      "operationId": "publishContentBulk",
-      "requestBody": {
-        "required": true,
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ContentIDListRequest"
-            }
-          }
-        }
-      },
-      "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad request"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
-      }
-    }
-  },
-  "/contents_bulk": {
-    "delete": {
-      "tags": [
-        "content"
-      ],
-      "description": "Delete content bulk",
-      "operationId": "deleteContentBulk",
-      "requestBody": {
-        "required": true,
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ContentIDListRequest"
-            }
-          }
-        }
-      },
-      "responses": {
-        "200": {
-          "description": "Success"
         },
         "400": {
           "description": "Bad request"
