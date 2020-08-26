@@ -196,31 +196,30 @@ type RepeatEnd struct {
 }
 
 type Schedule struct {
-	ID           string   `gorm:"column:id;PRIMARY_KEY"`
-	Title        string   `gorm:"column:title;type:varchar(100)"`
-	ClassID      string   `gorm:"column:class_id;type:varchar(100)"`
-	LessonPlanID string   `gorm:"column:lesson_plan_id;type:varchar(100)"`
-	TeacherIDs   []string `dynamodbav:"teacher_ids"`
-	OrgID        string   `gorm:"column:org_id;type:varchar(100)"`
-	StartAt      int64    `gorm:"column:start_at;type:bigint"`
-	EndAt        int64    `gorm:"column:end_at;type:bigint"`
-
-	SubjectID   string `gorm:"column:subject_id;type:varchar(100)"`
-	ProgramID   string `gorm:"column:program_id;type:varchar(100)"`
-	ClassType   string `gorm:"column:class_type;type:varchar(100)"`
-	DueAt       int64  `gorm:"column:due_at;type:bigint"`
-	Description string `gorm:"column:description;type:varchar(500)"`
-	Attachment  string `gorm:"column:attachment_url;type:varchar(500)"`
-	Version     int64  `gorm:"column:version;type:bigint"`
-	RepeatID    string `gorm:"column:repeat_id;type:varchar(100)"`
-	//Repeat       RepeatOptions `dynamodbav:"repeat"`
-	RepeatJson string `gorm:"column:repeat;type:varchar(500)"`
-	CreatedID  string `gorm:"column:created_id;type:varchar(100)"`
-	UpdatedID  string `gorm:"column:updated_id;type:varchar(100)"`
-	DeletedID  string `gorm:"column:deleted_id;type:varchar(100)"`
-	CreatedAt  int64  `gorm:"column:created_at;type:bigint"`
-	UpdatedAt  int64  `gorm:"column:updated_at;type:bigint"`
-	DeletedAt  int64  `gorm:"column:deleted_at;type:bigint"`
+	ID           string `gorm:"column:id;PRIMARY_KEY"`
+	Title        string `gorm:"column:title;type:varchar(100)"`
+	ClassID      string `gorm:"column:class_id;type:varchar(100)"`
+	LessonPlanID string `gorm:"column:lesson_plan_id;type:varchar(100)"`
+	OrgID        string `gorm:"column:org_id;type:varchar(100)"`
+	StartAt      int64  `gorm:"column:start_at;type:bigint"`
+	EndAt        int64  `gorm:"column:end_at;type:bigint"`
+	Status       string `gorm:"column:status;type:varchar(100)"`
+	IsAllDay     bool   `gorm:"column:is_all_day;default:false"`
+	SubjectID    string `gorm:"column:subject_id;type:varchar(100)"`
+	ProgramID    string `gorm:"column:program_id;type:varchar(100)"`
+	ClassType    string `gorm:"column:class_type;type:varchar(100)"`
+	DueAt        int64  `gorm:"column:due_at;type:bigint"`
+	Description  string `gorm:"column:description;type:varchar(500)"`
+	Attachment   string `gorm:"column:attachment_url;type:varchar(500)"`
+	Version      int64  `gorm:"column:version;type:bigint"`
+	RepeatID     string `gorm:"column:repeat_id;type:varchar(100)"`
+	RepeatJson   string `gorm:"column:repeat;type:varchar(500)"`
+	CreatedID    string `gorm:"column:created_id;type:varchar(100)"`
+	UpdatedID    string `gorm:"column:updated_id;type:varchar(100)"`
+	DeletedID    string `gorm:"column:deleted_id;type:varchar(100)"`
+	CreatedAt    int64  `gorm:"column:created_at;type:bigint"`
+	UpdatedAt    int64  `gorm:"column:updated_at;type:bigint"`
+	DeletedAt    int64  `gorm:"column:deleted_at;type:bigint"`
 }
 
 func (Schedule) TableName() string {
@@ -233,7 +232,6 @@ func (Schedule) IndexNameRepeatIDAndStartAt() string {
 
 func (s Schedule) Clone() Schedule {
 	newItem := s
-	newItem.TeacherIDs = append([]string{}, s.TeacherIDs...)
 	return newItem
 }
 
@@ -252,8 +250,10 @@ type ScheduleAddView struct {
 	Description  string        `json:"description"`
 	Attachment   string        `json:"attachment_path"`
 	Version      int64         `json:"version"`
-	RepeatID     string        `json:"repeat_id"`
+	RepeatID     string        `json:"-"`
 	Repeat       RepeatOptions `json:"repeat"`
+	IsAllDay     bool          `json:"is_all_day"`
+	IsRepeat     bool          `json:"is_repeat"`
 	IsForce      bool          `json:"is_force"`
 }
 
@@ -264,7 +264,6 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		Title:        s.Title,
 		ClassID:      s.ClassID,
 		LessonPlanID: s.LessonPlanID,
-		TeacherIDs:   s.TeacherIDs,
 		OrgID:        s.OrgID,
 		StartAt:      s.StartAt,
 		EndAt:        s.EndAt,
@@ -279,10 +278,12 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		CreatedAt:    time.Now().Unix(),
 		UpdatedAt:    0,
 		RepeatID:     s.RepeatID,
+		IsAllDay:     s.IsAllDay,
 	}
 	if schedule.RepeatID == "" {
 		schedule.RepeatID = utils.NewID()
 	}
+
 	return schedule
 }
 
@@ -301,13 +302,8 @@ type ScheduleListView struct {
 }
 
 type ScheduleDetailsView struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-	//Class       ScheduleShortInfo     `json:"class"`
-	//LessonPlan  ScheduleShortInfo     `json:"lesson_plan"`
-	//Teachers    []ScheduleShortInfo   `json:"teachers"`
-	//Subject     ScheduleShortInfo     `json:"subject"`
-	//Program     ScheduleShortInfo     `json:"program"`
+	ID          string        `json:"id"`
+	Title       string        `json:"title"`
 	Attachment  string        `json:"attachment"`
 	OrgID       string        `json:"org_id"`
 	StartAt     int64         `json:"start_at"`
@@ -316,6 +312,7 @@ type ScheduleDetailsView struct {
 	DueAt       int64         `json:"due_at"`
 	Description string        `json:"description"`
 	Version     int64         `json:"version"`
+	IsAllDay    bool          `json:"is_all_day"`
 	RepeatID    string        `json:"repeat_id"`
 	Repeat      RepeatOptions `json:"repeat"`
 	ScheduleBasic
@@ -326,11 +323,6 @@ type ScheduleSeachView struct {
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
 	ScheduleBasic
-	//LessonPlan ScheduleShortInfo   `json:"lesson_plan"`
-	//Class      ScheduleShortInfo   `json:"class"`
-	//Subject    ScheduleShortInfo   `json:"subject"`
-	//Program    ScheduleShortInfo   `json:"program"`
-	//Teachers   []ScheduleShortInfo `json:"teachers"`
 }
 type ScheduleShortInfo struct {
 	ID   string `json:"id"`

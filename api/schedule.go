@@ -100,7 +100,10 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 	data.OrgID = op.OrgID
-
+	if data.IsAllDay {
+		data.StartAt = utils.BeginOfDayByTimeStamp(data.StartAt, s.getLocation(c)).Unix()
+		data.EndAt = utils.EndOfDayByTimeStamp(data.EndAt, s.getLocation(c)).Unix()
+	}
 	// add schedule
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data, s.getLocation(c))
 	if err == nil {

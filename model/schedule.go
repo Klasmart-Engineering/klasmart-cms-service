@@ -61,17 +61,19 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	return false, nil
 }
 
-func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location) (string, error) {
+func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView, options *entity.RepeatOptions, location *time.Location) (string, error) {
+	schedule := viewData.Convert()
+	schedule.CreatedID = op.UserID
 	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
 	}
-	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(schedule.TeacherIDs))
+	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(viewData.TeacherIDs))
 	index := 0
 	for _, item := range scheduleList {
 		item.ID = utils.NewID()
-		for _, teacherID := range item.TeacherIDs {
+		for _, teacherID := range viewData.TeacherIDs {
 			tsItem := &entity.ScheduleTeacher{
 				TeacherID:  teacherID,
 				ScheduleID: schedule.ID,
@@ -106,9 +108,6 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView, location *time.Location) (string, error) {
-	schedule := viewData.Convert()
-	schedule.CreatedID = op.UserID
-
 	// validate attachment
 	_, exits := storage.DefaultStorage().ExitsFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
 	if !exits {
@@ -134,16 +133,18 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 			return "", constant.ErrConflict
 		}
 	}
-	if viewData.Repeat.Type.Valid() {
-		return s.addRepeatSchedule(ctx, tx, schedule, &viewData.Repeat, location)
+	if viewData.IsRepeat {
+		return s.addRepeatSchedule(ctx, op, viewData, &viewData.Repeat, location)
 	} else {
+		schedule := viewData.Convert()
+		schedule.CreatedID = op.UserID
 		schedule.ID = utils.NewID()
 		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 			_, err := da.GetScheduleDA().InsertTx(ctx, tx, schedule)
 			if err != nil {
 				return err
 			}
-			scheduleTeachers := make([]*entity.ScheduleTeacher, len(schedule.TeacherIDs))
+			scheduleTeachers := make([]*entity.ScheduleTeacher, len(viewData.TeacherIDs))
 			for i, item := range viewData.TeacherIDs {
 				scheduleTeacher := &entity.ScheduleTeacher{
 					ID:         utils.NewID(),
@@ -177,14 +178,14 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			log.Error(ctx, "update schedule: check time conflict failed",
 				log.Err(err),
 				log.Any("operator", operator),
-				log.Any("viewdata", viewdata),
+				log.Any("viewData", viewdata),
 			)
 			return "", err
 		}
 		if conflict {
 			log.Info(ctx, "update schedule: time conflict",
 				log.Any("operator", operator),
-				log.Any("viewdata", viewdata),
+				log.Any("viewData", viewdata),
 			)
 			return "", constant.ErrConflict
 		}
@@ -209,6 +210,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			)
 			return err
 		}
+		viewdata.RepeatID = schedule.RepeatID
 		id, err = s.Add(ctx, tx, operator, &viewdata.ScheduleAddView, location)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
@@ -498,12 +500,12 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	}
 
 	result := &entity.ScheduleDetailsView{
-		ID:      schedule.ID,
-		Title:   schedule.Title,
-		OrgID:   schedule.OrgID,
-		StartAt: schedule.StartAt,
-		EndAt:   schedule.EndAt,
-		//ModeType:    schedule.ModeType,
+		ID:          schedule.ID,
+		Title:       schedule.Title,
+		OrgID:       schedule.OrgID,
+		StartAt:     schedule.StartAt,
+		EndAt:       schedule.EndAt,
+		IsAllDay:    schedule.IsAllDay,
 		ClassType:   schedule.ClassType,
 		DueAt:       schedule.DueAt,
 		Description: schedule.Description,
