@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -45,10 +46,24 @@ func MustLogin(c *gin.Context) {
 	c.Set(Operator, op)
 }
 
-func GetOperator(c *gin.Context) (*entity.Operator, bool) {
+func GetOperator(c *gin.Context) *entity.Operator {
 	op, exist := c.Get(Operator)
 	if exist {
-		return op.(*entity.Operator), true
+		return op.(*entity.Operator)
 	}
-	return nil, false
+	return &entity.Operator{}
+}
+
+func GetTimeLocation(c *gin.Context) *time.Location {
+	tz := c.GetHeader("CloudFront-Viewer-Time-Zone")
+	if tz == "" {
+		log.Debug(c.Request.Context(), "GetTimeLocation: get header failed")
+		return time.Local
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		log.Debug(c.Request.Context(), "GetTimeLocation: load location failed", log.Err(err))
+		return time.Local
+	}
+	return loc
 }
