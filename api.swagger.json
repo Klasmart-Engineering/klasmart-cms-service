@@ -120,9 +120,10 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "Search order by",
+            "description": "Search order by, valid value",
             "schema": {
               "type": "string",
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at"],
               "nullable": true
             }
           }
@@ -233,11 +234,11 @@
           "200": {
             "description": "OK"
           },
-          "406": {
-            "description": "Content status invalid"
-          },
           "400": {
             "description": "Bad request"
+          },
+          "406": {
+            "description": "Content status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -662,6 +663,7 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at"],
               "nullable": true
             }
           }
@@ -782,6 +784,7 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at"],
               "nullable": true
             }
           }
@@ -2277,7 +2280,9 @@
                   "type": "string"
                 },
                 "description": "program id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "subject": {
                 "type": "array",
@@ -2285,7 +2290,9 @@
                   "type": "string"
                 },
                 "description": "subject id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "developmental": {
                 "type": "array",
@@ -2293,7 +2300,9 @@
                   "type": "string"
                 },
                 "description": "developmental id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "skills": {
                 "type": "array",
@@ -2301,7 +2310,9 @@
                   "type": "string"
                 },
                 "description": "skills id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "age": {
                 "type": "array",
@@ -2309,7 +2320,9 @@
                   "type": "string"
                 },
                 "description": "age id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "grade": {
                 "type": "array",
@@ -2317,7 +2330,9 @@
                   "type": "string"
                 },
                 "description": "grade id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "suggest_time": {
                 "type": "integer",
@@ -2480,7 +2495,9 @@
                   "type": "string"
                 },
                 "description": "program id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "subject": {
                 "type": "array",
@@ -2488,7 +2505,9 @@
                   "type": "string"
                 },
                 "description": "subject id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "suggest_time": {
                 "type": "integer",
@@ -2501,7 +2520,9 @@
                   "type": "string"
                 },
                 "description": "developmental id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "skills": {
                 "type": "array",
@@ -2509,7 +2530,9 @@
                   "type": "string"
                 },
                 "description": "skills id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "age": {
                 "type": "array",
@@ -2517,7 +2540,9 @@
                   "type": "string"
                 },
                 "description": "age id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "grade": {
                 "type": "array",
@@ -2525,7 +2550,9 @@
                   "type": "string"
                 },
                 "description": "grade id",
-                "example": ["ede1995ebdb440ebb9526c53e07a9ff3"]
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "keywords": {
                 "type": "array",
@@ -2641,7 +2668,6 @@
           }
         ]
       },
-
       "Asset": {
         "allOf": [
           {
