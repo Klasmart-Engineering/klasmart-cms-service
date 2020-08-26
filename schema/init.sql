@@ -1,25 +1,42 @@
-CREATE TABLE `kidsloop2`.`assets` (
-    `id` VARCHAR(50) NOT NULL,
-    `name` VARCHAR(256) NOT NULL,
-    `program` VARCHAR(50) NOT NULL,
-    `subject` VARCHAR(50) NOT NULL,
-    `developmental` VARCHAR(50) NOT NULL,
-    `skills` VARCHAR(50) NOT NULL,
-    `age` VARCHAR(50) NOT NULL,
-    `keywords` TEXT NULL,
-    `description` TEXT NULL,
-    `thumbnail` TEXT NOT NULL,
-    `size` BIGINT NOT NULL DEFAULT 0,
-    `resource` TEXT NOT NULL,
-    `author` VARCHAR(50) NOT NULL,
-    `author_name` VARCHAR(128) NOT NULL,
-    `org` VARCHAR(50) NOT NULL,
-    `created_at` DATETIME NOT NULL,
-    `updated_at` DATETIME NOT NULL,
-    `deleted_at` DATETIME NULL,
-    PRIMARY KEY (`id`),
-    FULLTEXT INDEX `name_description_keywords_author_index` (`name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
-);
+CREATE TABLE `cms_contents` (
+   `content_id` VARCHAR(50) NOT  NULL  COMMENT  'content_id',
+   `content_type` int  NOT  NULL  COMMENT  '数据类型',
+   `content_name` VARCHAR( 255) NOT  NULL  COMMENT  '内容名称',
+   `program` VARCHAR( 1024) NOT  NULL  COMMENT  'program',
+   `subject` VARCHAR( 1024) NOT  NULL  COMMENT  'subject',
+   `developmental` VARCHAR( 1024) NOT  NULL  COMMENT  'developmental',
+   `skills` VARCHAR( 1024) NOT  NULL  COMMENT  'skills',
+   `age` VARCHAR( 1024) NOT  NULL  COMMENT  'age',
+   `grade` VARCHAR( 1024) NOT  NULL  COMMENT  'grade',
+   `keywords` TEXT  NULL  COMMENT  '关键字',
+   `description` TEXT  NULL  COMMENT  '描述',
+   `thumbnail` TEXT  NULL  COMMENT  '封面',
+   `data` JSON  NULL  COMMENT  '数据',
+   `extra` JSON  NULL  COMMENT  '附加数据',
+   `suggest_time` int  NOT  NULL  COMMENT  '建议时间',
+   `author` VARCHAR( 50) NOT  NULL  COMMENT  '作者id',
+   `author_name` VARCHAR( 128) NOT  NULL  COMMENT  '作者名',
+   `org` VARCHAR( 50) NOT  NULL  COMMENT  '所属机构',
+   `publish_scope` VARCHAR( 50) COMMENT  '发布范围',
+   `publish_status` VARCHAR( 16) NOT  NULL  COMMENT  '状态',
+   `reject_reason` VARCHAR( 255) COMMENT  '拒绝理由',
+   `version` INT  NOT  NULL  DEFAULT  0  COMMENT  '版本',
+   `locked_by` VARCHAR( 50) COMMENT  '封锁人',
+   `source_id` VARCHAR( 50) COMMENT  'source_id',
+   `latest_id` VARCHAR( 50) COMMENT  'latest_id',
+   `created_at` DATETIME  NOT  NULL  COMMENT  'created_at',
+   `updated_at` DATETIME  NOT  NULL  COMMENT  'updated_at',
+   `deleted_at` DATETIME  NULL  COMMENT  'deleted_at',
+   PRIMARY KEY (`content_id`),
+    KEY `content_type` (`content_type`),
+    KEY `content_author` (`author`),
+    KEY `content_org` (`org`),
+    KEY `content_publish_status` (`publish_status`),
+    KEY `content_source_id` (`source_id`),
+    KEY `content_latest_id` (`latest_id`),
+    FULLTEXT INDEX `name_description_keywords_author_index` (`content_name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
+) COMMENT '内容表';
+
 
 CREATE TABLE IF NOT EXISTS `schedules` (
   `id` varchar(50) NOT NULL COMMENT 'id',
@@ -63,5 +80,4 @@ CREATE TABLE IF NOT EXISTS `schedules_teachers` (
   KEY `schedules_schedule_id` (`schedule_id`),
   KEY `schedules_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='schedules_teachers';
-
 
