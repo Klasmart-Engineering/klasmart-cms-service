@@ -9,11 +9,7 @@ import (
 
 func (s *Server) approve(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	cid := c.Param("content_id")
 	if cid == "" {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
@@ -29,11 +25,7 @@ func (s *Server) approve(c *gin.Context) {
 
 func (s *Server) reject(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	cid := c.Param("content_id")
 	if cid == "" {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")

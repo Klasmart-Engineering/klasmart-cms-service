@@ -12,11 +12,7 @@ import (
 
 func (s *Server) createContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
@@ -37,11 +33,7 @@ func (s *Server) createContent(c *gin.Context) {
 
 func (s *Server) publishContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	cid := c.Param("content_id")
 	var data struct {
 		Scope string `json:"scope"`
@@ -62,11 +54,7 @@ func (s *Server) publishContent(c *gin.Context) {
 
 func (s *Server) GetContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	cid := c.Param("content_id")
 	var data struct {
 		Scope string `json:"scope"`
@@ -87,11 +75,7 @@ func (s *Server) GetContent(c *gin.Context) {
 
 func (s *Server) updateContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	cid := c.Param("content_id")
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
@@ -109,11 +93,7 @@ func (s *Server) updateContent(c *gin.Context) {
 
 func (s *Server) lockContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	cid := c.Param("content_id")
 	ncid, err := model.GetContentModel().LockContent(ctx, dbo.MustGetDB(ctx), cid, op)
 	if err != nil {
@@ -127,11 +107,7 @@ func (s *Server) lockContent(c *gin.Context) {
 
 func (s *Server) deleteContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	cid := c.Param("content_id")
 
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
@@ -144,11 +120,8 @@ func (s *Server) deleteContent(c *gin.Context) {
 
 func (s *Server) QueryDynamoContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
+
 	ctoips := ""
 	if c.Query("content_type") != "" {
 		ctoips = c.Query("content_type") + c.Query("org") + c.Query("publish_status")
@@ -177,11 +150,7 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 
 func (s *Server) QueryContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 
 	condition := da.DyContentCondition{}
 
@@ -198,11 +167,7 @@ func (s *Server) QueryContent(c *gin.Context) {
 
 func (s *Server) QueryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 
 	condition := da.DyContentCondition{}
 
@@ -220,11 +185,7 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 func (s *Server) QueryPendingContent(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 
 	condition := da.DyContentCondition{}
 
