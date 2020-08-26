@@ -283,6 +283,7 @@ func (s *ScheduleAddView) Convert() *Schedule {
 	if schedule.RepeatID == "" {
 		schedule.RepeatID = utils.NewID()
 	}
+
 	return schedule
 }
 
