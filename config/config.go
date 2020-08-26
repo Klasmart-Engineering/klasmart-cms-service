@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strconv"
+	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
@@ -11,29 +12,30 @@ import (
 type Config struct {
 	StorageConfig StorageConfig
 	CDNConfig     CDNConfig
-	DBConfig		DBConfig
-	RedisConfig 	RedisConfig
+	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
+	DBConfig      DBConfig
+	RedisConfig   RedisConfig
 }
 
 var config *Config
 
 type RedisConfig struct {
 	OpenCache bool
-	Host string
-	Port int
-	Password string
+	Host      string
+	Port      int
+	Password  string
 }
 type DBConfig struct {
 	DBMode string `json:"db_mode"`
 
 	ConnectionString string `json:"connection_string"`
-	MaxOpenConns     int `json:"max_open_conns"`
-	MaxIdleConns     int `json:"max_idle_conns"`
-	ShowLog          bool `json:"show_log"`
-	ShowSQL          bool `json:"show_sql"`
+	MaxOpenConns     int    `json:"max_open_conns"`
+	MaxIdleConns     int    `json:"max_idle_conns"`
+	ShowLog          bool   `json:"show_log"`
+	ShowSQL          bool   `json:"show_sql"`
 
 	DynamoEndPoint string `json:"dynamo_end_point"`
-	DynamoRegion string `json:"dynamo_region"`
+	DynamoRegion   string `json:"dynamo_region"`
 }
 
 type StorageConfig struct {
@@ -51,8 +53,12 @@ type CDNConfig struct {
 	CDNKeyId      string
 	CDNPrivateKey string
 
-	CDNServicePath string
+	CDNServicePath  string
 	CDNServiceToken string
+}
+
+type ScheduleConfig struct {
+	MaxRepeatYear int `json:"max_repeat_year" yaml:"max_repeat_year"`
 }
 
 func assertGetEnv(key string) string {
@@ -70,7 +76,6 @@ func LoadEnvConfig() {
 	loadDBEnvConfig(ctx)
 	loadRedisEnvConfig(ctx)
 }
-
 func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
@@ -108,6 +113,18 @@ func loadStorageEnvConfig(ctx context.Context) {
 			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
 		}
 	}
+
+	maxRepeatYearStr := strings.TrimSpace(os.Getenv("max_repeat_year"))
+	if maxRepeatYearStr == "" {
+		config.Schedule.MaxRepeatYear = 2
+	} else {
+		i, err := strconv.Atoi(maxRepeatYearStr)
+		if err != nil {
+			log.Panic(ctx, "parse env max_repeat_year failed", log.String("max_repeat_year", maxRepeatYearStr))
+		}
+		config.Schedule.MaxRepeatYear = i
+	}
+
 }
 
 func loadRedisEnvConfig(ctx context.Context) {
@@ -119,9 +136,9 @@ func loadRedisEnvConfig(ctx context.Context) {
 		portStr := assertGetEnv("redis_port")
 		password := os.Getenv("redis_password")
 		config.RedisConfig.Host = host
-		port ,err := strconv.Atoi(portStr)
-		if err != nil{
-			log.Error(ctx, "Can't parse redis_port")
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			log.Error(ctx, "Can't parse redis_port", log.Err(err))
 			port = 3306
 		}
 		config.RedisConfig.Port = port
@@ -129,7 +146,7 @@ func loadRedisEnvConfig(ctx context.Context) {
 	}
 }
 
-func loadDBEnvConfig(ctx context.Context){
+func loadDBEnvConfig(ctx context.Context) {
 	config.DBConfig.DBMode = os.Getenv("db_env")
 
 	if config.DBConfig.DBMode == "mysql" {
@@ -140,36 +157,37 @@ func loadDBEnvConfig(ctx context.Context){
 		showSQLStr := assertGetEnv("show_sql")
 
 		maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
-		if err != nil{
-			log.Error(ctx, "Can't parse max_open_conns")
+		if err != nil {
+			log.Error(ctx, "Can't parse max_open_conns", log.Err(err))
 			maxOpenConns = 16
 		}
 		config.DBConfig.MaxOpenConns = maxOpenConns
 
 		maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
-		if err != nil{
-			log.Error(ctx, "Can't parse max_idle_conns")
+		if err != nil {
+			log.Error(ctx, "Can't parse max_idle_conns", log.Err(err))
 			maxOpenConns = 16
 		}
 		config.DBConfig.MaxIdleConns = maxIdleConns
 
 		showLog, err := strconv.ParseBool(showLogStr)
-		if err != nil{
-			log.Error(ctx, "Can't parse show_log")
+		if err != nil {
+			log.Error(ctx, "Can't parse show_log", log.Err(err))
 			showLog = true
 		}
 		config.DBConfig.ShowLog = showLog
 
 		showSQL, err := strconv.ParseBool(showSQLStr)
-		if err != nil{
-			log.Error(ctx, "Can't parse show_sql")
+		if err != nil {
+			log.Error(ctx, "Can't parse show_sql", log.Err(err))
 			showLog = true
 		}
 		config.DBConfig.ShowSQL = showSQL
-	}else{
+	} else {
 		config.DBConfig.DynamoEndPoint = assertGetEnv("dynamo_end_point")
 		config.DBConfig.DynamoRegion = assertGetEnv("dynamo_region")
 	}
+
 }
 
 func Get() *Config {

@@ -65,16 +65,16 @@ func (s *CombineConditions) GetOrderBy() string {
 }
 
 type ContentCondition struct {
-	IDS          []string `json:"ids"`
-	Name         []string `json:"name"`
-	ContentType  []int `json:"content_type"`
-	Scope        []string `json:"scope"`
+	IDS           []string `json:"ids"`
+	Name          []string `json:"name"`
+	ContentType   []int    `json:"content_type"`
+	Scope         []string `json:"scope"`
 	PublishStatus []string `json:"publish_status"`
-	Author      string `json:"author"`
-	Org    		string `json:"org"`
+	Author        string   `json:"author"`
+	Org           string   `json:"org"`
 
-	OrderBy  ContentOrderBy `json:"order_by"`
-	Pager 	utils.Pager
+	OrderBy ContentOrderBy `json:"order_by"`
+	Pager   utils.Pager
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
@@ -120,7 +120,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.Author)
 	}
-	if s.Org != ""{
+	if s.Org != "" {
 		condition := " org = ? "
 		conditions = append(conditions, condition)
 		params = append(params, s.Org)

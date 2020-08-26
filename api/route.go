@@ -41,6 +41,15 @@ func (s Server) registeRoute() {
 		category.PUT("/:id", MustLogin, s.updateCategory)
 		category.DELETE("/:id", MustLogin, s.deleteCategory)
 	}
+
+	tag := s.engine.Group("/v1/tag")
+	{
+		tag.GET("/", s.queryTag)
+		tag.GET("/:id", s.getTagByID)
+		tag.POST("/", s.addTag)
+		tag.PUT("/:id", s.updateTag)
+		tag.DELETE("/:id", s.delTag)
+	}
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", MustLogin, s.createContent)
@@ -59,4 +68,15 @@ func (s Server) registeRoute() {
 		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)
 	}
+	schedules := s.engine.Group("/v1")
+	{
+		schedules.PUT("/schedules/:id", s.updateSchedule)
+		schedules.DELETE("/schedules/:id", s.deleteSchedule)
+		schedules.POST("/schedules", s.addSchedule)
+		schedules.GET("/schedules/:id", s.getScheduleByID)
+		schedules.GET("/schedules", s.querySchedule)
+		schedules.GET("/schedules_time_view", s.getScheduleTimeView)
+		schedules.GET("/schedule_attachment_upload/:ext", s.getAttachmentUploadPath)
+	}
+
 }
