@@ -69,6 +69,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -489,6 +490,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -670,6 +672,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -791,6 +794,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -2527,6 +2531,7 @@
               },
               "publish_status": {
                 "type": "string",
+                "enum": ["draft", "pending", "published", "rejected", "archive"],
                 "description": "content published status list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
@@ -2709,6 +2714,7 @@
               "publish_status": {
                 "type": "string",
                 "description": "content publish status",
+                "enum": ["draft", "pending", "published", "rejected", "archive"],
                 "example": "published"
               },
               "content_type_name": {

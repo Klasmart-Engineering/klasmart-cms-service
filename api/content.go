@@ -36,11 +36,7 @@ func (s *Server) createContent(c *gin.Context) {
 
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
 	ids := make([]string, 0)
 	err := c.ShouldBind(&ids)
 	if err != nil {
@@ -147,11 +143,8 @@ func (s *Server) lockContent(c *gin.Context) {
 
 func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusUnauthorized, "get operator failed")
-		return
-	}
+	op := GetOperator(c)
+
 	ids := make([]string, 0)
 	err := c.ShouldBind(&ids)
 	if err != nil {
