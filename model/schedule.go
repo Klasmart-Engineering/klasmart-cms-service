@@ -402,15 +402,15 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	}
 	scheduleBasicMap := make(map[string]*entity.ScheduleBasic)
 	for _, item := range schedules {
-		lessonPlanName, _ := GetContentModel().GetContentNameByID(ctx, tx, item.LessonPlanID)
+		lessonPlan, _ := GetContentModel().GetContentNameByID(ctx, tx, item.LessonPlanID)
 
 		scheduleBasic := &entity.ScheduleBasic{
 			Class:   *classMap[item.ClassID],
 			Subject: *subjectMap[item.SubjectID],
 			Program: *programMap[item.ProgramID],
 			LessonPlan: entity.ScheduleShortInfo{
-				ID:   item.LessonPlanID,
-				Name: lessonPlanName,
+				ID:   lessonPlan.ID,
+				Name: lessonPlan.Name,
 			},
 		}
 		tIDs := scheduleTeacherMap[item.ID]
