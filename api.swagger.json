@@ -38,49 +38,6 @@
   ],
   "paths": {
     "/contents": {
-      "post": {
-        "tags": [
-          "content"
-        ],
-        "description": "Create content",
-        "operationId": "createContent",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateContentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content info",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "description": "content id",
-                      "example": "1"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
       "get": {
         "tags": [
           "content"
