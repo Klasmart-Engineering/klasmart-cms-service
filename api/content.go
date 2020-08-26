@@ -220,8 +220,8 @@ func (s *Server) QueryContent(c *gin.Context) {
 		ContentType:   []int{contentType},
 		PublishStatus: []string{c.Query("publish_status")},
 		Scope:         []string{c.Query("scope")},
-		Author:        c.Query("author"),
-		Org:           c.Query("org"),
+		Author:        parseAuthor(c, op),
+		Org:           parseOrg(c, op),
 		OrderBy:       da.NewContentOrderBy(c.Query("order_by")),
 		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
 	}
@@ -248,8 +248,8 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 		ContentType:   []int{contentType},
 		PublishStatus: []string{c.Query("publish_status")},
 		Scope:         []string{c.Query("scope")},
-		Author:        c.Query("author"),
-		Org:           c.Query("org"),
+		Author:        parseAuthor(c, op),
+		Org:           parseOrg(c, op),
 		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
 		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
 	}
@@ -277,8 +277,8 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 		ContentType:   []int{contentType},
 		PublishStatus: []string{c.Query("publish_status")},
 		Scope:         []string{c.Query("scope")},
-		Author:        c.Query("author"),
-		Org:           c.Query("org"),
+		Author:        parseAuthor(c, op),
+		Org:           parseOrg(c, op),
 		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
 		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
 	}
@@ -292,4 +292,20 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 		"key":  key,
 		"list": results,
 	})
+}
+
+func parseAuthor(c *gin.Context, u *entity.Operator) string {
+	author := c.Query("author")
+	if author == "self"{
+		author = u.UserID
+	}
+	return author
+}
+
+func parseOrg(c *gin.Context, u *entity.Operator) string {
+	author := c.Query("org")
+	if author == "self"{
+		author = u.OrgID
+	}
+	return author
 }
