@@ -2521,6 +2521,11 @@
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
               },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
               "developmental": {
                 "type": "array",
                 "items": {
@@ -2631,9 +2636,9 @@
             "type": "object",
             "description": "Company",
             "properties": {
-              "scope": {
+              "id": {
                 "type": "array",
-                "description": "content published scope list",
+                "description": "content id list",
                 "items":{
                   "type":"string"
                 },
@@ -2760,6 +2765,11 @@
                 "type": "integer",
                 "description": "suggest time",
                 "example": 1
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
               },
               "developmental": {
                 "type": "array",
