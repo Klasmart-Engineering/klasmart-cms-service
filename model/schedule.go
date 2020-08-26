@@ -424,12 +424,12 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs 
 	if len(classIDs) != 0 {
 		classService, err := external.GetClassServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("classIDs", classIDs))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Strings("classIDs", classIDs))
 			return nil, err
 		}
 		classInfos, err := classService.BatchGet(ctx, classIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("classIDs", classIDs))
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Strings("classIDs", classIDs))
 			return nil, err
 		}
 		for _, item := range classInfos {
@@ -447,12 +447,12 @@ func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjec
 	if len(subjectIDs) != 0 {
 		subjectService, err := external.GetSubjectServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("subjectIDs", subjectIDs))
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 			return nil, err
 		}
 		subjectInfos, err := subjectService.BatchGet(ctx, subjectIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("subjectIDs", subjectIDs))
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 			return nil, err
 		}
 		for _, item := range subjectInfos {
@@ -470,12 +470,12 @@ func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, progr
 	if len(programIDs) != 0 {
 		programService, err := external.GetProgramServiceProvider()
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("programIDs", programIDs))
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Strings("programIDs", programIDs))
 			return nil, err
 		}
 		programInfos, err := programService.BatchGet(ctx, programIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("programIDs", programIDs))
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Strings("programIDs", programIDs))
 			return nil, err
 		}
 
