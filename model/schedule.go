@@ -337,12 +337,15 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		teacherIDs         []string
 		teacherMap         map[string]*entity.ScheduleShortInfo
 		scheduleTeacherMap map[string][]string
+		lessonPlanIDs      []string
+		lessonPlanMap      map[string]*entity.ScheduleShortInfo
 	)
 	for _, item := range schedules {
 		classIDs = append(classIDs, item.ClassID)
 		subjectIDs = append(subjectIDs, item.SubjectID)
 		programIDs = append(programIDs, item.ProgramID)
 		scheduleIDs = append(scheduleIDs, item.ID)
+		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 	}
 	classMap, err := s.getClassInfoMapByClassIDs(ctx, classIDs)
 	if err != nil {
@@ -400,23 +403,36 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
+	lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
+		return nil, err
+	}
+	for _, item := range lessonPlans {
+		lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
+			ID:   item.ID,
+			Name: item.Name,
+		}
+	}
 	scheduleBasicMap := make(map[string]*entity.ScheduleBasic)
 	for _, item := range schedules {
-		lessonPlan, _ := GetContentModel().GetContentNameByID(ctx, tx, item.LessonPlanID)
-
-		scheduleBasic := &entity.ScheduleBasic{
-			Class:   *classMap[item.ClassID],
-			Subject: *subjectMap[item.SubjectID],
-			Program: *programMap[item.ProgramID],
-			LessonPlan: entity.ScheduleShortInfo{
-				ID:   lessonPlan.ID,
-				Name: lessonPlan.Name,
-			},
+		scheduleBasic := &entity.ScheduleBasic{}
+		if v, ok := classMap[item.ClassID]; ok {
+			scheduleBasic.Class = *v
+		}
+		if v, ok := subjectMap[item.SubjectID]; ok {
+			scheduleBasic.Subject = *v
+		}
+		if v, ok := programMap[item.ProgramID]; ok {
+			scheduleBasic.Program = *v
+		}
+		if v, ok := lessonPlanMap[item.LessonPlanID]; ok {
+			scheduleBasic.LessonPlan = *v
 		}
 		tIDs := scheduleTeacherMap[item.ID]
 		scheduleBasic.Teachers = make([]entity.ScheduleShortInfo, 0)
 		for _, tID := range tIDs {
-			if v, ok := teacherMap[tID]; ok {
+			if v, ok := teacherMap[tID]; ok && v != nil {
 				scheduleBasic.Teachers = append(scheduleBasic.Teachers, *v)
 			}
 		}
