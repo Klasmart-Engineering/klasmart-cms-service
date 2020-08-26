@@ -56,5 +56,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", MustLogin, s.QueryPrivateContent)
 		content.GET("/contents_pending", MustLogin, s.QueryPendingContent)
 
+		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
+		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)
 	}
 }

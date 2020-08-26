@@ -74,8 +74,7 @@ type ContentCondition struct {
 	Org    		string `json:"org"`
 
 	OrderBy  ContentOrderBy `json:"order_by"`
-	Page     int `json:"page"`
-	PageSize int `json:"page_size"`
+	Pager 	utils.Pager
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
@@ -131,12 +130,9 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	return conditions, params
 }
 func (s *ContentCondition) GetPager() *dbo.Pager {
-	if s.PageSize < 1 {
-		s.PageSize = 20
-	}
 	return &dbo.Pager{
-		Page:     s.Page,
-		PageSize: s.PageSize,
+		Page:     int(s.Pager.PageIndex),
+		PageSize: int(s.Pager.PageSize),
 	}
 }
 func (s *ContentCondition) GetOrderBy() string {

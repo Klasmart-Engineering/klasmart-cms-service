@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,6 +36,28 @@ func (s *Server) createContent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"content_id": cid,
 	})
+}
+
+func (s *Server) publishContentBulk(c *gin.Context) {
+	ctx := c.Request.Context()
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusUnauthorized, "get operator failed")
+		return
+	}
+	ids := make([]string, 0)
+	err := c.ShouldBind(&ids)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	}
+
+	err = model.GetContentModel().PublishContentBulk(ctx, dbo.MustGetDB(ctx), ids, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) publishContent(c *gin.Context) {
@@ -142,6 +165,28 @@ func (s *Server) lockContent(c *gin.Context) {
 	})
 }
 
+func (s *Server) deleteContentBulk(c *gin.Context) {
+	ctx := c.Request.Context()
+	op, exist := GetOperator(c)
+	if !exist {
+		c.JSON(http.StatusUnauthorized, "get operator failed")
+		return
+	}
+	ids := make([]string, 0)
+	err := c.ShouldBind(&ids)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	}
+
+	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, "ok")
+}
+
 func (s *Server) deleteContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op, exist := GetOperator(c)
@@ -206,9 +251,6 @@ func (s *Server) QueryContent(c *gin.Context) {
 	}
 
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	page, _ := strconv.Atoi(c.Query("page"))
-	pageSize, err := strconv.Atoi(c.Query("page_size"))
-
 
 	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	condition := da.ContentCondition{
@@ -219,8 +261,7 @@ func (s *Server) QueryContent(c *gin.Context) {
 		Author:        c.Query("author"),
 		Org:           c.Query("org"),
 		OrderBy:       da.NewContentOrderBy(c.Query("order_by")),
-		Page:          page,
-		PageSize:      pageSize,
+		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
 	}
 
 	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
@@ -243,8 +284,6 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 	}
 
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	page, _ := strconv.Atoi(c.Query("page"))
-	pageSize, err := strconv.Atoi(c.Query("page_size"))
 	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	condition := da.ContentCondition{
 		Name:         keywords,
@@ -254,8 +293,7 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 		Author:        c.Query("author"),
 		Org:           c.Query("org"),
 		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
-		Page:          page,
-		PageSize:      pageSize,
+		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
 	}
 
 	key, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
@@ -279,8 +317,6 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 	}
 
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	page, _ := strconv.Atoi(c.Query("page"))
-	pageSize, err := strconv.Atoi(c.Query("page_size"))
 	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	condition := da.ContentCondition{
 		Name:          keywords,
@@ -290,8 +326,7 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 		Author:        c.Query("author"),
 		Org:           c.Query("org"),
 		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
-		Page:          page,
-		PageSize:      pageSize,
+		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
 	}
 
 	key, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)

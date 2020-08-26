@@ -18,16 +18,16 @@ type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
 	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
-
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
-	//UnlockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
+	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
+	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
+
+	PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error
+	DeleteContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error
 
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string)(string ,error)
-
-	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
-	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
@@ -127,7 +127,8 @@ func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext
 
 func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//若content为已发布状态或发布中状态，则创建新content
-	if content.PublishStatus != entity.ContentStatusDraft && content.PublishStatus != entity.ContentStatusRejected {
+	if content.PublishStatus != entity.ContentStatusDraft && content.PublishStatus != entity.ContentStatusRejected &&
+		content.PublishStatus != entity.ContentStatusArchive{
 		//报错
 		return ErrInvalidContentStatusToPublish
 	}
@@ -397,6 +398,26 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	return ccid, nil
 
 }
+func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error{
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, contents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+			IDS:           ids,
+		})
+		if err != nil{
+			log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
+			return err
+		}
+		for i := range contents {
+			err = cm.doPublishContent(ctx, tx, contents[i], user)
+			if err != nil {
+				log.Error(ctx, "can't publish content", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
 
 func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
@@ -406,13 +427,60 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	//发布
-	content.PublishScope = scope
+	if scope != "" {
+		content.PublishScope = scope
+	}
+
 	err = cm.doPublishContent(ctx, tx, content, user)
 	if err != nil {
 		return err
 	}
 
 	cache.GetRedisContentCache().CleanContentCache(ctx, []string{cid, content.SourceID})
+	return nil
+}
+
+
+func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
+	deletedIds := make([]string, 0)
+	deletedIds = append(deletedIds, ids...)
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, contents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+			IDS:           ids,
+		})
+		if err != nil{
+			log.Error(ctx, "can't read content on delete contentdata", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
+			return err
+		}
+		for i := range contents {
+			if contents[i].Author != user.UserID {
+				return ErrNoAuth
+			}
+			obj := cm.prepareDeleteContentParams(ctx, contents[i], contents[i].PublishStatus)
+
+			err = da.GetContentDA().UpdateContent(ctx, tx, contents[i].ID, *obj)
+			if err != nil {
+				log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", contents[i].ID), log.String("uid", user.UserID))
+				return err
+			}
+
+			//解锁source content
+			if contents[i].SourceID != "" {
+				err = cm.UnlockContent(ctx, tx, contents[i].SourceID, user)
+				if err != nil {
+					log.Error(ctx, "unlock contentdata failed", log.Err(err), log.String("cid", contents[i].ID), log.String("uid", user.UserID))
+					return err
+				}
+				deletedIds = append(deletedIds, contents[i].SourceID)
+			}
+		}
+		return nil
+	})
+	if err != nil{
+		return err
+	}
+	cache.GetRedisContentCache().CleanContentCache(ctx, deletedIds)
+
 	return nil
 }
 

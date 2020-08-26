@@ -137,8 +137,8 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
+                    "total": {
+                      "type": "integer",
                       "description": "search key"
                     },
                     "list": {
@@ -577,1648 +577,1752 @@
         }
       }
     },
-    "/contents_private": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search user's private content with condition",
-        "operationId": "searchPrivateContents",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
+    "post": {
+      "tags": [
+        "content"
+      ],
+      "description": "Create content",
+      "operationId": "createContent",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
             "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "description": "Search content by scope",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "Search page",
-            "schema": {
-              "type": "integer",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "Search page size",
-            "schema": {
-              "type": "integer",
-              "nullable": true
-            }
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "Search order by",
-            "schema": {
-              "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
-              "nullable": true
+              "$ref": "#/components/schemas/CreateContentRequest"
             }
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
-                      }
-                    }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content info",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "content id",
+                    "example": "1"
                   }
                 }
               }
             }
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_pending": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search pending content",
-        "operationId": "searchPendingContents",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "description": "Search content by scope",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "Search page",
-            "schema": {
-              "type": "integer",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "Search page size",
-            "schema": {
-              "type": "integer",
-              "nullable": true
-            }
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "Search order by",
-            "schema": {
-              "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/assets": {
-      "get": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "query asset",
-        "description": "query asset",
-        "operationId": "queryAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "query",
-            "description": "Search asset by id",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search asset by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "category",
-            "in": "query",
-            "description": "Search asset by category",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "size_min",
-            "in": "query",
-            "description": "Search asset by size_min",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 2
-            }
-          },
-          {
-            "name": "size_max",
-            "in": "query",
-            "description": "Search asset by size_max",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            }
-          },
-          {
-            "name": "tag",
-            "in": "query",
-            "description": "Search asset by tag",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "page index, not paging if page <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "records per page, not paging if page_size <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 10
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "order by enum",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "-name",
-                "create_at",
-                "-create_at",
-                "last_update_at",
-                "-last_update_at"
-              ],
-              "nullable": true,
-              "default": "create_at"
-            },
-            "required": false,
-            "allowEmptyValue": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "asset list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Asset"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "CreateAsset",
-        "description": "CreateAsset",
-        "operationId": "createAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssetCreateRequest"
-              }
-            }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Asset"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/assets/{asset_id}": {
-      "get": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "GetAsset",
-        "description": "GetAsset",
-        "operationId": "getAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "asset_id",
-            "in": "path",
-            "description": "AssetID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Asset"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "update asset",
-        "description": "update asset",
-        "operationId": "updateAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "asset_id",
-            "in": "path",
-            "description": "AssetID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssetCreateRequest"
-              }
-            }
-          }
+        "400": {
+          "description": "Bad request"
         },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Asset"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "delete asset",
-        "description": "delete asset",
-        "operationId": "deleteAsset",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "asset_id",
-            "in": "path",
-            "description": "AssetID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/assets/{ext}/upload": {
-      "get": {
-        "tags": [
-          "asset"
-        ],
-        "summary": "GetAssetUploadPath",
-        "description": "GetAssetUploadPath",
-        "operationId": "getAssetUploadPath",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ext",
-            "in": "path",
-            "description": "File Extension",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "category list",
-                  "properties": {
-                    "path": {
-                      "type": "string",
-                      "description": "upload asset path",
-                      "example": "https://badanamu.com/upload/bada.mp3"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/categories": {
-      "get": {
-        "tags": [
-          "category"
-        ],
-        "summary": "query category",
-        "description": "query category",
-        "operationId": "queryCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ids",
-            "in": "query",
-            "description": "Search category by ids",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "names",
-            "in": "query",
-            "description": "Search category by names",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "page index, not paging if page <=0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "records per page, not paging if page_size <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 10
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "order by enum",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "-name",
-                "create_at",
-                "-create_at",
-                "last_update_at",
-                "last_update_at"
-              ],
-              "nullable": true,
-              "default": "create_at"
-            },
-            "required": false,
-            "allowEmptyValue": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "category list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Category"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "category"
-        ],
-        "summary": "create category",
-        "description": "create category",
-        "operationId": "createCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CategoryCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Category"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "409": {
-            "description": "conflict"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/categories/{category_id}": {
-      "get": {
-        "tags": [
-          "category"
-        ],
-        "summary": "get category",
-        "description": "get category",
-        "operationId": "getCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "category_id",
-            "in": "path",
-            "description": "CategoryID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Category"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Record not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "category"
-        ],
-        "summary": "update category",
-        "description": "update category",
-        "operationId": "updateCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "category_id",
-            "in": "path",
-            "description": "CategoryID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CategoryCreateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Category"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Record not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "category"
-        ],
-        "summary": "delete category",
-        "description": "delete category",
-        "operationId": "deleteCategory",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "category_id",
-            "in": "path",
-            "description": "CategoryID",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Record not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/tag": {
-      "get": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "query tag",
-        "description": "query tag",
-        "operationId": "queryTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search tag by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "page index, not paging if page <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "records per page, not paging if page_size <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 10
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "order by enum",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "name",
-                "-name",
-                "create_at",
-                "-create_at"
-              ],
-              "nullable": true,
-              "default": "create_at"
-            },
-            "required": false,
-            "allowEmptyValue": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "tag list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Tag"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "create tag",
-        "description": "Create Tag",
-        "operationId": "createTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TagCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "string",
-                  "description": "tag id"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/tag/{tag_id}": {
-      "get": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "get tag by id",
-        "description": "get tag by id",
-        "operationId": "GetTagByID",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tag_id",
-            "in": "path",
-            "description": "tag id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tag"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "update tag",
-        "description": "update tag",
-        "operationId": "updateTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tag_id",
-            "in": "path",
-            "description": "tag id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TagUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tag"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "tag"
-        ],
-        "summary": "delete tag",
-        "description": "delete tag",
-        "operationId": "deleteTag",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "tag_id",
-            "in": "path",
-            "description": "delete tag",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/schedules": {
-      "get": {
-        "tags": [
-          "schedule"
-        ],
-        "summary": "query schedules",
-        "description": "query schedules",
-        "operationId": "queryschedules",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "teacher_id",
-            "in": "query",
-            "description": "Search schedules by teacher_id",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "last_key",
-            "in": "query",
-            "description": "The key value of the last record",
-            "schema": {
-              "type": "string",
-              "format": "string",
-              "nullable": true,
-              "default": ""
-            },
-            "required": false,
-            "allowEmptyValue": true
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "records per page, not paging if pageSize <= 0",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 10
-            },
-            "required": false,
-            "allowEmptyValue": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "schedule list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Schedule"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "schedule"
-        ],
-        "summary": "create schedule",
-        "description": "Create schedule",
-        "operationId": "createSchedule",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ScheduleCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "string",
-                  "description": "schedule id"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "409": {
-            "description": "Conflict"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/schedules/{schedule_id}": {
-      "get": {
-        "tags": [
-          "schedule"
-        ],
-        "summary": "get schedules by id",
-        "description": "get schedules by id",
-        "operationId": "GetSchedulesByID",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "schedule_id",
-            "in": "path",
-            "description": "schedule id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ScheduleDetailed"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "schedule"
-        ],
-        "summary": "update schedule",
-        "description": "update schedule",
-        "operationId": "updateSchedule",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "schedule_id",
-            "in": "path",
-            "description": "schedule id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ScheduleUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "string",
-                  "description": "schedule id"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "schedule"
-        ],
-        "summary": "delete schedule",
-        "description": "delete schedule",
-        "operationId": "deleteSchedule",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "schedule_id",
-            "in": "path",
-            "description": "delete schedule",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          },
-          {
-            "name": "repeat_edit_options",
-            "in": "query",
-            "description": "Search schedules by teacher_id",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "only_current",
-                "with_following"
-              ],
-              "nullable": true,
-              "description": "repeat edit option"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
+        "500": {
+          "description": "Internal Server Error"
         }
       }
     }
+  },
+  "/contents_bulk/publish": {
+    "put": {
+      "tags": [
+        "content"
+      ],
+      "description": "Publish content bulk",
+      "operationId": "publishContentBulk",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContentIDListRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents_bulk": {
+    "delete": {
+      "tags": [
+        "content"
+      ],
+      "description": "Delete content bulk",
+      "operationId": "deleteContentBulk",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContentIDListRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents_private": {
+    "get": {
+      "tags": [
+        "content"
+      ],
+      "description": "Search user's private content with condition",
+      "operationId": "searchPrivateContents",
+      "parameters": [
+        {
+          "name": "name",
+          "in": "query",
+          "description": "Search content by name",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "content_type",
+          "in": "query",
+          "description": "Search content by content type",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "publish_status",
+          "in": "query",
+          "description": "Search content by publish status",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "scope",
+          "in": "query",
+          "description": "Search content by scope",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "author",
+          "in": "query",
+          "description": "Search content by author",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "org",
+          "in": "query",
+          "description": "Search content by org",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "description": "Search page",
+          "schema": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page_size",
+          "in": "query",
+          "description": "Search page size",
+          "schema": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        {
+          "name": "order_by",
+          "in": "query",
+          "description": "Search order by",
+          "schema": {
+            "type": "string",
+            "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+            "nullable": true
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content list",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "search key"
+                  },
+                  "list": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Content"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents_pending": {
+    "get": {
+      "tags": [
+        "content"
+      ],
+      "description": "Search pending content",
+      "operationId": "searchPendingContents",
+      "parameters": [
+        {
+          "name": "name",
+          "in": "query",
+          "description": "Search content by name",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "content_type",
+          "in": "query",
+          "description": "Search content by content type",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "publish_status",
+          "in": "query",
+          "description": "Search content by publish status",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "scope",
+          "in": "query",
+          "description": "Search content by scope",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "author",
+          "in": "query",
+          "description": "Search content by author",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "org",
+          "in": "query",
+          "description": "Search content by org",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "description": "Search page",
+          "schema": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page_size",
+          "in": "query",
+          "description": "Search page size",
+          "schema": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        {
+          "name": "order_by",
+          "in": "query",
+          "description": "Search order by",
+          "schema": {
+            "type": "string",
+            "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+            "nullable": true
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content list",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "search key"
+                  },
+                  "list": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Content"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/assets": {
+    "get": {
+      "tags": [
+        "asset"
+      ],
+      "summary": "query asset",
+      "description": "query asset",
+      "operationId": "queryAsset",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "query",
+          "description": "Search asset by id",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "name",
+          "in": "query",
+          "description": "Search asset by name",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "description": "Search asset by category",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "size_min",
+          "in": "query",
+          "description": "Search asset by size_min",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 2
+          }
+        },
+        {
+          "name": "size_max",
+          "in": "query",
+          "description": "Search asset by size_max",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 1
+          }
+        },
+        {
+          "name": "tag",
+          "in": "query",
+          "description": "Search asset by tag",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "description": "page index, not paging if page <= 0",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 1
+          },
+          "required": false,
+          "allowEmptyValue": true
+        },
+        {
+          "name": "page_size",
+          "in": "query",
+          "description": "records per page, not paging if page_size <= 0",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 10
+          },
+          "required": false,
+          "allowEmptyValue": true
+        },
+        {
+          "name": "order_by",
+          "in": "query",
+          "description": "order by enum",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "name",
+              "-name",
+              "create_at",
+              "-create_at",
+              "last_update_at",
+              "-last_update_at"
+            ],
+            "nullable": true,
+            "default": "create_at"
+          },
+          "required": false,
+          "allowEmptyValue": true
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "asset list",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "format": "int32",
+                    "description": "total records",
+                    "example": 1
+                  },
+                  "list": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Asset"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "post": {
+      "tags": [
+        "asset"
+      ],
+      "summary": "CreateAsset",
+      "description": "CreateAsset",
+      "operationId": "createAsset",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AssetCreateRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Asset"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/assets/{asset_id}": {
+    "get": {
+      "tags": [
+        "asset"
+      ],
+      "summary": "GetAsset",
+      "description": "GetAsset",
+      "operationId": "getAsset",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "asset_id",
+          "in": "path",
+          "description": "AssetID",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Asset"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "put": {
+      "tags": [
+        "asset"
+      ],
+      "summary": "update asset",
+      "description": "update asset",
+      "operationId": "updateAsset",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "asset_id",
+          "in": "path",
+          "description": "AssetID",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AssetCreateRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Asset"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "delete": {
+      "tags": [
+        "asset"
+      ],
+      "summary": "delete asset",
+      "description": "delete asset",
+      "operationId": "deleteAsset",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "asset_id",
+          "in": "path",
+          "description": "AssetID",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/assets/{ext}/upload": {
+    "get": {
+      "tags": [
+        "asset"
+      ],
+      "summary": "GetAssetUploadPath",
+      "description": "GetAssetUploadPath",
+      "operationId": "getAssetUploadPath",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "ext",
+          "in": "path",
+          "description": "File Extension",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "category list",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "upload asset path",
+                    "example": "https://badanamu.com/upload/bada.mp3"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/categories": {
+    "get": {
+      "tags": [
+        "category"
+      ],
+      "summary": "query category",
+      "description": "query category",
+      "operationId": "queryCategory",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "ids",
+          "in": "query",
+          "description": "Search category by ids",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "names",
+          "in": "query",
+          "description": "Search category by names",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "description": "page index, not paging if page <=0",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 1
+          },
+          "required": false,
+          "allowEmptyValue": true
+        },
+        {
+          "name": "page_size",
+          "in": "query",
+          "description": "records per page, not paging if page_size <= 0",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 10
+          },
+          "required": false,
+          "allowEmptyValue": true
+        },
+        {
+          "name": "order_by",
+          "in": "query",
+          "description": "order by enum",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "name",
+              "-name",
+              "create_at",
+              "-create_at",
+              "last_update_at",
+              "last_update_at"
+            ],
+            "nullable": true,
+            "default": "create_at"
+          },
+          "required": false,
+          "allowEmptyValue": true
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "category list",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "format": "int32",
+                    "description": "total records",
+                    "example": 1
+                  },
+                  "list": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Category"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "post": {
+      "tags": [
+        "category"
+      ],
+      "summary": "create category",
+      "description": "create category",
+      "operationId": "createCategory",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CategoryCreateRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Category"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "409": {
+          "description": "conflict"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/categories/{category_id}": {
+    "get": {
+      "tags": [
+        "category"
+      ],
+      "summary": "get category",
+      "description": "get category",
+      "operationId": "getCategory",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "category_id",
+          "in": "path",
+          "description": "CategoryID",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Category"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Record not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "put": {
+      "tags": [
+        "category"
+      ],
+      "summary": "update category",
+      "description": "update category",
+      "operationId": "updateCategory",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "category_id",
+          "in": "path",
+          "description": "CategoryID",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CategoryCreateRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Category"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Record not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "delete": {
+      "tags": [
+        "category"
+      ],
+      "summary": "delete category",
+      "description": "delete category",
+      "operationId": "deleteCategory",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "category_id",
+          "in": "path",
+          "description": "CategoryID",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Record not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/tag": {
+    "get": {
+      "tags": [
+        "tag"
+      ],
+      "summary": "query tag",
+      "description": "query tag",
+      "operationId": "queryTag",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "name",
+          "in": "query",
+          "description": "Search tag by name",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "description": "page index, not paging if page <= 0",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 1
+          },
+          "required": false,
+          "allowEmptyValue": true
+        },
+        {
+          "name": "page_size",
+          "in": "query",
+          "description": "records per page, not paging if page_size <= 0",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 10
+          },
+          "required": false,
+          "allowEmptyValue": true
+        },
+        {
+          "name": "order_by",
+          "in": "query",
+          "description": "order by enum",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "name",
+              "-name",
+              "create_at",
+              "-create_at"
+            ],
+            "nullable": true,
+            "default": "create_at"
+          },
+          "required": false,
+          "allowEmptyValue": true
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "tag list",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "format": "int32",
+                    "description": "total records",
+                    "example": 1
+                  },
+                  "list": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Tag"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "post": {
+      "tags": [
+        "tag"
+      ],
+      "summary": "create tag",
+      "description": "Create Tag",
+      "operationId": "createTag",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TagCreate"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "string",
+                "description": "tag id"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/tag/{tag_id}": {
+    "get": {
+      "tags": [
+        "tag"
+      ],
+      "summary": "get tag by id",
+      "description": "get tag by id",
+      "operationId": "GetTagByID",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "tag_id",
+          "in": "path",
+          "description": "tag id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tag"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "put": {
+      "tags": [
+        "tag"
+      ],
+      "summary": "update tag",
+      "description": "update tag",
+      "operationId": "updateTag",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "tag_id",
+          "in": "path",
+          "description": "tag id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TagUpdate"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tag"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "delete": {
+      "tags": [
+        "tag"
+      ],
+      "summary": "delete tag",
+      "description": "delete tag",
+      "operationId": "deleteTag",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "tag_id",
+          "in": "path",
+          "description": "delete tag",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/schedules": {
+    "get": {
+      "tags": [
+        "schedule"
+      ],
+      "summary": "query schedules",
+      "description": "query schedules",
+      "operationId": "queryschedules",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "teacher_id",
+          "in": "query",
+          "description": "Search schedules by teacher_id",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_key",
+          "in": "query",
+          "description": "The key value of the last record",
+          "schema": {
+            "type": "string",
+            "format": "string",
+            "nullable": true,
+            "default": ""
+          },
+          "required": false,
+          "allowEmptyValue": true
+        },
+        {
+          "name": "page_size",
+          "in": "query",
+          "description": "records per page, not paging if pageSize <= 0",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 10
+          },
+          "required": false,
+          "allowEmptyValue": true
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "schedule list",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "format": "int32",
+                    "description": "total records",
+                    "example": 1
+                  },
+                  "data": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Schedule"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "post": {
+      "tags": [
+        "schedule"
+      ],
+      "summary": "create schedule",
+      "description": "Create schedule",
+      "operationId": "createSchedule",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ScheduleCreate"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "string",
+                "description": "schedule id"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "409": {
+          "description": "Conflict"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+  },
+  "/schedules/{schedule_id}": {
+    "get": {
+      "tags": [
+        "schedule"
+      ],
+      "summary": "get schedules by id",
+      "description": "get schedules by id",
+      "operationId": "GetSchedulesByID",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "schedule_id",
+          "in": "path",
+          "description": "schedule id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleDetailed"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "put": {
+      "tags": [
+        "schedule"
+      ],
+      "summary": "update schedule",
+      "description": "update schedule",
+      "operationId": "updateSchedule",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "schedule_id",
+          "in": "path",
+          "description": "schedule id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ScheduleUpdate"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "string",
+                "description": "schedule id"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    },
+    "delete": {
+      "tags": [
+        "schedule"
+      ],
+      "summary": "delete schedule",
+      "description": "delete schedule",
+      "operationId": "deleteSchedule",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "schedule_id",
+          "in": "path",
+          "description": "delete schedule",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        },
+        {
+          "name": "repeat_edit_options",
+          "in": "query",
+          "description": "Search schedules by teacher_id",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "only_current",
+              "with_following"
+            ],
+            "nullable": true,
+            "description": "repeat edit option"
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "401": {
+          "description": "User not login"
+        },
+        "403": {
+          "description": "Forbidden"
+        },
+        "404": {
+          "description": "Recorde not found"
+        },
+        "500": {
+          "description": "Server error"
+        }
+      }
+    }
+
   },
   "components": {
     "securitySchemes": {
@@ -2391,6 +2495,25 @@
               "scope": {
                 "type": "string",
                 "description": "content published scope list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+
+              }
+            }
+          }
+        ]
+      },
+      "ContentIDListRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "scope": {
+                "type": "array",
+                "description": "content published scope list",
+                "items":{
+                  "type":"string"
+                },
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
