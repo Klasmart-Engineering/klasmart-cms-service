@@ -38,125 +38,6 @@
   ],
   "paths": {
     "/contents": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search content with condition",
-        "operationId": "searchContents",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "scope",
-            "in": "query",
-            "description": "Search content by scope",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "Search page",
-            "schema": {
-              "type": "integer",
-              "nullable": true
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "description": "Search page size",
-            "schema": {
-              "type": "integer",
-              "nullable": true
-            }
-          },
-          {
-            "name": "order_by",
-            "in": "query",
-            "description": "Search order by, default with content_name",
-            "schema": {
-              "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "total": {
-                      "type": "integer",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
       "post": {
         "tags": [
           "content"
@@ -201,439 +82,122 @@
         }
       }
     },
-    "/contents/{content_id}/publish": {
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Publish content",
-        "operationId": "publishContent",
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
+    "get": {
+      "tags": [
+        "content"
+      ],
+      "description": "Search content with condition",
+      "operationId": "searchContents",
+      "parameters": [
+        {
+          "name": "name",
+          "in": "query",
+          "description": "Search content by name",
+          "schema": {
+            "type": "string",
+            "nullable": true
           }
-        ],
-        "requestBody": {
-          "required": true,
+        },
+        {
+          "name": "content_type",
+          "in": "query",
+          "description": "Search content by content type",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "publish_status",
+          "in": "query",
+          "description": "Search content by publish status",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "scope",
+          "in": "query",
+          "description": "Search content by scope",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "author",
+          "in": "query",
+          "description": "Search content by author",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "org",
+          "in": "query",
+          "description": "Search content by org",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page",
+          "in": "query",
+          "description": "Search page",
+          "schema": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        {
+          "name": "page_size",
+          "in": "query",
+          "description": "Search page size",
+          "schema": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        {
+          "name": "order_by",
+          "in": "query",
+          "description": "Search order by, default with content_name",
+          "schema": {
+            "type": "string",
+            "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+            "nullable": true
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PublishContentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "406": {
-            "description": "Content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents/{content_id}/lock": {
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "description": "Lock a content by content_id",
-        "operationId": "lockContent",
-        "responses": {
-          "200": {
-            "description": "success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "$ref": "#/components/schemas/LockContentResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "406": {
-            "description": "content was locked"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_review/{content_id}/approve": {
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "description": "Approve a content review by content_id",
-        "operationId": "approveContentReview",
-        "responses": {
-          "200": {
-            "description": "success"
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "412": {
-            "description": "content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_review/{content_id}/reject": {
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "description": "Reject a content review by content_id",
-        "operationId": "rejectContentReview",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectReasonRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "success"
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "412": {
-            "description": "content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents/{content_id}": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Get content by content_id",
-        "operationId": "getContentById",
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "content info",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "$ref": "#/components/schemas/Content"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Update content by content_id",
-        "operationId": "updateContent",
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateContentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "content"
-        ],
-        "description": "Delete content by content_id",
-        "operationId": "deleteContent",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_bulk/publish": {
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "description": "Publish content bulk",
-        "operationId": "publishContentBulk",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ContentIDListRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_bulk": {
-      "delete": {
-        "tags": [
-          "content"
-        ],
-        "description": "Delete content bulk",
-        "operationId": "deleteContentBulk",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ContentIDListRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_dynamo": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search user's private content with condition",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "description",
-            "in": "query",
-            "description": "Search content by description",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "keywords",
-            "in": "query",
-            "description": "Search content by keywords",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "key",
-            "in": "query",
-            "description": "Search key",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
-                      }
+                "type": "object",
+                "description": "content list",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "description": "search key"
+                  },
+                  "list": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Content"
                     }
                   }
                 }
               }
             }
-          },
-          "500": {
-            "description": "Internal Server Error"
           }
+        },
+        "500": {
+          "description": "Internal Server Error"
         }
       }
     },
@@ -671,6 +235,443 @@
               }
             }
           }
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents/{content_id}/publish": {
+    "put": {
+      "tags": [
+        "content"
+      ],
+      "description": "Publish content",
+      "operationId": "publishContent",
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PublishContentRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "OK"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "406": {
+          "description": "Content status invalid"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents/{content_id}/lock": {
+    "put": {
+      "tags": [
+        "content"
+      ],
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "description": "Lock a content by content_id",
+      "operationId": "lockContent",
+      "responses": {
+        "200": {
+          "description": "success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "$ref": "#/components/schemas/LockContentResponse"
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "no auth to review"
+        },
+        "406": {
+          "description": "content was locked"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents_review/{content_id}/approve": {
+    "put": {
+      "tags": [
+        "content"
+      ],
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "description": "Approve a content review by content_id",
+      "operationId": "approveContentReview",
+      "responses": {
+        "200": {
+          "description": "success"
+        },
+        "403": {
+          "description": "no auth to review"
+        },
+        "412": {
+          "description": "content status invalid"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents_review/{content_id}/reject": {
+    "put": {
+      "tags": [
+        "content"
+      ],
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "description": "Reject a content review by content_id",
+      "operationId": "rejectContentReview",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RejectReasonRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "success"
+        },
+        "403": {
+          "description": "no auth to review"
+        },
+        "412": {
+          "description": "content status invalid"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents/{content_id}": {
+    "get": {
+      "tags": [
+        "content"
+      ],
+      "description": "Get content by content_id",
+      "operationId": "getContentById",
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "content info",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "$ref": "#/components/schemas/Content"
+              }
+            }
+          }
+        },
+        "404": {
+          "description": "Content not found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    },
+    "put": {
+      "tags": [
+        "content"
+      ],
+      "description": "Update content by content_id",
+      "operationId": "updateContent",
+      "parameters": [
+        {
+          "name": "content_id",
+          "in": "path",
+          "description": "content id",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "allowEmptyValue": false
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateContentRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "OK"
+        },
+        "404": {
+          "description": "Content not found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    },
+    "delete": {
+      "tags": [
+        "content"
+      ],
+      "description": "Delete content by content_id",
+      "operationId": "deleteContent",
+      "responses": {
+        "200": {
+          "description": "OK"
+        },
+        "404": {
+          "description": "Content not found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents_dynamo": {
+    "get": {
+      "tags": [
+        "content"
+      ],
+      "description": "Search user's private content with condition",
+      "parameters": [
+        {
+          "name": "name",
+          "in": "query",
+          "description": "Search content by name",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "publish_status",
+          "in": "query",
+          "description": "Search content by publish status",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "author",
+          "in": "query",
+          "description": "Search content by author",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "content_type",
+          "in": "query",
+          "description": "Search content by content type",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "description",
+          "in": "query",
+          "description": "Search content by description",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "keywords",
+          "in": "query",
+          "description": "Search content by keywords",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "org",
+          "in": "query",
+          "description": "Search content by org",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "key",
+          "in": "query",
+          "description": "Search key",
+          "schema": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "Success",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content list",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "search key"
+                  },
+                  "list": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Content"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+
+  "/contents_bulk/publish": {
+    "put": {
+      "tags": [
+        "content"
+      ],
+      "description": "Publish content bulk",
+      "operationId": "publishContentBulk",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContentIDListRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad request"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    }
+  },
+  "/contents_bulk": {
+    "delete": {
+      "tags": [
+        "content"
+      ],
+      "description": "Delete content bulk",
+      "operationId": "deleteContentBulk",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContentIDListRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Success"
         },
         "400": {
           "description": "Bad request"
