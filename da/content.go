@@ -22,6 +22,8 @@ const (
 	ContentOrderById
 	ContentOrderByUpdatedAt
 	ContentOrderByUpdatedAtDesc
+	ContentOrderByName
+	ContentOrderByNameDesc
 )
 
 type IContentDA interface {
@@ -156,6 +158,10 @@ func NewContentOrderBy(orderby string) ContentOrderBy {
 		return ContentOrderByUpdatedAt
 	case "-updated_at":
 		return ContentOrderByUpdatedAtDesc
+	case "content_name":
+		return ContentOrderByName
+	case "-content_name":
+		return ContentOrderByNameDesc
 	default:
 		return ContentOrderByCreatedAtDesc
 	}
@@ -176,8 +182,12 @@ func (s ContentOrderBy) ToSQL() string {
 		return "updated_at"
 	case ContentOrderByUpdatedAtDesc:
 		return "updated_at desc"
+	case ContentOrderByName:
+		return "content_name"
+	case ContentOrderByNameDesc:
+		return "content_name desc"
 	default:
-		return "upload_at desc"
+		return "content_name"
 	}
 }
 

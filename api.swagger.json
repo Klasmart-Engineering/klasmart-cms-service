@@ -120,10 +120,10 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "Search order by, valid value",
+            "description": "Search order by, default with content_name",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at"],
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
               "nullable": true
             }
           }
@@ -663,7 +663,7 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at"],
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
               "nullable": true
             }
           }
@@ -784,7 +784,7 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at"],
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
               "nullable": true
             }
           }
