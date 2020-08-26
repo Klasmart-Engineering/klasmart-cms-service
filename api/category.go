@@ -10,11 +10,8 @@ import (
 )
 
 func (s *Server) createCategory(c *gin.Context) {
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
-		return
-	}
+	op := GetOperator(c)
+
 	data := new(entity.CategoryObject)
 	err := c.ShouldBind(data)
 	if err != nil {
