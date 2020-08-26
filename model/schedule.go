@@ -430,10 +430,10 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			scheduleBasic.LessonPlan = *v
 		}
 		tIDs := scheduleTeacherMap[item.ID]
-		scheduleBasic.Teachers = make([]entity.ScheduleShortInfo, len(tIDs))
-		for i, tID := range tIDs {
+		scheduleBasic.Teachers = make([]entity.ScheduleShortInfo, 0, len(tIDs))
+		for _, tID := range tIDs {
 			if v, ok := teacherMap[tID]; ok {
-				scheduleBasic.Teachers[i] = *v
+				scheduleBasic.Teachers = append(scheduleBasic.Teachers, *v)
 			}
 		}
 		scheduleBasicMap[item.ID] = scheduleBasic
