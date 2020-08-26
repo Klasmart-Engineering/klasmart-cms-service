@@ -20,3 +20,39 @@ CREATE TABLE `kidsloop2`.`assets` (
     PRIMARY KEY (`id`),
     FULLTEXT INDEX `name_description_keywords_author_index` (`name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
 );
+
+CREATE TABLE `kidsloop2`.`cms_contents` (
+    `content_id` VARCHAR(50) NOT NULL,
+    `content_type` int NOT NULL,
+    `content_name` VARCHAR(255) NOT NULL,
+    `program` VARCHAR(1024) NOT NULL,
+    `subject` VARCHAR(1024) NOT NULL,
+    `developmental` VARCHAR(1024) NOT NULL,
+    `skills` VARCHAR(1024) NOT NULL,
+    `age` VARCHAR(1024) NOT NULL,
+    `grade` VARCHAR(1024) NOT NULL,
+    `keywords` TEXT NULL,
+    `description` TEXT NULL,
+    `thumbnail` TEXT NOT NULL,
+    `data` JSON NOT NULL,
+    `extra` JSON NOT NULL,
+    `suggest_time` int NOT NULL,
+
+    `author` VARCHAR(50) NOT NULL,
+    `author_name` VARCHAR(128) NOT NULL,
+    `org` VARCHAR(50) NOT NULL,
+
+    `publish_scope` VARCHAR(50),
+    `publish_status` VARCHAR(16) NOT NULL,
+    `reject_reason` VARCHAR(255),
+    `version` INT NOT NULL DEFAULT 0,
+    `locked_by` VARCHAR(50),
+    `source_id` VARCHAR(50),
+    `latest_id` VARCHAR(50),
+
+    `created_at` DATETIME NOT NULL,
+    `updated_at` DATETIME NOT NULL,
+    `deleted_at` DATETIME NULL,
+    PRIMARY KEY (`content_id`),
+    FULLTEXT INDEX `name_description_keywords_author_index` (`content_name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
+);
