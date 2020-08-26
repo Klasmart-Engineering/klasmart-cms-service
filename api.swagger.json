@@ -2361,6 +2361,11 @@
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
               },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
               "developmental": {
                 "type": "array",
                 "items": {
@@ -2600,6 +2605,11 @@
                 "type": "integer",
                 "description": "suggest time",
                 "example": 1
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
               },
               "developmental": {
                 "type": "array",

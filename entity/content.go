@@ -179,6 +179,7 @@ type CreateContentRequest struct {
 	Description   string   `json:"description"`
 	Thumbnail     string   `json:"thumbnail"`
 	SuggestTime int `json:"suggest_time"`
+	RejectReason string `json:"reject_reason"`
 
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
@@ -217,7 +218,7 @@ type ContentInfo struct {
 
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`
-	RejectReason string `json:":rr"`
+	RejectReason string `json:"reject_reason"`
 	LatestID     string `json:"latest_id"`
 
 	Data  ContentData `json:"data"`
