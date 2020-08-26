@@ -138,7 +138,7 @@ func loadRedisEnvConfig(ctx context.Context) {
 		config.RedisConfig.Host = host
 		port, err := strconv.Atoi(portStr)
 		if err != nil {
-			log.Error(ctx, "Can't parse redis_port")
+			log.Error(ctx, "Can't parse redis_port", log.Err(err))
 			port = 3306
 		}
 		config.RedisConfig.Port = port
@@ -158,28 +158,28 @@ func loadDBEnvConfig(ctx context.Context) {
 
 		maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
 		if err != nil {
-			log.Error(ctx, "Can't parse max_open_conns")
+			log.Error(ctx, "Can't parse max_open_conns", log.Err(err))
 			maxOpenConns = 16
 		}
 		config.DBConfig.MaxOpenConns = maxOpenConns
 
 		maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
 		if err != nil {
-			log.Error(ctx, "Can't parse max_idle_conns")
+			log.Error(ctx, "Can't parse max_idle_conns", log.Err(err))
 			maxOpenConns = 16
 		}
 		config.DBConfig.MaxIdleConns = maxIdleConns
 
 		showLog, err := strconv.ParseBool(showLogStr)
 		if err != nil {
-			log.Error(ctx, "Can't parse show_log")
+			log.Error(ctx, "Can't parse show_log", log.Err(err))
 			showLog = true
 		}
 		config.DBConfig.ShowLog = showLog
 
 		showSQL, err := strconv.ParseBool(showSQLStr)
 		if err != nil {
-			log.Error(ctx, "Can't parse show_sql")
+			log.Error(ctx, "Can't parse show_sql", log.Err(err))
 			showLog = true
 		}
 		config.DBConfig.ShowSQL = showSQL

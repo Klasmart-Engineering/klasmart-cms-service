@@ -176,10 +176,11 @@ func (s *Server) querySchedule(c *gin.Context) {
 	teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, teacherName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
+		log.Info(ctx, "get teacher info by name error", log.Err(err), log.String("teacherName", teacherName), log.Any("condition", condition))
 		return
 	}
 	if len(teachers) <= 0 {
-		log.Info(ctx, "querySchedule:teacher info not found")
+		log.Info(ctx, "querySchedule:teacher info not found", log.String("teacherName", teacherName), log.Any("condition", condition))
 		c.JSON(http.StatusBadRequest, "teacher info not found")
 		return
 	}
@@ -271,9 +272,11 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	}
 	if err == constant.ErrRecordNotFound {
 		c.JSON(http.StatusNotFound, err.Error())
+		log.Info(ctx, "record not found", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 		return
 	}
 	c.JSON(http.StatusInternalServerError, err.Error())
+	log.Info(ctx, "record not found", log.Err(err), log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 }
 
 func (s *Server) getAttachmentUploadPath(c *gin.Context) {
