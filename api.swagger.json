@@ -3323,6 +3323,10 @@
           "is_force": {
             "type": "boolean",
             "description": "If true, skip the conflict detection"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule will repeat"
           }
         }
       },
@@ -3561,6 +3565,10 @@
           "is_force": {
             "type": "boolean",
             "description": "If true, skip the conflict detection"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule will repeat"
           }
         }
       },
@@ -3785,6 +3793,10 @@
           },
           "attachment": {
             "$ref": "#/components/schemas/CommonShort"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
           }
         }
       },
