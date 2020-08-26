@@ -69,6 +69,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -100,11 +101,30 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with content_name",
             "schema": {
               "type": "string",
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
               "nullable": true
             }
           }
@@ -118,8 +138,8 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
+                    "total": {
+                      "type": "integer",
                       "description": "search key"
                     },
                     "list": {
@@ -215,11 +235,11 @@
           "200": {
             "description": "OK"
           },
-          "406": {
-            "description": "Content status invalid"
-          },
           "400": {
             "description": "Bad request"
+          },
+          "406": {
+            "description": "Content status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -470,6 +490,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -558,6 +579,67 @@
         }
       }
     },
+
+    "/contents_bulk/publish": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "description": "Publish content bulk",
+        "operationId": "publishContentBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_bulk": {
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "description": "Delete content bulk",
+        "operationId": "deleteContentBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/contents_private": {
       "get": {
         "tags": [
@@ -590,6 +672,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -621,11 +704,30 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
             "schema": {
               "type": "string",
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
               "nullable": true
             }
           }
@@ -692,6 +794,7 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": ["draft", "pending", "published", "rejected", "archive"],
               "nullable": true
             }
           },
@@ -723,11 +826,30 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
             "schema": {
               "type": "string",
+              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
               "nullable": true
             }
           }
@@ -2161,7 +2283,9 @@
           }
         }
       }
+
     }
+
   },
   "components": {
     "securitySchemes": {
@@ -2218,29 +2342,64 @@
                 "example": "Content title"
               },
               "program": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "subject": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "developmental": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "skills": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "age": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "suggest_time": {
                 "type": "integer",
@@ -2266,11 +2425,6 @@
                 "type": "string",
                 "description": "content thumbnail",
                 "example": "Content thumbnail"
-              },
-              "do_publish": {
-                "type": "boolean",
-                "description": "content create & publish",
-                "example": false
               },
               "data": {
                 "type": "object",
@@ -2304,6 +2458,25 @@
               "scope": {
                 "type": "string",
                 "description": "content published scope list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+
+              }
+            }
+          }
+        ]
+      },
+      "ContentIDListRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "scope": {
+                "type": "array",
+                "description": "content published scope list",
+                "items":{
+                  "type":"string"
+                },
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
@@ -2347,34 +2520,20 @@
             "description": "Company",
             "properties": {
               "content_type": {
-                "type": "array",
+                "type": "string",
                 "description": "content type list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "scope": {
-                "type": "array",
+                "type": "string",
                 "description": "content published scope list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "publish_status": {
-                "type": "array",
+                "type": "string",
+                "enum": ["draft", "pending", "published", "rejected", "archive"],
                 "description": "content published status list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "author": {
                 "type": "string",
@@ -2418,14 +2577,24 @@
                 "example": "Content title"
               },
               "program": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "subject": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "suggest_time": {
                 "type": "integer",
@@ -2433,19 +2602,44 @@
                 "example": 1
               },
               "developmental": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "skills": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "age": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "keywords": {
                 "type": "array",
@@ -2520,6 +2714,7 @@
               "publish_status": {
                 "type": "string",
                 "description": "content publish status",
+                "enum": ["draft", "pending", "published", "rejected", "archive"],
                 "example": "published"
               },
               "content_type_name": {
@@ -2561,7 +2756,6 @@
           }
         ]
       },
-
       "Asset": {
         "allOf": [
           {

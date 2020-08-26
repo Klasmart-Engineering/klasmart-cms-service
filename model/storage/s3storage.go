@@ -310,8 +310,8 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 	cdnConf := config.Get().CDNConfig
 
 	params := &CDNServiceRequest{
-		URL:      cdnConf.CDNPath,
-		Duration: PRESIGN_DURATION_MINUTES * 60,
+		URL:       cdnConf.CDNPath,
+		Duration:  PRESIGN_DURATION_MINUTES * 60,
 		FilePaths: []string{fmt.Sprintf("%s/%s", partition, filePath)},
 	}
 	data, err := json.Marshal(params)

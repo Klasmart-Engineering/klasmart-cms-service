@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"sync"
@@ -16,9 +16,9 @@ import (
 
 type IContentCache interface {
 	SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails)
-	SaveContentCacheListBySearchCondition(ctx context.Context, condition da.IDyCondition, c *ContentListWithKey)
+	SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey)
 	GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfoWithDetails)
-	GetContentCacheBySearchCondition(ctx context.Context, condition da.IDyCondition) *ContentListWithKey
+	GetContentCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *ContentListWithKey
 
 	SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails)
 	GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails
@@ -33,14 +33,14 @@ type RedisContentCache struct {
 }
 
 type ContentListWithKey struct {
-	Key         string                           `json:"key"`
+	Count         int                           `json:"count"`
 	ContentList []*entity.ContentInfoWithDetails `json:"content_list"`
 }
 
 func (r *RedisContentCache) contentKey(id string) string {
 	return fmt.Sprintf("kidsloop2.content.id.%v", id)
 }
-func (r *RedisContentCache) contentConditionKey(condition da.IDyCondition) string {
+func (r *RedisContentCache) contentConditionKey(condition dbo.Conditions) string {
 	h := md5.New()
 	h.Write([]byte(fmt.Sprintf("%v", condition)))
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
@@ -85,7 +85,7 @@ func (r *RedisContentCache) GetContentCacheById(ctx context.Context, id string) 
 	return nil
 }
 
-func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Context, condition da.IDyCondition, c *ContentListWithKey) {
+func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey) {
 	if config.Get().RedisConfig.OpenCache {
 		return
 	}
@@ -155,7 +155,7 @@ func (r *RedisContentCache) GetContentCacheByIdList(ctx context.Context, ids []s
 	return restIds, cachedContents
 }
 
-func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context, condition da.IDyCondition) *ContentListWithKey {
+func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *ContentListWithKey {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}

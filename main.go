@@ -15,7 +15,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 )
 
 func initDB(){

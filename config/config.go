@@ -70,6 +70,7 @@ func LoadEnvConfig() {
 	loadDBEnvConfig(ctx)
 	loadRedisEnvConfig(ctx)
 }
+
 func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
@@ -107,7 +108,6 @@ func loadStorageEnvConfig(ctx context.Context) {
 			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
 		}
 	}
-
 }
 
 func loadRedisEnvConfig(ctx context.Context) {
@@ -170,7 +170,6 @@ func loadDBEnvConfig(ctx context.Context){
 		config.DBConfig.DynamoEndPoint = assertGetEnv("dynamo_end_point")
 		config.DBConfig.DynamoRegion = assertGetEnv("dynamo_region")
 	}
-
 }
 
 func Get() *Config {

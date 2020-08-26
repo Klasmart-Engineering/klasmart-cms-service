@@ -22,6 +22,8 @@ const (
 	ContentOrderById
 	ContentOrderByUpdatedAt
 	ContentOrderByUpdatedAtDesc
+	ContentOrderByName
+	ContentOrderByNameDesc
 )
 
 type IContentDA interface {
@@ -64,7 +66,7 @@ func (s *CombineConditions) GetOrderBy() string {
 
 type ContentCondition struct {
 	IDS          []string `json:"ids"`
-	Name         string `json:"name"`
+	Name         []string `json:"name"`
 	ContentType  []int `json:"content_type"`
 	Scope        []string `json:"scope"`
 	PublishStatus []string `json:"publish_status"`
@@ -72,8 +74,7 @@ type ContentCondition struct {
 	Org    		string `json:"org"`
 
 	OrderBy  ContentOrderBy `json:"order_by"`
-	Page     int `json:"page"`
-	PageSize int `json:"page_size"`
+	Pager 	utils.Pager
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
@@ -84,16 +85,15 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.IDS)
 	}
-	if s.Name != "" {
+	if len(s.Name) != 0 {
 		var fullparam string
-		keywords := strings.Split(strings.TrimSpace(s.Name), " ")
-		for i := range keywords {
-			if keywords[i] != " " && keywords[i] != "" {
-				fullparam = fullparam + "+" + keywords[i] + " "
+		for i := range s.Name {
+			if s.Name[i] != " " && s.Name[i] != "" {
+				fullparam = fullparam + "+" + s.Name[i] + " "
 			}
 		}
 		fullparam = strings.TrimSuffix(fullparam, " ")
-		conditions = append(conditions, "match(name) against(? in boolean mode)")
+		conditions = append(conditions, "match(name, description, author_name, keywords) against(? in boolean mode)")
 		params = append(params, fullparam)
 	}
 	if len(s.ContentType) > 0 {
@@ -131,8 +131,8 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 }
 func (s *ContentCondition) GetPager() *dbo.Pager {
 	return &dbo.Pager{
-		Page:     s.Page,
-		PageSize: s.PageSize,
+		Page:     int(s.Pager.PageIndex),
+		PageSize: int(s.Pager.PageSize),
 	}
 }
 func (s *ContentCondition) GetOrderBy() string {
@@ -154,6 +154,10 @@ func NewContentOrderBy(orderby string) ContentOrderBy {
 		return ContentOrderByUpdatedAt
 	case "-updated_at":
 		return ContentOrderByUpdatedAtDesc
+	case "content_name":
+		return ContentOrderByName
+	case "-content_name":
+		return ContentOrderByNameDesc
 	default:
 		return ContentOrderByCreatedAtDesc
 	}
@@ -174,8 +178,12 @@ func (s ContentOrderBy) ToSQL() string {
 		return "updated_at"
 	case ContentOrderByUpdatedAtDesc:
 		return "updated_at desc"
+	case ContentOrderByName:
+		return "content_name"
+	case ContentOrderByNameDesc:
+		return "content_name desc"
 	default:
-		return "upload_at desc"
+		return "content_name"
 	}
 }
 
