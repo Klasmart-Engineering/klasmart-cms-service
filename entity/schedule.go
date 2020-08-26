@@ -204,15 +204,15 @@ type Schedule struct {
 	OrgID        string   `gorm:"column:org_id;type:varchar(100)"`
 	StartAt      int64    `gorm:"column:start_at;type:bigint"`
 	EndAt        int64    `gorm:"column:end_at;type:bigint"`
-	ModeType     string   `gorm:"column:mode_type;type:varchar(100)"`
-	SubjectID    string   `gorm:"column:subject_id;type:varchar(100)"`
-	ProgramID    string   `gorm:"column:program_id;type:varchar(100)"`
-	ClassType    string   `gorm:"column:class_type;type:varchar(100)"`
-	DueAt        int64    `gorm:"column:due_at;type:bigint"`
-	Description  string   `gorm:"column:description;type:varchar(500)"`
-	Attachment   string   `gorm:"column:attachment_id;type:varchar(500)"`
-	Version      int64    `gorm:"column:version;type:bigint"`
-	RepeatID     string   `gorm:"column:repeat_id;type:varchar(100)"`
+
+	SubjectID   string `gorm:"column:subject_id;type:varchar(100)"`
+	ProgramID   string `gorm:"column:program_id;type:varchar(100)"`
+	ClassType   string `gorm:"column:class_type;type:varchar(100)"`
+	DueAt       int64  `gorm:"column:due_at;type:bigint"`
+	Description string `gorm:"column:description;type:varchar(500)"`
+	Attachment  string `gorm:"column:attachment_id;type:varchar(500)"`
+	Version     int64  `gorm:"column:version;type:bigint"`
+	RepeatID    string `gorm:"column:repeat_id;type:varchar(100)"`
 	//Repeat       RepeatOptions `dynamodbav:"repeat"`
 	RepeatJson string `gorm:"column:repeat;type:varchar(500)"`
 	CreatedID  string `gorm:"column:created_id;type:varchar(100)"`
@@ -237,12 +237,6 @@ func (s Schedule) Clone() Schedule {
 	return newItem
 }
 
-const (
-	ModeTypeAllDay = "AllDay"
-	ModeTypeRepeat = "Repeat"
-	ModeTypeNone   = "None"
-)
-
 type ScheduleAddView struct {
 	Title        string        `json:"title" binding:"required"`
 	ClassID      string        `json:"class_id"`
@@ -251,7 +245,6 @@ type ScheduleAddView struct {
 	OrgID        string        `json:"org_id" binding:"required"`
 	StartAt      int64         `json:"start_at" binding:"required"`
 	EndAt        int64         `json:"end_at" binding:"required"`
-	ModeType     string        `json:"mode_type"`
 	SubjectID    string        `json:"subject_id"`
 	ProgramID    string        `json:"program_id"`
 	ClassType    string        `json:"class_type"`
@@ -275,7 +268,6 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		OrgID:        s.OrgID,
 		StartAt:      s.StartAt,
 		EndAt:        s.EndAt,
-		ModeType:     s.ModeType,
 		SubjectID:    s.SubjectID,
 		ProgramID:    s.ProgramID,
 		ClassType:    s.ClassType,
@@ -320,7 +312,6 @@ type ScheduleDetailsView struct {
 	OrgID       string        `json:"org_id"`
 	StartAt     int64         `json:"start_at"`
 	EndAt       int64         `json:"end_at"`
-	ModeType    string        `json:"mode_type"`
 	ClassType   string        `json:"class_type"`
 	DueAt       int64         `json:"due_at"`
 	Description string        `json:"description"`

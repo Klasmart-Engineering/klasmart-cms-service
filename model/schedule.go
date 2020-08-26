@@ -135,7 +135,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 			return "", constant.ErrConflict
 		}
 	}
-	if viewData.ModeType == entity.ModeTypeRepeat {
+	if viewData.Repeat.Type.Valid() {
 		return s.addRepeatSchedule(ctx, tx, schedule, &viewData.Repeat, location)
 	} else {
 		schedule.ID = utils.NewID()
@@ -498,12 +498,12 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	}
 
 	result := &entity.ScheduleDetailsView{
-		ID:          schedule.ID,
-		Title:       schedule.Title,
-		OrgID:       schedule.OrgID,
-		StartAt:     schedule.StartAt,
-		EndAt:       schedule.EndAt,
-		ModeType:    schedule.ModeType,
+		ID:      schedule.ID,
+		Title:   schedule.Title,
+		OrgID:   schedule.OrgID,
+		StartAt: schedule.StartAt,
+		EndAt:   schedule.EndAt,
+		//ModeType:    schedule.ModeType,
 		ClassType:   schedule.ClassType,
 		DueAt:       schedule.DueAt,
 		Description: schedule.Description,

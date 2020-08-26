@@ -1849,7 +1849,7 @@
         ],
         "summary": "query schedules",
         "description": "query schedules",
-        "operationId": "queryschedules",
+        "operationId": "querySchedules",
         "security": [
           {
             "bearerAuth": []
@@ -2943,14 +2943,6 @@
           "end_at": {
             "type": "integer",
             "description": "schedule end time, timestamp"
-          },
-          "mode_type": {
-            "type": "string",
-            "enum": [
-              "AllDay",
-              "Repeat"
-            ],
-            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
           },
           "repeat": {
             "type": "object",
