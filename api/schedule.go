@@ -11,7 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/storage"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
@@ -148,13 +148,13 @@ func (s *Server) querySchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("teacherName is empty"))
 		return
 	}
-	condition.Pager = utils.GetPager(c.Query("page"), c.Query("page_size"))
+	condition.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 	startAtStr := c.Query("start_at")
 	startAt, err := strconv.ParseInt(startAtStr, 10, 64)
 	if err != nil {
-		startAt = utils.BeginOfDayByTimeStamp(time.Now().Unix()).Unix()
+		startAt = utils.BeginOfDayByTimeStamp(time.Now().Unix(), s.getLocation(c)).Unix()
 	}
-	startAt = utils.BeginOfDayByTimeStamp(startAt).Unix()
+	startAt = utils.BeginOfDayByTimeStamp(startAt, s.getLocation(c)).Unix()
 	condition.StartAtLe = sql.NullInt64{
 		Int64: startAt,
 		Valid: startAt == 0,
@@ -225,14 +225,14 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	)
 	switch viewType {
 	case ViewTypeDay:
-		start = utils.BeginOfDayByTimeStamp(timeAt).Unix()
-		end = utils.EndOfDayByTimeStamp(timeAt).Unix()
+		start = utils.BeginOfDayByTimeStamp(timeAt, s.getLocation(c)).Unix()
+		end = utils.EndOfDayByTimeStamp(timeAt, s.getLocation(c)).Unix()
 	case ViewTypeWorkweek:
-		start, end = timeUtil.FindWorkWeekTimeRange()
+		start, end = timeUtil.FindWorkWeekTimeRange(s.getLocation(c))
 	case ViewTypeWeek:
-		start, end = timeUtil.FindWeekTimeRange()
+		start, end = timeUtil.FindWeekTimeRange(s.getLocation(c))
 	case ViewTypeMonth:
-		start, end = timeUtil.FindMonthRange()
+		start, end = timeUtil.FindMonthRange(s.getLocation(c))
 	default:
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))

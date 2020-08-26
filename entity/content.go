@@ -51,12 +51,13 @@ type ContentID struct {
 type Content struct {
 	ID            string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
 	ContentType   int    `gorm:"type:int;NOTNULL; column: content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
-	Name          string `gorm:"type:char(256);NOT NULL;column:name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
-	Program       string `gorm:"type:varchar(50);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
-	Subject       string `gorm:"type:varchar(50);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
-	Developmental string `gorm:"type:varchar(50);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
-	Skills        string `gorm:"type:varchar(50);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
-	Age           string `gorm:"type:varchar(50);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
+	Name          string `gorm:"type:char(255);NOT NULL;column:name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
+	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
+	Subject       string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
+	Developmental string `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
+	Skills        string `gorm:"type:varchar(1024);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
+	Age           string `gorm:"type:varchar(1024);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
+	Grade         string `gorm:"type:varchar(1024);NOT NULL;column:grade" dynamodbav:"grade" json:"grade" dynamoupdate:":grd"`
 	Keywords      string `gorm:"type:text;NOT NULL;column:keywords" dynamodbav:"keywords" json:"keywords" dynamoupdate:":ky"`
 	Description   string `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
 	Thumbnail     string `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
@@ -75,11 +76,11 @@ type Content struct {
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason" dynamodbav:"reject_reason" json:"reject_reason" dynamoupdate:":rr"`
 	Version      int64  `gorm:"type:int;NOT NULL;column:version" dynamodbav:"version" json:"version" dynamoupdate:":ve"`
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
-	SourceId     string `gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
-	LatestId     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
+	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
+	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 
-	OrgUserId                     string `dynamodbav:"org_user_id" json:"org_user_id" dynamoupdate:":ouid"`
-	ContentTypeOrgIdPublishStatus string `dynamodbav:"ctoips" json:"ctoips" dynamoupdate:":cps"`
+	//OrgUserId                     string `dynamodbav:"org_user_id" json:"org_user_id" dynamoupdate:":ouid"`
+	//ContentTypeOrgIdPublishStatus string `dynamodbav:"ctoips" json:"ctoips" dynamoupdate:":cps"`
 
 	CreatedAt int64 `gorm:"type:bigint;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdatedAt int64 `gorm:"type:bigint;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
@@ -121,8 +122,8 @@ type UpdateDyContent struct {
 	PublishStatus ContentPublishStatus `json:":pst"`
 
 	RejectReason string `json:":rr"`
-	SourceId     string `json:":si"`
-	LatestId     string `json:"lsi"`
+	SourceID     string `json:":si"`
+	LatestID     string `json:"lsi"`
 	Version      int64  `json:":ve"`
 
 	OrgUserId                     string `json:":ouid"`
@@ -168,11 +169,12 @@ func (s Content) GetID() interface{} {
 type CreateContentRequest struct {
 	ContentType   int      `json:"content_type"`
 	Name          string   `json:"name"`
-	Program       string   `json:"program"`
-	Subject       string   `json:"subject"`
-	Developmental string   `json:"developmental"`
-	Skills        string   `json:"skills"`
-	Age           string   `json:"age"`
+	Program       []string   `json:"program"`
+	Subject       []string   `json:"subject"`
+	Developmental []string   `json:"developmental"`
+	Skills        []string   `json:"skills"`
+	Age           []string   `json:"age"`
+	Grade			[]string `json:"grade"`
 	Keywords      []string `json:"keywords"`
 	Description   string   `json:"description"`
 	Thumbnail     string   `json:"thumbnail"`
@@ -188,11 +190,12 @@ type CreateContentRequest struct {
 type ContentInfoWithDetails struct {
 	ContentInfo
 	ContentTypeName   string `json:"content_type_name"`
-	ProgramName       string `json:"program_name"`
-	SubjectName       string `json:"subject_name"`
-	DevelopmentalName string `json:"developmental_name"`
-	SkillsName        string `json:"skills_name"`
-	AgeName           string `json:"age_name"`
+	ProgramName       []string `json:"program_name"`
+	SubjectName       []string `json:"subject_name"`
+	DevelopmentalName []string `json:"developmental_name"`
+	SkillsName        []string `json:"skills_name"`
+	AgeName           []string `json:"age_name"`
+	GradeName			[]string `json:"grade_name"`
 	OrgName           string `json:"org_name"`
 }
 
@@ -200,11 +203,12 @@ type ContentInfo struct {
 	ID            string   `json:"id"`
 	ContentType   int      `json:"content_type"`
 	Name          string   `json:"name"`
-	Program       string   `json:"program"`
-	Subject       string   `json:"subject"`
-	Developmental string   `json:"developmental"`
-	Skills        string   `json:"skills"`
-	Age           string   `json:"age"`
+	Program       []string   `json:"program"`
+	Subject       []string   `json:"subject"`
+	Developmental []string   `json:"developmental"`
+	Skills        []string   `json:"skills"`
+	Age           []string   `json:"age"`
+	Grade		 []string `json:"grade"`
 	Keywords      []string `json:"keywords"`
 	Description   string   `json:"description"`
 	Thumbnail     string   `json:"thumbnail"`

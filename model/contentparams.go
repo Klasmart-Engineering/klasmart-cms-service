@@ -23,7 +23,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		return nil, err
 	}
 
-	//获取publishScope&authorName
+	//get publishScope&authorName
 	publishScope := operator.OrgID
 	authorName := operator.UserID
 
@@ -31,11 +31,11 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
 		Name:          c.Name,
-		Program:       c.Program,
-		Subject:       c.Subject,
-		Developmental: c.Developmental,
-		Skills:        c.Skills,
-		Age:           c.Age,
+		Program:       strings.Join(c.Program, ","),
+		Subject:       strings.Join(c.Subject, ","),
+		Developmental: strings.Join(c.Developmental, ","),
+		Skills:        strings.Join(c.Skills, ","),
+		Age:           strings.Join(c.Age, ","),
 		Keywords:      strings.Join(c.Keywords, ","),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
@@ -60,20 +60,20 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.ContentType > 0 && data.Data != nil{
 		content.ContentType = data.ContentType
 	}
-	if data.Program != "" {
-		content.Program = data.Program
+	if data.Program != nil {
+		content.Program = strings.Join(data.Program, ",")
 	}
-	if data.Subject != "" {
-		content.Subject = data.Subject
+	if data.Subject != nil {
+		content.Subject = strings.Join(data.Subject, ",")
 	}
-	if data.Developmental != "" {
-		content.Developmental = data.Developmental
+	if data.Developmental != nil {
+		content.Developmental = strings.Join(data.Developmental, ",")
 	}
-	if data.Skills != "" {
-		content.Skills = data.Skills
+	if data.Skills != nil {
+		content.Skills = strings.Join(data.Skills, ",")
 	}
-	if data.Age != "" {
-		content.Age = data.Age
+	if data.Age != nil {
+		content.Age = strings.Join(data.Age, ",")
 	}
 	if data.Description != "" {
 		content.Description = data.Description
@@ -113,7 +113,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 }
 
 func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
-	content.SourceId = content.ID
+	content.SourceID = content.ID
 	content.Version = content.Version + 1
 	content.ID = ""
 	content.LockedBy = "-"
@@ -124,7 +124,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 }
 
 
-func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) (*entity.Content, error) {
+func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) *entity.Content {
 	switch publishStatus {
 	case entity.ContentStatusPublished:
 		content.PublishStatus = entity.ContentStatusArchive
@@ -134,5 +134,5 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 		now := time.Now()
 		content.DeletedAt = now.Unix()
 	}
-	return content, nil
+	return content
 }

@@ -115,7 +115,7 @@ func (s Server) getTagByID(c *gin.Context) {
 func (s Server) queryTag(c *gin.Context) {
 	ctx := c.Request.Context()
 	condition := new(da.TagCondition)
-	condition.Pager = utils.GetPager(c.Query("page"), c.Query("page_size"))
+	condition.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 	name := c.Query("name")
 	condition.Name = entity.NullString{
 		String: name,

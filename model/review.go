@@ -31,9 +31,9 @@ func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, 
 
 	// 2. get ContentModel
 	cm := new(ContentModel)
-	content, err := cm.GetContentById(ctx, tx, cid, user)
+	content, err := cm.GetContentByID(ctx, tx, cid, user)
 	if err != nil {
-		log.Error(ctx, "Approve: GetContentById failed: ", log.Err(err))
+		log.Error(ctx, "Approve: GetContentByID failed: ", log.Err(err))
 		return err
 	}
 	err = content.SetStatus(entity.ContentStatusPublished)
@@ -61,9 +61,9 @@ func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, r
 
 	// 2. get ContentModel
 	cm := new(ContentModel)
-	content, err := cm.GetContentById(ctx, tx, cid, user)
+	content, err := cm.GetContentByID(ctx, tx, cid, user)
 	if err != nil {
-		log.Error(ctx, "Reject: GetContentById failed: ", log.Err(err))
+		log.Error(ctx, "Reject: GetContentByID failed: ", log.Err(err))
 		return err
 	}
 	err = content.SetStatus(entity.ContentStatusRejected)

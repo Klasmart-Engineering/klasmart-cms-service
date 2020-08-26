@@ -38,8 +38,8 @@ type DyContentDA struct {
 func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (string, error) {
 	now := time.Now()
 	co.ID = utils.NewID()
-	co.OrgUserId = co.Org + co.ID
-	co.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
+	//co.OrgUserId = co.Org + co.ID
+	//co.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
 	co.UpdatedAt = now.Unix()
 	co.CreatedAt = now.Unix()
 	dyMap, err := dynamodbattribute.MarshalMap(co)
@@ -233,11 +233,11 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		AuthorName:    co.AuthorName,
 		Org:           co.Org,
 		PublishScope:  co.PublishScope,
-		SuggestTime: 	co.SuggestTime,
+		SuggestTime:   co.SuggestTime,
 		PublishStatus: co.PublishStatus,
 		RejectReason:  co.RejectReason,
-		SourceId:      co.SourceId,
-		LatestId:      co.LatestId,
+		SourceID:      co.SourceID,
+		LatestID:      co.LatestID,
 		LockedBy:      co.LockedBy,
 		Version:       co.Version,
 		CreatedAt:     co.CreatedAt,
@@ -303,11 +303,11 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	if co.RejectReason == "" {
 		co0.RejectReason = content.RejectReason
 	}
-	if co.SourceId == "" {
-		co0.SourceId = content.SourceId
+	if co.SourceID == "" {
+		co0.SourceID = content.SourceID
 	}
-	if co.LatestId == "" {
-		co0.LatestId = content.LatestId
+	if co.LatestID == "" {
+		co0.LatestID = content.LatestID
 	}
 	if co.LockedBy == "" {
 		co0.LockedBy = content.LockedBy
@@ -315,9 +315,9 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	if co.Version == 0 {
 		co0.Version = content.Version
 	}
-	if co.OrgUserId == "" {
-		co0.OrgUserId = content.OrgUserId
-	}
+	//if co.OrgUserId == "" {
+	//	co0.OrgUserId = content.OrgUserId
+	//}
 	if co.CreatedAt == 0 {
 		co0.CreatedAt = content.CreatedAt
 	}
