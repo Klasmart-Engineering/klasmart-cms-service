@@ -14,11 +14,7 @@ import (
 )
 
 func (s Server) addTag(c *gin.Context) {
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
-		return
-	}
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.TagAddView)
 	err := c.ShouldBindJSON(data)
@@ -49,11 +45,7 @@ func (s Server) addTag(c *gin.Context) {
 }
 
 func (s Server) delTag(c *gin.Context) {
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
-		return
-	}
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	err := model.GetTagModel().DeleteSoft(ctx, op, c.Param("id"))
 	if err != nil {
@@ -64,11 +56,7 @@ func (s Server) delTag(c *gin.Context) {
 }
 
 func (s Server) updateTag(c *gin.Context) {
-	op, exist := GetOperator(c)
-	if !exist {
-		c.JSON(http.StatusBadRequest, responseMsg("operate not exist"))
-		return
-	}
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	ID := c.Param("id")
 	data := new(entity.TagUpdateView)
