@@ -296,7 +296,7 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("author")
-	if author == "self"{
+	if author == "{self}"{
 		author = u.UserID
 	}
 	return author
@@ -304,7 +304,7 @@ func parseAuthor(c *gin.Context, u *entity.Operator) string {
 
 func parseOrg(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("org")
-	if author == "self"{
+	if author == "{self}"{
 		author = u.OrgID
 	}
 	return author
