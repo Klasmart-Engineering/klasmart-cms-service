@@ -210,14 +210,14 @@ type Schedule struct {
 	ClassType   string `gorm:"column:class_type;type:varchar(100)"`
 	DueAt       int64  `gorm:"column:due_at;type:bigint"`
 	Description string `gorm:"column:description;type:varchar(500)"`
-	Attachment  string `gorm:"column:attachment_id;type:varchar(500)"`
+	Attachment  string `gorm:"column:attachment_url;type:varchar(500)"`
 	Version     int64  `gorm:"column:version;type:bigint"`
 	RepeatID    string `gorm:"column:repeat_id;type:varchar(100)"`
 	//Repeat       RepeatOptions `dynamodbav:"repeat"`
 	RepeatJson string `gorm:"column:repeat;type:varchar(500)"`
 	CreatedID  string `gorm:"column:created_id;type:varchar(100)"`
 	UpdatedID  string `gorm:"column:updated_id;type:varchar(100)"`
-	DeletedID  string `gorm:"column:position;type:varchar(100)"`
+	DeletedID  string `gorm:"column:deleted_id;type:varchar(100)"`
 	CreatedAt  int64  `gorm:"column:created_at;type:bigint"`
 	UpdatedAt  int64  `gorm:"column:updated_at;type:bigint"`
 	DeletedAt  int64  `gorm:"column:deleted_at;type:bigint"`

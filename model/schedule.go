@@ -75,7 +75,6 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 			tsItem := &entity.ScheduleTeacher{
 				TeacherID:  teacherID,
 				ScheduleID: schedule.ID,
-				StartAt:    schedule.StartAt,
 			}
 			scheduleTeachers[index] = tsItem
 			index++
