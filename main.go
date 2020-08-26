@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -18,8 +19,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 )
 
-func initDB(){
-	if config.Get().DBConfig.DBMode == "mysql"{
+func initDB() {
+	if config.Get().DBConfig.DBMode == "mysql" {
 		dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
 			dbConf := config.Get().DBConfig
 			c.ShowLog = dbConf.ShowLog
@@ -28,40 +29,51 @@ func initDB(){
 			c.MaxOpenConns = dbConf.MaxOpenConns
 			c.ConnectionString = dbConf.ConnectionString
 		})
-		if err != nil{
+		if err != nil {
 			log.Error(context.TODO(), "create dbo failed", log.Err(err))
 			panic(err)
 		}
 		dbo.ReplaceGlobal(dboHandler)
-	}else{
+	} else {
 		dynamodb.GetClient()
 	}
 }
-func initCache(){
+func initCache() {
 	if config.Get().RedisConfig.OpenCache {
 		ro.SetConfig(&redis.Options{
-			Addr:               fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-			Password:           config.Get().RedisConfig.Password,
+			Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
+			Password: config.Get().RedisConfig.Password,
 		})
 	}
 }
 
 func main() {
+	log.Info(context.TODO(), "start kidsloop2 api service")
+	defer func() {
+		log.Info(context.TODO(), "kidsloop2 api service stopped")
+	}()
+
 	//获取数据库连接
 	config.LoadEnvConfig()
 
+	log.Debug(context.TODO(), "load config success", log.Any("config", config.Get()))
+
 	//设置数据库配置
 	initDB()
+
+	log.Debug(context.TODO(), "init db success")
 	initCache()
 
+	log.Debug(context.TODO(), "init cache success")
 	// init dynamodb connection
 	storage.DefaultStorage()
 
-	log.Info(context.TODO(), "start kidsloop2 api service")
-	defer log.Info(context.TODO(), "kidsloop2 api service stopped")
+	log.Debug(context.TODO(), "init storage success")
 
-	common.Setenv(common.EnvHTTP)
+	common.Setenv(common.EnvLAMBDA)
 	go common.RunWithHTTPHandler(api.NewServer(), ":8088")
+
+	log.Debug(context.TODO(), "init api server success")
 
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
