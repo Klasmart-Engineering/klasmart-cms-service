@@ -29,7 +29,7 @@ func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBCo
 			item.ID,
 			item.ScheduleID,
 			item.TeacherID,
-			item.DeletedAt,
+			item.DeleteAt,
 		})
 	}
 	sql := SQLBatchInsert(constant.TableNameScheduleTeacher, []string{"id", "schedule_id", "teacher_id", "delete_at"}, data)
