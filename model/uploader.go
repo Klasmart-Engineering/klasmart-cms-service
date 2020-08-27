@@ -4,12 +4,13 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"strings"
 	"sync"
 )
 
 type IResourceUploaderModel interface{
 	GetResourceUploadPath(ctx context.Context, partition string, extension string) (string, string, error)
-	GetResourcePath(ctx context.Context, partition string, name string) (string, error)
+	GetResourcePath(ctx context.Context, resourceId string) (string, error)
 }
 
 type ResourceUploaderModel struct {
@@ -22,11 +23,15 @@ func (r *ResourceUploaderModel) GetResourceUploadPath(ctx context.Context, parti
 	if err != nil{
 		return "", "", err
 	}
-	return fileName, path, nil
+	return partition + "-" + fileName, path, nil
 }
 
-func (r *ResourceUploaderModel) GetResourcePath(ctx context.Context, partition string, name string) (string, error) {
-	return storage.DefaultStorage().GetFileTempPath(ctx, partition, name)
+func (r *ResourceUploaderModel) GetResourcePath(ctx context.Context, resourceId string) (string, error) {
+	parts := strings.Split(resourceId, "-")
+	if len(parts) != 2 {
+		return "", ErrInvalidResourceId
+	}
+	return storage.DefaultStorage().GetFileTempPath(ctx, parts[0], parts[1])
 }
 var (
 	_uploaderModel     IResourceUploaderModel

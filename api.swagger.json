@@ -883,7 +883,7 @@
         }
       }
     },
-    "/contents_resources": {
+    "/contents_resources/{resource_id}": {
       "get": {
         "tags": [
           "content"
@@ -892,19 +892,9 @@
         "operationId": "getContentResourcePath",
         "parameters": [
           {
-            "name": "partition",
-            "in": "query",
-            "description": "Resource partition",
-            "schema": {
-              "type": "string",
-              "enum": ["assets", "thumbnail"],
-              "nullable": false
-            }
-          },
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Resource name",
+            "name": "resource_id",
+            "in": "param",
+            "description": "Resource id",
             "schema": {
               "type": "string",
               "nullable": false
@@ -912,22 +902,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "resource path info",
-                  "properties": {
-                    "path": {
-                      "type": "string",
-                      "description": "resource path"
-                    }
-                  }
-                }
-              }
-            }
+          "302": {
+            "description": "Found"
           },
           "500": {
             "description": "Internal Server Error"
@@ -935,7 +911,7 @@
         }
       }
     },
-    "/contents_resources/upload": {
+    "/contents_resources": {
       "get": {
         "tags": [
           "content"
@@ -976,9 +952,9 @@
                       "type": "string",
                       "description": "resource path"
                     },
-                    "name": {
+                    "resource_id": {
                       "type": "string",
-                      "description": "resource name"
+                      "description": "resource id"
                     }
                   }
                 }

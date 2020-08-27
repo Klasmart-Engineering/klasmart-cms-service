@@ -68,8 +68,8 @@ func (s Server) registeRoute() {
 		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)
 
-		content.GET("/contents_resources/upload", MustLogin, s.GetUploadPath)
-		content.GET("/contents_resources", MustLogin, s.GetPath)
+		content.GET("/contents_resources", MustLogin, s.GetUploadPath)
+		content.GET("/contents_resources/{resource_id}", MustLogin, s.GetPath)
 	}
 	schedules := s.engine.Group("/v1")
 	{
