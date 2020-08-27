@@ -978,7 +978,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:       *contentList[i],
-			ContentTypeName:   entity.GetContentTypeName(contentList[i].ContentType),
+			ContentTypeName:   contentList[i].ContentType.Name(),
 			ProgramName:       programNames,
 			SubjectName:       subjectNames,
 			DevelopmentalName: developmentalNames,

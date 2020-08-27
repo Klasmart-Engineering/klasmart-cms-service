@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func CreateContentData(ctx context.Context, contentType int, data string) (entity.ContentData, error) {
+func CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
 	var contentData entity.ContentData
 	switch contentType {
 	case entity.ContentTypeLesson:

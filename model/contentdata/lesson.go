@@ -68,7 +68,7 @@ func (l *LessonData) SubContentIds(ctx context.Context) ([]string ,error){
 	return materialList, nil
 }
 
-func (l *LessonData) Validate(ctx context.Context, contentType int) error {
+func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentType) error {
 	if contentType != entity.ContentTypeLesson {
 		return ErrInvalidContentType
 	}

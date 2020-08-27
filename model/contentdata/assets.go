@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 )
 
@@ -42,7 +43,7 @@ func (a *AssetsData) SubContentIds(ctx context.Context) ([]string ,error){
 	return nil, nil
 }
 
-func (a *AssetsData) Validate(ctx context.Context, contentType int) error {
+func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentType) error {
 	if strings.TrimSpace(a.Source) == "" {
 		log.Error(ctx, "marshal material failed", log.String("source", a.Source))
 		return errors.New("assets: require source")

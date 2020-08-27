@@ -43,7 +43,7 @@ func (this *MaterialData) Marshal(ctx context.Context) (string, error) {
 	return string(data), nil
 }
 
-func (this *MaterialData) Validate(ctx context.Context, contentType int) error {
+func (this *MaterialData) Validate(ctx context.Context, contentType entity.ContentType) error {
 	if contentType != entity.ContentTypeMaterial {
 		return ErrInvalidContentType
 	}
