@@ -154,9 +154,9 @@ func (s *Server) querySchedule(c *gin.Context) {
 		startAt = utils.BeginOfDayByTimeStamp(time.Now().Unix(), s.getLocation(c)).Unix()
 	}
 	startAt = utils.BeginOfDayByTimeStamp(startAt, s.getLocation(c)).Unix()
-	condition.StartAtLe = sql.NullInt64{
+	condition.StartAtGe = sql.NullInt64{
 		Int64: startAt,
-		Valid: startAt == 0,
+		Valid: startAt > 0,
 	}
 
 	condition.OrgID = sql.NullString{
@@ -249,16 +249,19 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 			String: op.OrgID,
 			Valid:  op.OrgID != "",
 		},
-		StartAtLe: sql.NullInt64{
-			Int64: start,
-			Valid: start > 0,
-		},
-		EndAtGe: sql.NullInt64{
-			Valid: end > 0,
-			Int64: end,
+		StartAndEndRange: []sql.NullInt64{
+			sql.NullInt64{
+				Int64: start,
+				Valid: start > 0,
+			},
+			sql.NullInt64{
+				Int64: end,
+				Valid: end > 0,
+			},
 		},
 	}
 
+	log.Debug(ctx, "condition info", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 	result, err := model.GetScheduleModel().Query(ctx, dbo.MustGetDB(ctx), condition)
 	if err == nil {
 		c.JSON(http.StatusOK, result)

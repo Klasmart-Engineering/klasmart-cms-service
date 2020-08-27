@@ -266,9 +266,7 @@ type ScheduleAddView struct {
 	IsForce      bool          `json:"is_force"`
 }
 
-func (s *ScheduleAddView) Convert() *Schedule {
-	repeatJson, _ := json.Marshal(s.Repeat)
-
+func (s *ScheduleAddView) Convert() (*Schedule, error) {
 	schedule := &Schedule{
 		Title:        s.Title,
 		ClassID:      s.ClassID,
@@ -283,17 +281,24 @@ func (s *ScheduleAddView) Convert() *Schedule {
 		Description:  s.Description,
 		Attachment:   s.Attachment,
 		Version:      0,
-		RepeatJson:   string(repeatJson),
 		CreatedAt:    time.Now().Unix(),
 		UpdatedAt:    0,
 		RepeatID:     s.RepeatID,
 		IsAllDay:     s.IsAllDay,
 	}
-	if schedule.RepeatID == "" {
-		schedule.RepeatID = utils.NewID()
+	if s.IsRepeat {
+		b, err := json.Marshal(s.Repeat)
+		if err != nil {
+			return nil, err
+		}
+		schedule.RepeatJson = string(b)
+
+		if schedule.RepeatID == "" {
+			schedule.RepeatID = utils.NewID()
+		}
 	}
 
-	return schedule
+	return schedule, nil
 }
 
 type ScheduleUpdateView struct {

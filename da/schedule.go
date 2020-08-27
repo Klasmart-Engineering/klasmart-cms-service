@@ -83,7 +83,7 @@ func GetScheduleDA() IScheduleDA {
 
 type ScheduleCondition struct {
 	OrgID            sql.NullString
-	StartAtLe        sql.NullInt64
+	StartAtGe        sql.NullInt64
 	EndAtGe          sql.NullInt64
 	TeacherID        sql.NullString
 	TeacherIDs       entity.NullStrings
@@ -105,9 +105,9 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.OrgID.String)
 	}
 
-	if c.StartAtLe.Valid {
-		wheres = append(wheres, "start_at <= ?")
-		params = append(params, c.StartAtLe.Int64)
+	if c.StartAtGe.Valid {
+		wheres = append(wheres, "start_at >= ?")
+		params = append(params, c.StartAtGe.Int64)
 	}
 	if len(c.StartAndEndRange) == 2 {
 		startRange := c.StartAndEndRange[0]
