@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
@@ -19,6 +20,7 @@ func (s *Server) createContent(c *gin.Context) {
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
+		log.Error(ctx, "create content failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
