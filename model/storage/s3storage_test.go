@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func InitEnv(){
+func InitEnv() {
 	os.Setenv("cloud_env", "aws")
 	os.Setenv("storage_bucket", "kidsloop-global-resources-dev")
 	os.Setenv("storage_region", "ap-northeast-2")
@@ -27,18 +27,18 @@ func TestS3Storage_ExitsFile(t *testing.T) {
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
 
-	_, ret := storage.ExitsFile(context.Background(), "asset", "5f225eeee763b300cf63cb901.jpg")
+	_, ret := storage.ExistFile(context.Background(), "asset", "5f225eeee763b300cf63cb901.jpg")
 	t.Log(ret)
-	_, ret = storage.ExitsFile(context.Background(), "asset", "5f225eeee763b300cf63cb90.jpg")
+	_, ret = storage.ExistFile(context.Background(), "asset", "5f225eeee763b300cf63cb90.jpg")
 	t.Log(ret)
 }
 
-func TestCDNSignature(t *testing.T){
+func TestCDNSignature(t *testing.T) {
 	InitEnv()
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
 	path, err := storage.GetFileTempPath(context.Background(), "ESL/Songs", "abby_cadabra_720p.mp4")
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 		return
 	}
