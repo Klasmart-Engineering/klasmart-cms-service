@@ -408,8 +408,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
-		// TODO
-		// return nil, err
+		return nil, err
 	}
 	for _, item := range lessonPlans {
 		lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{

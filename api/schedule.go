@@ -95,8 +95,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
-		c.JSON(http.StatusBadRequest, err.Error())
 		log.Info(ctx, "add schedule: should bind body failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 	data.OrgID = op.OrgID
@@ -113,17 +113,17 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 	if err == constant.ErrFileNotFound {
-		c.JSON(http.StatusBadRequest, err.Error())
 		log.Info(ctx, "add schedule: verify data failed,attachment not found", log.Err(err), log.Any("requestData", data))
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 	if err == constant.ErrConflict {
-		c.JSON(http.StatusConflict, err.Error())
 		log.Info(ctx, "add schedule: schedule start_at or end_at conflict", log.Err(err), log.Any("requestData", data))
+		c.JSON(http.StatusConflict, err.Error())
 		return
 	}
-	c.JSON(http.StatusInternalServerError, err.Error())
 	log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", data))
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -138,8 +138,8 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, err.Error())
 		return
 	}
-	c.JSON(http.StatusInternalServerError, err.Error())
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
 func (s *Server) querySchedule(c *gin.Context) {
 	op := GetOperator(c)
@@ -168,11 +168,11 @@ func (s *Server) querySchedule(c *gin.Context) {
 	if strings.TrimSpace(teacherName) != "" {
 		teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, teacherName)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, err.Error())
 			log.Info(ctx, "get teacher info by name error",
 				log.Err(err),
 				log.String("teacherName", teacherName),
 				log.Any("condition", condition))
+			c.JSON(http.StatusInternalServerError, err.Error())
 			return
 		}
 		if len(teachers) <= 0 {
@@ -194,8 +194,8 @@ func (s *Server) querySchedule(c *gin.Context) {
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 	total, result, err := model.GetScheduleModel().Page(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
 		log.Error(ctx, "querySchedule:error", log.Any("condition", condition), log.Err(err))
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -240,8 +240,8 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	case ViewTypeMonth:
 		start, end = timeUtil.FindMonthRange(s.getLocation(c))
 	default:
-		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
+		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		return
 	}
 	condition := &da.ScheduleCondition{
@@ -265,12 +265,12 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		return
 	}
 	if err == constant.ErrRecordNotFound {
-		c.JSON(http.StatusNotFound, err.Error())
 		log.Info(ctx, "record not found", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
+		c.JSON(http.StatusNotFound, err.Error())
 		return
 	}
-	c.JSON(http.StatusInternalServerError, err.Error())
 	log.Info(ctx, "record not found", log.Err(err), log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
+	c.JSON(http.StatusInternalServerError, err.Error())
 }
 
 func (s *Server) getAttachmentUploadPath(c *gin.Context) {

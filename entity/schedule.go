@@ -195,11 +195,13 @@ type RepeatEnd struct {
 	AfterTime  int64         `json:"after_time"`
 }
 
+type ScheduleClassType string
+
 const (
-	ScheduleClassTypeOnlineClass  = "OnlineClass"
-	ScheduleClassTypeOfflineClass = "OfflineClass"
-	ScheduleClassTypeHomework     = "Homework"
-	ScheduleClassTypeTask         = "Task"
+	ScheduleClassTypeOnlineClass  ScheduleClassType = "OnlineClass"
+	ScheduleClassTypeOfflineClass ScheduleClassType = "OfflineClass"
+	ScheduleClassTypeHomework     ScheduleClassType = "Homework"
+	ScheduleClassTypeTask         ScheduleClassType = "Task"
 )
 
 type Schedule struct {
