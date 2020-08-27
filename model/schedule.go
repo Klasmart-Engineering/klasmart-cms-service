@@ -109,10 +109,12 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operat
 }
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView, location *time.Location) (string, error) {
 	// validate attachment
-	_, exits := storage.DefaultStorage().ExitsFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
-	if !exits {
-		log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", viewData))
-		return "", constant.ErrFileNotFound
+	if viewData.Attachment != "" {
+		_, exist := storage.DefaultStorage().ExistFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
+		if !exist {
+			log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", viewData))
+			return "", constant.ErrFileNotFound
+		}
 	}
 
 	// is force add

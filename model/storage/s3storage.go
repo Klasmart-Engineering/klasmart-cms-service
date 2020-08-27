@@ -37,8 +37,8 @@ type S3Storage struct {
 }
 
 type CDNServiceRequest struct {
-	URL      string `json:"domain"`
-	Duration int    `json:"durationSeconds"`
+	URL       string   `json:"domain"`
+	Duration  int      `json:"durationSeconds"`
 	FilePaths []string `json:"filePaths"`
 }
 
@@ -49,7 +49,6 @@ type CDNServiceResponse struct {
 type CDNServiceResult struct {
 	SignedURL string `json:"signedUrl"`
 }
-
 
 func (s *S3Storage) OpenStorage(ctx context.Context) error {
 	//在~/.aws/credentials文件中保存secretId和secretKey
@@ -174,13 +173,13 @@ func (s *S3Storage) DownloadFile(ctx context.Context, partition string, filePath
 	return buffer, nil
 }
 
-func (s *S3Storage) ExitsFile(ctx context.Context, partition string, filePath string) (int64, bool) {
+func (s *S3Storage) ExistFile(ctx context.Context, partition string, filePath string) (int64, bool) {
 	//_, err := s.DownloadFile(ctx, partition, filePath)
 	path := fmt.Sprintf("%s/%s", partition, filePath)
 	svc := s3.New(s.session)
 	res, err := svc.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key: aws.String(path),
+		Key:    aws.String(path),
 	})
 
 	if err != nil {
@@ -325,7 +324,7 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("charset", "utf-8")
-	request.Header.Set("Authorization", "Bearer " + cdnConf.CDNServiceToken)
+	request.Header.Set("Authorization", "Bearer "+cdnConf.CDNServiceToken)
 
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -340,7 +339,7 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 	if err != nil {
 		return "", err
 	}
-	if len(respData.Result) < 1{
+	if len(respData.Result) < 1 {
 		return "", ErrInvalidCDNSignatureServiceResponse
 	}
 

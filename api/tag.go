@@ -72,7 +72,7 @@ func (s Server) updateTag(c *gin.Context) {
 		log.Info(ctx, "tag name is empty")
 		return
 	}
-	if data.States != constant.Enable || data.States != constant.Disabled {
+	if data.States != constant.Enable && data.States != constant.Disabled {
 		c.JSON(http.StatusBadRequest, errors.New("tag states is invalid"))
 		log.Info(ctx, "tag states is invalid")
 		return
