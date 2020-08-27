@@ -31,6 +31,9 @@ func (s *Server) createContent(c *gin.Context) {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
@@ -98,7 +101,7 @@ func (s *Server) GetContent(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
+	result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -125,6 +128,9 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}

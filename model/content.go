@@ -22,7 +22,7 @@ type IContentModel interface {
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
 	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
-	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
+	DeleteContent(ctx context.Context, tx  *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 
 	PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error
@@ -34,7 +34,7 @@ type IContentModel interface {
 	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
-	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
+	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content , user *entity.Operator) error
 
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -978,7 +978,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:       *contentList[i],
-			ContentTypeName:   entity.GetContentTypeName(contentList[i].ContentType),
+			ContentTypeName:   contentList[i].ContentType.Name(),
 			ProgramName:       programNames,
 			SubjectName:       subjectNames,
 			DevelopmentalName: developmentalNames,
