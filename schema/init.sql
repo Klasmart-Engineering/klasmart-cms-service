@@ -1,5 +1,5 @@
 CREATE TABLE `cms_contents` (
-   `content_id` VARCHAR(50) NOT  NULL  COMMENT  'content_id',
+   `id` VARCHAR(50) NOT  NULL  COMMENT  'content_id',
    `content_type` int  NOT  NULL  COMMENT  '数据类型',
    `content_name` VARCHAR( 255) NOT  NULL  COMMENT  '内容名称',
    `program` VARCHAR( 1024) NOT  NULL  COMMENT  'program',
