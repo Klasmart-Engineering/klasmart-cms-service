@@ -114,7 +114,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	if err == constant.ErrFileNotFound {
 		c.JSON(http.StatusBadRequest, err.Error())
-		log.Info(ctx, "add schedule: verify data failed", log.Err(err), log.Any("requestData", data))
+		log.Info(ctx, "add schedule: verify data failed,attachment not found", log.Err(err), log.Any("requestData", data))
 		return
 	}
 	if err == constant.ErrConflict {
@@ -146,12 +146,8 @@ func (s *Server) querySchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	condition := new(da.ScheduleCondition)
 	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
-	teacherName := c.Query("teacher_name")
-	if strings.TrimSpace(teacherName) == "" {
-		c.JSON(http.StatusBadRequest, errors.New("teacherName is empty"))
-		return
-	}
 	condition.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
+
 	startAtStr := c.Query("start_at")
 	startAt, err := strconv.ParseInt(startAtStr, 10, 64)
 	if err != nil {
@@ -162,33 +158,40 @@ func (s *Server) querySchedule(c *gin.Context) {
 		Int64: startAt,
 		Valid: startAt == 0,
 	}
+
 	condition.OrgID = sql.NullString{
 		String: op.OrgID,
 		Valid:  op.OrgID != "",
 	}
-	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 
-	teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, teacherName)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
-		log.Info(ctx, "get teacher info by name error", log.Err(err), log.String("teacherName", teacherName), log.Any("condition", condition))
-		return
-	}
-	if len(teachers) <= 0 {
-		log.Info(ctx, "querySchedule:teacher info not found", log.String("teacherName", teacherName), log.Any("condition", condition))
-		c.JSON(http.StatusBadRequest, "teacher info not found")
-		return
-	}
-	teacherIDs := make([]string, len(teachers))
-	for i, item := range teachers {
-		teacherIDs[i] = item.ID
-	}
-	condition.TeacherIDs = entity.NullStrings{
-		Valid:   len(teacherIDs) > 0,
-		Strings: teacherIDs,
+	teacherName := c.Query("teacher_name")
+	if strings.TrimSpace(teacherName) != "" {
+		teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, teacherName)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, err.Error())
+			log.Info(ctx, "get teacher info by name error",
+				log.Err(err),
+				log.String("teacherName", teacherName),
+				log.Any("condition", condition))
+			return
+		}
+		if len(teachers) <= 0 {
+			log.Info(ctx, "querySchedule:teacher info not found",
+				log.String("teacherName", teacherName),
+				log.Any("condition", condition))
+			c.JSON(http.StatusBadRequest, "teacher info not found")
+			return
+		}
+		teacherIDs := make([]string, len(teachers))
+		for i, item := range teachers {
+			teacherIDs[i] = item.ID
+		}
+		condition.TeacherIDs = entity.NullStrings{
+			Valid:   len(teacherIDs) > 0,
+			Strings: teacherIDs,
+		}
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
-
 	total, result, err := model.GetScheduleModel().Page(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())

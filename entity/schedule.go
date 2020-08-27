@@ -195,6 +195,13 @@ type RepeatEnd struct {
 	AfterTime  int64         `json:"after_time"`
 }
 
+const (
+	ScheduleClassTypeOnlineClass  = "OnlineClass"
+	ScheduleClassTypeOfflineClass = "OfflineClass"
+	ScheduleClassTypeHomework     = "Homework"
+	ScheduleClassTypeTask         = "Task"
+)
+
 type Schedule struct {
 	ID           string `gorm:"column:id;PRIMARY_KEY"`
 	Title        string `gorm:"column:title;type:varchar(100)"`
@@ -237,14 +244,14 @@ func (s Schedule) Clone() Schedule {
 
 type ScheduleAddView struct {
 	Title        string        `json:"title" binding:"required"`
-	ClassID      string        `json:"class_id"`
-	LessonPlanID string        `json:"lesson_plan_id"`
-	TeacherIDs   []string      `json:"teacher_ids"`
-	OrgID        string        `json:"org_id" binding:"required"`
+	ClassID      string        `json:"class_id" binding:"required"`
+	LessonPlanID string        `json:"lesson_plan_id" binding:"required"`
+	TeacherIDs   []string      `json:"teacher_ids" binding:"required"`
+	OrgID        string        `json:"org_id"`
 	StartAt      int64         `json:"start_at" binding:"required"`
 	EndAt        int64         `json:"end_at" binding:"required"`
-	SubjectID    string        `json:"subject_id"`
-	ProgramID    string        `json:"program_id"`
+	SubjectID    string        `json:"subject_id" binding:"required"`
+	ProgramID    string        `json:"program_id" binding:"required"`
 	ClassType    string        `json:"class_type"`
 	DueAt        int64         `json:"due_at"`
 	Description  string        `json:"description"`
