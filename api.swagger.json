@@ -883,6 +883,114 @@
         }
       }
     },
+    "/contents_resources": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource path",
+        "operationId": "getContentResourcePath",
+        "parameters": [
+          {
+            "name": "partition",
+            "in": "query",
+            "description": "Resource partition",
+            "schema": {
+              "type": "string",
+              "enum": ["assets", "thumbnail"],
+              "nullable": false
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Resource name",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "resource path info",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "resource path"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_resources/upload": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource upload path",
+        "operationId": "getContentResourceUploadPath",
+        "parameters": [
+          {
+            "name": "partition",
+            "in": "query",
+            "description": "Resource partition",
+            "schema": {
+              "type": "string",
+              "enum": ["assets", "thumbnail"],
+              "nullable": false
+            }
+          },
+          {
+            "name": "extension",
+            "in": "query",
+            "description": "Resource extension",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "resource path info",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "resource path"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "resource name"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/assets": {
       "get": {
         "tags": [
