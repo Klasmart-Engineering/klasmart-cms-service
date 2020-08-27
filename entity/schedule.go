@@ -228,7 +228,7 @@ type Schedule struct {
 	DeletedID    string `gorm:"column:deleted_id;type:varchar(100)"`
 	CreatedAt    int64  `gorm:"column:created_at;type:bigint"`
 	UpdatedAt    int64  `gorm:"column:updated_at;type:bigint"`
-	DeletedAt    int64  `gorm:"column:delete_at;type:bigint"`
+	DeleteAt     int64  `gorm:"column:delete_at;type:bigint"`
 }
 
 func (Schedule) TableName() string {
