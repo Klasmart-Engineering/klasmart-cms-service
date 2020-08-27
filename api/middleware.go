@@ -33,7 +33,7 @@ const Operator = "_op_"
 func MustLogin(c *gin.Context) {
 	token, err := ExtractSession(c)
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	// TODO: get user info from token
