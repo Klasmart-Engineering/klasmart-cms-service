@@ -1,27 +1,32 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "KidsLoop 2.0 Asset REST API",
-    "description": "Kidsloop 2.0 Asset backend rest api",
-    "version": "1.0.0",
-    "contact": {
-      "email": "peter.yang@badanamu.com.cn"
-    }
+    "title": "KidsLoop 2.0 REST API",
+    "description": "KidsLoop 2.0 backend rest api",
+    "version": "1.0.0"
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:12345/1.0",
-      "description": "local dev"
+      "url": "http://127.0.0.1:12345/v1",
+      "description": "dev"
     },
     {
-      "url": "http://192.168.1.234:12345/1.0",
-      "description": "local test"
+      "url": "https://cp03fzjc58.execute-api.ap-northeast-2.amazonaws.com/v1",
+      "description": "temp test"
+    },
+    {
+      "url": "https://kl2-test.kidsloop.net/v1",
+      "description": "test"
     }
   ],
   "tags": [
     {
       "name": "content",
-      "description": "content tag management"
+      "description": "content management"
+    },
+    {
+      "name": "schedule",
+      "description": "schedule management"
     },
     {
       "name": "asset",
@@ -123,7 +128,16 @@
             "description": "Search order by, default with content_name",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -489,7 +503,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
-              "enum": ["draft", "pending", "published", "rejected", "archive"],
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -578,7 +598,6 @@
         }
       }
     },
-
     "/contents_bulk/publish": {
       "put": {
         "tags": [
@@ -671,7 +690,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
-              "enum": ["draft", "pending", "published", "rejected", "archive"],
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -726,7 +751,16 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -793,7 +827,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
-              "enum": ["draft", "pending", "published", "rejected", "archive"],
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -848,7 +888,16 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -925,7 +974,10 @@
             "description": "Resource partition",
             "schema": {
               "type": "string",
-              "enum": ["assets", "thumbnail"],
+              "enum": [
+                "assets",
+                "thumbnail"
+              ],
               "nullable": false
             }
           },
@@ -2708,7 +2760,6 @@
                 "type": "string",
                 "description": "content published scope list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-
               }
             }
           }
@@ -2723,8 +2774,8 @@
               "id": {
                 "type": "array",
                 "description": "content id list",
-                "items":{
-                  "type":"string"
+                "items": {
+                  "type": "string"
                 },
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
@@ -2780,7 +2831,13 @@
               },
               "publish_status": {
                 "type": "string",
-                "enum": ["draft", "pending", "published", "rejected", "archive"],
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
                 "description": "content published status list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
@@ -2968,7 +3025,13 @@
               "publish_status": {
                 "type": "string",
                 "description": "content publish status",
-                "enum": ["draft", "pending", "published", "rejected", "archive"],
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
                 "example": "published"
               },
               "content_type_name": {
@@ -3290,9 +3353,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "sun",
+                        "mon",
+                        "tue",
+                        "wed",
+                        "thu",
+                        "fri",
+                        "sat"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3442,6 +3513,14 @@
           "is_force": {
             "type": "boolean",
             "description": "If true, skip the conflict detection"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule will repeat"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
           }
         }
       },
@@ -3528,9 +3607,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "sun",
+                        "mon",
+                        "tue",
+                        "wed",
+                        "thu",
+                        "fri",
+                        "sat"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3680,6 +3767,14 @@
           "is_force": {
             "type": "boolean",
             "description": "If true, skip the conflict detection"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule will repeat"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
           }
         }
       },
@@ -3759,9 +3854,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "sun",
+                        "mon",
+                        "tue",
+                        "wed",
+                        "thu",
+                        "fri",
+                        "sat"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3904,6 +4007,10 @@
           },
           "attachment": {
             "$ref": "#/components/schemas/CommonShort"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
           }
         }
       },

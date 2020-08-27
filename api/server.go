@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
 
 // Server api server
@@ -18,7 +20,11 @@ func NewServer() *Server {
 		engine: gin.New(),
 	}
 
+	log.Debug(context.TODO(), "init gin success")
+
 	server.registeRoute()
+
+	log.Debug(context.TODO(), "register route success")
 
 	return server
 }

@@ -61,17 +61,19 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 	return false, nil
 }
 
-func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location) (string, error) {
+func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView, options *entity.RepeatOptions, location *time.Location) (string, error) {
+	schedule := viewData.Convert()
+	schedule.CreatedID = op.UserID
 	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
 	}
-	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(schedule.TeacherIDs))
+	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(viewData.TeacherIDs))
 	index := 0
 	for _, item := range scheduleList {
 		item.ID = utils.NewID()
-		for _, teacherID := range item.TeacherIDs {
+		for _, teacherID := range viewData.TeacherIDs {
 			tsItem := &entity.ScheduleTeacher{
 				TeacherID:  teacherID,
 				ScheduleID: schedule.ID,
@@ -106,14 +108,13 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, tx *dbo.DBContext
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView, location *time.Location) (string, error) {
-	schedule := viewData.Convert()
-	schedule.CreatedID = op.UserID
-
 	// validate attachment
-	_, exits := storage.DefaultStorage().ExitsFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
-	if !exits {
-		log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", viewData))
-		return "", constant.ErrFileNotFound
+	if viewData.Attachment != "" {
+		_, exist := storage.DefaultStorage().ExistFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
+		if !exist {
+			log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", viewData))
+			return "", constant.ErrFileNotFound
+		}
 	}
 
 	// is force add
@@ -134,16 +135,18 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 			return "", constant.ErrConflict
 		}
 	}
-	if viewData.Repeat.Type.Valid() {
-		return s.addRepeatSchedule(ctx, tx, schedule, &viewData.Repeat, location)
+	if viewData.IsRepeat {
+		return s.addRepeatSchedule(ctx, op, viewData, &viewData.Repeat, location)
 	} else {
+		schedule := viewData.Convert()
+		schedule.CreatedID = op.UserID
 		schedule.ID = utils.NewID()
 		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 			_, err := da.GetScheduleDA().InsertTx(ctx, tx, schedule)
 			if err != nil {
 				return err
 			}
-			scheduleTeachers := make([]*entity.ScheduleTeacher, len(schedule.TeacherIDs))
+			scheduleTeachers := make([]*entity.ScheduleTeacher, len(viewData.TeacherIDs))
 			for i, item := range viewData.TeacherIDs {
 				scheduleTeacher := &entity.ScheduleTeacher{
 					ID:         utils.NewID(),
@@ -177,14 +180,14 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			log.Error(ctx, "update schedule: check time conflict failed",
 				log.Err(err),
 				log.Any("operator", operator),
-				log.Any("viewdata", viewdata),
+				log.Any("viewData", viewdata),
 			)
 			return "", err
 		}
 		if conflict {
 			log.Info(ctx, "update schedule: time conflict",
 				log.Any("operator", operator),
-				log.Any("viewdata", viewdata),
+				log.Any("viewData", viewdata),
 			)
 			return "", constant.ErrConflict
 		}
@@ -209,6 +212,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			)
 			return err
 		}
+		viewdata.RepeatID = schedule.RepeatID
 		id, err = s.Add(ctx, tx, operator, &viewdata.ScheduleAddView, location)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
@@ -335,12 +339,15 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		teacherIDs         []string
 		teacherMap         map[string]*entity.ScheduleShortInfo
 		scheduleTeacherMap map[string][]string
+		lessonPlanIDs      []string
+		lessonPlanMap      map[string]*entity.ScheduleShortInfo
 	)
 	for _, item := range schedules {
 		classIDs = append(classIDs, item.ClassID)
 		subjectIDs = append(subjectIDs, item.SubjectID)
 		programIDs = append(programIDs, item.ProgramID)
 		scheduleIDs = append(scheduleIDs, item.ID)
+		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 	}
 	classMap, err := s.getClassInfoMapByClassIDs(ctx, classIDs)
 	if err != nil {
@@ -398,17 +405,34 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
+	lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
+		return nil, err
+	}
+	for _, item := range lessonPlans {
+		lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
+			ID:   item.ID,
+			Name: item.Name,
+		}
+	}
 	scheduleBasicMap := make(map[string]*entity.ScheduleBasic)
 	for _, item := range schedules {
-		scheduleBasic := &entity.ScheduleBasic{
-			Class:   *classMap[item.ClassID],
-			Subject: *subjectMap[item.SubjectID],
-			Program: *programMap[item.ProgramID],
-			// TODO LessonPlan
-			LessonPlan: entity.ScheduleShortInfo{},
+		scheduleBasic := &entity.ScheduleBasic{}
+		if v, ok := classMap[item.ClassID]; ok {
+			scheduleBasic.Class = *v
+		}
+		if v, ok := subjectMap[item.SubjectID]; ok {
+			scheduleBasic.Subject = *v
+		}
+		if v, ok := programMap[item.ProgramID]; ok {
+			scheduleBasic.Program = *v
+		}
+		if v, ok := lessonPlanMap[item.LessonPlanID]; ok {
+			scheduleBasic.LessonPlan = *v
 		}
 		tIDs := scheduleTeacherMap[item.ID]
-		scheduleBasic.Teachers = make([]entity.ScheduleShortInfo, 0)
+		scheduleBasic.Teachers = make([]entity.ScheduleShortInfo, 0, len(tIDs))
 		for _, tID := range tIDs {
 			if v, ok := teacherMap[tID]; ok {
 				scheduleBasic.Teachers = append(scheduleBasic.Teachers, *v)
@@ -498,12 +522,12 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	}
 
 	result := &entity.ScheduleDetailsView{
-		ID:      schedule.ID,
-		Title:   schedule.Title,
-		OrgID:   schedule.OrgID,
-		StartAt: schedule.StartAt,
-		EndAt:   schedule.EndAt,
-		//ModeType:    schedule.ModeType,
+		ID:          schedule.ID,
+		Title:       schedule.Title,
+		OrgID:       schedule.OrgID,
+		StartAt:     schedule.StartAt,
+		EndAt:       schedule.EndAt,
+		IsAllDay:    schedule.IsAllDay,
 		ClassType:   schedule.ClassType,
 		DueAt:       schedule.DueAt,
 		Description: schedule.Description,

@@ -70,7 +70,7 @@ func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must b
 	}
 	size := int64(0)
 	if data.assetSource != "" {
-		tempSize, exist := storage.DefaultStorage().ExitsFile(ctx, Asset_Storage_Partition, data.assetSource)
+		tempSize, exist := storage.DefaultStorage().ExistFile(ctx, Asset_Storage_Partition, data.assetSource)
 		if !exist {
 			return -1, ErrNoSuchURL
 		}
@@ -78,7 +78,7 @@ func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must b
 	}
 
 	if data.assetSource != "" {
-		_, exist := storage.DefaultStorage().ExitsFile(ctx, Thumbnail_Storage_Partition, data.thumbnailSource)
+		_, exist := storage.DefaultStorage().ExistFile(ctx, Thumbnail_Storage_Partition, data.thumbnailSource)
 		if !exist {
 			return -1, ErrNoSuchURL
 		}

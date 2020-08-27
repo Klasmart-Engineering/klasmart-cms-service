@@ -73,13 +73,13 @@ func (s Server) registeRoute() {
 	}
 	schedules := s.engine.Group("/v1")
 	{
-		schedules.PUT("/schedules/:id", s.updateSchedule)
-		schedules.DELETE("/schedules/:id", s.deleteSchedule)
-		schedules.POST("/schedules", s.addSchedule)
-		schedules.GET("/schedules/:id", s.getScheduleByID)
-		schedules.GET("/schedules", s.querySchedule)
+		schedules.PUT("/schedules/:id", MustLogin, s.updateSchedule)
+		schedules.DELETE("/schedules/:id", MustLogin, s.deleteSchedule)
+		schedules.POST("/schedules", MustLogin, s.addSchedule)
+		schedules.GET("/schedules/:id", MustLogin, s.getScheduleByID)
+		schedules.GET("/schedules", MustLogin, s.querySchedule)
 		schedules.GET("/schedules_time_view", s.getScheduleTimeView)
-		schedules.GET("/schedule_attachment_upload/:ext", s.getAttachmentUploadPath)
+		schedules.GET("/schedule_attachment_upload/:ext", MustLogin, s.getAttachmentUploadPath)
 	}
 
 }

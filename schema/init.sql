@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   `start_at` bigint(20) NOT NULL COMMENT 'start_at',
   `end_at` bigint(20) NOT NULL COMMENT 'end_at',
   `due_at` bigint(20) DEFAULT NULL COMMENT 'due_at',
+  `status` varchar(100) DEFAULT NULL COMMENT 'status',
+  `is_all_day` BOOLEAN DEFAULT FALSE COMMENT 'is_all_day',
   `description` varchar(500) DEFAULT NULL COMMENT 'description',
   `attachment_url` varchar(500) DEFAULT NULL COMMENT 'attachment_url',
   `version` bigint(20) DEFAULT 0 COMMENT 'version',
