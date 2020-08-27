@@ -57,7 +57,7 @@ func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []strin
 		log.Error(ctx, "Can't get schedule list from cache", log.Err(err))
 		return nil, err
 	}
-	schedules := make([]*entity.ScheduleDetailsView, 0)
+	schedules := make([]*entity.ScheduleDetailsView, 0, len(res))
 	for i := range res {
 		resJSON, ok := res[i].(string)
 		if !ok {
