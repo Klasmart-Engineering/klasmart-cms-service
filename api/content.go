@@ -45,7 +45,7 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"content_id": cid,
+		"id": cid,
 	})
 }
 
@@ -164,7 +164,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"content_id": ncid,
+		"id": ncid,
 	})
 }
 
@@ -259,7 +259,7 @@ func (s *Server) QueryContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
+		"total":  key,
 		"list": results,
 	})
 }
@@ -287,7 +287,7 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
+		"total":  key,
 		"list": results,
 	})
 }
@@ -316,7 +316,7 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
+		"total":  key,
 		"list": results,
 	})
 }

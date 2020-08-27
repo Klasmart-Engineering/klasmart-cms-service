@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
@@ -126,7 +127,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Org)
 	}
 
-	conditions = append(conditions, " deleted_at IS NULL ")
+	conditions = append(conditions, " delete_at = 0")
 	return conditions, params
 }
 func (s *ContentCondition) GetPager() *dbo.Pager {
@@ -146,13 +147,13 @@ func NewContentOrderBy(orderby string) ContentOrderBy {
 		return ContentOrderById
 	case "-id":
 		return ContentOrderByIdDesc
-	case "created_at":
+	case "create_at":
 		return ContentOrderByCreatedAt
-	case "-created_at":
+	case "-create_at":
 		return ContentOrderByCreatedAtDesc
-	case "updated_at":
+	case "update_at":
 		return ContentOrderByUpdatedAt
-	case "-updated_at":
+	case "-update_at":
 		return ContentOrderByUpdatedAtDesc
 	case "content_name":
 		return ContentOrderByName
@@ -171,13 +172,13 @@ func (s ContentOrderBy) ToSQL() string {
 	case ContentOrderByIdDesc:
 		return "id desc"
 	case ContentOrderByCreatedAt:
-		return "created_at"
+		return "create_at"
 	case ContentOrderByCreatedAtDesc:
-		return "created_at desc"
+		return "create_at desc"
 	case ContentOrderByUpdatedAt:
-		return "updated_at"
+		return "update_at"
 	case ContentOrderByUpdatedAtDesc:
-		return "updated_at desc"
+		return "update_at desc"
 	case ContentOrderByName:
 		return "content_name"
 	case ContentOrderByNameDesc:
@@ -194,8 +195,8 @@ type DBContentDA struct {
 func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {
 	now := time.Now()
 	co.ID = utils.NewID()
-	co.UpdatedAt = now.Unix()
-	co.CreatedAt = now.Unix()
+	co.UpdateAt = now.Unix()
+	co.CreateAt = now.Unix()
 	_, err := cd.s.InsertTx(ctx, tx, &co)
 	if err != nil {
 		return "", err
@@ -205,7 +206,7 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
 	now := time.Now()
 	co.ID = cid
-	co.UpdatedAt = now.Unix()
+	co.UpdateAt = now.Unix()
 	log.Info(ctx, "Update contentdata da", log.String("id", co.ID))
 	_, err := cd.s.UpdateTx(ctx, tx, &co)
 	if err != nil {
@@ -218,7 +219,7 @@ func (cd *DBContentDA) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid
 	now := time.Now()
 	content := new(entity.Content)
 	content.ID = cid
-	content.DeletedAt = now.Unix()
+	content.DeleteAt = now.Unix()
 	_, err := cd.s.UpdateTx(ctx, tx, content)
 	if err != nil {
 		return err
@@ -230,6 +231,9 @@ func (cd *DBContentDA) GetContentById(ctx context.Context, tx *dbo.DBContext, ci
 	err := cd.s.GetTx(ctx, tx, cid, obj)
 	if err != nil {
 		return nil, err
+	}
+	if obj.DeleteAt > 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	return obj, nil

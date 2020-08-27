@@ -40,8 +40,8 @@ func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (str
 	co.ID = utils.NewID()
 	//co.OrgUserId = co.Org + co.ID
 	//co.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
-	co.UpdatedAt = now.Unix()
-	co.CreatedAt = now.Unix()
+	co.UpdateAt = now.Unix()
+	co.CreateAt = now.Unix()
 	dyMap, err := dynamodbattribute.MarshalMap(co)
 	if err != nil {
 		return "", err
@@ -58,7 +58,7 @@ func (d *DyContentDA) CreateContent(ctx context.Context, co entity.Content) (str
 
 func (d *DyContentDA) UpdateContent(ctx context.Context, cid string, co0 entity.Content) error {
 	now := time.Now()
-	co0.UpdatedAt = now.Unix()
+	co0.UpdateAt = now.Unix()
 	co, err := d.getContentForUpdateContent(ctx, cid, &co0)
 	if err != nil {
 		return err
@@ -240,9 +240,9 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 		LatestID:      co.LatestID,
 		LockedBy:      co.LockedBy,
 		Version:       co.Version,
-		CreatedAt:     co.CreatedAt,
-		UpdatedAt:     co.UpdatedAt,
-		DeletedAt:     co.DeletedAt,
+		CreatedAt:     co.CreateAt,
+		UpdatedAt:     co.UpdateAt,
+		DeletedAt:     co.DeleteAt,
 	}
 	co0.OrgUserId = co.Org + co.ID
 	co0.ContentTypeOrgIdPublishStatus = fmt.Sprintf("%v%v%v", co.ContentType, co.Org, co.PublishStatus)
@@ -318,14 +318,14 @@ func (d *DyContentDA) getContentForUpdateContent(ctx context.Context, cid string
 	//if co.OrgUserId == "" {
 	//	co0.OrgUserId = content.OrgUserId
 	//}
-	if co.CreatedAt == 0 {
-		co0.CreatedAt = content.CreatedAt
+	if co.CreateAt == 0 {
+		co0.CreatedAt = content.CreateAt
 	}
-	if co.UpdatedAt == 0 {
-		co0.UpdatedAt = content.UpdatedAt
+	if co.UpdateAt == 0 {
+		co0.UpdatedAt = content.UpdateAt
 	}
-	if co.DeletedAt == 0 {
-		co0.DeletedAt = content.DeletedAt
+	if co.DeleteAt == 0 {
+		co0.DeletedAt = content.DeleteAt
 	}
 	fmt.Printf("content: %#v\n", co)
 	return co0, nil

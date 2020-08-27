@@ -120,7 +120,7 @@ type Content struct {
 	Thumbnail     string `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
 
 	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
-	Extra string `gorm:"type:json;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
+	Extra string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
 	SuggestTime int `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
 	Author     string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
@@ -139,9 +139,9 @@ type Content struct {
 	//OrgUserId                     string `dynamodbav:"org_user_id" json:"org_user_id" dynamoupdate:":ouid"`
 	//ContentTypeOrgIdPublishStatus string `dynamodbav:"ctoips" json:"ctoips" dynamoupdate:":cps"`
 
-	CreatedAt int64 `gorm:"type:bigint;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdatedAt int64 `gorm:"type:bigint;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeletedAt int64 `gorm:"type:bigint;column:deleted_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt int64 `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
 }
 
 func (u Content) UpdateExpress() string {
