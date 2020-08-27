@@ -160,7 +160,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 				ID:         utils.NewID(),
 				TeacherID:  item,
 				ScheduleID: schedule.ID,
-				DeletedAt:  0,
+				DeleteAt:   0,
 			}
 			scheduleTeachers[i] = scheduleTeacher
 		}
