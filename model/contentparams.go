@@ -137,7 +137,7 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 	//asset直接删除
 	if content.ContentType.IsAsset() {
 		now := time.Now()
-		content.DeletedAt = now.Unix()
+		content.DeleteAt = now.Unix()
 		return content
 	}
 
@@ -148,7 +148,7 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 	//	content.PublishStatus = entity.ContentStatusHidden
 	default:
 		now := time.Now()
-		content.DeletedAt = now.Unix()
+		content.DeleteAt = now.Unix()
 	}
 	return content
 }

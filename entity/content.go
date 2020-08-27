@@ -139,9 +139,9 @@ type Content struct {
 	//OrgUserId                     string `dynamodbav:"org_user_id" json:"org_user_id" dynamoupdate:":ouid"`
 	//ContentTypeOrgIdPublishStatus string `dynamodbav:"ctoips" json:"ctoips" dynamoupdate:":cps"`
 
-	CreatedAt int64 `gorm:"type:bigint;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdatedAt int64 `gorm:"type:bigint;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeletedAt int64 `gorm:"type:bigint;column:deleted_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt int64 `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
 }
 
 func (u Content) UpdateExpress() string {

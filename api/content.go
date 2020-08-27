@@ -45,7 +45,7 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"content_id": cid,
+		"id": cid,
 	})
 }
 
@@ -164,7 +164,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"content_id": ncid,
+		"id": ncid,
 	})
 }
 
