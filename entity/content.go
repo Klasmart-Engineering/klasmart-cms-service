@@ -19,6 +19,11 @@ const (
 
 	ContentTypeMaterial = 1
 	ContentTypeLesson   = 2
+
+	ContentTypeAssetImage = 10
+	ContentTypeAssetVideo = 11
+	ContentTypeAssetAudio = 12
+	ContentTypeAssetDocument = 13
 )
 
 type ContentPublishStatus string
@@ -341,6 +346,14 @@ func GetContentTypeName(contentType int) string {
 		return "LESSON"
 	case ContentTypeMaterial:
 		return "MATERIAL"
+	case ContentTypeAssetImage:
+		fallthrough
+	case ContentTypeAssetVideo:
+		fallthrough
+	case ContentTypeAssetAudio:
+		fallthrough
+	case ContentTypeAssetDocument:
+		return "ASSET"
 	}
 	return "UNKNOWN"
 }

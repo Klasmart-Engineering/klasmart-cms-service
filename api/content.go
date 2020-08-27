@@ -101,7 +101,7 @@ func (s *Server) GetContent(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
+	result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
