@@ -10,20 +10,24 @@ import (
 )
 
 type Config struct {
-	StorageConfig StorageConfig `yaml:"storage_config"`
-	CDNConfig     CDNConfig `yaml:"cdn_config"`
+	StorageConfig StorageConfig  `yaml:"storage_config"`
+	CDNConfig     CDNConfig      `yaml:"cdn_config"`
 	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
-	DBConfig      DBConfig `yaml:"db_config"`
-	RedisConfig   RedisConfig `yaml:"redis_config"`
+	DBConfig      DBConfig       `yaml:"db_config"`
+	RedisConfig   RedisConfig    `yaml:"redis_config"`
 }
 
 var config *Config
 
 type RedisConfig struct {
-	OpenCache bool `yaml:"open_cache"`
-	Host      string `yaml:"host"`
-	Port      int `yaml:"port"`
-	Password  string `yaml:"password"`
+	OpenCache  bool               `yaml:"open_cache"`
+	Host       string             `yaml:"host"`
+	Port       int                `yaml:"port"`
+	Password   string             `yaml:"password"`
+	Expiration RedisKeyExpiration `yaml:"expiration"`
+}
+type RedisKeyExpiration struct {
+	ScheduleKeyExpiration int `yaml:"schedule_key"`
 }
 type DBConfig struct {
 	DBMode string `yaml:"db_mode"`
@@ -46,7 +50,7 @@ type StorageConfig struct {
 }
 
 type CDNConfig struct {
-	CDNOpen bool `yaml:"cdn_open"`
+	CDNOpen bool   `yaml:"cdn_open"`
 	CDNMode string `yaml:"cdn_mode"`
 
 	CDNPath       string `yaml:"cdn_path"`

@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	CacheScheduleIDKey = "kidsLoop2.schedule.id"
+	CacheScheduleIDKey    = "kidsLoop2.schedule.id"
+	ScheduleKeyExpiration = 3
 	//CacheScheduleConditionKey = "kidsLoop2.schedule.condition"
 )
 
@@ -109,7 +110,13 @@ var (
 
 func GetScheduleRedisDA() *ScheduleRedisDA {
 	_scheduleRedisDAOnce.Do(func() {
-		_scheduleRedisDA = &ScheduleRedisDA{expiration: time.Minute * 3}
+		_scheduleRedisDA = &ScheduleRedisDA{}
+		expiration := config.Get().RedisConfig.Expiration.ScheduleKeyExpiration
+		if expiration <= 0 {
+			_scheduleRedisDA.expiration = time.Minute * ScheduleKeyExpiration
+		} else {
+			_scheduleRedisDA.expiration = time.Minute * time.Duration(expiration)
+		}
 	})
 	return _scheduleRedisDA
 }
