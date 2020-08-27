@@ -33,7 +33,7 @@ func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules [
 				)
 				continue
 			}
-			err = ro.MustGetRedis(ctx).SetNX(key, string(b), r.expiration).Err()
+			err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
 			if err != nil {
 				log.Error(ctx, "Can't save schedule into cache",
 					log.Err(err),
@@ -90,7 +90,12 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, ids []string) error {
 		keys[i] = r.scheduleIDKey(id)
 	}
 
-	return ro.MustGetRedis(ctx).Del(keys...).Err()
+	err := ro.MustGetRedis(ctx).Del(keys...).Err()
+	if err != nil {
+		log.Error(ctx, "redis del keys error", log.Err(err), log.Strings("ids", ids))
+		return err
+	}
+	return nil
 }
 
 type ScheduleRedisDA struct {

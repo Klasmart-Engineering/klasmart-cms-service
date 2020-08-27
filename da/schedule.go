@@ -63,7 +63,11 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 			"deleted_id": operator.UserID,
 			"delete_at":  time.Now().Unix(),
 		}).Error; err != nil {
-		log.Error(ctx, "soft delete schedule: update failed")
+		log.Error(ctx, "soft delete schedule: update failed",
+			log.Err(err),
+			log.String("id", id),
+			log.Any("operator", operator),
+		)
 		return err
 	}
 	return nil
