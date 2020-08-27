@@ -14,9 +14,7 @@ import (
 )
 
 const (
-	CacheScheduleIDKey    = "kidsLoop2.schedule.id"
-	ScheduleKeyExpiration = 3
-	//CacheScheduleConditionKey = "kidsLoop2.schedule.condition"
+	CacheScheduleIDKey = "schedule"
 )
 
 func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules []*entity.ScheduleDetailsView) {
@@ -79,7 +77,7 @@ func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []strin
 	return schedules, nil
 }
 func (r *ScheduleRedisDA) scheduleIDKey(id string) string {
-	return fmt.Sprintf("%s.%v", CacheScheduleIDKey, id)
+	return fmt.Sprintf("%s:%v", CacheScheduleIDKey, id)
 }
 
 func (r *ScheduleRedisDA) Clean(ctx context.Context, ids []string) error {
