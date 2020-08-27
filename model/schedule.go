@@ -313,6 +313,7 @@ func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *
 		viewData := &entity.ScheduleSeachView{
 			ID:      item.ID,
 			StartAt: item.StartAt,
+			Title:   item.Title,
 			EndAt:   item.EndAt,
 		}
 		if v, ok := basicInfo[item.ID]; ok {

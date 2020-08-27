@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   `attachment_url` varchar(500) DEFAULT NULL COMMENT 'attachment_url',
   `version` bigint(20) DEFAULT 0 COMMENT 'version',
   `repeat_id` varchar(100) DEFAULT NULL COMMENT 'repeat_id',
-  `repeat` varchar(500) DEFAULT NULL COMMENT 'repeat',
+  `repeat` JSON DEFAULT NULL COMMENT 'repeat',
   `created_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
   `updated_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
   `deleted_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
