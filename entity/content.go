@@ -108,7 +108,7 @@ type ContentID struct {
 type Content struct {
 	ID            string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
 	ContentType   ContentType    `gorm:"type:int;NOTNULL; column:content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
-	Name          string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
+	Name          string `gorm:"type:varchar(255);NOT NULL;column:content_name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
 	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
 	Subject       string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
 	Developmental string `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
