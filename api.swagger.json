@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "KidsLoop 2.0 Asset REST API",
-    "description": "Kidsloop 2.0 Asset backend rest api",
+    "description": "KidsLoop 2.0 Asset backend rest api",
     "version": "1.0.0",
     "contact": {
       "email": "peter.yang@badanamu.com.cn"
@@ -10,12 +10,12 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:12345/1.0",
-      "description": "local dev"
+      "url": "http://127.0.0.1:12345/v1",
+      "description": "dev"
     },
     {
-      "url": "http://192.168.1.234:12345/1.0",
-      "description": "local test"
+      "url": "https://cp03fzjc58.execute-api.ap-northeast-2.amazonaws.com/v1",
+      "description": "test"
     }
   ],
   "tags": [
