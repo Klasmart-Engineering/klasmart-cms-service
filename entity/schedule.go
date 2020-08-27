@@ -222,7 +222,7 @@ type Schedule struct {
 	Attachment   string `gorm:"column:attachment_url;type:varchar(500)"`
 	Version      int64  `gorm:"column:'version';type:bigint"`
 	RepeatID     string `gorm:"column:repeat_id;type:varchar(100)"`
-	RepeatJson   string `gorm:"column:repeat;type:varchar(500)"`
+	RepeatJson   string `gorm:"column:repeat;type:json;"`
 	CreatedID    string `gorm:"column:created_id;type:varchar(100)"`
 	UpdatedID    string `gorm:"column:updated_id;type:varchar(100)"`
 	DeletedID    string `gorm:"column:deleted_id;type:varchar(100)"`
@@ -336,6 +336,7 @@ type ScheduleSeachView struct {
 	ID      string `json:"id"`
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
+	Title   string `json:"title"`
 	ScheduleBasic
 }
 type ScheduleShortInfo struct {
