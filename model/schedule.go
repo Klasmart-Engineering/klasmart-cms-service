@@ -233,6 +233,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 		log.Error(ctx, "update schedule: tx failed", log.Err(err))
 		return "", err
 	}
+	da.GetScheduleRedisDA().Clean(ctx, []string{viewdata.ID})
 	return id, nil
 }
 
@@ -287,6 +288,7 @@ func (s *scheduleModel) Delete(ctx context.Context, tx *dbo.DBContext, op *entit
 	}); err != nil {
 		log.Error(ctx, "delete schedule: tx failed", log.Err(err))
 	}
+	da.GetScheduleRedisDA().Clean(ctx, []string{id})
 	return nil
 }
 
@@ -528,8 +530,12 @@ func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, progr
 }
 
 func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error) {
-	var schedule *entity.Schedule
-	err := da.GetScheduleDA().Get(ctx, id, schedule)
+	data, err := da.GetScheduleRedisDA().GetScheduleCacheByIDs(ctx, []string{id})
+	if err == nil && len(data) > 0 {
+		return data[0], nil
+	}
+	var schedule = new(entity.Schedule)
+	err = da.GetScheduleDA().Get(ctx, id, schedule)
 	if err != nil {
 		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
 		return nil, err
@@ -550,7 +556,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	}
 	if schedule.RepeatJson != "" {
 		var repeat entity.RepeatOptions
-		err := json.Unmarshal([]byte(schedule.RepeatJson), repeat)
+		err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat)
 		if err != nil {
 			log.Error(ctx, "Unmarshal schedule.RepeatJson error", log.Err(err), log.String("schedule.RepeatJson", schedule.RepeatJson))
 			return nil, err
@@ -565,6 +571,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	if v, ok := basicInfo[result.ID]; ok {
 		result.ScheduleBasic = *v
 	}
+	da.GetScheduleRedisDA().BatchAddScheduleCache(ctx, []*entity.ScheduleDetailsView{result})
 	return result, nil
 }
 

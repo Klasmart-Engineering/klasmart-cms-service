@@ -61,7 +61,7 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"deleted_id": operator.UserID,
-			"deleted_at": time.Now().Unix(),
+			"delete_at":  time.Now().Unix(),
 		}).Error; err != nil {
 		log.Error(ctx, "soft delete schedule: update failed")
 		return err
@@ -127,22 +127,22 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.EndAtGe.Int64)
 	}
 	if c.TeacherID.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (deleted_at=0) and %s.id = %s.schedule_id)",
+		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",
 			constant.TableNameScheduleTeacher, constant.TableNameSchedule, constant.TableNameScheduleTeacher)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherID.String)
 	}
 	if c.TeacherIDs.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id in (%s) and (deleted_at=0) and %s.id = %s.schedule_id)",
+		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id in (%s) and (delete_at=0) and %s.id = %s.schedule_id)",
 			constant.TableNameScheduleTeacher, c.TeacherIDs.SQLPlaceHolder(), constant.TableNameSchedule, constant.TableNameScheduleTeacher)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherIDs.ToInterfaceSlice()...)
 	}
 
 	if c.DeleteAt.Valid {
-		wheres = append(wheres, "deleted_at>0")
+		wheres = append(wheres, "delete_at>0")
 	} else {
-		wheres = append(wheres, "(deleted_at=0)")
+		wheres = append(wheres, "(delete_at=0)")
 	}
 
 	return wheres, params

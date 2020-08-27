@@ -32,7 +32,7 @@ func (s *scheduleTeacherDA) BatchInsert(ctx context.Context, dbContext *dbo.DBCo
 			item.DeletedAt,
 		})
 	}
-	sql := SQLBatchInsert(constant.TableNameScheduleTeacher, []string{"id", "schedule_id", "teacher_id", "deleted_at"}, data)
+	sql := SQLBatchInsert(constant.TableNameScheduleTeacher, []string{"id", "schedule_id", "teacher_id", "delete_at"}, data)
 	execResult := dbContext.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
 		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
