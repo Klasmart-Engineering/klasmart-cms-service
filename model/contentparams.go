@@ -16,7 +16,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}
 	err := c.Data.Validate(ctx, c.ContentType)
 	if err != nil{
-		return nil, err
+		return nil, ErrInvalidContentData
 	}
 	dataJSON, err := c.Data.Marshal(ctx)
 	if err != nil{
@@ -26,6 +26,11 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	//get publishScope&authorName
 	publishScope := operator.OrgID
 	authorName := operator.UserID
+
+	//若为asset，直接发布
+	if c.ContentType.IsAsset() {
+		publishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
+	}
 
 	return &entity.Content{
 		//ID:            utils.NewID(),
@@ -97,11 +102,15 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusPending
 	}
+	//Asset修改后直接发布
+	if content.ContentType.IsAsset() {
+		content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
+	}
 
 	//检查data
 	err := data.Data.Validate(ctx, content.ContentType)
 	if err != nil{
-		return nil, err
+		return nil, ErrInvalidContentData
 	}
 	dataJSON, err := data.Data.Marshal(ctx)
 	if err != nil{
@@ -125,6 +134,13 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) *entity.Content {
+	//asset直接删除
+	if content.ContentType.IsAsset() {
+		now := time.Now()
+		content.DeletedAt = now.Unix()
+		return content
+	}
+
 	switch publishStatus {
 	case entity.ContentStatusPublished:
 		content.PublishStatus = entity.ContentStatusArchive

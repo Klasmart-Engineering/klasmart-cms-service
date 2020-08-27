@@ -2,10 +2,9 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"strings"
 	"sync"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -123,6 +122,12 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 }
 
 func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) (*entity.Content, error) {
+
+	//若为asset，直接发布
+	if content.ContentType.IsAsset() {
+		return content, nil
+	}
+
 	//TODO:maybe wrong
 	if content.Author != user.UserID {
 		return nil, ErrNoAuth
@@ -341,6 +346,9 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
 		return ErrReadContentFailed
 	}
+	if content.ContentType.IsAsset() {
+		return ErrInvalidContentType
+	}
 
 	content.PublishStatus = entity.NewContentPublishStatus(status)
 	content.RejectReason = reason
@@ -388,6 +396,10 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
 		return "", ErrNoContent
 	}
+	if content.ContentType.IsAsset() {
+		return "", ErrInvalidContentType
+	}
+
 	if content.PublishStatus != entity.ContentStatusPublished {
 		return "", ErrInvalidPublishStatus
 	}
@@ -422,6 +434,10 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 			return err
 		}
 		for i := range contents {
+			if contents[i].ContentType.IsAsset() {
+				log.Warn(ctx, "try to publish asset", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
+				continue
+			}
 			err = cm.doPublishContent(ctx, tx, contents[i], user)
 			if err != nil {
 				log.Error(ctx, "can't publish content", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
@@ -438,6 +454,9 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 	if err != nil {
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
 		return ErrNoContent
+	}
+	if content.ContentType.IsAsset() {
+		return ErrInvalidContentType
 	}
 
 	//发布
@@ -534,6 +553,9 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return "", ErrNoContent
+	}
+	if content.ContentType.IsAsset() {
+		return "", ErrInvalidContentType
 	}
 
 	//检查是否有克隆权限
