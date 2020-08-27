@@ -2893,29 +2893,54 @@
                 "example": "lesson"
               },
               "program_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program name",
-                "example": "program1"
+                "example": [
+                  "program1"
+                ]
               },
               "subject_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject name",
-                "example": "subject1"
+                "example": [
+                  "subject1"
+                ]
               },
               "developmental_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental name",
-                "example": "developmental1"
+                "example": [
+                  "developmental"
+                ]
               },
               "skills_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills name",
-                "example": "skills1"
+                "example": [
+                  "skills"
+                ]
               },
               "age_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age name",
-                "example": "6-9months"
+                "example": [
+                  "age"
+                ]
               },
               "org_name": {
                 "type": "string",
