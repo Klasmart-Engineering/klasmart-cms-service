@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/go-redis/redis"
+	"github.com/sirupsen/logrus"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/ro"
@@ -17,6 +18,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+
+	logger "gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 )
 
 func initDB() {
@@ -50,15 +53,22 @@ func initCache() {
 func main() {
 	log.Info(context.TODO(), "start kidsloop2 api service")
 	defer func() {
-		log.Info(context.TODO(), "kidsloop2 api service stopped")
+		if err := recover(); err != nil {
+			log.Info(context.TODO(), "kidsloop2 api service stopped", log.Any("err", err))
+		} else {
+			log.Info(context.TODO(), "kidsloop2 api service stopped")
+		}
 	}()
 
-	//获取数据库连接
+	// temp solution, will remove in next version
+	logger.SetLevel(logrus.DebugLevel)
+
+	// read config
 	config.LoadEnvConfig()
 
 	log.Debug(context.TODO(), "load config success", log.Any("config", config.Get()))
 
-	//设置数据库配置
+	// init database connection
 	initDB()
 
 	log.Debug(context.TODO(), "init db success")

@@ -22,6 +22,8 @@ func NewServer() *Server {
 
 	log.Debug(context.TODO(), "init gin success")
 
+	server.engine.Use(logger(), recovery())
+
 	server.registeRoute()
 
 	log.Debug(context.TODO(), "register route success")
