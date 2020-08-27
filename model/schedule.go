@@ -62,7 +62,11 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 }
 
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView, options *entity.RepeatOptions, location *time.Location) (string, error) {
-	schedule := viewData.Convert()
+	schedule, err := viewData.Convert()
+	if err != nil {
+		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData), log.Any("options", options))
+		return "", err
+	}
 	schedule.CreatedID = op.UserID
 	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
 	if err != nil {
@@ -137,39 +141,42 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 	}
 	if viewData.IsRepeat {
 		return s.addRepeatSchedule(ctx, op, viewData, &viewData.Repeat, location)
-	} else {
-		schedule := viewData.Convert()
-		schedule.CreatedID = op.UserID
-		schedule.ID = utils.NewID()
-		err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-			_, err := da.GetScheduleDA().InsertTx(ctx, tx, schedule)
-			if err != nil {
-				return err
-			}
-			scheduleTeachers := make([]*entity.ScheduleTeacher, len(viewData.TeacherIDs))
-			for i, item := range viewData.TeacherIDs {
-				scheduleTeacher := &entity.ScheduleTeacher{
-					ID:         utils.NewID(),
-					TeacherID:  item,
-					ScheduleID: schedule.ID,
-					DeletedAt:  0,
-				}
-				scheduleTeachers[i] = scheduleTeacher
-			}
-			// add to teachers_schedules
-			_, err = da.GetScheduleTeacherDA().BatchInsert(ctx, tx, scheduleTeachers)
-			if err != nil {
-				log.Error(ctx, "schedules_teachers batchInsert error", log.Err(err), log.Any("scheduleTeachers", scheduleTeachers))
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", schedule))
-			return "", err
-		}
-		return schedule.ID, nil
 	}
+	schedule, err := viewData.Convert()
+	if err != nil {
+		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData))
+		return "", err
+	}
+	schedule.CreatedID = op.UserID
+	schedule.ID = utils.NewID()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, err := da.GetScheduleDA().InsertTx(ctx, tx, schedule)
+		if err != nil {
+			return err
+		}
+		scheduleTeachers := make([]*entity.ScheduleTeacher, len(viewData.TeacherIDs))
+		for i, item := range viewData.TeacherIDs {
+			scheduleTeacher := &entity.ScheduleTeacher{
+				ID:         utils.NewID(),
+				TeacherID:  item,
+				ScheduleID: schedule.ID,
+				DeletedAt:  0,
+			}
+			scheduleTeachers[i] = scheduleTeacher
+		}
+		// add to teachers_schedules
+		_, err = da.GetScheduleTeacherDA().BatchInsert(ctx, tx, scheduleTeachers)
+		if err != nil {
+			log.Error(ctx, "schedules_teachers batchInsert error", log.Err(err), log.Any("scheduleTeachers", scheduleTeachers))
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", schedule))
+		return "", err
+	}
+	return schedule.ID, nil
 }
 
 func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, viewdata *entity.ScheduleUpdateView, location *time.Location) (string, error) {
@@ -293,6 +300,13 @@ func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *
 
 	result := make([]*entity.ScheduleSeachView, len(scheduleList))
 	basicInfo, err := s.getBasicInfo(ctx, tx, scheduleList)
+	if err != nil {
+		log.Error(ctx, "Page: get basic info error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("scheduleList", scheduleList))
+		return 0, nil, err
+	}
 	for i, item := range scheduleList {
 		viewData := &entity.ScheduleSeachView{
 			ID:      item.ID,
