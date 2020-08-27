@@ -740,9 +740,9 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
@@ -862,9 +862,9 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
