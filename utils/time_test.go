@@ -10,7 +10,6 @@ func TestDemo(t *testing.T) {
 
 	time2 := BeginOfDayByTime(time.Now(), time.Local)
 	fmt.Println(time2.Unix())
-
 	fmt.Println(time.Unix(time2.Unix(), 0).Format(Second))
 }
 

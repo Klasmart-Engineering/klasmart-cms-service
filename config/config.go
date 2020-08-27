@@ -2,29 +2,31 @@ package config
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"os"
 	"strconv"
 	"strings"
-
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"time"
 )
 
 type Config struct {
-	StorageConfig StorageConfig `yaml:"storage_config"`
-	CDNConfig     CDNConfig `yaml:"cdn_config"`
+	StorageConfig StorageConfig  `yaml:"storage_config"`
+	CDNConfig     CDNConfig      `yaml:"cdn_config"`
 	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
-	DBConfig      DBConfig `yaml:"db_config"`
-	RedisConfig   RedisConfig `yaml:"redis_config"`
+	DBConfig      DBConfig       `yaml:"db_config"`
+	RedisConfig   RedisConfig    `yaml:"redis_config"`
 }
 
 var config *Config
 
 type RedisConfig struct {
-	OpenCache bool `yaml:"open_cache"`
+	OpenCache bool   `yaml:"open_cache"`
 	Host      string `yaml:"host"`
-	Port      int `yaml:"port"`
+	Port      int    `yaml:"port"`
 	Password  string `yaml:"password"`
 }
+
 type DBConfig struct {
 	DBMode string `yaml:"db_mode"`
 
@@ -46,7 +48,7 @@ type StorageConfig struct {
 }
 
 type CDNConfig struct {
-	CDNOpen bool `yaml:"cdn_open"`
+	CDNOpen bool   `yaml:"cdn_open"`
 	CDNMode string `yaml:"cdn_mode"`
 
 	CDNPath       string `yaml:"cdn_path"`
@@ -58,7 +60,8 @@ type CDNConfig struct {
 }
 
 type ScheduleConfig struct {
-	MaxRepeatYear int `json:"max_repeat_year" yaml:"max_repeat_year"`
+	MaxRepeatYear   int           `json:"max_repeat_year" yaml:"max_repeat_year"`
+	CacheExpiration time.Duration `yaml:"cache_expiration"`
 }
 
 func assertGetEnv(key string) string {
@@ -75,6 +78,7 @@ func LoadEnvConfig() {
 	loadStorageEnvConfig(ctx)
 	loadDBEnvConfig(ctx)
 	loadRedisEnvConfig(ctx)
+	loadScheduleEnvConfig(ctx)
 }
 func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
@@ -113,18 +117,6 @@ func loadStorageEnvConfig(ctx context.Context) {
 			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
 		}
 	}
-
-	maxRepeatYearStr := strings.TrimSpace(os.Getenv("max_repeat_year"))
-	if maxRepeatYearStr == "" {
-		config.Schedule.MaxRepeatYear = 2
-	} else {
-		i, err := strconv.Atoi(maxRepeatYearStr)
-		if err != nil {
-			log.Panic(ctx, "parse env max_repeat_year failed", log.String("max_repeat_year", maxRepeatYearStr))
-		}
-		config.Schedule.MaxRepeatYear = i
-	}
-
 }
 
 func loadRedisEnvConfig(ctx context.Context) {
@@ -143,6 +135,25 @@ func loadRedisEnvConfig(ctx context.Context) {
 		}
 		config.RedisConfig.Port = port
 		config.RedisConfig.Password = password
+	}
+}
+
+func loadScheduleEnvConfig(ctx context.Context) {
+	maxRepeatYearStr := strings.TrimSpace(os.Getenv("max_repeat_year"))
+	if maxRepeatYearStr == "" {
+		config.Schedule.MaxRepeatYear = 2
+	} else {
+		i, err := strconv.Atoi(maxRepeatYearStr)
+		if err != nil {
+			log.Panic(ctx, "parse env max_repeat_year failed", log.String("max_repeat_year", maxRepeatYearStr))
+		}
+		config.Schedule.MaxRepeatYear = i
+	}
+	cacheExpiration, err := time.ParseDuration(os.Getenv("cache_expiration"))
+	if err != nil {
+		config.Schedule.CacheExpiration = constant.ScheduleDefaultCacheExpiration
+	} else {
+		config.Schedule.CacheExpiration = cacheExpiration
 	}
 }
 
