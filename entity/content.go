@@ -241,7 +241,7 @@ type CreateContentRequest struct {
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
 
-	Data  ContentData `json:"data"`
+	Data  string `json:"data"`
 	Extra string      `json:"extra"`
 }
 

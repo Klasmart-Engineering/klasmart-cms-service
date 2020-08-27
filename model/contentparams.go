@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	"strings"
 	"time"
 )
@@ -11,16 +12,16 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 
 	publishStatus := entity.NewContentPublishStatus(entity.ContentStatusDraft)
 
-	if c.Data == nil {
+	if c.Data == "" {
 		return nil, ErrNoContentData
 	}
-	err := c.Data.Validate(ctx, c.ContentType)
+	cd, err := contentdata.CreateContentData(ctx, c.ContentType, c.Data)
 	if err != nil{
 		return nil, ErrInvalidContentData
 	}
-	dataJSON, err := c.Data.Marshal(ctx)
+	err = cd.Validate(ctx, c.ContentType)
 	if err != nil{
-		return nil, err
+		return nil, ErrInvalidContentData
 	}
 
 	//get publishScope&authorName
@@ -45,7 +46,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
 		SuggestTime: c.SuggestTime,
-		Data:          dataJSON,
+		Data:          c.Data,
 		Extra:         c.Extra,
 		Author:        operator.UserID,
 		AuthorName:    authorName,
@@ -62,7 +63,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.Name != "" {
 		content.Name = data.Name
 	}
-	if data.ContentType > 0 && data.Data != nil{
+	if data.ContentType > 0 && data.Data != ""{
 		content.ContentType = data.ContentType
 	}
 	if data.Program != nil {
@@ -95,9 +96,6 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.SuggestTime > 0 {
 		content.SuggestTime = data.SuggestTime
 	}
-	if data.Data != nil{
-		data.Data.Marshal(ctx)
-	}
 
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusPending
@@ -108,15 +106,17 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 
 	//检查data
-	err := data.Data.Validate(ctx, content.ContentType)
-	if err != nil{
-		return nil, ErrInvalidContentData
+	if data.Data != "" {
+		cd, err := contentdata.CreateContentData(ctx, data.ContentType, data.Data)
+		if err != nil{
+			return nil, ErrInvalidContentData
+		}
+		err = cd.Validate(ctx, content.ContentType)
+		if err != nil{
+			return nil, ErrInvalidContentData
+		}
+		content.Data = data.Data
 	}
-	dataJSON, err := data.Data.Marshal(ctx)
-	if err != nil{
-		return nil, err
-	}
-	content.Data = dataJSON
 
 	return content, nil
 }
