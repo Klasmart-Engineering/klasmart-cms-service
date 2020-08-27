@@ -269,14 +269,14 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	log.Info(ctx, "create content")
 	err := cm.checkContentInfo(ctx, c, true)
 	if err != nil {
-		log.Error(ctx, "check content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		log.Warn(ctx, "check content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return "", err
 	}
 
 	//组装要创建的内容
 	obj, err := cm.prepareCreateContentParams(ctx, c, operator)
 	if err != nil {
-		log.Error(ctx, "prepare content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		log.Warn(ctx, "prepare content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return "", err
 	}
 
