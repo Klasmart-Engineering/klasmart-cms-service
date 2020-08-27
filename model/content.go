@@ -280,10 +280,6 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		}
 	}
 
-	if obj.Thumbnail == "" {
-		obj.Thumbnail = cm.getDefaultThumbnail(ctx, obj.ContentType)
-	}
-
 	//添加内容
 	pid, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
 	if err != nil {
@@ -998,10 +994,6 @@ func (cm *ContentModel)buildContentWithDetails(ctx context.Context, contentList 
 
 func (cm *ContentModel)listVisibleScopes(ctx context.Context, operator *entity.Operator) []string {
 	return []string{operator.OrgID}
-}
-
-func (cm *ContentModel) getDefaultThumbnail(ctx context.Context, contentType int) string {
-	return ""
 }
 
 var (
