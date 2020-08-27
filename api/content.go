@@ -34,6 +34,9 @@ func (s *Server) createContent(c *gin.Context) {
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
@@ -131,6 +134,9 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}

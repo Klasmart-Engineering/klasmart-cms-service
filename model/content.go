@@ -2,10 +2,9 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"strings"
 	"sync"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -123,6 +122,12 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 }
 
 func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) (*entity.Content, error) {
+
+	//若为asset，直接发布
+	if content.ContentType.IsAsset() {
+		return content, nil
+	}
+
 	//TODO:maybe wrong
 	if content.Author != user.UserID {
 		return nil, ErrNoAuth
@@ -341,6 +346,9 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
 		return ErrReadContentFailed
 	}
+	if content.ContentType.IsAsset() {
+		return ErrInvalidContentType
+	}
 
 	content.PublishStatus = entity.NewContentPublishStatus(status)
 	content.RejectReason = reason
@@ -388,6 +396,10 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
 		return "", ErrNoContent
 	}
+	if content.ContentType.IsAsset() {
+		return "", ErrInvalidContentType
+	}
+
 	if content.PublishStatus != entity.ContentStatusPublished {
 		return "", ErrInvalidPublishStatus
 	}
@@ -422,6 +434,10 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 			return err
 		}
 		for i := range contents {
+			if contents[i].ContentType.IsAsset() {
+				log.Warn(ctx, "try to publish asset", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
+				continue
+			}
 			err = cm.doPublishContent(ctx, tx, contents[i], user)
 			if err != nil {
 				log.Error(ctx, "can't publish content", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
@@ -438,6 +454,9 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 	if err != nil {
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
 		return ErrNoContent
+	}
+	if content.ContentType.IsAsset() {
+		return ErrInvalidContentType
 	}
 
 	//发布
@@ -466,24 +485,12 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 			return err
 		}
 		for i := range contents {
-			if contents[i].Author != user.UserID {
-				return ErrNoAuth
-			}
-			obj := cm.prepareDeleteContentParams(ctx, contents[i], contents[i].PublishStatus)
-
-			err = da.GetContentDA().UpdateContent(ctx, tx, contents[i].ID, *obj)
-			if err != nil {
-				log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", contents[i].ID), log.String("uid", user.UserID))
+			err = cm.doDeleteContent(ctx, tx, contents[i], user)
+			if err != nil{
 				return err
 			}
-
-			//解锁source content
+			//record pending delete content id
 			if contents[i].SourceID != "" {
-				err = cm.UnlockContent(ctx, tx, contents[i].SourceID, user)
-				if err != nil {
-					log.Error(ctx, "unlock contentdata failed", log.Err(err), log.String("cid", contents[i].ID), log.String("uid", user.UserID))
-					return err
-				}
 				deletedIds = append(deletedIds, contents[i].SourceID)
 			}
 		}
@@ -493,7 +500,33 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 		return err
 	}
 	cache.GetRedisContentCache().CleanContentCache(ctx, deletedIds)
+	return nil
+}
 
+func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+	if content.Author != user.UserID {
+		return ErrNoAuth
+	}
+	if content.LockedBy != "-" && content.LockedBy != user.UserID {
+		return ErrContentAlreadyLocked
+	}
+
+	obj := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus)
+
+	err := da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
+	if err != nil {
+		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
+		return err
+	}
+
+	//解锁source content
+	if content.SourceID != "" {
+		err = cm.UnlockContent(ctx, tx, content.SourceID, user)
+		if err != nil {
+			log.Error(ctx, "unlock contentdata failed", log.Err(err), log.String("cid", content.SourceID), log.String("uid", user.UserID))
+			return err
+		}
+	}
 	return nil
 }
 
@@ -504,25 +537,9 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 		return ErrReadContentFailed
 	}
 
-	if content.Author != user.UserID {
-		return ErrNoAuth
-	}
-
-	obj := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus)
-
-	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *obj)
-	if err != nil {
-		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+	err = cm.doDeleteContent(ctx, tx, content, user)
+	if err != nil{
 		return err
-	}
-
-	//解锁source content
-	if content.SourceID != "" {
-		err = cm.UnlockContent(ctx, tx, content.SourceID, user)
-		if err != nil {
-			log.Error(ctx, "unlock contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
-			return err
-		}
 	}
 
 	cache.GetRedisContentCache().CleanContentCache(ctx, []string{cid, content.SourceID})
@@ -534,6 +551,9 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return "", ErrNoContent
+	}
+	if content.ContentType.IsAsset() {
+		return "", ErrInvalidContentType
 	}
 
 	//检查是否有克隆权限

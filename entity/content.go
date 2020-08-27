@@ -48,7 +48,21 @@ func NewContentType(contentType int) ContentType {
 	}
 }
 
-func (c ContentType)Name() string {
+func (c ContentType) IsAsset() bool {
+	switch c {
+	case ContentTypeAssetImage:
+		fallthrough
+	case ContentTypeAssetVideo:
+		fallthrough
+	case ContentTypeAssetAudio:
+		fallthrough
+	case ContentTypeAssetDocument:
+		return true
+	}
+	return false
+}
+
+func (c ContentType) Name() string {
 	switch c {
 	case ContentTypeLesson:
 		return "LESSON"
@@ -65,7 +79,6 @@ func (c ContentType)Name() string {
 	}
 	return "UNKNOWN"
 }
-
 
 func NewContentPublishStatus(status string) ContentPublishStatus {
 	switch status {

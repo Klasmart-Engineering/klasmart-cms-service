@@ -49,7 +49,7 @@ func (r *RedisContentCache) contentConditionKey(condition dbo.Conditions) string
 }
 
 func (r *RedisContentCache) SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails) {
-	if config.Get().RedisConfig.OpenCache {
+	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
 	go func() {
@@ -75,7 +75,7 @@ func (r *RedisContentCache) SaveContentCache(ctx context.Context, content *entit
 	})
 }
 func (r *RedisContentCache) GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails {
-	if config.Get().RedisConfig.OpenCache {
+	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
 	_, res := r.GetContentCacheByIdList(ctx, []string{id})
@@ -86,7 +86,7 @@ func (r *RedisContentCache) GetContentCacheById(ctx context.Context, id string) 
 }
 
 func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey) {
-	if config.Get().RedisConfig.OpenCache {
+	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
 	go func() {
