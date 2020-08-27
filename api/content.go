@@ -24,7 +24,14 @@ func (s *Server) createContent(c *gin.Context) {
 	}
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
-
+	switch err {
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -113,6 +120,12 @@ func (s *Server) updateContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		return
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
 	if err != nil {

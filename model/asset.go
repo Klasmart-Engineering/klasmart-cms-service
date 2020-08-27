@@ -37,6 +37,9 @@ var (
 	ErrInvalidContentStatusToPublish = errors.New("content status is invalid to publish")
 	ErrReadContentFailed             = errors.New("read content failed")
 	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
+
+	ErrInvalidResourceId			= errors.New("invalid resource id")
+	ErrResourceNotFound		= errors.New("resource not found")
 )
 
 type IAssetModel interface {

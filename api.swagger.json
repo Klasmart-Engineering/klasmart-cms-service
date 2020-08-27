@@ -740,9 +740,9 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
@@ -862,15 +862,99 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
                       "items": {
                         "$ref": "#/components/schemas/Content"
                       }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_resources/{resource_id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource path",
+        "operationId": "getContentResourcePath",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "param",
+            "description": "Resource id",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_resources": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource upload path",
+        "operationId": "getContentResourceUploadPath",
+        "parameters": [
+          {
+            "name": "partition",
+            "in": "query",
+            "description": "Resource partition",
+            "schema": {
+              "type": "string",
+              "enum": ["assets", "thumbnail"],
+              "nullable": false
+            }
+          },
+          {
+            "name": "extension",
+            "in": "query",
+            "description": "Resource extension",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "resource path info",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "resource path"
+                    },
+                    "resource_id": {
+                      "type": "string",
+                      "description": "resource id"
                     }
                   }
                 }
@@ -2893,29 +2977,54 @@
                 "example": "lesson"
               },
               "program_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program name",
-                "example": "program1"
+                "example": [
+                  "program1"
+                ]
               },
               "subject_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject name",
-                "example": "subject1"
+                "example": [
+                  "subject1"
+                ]
               },
               "developmental_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental name",
-                "example": "developmental1"
+                "example": [
+                  "developmental"
+                ]
               },
               "skills_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills name",
-                "example": "skills1"
+                "example": [
+                  "skills"
+                ]
               },
               "age_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age name",
-                "example": "6-9months"
+                "example": [
+                  "age"
+                ]
               },
               "org_name": {
                 "type": "string",
