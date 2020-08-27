@@ -62,12 +62,12 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   `deleted_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
   `created_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
   `updated_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
-  `deleted_at` bigint(20) DEFAULT 0 COMMENT 'deleted_at',
+  `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
   PRIMARY KEY (`id`),
   KEY `schedules_org_id` (`org_id`),
   KEY `schedules_start_at` (`start_at`),
   KEY `schedules_end_at` (`end_at`),
-  KEY `schedules_deleted_at` (`deleted_at`)
+  KEY `schedules_delete_at` (`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='schedules';
 
 CREATE TABLE IF NOT EXISTS `schedules_teachers` (
