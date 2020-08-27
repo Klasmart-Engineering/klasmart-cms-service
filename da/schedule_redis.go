@@ -110,12 +110,8 @@ var (
 
 func GetScheduleRedisDA() *ScheduleRedisDA {
 	_scheduleRedisDAOnce.Do(func() {
-		_scheduleRedisDA = &ScheduleRedisDA{}
-		expiration := config.Get().RedisConfig.Expiration.ScheduleKeyExpiration
-		if expiration <= 0 {
-			_scheduleRedisDA.expiration = time.Minute * ScheduleKeyExpiration
-		} else {
-			_scheduleRedisDA.expiration = time.Minute * time.Duration(expiration)
+		_scheduleRedisDA = &ScheduleRedisDA{
+			expiration: config.Get().Schedule.CacheExpiration,
 		}
 	})
 	return _scheduleRedisDA

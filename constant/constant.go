@@ -1,11 +1,18 @@
 package constant
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 const (
 	TableNameTag             = "tags"
 	TableNameSchedule        = "schedules"
 	TableNameScheduleTeacher = "schedules_teachers"
+)
+
+const (
+	ScheduleDefaultCacheExpiration = 3 * time.Minute
 )
 
 type GSIName string
