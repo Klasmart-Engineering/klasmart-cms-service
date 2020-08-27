@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -106,6 +108,16 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
 	//TODO:Check age, category...
+	if c.Thumbnail != "" {
+		parts := strings.Split(c.Thumbnail, "-")
+		if len(parts) != 2 {
+			return ErrInvalidResourceId
+		}
+		_, exist := storage.DefaultStorage().ExitsFile(ctx, parts[0], parts[1])
+		if !exist {
+			return ErrResourceNotFound
+		}
+	}
 	return nil
 }
 

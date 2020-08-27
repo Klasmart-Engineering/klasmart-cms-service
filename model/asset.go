@@ -39,6 +39,7 @@ var (
 	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
 
 	ErrInvalidResourceId			= errors.New("invalid resource id")
+	ErrResourceNotFound		= errors.New("resource not found")
 )
 
 type IAssetModel interface {
