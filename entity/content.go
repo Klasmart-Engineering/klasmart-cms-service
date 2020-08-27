@@ -120,7 +120,7 @@ type Content struct {
 	Thumbnail     string `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
 
 	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
-	Extra string `gorm:"type:json;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
+	Extra string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
 	SuggestTime int `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
 	Author     string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`

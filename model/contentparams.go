@@ -32,10 +32,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	if c.ContentType.IsAsset() {
 		publishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 	}
-	extra := "{}"
-	if c.Extra == "" {
-		extra = c.Extra
-	}
 
 	return &entity.Content{
 		//ID:            utils.NewID(),
@@ -51,7 +47,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Thumbnail:     c.Thumbnail,
 		SuggestTime: c.SuggestTime,
 		Data:          c.Data,
-		Extra:         extra,
+		Extra:         c.Extra,
 		Author:        operator.UserID,
 		AuthorName:    authorName,
 		LockedBy: 	   "-",
