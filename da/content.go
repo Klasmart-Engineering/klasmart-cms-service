@@ -196,7 +196,7 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 	co.ID = utils.NewID()
 	co.UpdatedAt = now.Unix()
 	co.CreatedAt = now.Unix()
-	err := cd.s.SaveTx(ctx, tx, &co)
+	_, err := cd.s.InsertTx(ctx, tx, &co)
 	if err != nil {
 		return "", err
 	}
