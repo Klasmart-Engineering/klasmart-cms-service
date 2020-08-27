@@ -24,6 +24,7 @@ require (
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/go-playground/validator.v9 v9.31.0
+	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
 

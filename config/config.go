@@ -10,32 +10,32 @@ import (
 )
 
 type Config struct {
-	StorageConfig StorageConfig
-	CDNConfig     CDNConfig
+	StorageConfig StorageConfig `yaml:"storage_config"`
+	CDNConfig     CDNConfig `yaml:"cdn_config"`
 	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
-	DBConfig      DBConfig
-	RedisConfig   RedisConfig
+	DBConfig      DBConfig `yaml:"db_config"`
+	RedisConfig   RedisConfig `yaml:"redis_config"`
 }
 
 var config *Config
 
 type RedisConfig struct {
-	OpenCache bool
-	Host      string
-	Port      int
-	Password  string
+	OpenCache bool `yaml:"open_cache"`
+	Host      string `yaml:"host"`
+	Port      int `yaml:"port"`
+	Password  string `yaml:"password"`
 }
 type DBConfig struct {
-	DBMode string `json:"db_mode"`
+	DBMode string `yaml:"db_mode"`
 
-	ConnectionString string `json:"connection_string"`
-	MaxOpenConns     int    `json:"max_open_conns"`
-	MaxIdleConns     int    `json:"max_idle_conns"`
-	ShowLog          bool   `json:"show_log"`
-	ShowSQL          bool   `json:"show_sql"`
+	ConnectionString string `yaml:"connection_string"`
+	MaxOpenConns     int    `yaml:"max_open_conns"`
+	MaxIdleConns     int    `yaml:"max_idle_conns"`
+	ShowLog          bool   `yaml:"show_log"`
+	ShowSQL          bool   `yaml:"show_sql"`
 
-	DynamoEndPoint string `json:"dynamo_end_point"`
-	DynamoRegion   string `json:"dynamo_region"`
+	DynamoEndPoint string `yaml:"dynamo_end_point"`
+	DynamoRegion   string `yaml:"dynamo_region"`
 }
 
 type StorageConfig struct {
@@ -46,15 +46,15 @@ type StorageConfig struct {
 }
 
 type CDNConfig struct {
-	CDNOpen bool
-	CDNMode string
+	CDNOpen bool `yaml:"cdn_open"`
+	CDNMode string `yaml:"cdn_mode"`
 
-	CDNPath       string
-	CDNKeyId      string
-	CDNPrivateKey string
+	CDNPath       string `yaml:"cdn_path"`
+	CDNKeyId      string `yaml:"cdn_key_id"`
+	CDNPrivateKey string `yaml:"cdn_private_key"`
 
-	CDNServicePath  string
-	CDNServiceToken string
+	CDNServicePath  string `yaml:"cdn_service_path"`
+	CDNServiceToken string `yaml:"cdn_service_token"`
 }
 
 type ScheduleConfig struct {

@@ -81,7 +81,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
 	if len(s.IDS) > 0 {
-		condition := " id in (?) "
+		condition := " content_id in (?) "
 		conditions = append(conditions, condition)
 		params = append(params, s.IDS)
 	}
@@ -142,9 +142,9 @@ func (s *ContentCondition) GetOrderBy() string {
 // NewTeacherOrderBy parse order by
 func NewContentOrderBy(orderby string) ContentOrderBy {
 	switch orderby {
-	case "id":
+	case "content_id":
 		return ContentOrderById
-	case "-id":
+	case "-content_id":
 		return ContentOrderByIdDesc
 	case "created_at":
 		return ContentOrderByCreatedAt
@@ -167,9 +167,9 @@ func NewContentOrderBy(orderby string) ContentOrderBy {
 func (s ContentOrderBy) ToSQL() string {
 	switch s {
 	case ContentOrderById:
-		return "id"
+		return "content_id"
 	case ContentOrderByIdDesc:
-		return "id desc"
+		return "content_id desc"
 	case ContentOrderByCreatedAt:
 		return "created_at"
 	case ContentOrderByCreatedAtDesc:
