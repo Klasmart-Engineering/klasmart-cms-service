@@ -36,18 +36,18 @@ const (
 type RepeatWeekday string
 
 const (
-	RepeatWeekdaySun RepeatWeekday = "sun"
-	RepeatWeekdayMon RepeatWeekday = "mon"
-	RepeatWeekdayTue RepeatWeekday = "tue"
-	RepeatWeekdayWed RepeatWeekday = "wed"
-	RepeatWeekdayThu RepeatWeekday = "thu"
-	RepeatWeekdayFri RepeatWeekday = "fri"
-	RepeatWeekdaySat RepeatWeekday = "sat"
+	RepeatWeekdaySunday    RepeatWeekday = "Sunday"
+	RepeatWeekdayMonday    RepeatWeekday = "Monday"
+	RepeatWeekdayTuesday   RepeatWeekday = "Tuesday"
+	RepeatWeekdayWednesday RepeatWeekday = "Wednesday"
+	RepeatWeekdayThursday  RepeatWeekday = "Thursday"
+	RepeatWeekdayFriday    RepeatWeekday = "Friday"
+	RepeatWeekdaySaturday  RepeatWeekday = "Saturday"
 )
 
 func (w RepeatWeekday) Valid() bool {
 	switch w {
-	case RepeatWeekdaySun, RepeatWeekdayMon, RepeatWeekdayTue, RepeatWeekdayWed, RepeatWeekdayThu, RepeatWeekdayFri, RepeatWeekdaySat:
+	case RepeatWeekdaySunday, RepeatWeekdayMonday, RepeatWeekdayTuesday, RepeatWeekdayWednesday, RepeatWeekdayThursday, RepeatWeekdayFriday, RepeatWeekdaySaturday:
 		return true
 	default:
 		return false
@@ -56,19 +56,19 @@ func (w RepeatWeekday) Valid() bool {
 
 func (w RepeatWeekday) TimeWeekday() time.Weekday {
 	switch w {
-	case RepeatWeekdaySun:
+	case RepeatWeekdaySunday:
 		return time.Sunday
-	case RepeatWeekdayMon:
+	case RepeatWeekdayMonday:
 		return time.Monday
-	case RepeatWeekdayTue:
+	case RepeatWeekdayTuesday:
 		return time.Tuesday
-	case RepeatWeekdayWed:
+	case RepeatWeekdayWednesday:
 		return time.Wednesday
-	case RepeatWeekdayThu:
+	case RepeatWeekdayThursday:
 		return time.Thursday
-	case RepeatWeekdayFri:
+	case RepeatWeekdayFriday:
 		return time.Friday
-	case RepeatWeekdaySat:
+	case RepeatWeekdaySaturday:
 		return time.Saturday
 	}
 	return 0
@@ -151,48 +151,48 @@ func (s RepeatWeekSeq) Offset() int {
 }
 
 type RepeatOptions struct {
-	Type    RepeatType    `json:"type"`
-	Daily   RepeatDaily   `json:"daily"`
-	Weekly  RepeatWeekly  `json:"weekly"`
-	Monthly RepeatMonthly `json:"monthly"`
-	Yearly  RepeatYearly  `json:"yearly"`
+	Type    RepeatType    `json:"type,omitempty"`
+	Daily   RepeatDaily   `json:"daily,omitempty"`
+	Weekly  RepeatWeekly  `json:"weekly,omitempty"`
+	Monthly RepeatMonthly `json:"monthly,omitempty"`
+	Yearly  RepeatYearly  `json:"yearly,omitempty"`
 }
 
 type RepeatDaily struct {
-	Interval int       `json:"interval"`
-	End      RepeatEnd `json:"end"`
+	Interval int       `json:"interval,omitempty"`
+	End      RepeatEnd `json:"end,omitempty"`
 }
 
 type RepeatWeekly struct {
-	Interval int             `json:"interval"`
-	On       []RepeatWeekday `json:"on"`
-	End      RepeatEnd       `json:"end"`
+	Interval int             `json:"interval,omitempty"`
+	On       []RepeatWeekday `json:"on,omitempty"`
+	End      RepeatEnd       `json:"end,omitempty"`
 }
 
 type RepeatMonthly struct {
-	Interval  int                 `json:"interval"`
-	OnType    RepeatMonthlyOnType `json:"on_type"`
-	OnDateDay int                 `json:"on_date_day"`
-	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq"`
-	OnWeek    RepeatWeekday       `json:"on_week"`
-	End       RepeatEnd           `json:"end"`
+	Interval  int                 `json:"interval,omitempty"`
+	OnType    RepeatMonthlyOnType `json:"on_type,omitempty"`
+	OnDateDay int                 `json:"on_date_day,omitempty"`
+	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq,omitempty"`
+	OnWeek    RepeatWeekday       `json:"on_week,omitempty"`
+	End       RepeatEnd           `json:"end,omitempty"`
 }
 
 type RepeatYearly struct {
-	Interval    int                `json:"interval"`
-	OnType      RepeatYearlyOnType `json:"on_type"`
-	OnDateMonth int                `json:"on_date_month"`
-	OnDateDay   int                `json:"on_date_day"`
-	OnWeekMonth int                `json:"on_week_month"`
-	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq"`
-	OnWeek      RepeatWeekday      `json:"on_week"`
-	End         RepeatEnd          `json:"end"`
+	Interval    int                `json:"interval,omitempty"`
+	OnType      RepeatYearlyOnType `json:"on_type,omitempty"`
+	OnDateMonth int                `json:"on_date_month,omitempty"`
+	OnDateDay   int                `json:"on_date_day,omitempty"`
+	OnWeekMonth int                `json:"on_week_month,omitempty"`
+	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq,omitempty"`
+	OnWeek      RepeatWeekday      `json:"on_week,omitempty"`
+	End         RepeatEnd          `json:"end,omitempty"`
 }
 
 type RepeatEnd struct {
-	Type       RepeatEndType `json:"type"`
-	AfterCount int           `json:"after_count"`
-	AfterTime  int64         `json:"after_time"`
+	Type       RepeatEndType `json:"type,omitempty"`
+	AfterCount int           `json:"after_count,omitempty"`
+	AfterTime  int64         `json:"after_time,omitempty"`
 }
 
 type ScheduleClassType string
@@ -205,30 +205,30 @@ const (
 )
 
 type Schedule struct {
-	ID           string `gorm:"column:id;PRIMARY_KEY"`
-	Title        string `gorm:"column:title;type:varchar(100)"`
-	ClassID      string `gorm:"column:class_id;type:varchar(100)"`
-	LessonPlanID string `gorm:"column:lesson_plan_id;type:varchar(100)"`
-	OrgID        string `gorm:"column:org_id;type:varchar(100)"`
-	StartAt      int64  `gorm:"column:start_at;type:bigint"`
-	EndAt        int64  `gorm:"column:end_at;type:bigint"`
-	Status       string `gorm:"column:status;type:varchar(100)"`
-	IsAllDay     bool   `gorm:"column:is_all_day;default:false"`
-	SubjectID    string `gorm:"column:subject_id;type:varchar(100)"`
-	ProgramID    string `gorm:"column:program_id;type:varchar(100)"`
-	ClassType    string `gorm:"column:class_type;type:varchar(100)"`
-	DueAt        int64  `gorm:"column:due_at;type:bigint"`
-	Description  string `gorm:"column:description;type:varchar(500)"`
-	Attachment   string `gorm:"column:attachment_url;type:varchar(500)"`
-	Version      int64  `gorm:"column:'version';type:bigint"`
-	RepeatID     string `gorm:"column:repeat_id;type:varchar(100)"`
-	RepeatJson   string `gorm:"column:repeat;type:json;"`
-	CreatedID    string `gorm:"column:created_id;type:varchar(100)"`
-	UpdatedID    string `gorm:"column:updated_id;type:varchar(100)"`
-	DeletedID    string `gorm:"column:deleted_id;type:varchar(100)"`
-	CreatedAt    int64  `gorm:"column:created_at;type:bigint"`
-	UpdatedAt    int64  `gorm:"column:updated_at;type:bigint"`
-	DeleteAt     int64  `gorm:"column:delete_at;type:bigint"`
+	ID              string `gorm:"column:id;PRIMARY_KEY"`
+	Title           string `gorm:"column:title;type:varchar(100)"`
+	ClassID         string `gorm:"column:class_id;type:varchar(100)"`
+	LessonPlanID    string `gorm:"column:lesson_plan_id;type:varchar(100)"`
+	OrgID           string `gorm:"column:org_id;type:varchar(100)"`
+	StartAt         int64  `gorm:"column:start_at;type:bigint"`
+	EndAt           int64  `gorm:"column:end_at;type:bigint"`
+	Status          string `gorm:"column:status;type:varchar(100)"`
+	IsAllDay        bool   `gorm:"column:is_all_day;default:false"`
+	SubjectID       string `gorm:"column:subject_id;type:varchar(100)"`
+	ProgramID       string `gorm:"column:program_id;type:varchar(100)"`
+	ClassType       string `gorm:"column:class_type;type:varchar(100)"`
+	DueAt           int64  `gorm:"column:due_at;type:bigint"`
+	Description     string `gorm:"column:description;type:varchar(500)"`
+	Attachment      string `gorm:"column:attachment_url;type:varchar(500)"`
+	ScheduleVersion int64  `gorm:"column:version;type:bigint"`
+	RepeatID        string `gorm:"column:repeat_id;type:varchar(100)"`
+	RepeatJson      string `gorm:"column:repeat;type:json;"`
+	CreatedID       string `gorm:"column:created_id;type:varchar(100)"`
+	UpdatedID       string `gorm:"column:updated_id;type:varchar(100)"`
+	DeletedID       string `gorm:"column:deleted_id;type:varchar(100)"`
+	CreatedAt       int64  `gorm:"column:created_at;type:bigint"`
+	UpdatedAt       int64  `gorm:"column:updated_at;type:bigint"`
+	DeleteAt        int64  `gorm:"column:delete_at;type:bigint"`
 }
 
 func (Schedule) TableName() string {
@@ -268,23 +268,23 @@ type ScheduleAddView struct {
 
 func (s *ScheduleAddView) Convert() (*Schedule, error) {
 	schedule := &Schedule{
-		Title:        s.Title,
-		ClassID:      s.ClassID,
-		LessonPlanID: s.LessonPlanID,
-		OrgID:        s.OrgID,
-		StartAt:      s.StartAt,
-		EndAt:        s.EndAt,
-		SubjectID:    s.SubjectID,
-		ProgramID:    s.ProgramID,
-		ClassType:    s.ClassType,
-		DueAt:        s.DueAt,
-		Description:  s.Description,
-		Attachment:   s.Attachment,
-		Version:      0,
-		CreatedAt:    time.Now().Unix(),
-		UpdatedAt:    0,
-		RepeatID:     s.RepeatID,
-		IsAllDay:     s.IsAllDay,
+		Title:           s.Title,
+		ClassID:         s.ClassID,
+		LessonPlanID:    s.LessonPlanID,
+		OrgID:           s.OrgID,
+		StartAt:         s.StartAt,
+		EndAt:           s.EndAt,
+		SubjectID:       s.SubjectID,
+		ProgramID:       s.ProgramID,
+		ClassType:       s.ClassType,
+		DueAt:           s.DueAt,
+		Description:     s.Description,
+		Attachment:      s.Attachment,
+		ScheduleVersion: 0,
+		CreatedAt:       time.Now().Unix(),
+		UpdatedAt:       0,
+		RepeatID:        s.RepeatID,
+		IsAllDay:        s.IsAllDay,
 	}
 	if s.IsRepeat {
 		b, err := json.Marshal(s.Repeat)
@@ -296,6 +296,8 @@ func (s *ScheduleAddView) Convert() (*Schedule, error) {
 		if schedule.RepeatID == "" {
 			schedule.RepeatID = utils.NewID()
 		}
+	} else {
+		schedule.RepeatJson = "{}"
 	}
 
 	return schedule, nil

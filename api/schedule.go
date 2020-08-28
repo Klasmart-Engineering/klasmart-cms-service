@@ -149,14 +149,19 @@ func (s *Server) querySchedule(c *gin.Context) {
 	condition.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 
 	startAtStr := c.Query("start_at")
-	startAt, err := strconv.ParseInt(startAtStr, 10, 64)
-	if err != nil {
-		startAt = utils.BeginOfDayByTimeStamp(time.Now().Unix(), s.getLocation(c)).Unix()
-	}
-	startAt = utils.BeginOfDayByTimeStamp(startAt, s.getLocation(c)).Unix()
-	condition.StartAtGe = sql.NullInt64{
-		Int64: startAt,
-		Valid: startAt > 0,
+	if strings.TrimSpace(startAtStr) != "" {
+		startAt, err := strconv.ParseInt(startAtStr, 10, 64)
+		if err != nil {
+			log.Info(ctx, "querySchedule:invalid start_at params",
+				log.String("startAt", startAtStr),
+				log.Any("condition", condition))
+			c.JSON(http.StatusBadRequest, "invalid 'start_at' params")
+		}
+		startAt = utils.BeginOfDayByTimeStamp(startAt, s.getLocation(c)).Unix()
+		condition.StartAtGe = sql.NullInt64{
+			Int64: startAt,
+			Valid: startAt > 0,
+		}
 	}
 
 	condition.OrgID = sql.NullString{
@@ -209,10 +214,10 @@ func (s *Server) getLocation(c *gin.Context) *time.Location {
 }
 
 const (
-	ViewTypeDay      = "Day"
-	ViewTypeWorkweek = "Workweek"
-	ViewTypeWeek     = "Week"
-	ViewTypeMonth    = "Month"
+	ViewTypeDay      = "day"
+	ViewTypeWorkweek = "workWeek"
+	ViewTypeWeek     = "week"
+	ViewTypeMonth    = "month"
 )
 
 func (s *Server) getScheduleTimeView(c *gin.Context) {

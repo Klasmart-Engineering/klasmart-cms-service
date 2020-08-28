@@ -79,6 +79,7 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operat
 		item.ID = utils.NewID()
 		for _, teacherID := range viewData.TeacherIDs {
 			tsItem := &entity.ScheduleTeacher{
+				ID:         utils.NewID(),
 				TeacherID:  teacherID,
 				ScheduleID: schedule.ID,
 			}
@@ -552,7 +553,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		ClassType:   schedule.ClassType,
 		DueAt:       schedule.DueAt,
 		Description: schedule.Description,
-		Version:     schedule.Version,
+		Version:     schedule.ScheduleVersion,
 		RepeatID:    schedule.RepeatID,
 	}
 	if schedule.RepeatJson != "" {
