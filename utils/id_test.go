@@ -13,6 +13,6 @@ func TestNewId(t *testing.T) {
 }
 
 func TestUniqueIdList(t *testing.T) {
-	r := UniqueIdList([]string{"a", "b", "2", "c", "a", "2"})
+	r := SliceDeduplication([]string{"a", "b", "2", "c", "a", "2"})
 	fmt.Println(r)
 }
