@@ -2287,6 +2287,12 @@
             "in": "query",
             "description": "Search schedules by view_type",
             "schema": {
+              "enum": [
+                "day",
+                "workWeek",
+                "week",
+                "month"
+              ],
               "type": "string",
               "nullable": false
             }
