@@ -642,11 +642,21 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	//补全相关内容
-	err = content.Data.PrepareResult(ctx)
+	contentData, err := contentdata.CreateContentData(ctx, obj.ContentType, obj.Data)
+	if err != nil {
+		return nil, err
+	}
+	err = contentData.PrepareResult(ctx)
 	if err != nil {
 		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
 	}
+	filledContentData, err := contentData.Marshal(ctx)
+	if err != nil {
+		log.Error(ctx, "can't marshal contentdata for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
+	}
+	content.Data = filledContentData
 
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, []*entity.ContentInfo{content}, user)
 	if err != nil {
