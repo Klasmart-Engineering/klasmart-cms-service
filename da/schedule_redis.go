@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	CacheScheduleIDKey = "schedule"
+	CacheScheduleKey          = "schedule"
+	CacheScheduleConditionKey = "schedule:condition"
 )
 
 func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules []*entity.ScheduleDetailsView) {
@@ -23,7 +24,7 @@ func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules [
 	}
 	go func() {
 		for _, item := range schedules {
-			key := r.scheduleIDKey(item.ID)
+			key := r.scheduleKey(item.ID)
 			b, err := json.Marshal(item)
 			if err != nil {
 				log.Error(ctx, "Can't parse schedule into json",
@@ -43,13 +44,39 @@ func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules [
 		}
 	}()
 }
+func (r *ScheduleRedisDA) AddScheduleByCondition(ctx context.Context, viewType string, schedules []*entity.ScheduleListView) {
+	if !config.Get().RedisConfig.OpenCache {
+		return
+	}
+	go func() {
+		b, err := json.Marshal(schedules)
+		if err != nil {
+			log.Error(ctx, "Can't parse schedule list into json",
+				log.Err(err),
+				log.String("viewType", viewType),
+				log.Any("schedules", schedules),
+			)
+			return
+		}
+		key := r.scheduleKey(viewType)
+		err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
+		if err != nil {
+			log.Error(ctx, "Can't save schedule into cache",
+				log.Err(err),
+				log.String("viewType", viewType),
+				log.Any("schedules", schedules),
+			)
+			return
+		}
+	}()
+}
 func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []string) ([]*entity.ScheduleDetailsView, error) {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil, errors.New("not open cache")
 	}
 	keys := make([]string, len(ids))
 	for i := range ids {
-		keys[i] = r.scheduleIDKey(ids[i])
+		keys[i] = r.scheduleKey(ids[i])
 	}
 	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
 	if err != nil {
@@ -76,17 +103,19 @@ func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []strin
 
 	return schedules, nil
 }
-func (r *ScheduleRedisDA) scheduleIDKey(id string) string {
-	return fmt.Sprintf("%s:%v", CacheScheduleIDKey, id)
+func (r *ScheduleRedisDA) scheduleKey(key string) string {
+	return fmt.Sprintf("%s:%v", CacheScheduleKey, key)
 }
-
+func (r *ScheduleRedisDA) scheduleConditionKey(key string) string {
+	return ""
+}
 func (r *ScheduleRedisDA) Clean(ctx context.Context, ids []string) error {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
 	keys := make([]string, len(ids))
 	for i, id := range ids {
-		keys[i] = r.scheduleIDKey(id)
+		keys[i] = r.scheduleKey(id)
 	}
 
 	err := ro.MustGetRedis(ctx).Del(keys...).Err()
