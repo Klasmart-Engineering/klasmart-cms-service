@@ -30,9 +30,56 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 		data = append(data, []interface{}{
 			item.ID,
 			item.Title,
+			item.ClassID,
+			item.LessonPlanID,
+			item.OrgID,
+			item.StartAt,
+			item.EndAt,
+			item.Status,
+			item.IsAllDay,
+			item.SubjectID,
+			item.ProgramID,
+			item.ClassType,
+			item.DueAt,
+			item.Description,
+			item.Attachment,
+			item.ScheduleVersion,
+			item.RepeatID,
+			item.RepeatJson,
+			item.CreatedID,
+			item.UpdatedID,
+			item.DeletedID,
+			item.CreatedAt,
+			item.UpdatedAt,
+			item.DeleteAt,
 		})
 	}
-	sql := SQLBatchInsert(constant.TableNameSchedule, []string{"id", "title"}, data)
+	sql := SQLBatchInsert(constant.TableNameSchedule, []string{
+		"id",
+		"title",
+		"class_id",
+		"lesson_plan_id",
+		"org_id",
+		"start_at",
+		"end_at",
+		"status",
+		"is_all_day",
+		"subject_id",
+		"program_id",
+		"class_type",
+		"due_at",
+		"description",
+		"attachment_url",
+		"version",
+		"repeat_id",
+		"repeat",
+		"created_id",
+		"updated_id",
+		"deleted_id",
+		"created_at",
+		"updated_at",
+		"delete_at",
+	}, data)
 	execResult := dbContext.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
 		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
@@ -88,7 +135,7 @@ func GetScheduleDA() IScheduleDA {
 type ScheduleCondition struct {
 	OrgID            sql.NullString
 	StartAtGe        sql.NullInt64
-	EndAtGe          sql.NullInt64
+	EndAtLe          sql.NullInt64
 	TeacherID        sql.NullString
 	TeacherIDs       entity.NullStrings
 	StartAndEndRange []sql.NullInt64
@@ -119,9 +166,9 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "((start_at <= ? and end_at >= ?) or (start_at <= ? and end_at >= ?))")
 		params = append(params, startRange.Int64, startRange.Int64, endRange.Int64, endRange.Int64)
 	}
-	if c.EndAtGe.Valid {
-		wheres = append(wheres, "end_at >= ?")
-		params = append(params, c.EndAtGe.Int64)
+	if c.EndAtLe.Valid {
+		wheres = append(wheres, "end_at <= ?")
+		params = append(params, c.EndAtLe.Int64)
 	}
 	if c.TeacherID.Valid {
 		sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",
