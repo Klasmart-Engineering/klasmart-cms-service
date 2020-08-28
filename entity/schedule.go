@@ -151,48 +151,48 @@ func (s RepeatWeekSeq) Offset() int {
 }
 
 type RepeatOptions struct {
-	Type    RepeatType    `json:"type"`
-	Daily   RepeatDaily   `json:"daily"`
-	Weekly  RepeatWeekly  `json:"weekly"`
-	Monthly RepeatMonthly `json:"monthly"`
-	Yearly  RepeatYearly  `json:"yearly"`
+	Type    RepeatType    `json:"type,omitempty"`
+	Daily   RepeatDaily   `json:"daily,omitempty"`
+	Weekly  RepeatWeekly  `json:"weekly,omitempty"`
+	Monthly RepeatMonthly `json:"monthly,omitempty"`
+	Yearly  RepeatYearly  `json:"yearly,omitempty"`
 }
 
 type RepeatDaily struct {
-	Interval int       `json:"interval"`
-	End      RepeatEnd `json:"end"`
+	Interval int       `json:"interval,omitempty"`
+	End      RepeatEnd `json:"end,omitempty"`
 }
 
 type RepeatWeekly struct {
-	Interval int             `json:"interval"`
-	On       []RepeatWeekday `json:"on"`
-	End      RepeatEnd       `json:"end"`
+	Interval int             `json:"interval,omitempty"`
+	On       []RepeatWeekday `json:"on,omitempty"`
+	End      RepeatEnd       `json:"end,omitempty"`
 }
 
 type RepeatMonthly struct {
-	Interval  int                 `json:"interval"`
-	OnType    RepeatMonthlyOnType `json:"on_type"`
-	OnDateDay int                 `json:"on_date_day"`
-	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq"`
-	OnWeek    RepeatWeekday       `json:"on_week"`
-	End       RepeatEnd           `json:"end"`
+	Interval  int                 `json:"interval,omitempty"`
+	OnType    RepeatMonthlyOnType `json:"on_type,omitempty"`
+	OnDateDay int                 `json:"on_date_day,omitempty"`
+	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq,omitempty"`
+	OnWeek    RepeatWeekday       `json:"on_week,omitempty"`
+	End       RepeatEnd           `json:"end,omitempty"`
 }
 
 type RepeatYearly struct {
-	Interval    int                `json:"interval"`
-	OnType      RepeatYearlyOnType `json:"on_type"`
-	OnDateMonth int                `json:"on_date_month"`
-	OnDateDay   int                `json:"on_date_day"`
-	OnWeekMonth int                `json:"on_week_month"`
-	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq"`
-	OnWeek      RepeatWeekday      `json:"on_week"`
-	End         RepeatEnd          `json:"end"`
+	Interval    int                `json:"interval,omitempty"`
+	OnType      RepeatYearlyOnType `json:"on_type,omitempty"`
+	OnDateMonth int                `json:"on_date_month,omitempty"`
+	OnDateDay   int                `json:"on_date_day,omitempty"`
+	OnWeekMonth int                `json:"on_week_month,omitempty"`
+	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq,omitempty"`
+	OnWeek      RepeatWeekday      `json:"on_week,omitempty"`
+	End         RepeatEnd          `json:"end,omitempty"`
 }
 
 type RepeatEnd struct {
-	Type       RepeatEndType `json:"type"`
-	AfterCount int           `json:"after_count"`
-	AfterTime  int64         `json:"after_time"`
+	Type       RepeatEndType `json:"type,omitempty"`
+	AfterCount int           `json:"after_count,omitempty"`
+	AfterTime  int64         `json:"after_time,omitempty"`
 }
 
 type ScheduleClassType string
