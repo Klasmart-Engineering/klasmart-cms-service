@@ -207,16 +207,15 @@ func (r *ContentRedis) CleanContentCache(ctx context.Context, ids []string) {
 	//keys = append(keys, conditionKeys...)
 	keys = append(keys, RedisKeyPrefixContentCondition)
 	go func() {
-		//双删
 		err := ro.MustGetRedis(ctx).Del(keys...).Err()
 		if err != nil{
 			log.Error(ctx, "Can't clean content from cache", log.Err(err), log.Strings("keys", keys))
 		}
-		time.Sleep(time.Second)
-		ro.MustGetRedis(ctx).Del(keys...)
-		if err != nil{
-			log.Error(ctx, "Can't clean content again from cache", log.Err(err), log.Strings("keys", keys))
-		}
+		//time.Sleep(time.Second)
+		//ro.MustGetRedis(ctx).Del(keys...)
+		//if err != nil{
+		//	log.Error(ctx, "Can't clean content again from cache", log.Err(err), log.Strings("keys", keys))
+		//}
 	}()
 }
 
