@@ -79,6 +79,7 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operat
 		item.ID = utils.NewID()
 		for _, teacherID := range viewData.TeacherIDs {
 			tsItem := &entity.ScheduleTeacher{
+				ID:         utils.NewID(),
 				TeacherID:  teacherID,
 				ScheduleID: schedule.ID,
 			}
