@@ -12,7 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
-	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutext"
+	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 )
 
 type IContentModel interface {

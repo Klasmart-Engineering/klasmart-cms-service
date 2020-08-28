@@ -10,16 +10,20 @@ import (
 	"time"
 )
 
+const(
+	defaultLockTimeout = time.Minute * 3
+)
+
 func NewLock(ctx context.Context, key string, params ...interface{}) (sync.Locker, error){
 	lockKey := key + ":"
 	for i := range params{
-		lockKey = lockKey + ":" + fmt.Sprintf("%v", params[i])
+		lockKey = fmt.Sprintf("%v:%v", lockKey, params[i])
 	}
 
 	return locker.NewDistributedLock(locker.DistributedLockConfig{
 		Driver:      "redis",
-		Key:         fmt.Sprintf("%v", lockKey),
-		Timeout:     time.Minute * 3,
+		Key:         lockKey,
+		Timeout:     defaultLockTimeout,
 		Ctx:         ctx,
 		RedisConfig: drivers.RedisConfig{
 			Host:     config.Get().RedisConfig.Host,

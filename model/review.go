@@ -6,7 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutext"
+	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"sync"
 )
 
