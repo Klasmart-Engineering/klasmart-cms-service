@@ -145,7 +145,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: &entity.RepeatWeekly{
 					Interval: 1,
-					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon, entity.RepeatWeekdayTue, entity.RepeatWeekdaySat},
+					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday, entity.RepeatWeekdayTuesday, entity.RepeatWeekdaySaturday},
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
 					},
@@ -164,7 +164,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: &entity.RepeatWeekly{
 					Interval: 3,
-					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon},
+					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday},
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
 					},
@@ -183,7 +183,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: &entity.RepeatWeekly{
 					Interval: 1,
-					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon, entity.RepeatWeekdayFri, entity.RepeatWeekdaySun},
+					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday, entity.RepeatWeekdayFriday, entity.RepeatWeekdaySunday},
 					End: entity.RepeatEnd{
 						Type:       entity.RepeatEndAfterCount,
 						AfterCount: 3,
@@ -203,7 +203,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: &entity.RepeatWeekly{
 					Interval: 1,
-					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMon},
+					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday},
 					End: entity.RepeatEnd{
 						Type:      entity.RepeatEndAfterTime,
 						AfterTime: time.Date(2020, 10, 1, 0, 0, 0, 0, time.Local).Unix(),
@@ -290,7 +290,7 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnWeek,
-					OnWeek:    entity.RepeatWeekdayMon,
+					OnWeek:    entity.RepeatWeekdayMonday,
 					OnWeekSeq: entity.RepeatWeekSeqFirst,
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
@@ -332,7 +332,7 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnWeek,
-					OnWeek:    entity.RepeatWeekdayMon,
+					OnWeek:    entity.RepeatWeekdayMonday,
 					OnWeekSeq: entity.RepeatWeekSeqFourth,
 					End: entity.RepeatEnd{
 						Type:       entity.RepeatEndAfterCount,
@@ -375,7 +375,7 @@ func Test_repeatScheduleMonthly(t *testing.T) {
 				options: &entity.RepeatMonthly{
 					Interval:  1,
 					OnType:    entity.RepeatMonthlyOnWeek,
-					OnWeek:    entity.RepeatWeekdayMon,
+					OnWeek:    entity.RepeatWeekdayMonday,
 					OnWeekSeq: entity.RepeatWeekSeqLast,
 					End: entity.RepeatEnd{
 						Type:      entity.RepeatEndAfterTime,
@@ -464,7 +464,7 @@ func Test_repeatScheduleYearly(t *testing.T) {
 					OnType:      entity.RepeatYearlyOnWeek,
 					OnWeekMonth: 11,
 					OnWeekSeq:   entity.RepeatWeekSeqFirst,
-					OnWeek:      entity.RepeatWeekdayMon,
+					OnWeek:      entity.RepeatWeekdayMonday,
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
 					},
@@ -506,7 +506,7 @@ func Test_repeatScheduleYearly(t *testing.T) {
 					OnType:      entity.RepeatYearlyOnWeek,
 					OnWeekMonth: 11,
 					OnWeekSeq:   entity.RepeatWeekSeqFirst,
-					OnWeek:      entity.RepeatWeekdayMon,
+					OnWeek:      entity.RepeatWeekdayMonday,
 					End: entity.RepeatEnd{
 						Type:       entity.RepeatEndAfterCount,
 						AfterCount: 10,
@@ -549,7 +549,7 @@ func Test_repeatScheduleYearly(t *testing.T) {
 					OnType:      entity.RepeatYearlyOnWeek,
 					OnWeekMonth: 11,
 					OnWeekSeq:   entity.RepeatWeekSeqFirst,
-					OnWeek:      entity.RepeatWeekdayMon,
+					OnWeek:      entity.RepeatWeekdayMonday,
 					End: entity.RepeatEnd{
 						Type:      entity.RepeatEndAfterTime,
 						AfterTime: time.Date(2021, 12, 1, 0, 0, 0, 0, time.Local).Unix(),

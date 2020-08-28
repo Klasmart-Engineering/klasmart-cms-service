@@ -7,7 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/jinzhu/gorm v1.9.16 // indirect
+	github.com/jinzhu/gorm v1.9.16
 	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
