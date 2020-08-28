@@ -23,7 +23,7 @@ type IContentCache interface {
 	SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails)
 	GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails
 
-	CleanContentCache(ctx context.Context, ids []string) error
+	CleanContentCache(ctx context.Context, ids []string)
 
 	SetExpiration(t time.Duration)
 }
@@ -176,13 +176,13 @@ func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context
 	return contentLists
 }
 
-func (r *RedisContentCache) CleanContentCache(ctx context.Context, ids []string) error {
+func (r *RedisContentCache) CleanContentCache(ctx context.Context, ids []string) {
 	if !config.Get().RedisConfig.OpenCache {
-		return nil
+		return
 	}
 
 	if len(ids) < 1 {
-		return nil
+		return
 	}
 	//删除对应的id
 	keys := make([]string, 0)
@@ -194,7 +194,12 @@ func (r *RedisContentCache) CleanContentCache(ctx context.Context, ids []string)
 	conditionKeys := ro.MustGetRedis(ctx).Keys("kidsloop2.content.condition.*").Val()
 	keys = append(keys, conditionKeys...)
 
-	return ro.MustGetRedis(ctx).Del(keys...).Err()
+	go func() {
+		//双删
+		ro.MustGetRedis(ctx).Del(keys...)
+		time.Sleep(time.Second)
+		ro.MustGetRedis(ctx).Del(keys...)
+	}()
 }
 
 func (r *RedisContentCache) SetExpiration(t time.Duration) {
