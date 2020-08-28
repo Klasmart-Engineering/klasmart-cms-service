@@ -2489,7 +2489,7 @@
           {
             "name": "repeat_edit_options",
             "in": "query",
-            "description": "Search schedules by teacher_id",
+            "description": "repeat edit option",
             "schema": {
               "type": "string",
               "enum": [
