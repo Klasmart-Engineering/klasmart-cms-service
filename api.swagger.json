@@ -3051,6 +3051,16 @@
                   "program1"
                 ]
               },
+              "grade_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade name",
+                "example": [
+                  "program1"
+                ]
+              },
               "subject_name": {
                 "type": "array",
                 "items": {
