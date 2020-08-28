@@ -13,6 +13,10 @@ import (
 	"strings"
 )
 
+type IdList struct {
+	ID []string `json:"id"`
+}
+
 func (s *Server) createContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -171,13 +175,13 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
-	ids := make([]string, 0)
+	ids := new(IdList)
 	err := c.ShouldBind(&ids)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
-	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids, op)
+	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return

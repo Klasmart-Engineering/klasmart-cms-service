@@ -359,7 +359,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		log.Error(ctx, "update contentdata scope failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
-	if status == entity.ContentStatusPublished {
+	if status == entity.ContentStatusPublished && content.SourceID != ""{
 		//处理source content
 		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
 		if err != nil {
@@ -427,6 +427,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 
 }
 func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
+	updateIds := make([]string , 0)
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, contents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 			IDS: ids,
@@ -445,9 +446,15 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 				log.Error(ctx, "can't publish content", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
 				return err
 			}
+			updateIds = append(updateIds, contents[i].ID)
+			if contents[i].SourceID != ""{
+				updateIds = append(updateIds, contents[i].SourceID)
+			}
 		}
 		return nil
 	})
+
+	da.GetContentRedis().CleanContentCache(ctx, updateIds)
 	return err
 }
 

@@ -15,6 +15,11 @@ func (s *Server) approve(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
 	}
 	err := model.GetReviewerModel().Approve(ctx, dbo.MustGetDB(ctx), cid, op)
+	switch err {
+	case model.ErrReadContentFailed:
+		c.JSON(http.StatusNotFound, "content not found")
+		return
+	}
 	if err != nil {
 		// TODO: differentiate error types
 		c.JSON(http.StatusInternalServerError, "Internal server error")
@@ -32,6 +37,11 @@ func (s *Server) reject(c *gin.Context) {
 	}
 	// extract reject reason
 	err := model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, "", op)
+	switch err {
+	case model.ErrReadContentFailed:
+		c.JSON(http.StatusNotFound, "content not found")
+		return
+	}
 	if err != nil {
 		// TODO: differentiate error types
 		c.JSON(http.StatusInternalServerError, "Internal server error")
