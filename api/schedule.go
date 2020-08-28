@@ -23,7 +23,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	data := entity.ScheduleUpdateView{}
-	if err := c.ShouldBind(data); err != nil {
+	if err := c.ShouldBind(&data); err != nil {
 		log.Info(ctx, "update schedule: should bind body failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
