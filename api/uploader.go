@@ -22,7 +22,7 @@ func (s *Server) GetUploadPath(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"path":  path,
+		"path":       path,
 		"resource_id": name,
 	})
 }
@@ -30,7 +30,6 @@ func (s *Server) GetUploadPath(c *gin.Context) {
 
 func (s *Server) GetPath(c *gin.Context) {
 	ctx := c.Request.Context()
-
 	resourceId := c.Param("resource_id")
 
 	if resourceId == "" {
