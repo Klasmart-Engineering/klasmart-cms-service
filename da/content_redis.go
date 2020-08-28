@@ -14,12 +14,8 @@ import (
 	"time"
 )
 
-const(
-	redisKeyPrefixCondition = "content:condition"
-	redisKeyPrefixId = "content:id"
-)
 
-type IContentCache interface {
+type IContentRedis interface {
 	SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails)
 	SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey)
 	GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfoWithDetails)
@@ -33,7 +29,7 @@ type IContentCache interface {
 	SetExpiration(t time.Duration)
 }
 
-type RedisContentCache struct {
+type ContentRedis struct {
 	expiration time.Duration
 }
 
@@ -42,18 +38,18 @@ type ContentListWithKey struct {
 	ContentList []*entity.ContentInfoWithDetails `json:"content_list"`
 }
 
-func (r *RedisContentCache) contentKey(id string) string {
-	return fmt.Sprintf("%v:%v", redisKeyPrefixId, id)
+func (r *ContentRedis) contentKey(id string) string {
+	return fmt.Sprintf("%v:%v", RedisKeyPrefixContentId, id)
 }
-func (r *RedisContentCache) contentConditionKey(condition dbo.Conditions) string {
+func (r *ContentRedis) contentConditionKey(condition dbo.Conditions) string {
 	h := md5.New()
 	h.Write([]byte(fmt.Sprintf("%v", condition)))
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
 
-	return fmt.Sprintf("%v:%v", redisKeyPrefixCondition, md5Hash)
+	return fmt.Sprintf("%v:%v", RedisKeyPrefixContentCondition, md5Hash)
 }
 
-func (r *RedisContentCache) SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails) {
+func (r *ContentRedis) SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
@@ -74,12 +70,12 @@ func (r *RedisContentCache) SaveContentCacheList(ctx context.Context, contents [
 	}()
 
 }
-func (r *RedisContentCache) SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails) {
+func (r *ContentRedis) SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails) {
 	r.SaveContentCacheList(ctx, []*entity.ContentInfoWithDetails{
 		content,
 	})
 }
-func (r *RedisContentCache) GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails {
+func (r *ContentRedis) GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
@@ -90,7 +86,7 @@ func (r *RedisContentCache) GetContentCacheById(ctx context.Context, id string) 
 	return nil
 }
 
-func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey) {
+func (r *ContentRedis) SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
@@ -108,7 +104,7 @@ func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Co
 	}()
 }
 
-func (r *RedisContentCache) GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfoWithDetails) {
+func (r *ContentRedis) GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfoWithDetails) {
 	if !config.Get().RedisConfig.OpenCache {
 		return ids, nil
 	}
@@ -160,7 +156,7 @@ func (r *RedisContentCache) GetContentCacheByIdList(ctx context.Context, ids []s
 	return restIds, cachedContents
 }
 
-func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *ContentListWithKey {
+func (r *ContentRedis) GetContentCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *ContentListWithKey {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
@@ -181,7 +177,7 @@ func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context
 	return contentLists
 }
 
-func (r *RedisContentCache) CleanContentCache(ctx context.Context, ids []string) {
+func (r *ContentRedis) CleanContentCache(ctx context.Context, ids []string) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
@@ -207,18 +203,18 @@ func (r *RedisContentCache) CleanContentCache(ctx context.Context, ids []string)
 	}()
 }
 
-func (r *RedisContentCache) SetExpiration(t time.Duration) {
+func (r *ContentRedis) SetExpiration(t time.Duration) {
 	r.expiration = t
 }
 
 var (
-	_redisContentCache     *RedisContentCache
+	_redisContentCache     *ContentRedis
 	_redisContentCacheOnce sync.Once
 )
 
-func GetRedisContentCache() IContentCache {
+func GetContentRedis() IContentRedis {
 	_redisContentCacheOnce.Do(func() {
-		_redisContentCache = &RedisContentCache{expiration: time.Minute * 2}
+		_redisContentCache = &ContentRedis{expiration: time.Minute * 2}
 	})
 	return _redisContentCache
 }
