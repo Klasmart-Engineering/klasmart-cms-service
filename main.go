@@ -85,6 +85,7 @@ func main() {
 	}else{
 		common.Setenv(common.EnvLAMBDA)
 	}
+
 	go common.RunWithHTTPHandler(api.NewServer(), ":8088")
 
 	log.Debug(context.TODO(), "init api server success")
