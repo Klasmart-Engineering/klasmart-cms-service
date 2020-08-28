@@ -296,6 +296,8 @@ func (s *ScheduleAddView) Convert() (*Schedule, error) {
 		if schedule.RepeatID == "" {
 			schedule.RepeatID = utils.NewID()
 		}
+	} else {
+		schedule.RepeatJson = "{}"
 	}
 
 	return schedule, nil
