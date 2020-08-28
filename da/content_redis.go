@@ -12,12 +12,12 @@ import (
 )
 
 const(
-	RedisContentBucket = "kidsloop2.da.content"
-	RedisContentKeywordsBucket = "kidsloop2.da.content.keywords"
-	RedisContentContentTypeBucket = "kidsloop2.da.content.contentType"
-	RedisContentPublishStatusBucket = "kidsloop2.da.content.publishStatus"
-	RedisContentAuthorBucket = "kidsloop2.da.content.author"
-	RedisContentOrgBucket = "kidsloop2.da.content.org"
+	RedisContentBucket = "kidsloop2:da:content"
+	RedisContentKeywordsBucket = "kidsloop2:da:content:keywords"
+	RedisContentContentTypeBucket = "kidsloop2:da:content:contentType"
+	RedisContentPublishStatusBucket = "kidsloop2:da:content:publishStatus"
+	RedisContentAuthorBucket = "kidsloop2:da:content:author"
+	RedisContentOrgBucket = "kidsloop2:da:content:org"
 )
 
 type RedisContentDA struct {
@@ -241,7 +241,7 @@ func (r *RedisContentCondition) GetConditions(ctx context.Context) []string {
 }
 
 func redisKey(ctx context.Context, bucket, key string) string {
-	return fmt.Sprintf("%v.%v", bucket, key)
+	return fmt.Sprintf("%v:%v", bucket, key)
 }
 
 var(
