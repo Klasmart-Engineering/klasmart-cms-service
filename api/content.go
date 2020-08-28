@@ -55,14 +55,14 @@ func (s *Server) createContent(c *gin.Context) {
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-	ids := make([]string, 0)
+	ids := new(IdList)
 	err := c.ShouldBind(&ids)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
 
-	err = model.GetContentModel().PublishContentBulk(ctx, dbo.MustGetDB(ctx), ids, op)
+	err = model.GetContentModel().PublishContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
