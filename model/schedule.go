@@ -378,6 +378,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		scheduleIDs = append(scheduleIDs, item.ID)
 		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 	}
+
 	classMap, err := s.getClassInfoMapByClassIDs(ctx, classIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get class info error", log.Err(err), log.Strings("classIDs", classIDs))
@@ -394,7 +395,8 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Strings("programIDs", programIDs))
 		return nil, err
 	}
-
+	teacherMap = make(map[string]*entity.ScheduleShortInfo)
+	scheduleTeacherMap = make(map[string][]string)
 	if len(scheduleIDs) > 0 {
 		var scheduleTeacherList []*entity.ScheduleTeacher
 		err := da.GetScheduleTeacherDA().Query(ctx, &da.ScheduleTeacherCondition{
@@ -407,7 +409,6 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			return nil, err
 		}
 		teacherIDs = make([]string, len(scheduleTeacherList))
-		scheduleTeacherMap = make(map[string][]string)
 		for i, item := range scheduleTeacherList {
 			teacherIDs[i] = item.TeacherID
 			if _, ok := scheduleTeacherMap[item.ScheduleID]; !ok {
@@ -415,7 +416,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 			scheduleTeacherMap[item.ScheduleID] = append(scheduleTeacherMap[item.ScheduleID], item.TeacherID)
 		}
-
+		teacherIDs = utils.SliceDeduplication(teacherIDs)
 		teacherService, err := external.GetTeacherServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("schedules", schedules))
@@ -426,7 +427,6 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedules", schedules))
 			return nil, err
 		}
-		teacherMap = make(map[string]*entity.ScheduleShortInfo)
 		for _, item := range teacherInfos {
 			teacherMap[item.ID] = &entity.ScheduleShortInfo{
 				ID:   item.ID,
@@ -434,17 +434,10 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
-	lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
+	lessonPlanMap, err = s.getLessonPlanMapByLessonPlanIDs(ctx, tx, lessonPlanIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
+		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Any("lessonPlanIDs", lessonPlanIDs))
 		return nil, err
-	}
-	lessonPlanMap = make(map[string]*entity.ScheduleShortInfo)
-	for _, item := range lessonPlans {
-		lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
-			ID:   item.ID,
-			Name: item.Name,
-		}
 	}
 	scheduleBasicMap := make(map[string]*entity.ScheduleBasic)
 	for _, item := range schedules {
@@ -473,9 +466,30 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	return scheduleBasicMap, nil
 }
 
+func (s *scheduleModel) getLessonPlanMapByLessonPlanIDs(ctx context.Context, tx *dbo.DBContext, lessonPlanIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+	lessonPlanMap := make(map[string]*entity.ScheduleShortInfo)
+	if len(lessonPlanIDs) != 0 {
+		lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
+		lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
+		if err != nil {
+			log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
+			return nil, err
+		}
+
+		for _, item := range lessonPlans {
+			lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
+				ID:   item.ID,
+				Name: item.Name,
+			}
+		}
+	}
+	return lessonPlanMap, nil
+}
+
 func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var classMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(classIDs) != 0 {
+		classIDs = utils.SliceDeduplication(classIDs)
 		classService, err := external.GetClassServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Strings("classIDs", classIDs))
@@ -499,6 +513,7 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs 
 func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
+		subjectIDs = utils.SliceDeduplication(subjectIDs)
 		subjectService, err := external.GetSubjectServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
@@ -522,6 +537,7 @@ func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjec
 func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var programMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(programIDs) != 0 {
+		programIDs = utils.SliceDeduplication(programIDs)
 		programService, err := external.GetProgramServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Strings("programIDs", programIDs))
