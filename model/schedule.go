@@ -534,6 +534,7 @@ func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, progr
 func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error) {
 	data, err := da.GetScheduleRedisDA().GetScheduleCacheByIDs(ctx, []string{id})
 	if err == nil && len(data) > 0 {
+		log.Info(ctx, "GetByID:using cache")
 		return data[0], nil
 	}
 	var schedule = new(entity.Schedule)

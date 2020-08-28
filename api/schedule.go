@@ -254,15 +254,13 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 			String: op.OrgID,
 			Valid:  op.OrgID != "",
 		},
-		StartAndEndRange: []sql.NullInt64{
-			sql.NullInt64{
-				Int64: start,
-				Valid: start > 0,
-			},
-			sql.NullInt64{
-				Int64: end,
-				Valid: end > 0,
-			},
+		StartAtGe: sql.NullInt64{
+			Int64: start,
+			Valid: start > 0,
+		},
+		EndAtLe: sql.NullInt64{
+			Int64: end,
+			Valid: end > 0,
 		},
 	}
 
