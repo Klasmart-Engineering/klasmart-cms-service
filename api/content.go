@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
@@ -19,18 +20,32 @@ func (s *Server) createContent(c *gin.Context) {
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
+		log.Error(ctx, "create content failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
-
+	switch err {
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"content_id": cid,
+		"id": cid,
 	})
 }
 
@@ -91,7 +106,7 @@ func (s *Server) GetContent(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
+	result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
@@ -113,6 +128,18 @@ func (s *Server) updateContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		return
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		return
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
 	if err != nil {
@@ -137,7 +164,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"content_id": ncid,
+		"id": ncid,
 	})
 }
 
@@ -232,7 +259,7 @@ func (s *Server) QueryContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
+		"total":  key,
 		"list": results,
 	})
 }
@@ -260,7 +287,7 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
+		"total":  key,
 		"list": results,
 	})
 }
@@ -289,7 +316,7 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
+		"total":  key,
 		"list": results,
 	})
 }

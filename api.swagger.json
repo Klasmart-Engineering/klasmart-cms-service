@@ -1,12 +1,9 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "KidsLoop 2.0 Asset REST API",
-    "description": "KidsLoop 2.0 Asset backend rest api",
-    "version": "1.0.0",
-    "contact": {
-      "email": "peter.yang@badanamu.com.cn"
-    }
+    "title": "KidsLoop 2.0 REST API",
+    "description": "KidsLoop 2.0 backend rest api",
+    "version": "1.0.0"
   },
   "servers": [
     {
@@ -15,13 +12,21 @@
     },
     {
       "url": "https://cp03fzjc58.execute-api.ap-northeast-2.amazonaws.com/v1",
+      "description": "temp test"
+    },
+    {
+      "url": "https://kl2-test.kidsloop.net/v1",
       "description": "test"
     }
   ],
   "tags": [
     {
       "name": "content",
-      "description": "content tag management"
+      "description": "content management"
+    },
+    {
+      "name": "schedule",
+      "description": "schedule management"
     },
     {
       "name": "asset",
@@ -123,7 +128,16 @@
             "description": "Search order by, default with content_name",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -489,7 +503,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
-              "enum": ["draft", "pending", "published", "rejected", "archive"],
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -578,7 +598,6 @@
         }
       }
     },
-
     "/contents_bulk/publish": {
       "put": {
         "tags": [
@@ -671,7 +690,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
-              "enum": ["draft", "pending", "published", "rejected", "archive"],
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -726,7 +751,16 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -740,9 +774,9 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
@@ -793,7 +827,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
-              "enum": ["draft", "pending", "published", "rejected", "archive"],
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -848,7 +888,16 @@
             "description": "Search order by",
             "schema": {
               "type": "string",
-              "enum": ["id", "-id", "created_at", "-created_at", "updated_at", "-updated_at", "content_name", "-content_name"],
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -862,15 +911,102 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
                       "items": {
                         "$ref": "#/components/schemas/Content"
                       }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_resources/{resource_id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource path",
+        "operationId": "getContentResourcePath",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "param",
+            "description": "Resource id",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_resources": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource upload path",
+        "operationId": "getContentResourceUploadPath",
+        "parameters": [
+          {
+            "name": "partition",
+            "in": "query",
+            "description": "Resource partition",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "assets",
+                "thumbnail"
+              ],
+              "nullable": false
+            }
+          },
+          {
+            "name": "extension",
+            "in": "query",
+            "description": "Resource extension",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "resource path info",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "resource path"
+                    },
+                    "resource_id": {
+                      "type": "string",
+                      "description": "resource id"
                     }
                   }
                 }
@@ -2353,7 +2489,7 @@
           {
             "name": "repeat_edit_options",
             "in": "query",
-            "description": "Search schedules by teacher_id",
+            "description": "repeat edit option",
             "schema": {
               "type": "string",
               "enum": [
@@ -2624,7 +2760,6 @@
                 "type": "string",
                 "description": "content published scope list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-
               }
             }
           }
@@ -2639,8 +2774,8 @@
               "id": {
                 "type": "array",
                 "description": "content id list",
-                "items":{
-                  "type":"string"
+                "items": {
+                  "type": "string"
                 },
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
@@ -2696,7 +2831,13 @@
               },
               "publish_status": {
                 "type": "string",
-                "enum": ["draft", "pending", "published", "rejected", "archive"],
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
                 "description": "content published status list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
@@ -2884,7 +3025,13 @@
               "publish_status": {
                 "type": "string",
                 "description": "content publish status",
-                "enum": ["draft", "pending", "published", "rejected", "archive"],
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
                 "example": "published"
               },
               "content_type_name": {
@@ -2893,29 +3040,54 @@
                 "example": "lesson"
               },
               "program_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program name",
-                "example": "program1"
+                "example": [
+                  "program1"
+                ]
               },
               "subject_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject name",
-                "example": "subject1"
+                "example": [
+                  "subject1"
+                ]
               },
               "developmental_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental name",
-                "example": "developmental1"
+                "example": [
+                  "developmental"
+                ]
               },
               "skills_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills name",
-                "example": "skills1"
+                "example": [
+                  "skills"
+                ]
               },
               "age_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age name",
-                "example": "6-9months"
+                "example": [
+                  "age"
+                ]
               },
               "org_name": {
                 "type": "string",
@@ -3181,9 +3353,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3226,13 +3406,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3283,13 +3463,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3427,9 +3607,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3472,13 +3660,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3529,13 +3717,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3666,9 +3854,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3711,13 +3907,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3768,13 +3964,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },

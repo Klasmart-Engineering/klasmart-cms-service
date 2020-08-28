@@ -8,13 +8,21 @@ import (
 	"strings"
 )
 
-func CreateContentData(ctx context.Context, contentType int, data string) (entity.ContentData, error) {
+func CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
 	var contentData entity.ContentData
 	switch contentType {
 	case entity.ContentTypeLesson:
 		contentData = new(LessonData)
 	case entity.ContentTypeMaterial:
 		contentData = new(MaterialData)
+	case entity.ContentTypeAssetVideo:
+		fallthrough
+	case entity.ContentTypeAssetImage:
+		fallthrough
+	case entity.ContentTypeAssetAudio:
+		fallthrough
+	case entity.ContentTypeAssetDocument:
+		contentData = new(AssetsData)
 	default:
 		return nil, errors.New("unknown content type")
 	}

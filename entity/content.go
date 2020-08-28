@@ -19,9 +19,66 @@ const (
 
 	ContentTypeMaterial = 1
 	ContentTypeLesson   = 2
+
+	ContentTypeAssetImage = 10
+	ContentTypeAssetVideo = 11
+	ContentTypeAssetAudio = 12
+	ContentTypeAssetDocument = 13
 )
 
 type ContentPublishStatus string
+type ContentType int
+
+func NewContentType(contentType int) ContentType {
+	switch contentType {
+	case ContentTypeMaterial:
+		return ContentTypeMaterial
+	case ContentTypeLesson:
+		return ContentTypeLesson
+	case ContentTypeAssetDocument:
+		return ContentTypeAssetDocument
+	case ContentTypeAssetAudio:
+		return ContentTypeAssetAudio
+	case ContentTypeAssetImage:
+		return ContentTypeAssetImage
+	case ContentTypeAssetVideo:
+		return ContentTypeAssetVideo
+	default:
+		return ContentTypeAssetImage
+	}
+}
+
+func (c ContentType) IsAsset() bool {
+	switch c {
+	case ContentTypeAssetImage:
+		fallthrough
+	case ContentTypeAssetVideo:
+		fallthrough
+	case ContentTypeAssetAudio:
+		fallthrough
+	case ContentTypeAssetDocument:
+		return true
+	}
+	return false
+}
+
+func (c ContentType) Name() string {
+	switch c {
+	case ContentTypeLesson:
+		return "LESSON"
+	case ContentTypeMaterial:
+		return "MATERIAL"
+	case ContentTypeAssetImage:
+		fallthrough
+	case ContentTypeAssetVideo:
+		fallthrough
+	case ContentTypeAssetAudio:
+		fallthrough
+	case ContentTypeAssetDocument:
+		return "ASSET"
+	}
+	return "UNKNOWN"
+}
 
 func NewContentPublishStatus(status string) ContentPublishStatus {
 	switch status {
@@ -50,8 +107,8 @@ type ContentID struct {
 
 type Content struct {
 	ID            string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
-	ContentType   int    `gorm:"type:int;NOTNULL; column: content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
-	Name          string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
+	ContentType   ContentType    `gorm:"type:int;NOTNULL; column:content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
+	Name          string `gorm:"type:varchar(255);NOT NULL;column:content_name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
 	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
 	Subject       string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
 	Developmental string `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
@@ -63,7 +120,7 @@ type Content struct {
 	Thumbnail     string `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
 
 	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
-	Extra string `gorm:"type:json;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
+	Extra string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
 	SuggestTime int `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
 	Author     string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
@@ -82,9 +139,9 @@ type Content struct {
 	//OrgUserId                     string `dynamodbav:"org_user_id" json:"org_user_id" dynamoupdate:":ouid"`
 	//ContentTypeOrgIdPublishStatus string `dynamodbav:"ctoips" json:"ctoips" dynamoupdate:":cps"`
 
-	CreatedAt int64 `gorm:"type:bigint;NOT NULL;column:created_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdatedAt int64 `gorm:"type:bigint;NOT NULL;column:updated_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeletedAt int64 `gorm:"type:bigint;column:deleted_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt int64 `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
 }
 
 func (u Content) UpdateExpress() string {
@@ -98,7 +155,7 @@ func (u Content) UpdateExpress() string {
 }
 
 type UpdateDyContent struct {
-	ContentType   int    ` json:":ct"`
+	ContentType   ContentType    ` json:":ct"`
 	Name          string `json:":n"`
 	Program       string `json:":p"`
 	Subject       string `json:":su"`
@@ -167,7 +224,7 @@ func (s Content) GetID() interface{} {
 }
 
 type CreateContentRequest struct {
-	ContentType   int      `json:"content_type"`
+	ContentType   ContentType      `json:"content_type"`
 	Name          string   `json:"name"`
 	Program       []string   `json:"program"`
 	Subject       []string   `json:"subject"`
@@ -184,7 +241,7 @@ type CreateContentRequest struct {
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
 
-	Data  ContentData `json:"data"`
+	Data  string `json:"data"`
 	Extra string      `json:"extra"`
 }
 
@@ -207,7 +264,7 @@ type ContentName struct {
 
 type ContentInfo struct {
 	ID            string   `json:"id"`
-	ContentType   int      `json:"content_type"`
+	ContentType   ContentType      `json:"content_type"`
 	Name          string   `json:"name"`
 	Program       []string   `json:"program"`
 	Subject       []string   `json:"subject"`
@@ -241,7 +298,7 @@ type ContentData interface {
 	Unmarshal(ctx context.Context, data string) error
 	Marshal(ctx context.Context) (string, error)
 
-	Validate(ctx context.Context, contentType int) error
+	Validate(ctx context.Context, contentType ContentType) error
 	PrepareResult(ctx context.Context) error
 	SubContentIds(ctx context.Context) ([]string, error)
 }
@@ -333,14 +390,4 @@ func (cInfo ContentInfo) CanBeDeleted() bool {
 		return true
 	}
 	return false
-}
-
-func GetContentTypeName(contentType int) string {
-	switch contentType {
-	case ContentTypeLesson:
-		return "LESSON"
-	case ContentTypeMaterial:
-		return "MATERIAL"
-	}
-	return "UNKNOWN"
 }
