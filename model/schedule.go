@@ -177,6 +177,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 		log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", schedule))
 		return "", err
 	}
+	da.GetScheduleRedisDA().Clean(ctx, nil)
 	return schedule.ID, nil
 }
 
@@ -327,8 +328,16 @@ func (s *scheduleModel) Page(ctx context.Context, tx *dbo.DBContext, condition *
 }
 
 func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error) {
+	cacheData, err := da.GetScheduleRedisDA().GetScheduleCacheByCondition(ctx, condition)
+	if err == nil && len(cacheData) > 0 {
+		log.Debug(ctx, "Query:using cache",
+			log.Any("condition", condition),
+			log.Any("cacheData", cacheData),
+		)
+		return cacheData, nil
+	}
 	var scheduleList []*entity.Schedule
-	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	err = da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
 		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
@@ -342,6 +351,8 @@ func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition 
 			EndAt:   item.EndAt,
 		}
 	}
+	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)
+
 	return result, nil
 }
 
@@ -428,6 +439,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
 		return nil, err
 	}
+	lessonPlanMap = make(map[string]*entity.ScheduleShortInfo)
 	for _, item := range lessonPlans {
 		lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
 			ID:   item.ID,
@@ -532,10 +544,13 @@ func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, progr
 }
 
 func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error) {
-	data, err := da.GetScheduleRedisDA().GetScheduleCacheByIDs(ctx, []string{id})
-	if err == nil && len(data) > 0 {
-		log.Info(ctx, "GetByID:using cache")
-		return data[0], nil
+	cacheData, err := da.GetScheduleRedisDA().GetScheduleCacheByIDs(ctx, []string{id})
+	if err == nil && len(cacheData) > 0 {
+		log.Debug(ctx, "GetByID:using cache",
+			log.Any("id", id),
+			log.Any("cacheData", cacheData),
+		)
+		return cacheData[0], nil
 	}
 	var schedule = new(entity.Schedule)
 	err = da.GetScheduleDA().Get(ctx, id, schedule)
