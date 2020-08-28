@@ -552,7 +552,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		ClassType:   schedule.ClassType,
 		DueAt:       schedule.DueAt,
 		Description: schedule.Description,
-		Version:     schedule.Version,
+		Version:     schedule.ScheduleVersion,
 		RepeatID:    schedule.RepeatID,
 	}
 	if schedule.RepeatJson != "" {
