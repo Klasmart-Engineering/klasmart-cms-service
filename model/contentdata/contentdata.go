@@ -35,10 +35,10 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 
 func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.ContentInfo, error) {
 	log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
-	contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
-	if err != nil {
-		return nil, err
-	}
+	//contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	cm := &entity.ContentInfo{
 		ID:            obj.ID,
@@ -55,7 +55,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		RejectReason:	obj.RejectReason,
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
-		Data:          contentData,
+		Data:          obj.Data,
 		Extra:         obj.Data,
 		Author:        obj.Author,
 		AuthorName:    obj.AuthorName,

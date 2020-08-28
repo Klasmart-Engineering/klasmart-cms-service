@@ -246,7 +246,6 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string,
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
 	}
-
 	return urlStr, nil
 }
 

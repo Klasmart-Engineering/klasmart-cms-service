@@ -27,7 +27,7 @@ CREATE TABLE `cms_contents` (
    `create_at` BIGINT  NOT  NULL  COMMENT  'created_at',
    `update_at` BIGINT  NOT  NULL  COMMENT  'updated_at',
    `delete_at` BIGINT  NULL  COMMENT  'deleted_at',
-   PRIMARY KEY (`content_id`),
+   PRIMARY KEY (`id`),
     KEY `content_type` (`content_type`),
     KEY `content_author` (`author`),
     KEY `content_org` (`org`),

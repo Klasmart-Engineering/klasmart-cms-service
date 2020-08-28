@@ -4,8 +4,9 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutext"
+	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"sync"
 )
 
@@ -17,12 +18,10 @@ type IReviewerModel interface {
 type Reviewer struct {
 }
 
-const prefix = "cms:review:"
-
 func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	// TODO:
 	// 1. check auth
-	locker, err := mutex.NewLock(ctx, prefix+cid, "review")
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentReview,cid)
 	if err != nil {
 		return err
 	}
@@ -52,7 +51,7 @@ func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, 
 func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, reason string, user *entity.Operator) error {
 	// TODO:
 	// 1. check auth
-	locker, err := mutex.NewLock(ctx, prefix+cid, "review")
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentReview, cid)
 	if err != nil {
 		return err
 	}
