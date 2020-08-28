@@ -2734,18 +2734,14 @@
                 "example": "Content thumbnail"
               },
               "data": {
-                "type": "object",
+                "type": "string",
                 "description": "content data",
-                "example": {
-                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
-                }
+                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
               },
               "extra": {
                 "type": "string",
                 "description": "content extra data",
-                "example": {
-                  "data": "hello"
-                }
+                "example": "{\"data\": \"hello\"}"
               },
               "publish_scope": {
                 "type": "string",

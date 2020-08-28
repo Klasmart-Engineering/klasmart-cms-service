@@ -67,7 +67,7 @@ func (s *CombineConditions) GetOrderBy() string {
 
 type ContentCondition struct {
 	IDS           []string `json:"ids"`
-	Name          []string `json:"name"`
+	Name          string `json:"name"`
 	ContentType   []int    `json:"content_type"`
 	Scope         []string `json:"scope"`
 	PublishStatus []string `json:"publish_status"`
@@ -86,16 +86,9 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.IDS)
 	}
-	if len(s.Name) != 0 {
-		var fullparam string
-		for i := range s.Name {
-			if s.Name[i] != " " && s.Name[i] != "" {
-				fullparam = fullparam + "+" + s.Name[i] + " "
-			}
-		}
-		fullparam = strings.TrimSuffix(fullparam, " ")
+	if s.Name != "" {
 		conditions = append(conditions, "match(content_name, description, author_name, keywords) against(? in boolean mode)")
-		params = append(params, fullparam)
+		params = append(params, s.Name)
 	}
 	if len(s.ContentType) > 0 {
 		var subConditions []string

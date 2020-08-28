@@ -283,7 +283,7 @@ type ContentInfo struct {
 	RejectReason string `json:"reject_reason"`
 	LatestID     string `json:"latest_id"`
 
-	Data  ContentData `json:"data"`
+	Data  string `json:"data"`
 	Extra string      `json:"extra"`
 
 	Author     string `json:"author"`
