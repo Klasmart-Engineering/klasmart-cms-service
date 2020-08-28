@@ -3057,6 +3057,7 @@
                   "type": "string"
                 },
                 "description": "grade name",
+
                 "example": [
                   "program1"
                 ]
