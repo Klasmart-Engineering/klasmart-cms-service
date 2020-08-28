@@ -205,30 +205,30 @@ const (
 )
 
 type Schedule struct {
-	ID           string `gorm:"column:id;PRIMARY_KEY"`
-	Title        string `gorm:"column:title;type:varchar(100)"`
-	ClassID      string `gorm:"column:class_id;type:varchar(100)"`
-	LessonPlanID string `gorm:"column:lesson_plan_id;type:varchar(100)"`
-	OrgID        string `gorm:"column:org_id;type:varchar(100)"`
-	StartAt      int64  `gorm:"column:start_at;type:bigint"`
-	EndAt        int64  `gorm:"column:end_at;type:bigint"`
-	Status       string `gorm:"column:status;type:varchar(100)"`
-	IsAllDay     bool   `gorm:"column:is_all_day;default:false"`
-	SubjectID    string `gorm:"column:subject_id;type:varchar(100)"`
-	ProgramID    string `gorm:"column:program_id;type:varchar(100)"`
-	ClassType    string `gorm:"column:class_type;type:varchar(100)"`
-	DueAt        int64  `gorm:"column:due_at;type:bigint"`
-	Description  string `gorm:"column:description;type:varchar(500)"`
-	Attachment   string `gorm:"column:attachment_url;type:varchar(500)"`
-	Version      int64  `gorm:"column:'version';type:bigint"`
-	RepeatID     string `gorm:"column:repeat_id;type:varchar(100)"`
-	RepeatJson   string `gorm:"column:repeat;type:json;"`
-	CreatedID    string `gorm:"column:created_id;type:varchar(100)"`
-	UpdatedID    string `gorm:"column:updated_id;type:varchar(100)"`
-	DeletedID    string `gorm:"column:deleted_id;type:varchar(100)"`
-	CreatedAt    int64  `gorm:"column:created_at;type:bigint"`
-	UpdatedAt    int64  `gorm:"column:updated_at;type:bigint"`
-	DeleteAt     int64  `gorm:"column:delete_at;type:bigint"`
+	ID              string `gorm:"column:id;PRIMARY_KEY"`
+	Title           string `gorm:"column:title;type:varchar(100)"`
+	ClassID         string `gorm:"column:class_id;type:varchar(100)"`
+	LessonPlanID    string `gorm:"column:lesson_plan_id;type:varchar(100)"`
+	OrgID           string `gorm:"column:org_id;type:varchar(100)"`
+	StartAt         int64  `gorm:"column:start_at;type:bigint"`
+	EndAt           int64  `gorm:"column:end_at;type:bigint"`
+	Status          string `gorm:"column:status;type:varchar(100)"`
+	IsAllDay        bool   `gorm:"column:is_all_day;default:false"`
+	SubjectID       string `gorm:"column:subject_id;type:varchar(100)"`
+	ProgramID       string `gorm:"column:program_id;type:varchar(100)"`
+	ClassType       string `gorm:"column:class_type;type:varchar(100)"`
+	DueAt           int64  `gorm:"column:due_at;type:bigint"`
+	Description     string `gorm:"column:description;type:varchar(500)"`
+	Attachment      string `gorm:"column:attachment_url;type:varchar(500)"`
+	ScheduleVersion int64  `gorm:"column:version;type:bigint"`
+	RepeatID        string `gorm:"column:repeat_id;type:varchar(100)"`
+	RepeatJson      string `gorm:"column:repeat;type:json;"`
+	CreatedID       string `gorm:"column:created_id;type:varchar(100)"`
+	UpdatedID       string `gorm:"column:updated_id;type:varchar(100)"`
+	DeletedID       string `gorm:"column:deleted_id;type:varchar(100)"`
+	CreatedAt       int64  `gorm:"column:created_at;type:bigint"`
+	UpdatedAt       int64  `gorm:"column:updated_at;type:bigint"`
+	DeleteAt        int64  `gorm:"column:delete_at;type:bigint"`
 }
 
 func (Schedule) TableName() string {
@@ -268,23 +268,23 @@ type ScheduleAddView struct {
 
 func (s *ScheduleAddView) Convert() (*Schedule, error) {
 	schedule := &Schedule{
-		Title:        s.Title,
-		ClassID:      s.ClassID,
-		LessonPlanID: s.LessonPlanID,
-		OrgID:        s.OrgID,
-		StartAt:      s.StartAt,
-		EndAt:        s.EndAt,
-		SubjectID:    s.SubjectID,
-		ProgramID:    s.ProgramID,
-		ClassType:    s.ClassType,
-		DueAt:        s.DueAt,
-		Description:  s.Description,
-		Attachment:   s.Attachment,
-		Version:      0,
-		CreatedAt:    time.Now().Unix(),
-		UpdatedAt:    0,
-		RepeatID:     s.RepeatID,
-		IsAllDay:     s.IsAllDay,
+		Title:           s.Title,
+		ClassID:         s.ClassID,
+		LessonPlanID:    s.LessonPlanID,
+		OrgID:           s.OrgID,
+		StartAt:         s.StartAt,
+		EndAt:           s.EndAt,
+		SubjectID:       s.SubjectID,
+		ProgramID:       s.ProgramID,
+		ClassType:       s.ClassType,
+		DueAt:           s.DueAt,
+		Description:     s.Description,
+		Attachment:      s.Attachment,
+		ScheduleVersion: 0,
+		CreatedAt:       time.Now().Unix(),
+		UpdatedAt:       0,
+		RepeatID:        s.RepeatID,
+		IsAllDay:        s.IsAllDay,
 	}
 	if s.IsRepeat {
 		b, err := json.Marshal(s.Repeat)
