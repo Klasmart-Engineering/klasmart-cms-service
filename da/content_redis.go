@@ -41,11 +41,15 @@ type ContentListWithKey struct {
 func (r *ContentRedis) contentKey(id string) string {
 	return fmt.Sprintf("%v:%v", RedisKeyPrefixContentId, id)
 }
-func (r *ContentRedis) contentConditionKey(condition dbo.Conditions) string {
+
+func (r *ContentRedis) conditionHash(condition dbo.Conditions) string {
 	h := md5.New()
 	h.Write([]byte(fmt.Sprintf("%v", condition)))
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
-
+	return fmt.Sprintf("%v", md5Hash)
+}
+func (r *ContentRedis) contentConditionKey(condition dbo.Conditions) string {
+	md5Hash := r.conditionHash(condition)
 	return fmt.Sprintf("%v:%v", RedisKeyPrefixContentCondition, md5Hash)
 }
 
@@ -97,7 +101,9 @@ func (r *ContentRedis) SaveContentCacheListBySearchCondition(ctx context.Context
 			log.Error(ctx, "Can't parse content list into json", log.Err(err), log.String("key", key), log.String("data", string(contentListJSON)))
 			return
 		}
-		err = ro.MustGetRedis(ctx).SetNX(key, string(contentListJSON), r.expiration).Err()
+		ro.MustGetRedis(ctx).Expire(RedisKeyPrefixContentCondition, r.expiration)
+		err = ro.MustGetRedis(ctx).HSetNX(RedisKeyPrefixContentCondition, r.conditionHash(condition), string(contentListJSON)).Err()
+		//err = ro.MustGetRedis(ctx).SetNX(key, string(contentListJSON), r.expiration).Err()
 		if err != nil {
 			log.Error(ctx, "Can't save content list into cache", log.Err(err), log.String("key", key), log.String("data", string(contentListJSON)))
 		}
@@ -161,7 +167,9 @@ func (r *ContentRedis) GetContentCacheBySearchCondition(ctx context.Context, con
 		return nil
 	}
 	key := r.contentConditionKey(condition)
-	res, err := ro.MustGetRedis(ctx).Get(key).Result()
+	//res, err := ro.MustGetRedis(ctx).Get(key).Result()
+	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixContentCondition, r.conditionHash(condition)).Result()
+
 	if err != nil {
 		log.Error(ctx, "Can't get content condition from cache", log.Err(err), log.String("key", key), log.Any("condition", condition))
 		return nil
@@ -195,9 +203,9 @@ func (r *ContentRedis) CleanContentCache(ctx context.Context, ids []string) {
 	}
 
 	//删除所有condition cache
-	conditionKeys := ro.MustGetRedis(ctx).Keys(RedisKeyPrefixContentCondition + ":*").Val()
-	keys = append(keys, conditionKeys...)
-
+	//conditionKeys := ro.MustGetRedis(ctx).Keys(RedisKeyPrefixContentCondition + ":*").Val()
+	//keys = append(keys, conditionKeys...)
+	keys = append(keys, RedisKeyPrefixContentCondition)
 	go func() {
 		//双删
 		err := ro.MustGetRedis(ctx).Del(keys...).Err()

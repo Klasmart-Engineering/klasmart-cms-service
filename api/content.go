@@ -177,7 +177,6 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
-
 	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
