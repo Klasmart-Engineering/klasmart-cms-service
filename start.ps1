@@ -14,3 +14,5 @@ $env:max_open_conns="8"
 $env:max_idle_conns="4"
 $env:show_log="true"
 $env:show_sql="true"
+
+go run main.go
