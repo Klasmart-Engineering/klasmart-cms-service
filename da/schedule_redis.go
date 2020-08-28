@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,10 +14,10 @@ import (
 	"time"
 )
 
-const (
-	CacheScheduleKey          = "schedule"
-	CacheScheduleConditionKey = "schedule:condition"
-)
+type ScheduleRedisCondition struct {
+	OrgID    string
+	ViewType string
+}
 
 func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules []*entity.ScheduleDetailsView) {
 	if !config.Get().RedisConfig.OpenCache {
@@ -44,7 +45,7 @@ func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules [
 		}
 	}()
 }
-func (r *ScheduleRedisDA) AddScheduleByCondition(ctx context.Context, viewType string, schedules []*entity.ScheduleListView) {
+func (r *ScheduleRedisDA) AddScheduleByCondition(ctx context.Context, condition *ScheduleRedisCondition, schedules []*entity.ScheduleListView) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
@@ -53,17 +54,19 @@ func (r *ScheduleRedisDA) AddScheduleByCondition(ctx context.Context, viewType s
 		if err != nil {
 			log.Error(ctx, "Can't parse schedule list into json",
 				log.Err(err),
-				log.String("viewType", viewType),
+				log.Any("condition", condition),
 				log.Any("schedules", schedules),
 			)
 			return
 		}
-		key := r.scheduleKey(viewType)
-		err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
+		filed := r.conditionHash(*condition)
+		ro.MustGetRedis(ctx).Expire(RedisKeyPrefixScheduleCondition, r.expiration)
+		err = ro.MustGetRedis(ctx).HSet(RedisKeyPrefixScheduleCondition, filed, string(b)).Err()
 		if err != nil {
 			log.Error(ctx, "Can't save schedule into cache",
 				log.Err(err),
-				log.String("viewType", viewType),
+				log.Any("condition", condition),
+				log.Any("filed", filed),
 				log.Any("schedules", schedules),
 			)
 			return
@@ -100,14 +103,48 @@ func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []strin
 		}
 		schedules = append(schedules, schedule)
 	}
-
 	return schedules, nil
 }
-func (r *ScheduleRedisDA) scheduleKey(key string) string {
-	return fmt.Sprintf("%s:%v", CacheScheduleKey, key)
+func (r *ScheduleRedisDA) GetScheduleCacheByCondition(ctx context.Context, condition *ScheduleRedisCondition) ([]*entity.ScheduleListView, error) {
+	if !config.Get().RedisConfig.OpenCache {
+		return nil, errors.New("not open cache")
+	}
+	filed := r.conditionHash(*condition)
+	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixScheduleCondition, filed).Result()
+	if err != nil {
+		log.Error(ctx, "Can't get schedule condition from cache",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("filed", filed),
+		)
+		return nil, err
+	}
+	var result []*entity.ScheduleListView
+	err = json.Unmarshal([]byte(res), result)
+	if err != nil {
+		log.Error(ctx, "unmarshal schedule error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("filed", filed),
+			log.String("scheduleJson", res),
+		)
+		return nil, err
+	}
+	return result, nil
 }
-func (r *ScheduleRedisDA) scheduleConditionKey(key string) string {
-	return ""
+func (r *ScheduleRedisDA) scheduleKey(key string) string {
+	return fmt.Sprintf("%s:%v", RedisKeyPrefixScheduleID, key)
+}
+func (r *ScheduleRedisDA) conditionHash(condition ScheduleRedisCondition) string {
+	h := md5.New()
+	h.Write([]byte(fmt.Sprintf("%v", condition)))
+	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
+	return fmt.Sprintf("%v", md5Hash)
+}
+
+func (r *ScheduleRedisDA) scheduleConditionKey(condition ScheduleRedisCondition) string {
+	md5Hash := r.conditionHash(condition)
+	return fmt.Sprintf("%v:%v", RedisKeyPrefixScheduleCondition, md5Hash)
 }
 func (r *ScheduleRedisDA) Clean(ctx context.Context, ids []string) error {
 	if !config.Get().RedisConfig.OpenCache {
@@ -118,9 +155,14 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, ids []string) error {
 		keys[i] = r.scheduleKey(id)
 	}
 
+	keys = append(keys, RedisKeyPrefixScheduleCondition)
 	err := ro.MustGetRedis(ctx).Del(keys...).Err()
 	if err != nil {
-		log.Error(ctx, "redis del keys error", log.Err(err), log.Strings("ids", ids))
+		log.Error(ctx, "redis del keys error",
+			log.Err(err),
+			log.Strings("ids", ids),
+			log.Any("keys", keys),
+		)
 		return err
 	}
 	return nil
