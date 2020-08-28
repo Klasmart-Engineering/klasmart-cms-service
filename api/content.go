@@ -193,7 +193,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 	cid := c.Param("content_id")
 
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
-	switch err{
+	switch err {
 	case model.ErrReadContentFailed:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 		return
@@ -238,29 +238,15 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 func (s *Server) QueryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-
-	contentType, _ := strconv.Atoi(c.Query("content_type"))
-
-	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
-	condition := da.ContentCondition{
-		Name:          keywords,
-		ContentType:   []int{contentType},
-		PublishStatus: []string{c.Query("publish_status")},
-		Scope:         []string{c.Query("scope")},
-		Author:        parseAuthor(c, op),
-		Org:           parseOrg(c, op),
-		OrderBy:       da.NewContentOrderBy(c.Query("order_by")),
-		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
-	}
-
+	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"total":  key,
-		"list": results,
+		"total": key,
+		"list":  results,
 	})
 }
 
@@ -268,27 +254,15 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
-	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
-	condition := da.ContentCondition{
-		Name:         keywords,
-		ContentType:   []int{contentType},
-		PublishStatus: []string{c.Query("publish_status")},
-		Scope:         []string{c.Query("scope")},
-		Author:        parseAuthor(c, op),
-		Org:           parseOrg(c, op),
-		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
-		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
-	}
-
+	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"total":  key,
-		"list": results,
+		"total": key,
+		"list":  results,
 	})
 }
 
@@ -297,33 +271,21 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
-	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
-	condition := da.ContentCondition{
-		Name:          keywords,
-		ContentType:   []int{contentType},
-		PublishStatus: []string{c.Query("publish_status")},
-		Scope:         []string{c.Query("scope")},
-		Author:        parseAuthor(c, op),
-		Org:           parseOrg(c, op),
-		OrderBy:      da.NewContentOrderBy(c.Query("order_by")),
-		Pager:			utils.GetPager(c.Query("page"),c.Query("page_size")),
-	}
-
+	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"total":  key,
-		"list": results,
+		"total": key,
+		"list":  results,
 	})
 }
 
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("author")
-	if author == "{self}"{
+	if author == "{self}" {
 		author = u.UserID
 	}
 	return author
@@ -331,8 +293,35 @@ func parseAuthor(c *gin.Context, u *entity.Operator) string {
 
 func parseOrg(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("org")
-	if author == "{self}"{
+	if author == "{self}" {
 		author = u.OrgID
 	}
 	return author
+}
+
+func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
+
+	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
+	scope := c.Query("scope")
+	publish := c.Query("publish_status")
+	condition := da.ContentCondition{
+		Author:  parseAuthor(c, op),
+		Org:     parseOrg(c, op),
+		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
+		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
+	}
+	if len(keywords) > 0 {
+		condition.Name = keywords
+	}
+	if contentType != 0 {
+		condition.ContentType = append(condition.ContentType, contentType)
+	}
+	if scope != "" {
+		condition.Scope = append(condition.Scope, scope)
+	}
+	if publish != "" {
+		condition.PublishStatus = append(condition.PublishStatus, publish)
+	}
+	return condition
 }
