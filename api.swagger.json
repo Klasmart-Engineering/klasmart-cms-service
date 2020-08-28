@@ -2489,7 +2489,7 @@
           {
             "name": "repeat_edit_options",
             "in": "query",
-            "description": "Search schedules by teacher_id",
+            "description": "repeat edit option",
             "schema": {
               "type": "string",
               "enum": [
@@ -3356,13 +3356,13 @@
                     "items": {
                       "type": "string",
                       "enum": [
-                        "sun",
-                        "mon",
-                        "tue",
-                        "wed",
-                        "thu",
-                        "fri",
-                        "sat"
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
                       ]
                     },
                     "description": "on weekdays"
@@ -3406,13 +3406,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3463,13 +3463,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3610,13 +3610,13 @@
                     "items": {
                       "type": "string",
                       "enum": [
-                        "sun",
-                        "mon",
-                        "tue",
-                        "wed",
-                        "thu",
-                        "fri",
-                        "sat"
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
                       ]
                     },
                     "description": "on weekdays"
@@ -3660,13 +3660,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3717,13 +3717,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3857,13 +3857,13 @@
                     "items": {
                       "type": "string",
                       "enum": [
-                        "sun",
-                        "mon",
-                        "tue",
-                        "wed",
-                        "thu",
-                        "fri",
-                        "sat"
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
                       ]
                     },
                     "description": "on weekdays"
@@ -3907,13 +3907,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },
@@ -3964,13 +3964,13 @@
                   "on_week": {
                     "type": "string",
                     "enum": [
-                      "sun",
-                      "mon",
-                      "tue",
-                      "wed",
-                      "thu",
-                      "fri",
-                      "sat"
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
                     ],
                     "description": "on week"
                   },

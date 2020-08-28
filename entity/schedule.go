@@ -36,18 +36,18 @@ const (
 type RepeatWeekday string
 
 const (
-	RepeatWeekdaySun RepeatWeekday = "sun"
-	RepeatWeekdayMon RepeatWeekday = "mon"
-	RepeatWeekdayTue RepeatWeekday = "tue"
-	RepeatWeekdayWed RepeatWeekday = "wed"
-	RepeatWeekdayThu RepeatWeekday = "thu"
-	RepeatWeekdayFri RepeatWeekday = "fri"
-	RepeatWeekdaySat RepeatWeekday = "sat"
+	RepeatWeekdaySunday    RepeatWeekday = "Sunday"
+	RepeatWeekdayMonday    RepeatWeekday = "Monday"
+	RepeatWeekdayTuesday   RepeatWeekday = "Tuesday"
+	RepeatWeekdayWednesday RepeatWeekday = "Wednesday"
+	RepeatWeekdayThursday  RepeatWeekday = "Thursday"
+	RepeatWeekdayFriday    RepeatWeekday = "Friday"
+	RepeatWeekdaySaturday  RepeatWeekday = "Saturday"
 )
 
 func (w RepeatWeekday) Valid() bool {
 	switch w {
-	case RepeatWeekdaySun, RepeatWeekdayMon, RepeatWeekdayTue, RepeatWeekdayWed, RepeatWeekdayThu, RepeatWeekdayFri, RepeatWeekdaySat:
+	case RepeatWeekdaySunday, RepeatWeekdayMonday, RepeatWeekdayTuesday, RepeatWeekdayWednesday, RepeatWeekdayThursday, RepeatWeekdayFriday, RepeatWeekdaySaturday:
 		return true
 	default:
 		return false
@@ -56,19 +56,19 @@ func (w RepeatWeekday) Valid() bool {
 
 func (w RepeatWeekday) TimeWeekday() time.Weekday {
 	switch w {
-	case RepeatWeekdaySun:
+	case RepeatWeekdaySunday:
 		return time.Sunday
-	case RepeatWeekdayMon:
+	case RepeatWeekdayMonday:
 		return time.Monday
-	case RepeatWeekdayTue:
+	case RepeatWeekdayTuesday:
 		return time.Tuesday
-	case RepeatWeekdayWed:
+	case RepeatWeekdayWednesday:
 		return time.Wednesday
-	case RepeatWeekdayThu:
+	case RepeatWeekdayThursday:
 		return time.Thursday
-	case RepeatWeekdayFri:
+	case RepeatWeekdayFriday:
 		return time.Friday
-	case RepeatWeekdaySat:
+	case RepeatWeekdaySaturday:
 		return time.Saturday
 	}
 	return 0
@@ -296,6 +296,8 @@ func (s *ScheduleAddView) Convert() (*Schedule, error) {
 		if schedule.RepeatID == "" {
 			schedule.RepeatID = utils.NewID()
 		}
+	} else {
+		schedule.RepeatJson = "{}"
 	}
 
 	return schedule, nil
