@@ -1,3 +1,4 @@
+$env:env="HTTP"
 $env:cloud_env="aws"
 $env:storage_bucket="kidsloop-global-resources-test"
 $env:storage_region="ap-northeast-2"
