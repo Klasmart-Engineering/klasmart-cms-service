@@ -1,17 +1,16 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
-	"strconv"
-	"strings"
-
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"net/http"
+	"strconv"
+	"strings"
 )
 
 func (s *Server) createContent(c *gin.Context) {
@@ -302,7 +301,7 @@ func parseOrg(c *gin.Context, u *entity.Operator) string {
 func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 
 	contentType, _ := strconv.Atoi(c.Query("content_type"))
-	keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
+	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
 	publish := c.Query("publish_status")
 	condition := da.ContentCondition{
@@ -310,10 +309,11 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		Org:     parseOrg(c, op),
 		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
 		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
+		Name:  	 strings.TrimSpace(c.Query("name")),
 	}
-	if len(keywords) > 0 {
-		condition.Name = keywords
-	}
+	//if len(keywords) > 0 {
+	//	condition.Name = keywords
+	//}
 	if contentType != 0 {
 		condition.ContentType = append(condition.ContentType, contentType)
 	}

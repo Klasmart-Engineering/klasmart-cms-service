@@ -87,7 +87,6 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.IDS)
 	}
 	if s.Name != "" {
-		s.Name = strings.TrimSuffix(s.Name, " ")
 		conditions = append(conditions, "match(content_name, description, author_name, keywords) against(? in boolean mode)")
 		params = append(params, s.Name)
 	}
