@@ -36,6 +36,11 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		return
 	}
 	operator := GetOperator(c)
+	data.OrgID = operator.OrgID
+	if data.IsAllDay {
+		data.StartAt = utils.BeginOfDayByTimeStamp(data.StartAt, s.getLocation(c)).Unix()
+		data.EndAt = utils.EndOfDayByTimeStamp(data.EndAt, s.getLocation(c)).Unix()
+	}
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data, s.getLocation(c))
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed",
