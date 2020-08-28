@@ -11,14 +11,14 @@ import (
 )
 
 func NewLock(ctx context.Context, key string, params ...interface{}) (sync.Locker, error){
-	lockKey := key + "."
+	lockKey := key + ":"
 	for i := range params{
-		lockKey = lockKey + "." + fmt.Sprintf("%v", params[i])
+		lockKey = lockKey + ":" + fmt.Sprintf("%v", params[i])
 	}
 
 	return locker.NewDistributedLock(locker.DistributedLockConfig{
 		Driver:      "redis",
-		Key:         fmt.Sprintf("kidsloop2.%v", lockKey),
+		Key:         fmt.Sprintf("%v", lockKey),
 		Timeout:     time.Minute * 3,
 		Ctx:         ctx,
 		RedisConfig: drivers.RedisConfig{
