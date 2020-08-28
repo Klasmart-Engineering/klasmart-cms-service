@@ -12,12 +12,12 @@ import (
 )
 
 const(
-	RedisContentBucket = "kidsloop2:da:content"
-	RedisContentKeywordsBucket = "kidsloop2:da:content:keywords"
-	RedisContentContentTypeBucket = "kidsloop2:da:content:contentType"
-	RedisContentPublishStatusBucket = "kidsloop2:da:content:publishStatus"
-	RedisContentAuthorBucket = "kidsloop2:da:content:author"
-	RedisContentOrgBucket = "kidsloop2:da:content:org"
+	RedisContentBucket = "da:content"
+	RedisContentKeywordsBucket = "da:content:keywords"
+	RedisContentContentTypeBucket = "da:content:contentType"
+	RedisContentPublishStatusBucket = "da:content:publishStatus"
+	RedisContentAuthorBucket = "da:content:author"
+	RedisContentOrgBucket = "da:content:org"
 )
 
 type RedisContentDA struct {

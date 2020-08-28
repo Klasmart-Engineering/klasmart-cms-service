@@ -14,6 +14,11 @@ import (
 	"time"
 )
 
+const(
+	redisKeyPrefixCondition = "cache:content:condition"
+	redisKeyPrefixId = "cache:content:id"
+)
+
 type IContentCache interface {
 	SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails)
 	SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey)
@@ -38,14 +43,14 @@ type ContentListWithKey struct {
 }
 
 func (r *RedisContentCache) contentKey(id string) string {
-	return fmt.Sprintf("kidsloop2:content:id:%v", id)
+	return fmt.Sprintf("%v:%v", redisKeyPrefixId, id)
 }
 func (r *RedisContentCache) contentConditionKey(condition dbo.Conditions) string {
 	h := md5.New()
 	h.Write([]byte(fmt.Sprintf("%v", condition)))
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
 
-	return fmt.Sprintf("kidsloop2:content:condition:%v", md5Hash)
+	return fmt.Sprintf("%v:%v", redisKeyPrefixCondition, md5Hash)
 }
 
 func (r *RedisContentCache) SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails) {
