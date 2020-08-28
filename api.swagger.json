@@ -2287,6 +2287,12 @@
             "in": "query",
             "description": "Search schedules by view_type",
             "schema": {
+              "enum": [
+                "day",
+                "workWeek",
+                "week",
+                "month"
+              ],
               "type": "string",
               "nullable": false
             }
@@ -3324,9 +3330,10 @@
               "type": {
                 "type": "string",
                 "enum": [
-                  "never",
-                  "after_count",
-                  "after_time"
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  "yearly"
                 ],
                 "description": "repeat type"
               },
@@ -3578,9 +3585,10 @@
               "type": {
                 "type": "string",
                 "enum": [
-                  "never",
-                  "after_count",
-                  "after_time"
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  "yearly"
                 ],
                 "description": "repeat type"
               },
@@ -3825,9 +3833,10 @@
               "type": {
                 "type": "string",
                 "enum": [
-                  "never",
-                  "after_count",
-                  "after_time"
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  "yearly"
                 ],
                 "description": "repeat type"
               },
