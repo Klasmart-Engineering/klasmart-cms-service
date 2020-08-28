@@ -2,256 +2,223 @@ package da
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"strconv"
 	"sync"
+	"time"
 )
 
 const(
-	RedisContentBucket = "da:content"
-	RedisContentKeywordsBucket = "da:content:keywords"
-	RedisContentContentTypeBucket = "da:content:contentType"
-	RedisContentPublishStatusBucket = "da:content:publishStatus"
-	RedisContentAuthorBucket = "da:content:author"
-	RedisContentOrgBucket = "da:content:org"
+	redisKeyPrefixCondition = "content:condition"
+	redisKeyPrefixId = "content:id"
 )
 
-type RedisContentDA struct {
+type IContentCache interface {
+	SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails)
+	SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey)
+	GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfoWithDetails)
+	GetContentCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *ContentListWithKey
 
+	SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails)
+	GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails
+
+	CleanContentCache(ctx context.Context, ids []string)
+
+	SetExpiration(t time.Duration)
 }
 
-func (r *RedisContentDA) setIndex(ctx context.Context, co entity.Content) error {
-	err := ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentKeywordsBucket, co.Name), co.ID).Err()
-	if err != nil{
-		return err
+type RedisContentCache struct {
+	expiration time.Duration
+}
+
+type ContentListWithKey struct {
+	Count         int                           `json:"count"`
+	ContentList []*entity.ContentInfoWithDetails `json:"content_list"`
+}
+
+func (r *RedisContentCache) contentKey(id string) string {
+	return fmt.Sprintf("%v:%v", redisKeyPrefixId, id)
+}
+func (r *RedisContentCache) contentConditionKey(condition dbo.Conditions) string {
+	h := md5.New()
+	h.Write([]byte(fmt.Sprintf("%v", condition)))
+	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
+
+	return fmt.Sprintf("%v:%v", redisKeyPrefixCondition, md5Hash)
+}
+
+func (r *RedisContentCache) SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails) {
+	if !config.Get().RedisConfig.OpenCache {
+		return
 	}
-	err = ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentKeywordsBucket, co.Keywords), co.ID).Err()
-	if err != nil{
-		return err
+	go func() {
+		for i := range contents {
+			key := r.contentKey(contents[i].ID)
+			contentJSON, err := json.Marshal(contents[i])
+			if err != nil {
+				log.Error(ctx, "Can't parse content into json", log.Err(err))
+				continue
+			}
+			err = ro.MustGetRedis(ctx).SetNX(key, string(contentJSON), r.expiration).Err()
+			if err != nil {
+				log.Error(ctx, "Can't save content into cache", log.Err(err))
+				continue
+			}
+		}
+	}()
+
+}
+func (r *RedisContentCache) SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails) {
+	r.SaveContentCacheList(ctx, []*entity.ContentInfoWithDetails{
+		content,
+	})
+}
+func (r *RedisContentCache) GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails {
+	if !config.Get().RedisConfig.OpenCache {
+		return nil
 	}
-	err = ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentKeywordsBucket, co.Description), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentKeywordsBucket, co.AuthorName), co.ID, ).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentContentTypeBucket, strconv.Itoa(int(co.ContentType))), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentPublishStatusBucket, string(co.PublishStatus)), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentAuthorBucket, co.AuthorName), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SAdd(redisKey(ctx, RedisContentOrgBucket, co.Org), co.ID).Err()
-	if err != nil{
-		return err
+	_, res := r.GetContentCacheByIdList(ctx, []string{id})
+	if len(res) > 0 {
+		return res[0]
 	}
 	return nil
 }
 
-func (r *RedisContentDA) removeIndex(ctx context.Context, co entity.Content) error {
-	err := ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentKeywordsBucket, co.Name), co.ID).Err()
-	if err != nil{
-		return err
+func (r *RedisContentCache) SaveContentCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *ContentListWithKey) {
+	if !config.Get().RedisConfig.OpenCache {
+		return
 	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentKeywordsBucket, co.Keywords), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentKeywordsBucket, co.Description), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentKeywordsBucket, co.AuthorName), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentContentTypeBucket, strconv.Itoa(int(co.ContentType))), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentPublishStatusBucket, string(co.PublishStatus)), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentAuthorBucket, co.Author), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).SRem(redisKey(ctx, RedisContentOrgBucket, co.Org), co.ID).Err()
-	if err != nil{
-		return err
-	}
-	return nil
+	go func() {
+		key := r.contentConditionKey(condition)
+		contentListJSON, err := json.Marshal(c)
+		if err != nil {
+			log.Error(ctx, "Can't parse content list into json", log.Err(err))
+			return
+		}
+		err = ro.MustGetRedis(ctx).SetNX(key, string(contentListJSON), r.expiration).Err()
+		if err != nil {
+			log.Error(ctx, "Can't save content list into cache", log.Err(err))
+		}
+	}()
 }
 
-func (r *RedisContentDA) CreateContent(ctx context.Context, co entity.Content) (string, error) {
-	co.ID = utils.NewID()
-	data, err := json.Marshal(co)
-	if err != nil{
-		return "", err
-	}
-	err = ro.MustGetRedis(ctx).SetNX(redisKey(ctx, RedisContentBucket, co.ID), data, 0).Err()
-	if err != nil{
-		return "", err
-	}
-
-	err = r.setIndex(ctx, co)
-	if err != nil{
-		return "", err
-	}
-
-	return co.ID, nil
-}
-
-func (r *RedisContentDA) UpdateContent(ctx context.Context, cid string, co entity.Content) error {
-	oldContent, err := r.GetContentById(ctx, cid)
-	if err != nil{
-		return err
-	}
-	err = r.removeIndex(ctx, *oldContent)
-	if err != nil{
-		return err
-	}
-	data, err := json.Marshal(co)
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).Set(redisKey(ctx, RedisContentBucket, co.ID), data, -1).Err()
-	if err != nil{
-		return err
-	}
-	err = r.setIndex(ctx, co)
-	if err != nil{
-		return err
-	}
-	return nil
-}
-
-func (r *RedisContentDA) DeleteContent(ctx context.Context, cid string) error {
-	oldContent, err := r.GetContentById(ctx, cid)
-	if err != nil{
-		return err
-	}
-	err = r.removeIndex(ctx, *oldContent)
-	if err != nil{
-		return err
-	}
-	err = ro.MustGetRedis(ctx).Del(redisKey(ctx, RedisContentBucket, cid)).Err()
-	if err != nil{
-		return err
-	}
-	return nil
-}
-
-func (r *RedisContentDA) GetContentById(ctx context.Context, cid string) (*entity.Content, error) {
-	res, err := ro.MustGetRedis(ctx).Get(redisKey(ctx, RedisContentBucket, cid)).Result()
-	if err != nil {
-		return nil, err
-	}
-	content := new(entity.Content)
-	err = json.Unmarshal([]byte(res), content)
-	if err != nil{
-		return nil, err
-	}
-	return content, nil
-}
-
-func (r *RedisContentDA) SearchContent(ctx context.Context, condition RedisContentCondition) ([]*entity.Content, error) {
-	ids := condition.GetConditions(ctx)
-	if len(ids) == 0 {
-		return nil, nil
+func (r *RedisContentCache) GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfoWithDetails) {
+	if !config.Get().RedisConfig.OpenCache {
+		return ids, nil
 	}
 	keys := make([]string, len(ids))
 	for i := range ids {
-		keys[i] = redisKey(ctx, RedisContentBucket, ids[i])
+		keys[i] = r.contentKey(ids[i])
 	}
-
 	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
-	if err != nil{
-		return nil, err
+	if err != nil {
+		log.Error(ctx, "Can't get content list from cache", log.Err(err))
+		return ids, nil
 	}
 
-	contentList := make([]*entity.Content, len(res))
+	//解析cachedContents
+	cachedContents := make([]*entity.ContentInfoWithDetails, 0)
 	for i := range res {
-		resData, ok := res[i].(string)
+		resJSON, ok := res[i].(string)
 		if !ok {
+			log.Error(ctx, "Get invalid data from cache", log.Any("data", res[i]))
 			continue
 		}
-		tempContent := new(entity.Content)
-		err = json.Unmarshal([]byte(resData), tempContent)
-		if err != nil{
-			return nil, err
+		content := new(entity.ContentInfoWithDetails)
+		err = json.Unmarshal([]byte(resJSON), content)
+		if err != nil {
+			log.Error(ctx, "Can't unmarshal content from cache", log.Err(err), log.String("JSON", resJSON))
+			continue
 		}
-		contentList[i] = tempContent
+		cachedContents = append(cachedContents, content)
 	}
-	return contentList, nil
-}
 
-type RedisContentCondition struct {
-	IDS          []string `json:"ids"`
-	KeyWords     string `json:"keywords"`		//name,keyword,authorName,description
-	ContentType  []int `json:"content_type"`
-	PublishStatus []string `json:"publish_status"`
-	AuthorName      string `json:"author"`
-	Org    		string `json:"org"`
-}
-
-func (r *RedisContentCondition) GetConditions(ctx context.Context) []string {
-	ids := make([]string, 0)
-	if r.IDS != nil {
-		ids = append(ids, r.IDS...)
-	}
-	if r.KeyWords != "" {
-		key := redisKey(ctx, RedisContentKeywordsBucket, r.KeyWords)
-		ids = append(ids, ro.MustGetRedis(ctx).SMembers(key).Val()...)
-	}
-	if r.ContentType != nil {
-		for i := range r.ContentType {
-			key := redisKey(ctx, RedisContentContentTypeBucket, strconv.Itoa(r.ContentType[i]))
-			ids = append(ids, ro.MustGetRedis(ctx).SMembers(key).Val()...)
+	//标记需要被删掉的id
+	deletedMarks := make([]bool, len(ids))
+	for i := range ids {
+		for j := range cachedContents {
+			if ids[i] == cachedContents[j].ID {
+				deletedMarks[i] = true
+			}
 		}
 	}
-	if r.PublishStatus != nil {
-		for i := range r.PublishStatus {
-			key := redisKey(ctx, RedisContentPublishStatusBucket, r.PublishStatus[i])
-			ids = append(ids, ro.MustGetRedis(ctx).SMembers(key).Val()...)
+
+	//获取剩余ids
+	restIds := make([]string, 0)
+	for i := range ids {
+		if !deletedMarks[i] {
+			restIds = append(restIds, ids[i])
 		}
 	}
-	if r.AuthorName != "" {
-		key := redisKey(ctx, RedisContentAuthorBucket, r.AuthorName)
-		ids = append(ids, key)
-	}
-	if r.Org != "" {
-		key := redisKey(ctx, RedisContentOrgBucket, r.Org)
-		ids = append(ids, key)
-	}
-	return ids
+
+	return restIds, cachedContents
 }
 
-func redisKey(ctx context.Context, bucket, key string) string {
-	return fmt.Sprintf("%v:%v", bucket, key)
+func (r *RedisContentCache) GetContentCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *ContentListWithKey {
+	if !config.Get().RedisConfig.OpenCache {
+		return nil
+	}
+	key := r.contentConditionKey(condition)
+	res, err := ro.MustGetRedis(ctx).Get(key).Result()
+	if err != nil {
+		log.Error(ctx, "Can't get content condition from cache", log.Err(err))
+		return nil
+	}
+	contentLists := new(ContentListWithKey)
+	err = json.Unmarshal([]byte(res), contentLists)
+	if err != nil {
+		log.Error(ctx, "Can't unmarshal content condition from cache", log.Err(err), log.String("json", res))
+		ro.MustGetRedis(ctx).Del(key)
+		return nil
+	}
+
+	return contentLists
 }
 
-var(
-	_redisContentDA *RedisContentDA
-	_redisContentDAOnce sync.Once
+func (r *RedisContentCache) CleanContentCache(ctx context.Context, ids []string) {
+	if !config.Get().RedisConfig.OpenCache {
+		return
+	}
+
+	if len(ids) < 1 {
+		return
+	}
+	//删除对应的id
+	keys := make([]string, 0)
+	for i := range ids {
+		keys = append(keys, r.contentKey(ids[i]))
+	}
+
+	//删除所有condition cache
+	conditionKeys := ro.MustGetRedis(ctx).Keys("kidsloop2.content.condition.*").Val()
+	keys = append(keys, conditionKeys...)
+
+	go func() {
+		//双删
+		ro.MustGetRedis(ctx).Del(keys...)
+		time.Sleep(time.Second)
+		ro.MustGetRedis(ctx).Del(keys...)
+	}()
+}
+
+func (r *RedisContentCache) SetExpiration(t time.Duration) {
+	r.expiration = t
+}
+
+var (
+	_redisContentCache     *RedisContentCache
+	_redisContentCacheOnce sync.Once
 )
 
-func GetRedisContentDA() *RedisContentDA {
-	_redisContentDAOnce.Do(func() {
-		_redisContentDA = new(RedisContentDA)
+func GetRedisContentCache() IContentCache {
+	_redisContentCacheOnce.Do(func() {
+		_redisContentCache = &RedisContentCache{expiration: time.Minute * 2}
 	})
-	return _redisContentDA
+	return _redisContentCache
 }
