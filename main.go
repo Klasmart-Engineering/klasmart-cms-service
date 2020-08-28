@@ -80,7 +80,11 @@ func main() {
 
 	log.Debug(context.TODO(), "init storage success")
 
-	common.Setenv(common.EnvLAMBDA)
+	if os.Getenv("env") == "HTTP" {
+		common.Setenv(common.EnvHTTP)
+	}else{
+		common.Setenv(common.EnvLAMBDA)
+	}
 	go common.RunWithHTTPHandler(api.NewServer(), ":8088")
 
 	log.Debug(context.TODO(), "init api server success")
