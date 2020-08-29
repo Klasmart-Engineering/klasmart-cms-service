@@ -182,7 +182,23 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 }
 
 func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, viewdata *entity.ScheduleUpdateView, location *time.Location) (string, error) {
-	// TODO: check permission
+	var schedule entity.Schedule
+	if err := da.GetScheduleDA().Get(ctx, viewdata.ID, &schedule); err != nil {
+		log.Error(ctx, "update schedule: get schedule by id failed",
+			log.Err(err),
+			log.String("id", viewdata.ID),
+			log.String("edit_type", string(viewdata.EditType)),
+		)
+		return "", err
+	}
+	if schedule.DeleteAt != 0 {
+		log.Error(ctx, "update schedule: get schedule by id failed, schedule not found",
+			log.String("id", viewdata.ID),
+			log.String("edit_type", string(viewdata.EditType)),
+		)
+		return "", constant.ErrRecordNotFound
+	}
+
 	if !viewdata.IsForce {
 		conflict, err := s.IsScheduleConflict(ctx, operator, viewdata.StartAt, viewdata.EndAt)
 		if err != nil {
@@ -193,6 +209,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			)
 			return "", err
 		}
+
 		if conflict {
 			log.Info(ctx, "update schedule: time conflict",
 				log.Any("operator", operator),
@@ -201,15 +218,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			return "", constant.ErrConflict
 		}
 	}
-	var schedule entity.Schedule
-	if err := da.GetScheduleDA().Get(ctx, viewdata.ID, &schedule); err != nil {
-		log.Error(ctx, "update schedule: get schedule by id failed",
-			log.Err(err),
-			log.String("id", viewdata.ID),
-			log.String("edit_type", string(viewdata.EditType)),
-		)
-		return "", err
-	}
+
 	var id string
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
@@ -570,9 +579,15 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	}
 	var schedule = new(entity.Schedule)
 	err = da.GetScheduleDA().Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		return nil, constant.ErrRecordNotFound
+	}
 	if err != nil {
 		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
 		return nil, err
+	}
+	if schedule.DeleteAt != 0 {
+		return nil, constant.ErrRecordNotFound
 	}
 
 	result := &entity.ScheduleDetailsView{
