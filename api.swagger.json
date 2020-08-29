@@ -65,6 +65,7 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
+              "enum":["1", "2", "3"],
               "nullable": true
             }
           },
@@ -528,6 +529,7 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
+              "enum":["1", "2", "3"],
               "nullable": true
             }
           },
@@ -681,6 +683,7 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
+              "enum":["1", "2", "3"],
               "nullable": true
             }
           },
@@ -818,6 +821,7 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
+              "enum":["1", "2", "3"],
               "nullable": true
             }
           },
@@ -2637,6 +2641,7 @@
                 "type": "integer",
                 "format": "int64",
                 "description": "content type",
+                "enum":[1,2,3],
                 "example": 1
               },
               "name": {
@@ -2825,7 +2830,8 @@
               "content_type": {
                 "type": "string",
                 "description": "content type list",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3",
+                "enum":["1","2","3"]
               },
               "scope": {
                 "type": "string",
@@ -2878,7 +2884,8 @@
                 "type": "integer",
                 "format": "int64",
                 "description": "content type",
-                "example": 1
+                "example": 1,
+                "enum":[1,2,3]
               },
               "name": {
                 "type": "string",
