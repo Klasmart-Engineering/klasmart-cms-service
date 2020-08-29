@@ -1,10 +1,12 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 func (s *Server) approve(c *gin.Context) {
@@ -16,7 +18,7 @@ func (s *Server) approve(c *gin.Context) {
 	}
 	err := model.GetReviewerModel().Approve(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
-	case model.ErrReadContentFailed:
+		case gorm.ErrRecordNotFound::
 		c.JSON(http.StatusNotFound, "content not found")
 		return
 	}
@@ -38,7 +40,7 @@ func (s *Server) reject(c *gin.Context) {
 	// extract reject reason
 	err := model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, "", op)
 	switch err {
-	case model.ErrReadContentFailed:
+	case gorm.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, "content not found")
 		return
 	}

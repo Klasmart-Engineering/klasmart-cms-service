@@ -1,19 +1,21 @@
 package api
 
 import (
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
-	"strconv"
-	"strings"
 )
 
-type IdList struct {
+type contentBulkOperateRequest struct {
 	ID []string `json:"id"`
 }
 
@@ -55,7 +57,7 @@ func (s *Server) createContent(c *gin.Context) {
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-	ids := new(IdList)
+	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
@@ -175,7 +177,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
-	ids := new(IdList)
+	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
@@ -196,7 +198,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
-	case model.ErrReadContentFailed:
+	case gorm.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 		return
 	}
@@ -312,7 +314,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		Org:     parseOrg(c, op),
 		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
 		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
-		Name:  	 strings.TrimSpace(c.Query("name")),
+		Name:    strings.TrimSpace(c.Query("name")),
 	}
 	//if len(keywords) > 0 {
 	//	condition.Name = keywords
