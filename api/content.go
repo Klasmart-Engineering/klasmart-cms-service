@@ -33,24 +33,19 @@ func (s *Server) createContent(c *gin.Context) {
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": cid,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id": cid,
-	})
 }
 
 func (s *Server) publishContentBulk(c *gin.Context) {
@@ -64,11 +59,12 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	}
 
 	err = model.GetContentModel().PublishContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) publishContent(c *gin.Context) {
@@ -88,13 +84,11 @@ func (s *Server) publishContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) GetContent(c *gin.Context) {
@@ -111,11 +105,12 @@ func (s *Server) GetContent(c *gin.Context) {
 	}
 
 	result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, result)
 }
 
 func (s *Server) updateContent(c *gin.Context) {
@@ -132,25 +127,19 @@ func (s *Server) updateContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) lockContent(c *gin.Context) {
@@ -161,15 +150,13 @@ func (s *Server) lockContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": ncid,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id": ncid,
-	})
 }
 
 func (s *Server) deleteContentBulk(c *gin.Context) {
@@ -183,11 +170,12 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		return
 	}
 	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) deleteContent(c *gin.Context) {
@@ -199,13 +187,11 @@ func (s *Server) deleteContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) QueryDynamoContent(c *gin.Context) {
@@ -228,14 +214,16 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 	}
 
 	key, results, err := model.GetContentModel().SearchContentByDynamoKey(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"key":  key,
+			"list": results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
-		"list": results,
-	})
+
 }
 
 func (s *Server) QueryContent(c *gin.Context) {
@@ -243,14 +231,15 @@ func (s *Server) QueryContent(c *gin.Context) {
 	op := GetOperator(c)
 	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"total": key,
+			"list":  results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": key,
-		"list":  results,
-	})
 }
 
 func (s *Server) QueryPrivateContent(c *gin.Context) {
@@ -259,14 +248,15 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 
 	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"total": key,
+			"list":  results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": key,
-		"list":  results,
-	})
 }
 
 func (s *Server) QueryPendingContent(c *gin.Context) {
@@ -276,14 +266,15 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 
 	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"total": key,
+			"list":  results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": key,
-		"list":  results,
-	})
 }
 
 func parseAuthor(c *gin.Context, u *entity.Operator) string {

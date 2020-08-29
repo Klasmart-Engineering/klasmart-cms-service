@@ -19,14 +19,12 @@ func (s *Server) approve(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, "content not found")
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		// TODO: differentiate error types
 		c.JSON(http.StatusInternalServerError, "Internal server error")
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) reject(c *gin.Context) {
@@ -41,12 +39,10 @@ func (s *Server) reject(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, "content not found")
-		return
-	}
-	if err != nil {
-		// TODO: differentiate error types
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+
+	default:
 		c.JSON(http.StatusInternalServerError, "Internal server error")
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
