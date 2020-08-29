@@ -3,17 +3,18 @@ package contentdata
 import (
 	"context"
 	"encoding/json"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type LessonData struct {
-	SegmentId int               `json:"segmentId"`
-	Condition string            `json:"condition"`
-	MaterialId string           `json:"materialId"`
-	Material 	*entity.Content `json:"material"`
-	NextNode 	[]*LessonData   `json:"next"`
+	SegmentId  string          `json:"segmentId"`
+	Condition  string          `json:"condition"`
+	MaterialId string          `json:"materialId"`
+	Material   *entity.Content `json:"material"`
+	NextNode   []*LessonData   `json:"next"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -38,7 +39,7 @@ func (l *LessonData) Marshal(ctx context.Context) (string, error) {
 func (l *LessonData) lessonDataIterator(ctx context.Context, handleLessonData func(ctx context.Context, l *LessonData)) []string {
 	arr := make([]string, 0)
 	handleLessonData(ctx, l)
-	for i := range l.NextNode{
+	for i := range l.NextNode {
 		l.NextNode[i].lessonDataIterator(ctx, handleLessonData)
 	}
 	return arr
@@ -60,7 +61,7 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 	}
 }
 
-func (l *LessonData) SubContentIds(ctx context.Context) ([]string ,error){
+func (l *LessonData) SubContentIds(ctx context.Context) ([]string, error) {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -80,7 +81,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	_, data, err := da.GetDyContentDA().SearchContent(ctx, &da.DyContentCondition{
 		IDS: materialList,
 	})
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	if len(data) != len(materialList) {
@@ -99,7 +100,7 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 	_, contentList, err := da.GetDyContentDA().SearchContent(ctx, &da.DyContentCondition{
 		IDS: materialList,
 	})
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -107,7 +108,7 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 	for i := range contentList {
 		contentMap[contentList[i].ID] = contentList[i]
 	}
-	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData){
+	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		l.Material = contentMap[l.MaterialId]
 	})
 	return nil
