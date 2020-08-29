@@ -603,6 +603,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		Description: schedule.Description,
 		Version:     schedule.ScheduleVersion,
 		RepeatID:    schedule.RepeatID,
+		Attachment:  schedule.Attachment,
 	}
 	if schedule.RepeatJson != "" {
 		var repeat entity.RepeatOptions

@@ -320,7 +320,7 @@ type ScheduleListView struct {
 type ScheduleDetailsView struct {
 	ID          string        `json:"id"`
 	Title       string        `json:"title"`
-	Attachment  string        `json:"attachment"`
+	Attachment  string        `json:"attachment_path"`
 	OrgID       string        `json:"org_id"`
 	StartAt     int64         `json:"start_at"`
 	EndAt       int64         `json:"end_at"`
