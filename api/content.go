@@ -1,6 +1,10 @@
 package api
 
 import (
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -8,10 +12,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
-	"strconv"
-	"strings"
 )
+
+type contentBulkOperateRequest struct {
+	ID []string `json:"id"`
+}
 
 func (s *Server) createContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -28,42 +33,38 @@ func (s *Server) createContent(c *gin.Context) {
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": cid,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id": cid,
-	})
 }
 
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-	ids := make([]string, 0)
+	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
 
-	err = model.GetContentModel().PublishContentBulk(ctx, dbo.MustGetDB(ctx), ids, op)
-	if err != nil {
+	err = model.GetContentModel().PublishContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) publishContent(c *gin.Context) {
@@ -83,13 +84,11 @@ func (s *Server) publishContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) GetContent(c *gin.Context) {
@@ -106,11 +105,12 @@ func (s *Server) GetContent(c *gin.Context) {
 	}
 
 	result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, result)
 }
 
 func (s *Server) updateContent(c *gin.Context) {
@@ -127,25 +127,19 @@ func (s *Server) updateContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
 	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) lockContent(c *gin.Context) {
@@ -156,33 +150,32 @@ func (s *Server) lockContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": ncid,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id": ncid,
-	})
 }
 
 func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
-	ids := make([]string, 0)
+	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 		return
 	}
-	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids, op)
-	if err != nil {
+	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) deleteContent(c *gin.Context) {
@@ -192,15 +185,13 @@ func (s *Server) deleteContent(c *gin.Context) {
 
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
-	case model.ErrReadContentFailed:
+	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) QueryDynamoContent(c *gin.Context) {
@@ -223,14 +214,16 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 	}
 
 	key, results, err := model.GetContentModel().SearchContentByDynamoKey(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"key":  key,
+			"list": results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"key":  key,
-		"list": results,
-	})
+
 }
 
 func (s *Server) QueryContent(c *gin.Context) {
@@ -238,14 +231,15 @@ func (s *Server) QueryContent(c *gin.Context) {
 	op := GetOperator(c)
 	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"total": key,
+			"list":  results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": key,
-		"list":  results,
-	})
 }
 
 func (s *Server) QueryPrivateContent(c *gin.Context) {
@@ -254,14 +248,15 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 
 	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"total": key,
+			"list":  results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": key,
-		"list":  results,
-	})
 }
 
 func (s *Server) QueryPendingContent(c *gin.Context) {
@@ -271,14 +266,15 @@ func (s *Server) QueryPendingContent(c *gin.Context) {
 
 	condition := queryCondition(c, op)
 	key, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"total": key,
+			"list":  results,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": key,
-		"list":  results,
-	})
 }
 
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
@@ -308,7 +304,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		Org:     parseOrg(c, op),
 		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
 		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
-		Name:  	 strings.TrimSpace(c.Query("name")),
+		Name:    strings.TrimSpace(c.Query("name")),
 	}
 	//if len(keywords) > 0 {
 	//	condition.Name = keywords

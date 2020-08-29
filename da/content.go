@@ -3,11 +3,11 @@ package da
 import (
 	"context"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -67,7 +67,7 @@ func (s *CombineConditions) GetOrderBy() string {
 
 type ContentCondition struct {
 	IDS           []string `json:"ids"`
-	Name          string `json:"name"`
+	Name          string   `json:"name"`
 	ContentType   []int    `json:"content_type"`
 	Scope         []string `json:"scope"`
 	PublishStatus []string `json:"publish_status"`
@@ -226,7 +226,7 @@ func (cd *DBContentDA) GetContentById(ctx context.Context, tx *dbo.DBContext, ci
 		return nil, err
 	}
 	if obj.DeleteAt > 0 {
-		return nil, gorm.ErrRecordNotFound
+		return nil, dbo.ErrRecordNotFound
 	}
 
 	return obj, nil
