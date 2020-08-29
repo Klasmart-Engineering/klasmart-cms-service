@@ -35,6 +35,13 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errMsg)
 		return
 	}
+	//if strings.TrimSpace(data.Attachment) != "" {
+	//	if !model.GetScheduleModel().ExistScheduleAttachmentFile(ctx, data.Attachment) {
+	//		c.JSON(http.StatusBadRequest, "schedule attachment file not found")
+	//		return
+	//	}
+	//}
+
 	operator := GetOperator(c)
 	data.OrgID = operator.OrgID
 	if data.IsAllDay {
