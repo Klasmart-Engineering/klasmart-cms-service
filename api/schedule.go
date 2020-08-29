@@ -35,12 +35,20 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errMsg)
 		return
 	}
+	//if strings.TrimSpace(data.Attachment) != "" {
+	//	if !model.GetScheduleModel().ExistScheduleAttachmentFile(ctx, data.Attachment) {
+	//		c.JSON(http.StatusBadRequest, "schedule attachment file not found")
+	//		return
+	//	}
+	//}
+
 	operator := GetOperator(c)
 	data.OrgID = operator.OrgID
 	if data.IsAllDay {
 		data.StartAt = utils.BeginOfDayByTimeStamp(data.StartAt, s.getLocation(c)).Unix()
 		data.EndAt = utils.EndOfDayByTimeStamp(data.EndAt, s.getLocation(c)).Unix()
 	}
+	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data, s.getLocation(c))
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed",
@@ -109,6 +117,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		data.StartAt = utils.BeginOfDayByTimeStamp(data.StartAt, s.getLocation(c)).Unix()
 		data.EndAt = utils.EndOfDayByTimeStamp(data.EndAt, s.getLocation(c)).Unix()
 	}
+	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
 	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data, s.getLocation(c))
 	if err == nil {
@@ -215,7 +224,9 @@ func (s *Server) querySchedule(c *gin.Context) {
 }
 
 func (s *Server) getLocation(c *gin.Context) *time.Location {
-	return GetTimeLocation(c)
+	lc := GetTimeLocation(c)
+	log.Debug(c.Request.Context(), "time location info", log.Any("location", lc))
+	return lc
 }
 
 const (

@@ -28,6 +28,7 @@ type IScheduleModel interface {
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
 	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
+	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -59,6 +60,15 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 		return true, nil
 	}
 	return false, nil
+}
+
+func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool {
+	_, exist := storage.DefaultStorage().ExistFile(ctx, ScheduleAttachment_Storage_Partition, attachmentPath)
+	if !exist {
+		log.Info(ctx, "add schedule: attachment is not exits", log.Any("attachmentPath", attachmentPath))
+		return false
+	}
+	return true
 }
 
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView, options *entity.RepeatOptions, location *time.Location) (string, error) {
@@ -113,15 +123,6 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operat
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView, location *time.Location) (string, error) {
-	// validate attachment
-	if viewData.Attachment != "" {
-		_, exist := storage.DefaultStorage().ExistFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
-		if !exist {
-			log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", viewData))
-			return "", constant.ErrFileNotFound
-		}
-	}
-
 	// is force add
 	if !viewData.IsForce {
 		conflict, err := GetScheduleModel().IsScheduleConflict(ctx, op, viewData.StartAt, viewData.EndAt)
@@ -182,7 +183,23 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 }
 
 func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, viewdata *entity.ScheduleUpdateView, location *time.Location) (string, error) {
-	// TODO: check permission
+	var schedule entity.Schedule
+	if err := da.GetScheduleDA().Get(ctx, viewdata.ID, &schedule); err != nil {
+		log.Error(ctx, "update schedule: get schedule by id failed",
+			log.Err(err),
+			log.String("id", viewdata.ID),
+			log.String("edit_type", string(viewdata.EditType)),
+		)
+		return "", err
+	}
+	if schedule.DeleteAt != 0 {
+		log.Error(ctx, "update schedule: get schedule by id failed, schedule not found",
+			log.String("id", viewdata.ID),
+			log.String("edit_type", string(viewdata.EditType)),
+		)
+		return "", constant.ErrRecordNotFound
+	}
+
 	if !viewdata.IsForce {
 		conflict, err := s.IsScheduleConflict(ctx, operator, viewdata.StartAt, viewdata.EndAt)
 		if err != nil {
@@ -193,6 +210,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			)
 			return "", err
 		}
+
 		if conflict {
 			log.Info(ctx, "update schedule: time conflict",
 				log.Any("operator", operator),
@@ -201,15 +219,7 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			return "", constant.ErrConflict
 		}
 	}
-	var schedule entity.Schedule
-	if err := da.GetScheduleDA().Get(ctx, viewdata.ID, &schedule); err != nil {
-		log.Error(ctx, "update schedule: get schedule by id failed",
-			log.Err(err),
-			log.String("id", viewdata.ID),
-			log.String("edit_type", string(viewdata.EditType)),
-		)
-		return "", err
-	}
+
 	var id string
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
@@ -378,6 +388,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		scheduleIDs = append(scheduleIDs, item.ID)
 		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 	}
+
 	classMap, err := s.getClassInfoMapByClassIDs(ctx, classIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get class info error", log.Err(err), log.Strings("classIDs", classIDs))
@@ -394,7 +405,8 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Strings("programIDs", programIDs))
 		return nil, err
 	}
-
+	teacherMap = make(map[string]*entity.ScheduleShortInfo)
+	scheduleTeacherMap = make(map[string][]string)
 	if len(scheduleIDs) > 0 {
 		var scheduleTeacherList []*entity.ScheduleTeacher
 		err := da.GetScheduleTeacherDA().Query(ctx, &da.ScheduleTeacherCondition{
@@ -407,7 +419,6 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			return nil, err
 		}
 		teacherIDs = make([]string, len(scheduleTeacherList))
-		scheduleTeacherMap = make(map[string][]string)
 		for i, item := range scheduleTeacherList {
 			teacherIDs[i] = item.TeacherID
 			if _, ok := scheduleTeacherMap[item.ScheduleID]; !ok {
@@ -415,7 +426,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 			scheduleTeacherMap[item.ScheduleID] = append(scheduleTeacherMap[item.ScheduleID], item.TeacherID)
 		}
-
+		teacherIDs = utils.SliceDeduplication(teacherIDs)
 		teacherService, err := external.GetTeacherServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("schedules", schedules))
@@ -426,7 +437,6 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedules", schedules))
 			return nil, err
 		}
-		teacherMap = make(map[string]*entity.ScheduleShortInfo)
 		for _, item := range teacherInfos {
 			teacherMap[item.ID] = &entity.ScheduleShortInfo{
 				ID:   item.ID,
@@ -434,17 +444,10 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 			}
 		}
 	}
-	lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
+	lessonPlanMap, err = s.getLessonPlanMapByLessonPlanIDs(ctx, tx, lessonPlanIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
+		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Any("lessonPlanIDs", lessonPlanIDs))
 		return nil, err
-	}
-	lessonPlanMap = make(map[string]*entity.ScheduleShortInfo)
-	for _, item := range lessonPlans {
-		lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
-			ID:   item.ID,
-			Name: item.Name,
-		}
 	}
 	scheduleBasicMap := make(map[string]*entity.ScheduleBasic)
 	for _, item := range schedules {
@@ -473,9 +476,30 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, tx *dbo.DBContext, sch
 	return scheduleBasicMap, nil
 }
 
+func (s *scheduleModel) getLessonPlanMapByLessonPlanIDs(ctx context.Context, tx *dbo.DBContext, lessonPlanIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+	lessonPlanMap := make(map[string]*entity.ScheduleShortInfo)
+	if len(lessonPlanIDs) != 0 {
+		lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
+		lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
+		if err != nil {
+			log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
+			return nil, err
+		}
+
+		for _, item := range lessonPlans {
+			lessonPlanMap[item.ID] = &entity.ScheduleShortInfo{
+				ID:   item.ID,
+				Name: item.Name,
+			}
+		}
+	}
+	return lessonPlanMap, nil
+}
+
 func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var classMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(classIDs) != 0 {
+		classIDs = utils.SliceDeduplication(classIDs)
 		classService, err := external.GetClassServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Strings("classIDs", classIDs))
@@ -499,6 +523,7 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs 
 func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
+		subjectIDs = utils.SliceDeduplication(subjectIDs)
 		subjectService, err := external.GetSubjectServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
@@ -522,6 +547,7 @@ func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjec
 func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var programMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(programIDs) != 0 {
+		programIDs = utils.SliceDeduplication(programIDs)
 		programService, err := external.GetProgramServiceProvider()
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Strings("programIDs", programIDs))
@@ -554,9 +580,15 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 	}
 	var schedule = new(entity.Schedule)
 	err = da.GetScheduleDA().Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		return nil, constant.ErrRecordNotFound
+	}
 	if err != nil {
 		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
 		return nil, err
+	}
+	if schedule.DeleteAt != 0 {
+		return nil, constant.ErrRecordNotFound
 	}
 
 	result := &entity.ScheduleDetailsView{
