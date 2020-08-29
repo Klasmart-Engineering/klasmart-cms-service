@@ -2,12 +2,13 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
-	"sync"
 )
 
 type IReviewerModel interface {
@@ -21,8 +22,9 @@ type Reviewer struct {
 func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	// TODO:
 	// 1. check auth
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentReview,cid)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentReview, cid)
 	if err != nil {
+		log.Error(ctx, "Get lock failed", log.String("cid", cid), log.Err(err))
 		return err
 	}
 	locker.Lock()
@@ -32,7 +34,7 @@ func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, 
 	cm := new(ContentModel)
 	content, err := cm.GetContentByID(ctx, tx, cid, user)
 	if err != nil {
-		log.Error(ctx, "Approve: GetContentByID failed: ", log.Err(err))
+		log.Error(ctx, "Approve: GetContentByID failed:", log.Err(err))
 		return err
 	}
 	err = content.SetStatus(entity.ContentStatusPublished)
@@ -53,6 +55,7 @@ func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, r
 	// 1. check auth
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentReview, cid)
 	if err != nil {
+		log.Error(ctx, "Get lock failed", log.String("cid", cid), log.Err(err))
 		return err
 	}
 	locker.Lock()
