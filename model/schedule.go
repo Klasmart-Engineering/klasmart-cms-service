@@ -28,6 +28,7 @@ type IScheduleModel interface {
 	GetByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.ScheduleDetailsView, error)
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
 	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
+	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -59,6 +60,15 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 		return true, nil
 	}
 	return false, nil
+}
+
+func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool {
+	_, exist := storage.DefaultStorage().ExistFile(ctx, ScheduleAttachment_Storage_Partition, attachmentPath)
+	if !exist {
+		log.Info(ctx, "add schedule: attachment is not exits", log.Any("attachmentPath", attachmentPath))
+		return false
+	}
+	return true
 }
 
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView, options *entity.RepeatOptions, location *time.Location) (string, error) {
@@ -113,15 +123,6 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operat
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView, location *time.Location) (string, error) {
-	// validate attachment
-	if viewData.Attachment != "" {
-		_, exist := storage.DefaultStorage().ExistFile(ctx, ScheduleAttachment_Storage_Partition, viewData.Attachment)
-		if !exist {
-			log.Info(ctx, "add schedule: attachment is not exits", log.Any("requestData", viewData))
-			return "", constant.ErrFileNotFound
-		}
-	}
-
 	// is force add
 	if !viewData.IsForce {
 		conflict, err := GetScheduleModel().IsScheduleConflict(ctx, op, viewData.StartAt, viewData.EndAt)
