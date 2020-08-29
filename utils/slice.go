@@ -6,12 +6,12 @@ func SliceDeduplication(s []string) []string {
 		temp[s[i]] = true
 	}
 
-	result := make([]string, 0)
+	result := make([]string, 0, len(temp))
 	for k, v := range temp {
 		if v {
 			result = append(result, k)
 		}
 	}
-	//sort.Strings(retIdList)
+
 	return result
 }
