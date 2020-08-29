@@ -305,9 +305,13 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 		return err
 	}
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return ErrNoContent
+	}
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
-		return ErrNoContentData
+		return err
 	}
 
 	content, err = cm.checkUpdateContent(ctx, tx, content, user)
@@ -375,9 +379,13 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 
 func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return ErrNoContent
+	}
 	if err != nil {
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
-		return ErrNoContent
+		return err
 	}
 	//TODO:检查权限
 	//if content.LockedBy != user.UserID {
@@ -395,9 +403,13 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	defer locker.Unlock()
 
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return "", ErrNoContent
+	}
 	if err != nil {
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
-		return "", ErrNoContent
+		return "", err
 	}
 	if content.ContentType.IsAsset() {
 		return "", ErrInvalidContentType
@@ -461,9 +473,13 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 
 func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return ErrNoContent
+	}
 	if err != nil {
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
-		return ErrNoContent
+		return err
 	}
 	if content.ContentType.IsAsset() {
 		return ErrInvalidContentType
@@ -562,9 +578,13 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 
 func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error) {
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return "", ErrNoContent
+	}
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
-		return "", ErrNoContent
+		return "", err
 	}
 	if content.ContentType.IsAsset() {
 		return "", ErrInvalidContentType
@@ -643,9 +663,13 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return nil, ErrNoContent
+	}
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err))
-		return nil, ErrNoContent
+		return nil, err
 	}
 	content, err := contentdata.ConvertContentObj(ctx, obj)
 	if err != nil {
