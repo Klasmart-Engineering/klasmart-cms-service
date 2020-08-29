@@ -1,10 +1,11 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 func (s *Server) approve(c *gin.Context) {
@@ -15,12 +16,15 @@ func (s *Server) approve(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
 	}
 	err := model.GetReviewerModel().Approve(ctx, dbo.MustGetDB(ctx), cid, op)
-	if err != nil {
+	switch err {
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, "content not found")
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		// TODO: differentiate error types
 		c.JSON(http.StatusInternalServerError, "Internal server error")
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 func (s *Server) reject(c *gin.Context) {
@@ -32,10 +36,13 @@ func (s *Server) reject(c *gin.Context) {
 	}
 	// extract reject reason
 	err := model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, "", op)
-	if err != nil {
-		// TODO: differentiate error types
+	switch err {
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, "content not found")
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+
+	default:
 		c.JSON(http.StatusInternalServerError, "Internal server error")
-		return
 	}
-	c.JSON(http.StatusOK, "ok")
 }

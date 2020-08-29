@@ -67,7 +67,7 @@ type ScheduleConfig struct {
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
-		log.Panic(context.TODO(), "Environment is nil")
+		log.Panic(context.TODO(), "Environment is nil", log.String("key", key))
 	}
 	return value
 }

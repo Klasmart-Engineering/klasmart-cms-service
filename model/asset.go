@@ -25,7 +25,7 @@ var (
 	ErrCreateContentFailed = errors.New("create contentdata into data access failed")
 
 	ErrNoContentData                 = errors.New("no content data")
-	ErrInvalidContentData                 = errors.New("invalid content data")
+	ErrInvalidContentData            = errors.New("invalid content data")
 	ErrNoContent                     = errors.New("no content")
 	ErrContentAlreadyLocked          = errors.New("content is already locked")
 	ErrInvalidPublishStatus          = errors.New("invalid publish status")
@@ -39,9 +39,9 @@ var (
 	ErrReadContentFailed             = errors.New("read content failed")
 	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
 
-	ErrInvalidResourceId			= errors.New("invalid resource id")
-	ErrResourceNotFound		= errors.New("resource not found")
-	ErrInvalidContentType         = errors.New("invalid content type")
+	ErrInvalidResourceId  = errors.New("invalid resource id")
+	ErrResourceNotFound   = errors.New("resource not found")
+	ErrInvalidContentType = errors.New("invalid content type")
 )
 
 type IAssetModel interface {
