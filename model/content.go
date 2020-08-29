@@ -2,9 +2,10 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -20,7 +21,7 @@ type IContentModel interface {
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
 	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
-	DeleteContent(ctx context.Context, tx  *dbo.DBContext, cid string, user *entity.Operator) error
+	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 
 	PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error
@@ -32,7 +33,7 @@ type IContentModel interface {
 	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
-	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content , user *entity.Operator) error
+	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -346,7 +347,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
-		return ErrReadContentFailed
+		return err
 	}
 	if content.ContentType.IsAsset() {
 		return ErrInvalidContentType
@@ -359,7 +360,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		log.Error(ctx, "update contentdata scope failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
-	if status == entity.ContentStatusPublished && content.SourceID != ""{
+	if status == entity.ContentStatusPublished && content.SourceID != "" {
 		//处理source content
 		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
 		if err != nil {
@@ -427,7 +428,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 
 }
 func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
-	updateIds := make([]string , 0)
+	updateIds := make([]string, 0)
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, contents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 			IDS: ids,
@@ -447,7 +448,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 				return err
 			}
 			updateIds = append(updateIds, contents[i].ID)
-			if contents[i].SourceID != ""{
+			if contents[i].SourceID != "" {
 				updateIds = append(updateIds, contents[i].SourceID)
 			}
 		}
@@ -495,7 +496,7 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 		}
 		for i := range contents {
 			err = cm.doDeleteContent(ctx, tx, contents[i], user)
-			if err != nil{
+			if err != nil {
 				return err
 			}
 			//record pending delete content id
@@ -541,13 +542,17 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 
 func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "content not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return ErrNoContent
+	}
 	if err != nil {
-		log.Error(ctx, "can't read contentdata on delete contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
-		return ErrReadContentFailed
+		log.Error(ctx, "can't read content on delete content", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return err
 	}
 
 	err = cm.doDeleteContent(ctx, tx, content, user)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 

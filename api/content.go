@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -198,7 +197,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
-	case gorm.ErrRecordNotFound:
+	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 		return
 	}
