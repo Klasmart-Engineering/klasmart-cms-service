@@ -197,6 +197,7 @@ func (cm *ContentModel) SearchContentByDynamoKey(ctx context.Context, tx *dbo.DB
 }
 
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+	log.Error(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
 	cachedContents := da.GetContentRedis().GetContentCacheBySearchCondition(ctx, condition)
 	if cachedContents != nil {
 		return cachedContents.Count, cachedContents.ContentList, nil
