@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
@@ -78,7 +79,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
 	})
-	_, data, err := da.GetDyContentDA().SearchContent(ctx, &da.DyContentCondition{
+	_, data, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
 		IDS: materialList,
 	})
 	if err != nil {
@@ -97,7 +98,7 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
 	})
-	_, contentList, err := da.GetDyContentDA().SearchContent(ctx, &da.DyContentCondition{
+	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
 		IDS: materialList,
 	})
 	if err != nil {
