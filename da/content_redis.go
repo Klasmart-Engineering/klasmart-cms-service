@@ -5,15 +5,15 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"sync"
-	"time"
 )
-
 
 type IContentRedis interface {
 	SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfoWithDetails)
@@ -34,7 +34,7 @@ type ContentRedis struct {
 }
 
 type ContentListWithKey struct {
-	Count         int                           `json:"count"`
+	Count       int                              `json:"count"`
 	ContentList []*entity.ContentInfoWithDetails `json:"content_list"`
 }
 
@@ -206,17 +206,17 @@ func (r *ContentRedis) CleanContentCache(ctx context.Context, ids []string) {
 	//conditionKeys := ro.MustGetRedis(ctx).Keys(RedisKeyPrefixContentCondition + ":*").Val()
 	//keys = append(keys, conditionKeys...)
 	keys = append(keys, RedisKeyPrefixContentCondition)
-	go func() {
-		err := ro.MustGetRedis(ctx).Del(keys...).Err()
-		if err != nil{
-			log.Error(ctx, "Can't clean content from cache", log.Err(err), log.Strings("keys", keys))
-		}
-		//time.Sleep(time.Second)
-		//ro.MustGetRedis(ctx).Del(keys...)
-		//if err != nil{
-		//	log.Error(ctx, "Can't clean content again from cache", log.Err(err), log.Strings("keys", keys))
-		//}
-	}()
+	// go func() {
+	err := ro.MustGetRedis(ctx).Del(keys...).Err()
+	if err != nil {
+		log.Error(ctx, "Can't clean content from cache", log.Err(err), log.Strings("keys", keys))
+	}
+	//time.Sleep(time.Second)
+	//ro.MustGetRedis(ctx).Del(keys...)
+	//if err != nil{
+	//	log.Error(ctx, "Can't clean content again from cache", log.Err(err), log.Strings("keys", keys))
+	//}
+	// }()
 }
 
 func (r *ContentRedis) SetExpiration(t time.Duration) {
