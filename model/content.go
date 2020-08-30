@@ -123,6 +123,7 @@ func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext
 
 	//若为asset，直接发布
 	if content.ContentType.IsAsset() {
+		log.Info(ctx, "asset no need to check", log.String("cid", content.ID))
 		return content, nil
 	}
 
@@ -133,10 +134,8 @@ func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext
 	if content.PublishStatus == entity.ContentStatusPending ||
 		content.PublishStatus == entity.ContentStatusArchive ||
 		content.PublishStatus == entity.ContentStatusHidden ||
-		content.PublishStatus == entity.ContentStatusAttachment {
-		return nil, ErrInvalidPublishStatus
-	}
-	if content.PublishStatus == entity.ContentStatusPublished {
+		content.PublishStatus == entity.ContentStatusAttachment ||
+		content.PublishStatus == entity.ContentStatusPublished {
 		return nil, ErrInvalidPublishStatus
 	}
 	return content, nil
