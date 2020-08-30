@@ -96,6 +96,7 @@ func (r *ContentRedis) SaveContentCacheListBySearchCondition(ctx context.Context
 	}
 	go func() {
 		key := r.contentConditionKey(condition)
+		log.Info(ctx, "save content into cache", log.Any("condition", condition), log.String("key", key))
 		contentListJSON, err := json.Marshal(c)
 		if err != nil {
 			log.Error(ctx, "Can't parse content list into json", log.Err(err), log.String("key", key), log.String("data", string(contentListJSON)))
@@ -166,7 +167,10 @@ func (r *ContentRedis) GetContentCacheBySearchCondition(ctx context.Context, con
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
+
 	key := r.contentConditionKey(condition)
+	log.Info(ctx, "search content ", log.Any("condition", condition), log.String("key", key))
+
 	//res, err := ro.MustGetRedis(ctx).Get(key).Result()
 	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixContentCondition, r.conditionHash(condition)).Result()
 
@@ -184,6 +188,7 @@ func (r *ContentRedis) GetContentCacheBySearchCondition(ctx context.Context, con
 		}
 		return nil
 	}
+	log.Info(ctx, "search content from cache", log.String("key", key))
 
 	return contentLists
 }
