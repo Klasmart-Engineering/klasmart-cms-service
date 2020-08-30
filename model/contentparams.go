@@ -101,7 +101,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 
 	if content.PublishStatus == entity.ContentStatusRejected {
-		content.PublishStatus = entity.ContentStatusPending
+		content.PublishStatus = entity.ContentStatusDraft
 	}
 	//Asset修改后直接发布
 	if content.ContentType.IsAsset() {
