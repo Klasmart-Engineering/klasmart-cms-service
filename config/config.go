@@ -106,12 +106,11 @@ func loadStorageEnvConfig(ctx context.Context) {
 
 	if cdnOpen {
 		config.CDNConfig.CDNMode = assertGetEnv("cdn_mode")
+		config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
 		if config.CDNConfig.CDNMode == "service" {
-			config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
 			config.CDNConfig.CDNServicePath = assertGetEnv("cdn_service_path")
 			config.CDNConfig.CDNServiceToken = assertGetEnv("cdn_service_token")
 		} else if config.CDNConfig.CDNMode == "key" {
-			config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
 			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
 			config.CDNConfig.CDNPrivateKey = assertGetEnv("cdn_private_key")
 		} else {
