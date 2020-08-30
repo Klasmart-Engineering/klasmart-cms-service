@@ -315,6 +315,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 
 	content, err = cm.checkUpdateContent(ctx, tx, content, user)
 	if err != nil {
+		log.Error(ctx, "check update content failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
 		return err
 	}
 	//Check status
