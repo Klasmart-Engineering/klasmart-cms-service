@@ -5,8 +5,6 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -113,10 +111,10 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		if len(parts) != 2 {
 			return ErrInvalidResourceId
 		}
-		_, exist := storage.DefaultStorage().ExistFile(ctx, parts[0], parts[1])
-		if !exist {
-			return ErrResourceNotFound
-		}
+		// _, exist := storage.DefaultStorage().ExistFile(ctx, parts[0], parts[1])
+		// if !exist {
+		// 	return ErrResourceNotFound
+		// }
 	}
 	return nil
 }
