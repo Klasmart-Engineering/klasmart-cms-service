@@ -2,12 +2,13 @@ package config
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type Config struct {
@@ -123,19 +124,19 @@ func loadRedisEnvConfig(ctx context.Context) {
 	openCacheStr := os.Getenv("open_cache")
 	openCache, _ := strconv.ParseBool(openCacheStr)
 	config.RedisConfig.OpenCache = openCache
-	if openCache {
-		host := assertGetEnv("redis_host")
-		portStr := assertGetEnv("redis_port")
-		password := os.Getenv("redis_password")
-		config.RedisConfig.Host = host
-		port, err := strconv.Atoi(portStr)
-		if err != nil {
-			log.Error(ctx, "Can't parse redis_port", log.Err(err))
-			port = 3306
-		}
-		config.RedisConfig.Port = port
-		config.RedisConfig.Password = password
+	// if openCache {
+	host := assertGetEnv("redis_host")
+	portStr := assertGetEnv("redis_port")
+	password := os.Getenv("redis_password")
+	config.RedisConfig.Host = host
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		log.Error(ctx, "Can't parse redis_port", log.Err(err))
+		port = 3306
 	}
+	config.RedisConfig.Port = port
+	config.RedisConfig.Password = password
+	// }
 }
 
 func loadScheduleEnvConfig(ctx context.Context) {
