@@ -3112,6 +3112,11 @@
                 "type": "string",
                 "description": "org name",
                 "example": "school1"
+              },
+              "created_at": {
+                "type": "integer",
+                "description": "content create time",
+                "example": 123
               }
             }
           }

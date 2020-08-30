@@ -3,9 +3,10 @@ package contentdata
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
 )
 
 func CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
@@ -27,7 +28,7 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 		return nil, errors.New("unknown content type")
 	}
 	err := contentData.Unmarshal(ctx, data)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return contentData, nil
@@ -45,14 +46,14 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		ContentType:   obj.ContentType,
 		Name:          obj.Name,
 		Program:       strings.Split(obj.Program, ","),
-		Subject:        strings.Split(obj.Subject, ","),
-		Developmental:  strings.Split(obj.Developmental, ","),
-		Skills:         strings.Split(obj.Skills, ","),
-		Age:            strings.Split(obj.Age, ","),
-		Grade: 			 strings.Split(obj.Grade, ","),
+		Subject:       strings.Split(obj.Subject, ","),
+		Developmental: strings.Split(obj.Developmental, ","),
+		Skills:        strings.Split(obj.Skills, ","),
+		Age:           strings.Split(obj.Age, ","),
+		Grade:         strings.Split(obj.Grade, ","),
 		Keywords:      strings.Split(obj.Keywords, ","),
-		SuggestTime: 	obj.SuggestTime,
-		RejectReason:	obj.RejectReason,
+		SuggestTime:   obj.SuggestTime,
+		RejectReason:  obj.RejectReason,
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
 		Data:          obj.Data,
@@ -63,6 +64,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		PublishScope:  obj.PublishScope,
 		PublishStatus: obj.PublishStatus,
 		Version:       obj.Version,
+		CreatedAt:     obj.CreateAt,
 	}
 
 	return cm, nil
