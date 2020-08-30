@@ -2,10 +2,12 @@ package model
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	"strings"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 )
 
 func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
@@ -16,11 +18,13 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		return nil, ErrNoContentData
 	}
 	cd, err := contentdata.CreateContentData(ctx, c.ContentType, c.Data)
-	if err != nil{
+	if err != nil {
+		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
 	}
 	err = cd.Validate(ctx, c.ContentType)
-	if err != nil{
+	if err != nil {
+		log.Warn(ctx, "validate content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
 	}
 
@@ -45,12 +49,12 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Keywords:      strings.Join(c.Keywords, ","),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
-		SuggestTime: c.SuggestTime,
+		SuggestTime:   c.SuggestTime,
 		Data:          c.Data,
 		Extra:         c.Extra,
 		Author:        operator.UserID,
 		AuthorName:    authorName,
-		LockedBy: 	   "-",
+		LockedBy:      "-",
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
@@ -58,12 +62,11 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}, nil
 }
 
-
 func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *entity.Content, data *entity.CreateContentRequest) (*entity.Content, error) {
 	if data.Name != "" {
 		content.Name = data.Name
 	}
-	if data.ContentType > 0 && data.Data != ""{
+	if data.ContentType > 0 && data.Data != "" {
 		content.ContentType = data.ContentType
 	}
 	if data.Program != nil {
@@ -108,11 +111,11 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	//检查data
 	if data.Data != "" {
 		cd, err := contentdata.CreateContentData(ctx, data.ContentType, data.Data)
-		if err != nil{
+		if err != nil {
 			return nil, ErrInvalidContentData
 		}
 		err = cd.Validate(ctx, content.ContentType)
-		if err != nil{
+		if err != nil {
 			return nil, ErrInvalidContentData
 		}
 		content.Data = data.Data
@@ -131,7 +134,6 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)
 	return content
 }
-
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) *entity.Content {
 	//asset直接删除
