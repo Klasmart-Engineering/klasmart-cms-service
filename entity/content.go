@@ -20,9 +20,9 @@ const (
 	ContentTypeMaterial = 1
 	ContentTypeLesson   = 2
 
-	ContentTypeAssetImage = 10
-	ContentTypeAssetVideo = 11
-	ContentTypeAssetAudio = 12
+	ContentTypeAssetImage    = 10
+	ContentTypeAssetVideo    = 11
+	ContentTypeAssetAudio    = 12
 	ContentTypeAssetDocument = 13
 )
 
@@ -106,26 +106,26 @@ type ContentID struct {
 }
 
 type Content struct {
-	ID            string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
-	ContentType   ContentType    `gorm:"type:int;NOTNULL; column:content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
-	Name          string `gorm:"type:varchar(255);NOT NULL;column:content_name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
-	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
-	Subject       string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
-	Developmental string `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
-	Skills        string `gorm:"type:varchar(1024);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
-	Age           string `gorm:"type:varchar(1024);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
-	Grade         string `gorm:"type:varchar(1024);NOT NULL;column:grade" dynamodbav:"grade" json:"grade" dynamoupdate:":grd"`
-	Keywords      string `gorm:"type:text;NOT NULL;column:keywords" dynamodbav:"keywords" json:"keywords" dynamoupdate:":ky"`
-	Description   string `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
-	Thumbnail     string `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
+	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
+	ContentType   ContentType `gorm:"type:int;NOTNULL; column:content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
+	Name          string      `gorm:"type:varchar(255);NOT NULL;column:content_name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
+	Program       string      `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
+	Subject       string      `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
+	Developmental string      `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
+	Skills        string      `gorm:"type:varchar(1024);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
+	Age           string      `gorm:"type:varchar(1024);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
+	Grade         string      `gorm:"type:varchar(1024);NOT NULL;column:grade" dynamodbav:"grade" json:"grade" dynamoupdate:":grd"`
+	Keywords      string      `gorm:"type:text;NOT NULL;column:keywords" dynamodbav:"keywords" json:"keywords" dynamoupdate:":ky"`
+	Description   string      `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
+	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
 
 	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
 	Extra string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
-	SuggestTime int `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
-	Author     string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
-	AuthorName string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
-	Org        string `gorm:"type:varchar(50);NOT NULL;column:org" dynamodbav:"org" json:"org" dynamoupdate:":og"`
+	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
+	Author      string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
+	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
+	Org         string `gorm:"type:varchar(50);NOT NULL;column:org" dynamodbav:"org" json:"org" dynamoupdate:":og"`
 
 	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index" dynamodbav:"publish_scope" json:"publish_scope" dynamoupdate:":ps"`
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index" dynamodbav:"publish_status" json:"publish_status" dynamoupdate:":pst"`
@@ -155,25 +155,25 @@ func (u Content) UpdateExpress() string {
 }
 
 type UpdateDyContent struct {
-	ContentType   ContentType    ` json:":ct"`
-	Name          string `json:":n"`
-	Program       string `json:":p"`
-	Subject       string `json:":su"`
-	Developmental string `json:":dv"`
-	Skills        string `json:":sk"`
-	Age           string `json:":a"`
-	Keywords      string `json:":ky"`
-	Description   string `json:":de"`
-	Thumbnail     string `json:":th"`
-	LockedBy      string `json:":lb"`
+	ContentType   ContentType ` json:":ct"`
+	Name          string      `json:":n"`
+	Program       string      `json:":p"`
+	Subject       string      `json:":su"`
+	Developmental string      `json:":dv"`
+	Skills        string      `json:":sk"`
+	Age           string      `json:":a"`
+	Keywords      string      `json:":ky"`
+	Description   string      `json:":de"`
+	Thumbnail     string      `json:":th"`
+	LockedBy      string      `json:":lb"`
 
 	Data  string `json:":d"`
 	Extra string `json:":ex"`
 
-	Author     string `json:":au"`
-	AuthorName string `json:":aun"`
-	Org        string `json:":og"`
-	SuggestTime int `json:":sut"`
+	Author      string `json:":au"`
+	AuthorName  string `json:":aun"`
+	Org         string `json:":og"`
+	SuggestTime int    `json:":sut"`
 
 	PublishScope  string               `json:":ps"`
 	PublishStatus ContentPublishStatus `json:":pst"`
@@ -224,59 +224,59 @@ func (s Content) GetID() interface{} {
 }
 
 type CreateContentRequest struct {
-	ContentType   ContentType      `json:"content_type"`
-	Name          string   `json:"name"`
-	Program       []string   `json:"program"`
-	Subject       []string   `json:"subject"`
-	Developmental []string   `json:"developmental"`
-	Skills        []string   `json:"skills"`
-	Age           []string   `json:"age"`
-	Grade			[]string `json:"grade"`
-	Keywords      []string `json:"keywords"`
-	Description   string   `json:"description"`
-	Thumbnail     string   `json:"thumbnail"`
-	SuggestTime int `json:"suggest_time"`
-	RejectReason string `json:"reject_reason"`
+	ContentType   ContentType `json:"content_type"`
+	Name          string      `json:"name"`
+	Program       []string    `json:"program"`
+	Subject       []string    `json:"subject"`
+	Developmental []string    `json:"developmental"`
+	Skills        []string    `json:"skills"`
+	Age           []string    `json:"age"`
+	Grade         []string    `json:"grade"`
+	Keywords      []string    `json:"keywords"`
+	Description   string      `json:"description"`
+	Thumbnail     string      `json:"thumbnail"`
+	SuggestTime   int         `json:"suggest_time"`
+	RejectReason  string      `json:"reject_reason"`
 
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
 
 	Data  string `json:"data"`
-	Extra string      `json:"extra"`
+	Extra string `json:"extra"`
 }
 
 type ContentInfoWithDetails struct {
 	ContentInfo
-	ContentTypeName   string `json:"content_type_name"`
+	ContentTypeName   string   `json:"content_type_name"`
 	ProgramName       []string `json:"program_name"`
 	SubjectName       []string `json:"subject_name"`
 	DevelopmentalName []string `json:"developmental_name"`
 	SkillsName        []string `json:"skills_name"`
 	AgeName           []string `json:"age_name"`
-	GradeName			[]string `json:"grade_name"`
-	OrgName           string `json:"org_name"`
+	GradeName         []string `json:"grade_name"`
+	OrgName           string   `json:"org_name"`
 }
 
 type ContentName struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type ContentInfo struct {
-	ID            string   `json:"id"`
-	ContentType   ContentType      `json:"content_type"`
-	Name          string   `json:"name"`
-	Program       []string   `json:"program"`
-	Subject       []string   `json:"subject"`
-	Developmental []string   `json:"developmental"`
-	Skills        []string   `json:"skills"`
-	Age           []string   `json:"age"`
-	Grade		 []string `json:"grade"`
-	Keywords      []string `json:"keywords"`
-	Description   string   `json:"description"`
-	Thumbnail     string   `json:"thumbnail"`
-	Version       int64    `json:"version"`
-	SuggestTime int `json:"suggest_time"`
+	ID            string      `json:"id"`
+	ContentType   ContentType `json:"content_type"`
+	Name          string      `json:"name"`
+	Program       []string    `json:"program"`
+	Subject       []string    `json:"subject"`
+	Developmental []string    `json:"developmental"`
+	Skills        []string    `json:"skills"`
+	Age           []string    `json:"age"`
+	Grade         []string    `json:"grade"`
+	Keywords      []string    `json:"keywords"`
+	Description   string      `json:"description"`
+	Thumbnail     string      `json:"thumbnail"`
+	Version       int64       `json:"version"`
+	SuggestTime   int         `json:"suggest_time"`
 
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`
@@ -284,7 +284,7 @@ type ContentInfo struct {
 	LatestID     string `json:"latest_id"`
 
 	Data  string `json:"data"`
-	Extra string      `json:"extra"`
+	Extra string `json:"extra"`
 
 	Author     string `json:"author"`
 	AuthorName string `json:"author_name"`
@@ -292,6 +292,8 @@ type ContentInfo struct {
 
 	PublishScope  string               `json:"publish_scope"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
+
+	CreatedAt int64 `json:"created_at"`
 }
 
 type ContentData interface {
