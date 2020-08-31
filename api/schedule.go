@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -11,7 +10,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"strconv"
@@ -295,17 +293,17 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	c.JSON(http.StatusInternalServerError, err.Error())
 }
 
-func (s *Server) getAttachmentUploadPath(c *gin.Context) {
-	ctx := c.Request.Context()
-	ext := c.Param("ext")
-	name := fmt.Sprintf("%s.%s", utils.NewID(), ext)
-	url, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, model.ScheduleAttachment_Storage_Partition, name)
-	if err != nil {
-		log.Error(ctx, "uploadAttachment:get upload file path error", log.Err(err), log.String("fileName", name), log.String("partition", model.ScheduleAttachment_Storage_Partition))
-		c.JSON(http.StatusInternalServerError, err.Error())
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"attachment_url": url,
-	})
-}
+//func (s *Server) getAttachmentUploadPath(c *gin.Context) {
+//	ctx := c.Request.Context()
+//	ext := c.Param("ext")
+//	name := fmt.Sprintf("%s.%s", utils.NewID(), ext)
+//	url, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, model.ScheduleAttachment_Storage_Partition, name)
+//	if err != nil {
+//		log.Error(ctx, "uploadAttachment:get upload file path error", log.Err(err), log.String("fileName", name), log.String("partition", model.ScheduleAttachment_Storage_Partition))
+//		c.JSON(http.StatusInternalServerError, err.Error())
+//		return
+//	}
+//	c.JSON(http.StatusOK, gin.H{
+//		"attachment_url": url,
+//	})
+//}
