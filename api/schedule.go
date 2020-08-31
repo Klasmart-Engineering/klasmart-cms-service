@@ -59,7 +59,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, err.Error())
 		case constant.ErrConflict:
 			c.JSON(http.StatusConflict, err.Error())
-		case dbo.ErrRecordNotFound, constant.ErrDuplicateRecord:
+		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 			c.JSON(http.StatusNotFound, err.Error())
 		default:
 			c.JSON(http.StatusInternalServerError, err.Error())
