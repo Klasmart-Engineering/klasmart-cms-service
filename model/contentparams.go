@@ -30,7 +30,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 
 	//get publishScope&authorName
 	publishScope := operator.OrgID
-	authorName := operator.UserID
+	authorName := "Bada"
 
 	//若为asset，直接发布
 	if c.ContentType.IsAsset() {

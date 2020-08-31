@@ -57,7 +57,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
 		Data:          obj.Data,
-		Extra:         obj.Data,
+		Extra:         obj.Extra,
 		Author:        obj.Author,
 		AuthorName:    obj.AuthorName,
 		Org:           obj.Org,
