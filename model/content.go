@@ -294,6 +294,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		return "", err
 	}
 
+	da.GetContentRedis().CleanContentCache(ctx, []string{pid})
 	return pid, nil
 }
 
@@ -609,6 +610,8 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 		log.Error(ctx, "clone contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return "", err
 	}
+
+	da.GetContentRedis().CleanContentCache(ctx, []string{id, obj.ID})
 
 	return id, nil
 }
