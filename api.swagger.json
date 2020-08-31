@@ -2760,7 +2760,7 @@
             "type": "object",
             "description": "Lock content response",
             "properties": {
-              "content_id": {
+              "id": {
                 "type": "string",
                 "description": "content id to edit"
               }
