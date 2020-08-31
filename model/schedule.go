@@ -611,6 +611,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 			log.Error(ctx, "Unmarshal schedule.Attachment error", log.Err(err), log.String("schedule.Attachment", schedule.Attachment))
 			return nil, err
 		}
+		result.Attachment = attachment
 	}
 	if schedule.RepeatJson != "" {
 		var repeat entity.RepeatOptions
