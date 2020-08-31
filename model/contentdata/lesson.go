@@ -120,8 +120,11 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 		contentMap[contentList[i].ID] = contentList[i]
 	}
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
-		material, _ := ConvertContentObj(ctx, contentMap[l.MaterialId])
-		l.Material = material
+		data, ok:= contentMap[l.MaterialId]
+		if ok {
+			material, _ := ConvertContentObj(ctx, data)
+			l.Material = material
+		}
 	})
 	return nil
 }
