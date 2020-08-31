@@ -1,4 +1,4 @@
 include:
   - project: 'devops/ci-center'
     ref: 'dev'
-    file: 'gitlab-ci-kidsloopr/.gitlab-ci-kidsloopr.yml'
+    file: 'gitlab-ci-kidsloopr/.gitlab-ci-localhost.yml'
