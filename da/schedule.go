@@ -169,8 +169,8 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, startRange.Int64, startRange.Int64, endRange.Int64, endRange.Int64)
 	}
 	if len(c.StartAndEndTimeViewRange) == 2 {
-		startRange := c.StartAndEndRange[0]
-		endRange := c.StartAndEndRange[1]
+		startRange := c.StartAndEndTimeViewRange[0]
+		endRange := c.StartAndEndTimeViewRange[1]
 		wheres = append(wheres, "((start_at >= ? and start_at <= ?) or (end_at >= ? and end_at <= ?))")
 		params = append(params, startRange.Int64, endRange.Int64, startRange.Int64, endRange.Int64)
 	}
