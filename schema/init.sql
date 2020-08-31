@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   `status` varchar(100) DEFAULT NULL COMMENT 'status',
   `is_all_day` BOOLEAN DEFAULT FALSE COMMENT 'is_all_day',
   `description` varchar(500) DEFAULT NULL COMMENT 'description',
-  `attachment_url` varchar(500) DEFAULT NULL COMMENT 'attachment_url',
+  `attachment` TEXT DEFAULT NULL COMMENT 'attachment',
   `version` bigint(20) DEFAULT 0 COMMENT 'version',
   `repeat_id` varchar(100) DEFAULT NULL COMMENT 'repeat_id',
   `repeat` JSON DEFAULT NULL COMMENT 'repeat',

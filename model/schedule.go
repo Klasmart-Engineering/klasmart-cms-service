@@ -72,7 +72,7 @@ func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachm
 }
 
 func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView, options *entity.RepeatOptions, location *time.Location) (string, error) {
-	schedule, err := viewData.Convert()
+	schedule, err := viewData.Convert(ctx)
 	if err != nil {
 		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData), log.Any("options", options))
 		return "", err
@@ -144,7 +144,7 @@ func (s *scheduleModel) Add(ctx context.Context, tx *dbo.DBContext, op *entity.O
 	if viewData.IsRepeat {
 		return s.addRepeatSchedule(ctx, op, viewData, &viewData.Repeat, location)
 	}
-	schedule, err := viewData.Convert()
+	schedule, err := viewData.Convert(ctx)
 	if err != nil {
 		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData))
 		return "", err
@@ -603,7 +603,14 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		Description: schedule.Description,
 		Version:     schedule.ScheduleVersion,
 		RepeatID:    schedule.RepeatID,
-		Attachment:  schedule.Attachment,
+	}
+	if schedule.Attachment != "" {
+		var attachment entity.ScheduleShortInfo
+		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
+		if err != nil {
+			log.Error(ctx, "Unmarshal schedule.Attachment error", log.Err(err), log.String("schedule.Attachment", schedule.Attachment))
+			return nil, err
+		}
 	}
 	if schedule.RepeatJson != "" {
 		var repeat entity.RepeatOptions

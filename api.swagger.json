@@ -2539,65 +2539,6 @@
           }
         }
       }
-    },
-    "/schedule_attachment_upload/{ext}": {
-      "get": {
-        "tags": [
-          "schedule"
-        ],
-        "summary": "get schedules attachment upload path",
-        "description": "get schedules attachment upload path",
-        "operationId": "getAttachmentUploadPath",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ext",
-            "in": "path",
-            "description": "attachment ext",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "new schedule id",
-                  "properties": {
-                    "attachment_url": {
-                      "type": "string",
-                      "format": "string",
-                      "description": "attachment upload url"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
     }
   },
   "components": {
@@ -3537,9 +3478,8 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_path": {
-            "type": "string",
-            "description": "schedule attachment id"
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
           },
           "is_force": {
             "type": "boolean",
@@ -4022,9 +3962,8 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_path": {
-            "type": "string",
-            "description": "schedule attachment"
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
           },
           "is_all_day": {
             "type": "boolean",
