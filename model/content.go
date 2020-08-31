@@ -435,6 +435,10 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 			log.Info(ctx, "no content in source content", log.String("cid", cid))
 			return "", ErrNoContent
 		}
+		if data[0].PublishStatus != entity.ContentStatusRejected && data[0].PublishStatus != entity.ContentStatusDraft {
+			log.Info(ctx, "invalid locked content status", log.String("lock cid", data[0].ID), log.String("status", string(data[0].PublishStatus)), log.String("cid", cid))
+			return "", ErrInvalidLockedContentPublishStatus
+		}
 		//找到data
 		return data[0].ID, nil
 	}

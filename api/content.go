@@ -160,6 +160,8 @@ func (s *Server) lockContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case model.ErrContentAlreadyLocked:
 		c.JSON(http.StatusNotAcceptable, responseMsg(err.Error()))
+	case model.ErrInvalidLockedContentPublishStatus:
+		c.JSON(http.StatusConflict, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"content_id": ncid,

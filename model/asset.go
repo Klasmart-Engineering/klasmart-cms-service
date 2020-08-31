@@ -29,6 +29,7 @@ var (
 	ErrNoContent                     = errors.New("no content")
 	ErrContentAlreadyLocked          = errors.New("content is already locked")
 	ErrInvalidPublishStatus          = errors.New("invalid publish status")
+	ErrInvalidLockedContentPublishStatus          = errors.New("invalid locked content publish status")
 	ErrGetUnpublishedContent         = errors.New("unpublished content")
 	ErrGetUnauthorizedContent        = errors.New("unauthorized content")
 	ErrCloneContentFailed            = errors.New("clone content failed")
