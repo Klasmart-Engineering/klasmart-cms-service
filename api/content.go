@@ -164,7 +164,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		c.JSON(http.StatusConflict, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
-			"content_id": ncid,
+			"id": ncid,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
