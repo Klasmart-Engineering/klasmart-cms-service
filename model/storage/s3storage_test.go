@@ -14,13 +14,22 @@ func InitEnv() {
 	os.Setenv("secret_id", "AKIAXGKUAYT2P2IJ2KX7")
 	os.Setenv("secret_key", "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")
 	os.Setenv("storage_accelerate", "true")
+	os.Setenv("db_env", "mysql")
 	os.Setenv("cdn_open", "true")
 	os.Setenv("cdn_mode", "service")
 	os.Setenv("cdn_path", "d2sl4gnftnfbyu.cloudfront.net")
 
 	os.Setenv("cdn_service_path", "https://raven.dev.badanamu.net/cloudfront")
 	os.Setenv("cdn_service_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkb25naHVuLmNob2lAY2FsbWlkLmNvbSIsImF1ZCI6IkNhbG1Jc2xhbmQgQ2hpbmEiLCJzdWIiOiJyYXZlbiIsImlhdCI6MTUxNjIzOTAyMn0.oFThEoapYtp1BQQH8m-MQozOuFQeCZMNor3_jI3fNQo")
+	os.Setenv("connection_string", "root:Badanamu123456@tcp(172.22.20.171:3306)/kidsloop2?parseTime=true&charset=utf8mb4")
+	os.Setenv("max_open_conns", "8")
+	os.Setenv("max_idle_conns", "4")
+	os.Setenv("show_log", "true")
+	os.Setenv("show_sql", "true")
 
+	os.Setenv("open_cache", "true")
+	os.Setenv("redis_host", "172.22.20.171")
+	os.Setenv("redis_port", "6379")
 }
 func TestS3Storage_ExitsFile(t *testing.T) {
 	InitEnv()
