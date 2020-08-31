@@ -156,12 +156,14 @@ func (s *scheduleModel) repeatScheduleWeekly(ctx context.Context, template *enti
 			var (
 				start, end = originStart, originEnd
 				first      = true
+				count      = 0
 			)
-			for len(result) < options.End.AfterCount && end.Before(maxEndTime) {
+			for count < options.End.AfterCount && end.Before(maxEndTime) {
 				if start.After(originStart) && start.Weekday() == onWeekday.TimeWeekday() {
 					item := template.Clone()
 					item.StartAt, item.EndAt = start.Unix(), end.Unix()
 					result = append(result, &item)
+					count++
 				}
 				var offset int
 				if first {

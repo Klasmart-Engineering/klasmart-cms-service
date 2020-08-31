@@ -2248,9 +2248,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "string",
-                  "description": "schedule id"
+                  "type": "object",
+                  "description": "new schedule id",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "string",
+                      "description": "new schedule id"
+                    }
+                  }
                 }
               }
             }
@@ -2527,65 +2533,6 @@
           },
           "404": {
             "description": "Recorde not found"
-          },
-          "500": {
-            "description": "Server error"
-          }
-        }
-      }
-    },
-    "/schedule_attachment_upload/{ext}": {
-      "get": {
-        "tags": [
-          "schedule"
-        ],
-        "summary": "get schedules attachment upload path",
-        "description": "get schedules attachment upload path",
-        "operationId": "getAttachmentUploadPath",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ext",
-            "in": "path",
-            "description": "attachment ext",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "new schedule id",
-                  "properties": {
-                    "attachment_url": {
-                      "type": "string",
-                      "format": "string",
-                      "description": "attachment upload url"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
           },
           "500": {
             "description": "Server error"
@@ -3531,9 +3478,8 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_id": {
-            "type": "string",
-            "description": "schedule attachment id"
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
           },
           "is_force": {
             "type": "boolean",
@@ -3579,14 +3525,6 @@
           "end_at": {
             "type": "integer",
             "description": "schedule end time, timestamp"
-          },
-          "mode_type": {
-            "type": "string",
-            "enum": [
-              "AllDay",
-              "Repeat"
-            ],
-            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
           },
           "repeat_edit_options": {
             "type": "string",
@@ -3786,9 +3724,8 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_id": {
-            "type": "string",
-            "description": "schedule attachment id"
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
           },
           "is_force": {
             "type": "boolean",
@@ -3835,14 +3772,6 @@
           "end_at": {
             "type": "integer",
             "description": "schedule end time, timestamp"
-          },
-          "mode_type": {
-            "type": "string",
-            "enum": [
-              "AllDay",
-              "Repeat"
-            ],
-            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
           },
           "repeat": {
             "type": "object",

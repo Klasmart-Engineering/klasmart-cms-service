@@ -69,7 +69,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 		"`class_type`",
 		"`due_at`",
 		"`description`",
-		"`attachment_url`",
+		"`attachment`",
 		"`version`",
 		"`repeat_id`",
 		"`repeat`",
@@ -140,6 +140,7 @@ type ScheduleCondition struct {
 	TeacherIDs       entity.NullStrings
 	StartAndEndRange []sql.NullInt64
 	//ScheduleIDs entity.NullStrings
+	StartAndEndTimeViewRange []sql.NullInt64
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -160,11 +161,18 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "start_at >= ?")
 		params = append(params, c.StartAtGe.Int64)
 	}
+
 	if len(c.StartAndEndRange) == 2 {
 		startRange := c.StartAndEndRange[0]
 		endRange := c.StartAndEndRange[1]
 		wheres = append(wheres, "((start_at <= ? and end_at >= ?) or (start_at <= ? and end_at >= ?))")
 		params = append(params, startRange.Int64, startRange.Int64, endRange.Int64, endRange.Int64)
+	}
+	if len(c.StartAndEndTimeViewRange) == 2 {
+		startRange := c.StartAndEndTimeViewRange[0]
+		endRange := c.StartAndEndTimeViewRange[1]
+		wheres = append(wheres, "((start_at >= ? and start_at <= ?) or (end_at >= ? and end_at <= ?))")
+		params = append(params, startRange.Int64, endRange.Int64, startRange.Int64, endRange.Int64)
 	}
 	if c.EndAtLe.Valid {
 		wheres = append(wheres, "end_at <= ?")

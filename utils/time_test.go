@@ -7,10 +7,10 @@ import (
 )
 
 func TestDemo(t *testing.T) {
-
-	time2 := BeginOfDayByTime(time.Now(), time.Local)
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	time2 := BeginOfDayByTime(time.Now(), loc)
 	fmt.Println(time2.Unix())
-	fmt.Println(time.Unix(time2.Unix(), 0).Format(Second))
+	fmt.Println(time.Unix(time2.Unix(), 0).In(loc))
 }
 
 func TestTimeUtil_FindWeekTimeRange(t *testing.T) {
@@ -76,4 +76,10 @@ func TestTimeUtil_FindMonthRange(t *testing.T) {
 		start, end := timeUtil.FindMonthRangeFormat(time.Local, Second)
 		fmt.Println("start:", start, "end:", end)
 	}
+}
+
+func TestTodayZero(t *testing.T) {
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	t2 := TodayZero(time.Now().In(loc))
+	fmt.Println(t2)
 }

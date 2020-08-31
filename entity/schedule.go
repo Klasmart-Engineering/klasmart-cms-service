@@ -1,7 +1,9 @@
 package entity
 
 import (
+	"context"
 	"encoding/json"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"time"
@@ -219,7 +221,7 @@ type Schedule struct {
 	ClassType       string `gorm:"column:class_type;type:varchar(100)"`
 	DueAt           int64  `gorm:"column:due_at;type:bigint"`
 	Description     string `gorm:"column:description;type:varchar(500)"`
-	Attachment      string `gorm:"column:attachment_url;type:varchar(500)"`
+	Attachment      string `gorm:"column:attachment;type:text;"`
 	ScheduleVersion int64  `gorm:"column:version;type:bigint"`
 	RepeatID        string `gorm:"column:repeat_id;type:varchar(100)"`
 	RepeatJson      string `gorm:"column:repeat;type:json;"`
@@ -245,28 +247,28 @@ func (s Schedule) Clone() Schedule {
 }
 
 type ScheduleAddView struct {
-	Title        string        `json:"title" binding:"required"`
-	ClassID      string        `json:"class_id" binding:"required"`
-	LessonPlanID string        `json:"lesson_plan_id" binding:"required"`
-	TeacherIDs   []string      `json:"teacher_ids" binding:"required"`
-	OrgID        string        `json:"org_id"`
-	StartAt      int64         `json:"start_at" binding:"required"`
-	EndAt        int64         `json:"end_at" binding:"required"`
-	SubjectID    string        `json:"subject_id" binding:"required"`
-	ProgramID    string        `json:"program_id" binding:"required"`
-	ClassType    string        `json:"class_type"`
-	DueAt        int64         `json:"due_at"`
-	Description  string        `json:"description"`
-	Attachment   string        `json:"attachment_path"`
-	Version      int64         `json:"version"`
-	RepeatID     string        `json:"-"`
-	Repeat       RepeatOptions `json:"repeat"`
-	IsAllDay     bool          `json:"is_all_day"`
-	IsRepeat     bool          `json:"is_repeat"`
-	IsForce      bool          `json:"is_force"`
+	Title        string            `json:"title" binding:"required"`
+	ClassID      string            `json:"class_id" binding:"required"`
+	LessonPlanID string            `json:"lesson_plan_id" binding:"required"`
+	TeacherIDs   []string          `json:"teacher_ids" binding:"required"`
+	OrgID        string            `json:"org_id"`
+	StartAt      int64             `json:"start_at" binding:"required"`
+	EndAt        int64             `json:"end_at" binding:"required"`
+	SubjectID    string            `json:"subject_id" binding:"required"`
+	ProgramID    string            `json:"program_id" binding:"required"`
+	ClassType    string            `json:"class_type"`
+	DueAt        int64             `json:"due_at"`
+	Description  string            `json:"description"`
+	Attachment   ScheduleShortInfo `json:"attachment"`
+	Version      int64             `json:"version"`
+	RepeatID     string            `json:"-"`
+	Repeat       RepeatOptions     `json:"repeat"`
+	IsAllDay     bool              `json:"is_all_day"`
+	IsRepeat     bool              `json:"is_repeat"`
+	IsForce      bool              `json:"is_force"`
 }
 
-func (s *ScheduleAddView) Convert() (*Schedule, error) {
+func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
 	schedule := &Schedule{
 		Title:           s.Title,
 		ClassID:         s.ClassID,
@@ -279,7 +281,6 @@ func (s *ScheduleAddView) Convert() (*Schedule, error) {
 		ClassType:       s.ClassType,
 		DueAt:           s.DueAt,
 		Description:     s.Description,
-		Attachment:      s.Attachment,
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
 		UpdatedAt:       0,
@@ -299,7 +300,12 @@ func (s *ScheduleAddView) Convert() (*Schedule, error) {
 	} else {
 		schedule.RepeatJson = "{}"
 	}
-
+	b, err := json.Marshal(s.Attachment)
+	if err != nil {
+		log.Info(ctx, "marshal attachment error", log.Any("attachment", s.Attachment))
+		return nil, err
+	}
+	schedule.Attachment = string(b)
 	return schedule, nil
 }
 
@@ -318,19 +324,19 @@ type ScheduleListView struct {
 }
 
 type ScheduleDetailsView struct {
-	ID          string        `json:"id"`
-	Title       string        `json:"title"`
-	Attachment  string        `json:"attachment_path"`
-	OrgID       string        `json:"org_id"`
-	StartAt     int64         `json:"start_at"`
-	EndAt       int64         `json:"end_at"`
-	ClassType   string        `json:"class_type"`
-	DueAt       int64         `json:"due_at"`
-	Description string        `json:"description"`
-	Version     int64         `json:"version"`
-	IsAllDay    bool          `json:"is_all_day"`
-	RepeatID    string        `json:"repeat_id"`
-	Repeat      RepeatOptions `json:"repeat"`
+	ID          string            `json:"id"`
+	Title       string            `json:"title"`
+	Attachment  ScheduleShortInfo `json:"attachment"`
+	OrgID       string            `json:"org_id"`
+	StartAt     int64             `json:"start_at"`
+	EndAt       int64             `json:"end_at"`
+	ClassType   string            `json:"class_type"`
+	DueAt       int64             `json:"due_at"`
+	Description string            `json:"description"`
+	Version     int64             `json:"version"`
+	IsAllDay    bool              `json:"is_all_day"`
+	RepeatID    string            `json:"repeat_id"`
+	Repeat      RepeatOptions     `json:"repeat"`
 	ScheduleBasic
 }
 

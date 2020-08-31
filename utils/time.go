@@ -16,7 +16,7 @@ type TimeUtil struct {
 }
 
 func (t TimeUtil) FindWeekTimeRange(la *time.Location) (startDay, endDay int64) {
-	tt := time.Unix(t.TimeStamp, 0)
+	tt := time.Unix(t.TimeStamp, 0).In(la)
 	offset := int(time.Sunday - tt.Weekday())
 	lastoffset := int(time.Saturday - tt.Weekday())
 
@@ -34,7 +34,7 @@ func (t TimeUtil) FindWeekTimeRangeFormat(la *time.Location, layout string) (sta
 }
 
 func (t TimeUtil) FindWorkWeekTimeRange(la *time.Location) (startDay, endDay int64) {
-	tt := time.Unix(t.TimeStamp, 0)
+	tt := time.Unix(t.TimeStamp, 0).In(la)
 	offset := int(time.Monday - tt.Weekday())
 	lastoffset := int(time.Friday - tt.Weekday())
 
@@ -53,7 +53,7 @@ func (t TimeUtil) FindWorkWeekTimeRangeFormat(la *time.Location, layout string) 
 }
 
 func (t TimeUtil) FindMonthRange(la *time.Location) (startDay, endDay int64) {
-	tt := time.Unix(t.TimeStamp, 0)
+	tt := time.Unix(t.TimeStamp, 0).In(la)
 	currentYear, currentMonth, _ := tt.Date()
 	currentLocation := tt.Location()
 
@@ -70,15 +70,15 @@ func (t TimeUtil) FindMonthRangeFormat(la *time.Location, layout string) (start,
 	return
 }
 
-func (t TimeUtil) String(layout string) string {
-	return time.Unix(t.TimeStamp, 0).Format(layout)
+func (t TimeUtil) String(layout string, la *time.Location) string {
+	return time.Unix(t.TimeStamp, 0).In(la).Format(layout)
 }
 
 func BeginOfDayByTime(t time.Time, la *time.Location) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, la)
 }
 func BeginOfDayByTimeStamp(timeStamp int64, la *time.Location) time.Time {
-	t := time.Unix(timeStamp, 0)
+	t := time.Unix(timeStamp, 0).In(la)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, la)
 }
 
@@ -86,6 +86,12 @@ func EndOfDayByTime(t time.Time, la *time.Location) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, la)
 }
 func EndOfDayByTimeStamp(timeStamp int64, la *time.Location) time.Time {
-	t := time.Unix(timeStamp, 0)
+	t := time.Unix(timeStamp, 0).In(la)
 	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, la)
+}
+
+func TodayZero(now time.Time) time.Time {
+	_, offset := now.Zone()
+	duration := time.Second * time.Duration(offset)
+	return now.Add(duration).Truncate(time.Hour * 24).Add(-duration)
 }
