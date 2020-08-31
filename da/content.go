@@ -73,6 +73,7 @@ type ContentCondition struct {
 	PublishStatus []string `json:"publish_status"`
 	Author        string   `json:"author"`
 	Org           string   `json:"org"`
+	SourceID	string `json:"source_id"`
 
 	OrderBy ContentOrderBy `json:"order_by"`
 	Pager   utils.Pager
@@ -108,6 +109,11 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := " publish_status in (?) "
 		conditions = append(conditions, condition)
 		params = append(params, s.PublishStatus)
+	}
+	if s.SourceID != "" {
+		condition := " source_id = ?"
+		conditions = append(conditions, condition)
+		params = append(params, s.SourceID)
 	}
 	if s.Author != "" {
 		condition := " author = ? "

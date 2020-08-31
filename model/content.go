@@ -412,11 +412,31 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		return "", err
 	}
 	if content.ContentType.IsAsset() {
+		log.Info(ctx, "asset handle", log.String("cid", cid))
 		return "", ErrInvalidContentType
 	}
 
 	if content.PublishStatus != entity.ContentStatusPublished {
+		log.Info(ctx, "invalid publish status", log.String("cid", cid))
 		return "", ErrInvalidPublishStatus
+	}
+
+	//被自己锁住，则返回锁定id
+	if content.LockedBy == user.UserID {
+		_, data, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+			SourceID: cid,
+		})
+		if err != nil{
+			log.Info(ctx, "search source content failed", log.String("cid", cid))
+			return "", err
+		}
+		if len(data) < 1 {
+			//被自己锁定且找不到content
+			log.Info(ctx, "no content in source content", log.String("cid", cid))
+			return "", ErrNoContent
+		}
+		//找到data
+		return data[0].ID, nil
 	}
 
 	//更新锁定状态
