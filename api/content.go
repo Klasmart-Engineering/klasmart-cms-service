@@ -156,7 +156,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
-			"id": ncid,
+			"content_id": ncid,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
