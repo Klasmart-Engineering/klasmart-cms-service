@@ -85,8 +85,18 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	if err != nil {
 		return err
 	}
-	if len(data) != len(materialList) {
-		return ErrInvalidMaterialInLesson
+	//检查是否有不存在的material
+	for i := range materialList {
+		flag := false
+		for j := range data {
+			if data[j].ID == materialList[i] {
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			return ErrInvalidMaterialInLesson
+		}
 	}
 
 	//暂不检查Condition
