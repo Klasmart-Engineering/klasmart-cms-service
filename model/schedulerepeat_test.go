@@ -148,7 +148,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: &entity.RepeatWeekly{
 					Interval: 1,
-					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday, entity.RepeatWeekdayTuesday, entity.RepeatWeekdaySaturday},
+					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday, entity.RepeatWeekdayTuesday},
 					End: entity.RepeatEnd{
 						Type: entity.RepeatEndNever,
 					},
@@ -188,7 +188,7 @@ func Test_repeatScheduleWeekly(t *testing.T) {
 				},
 				options: &entity.RepeatWeekly{
 					Interval: 1,
-					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday, entity.RepeatWeekdayFriday, entity.RepeatWeekdaySunday},
+					On:       []entity.RepeatWeekday{entity.RepeatWeekdayMonday, entity.RepeatWeekdayTuesday},
 					End: entity.RepeatEnd{
 						Type:       entity.RepeatEndAfterCount,
 						AfterCount: 3,
