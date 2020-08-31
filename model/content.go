@@ -693,6 +693,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	}
 	content.Data = filledContentData
 
+
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, []*entity.ContentInfo{content}, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Err(err))
@@ -822,7 +823,7 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 
 func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	var err error
-	var contentData *entity.Content
+	var contentObj *entity.Content
 
 	cachedContent := da.GetContentRedis().GetContentCacheById(ctx, cid)
 	if cachedContent != nil {
@@ -833,27 +834,44 @@ func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBCon
 			if latestCachedContent != nil {
 				return latestCachedContent, nil
 			} else {
-				contentData = &entity.Content{LatestID: cachedContent.LatestID}
+				contentObj = &entity.Content{LatestID: cachedContent.LatestID}
 			}
 		}
 	}
 
-	if contentData == nil {
-		contentData, err = da.GetContentDA().GetContentById(ctx, tx, cid)
+	if contentObj == nil {
+		contentObj, err = da.GetContentDA().GetContentById(ctx, tx, cid)
 		if err != nil {
 			return nil, err
 		}
 	}
+	//补全相关内容
+	contentData, err := contentdata.CreateContentData(ctx, contentObj.ContentType, contentObj.Data)
+	if err != nil {
+		return nil, err
+	}
+	err = contentData.PrepareResult(ctx)
+	if err != nil {
+		log.Error(ctx, "can't get contentdata for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
+	}
+	filledContentData, err := contentData.Marshal(ctx)
+	if err != nil {
+		log.Error(ctx, "can't marshal contentdata for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
+	}
+	contentObj.Data = filledContentData
 
-	if contentData.LatestID != "" {
-		newContentData, err := da.GetContentDA().GetContentById(ctx, tx, contentData.LatestID)
+
+	if contentObj.LatestID != "" {
+		newContentData, err := da.GetContentDA().GetContentById(ctx, tx, contentObj.LatestID)
 		if err != nil {
 			return nil, err
 		}
-		contentData = newContentData
+		contentObj = newContentData
 	}
 
-	content, err := contentdata.ConvertContentObj(ctx, contentData)
+	content, err := contentdata.ConvertContentObj(ctx, contentObj)
 	if err != nil {
 		return nil, err
 	}

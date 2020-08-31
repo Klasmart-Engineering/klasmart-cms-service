@@ -1,6 +1,7 @@
 package contentdata
 
 import (
+	"fmt"
 	"context"
 	"encoding/json"
 
@@ -34,6 +35,8 @@ func (l *LessonData) Marshal(ctx context.Context) (string, error) {
 		log.Error(ctx, "marshal material failed", log.Err(err))
 		return "", err
 	}
+	fmt.Printf("\n\n\n\n\n\n1>>>>>>: %#v\n\n\n\n\n\n", l,"")
+	fmt.Printf("\n\n\n\n\n\n2>>>>>>: %#v\n\n\n\n\n\n", string(data))
 	return string(data), nil
 }
 
@@ -112,5 +115,6 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		l.Material = contentMap[l.MaterialId]
 	})
+	fmt.Printf("\n\n\n\n\n\n>>>>>>: %#v\n\n\n\n\n\n", l)
 	return nil
 }
