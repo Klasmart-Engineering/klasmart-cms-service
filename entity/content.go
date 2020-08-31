@@ -65,7 +65,7 @@ func (c ContentType) IsAsset() bool {
 func (c ContentType) Name() string {
 	switch c {
 	case ContentTypeLesson:
-		return "LESSON"
+		return "PLAN"
 	case ContentTypeMaterial:
 		return "MATERIAL"
 	case ContentTypeAssetImage:
