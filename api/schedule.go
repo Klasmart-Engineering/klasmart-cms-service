@@ -265,19 +265,21 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
 		return
 	}
+	StartAndEndRange := make([]sql.NullInt64, 2)
+	StartAndEndRange[0] = sql.NullInt64{
+		Valid: start <= 0,
+		Int64: start,
+	}
+	StartAndEndRange[1] = sql.NullInt64{
+		Valid: end <= 0,
+		Int64: end,
+	}
 	condition := &da.ScheduleCondition{
 		OrgID: sql.NullString{
 			String: op.OrgID,
 			Valid:  op.OrgID != "",
 		},
-		StartAtGe: sql.NullInt64{
-			Int64: start,
-			Valid: start > 0,
-		},
-		EndAtLe: sql.NullInt64{
-			Int64: end,
-			Valid: end > 0,
-		},
+		StartAndEndRange: StartAndEndRange,
 	}
 
 	log.Debug(ctx, "condition info", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))

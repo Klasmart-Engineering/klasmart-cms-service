@@ -3724,9 +3724,8 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_id": {
-            "type": "string",
-            "description": "schedule attachment id"
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
           },
           "is_force": {
             "type": "boolean",
