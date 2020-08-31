@@ -91,7 +91,7 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operat
 			tsItem := &entity.ScheduleTeacher{
 				ID:         utils.NewID(),
 				TeacherID:  teacherID,
-				ScheduleID: schedule.ID,
+				ScheduleID: item.ID,
 			}
 			scheduleTeachers[index] = tsItem
 			index++
