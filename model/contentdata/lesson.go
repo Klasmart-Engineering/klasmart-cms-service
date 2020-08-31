@@ -14,7 +14,7 @@ type LessonData struct {
 	SegmentId  string          `json:"segmentId"`
 	Condition  string          `json:"condition"`
 	MaterialId string          `json:"materialId"`
-	Material   *entity.Content `json:"material"`
+	Material   *entity.ContentInfo `json:"material"`
 	NextNode   []*LessonData   `json:"next"`
 }
 
@@ -110,7 +110,8 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 		contentMap[contentList[i].ID] = contentList[i]
 	}
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
-		l.Material = contentMap[l.MaterialId]
+		material, _ := ConvertContentObj(ctx, contentMap[l.MaterialId])
+		l.Material = material
 	})
 	return nil
 }
