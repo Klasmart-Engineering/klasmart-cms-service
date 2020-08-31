@@ -18,14 +18,5 @@ func GetSubjectServiceProvider() (SubjectServiceProvider, error) {
 type mockSubjectService struct{}
 
 func (s mockSubjectService) BatchGet(ctx context.Context, ids []string) ([]*Subject, error) {
-	return []*Subject{
-		{
-			ID:   "Subject-1",
-			Name: "Subject1",
-		},
-		{
-			ID:   "Subject-2",
-			Name: "Subject2",
-		},
-	}, nil
+	return GetMockData().Subject, nil
 }
