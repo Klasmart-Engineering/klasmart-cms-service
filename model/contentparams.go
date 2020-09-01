@@ -147,8 +147,10 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 	switch publishStatus {
 	case entity.ContentStatusPublished:
 		content.PublishStatus = entity.ContentStatusArchive
-	//case entity.ContentStatusArchive:
-	//	content.PublishStatus = entity.ContentStatusHidden
+	case entity.ContentStatusArchive:
+		//TODO: check lesson in schedule
+
+		fallthrough
 	default:
 		now := time.Now()
 		content.DeleteAt = now.Unix()
