@@ -26,6 +26,12 @@ const (
 	ContentTypeAssetDocument = 13
 )
 
+var(
+	ErrRequireContentName = errors.New("content name required")
+	ErrRequirePublishScope = errors.New("publish scope required")
+	ErrInvalidResourceId  = errors.New("invalid resource id")
+)
+
 type ContentPublishStatus string
 type ContentType int
 
@@ -243,6 +249,26 @@ type CreateContentRequest struct {
 
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
+}
+
+func (c CreateContentRequest) Validate() error {
+	if c.Name == "" {
+		return ErrRequireContentName
+	}
+	if c.PublishScope == "" {
+		return ErrRequirePublishScope
+	}
+	if c.Thumbnail != "" {
+		parts := strings.Split(c.Thumbnail, "-")
+		if len(parts) != 2 {
+			return ErrInvalidResourceId
+		}
+		// _, exist := storage.DefaultStorage().ExistFile(ctx, parts[0], parts[1])
+		// if !exist {
+		// 	return ErrResourceNotFound
+		// }
+	}
+	return nil
 }
 
 type ContentInfoWithDetails struct {

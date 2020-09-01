@@ -29,6 +29,7 @@ var (
 	ErrNoContent                     = errors.New("no content")
 	ErrContentAlreadyLocked          = errors.New("content is already locked")
 	ErrInvalidPublishStatus          = errors.New("invalid publish status")
+	ErrDeleteLessonInSchedule          = errors.New("can't delete lesson in schedule")
 	ErrInvalidLockedContentPublishStatus          = errors.New("invalid locked content publish status")
 	ErrGetUnpublishedContent         = errors.New("unpublished content")
 	ErrGetUnauthorizedContent        = errors.New("unauthorized content")

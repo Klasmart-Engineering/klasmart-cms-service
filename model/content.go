@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -106,16 +105,12 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
 	//TODO:Check age, category...
-	if c.Thumbnail != "" {
-		parts := strings.Split(c.Thumbnail, "-")
-		if len(parts) != 2 {
-			return ErrInvalidResourceId
-		}
-		// _, exist := storage.DefaultStorage().ExistFile(ctx, parts[0], parts[1])
-		// if !exist {
-		// 	return ErrResourceNotFound
-		// }
+	err := c.Validate()
+	if err != nil {
+		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
+		return err
 	}
+
 	return nil
 }
 
@@ -553,6 +548,20 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 
+func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.Content) error {
+	if content.PublishStatus == entity.ContentStatusArchive {
+		exist, err := GetScheduleModel().ExistScheduleByLessonPlanID(ctx, content.ID)
+		if err != nil{
+			return err
+		}
+		if exist {
+			return ErrDeleteLessonInSchedule
+		}
+	}
+
+	return nil
+}
+
 func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	if content.Author != user.UserID {
 		return ErrNoAuth
@@ -560,10 +569,15 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	if content.LockedBy != "-" && content.LockedBy != user.UserID {
 		return ErrContentAlreadyLocked
 	}
+	err := cm.checkDeleteContent(ctx, content)
+	if err != nil {
+		log.Error(ctx, "check delete content failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
+		return err
+	}
 
 	obj := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus)
 
-	err := da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
+	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
 	if err != nil {
 		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
 		return err
