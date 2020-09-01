@@ -14,7 +14,7 @@ type LessonData struct {
 	SegmentId  string          `json:"segmentId"`
 	Condition  string          `json:"condition"`
 	MaterialId string          `json:"materialId"`
-	Material   *entity.Content `json:"material"`
+	Material   *entity.ContentInfo `json:"material"`
 	NextNode   []*LessonData   `json:"next"`
 }
 
@@ -85,8 +85,18 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	if err != nil {
 		return err
 	}
-	if len(data) != len(materialList) {
-		return ErrInvalidMaterialInLesson
+	//检查是否有不存在的material
+	for i := range materialList {
+		flag := false
+		for j := range data {
+			if data[j].ID == materialList[i] {
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			return ErrInvalidMaterialInLesson
+		}
 	}
 
 	//暂不检查Condition
@@ -110,7 +120,11 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 		contentMap[contentList[i].ID] = contentList[i]
 	}
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
-		l.Material = contentMap[l.MaterialId]
+		data, ok:= contentMap[l.MaterialId]
+		if ok {
+			material, _ := ConvertContentObj(ctx, data)
+			l.Material = material
+		}
 	})
 	return nil
 }

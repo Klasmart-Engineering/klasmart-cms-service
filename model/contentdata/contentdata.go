@@ -40,24 +40,52 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	//if err != nil {
 	//	return nil, err
 	//}
+	programs := make([]string, 0)
+	subjects := make([]string, 0)
+	developmentals := make([]string, 0)
+	skills := make([]string, 0)
+	ages := make([]string, 0)
+	grades := make([]string, 0)
+	keywords := make([]string, 0)
+	if obj.Program != "" {
+		programs = strings.Split(obj.Program, ",")
+	}
+	if obj.Subject != "" {
+		subjects = strings.Split(obj.Subject, ",")
+	}
+	if obj.Developmental != "" {
+		developmentals = strings.Split(obj.Developmental, ",")
+	}
+	if obj.Skills != "" {
+		skills = strings.Split(obj.Skills, ",")
+	}
+	if obj.Age != "" {
+		ages = strings.Split(obj.Age, ",")
+	}
+	if obj.Grade != "" {
+		grades = strings.Split(obj.Grade, ",")
+	}
+	if obj.Keywords != "" {
+		keywords = strings.Split(obj.Keywords, ",")
+	}
 
 	cm := &entity.ContentInfo{
 		ID:            obj.ID,
 		ContentType:   obj.ContentType,
 		Name:          obj.Name,
-		Program:       strings.Split(obj.Program, ","),
-		Subject:       strings.Split(obj.Subject, ","),
-		Developmental: strings.Split(obj.Developmental, ","),
-		Skills:        strings.Split(obj.Skills, ","),
-		Age:           strings.Split(obj.Age, ","),
-		Grade:         strings.Split(obj.Grade, ","),
-		Keywords:      strings.Split(obj.Keywords, ","),
+		Program:       programs,
+		Subject:       subjects,
+		Developmental: developmentals,
+		Skills:        skills,
+		Age:           ages,
+		Grade:         grades,
+		Keywords:      keywords,
 		SuggestTime:   obj.SuggestTime,
 		RejectReason:  obj.RejectReason,
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
 		Data:          obj.Data,
-		Extra:         obj.Data,
+		Extra:         obj.Extra,
 		Author:        obj.Author,
 		AuthorName:    obj.AuthorName,
 		Org:           obj.Org,
