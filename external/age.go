@@ -18,14 +18,5 @@ func GetAgeServiceProvider() (AgeServiceProvider, error) {
 type mockAgeService struct{}
 
 func (s mockAgeService) BatchGet(ctx context.Context, ids []string) ([]*Age, error) {
-	return []*Age{
-		{
-			ID:   "Age-1",
-			Name: "Age1",
-		},
-		{
-			ID:   "Age-2",
-			Name: "Age2",
-		},
-	}, nil
+	return GetMockData().Age, nil
 }
