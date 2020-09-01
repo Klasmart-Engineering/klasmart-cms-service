@@ -667,10 +667,8 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 		log.Error(ctx, "get schedule count by condition error", log.Err(err), log.Any("condition", condition))
 		return false, err
 	}
-	if count > 0 {
-		return true, nil
-	}
-	return false, nil
+
+	return count > 0, nil
 }
 
 var (
