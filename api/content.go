@@ -39,6 +39,12 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
@@ -138,6 +144,12 @@ func (s *Server) updateContent(c *gin.Context) {
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, responseMsg(err.Error()))
 	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, "ok")

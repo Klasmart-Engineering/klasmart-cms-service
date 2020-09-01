@@ -558,7 +558,6 @@ func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.
 			return ErrDeleteLessonInSchedule
 		}
 	}
-
 	return nil
 }
 
