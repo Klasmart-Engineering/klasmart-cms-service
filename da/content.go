@@ -95,6 +95,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if len(s.ContentType) > 0 {
 		var subConditions []string
+		
 		for _, item := range s.ContentType {
 			subConditions = append(subConditions, "content_type in (?) ")
 			params = append(params, fmt.Sprintf("%d", item))

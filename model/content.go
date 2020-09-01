@@ -110,6 +110,11 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
 		return err
 	}
+	err = c.ContentType.Validate()
+	if err != nil {
+		log.Error(ctx, "content type invalid", log.Any("data", c), log.Bool("created", created), log.Err(err))
+		return err
+	}
 
 	return nil
 }
@@ -306,6 +311,9 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
 		return err
+	}
+	if content.ContentType.IsAsset() {
+		return ErrInvalidContentType
 	}
 
 	content, err = cm.checkUpdateContent(ctx, tx, content, user)
@@ -549,7 +557,7 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 }
 
 func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.Content) error {
-	if content.PublishStatus == entity.ContentStatusArchive {
+	if content.PublishStatus == entity.ContentStatusArchive && content.ContentType == entity.ContentTypeLesson{
 		exist, err := GetScheduleModel().ExistScheduleByLessonPlanID(ctx, content.ID)
 		if err != nil{
 			return err
@@ -558,7 +566,6 @@ func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.
 			return ErrDeleteLessonInSchedule
 		}
 	}
-
 	return nil
 }
 

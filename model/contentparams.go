@@ -137,10 +137,9 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 }
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) *entity.Content {
-	//asset直接删除
+	//assets则隐藏
 	if content.ContentType.IsAsset() {
-		now := time.Now()
-		content.DeleteAt = now.Unix()
+		content.PublishStatus = entity.ContentStatusHidden
 		return content
 	}
 

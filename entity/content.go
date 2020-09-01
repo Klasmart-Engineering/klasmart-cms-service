@@ -19,6 +19,7 @@ const (
 
 	ContentTypeMaterial = 1
 	ContentTypeLesson   = 2
+	ContentTypeAssets 	= 3
 
 	ContentTypeAssetImage    = 10
 	ContentTypeAssetVideo    = 11
@@ -30,6 +31,7 @@ var(
 	ErrRequireContentName = errors.New("content name required")
 	ErrRequirePublishScope = errors.New("publish scope required")
 	ErrInvalidResourceId  = errors.New("invalid resource id")
+	ErrInvalidContentType  = errors.New("invalid content type")
 )
 
 type ContentPublishStatus string
@@ -54,8 +56,28 @@ func NewContentType(contentType int) ContentType {
 	}
 }
 
+func (c ContentType) Validate() error {
+	switch c {
+	case ContentTypeMaterial:
+		return nil
+	case ContentTypeLesson:
+		return nil
+	case ContentTypeAssetDocument:
+		return nil
+	case ContentTypeAssetAudio:
+		return nil
+	case ContentTypeAssetImage:
+		return nil
+	case ContentTypeAssetVideo:
+		return nil
+	}
+	return ErrInvalidContentType
+}
+
 func (c ContentType) IsAsset() bool {
 	switch c {
+	case ContentTypeAssets:
+		fallthrough
 	case ContentTypeAssetImage:
 		fallthrough
 	case ContentTypeAssetVideo:
@@ -68,12 +90,54 @@ func (c ContentType) IsAsset() bool {
 	return false
 }
 
+func (c ContentType) ContentTypeInt() []int {
+	switch c {
+	case ContentTypeLesson:
+		return []int{ContentTypeLesson}
+	case ContentTypeMaterial:
+		return []int{ContentTypeMaterial}
+	case ContentTypeAssets:
+		return []int{ContentTypeAssetImage, ContentTypeAssetVideo, ContentTypeAssetAudio, ContentTypeAssetDocument}
+	case ContentTypeAssetImage:
+		return []int{ContentTypeAssetImage}
+	case ContentTypeAssetVideo:
+		return []int{ContentTypeAssetVideo}
+	case ContentTypeAssetAudio:
+		return []int{ContentTypeAssetAudio}
+	case ContentTypeAssetDocument:
+		return []int{ContentTypeAssetDocument}
+	}
+	return []int{ContentTypeLesson}
+}
+
+func (c ContentType) ContentType() []ContentType {
+	switch c {
+	case ContentTypeLesson:
+		return []ContentType{ContentTypeLesson}
+	case ContentTypeMaterial:
+		return []ContentType{ContentTypeMaterial}
+	case ContentTypeAssets:
+		return []ContentType{ContentTypeAssetImage, ContentTypeAssetVideo, ContentTypeAssetAudio, ContentTypeAssetDocument}
+	case ContentTypeAssetImage:
+		return []ContentType{ContentTypeAssetImage}
+	case ContentTypeAssetVideo:
+		return []ContentType{ContentTypeAssetVideo}
+	case ContentTypeAssetAudio:
+		return []ContentType{ContentTypeAssetAudio}
+	case ContentTypeAssetDocument:
+		return []ContentType{ContentTypeAssetDocument}
+	}
+	return []ContentType{ContentTypeLesson}
+}
+
 func (c ContentType) Name() string {
 	switch c {
 	case ContentTypeLesson:
 		return "Plan"
 	case ContentTypeMaterial:
 		return "Material"
+	case ContentTypeAssets:
+		fallthrough
 	case ContentTypeAssetImage:
 		fallthrough
 	case ContentTypeAssetVideo:
