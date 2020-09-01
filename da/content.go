@@ -91,7 +91,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if s.Name != "" {
 		conditions = append(conditions, "match(content_name, description, author_name, keywords) against(? in boolean mode)")
-		params = append(params, s.Name)
+		params = append(params, "*" + s.Name + "*")
 	}
 	if len(s.ContentType) > 0 {
 		var subConditions []string
