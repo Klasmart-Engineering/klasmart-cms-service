@@ -133,14 +133,14 @@ func GetScheduleDA() IScheduleDA {
 }
 
 type ScheduleCondition struct {
-	OrgID            sql.NullString
-	StartAtGe        sql.NullInt64
-	EndAtLe          sql.NullInt64
-	TeacherID        sql.NullString
-	TeacherIDs       entity.NullStrings
-	StartAndEndRange []sql.NullInt64
-	//ScheduleIDs entity.NullStrings
+	OrgID                    sql.NullString
+	StartAtGe                sql.NullInt64
+	EndAtLe                  sql.NullInt64
+	TeacherID                sql.NullString
+	TeacherIDs               entity.NullStrings
+	StartAndEndRange         []sql.NullInt64
 	StartAndEndTimeViewRange []sql.NullInt64
+	LessonPlanID             sql.NullString
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -189,6 +189,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 			constant.TableNameScheduleTeacher, c.TeacherIDs.SQLPlaceHolder(), constant.TableNameSchedule, constant.TableNameScheduleTeacher)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherIDs.ToInterfaceSlice()...)
+	}
+	if c.LessonPlanID.Valid {
+		wheres = append(wheres, "lesson_plan_id = ?")
+		params = append(params, c.LessonPlanID.String)
 	}
 
 	if c.DeleteAt.Valid {
