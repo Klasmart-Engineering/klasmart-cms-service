@@ -183,6 +183,8 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	}
 	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
 	switch err {
+	case model.ErrDeleteLessonInSchedule:
+		c.JSON(http.StatusConflict, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -197,6 +199,8 @@ func (s *Server) deleteContent(c *gin.Context) {
 
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
+	case model.ErrDeleteLessonInSchedule:
+		c.JSON(http.StatusConflict, responseMsg(err.Error()))
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 	case nil:
