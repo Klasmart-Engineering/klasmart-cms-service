@@ -549,7 +549,7 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 }
 
 func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.Content) error {
-	if content.PublishStatus == entity.ContentStatusArchive {
+	if content.PublishStatus == entity.ContentStatusArchive && content.ContentType == entity.ContentTypeLesson{
 		exist, err := GetScheduleModel().ExistScheduleByLessonPlanID(ctx, content.ID)
 		if err != nil{
 			return err
