@@ -45,6 +45,8 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case entity.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
@@ -133,6 +135,8 @@ func (s *Server) updateContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+	case model.ErrInvalidContentType:
+		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case model.ErrResourceNotFound:
@@ -150,6 +154,8 @@ func (s *Server) updateContent(c *gin.Context) {
 	case entity.ErrRequirePublishScope:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case entity.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
@@ -338,7 +344,8 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//	condition.Name = keywords
 	//}
 	if contentType != 0 {
-		condition.ContentType = append(condition.ContentType, contentType)
+		ct := entity.NewContentType(contentType)
+		condition.ContentType = append(condition.ContentType, ct.ContentTypeInt()...)
 	}
 	if scope != "" {
 		condition.Scope = append(condition.Scope, scope)

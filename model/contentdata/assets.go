@@ -56,13 +56,13 @@ func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentTyp
 	flag := false
 	switch contentType {
 	case entity.ContentTypeAssetImage:
-		flag = a.isArray(ext, []string{"jpg", "jpeg", "png", "svg", "gif"})
+		flag = a.isArray(ext, []string{"jpg", "jpeg", "png", "bmp", "gif"})
 	case entity.ContentTypeAssetDocument:
 		flag = a.isArray(ext, []string{"doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf"})
 	case entity.ContentTypeAssetAudio:
 		flag = a.isArray(ext, []string{"mp3", "wav"})
 	case entity.ContentTypeAssetVideo:
-		flag = a.isArray(ext, []string{"mp4", "flv", "avi", "wmv"})
+		flag = a.isArray(ext, []string{"mp4", "avi", "mov"})
 	}
 	if !flag {
 		return errors.New("invalid source extension")
