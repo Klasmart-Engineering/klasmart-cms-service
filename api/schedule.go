@@ -241,7 +241,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	timeAtStr := c.Query("time_at")
 	timeAt, err := strconv.ParseInt(timeAtStr, 10, 64)
 	if err != nil {
-		log.Info(ctx, "getScheduleTimeView:time_at is empty or invalid", log.String("time_at", timeAtStr))
+		log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("time_at", timeAtStr))
 		c.JSON(http.StatusBadRequest, errors.New("time_at is required"))
 		return
 	}
