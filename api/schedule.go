@@ -26,6 +26,11 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
+	loc, err := s.getLocation(c, data.TimeZone)
+	if err != nil {
+		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
+		c.JSON(http.StatusBadRequest, err.Error())
+	}
 	data.ID = id
 	if !data.EditType.Valid() {
 		errMsg := "update schedule: invalid edit type"
@@ -42,12 +47,15 @@ func (s *Server) updateSchedule(c *gin.Context) {
 
 	operator := GetOperator(c)
 	data.OrgID = operator.OrgID
+
 	if data.IsAllDay {
-		data.StartAt = utils.BeginOfDayByTimeStamp(data.StartAt, s.getLocation(c)).Unix()
-		data.EndAt = utils.EndOfDayByTimeStamp(data.EndAt, s.getLocation(c)).Unix()
+		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
+		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
+		timeUtil.TimeStamp = data.EndAt
+		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
-	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data, s.getLocation(c))
+	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data, loc)
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed",
 			log.Err(err),
@@ -110,14 +118,22 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
+	loc, err := s.getLocation(c, data.TimeZone)
+	if err != nil {
+		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
+		c.JSON(http.StatusBadRequest, err.Error())
+	}
 	data.OrgID = op.OrgID
+
 	if data.IsAllDay {
-		data.StartAt = utils.BeginOfDayByTimeStamp(data.StartAt, s.getLocation(c)).Unix()
-		data.EndAt = utils.EndOfDayByTimeStamp(data.EndAt, s.getLocation(c)).Unix()
+		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
+		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
+		timeUtil.TimeStamp = data.EndAt
+		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
-	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data, s.getLocation(c))
+	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data, loc)
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"id": id,
@@ -159,7 +175,6 @@ func (s *Server) querySchedule(c *gin.Context) {
 	condition := new(da.ScheduleCondition)
 	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
 	condition.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
-
 	startAtStr := c.Query("start_at")
 	if strings.TrimSpace(startAtStr) != "" {
 		startAt, err := strconv.ParseInt(startAtStr, 10, 64)
@@ -169,7 +184,13 @@ func (s *Server) querySchedule(c *gin.Context) {
 				log.Any("condition", condition))
 			c.JSON(http.StatusBadRequest, "invalid 'start_at' params")
 		}
-		startAt = utils.BeginOfDayByTimeStamp(startAt, s.getLocation(c)).Unix()
+		loc, err := s.getLocation(c, c.Query("time_zone"))
+		if err != nil {
+			log.Info(ctx, "update schedule: get time zone error", log.Err(err))
+			c.JSON(http.StatusBadRequest, err.Error())
+		}
+		timeUtil := utils.NewTimeUtil(startAt, loc)
+		startAt = timeUtil.BeginOfDayByTimeStamp().Unix()
 		condition.StartAtGe = sql.NullInt64{
 			Int64: startAt,
 			Valid: startAt > 0,
@@ -221,10 +242,24 @@ func (s *Server) querySchedule(c *gin.Context) {
 	})
 }
 
-func (s *Server) getLocation(c *gin.Context) *time.Location {
-	lc := GetTimeLocation(c)
-	log.Debug(c.Request.Context(), "time location info", log.Any("location", lc))
-	return lc
+func (s *Server) getLocation(c *gin.Context, tz string) (*time.Location, error) {
+	if strings.TrimSpace(tz) == "" {
+		log.Info(c.Request.Context(), "getLocation: time zone is empty")
+		return nil, errors.New("time_zone is require")
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		log.Info(c.Request.Context(), "getLocation: load location failed",
+			log.Err(err),
+			log.String("time_zone", tz),
+		)
+		return nil, err
+	}
+	log.Debug(c.Request.Context(), "getLocation: time location info",
+		log.String("time_zone", tz),
+		log.Any("location", loc),
+	)
+	return loc, nil
 }
 
 const (
@@ -245,21 +280,27 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("time_at is required"))
 		return
 	}
-	timeUtil := utils.TimeUtil{TimeStamp: timeAt}
+	loc, err := s.getLocation(c, c.Query("time_zone"))
+	if err != nil {
+		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
+		c.JSON(http.StatusBadRequest, err.Error())
+	}
+	timeUtil := utils.NewTimeUtil(timeAt, loc)
+
 	var (
 		start int64
 		end   int64
 	)
 	switch viewType {
 	case ViewTypeDay:
-		start = utils.BeginOfDayByTimeStamp(timeAt, s.getLocation(c)).Unix()
-		end = utils.EndOfDayByTimeStamp(timeAt, s.getLocation(c)).Unix()
+		start = timeUtil.BeginOfDayByTimeStamp().Unix()
+		end = timeUtil.EndOfDayByTimeStamp().Unix()
 	case ViewTypeWorkweek:
-		start, end = timeUtil.FindWorkWeekTimeRange(s.getLocation(c))
+		start, end = timeUtil.FindWorkWeekTimeRange()
 	case ViewTypeWeek:
-		start, end = timeUtil.FindWeekTimeRange(s.getLocation(c))
+		start, end = timeUtil.FindWeekTimeRange()
 	case ViewTypeMonth:
-		start, end = timeUtil.FindMonthRange(s.getLocation(c))
+		start, end = timeUtil.FindMonthRange()
 	default:
 		log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
 		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))

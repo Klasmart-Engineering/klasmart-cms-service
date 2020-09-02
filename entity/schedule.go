@@ -216,6 +216,7 @@ type Schedule struct {
 	EndAt           int64  `gorm:"column:end_at;type:bigint"`
 	Status          string `gorm:"column:status;type:varchar(100)"`
 	IsAllDay        bool   `gorm:"column:is_all_day;default:false"`
+	IsRepeat        bool   `gorm:"column:is_repeat;default:false"`
 	SubjectID       string `gorm:"column:subject_id;type:varchar(100)"`
 	ProgramID       string `gorm:"column:program_id;type:varchar(100)"`
 	ClassType       string `gorm:"column:class_type;type:varchar(100)"`
@@ -266,6 +267,7 @@ type ScheduleAddView struct {
 	IsAllDay     bool              `json:"is_all_day"`
 	IsRepeat     bool              `json:"is_repeat"`
 	IsForce      bool              `json:"is_force"`
+	TimeZone     string            `json:"time_zone"`
 }
 
 func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
@@ -317,10 +319,11 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	StartAt int64  `json:"start_at"`
-	EndAt   int64  `json:"end_at"`
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	StartAt  int64  `json:"start_at"`
+	EndAt    int64  `json:"end_at"`
+	IsRepeat bool   `json:"is_repeat"`
 }
 
 type ScheduleDetailsView struct {
@@ -335,6 +338,7 @@ type ScheduleDetailsView struct {
 	Description string            `json:"description"`
 	Version     int64             `json:"version"`
 	IsAllDay    bool              `json:"is_all_day"`
+	IsRepeat    bool              `json:"is_repeat"`
 	RepeatID    string            `json:"repeat_id"`
 	Repeat      RepeatOptions     `json:"repeat"`
 	ScheduleBasic

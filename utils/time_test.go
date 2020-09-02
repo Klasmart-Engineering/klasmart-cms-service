@@ -29,8 +29,8 @@ func TestTimeUtil_FindWeekTimeRange(t *testing.T) {
 		{targetTime: tm3.Unix()},
 	}
 	for _, item := range testData {
-		timeUtil := TimeUtil{TimeStamp: item.targetTime}
-		start, end := timeUtil.FindWeekTimeRangeFormat(time.Local, Second)
+		timeUtil := NewTimeUtil(item.targetTime, time.Local)
+		start, end := timeUtil.FindWeekTimeRangeFormat(Second)
 		fmt.Println("start:", start, "end:", end)
 	}
 }
@@ -50,8 +50,8 @@ func TestTimeUtil_FindWorkWeekTimeRange(t *testing.T) {
 		{targetTime: tm3.Unix()},
 	}
 	for _, item := range testData {
-		timeUtil := TimeUtil{TimeStamp: item.targetTime}
-		start, end := timeUtil.FindWorkWeekTimeRangeFormat(time.Local, Second)
+		timeUtil := NewTimeUtil(item.targetTime, time.Local)
+		start, end := timeUtil.FindWorkWeekTimeRangeFormat(Second)
 		fmt.Println("start:", start, "end:", end)
 	}
 }
@@ -72,8 +72,8 @@ func TestTimeUtil_FindMonthRange(t *testing.T) {
 		{targetTime: tm3.Unix()},
 	}
 	for _, item := range testData {
-		timeUtil := TimeUtil{TimeStamp: item.targetTime}
-		start, end := timeUtil.FindMonthRangeFormat(time.Local, Second)
+		timeUtil := NewTimeUtil(item.targetTime, time.Local)
+		start, end := timeUtil.FindMonthRangeFormat(Second)
 		fmt.Println("start:", start, "end:", end)
 	}
 }
