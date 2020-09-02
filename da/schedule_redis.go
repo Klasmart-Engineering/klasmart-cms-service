@@ -124,7 +124,7 @@ func (r *ScheduleRedisDA) GetScheduleCacheByCondition(ctx context.Context, condi
 	var result []*entity.ScheduleListView
 	err = json.Unmarshal([]byte(res), &result)
 	if err != nil {
-		log.Error(ctx, "unmarshal schedule error",
+		log.Error(ctx, "unmarshal schedule error ",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("filed", filed),
