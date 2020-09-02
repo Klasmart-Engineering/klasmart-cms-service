@@ -234,6 +234,17 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			return err
 		}
 		viewdata.RepeatID = schedule.RepeatID
+		if viewdata.EditType == entity.ScheduleEditWithFollowing && !viewdata.IsRepeat {
+			viewdata.IsRepeat = true
+			var repeat entity.RepeatOptions
+			if err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat); err != nil {
+				log.Error(ctx, "update schedule: json unmarshal failed",
+					log.Err(err),
+					log.Any("viewdata", viewdata),
+				)
+			}
+			viewdata.Repeat = repeat
+		}
 		id, err = s.Add(ctx, tx, operator, &viewdata.ScheduleAddView, location)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
