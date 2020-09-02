@@ -2,7 +2,3 @@ include:
   - project: 'devops/ci-center'
     ref: 'dev'
     file: 'gitlab-ci-kidsloopr/.gitlab-ci-cdk.yml'
-
-  - project: 'devops/ci-center'
-    ref: 'dev'
-    file: 'gitlab-ci-kidsloopr/.gitlab-ci-api.yml'
