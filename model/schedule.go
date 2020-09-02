@@ -357,10 +357,11 @@ func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition 
 	result := make([]*entity.ScheduleListView, len(scheduleList))
 	for i, item := range scheduleList {
 		result[i] = &entity.ScheduleListView{
-			ID:      item.ID,
-			Title:   item.Title,
-			StartAt: item.StartAt,
-			EndAt:   item.EndAt,
+			ID:       item.ID,
+			Title:    item.Title,
+			StartAt:  item.StartAt,
+			EndAt:    item.EndAt,
+			IsRepeat: item.RepeatID != "",
 		}
 	}
 	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)
@@ -604,7 +605,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		DueAt:       schedule.DueAt,
 		Description: schedule.Description,
 		Version:     schedule.ScheduleVersion,
-		RepeatID:    schedule.RepeatID,
+		IsRepeat:    schedule.RepeatID != "",
 	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo

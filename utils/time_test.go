@@ -79,7 +79,7 @@ func TestTimeUtil_FindMonthRange(t *testing.T) {
 }
 
 func TestTodayZero(t *testing.T) {
-	loc, _ := time.LoadLocation("America/Los_Angeles")
+	loc, _ := time.LoadLocation("Asia/Shanghai")
 	t2 := TodayZero(time.Now().In(loc))
 	fmt.Println(t2)
 }

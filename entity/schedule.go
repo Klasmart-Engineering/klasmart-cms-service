@@ -216,7 +216,6 @@ type Schedule struct {
 	EndAt           int64  `gorm:"column:end_at;type:bigint"`
 	Status          string `gorm:"column:status;type:varchar(100)"`
 	IsAllDay        bool   `gorm:"column:is_all_day;default:false"`
-	IsRepeat        bool   `gorm:"column:is_repeat;default:false"`
 	SubjectID       string `gorm:"column:subject_id;type:varchar(100)"`
 	ProgramID       string `gorm:"column:program_id;type:varchar(100)"`
 	ClassType       string `gorm:"column:class_type;type:varchar(100)"`
@@ -286,10 +285,10 @@ func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
 		UpdatedAt:       0,
-		RepeatID:        s.RepeatID,
 		IsAllDay:        s.IsAllDay,
 	}
 	if s.IsRepeat {
+		schedule.RepeatID = s.RepeatID
 		b, err := json.Marshal(s.Repeat)
 		if err != nil {
 			return nil, err
@@ -339,7 +338,6 @@ type ScheduleDetailsView struct {
 	Version     int64             `json:"version"`
 	IsAllDay    bool              `json:"is_all_day"`
 	IsRepeat    bool              `json:"is_repeat"`
-	RepeatID    string            `json:"repeat_id"`
 	Repeat      RepeatOptions     `json:"repeat"`
 	ScheduleBasic
 }
