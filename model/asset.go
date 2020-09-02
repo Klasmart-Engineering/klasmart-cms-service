@@ -183,7 +183,7 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string, 
 	st := storage.DefaultStorage()
 	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
-	path, err := st.GetUploadFileTempPath(ctx, 1024, storage.AssetStoragePartition, name)
+	path, err := st.GetUploadFileTempPath(ctx, storage.AssetStoragePartition, name)
 	if err != nil {
 		return nil, err
 	}

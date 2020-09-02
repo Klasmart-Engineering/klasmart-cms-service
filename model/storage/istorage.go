@@ -32,7 +32,7 @@ func (s StoragePartition) SizeLimit() int64{
 	case AssetStoragePartition:
 		return 1024 * 1000
 	case ThumbnailStoragePartition:
-		return 1024 * 5
+		return 1024 * 1024 * 5
 	case ScheduleAttachmentStoragePartition:
 		return 1024 * 100
 	}
@@ -70,7 +70,7 @@ type IStorage interface {
 	GetFilePath(ctx context.Context, partition StoragePartition) string
 	GetFileTempPath(ctx context.Context, partition StoragePartition, filePath string) (string, error)
 
-	GetUploadFileTempPath(ctx context.Context, size int64, partition StoragePartition, fileName string) (string, error)
+	GetUploadFileTempPath(ctx context.Context, partition StoragePartition, fileName string) (string, error)
 	GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string, error)
 
 	UploadFileBytes(ctx context.Context, partition StoragePartition, filePath string, fileStream *bytes.Buffer) error

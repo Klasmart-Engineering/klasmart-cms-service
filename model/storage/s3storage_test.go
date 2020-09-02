@@ -46,7 +46,22 @@ func TestCDNSignature(t *testing.T) {
 	InitEnv()
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
-	path, err := storage.GetFileTempPath(context.Background(), "ESL/Songs", "abby_cadabra_720p.mp4")
+	path, err := storage.GetFileTempPath(context.Background(), ThumbnailStoragePartition, "abby_cadabra_720p.mp4")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(path)
+}
+
+
+
+func TestS3Storage_GetUploadFileTempPath(t *testing.T) {
+	InitEnv()
+	config.LoadEnvConfig()
+	storage := DefaultStorage()
+	partition, _ := NewStoragePartition(ThumbnailStoragePartition)
+	path, err := storage.GetUploadFileTempPath(context.Background(),partition, "timg.jpg")
 	if err != nil {
 		t.Error(err)
 		return

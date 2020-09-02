@@ -25,7 +25,7 @@ func (r *ResourceUploaderModel) GetResourceUploadPath(ctx context.Context, parti
 		log.Error(ctx, "invalid partition", log.Err(err), log.String("partition", partition), log.String("extension", extension))
 		return "", "", err
 	}
-	path, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, pat.SizeLimit(), pat, fileName)
+	path, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, pat, fileName)
 	if err != nil{
 		log.Error(ctx, "get upload file temp path failed", log.Err(err), log.String("partition", partition), log.String("extension", extension))
 		return "", "", err

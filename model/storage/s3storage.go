@@ -231,14 +231,14 @@ func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath strin
 	return urlStr, nil
 }
 
-func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, size int64, partition StoragePartition, fileName string) (string, error) {
+func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition StoragePartition, fileName string) (string, error) {
 	path := fmt.Sprintf("%s/%s", partition, fileName)
 	svc := s3.New(s.session)
 
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
-		ContentLength: aws.Int64(size),
+		ContentLength: aws.Int64(partition.SizeLimit()),
 	})
 
 	urlStr, err := req.Presign(PresignUploadDurationMinutes * time.Minute)
