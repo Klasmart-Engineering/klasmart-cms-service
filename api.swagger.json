@@ -4944,20 +4944,6 @@
           }
         ]
       },
-      "RejectReasonRequest": {
-        "allOf": [
-          {
-            "type": "object",
-            "description": "Reject reason",
-            "properties": {
-              "reject_reason": {
-                "type": "string",
-                "description": "content reject reason"
-              }
-            }
-          }
-        ]
-      },
       "LockLearningOutcomesResponse": {
         "allOf": [
           {
@@ -4967,54 +4953,6 @@
               "id": {
                 "type": "string",
                 "description": "content id to edit"
-              }
-            }
-          }
-        ]
-      },
-      "ContentCondition": {
-        "allOf": [
-          {
-            "type": "object",
-            "description": "Company",
-            "properties": {
-              "content_type": {
-                "type": "string",
-                "description": "content type list",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3",
-                "enum":["1","2","3"]
-              },
-              "scope": {
-                "type": "string",
-                "description": "content published scope list",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "publish_status": {
-                "type": "string",
-                "enum": [
-                  "draft",
-                  "pending",
-                  "published",
-                  "rejected",
-                  "archive"
-                ],
-                "description": "content published status list",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "author": {
-                "type": "string",
-                "description": "content author id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "org": {
-                "type": "string",
-                "description": "content org id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
-              },
-              "bookmark": {
-                "type": "string",
-                "description": "content bookmark",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               }
             }
           }
