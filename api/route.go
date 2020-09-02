@@ -80,5 +80,5 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_time_view", MustLogin, s.getScheduleTimeView)
 		//schedules.GET("/schedule_attachment_upload/:ext", MustLogin, s.getAttachmentUploadPath)
 	}
-
 }
+

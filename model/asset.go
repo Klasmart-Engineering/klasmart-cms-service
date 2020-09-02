@@ -12,12 +12,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-const (
-	Asset_Storage_Partition              = "asset"
-	Thumbnail_Storage_Partition          = "thumbnail"
-	ScheduleAttachment_Storage_Partition = "schedule_attachment"
-)
-
 var (
 	ErrNoSuchURL           = errors.New("no such url")
 	ErrRequestItemIsNil    = errors.New("request item is nil")
@@ -44,6 +38,7 @@ var (
 
 	ErrResourceNotFound   = errors.New("resource not found")
 	ErrInvalidContentType = errors.New("invalid content type")
+
 )
 
 type IAssetModel interface {
@@ -74,7 +69,7 @@ func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must b
 	}
 	size := int64(0)
 	if data.assetSource != "" {
-		tempSize, exist := storage.DefaultStorage().ExistFile(ctx, Asset_Storage_Partition, data.assetSource)
+		tempSize, exist := storage.DefaultStorage().ExistFile(ctx, storage.AssetStoragePartition, data.assetSource)
 		if !exist {
 			return -1, ErrNoSuchURL
 		}
@@ -82,7 +77,7 @@ func (am AssetModel) checkResource(ctx context.Context, data AssetSource, must b
 	}
 
 	if data.assetSource != "" {
-		_, exist := storage.DefaultStorage().ExistFile(ctx, Thumbnail_Storage_Partition, data.thumbnailSource)
+		_, exist := storage.DefaultStorage().ExistFile(ctx, storage.ThumbnailStoragePartition, data.thumbnailSource)
 		if !exist {
 			return -1, ErrNoSuchURL
 		}
@@ -185,10 +180,10 @@ func (am *AssetModel) SearchAssets(ctx context.Context, condition *entity.Search
 }
 
 func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string, operator entity.Operator) (*entity.ResourcePath, error) {
-	storage := storage.DefaultStorage()
+	st := storage.DefaultStorage()
 	name := fmt.Sprintf("%s.%s", utils.NewID(), extension)
 
-	path, err := storage.GetUploadFileTempPath(ctx, Asset_Storage_Partition, name)
+	path, err := st.GetUploadFileTempPath(ctx, 1024, storage.AssetStoragePartition, name)
 	if err != nil {
 		return nil, err
 	}
@@ -199,8 +194,8 @@ func (am *AssetModel) GetAssetUploadPath(ctx context.Context, extension string, 
 }
 
 func (am *AssetModel) GetAssetResourcePath(ctx context.Context, name string, operator entity.Operator) (string, error) {
-	storage := storage.DefaultStorage()
-	return storage.GetFileTempPath(ctx, Asset_Storage_Partition, name)
+	st := storage.DefaultStorage()
+	return st.GetFileTempPath(ctx, storage.AssetStoragePartition, name)
 }
 
 var assetModel *AssetModel

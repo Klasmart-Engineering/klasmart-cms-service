@@ -88,7 +88,7 @@ func getContentTypeBytes(fileStream *bytes.Buffer) string {
 	return t
 }
 
-func (s *S3Storage) UploadFileBytes(ctx context.Context, partition string, filePath string, fileStream *bytes.Buffer) error {
+func (s *S3Storage) UploadFileBytes(ctx context.Context, partition StoragePartition, filePath string, fileStream *bytes.Buffer) error {
 	path := fmt.Sprintf("%s/%s", partition, filePath)
 	uploader := s3manager.NewUploader(s.session)
 
@@ -107,7 +107,7 @@ func (s *S3Storage) UploadFileBytes(ctx context.Context, partition string, fileP
 	}
 	return nil
 }
-func (s *S3Storage) UploadFile(ctx context.Context, partition string, filePath string, fileStream multipart.File) error {
+func (s *S3Storage) UploadFile(ctx context.Context, partition StoragePartition, filePath string, fileStream multipart.File) error {
 	path := fmt.Sprintf("%s/%s", partition, filePath)
 	uploader := s3manager.NewUploader(s.session)
 	contentType := getContentType(fileStream)
@@ -125,7 +125,7 @@ func (s *S3Storage) UploadFile(ctx context.Context, partition string, filePath s
 	return nil
 }
 
-func (s *S3Storage) UploadFileLAN(ctx context.Context, partition string, filePath string, contentType string, r io.Reader) error {
+func (s *S3Storage) UploadFileLAN(ctx context.Context, partition StoragePartition, filePath string, contentType string, r io.Reader) error {
 	//建立session
 	sess, err := session.NewSession(&aws.Config{
 		Region:          aws.String(s.region),
@@ -152,7 +152,7 @@ func (s *S3Storage) UploadFileLAN(ctx context.Context, partition string, filePat
 	return nil
 }
 
-func (s *S3Storage) DownloadFile(ctx context.Context, partition string, filePath string) (io.Reader, error) {
+func (s *S3Storage) DownloadFile(ctx context.Context, partition StoragePartition, filePath string) (io.Reader, error) {
 	path := fmt.Sprintf("%s/%s", partition, filePath)
 	downloader := s3manager.NewDownloader(s.session)
 	data := make([]byte, 1024)
@@ -173,7 +173,7 @@ func (s *S3Storage) DownloadFile(ctx context.Context, partition string, filePath
 	return buffer, nil
 }
 
-func (s *S3Storage) ExistFile(ctx context.Context, partition string, filePath string) (int64, bool) {
+func (s *S3Storage) ExistFile(ctx context.Context, partition StoragePartition, filePath string) (int64, bool) {
 	//_, err := s.DownloadFile(ctx, partition, filePath)
 	path := fmt.Sprintf("%s/%s", partition, filePath)
 	svc := s3.New(s.session)
@@ -188,7 +188,7 @@ func (s *S3Storage) ExistFile(ctx context.Context, partition string, filePath st
 	return *res.ContentLength, true
 }
 
-func (s *S3Storage) GetFilePath(ctx context.Context, partition string) string {
+func (s *S3Storage) GetFilePath(ctx context.Context, partition StoragePartition) string {
 	return fmt.Sprintf("http://%s.s3-website-%s.amazonaws.com/%s/", s.bucket, s.region, partition)
 }
 
@@ -221,7 +221,7 @@ func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath strin
 		Key:    aws.String(path),
 	})
 
-	urlStr, err := req.Presign(PRESIGN_UPLOAD_DURATION_MINUTES * time.Minute)
+	urlStr, err := req.Presign(PresignUploadDurationMinutes * time.Minute)
 
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
@@ -231,16 +231,17 @@ func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath strin
 	return urlStr, nil
 }
 
-func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string, fileName string) (string, error) {
+func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, size int64, partition StoragePartition, fileName string) (string, error) {
 	path := fmt.Sprintf("%s/%s", partition, fileName)
 	svc := s3.New(s.session)
 
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
+		ContentLength: aws.Int64(size),
 	})
 
-	urlStr, err := req.Presign(PRESIGN_UPLOAD_DURATION_MINUTES * time.Minute)
+	urlStr, err := req.Presign(PresignUploadDurationMinutes * time.Minute)
 
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
@@ -249,7 +250,7 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition string,
 	return urlStr, nil
 }
 
-func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, filePath string) (string, error) {
+func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
 	log.Info(ctx, "Must Get CDN config", log.Any("config", config.Get().CDNConfig))
 	if config.Get().CDNConfig.CDNOpen {
 		switch config.Get().CDNConfig.CDNMode {
@@ -269,7 +270,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, fileP
 		Key:    aws.String(path),
 	})
 
-	urlStr, err := req.Presign(PRESIGN_DURATION_MINUTES * time.Minute)
+	urlStr, err := req.Presign(PresignDurationMinutes * time.Minute)
 
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
@@ -279,7 +280,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition string, fileP
 	return urlStr, nil
 }
 
-func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition string, filePath string) (string, error) {
+func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
 	cdnConf := config.Get().CDNConfig
 
 	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
@@ -295,7 +296,7 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition string,
 	}
 
 	signer := sign.NewURLSigner(keyID, privKey)
-	signedURL, err := signer.Sign(path, time.Now().Add(PRESIGN_DURATION_MINUTES*time.Minute))
+	signedURL, err := signer.Sign(path, time.Now().Add(PresignDurationMinutes*time.Minute))
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
@@ -304,12 +305,12 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition string,
 	return signedURL, nil
 }
 
-func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partition string, filePath string) (string, error) {
+func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
 	cdnConf := config.Get().CDNConfig
 
 	params := &CDNServiceRequest{
 		URL:       cdnConf.CDNPath,
-		Duration:  PRESIGN_DURATION_MINUTES * 60,
+		Duration:  PresignDurationMinutes * 60,
 		FilePaths: []string{fmt.Sprintf("%s/%s", partition, filePath)},
 	}
 	data, err := json.Marshal(params)
