@@ -2539,6 +2539,782 @@
           }
         }
       }
+    },
+    "/learning_outcomes": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Search content with condition",
+        "operationId": "searchContents",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Search content by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "description": "Search content by content type",
+            "schema": {
+              "type": "string",
+              "enum":["1", "2", "3"],
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search content by publish status",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Search content by scope",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "Search content by author",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "org",
+            "in": "query",
+            "description": "Search content by org",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with content_name",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search key"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Content"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Create learning outcomes",
+        "operationId": "createLearningOutcomes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLearningOutComesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content info",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "content id",
+                      "example": "1"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get learning outcomes by id",
+        "operationId": "getLearningOutcomesById",
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "learning outcomes info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "$ref": "#/components/schemas/LearningOutcomes"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Update learning outcomes by id",
+        "operationId": "updateLearningOutcomes",
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLearningOutComesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Delete learning outcomes by id",
+        "operationId": "deleteLearningOutcome",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/publish/learning_outcomes/{outcome_id}": {
+      "put": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Publish learning outcomes",
+        "operationId": "publishLearningOutcomes",
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishLearningOutcomesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "406": {
+            "description": "Content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/lock/learning_outcomes/{outcome_id}": {
+      "put": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Lock a learning outcomes by content_id",
+        "operationId": "lockLearningOutcomes",
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "$ref": "#/components/schemas/LockLearningOutcomesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "406": {
+            "description": "content was locked"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/approve/learning_outcomes/{outcome_id}": {
+      "put": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Approve a learning outcomes by outcome_id",
+        "operationId": "approveLearningOutcomes",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "412": {
+            "description": "content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/reject/learning_outcomes/{outcome_id}": {
+      "put": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Reject a learning outcomes by outcome_id",
+        "operationId": "rejectLearningOutcomes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectReasonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "412": {
+            "description": "content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/bulk_publish/learning_outcomes": {
+      "put": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Publish learning outcomes bulk",
+        "operationId": "publishLearningOutcomesBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutcomesIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/bulk/learning_outcomes": {
+      "delete": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Delete content bulk",
+        "operationId": "deleteContentBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutcomesIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/private_learning_outcomes": {
+      "get": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Search user's private learning outcomes with condition",
+        "operationId": "searchPrivateLearningOutcomes",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Search content by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "description": "Search content by content type",
+            "schema": {
+              "type": "string",
+              "enum":["1", "2", "3"],
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search content by publish status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
+              "nullable": true
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Search content by scope",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "Search content by author",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "org",
+            "in": "query",
+            "description": "Search content by org",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/pending_learning_outcomes": {
+      "get": {
+        "tags": [
+          "learningOutcomes"
+        ],
+        "description": "Search pending learning outcomes",
+        "operationId": "searchPendingLearningOutcomes",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Search content by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "description": "Search content by content type",
+            "schema": {
+              "type": "string",
+              "enum":["1", "2", "3"],
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search content by publish status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
+              "nullable": true
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Search content by scope",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "Search content by author",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "org",
+            "in": "query",
+            "description": "Search content by org",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4005,6 +4781,497 @@
             "description": "end after the time(unix timestamp)"
           }
         }
+      },
+      "CreateLearningOutComesRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "content_type": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content type",
+                "enum":[1,2,3],
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 1
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "data": {
+                "type": "string",
+                "description": "content data",
+                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": "{\"data\": \"hello\"}"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "PublishLearningOutcomesRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "description": "content published scope list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "OutcomesIDListRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "id": {
+                "type": "array",
+                "description": "content id list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "RejectReasonRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Reject reason",
+            "properties": {
+              "reject_reason": {
+                "type": "string",
+                "description": "content reject reason"
+              }
+            }
+          }
+        ]
+      },
+      "LockLearningOutcomesResponse": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Lock content response",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "content id to edit"
+              }
+            }
+          }
+        ]
+      },
+      "ContentCondition": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "content_type": {
+                "type": "string",
+                "description": "content type list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3",
+                "enum":["1","2","3"]
+              },
+              "scope": {
+                "type": "string",
+                "description": "content published scope list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
+                "description": "content published status list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "org": {
+                "type": "string",
+                "description": "content org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "bookmark": {
+                "type": "string",
+                "description": "content bookmark",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "LearningOutcomes": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "content id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "content_type": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content type",
+                "example": 1,
+                "enum":[1,2,3]
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 1
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "version": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content version",
+                "example": 1
+              },
+              "source_id": {
+                "type": "string",
+                "description": "content source id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "locked_by": {
+                "type": "string",
+                "description": "content locked by others id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "data": {
+                "type": "string",
+                "description": "content data",
+                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": {
+                  "data": "hello"
+                }
+              },
+              "author": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "org": {
+                "type": "string",
+                "description": "content org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "content publish status",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
+                "example": "published"
+              },
+              "content_type_name": {
+                "type": "string",
+                "description": "content type name",
+                "example": "lesson"
+              },
+              "program_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program name",
+                "example": [
+                  "program1"
+                ]
+              },
+              "grade_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade name",
+
+                "example": [
+                  "program1"
+                ]
+              },
+              "subject_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject name",
+                "example": [
+                  "subject1"
+                ]
+              },
+              "developmental_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental name",
+                "example": [
+                  "developmental"
+                ]
+              },
+              "skills_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills name",
+                "example": [
+                  "skills"
+                ]
+              },
+              "age_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age name",
+                "example": [
+                  "age"
+                ]
+              },
+              "org_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              },
+              "created_at": {
+                "type": "integer",
+                "description": "content create time",
+                "example": 123
+              }
+            }
+          }
+        ]
       }
     }
   }
