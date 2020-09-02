@@ -42,3 +42,8 @@ const (
 	DefaultPageSize  = 10
 	DefaultPageIndex = 1
 )
+
+const (
+	PresignDurationMinutes       = 60 * 24 * time.Minute
+	PresignUploadDurationMinutes = 60 * time.Minute
+)

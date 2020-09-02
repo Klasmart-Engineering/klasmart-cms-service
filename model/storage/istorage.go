@@ -18,12 +18,10 @@ var (
 )
 
 const (
-	AssetStoragePartition              = "asset"
-	ThumbnailStoragePartition          = "thumbnail"
-	ScheduleAttachmentStoragePartition = "schedule_attachment"
+	AssetStoragePartition        StoragePartition      = "asset"
+	ThumbnailStoragePartition      StoragePartition    = "thumbnail"
+	ScheduleAttachmentStoragePartition StoragePartition = "schedule_attachment"
 
-	PresignDurationMinutes       = 60 * 24
-	PresignUploadDurationMinutes = 60
 )
 type StoragePartition string
 
@@ -41,11 +39,11 @@ func (s StoragePartition) SizeLimit() int64{
 
 func NewStoragePartition(partition string) (StoragePartition, error){
 	switch partition {
-	case AssetStoragePartition:
+	case string(AssetStoragePartition):
 		return AssetStoragePartition, nil
-	case ThumbnailStoragePartition:
+	case string(ThumbnailStoragePartition):
 		return ThumbnailStoragePartition, nil
-	case ScheduleAttachmentStoragePartition:
+	case string(ScheduleAttachmentStoragePartition):
 		return ScheduleAttachmentStoragePartition, nil
 	}
 	return "", ErrInvalidUploadPartition

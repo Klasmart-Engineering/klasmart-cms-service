@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -38,7 +39,7 @@ type S3Storage struct {
 
 type CDNServiceRequest struct {
 	URL       string   `json:"domain"`
-	Duration  int      `json:"durationSeconds"`
+	Duration time.Duration `json:"duration"`
 	FilePaths []string `json:"filePaths"`
 }
 
@@ -221,7 +222,7 @@ func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath strin
 		Key:    aws.String(path),
 	})
 
-	urlStr, err := req.Presign(PresignUploadDurationMinutes * time.Minute)
+	urlStr, err := req.Presign(constant.PresignUploadDurationMinutes)
 
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
@@ -241,7 +242,7 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition Storage
 		Key:    aws.String(path),
 	})
 
-	urlStr, err := req.Presign(PresignUploadDurationMinutes * time.Minute)
+	urlStr, err := req.Presign(constant.PresignUploadDurationMinutes)
 
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
@@ -270,7 +271,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartit
 		Key:    aws.String(path),
 	})
 
-	urlStr, err := req.Presign(PresignDurationMinutes * time.Minute)
+	urlStr, err := req.Presign(constant.PresignDurationMinutes)
 
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
@@ -296,7 +297,7 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition Storage
 	}
 
 	signer := sign.NewURLSigner(keyID, privKey)
-	signedURL, err := signer.Sign(path, time.Now().Add(PresignDurationMinutes*time.Minute))
+	signedURL, err := signer.Sign(path, time.Now().Add(constant.PresignDurationMinutes))
 	if err != nil {
 		log.Error(ctx, "Get presigned url failed", log.Err(err))
 		return "", err
@@ -310,7 +311,7 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 
 	params := &CDNServiceRequest{
 		URL:       cdnConf.CDNPath,
-		Duration:  PresignDurationMinutes * 60,
+		Duration: constant.PresignDurationMinutes,
 		FilePaths: []string{fmt.Sprintf("%s/%s", partition, filePath)},
 	}
 	data, err := json.Marshal(params)
