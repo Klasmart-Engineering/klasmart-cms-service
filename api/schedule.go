@@ -30,6 +30,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	if err != nil {
 		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
 		c.JSON(http.StatusBadRequest, err.Error())
+		return
 	}
 	data.ID = id
 	if !data.EditType.Valid() {
@@ -122,6 +123,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	if err != nil {
 		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
 		c.JSON(http.StatusBadRequest, err.Error())
+		return
 	}
 	data.OrgID = op.OrgID
 
@@ -183,11 +185,13 @@ func (s *Server) querySchedule(c *gin.Context) {
 				log.String("startAt", startAtStr),
 				log.Any("condition", condition))
 			c.JSON(http.StatusBadRequest, "invalid 'start_at' params")
+			return
 		}
 		loc, err := s.getLocation(c, c.Query("time_zone"))
 		if err != nil {
 			log.Info(ctx, "update schedule: get time zone error", log.Err(err))
 			c.JSON(http.StatusBadRequest, err.Error())
+			return
 		}
 		timeUtil := utils.NewTimeUtil(startAt, loc)
 		startAt = timeUtil.BeginOfDayByTimeStamp().Unix()
@@ -284,6 +288,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	if err != nil {
 		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
 		c.JSON(http.StatusBadRequest, err.Error())
+		return
 	}
 	timeUtil := utils.NewTimeUtil(timeAt, loc)
 
