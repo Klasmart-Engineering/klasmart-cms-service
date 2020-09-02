@@ -65,7 +65,7 @@ func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Opera
 }
 
 func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool {
-	_, exist := storage.DefaultStorage().ExistFile(ctx, ScheduleAttachment_Storage_Partition, attachmentPath)
+	_, exist := storage.DefaultStorage().ExistFile(ctx, storage.ScheduleAttachmentStoragePartition, attachmentPath)
 	if !exist {
 		log.Info(ctx, "add schedule: attachment is not exits", log.Any("attachmentPath", attachmentPath))
 		return false

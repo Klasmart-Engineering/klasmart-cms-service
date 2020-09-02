@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"net/http"
 )
 
@@ -17,14 +18,17 @@ func (s *Server) GetUploadPath(c *gin.Context) {
 		return
 	}
 	name, path, err := model.GetResourceUploaderModel().GetResourceUploadPath(ctx, partition, extension)
-	if err != nil {
+	switch err {
+	case storage.ErrInvalidUploadPartition:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"path":       path,
+			"resource_id": name,
+		})
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"path":       path,
-		"resource_id": name,
-	})
 }
 
 
@@ -37,13 +41,14 @@ func (s *Server) GetPath(c *gin.Context) {
 		return
 	}
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
-	if err == model.ErrInvalidResourceId {
+	switch err {
+	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-		return
-	}
-	if err != nil {
+	case storage.ErrInvalidUploadPartition:
+		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	case nil:
+		c.Redirect(http.StatusFound, path)
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.Redirect(http.StatusFound, path)
 }
