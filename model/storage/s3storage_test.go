@@ -36,9 +36,9 @@ func TestS3Storage_ExitsFile(t *testing.T) {
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
 
-	_, ret := storage.ExistFile(context.Background(), "asset", "5f225eeee763b300cf63cb901.jpg")
+	_, ret := storage.ExistFile(context.Background(), "thumbnail", "5f48815e9be1b049508ccb2c.jpg")
 	t.Log(ret)
-	_, ret = storage.ExistFile(context.Background(), "asset", "5f225eeee763b300cf63cb90.jpg")
+	_, ret = storage.ExistFile(context.Background(), "thumbnail", "5f48815e9be1b049508ccb2b.jpg")
 	t.Log(ret)
 }
 
@@ -61,7 +61,7 @@ func TestS3Storage_GetUploadFileTempPath(t *testing.T) {
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
 	partition, _ := NewStoragePartition(ThumbnailStoragePartition)
-	path, err := storage.GetUploadFileTempPath(context.Background(),partition, "timg.jpg")
+	path, err := storage.GetUploadFileTempPath(context.Background(),partition, "timg0.jpg")
 	if err != nil {
 		t.Error(err)
 		return

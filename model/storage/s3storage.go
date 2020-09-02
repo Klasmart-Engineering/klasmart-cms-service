@@ -235,10 +235,10 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition Storage
 	path := fmt.Sprintf("%s/%s", partition, fileName)
 	svc := s3.New(s.session)
 
+	fmt.Println(s.bucket)
 	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
-		ContentLength: aws.Int64(partition.SizeLimit()),
 	})
 
 	urlStr, err := req.Presign(PresignUploadDurationMinutes * time.Minute)
