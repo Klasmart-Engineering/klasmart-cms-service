@@ -13,6 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"strings"
 	"sync"
 	"time"
 )
@@ -29,6 +30,7 @@ type IScheduleModel interface {
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
 	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
+	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -91,7 +93,7 @@ func (s *scheduleModel) addRepeatSchedule(ctx context.Context, op *entity.Operat
 			tsItem := &entity.ScheduleTeacher{
 				ID:         utils.NewID(),
 				TeacherID:  teacherID,
-				ScheduleID: schedule.ID,
+				ScheduleID: item.ID,
 			}
 			scheduleTeachers[index] = tsItem
 			index++
@@ -611,6 +613,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 			log.Error(ctx, "Unmarshal schedule.Attachment error", log.Err(err), log.String("schedule.Attachment", schedule.Attachment))
 			return nil, err
 		}
+		result.Attachment = attachment
 	}
 	if schedule.RepeatJson != "" {
 		var repeat entity.RepeatOptions
@@ -646,6 +649,26 @@ func (s *scheduleModel) GetTeacherByName(ctx context.Context, name string) ([]*e
 	}
 
 	return teachers, nil
+}
+
+func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error) {
+	if strings.TrimSpace(lessonPlanID) == "" {
+		log.Info(ctx, "lessonPlanID is empty", log.String("lessonPlanID", lessonPlanID))
+		return false, errors.New("lessonPlanID is empty")
+	}
+	condition := &da.ScheduleCondition{
+		LessonPlanID: sql.NullString{
+			String: lessonPlanID,
+			Valid:  true,
+		},
+	}
+	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
+	if err != nil {
+		log.Error(ctx, "get schedule count by condition error", log.Err(err), log.Any("condition", condition))
+		return false, err
+	}
+
+	return count > 0, nil
 }
 
 var (

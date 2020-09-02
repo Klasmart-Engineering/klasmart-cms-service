@@ -65,9 +65,9 @@ func (c ContentType) IsAsset() bool {
 func (c ContentType) Name() string {
 	switch c {
 	case ContentTypeLesson:
-		return "LESSON"
+		return "Plan"
 	case ContentTypeMaterial:
-		return "MATERIAL"
+		return "Material"
 	case ContentTypeAssetImage:
 		fallthrough
 	case ContentTypeAssetVideo:
@@ -75,9 +75,9 @@ func (c ContentType) Name() string {
 	case ContentTypeAssetAudio:
 		fallthrough
 	case ContentTypeAssetDocument:
-		return "ASSET"
+		return "Assets"
 	}
-	return "UNKNOWN"
+	return "Unknown"
 }
 
 func NewContentPublishStatus(status string) ContentPublishStatus {

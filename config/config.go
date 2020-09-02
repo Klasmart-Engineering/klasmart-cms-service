@@ -158,46 +158,39 @@ func loadScheduleEnvConfig(ctx context.Context) {
 }
 
 func loadDBEnvConfig(ctx context.Context) {
-	config.DBConfig.DBMode = os.Getenv("db_env")
+	config.DBConfig.ConnectionString = assertGetEnv("connection_string")
+	maxOpenConnsStr := assertGetEnv("max_open_conns")
+	maxIdleConnsStr := assertGetEnv("max_idle_conns")
+	showLogStr := assertGetEnv("show_log")
+	showSQLStr := assertGetEnv("show_sql")
 
-	if config.DBConfig.DBMode == "mysql" {
-		config.DBConfig.ConnectionString = assertGetEnv("connection_string")
-		maxOpenConnsStr := assertGetEnv("max_open_conns")
-		maxIdleConnsStr := assertGetEnv("max_idle_conns")
-		showLogStr := assertGetEnv("show_log")
-		showSQLStr := assertGetEnv("show_sql")
-
-		maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
-		if err != nil {
-			log.Error(ctx, "Can't parse max_open_conns", log.Err(err))
-			maxOpenConns = 16
-		}
-		config.DBConfig.MaxOpenConns = maxOpenConns
-
-		maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
-		if err != nil {
-			log.Error(ctx, "Can't parse max_idle_conns", log.Err(err))
-			maxOpenConns = 16
-		}
-		config.DBConfig.MaxIdleConns = maxIdleConns
-
-		showLog, err := strconv.ParseBool(showLogStr)
-		if err != nil {
-			log.Error(ctx, "Can't parse show_log", log.Err(err))
-			showLog = true
-		}
-		config.DBConfig.ShowLog = showLog
-
-		showSQL, err := strconv.ParseBool(showSQLStr)
-		if err != nil {
-			log.Error(ctx, "Can't parse show_sql", log.Err(err))
-			showLog = true
-		}
-		config.DBConfig.ShowSQL = showSQL
-	} else {
-		config.DBConfig.DynamoEndPoint = assertGetEnv("dynamo_end_point")
-		config.DBConfig.DynamoRegion = assertGetEnv("dynamo_region")
+	maxOpenConns, err := strconv.Atoi(maxOpenConnsStr)
+	if err != nil {
+		log.Error(ctx, "Can't parse max_open_conns", log.Err(err))
+		maxOpenConns = 16
 	}
+	config.DBConfig.MaxOpenConns = maxOpenConns
+
+	maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
+	if err != nil {
+		log.Error(ctx, "Can't parse max_idle_conns", log.Err(err))
+		maxOpenConns = 16
+	}
+	config.DBConfig.MaxIdleConns = maxIdleConns
+
+	showLog, err := strconv.ParseBool(showLogStr)
+	if err != nil {
+		log.Error(ctx, "Can't parse show_log", log.Err(err))
+		showLog = true
+	}
+	config.DBConfig.ShowLog = showLog
+
+	showSQL, err := strconv.ParseBool(showSQLStr)
+	if err != nil {
+		log.Error(ctx, "Can't parse show_sql", log.Err(err))
+		showLog = true
+	}
+	config.DBConfig.ShowSQL = showSQL
 
 }
 

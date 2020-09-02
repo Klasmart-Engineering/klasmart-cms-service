@@ -10,7 +10,6 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/dynamodb"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
@@ -23,23 +22,19 @@ import (
 )
 
 func initDB() {
-	if config.Get().DBConfig.DBMode == "mysql" {
-		dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-			dbConf := config.Get().DBConfig
-			c.ShowLog = dbConf.ShowLog
-			c.ShowSQL = dbConf.ShowSQL
-			c.MaxIdleConns = dbConf.MaxIdleConns
-			c.MaxOpenConns = dbConf.MaxOpenConns
-			c.ConnectionString = dbConf.ConnectionString
-		})
-		if err != nil {
-			log.Error(context.TODO(), "create dbo failed", log.Err(err))
-			panic(err)
-		}
-		dbo.ReplaceGlobal(dboHandler)
-	} else {
-		dynamodb.GetClient()
+	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
+		dbConf := config.Get().DBConfig
+		c.ShowLog = dbConf.ShowLog
+		c.ShowSQL = dbConf.ShowSQL
+		c.MaxIdleConns = dbConf.MaxIdleConns
+		c.MaxOpenConns = dbConf.MaxOpenConns
+		c.ConnectionString = dbConf.ConnectionString
+	})
+	if err != nil {
+		log.Error(context.TODO(), "create dbo failed", log.Err(err))
+		panic(err)
 	}
+	dbo.ReplaceGlobal(dboHandler)
 }
 func initCache() {
 	if config.Get().RedisConfig.OpenCache {
@@ -82,7 +77,7 @@ func main() {
 
 	if os.Getenv("env") == "HTTP" {
 		common.Setenv(common.EnvHTTP)
-	}else{
+	} else {
 		common.Setenv(common.EnvLAMBDA)
 	}
 

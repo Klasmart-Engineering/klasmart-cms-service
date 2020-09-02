@@ -18,14 +18,5 @@ func GetProgramServiceProvider() (ProgramServiceProvider, error) {
 type mockProgramService struct{}
 
 func (s mockProgramService) BatchGet(ctx context.Context, ids []string) ([]*Program, error) {
-	return []*Program{
-		{
-			ID:   "Program-1",
-			Name: "Program1",
-		},
-		{
-			ID:   "Program-2",
-			Name: "Program2",
-		},
-	}, nil
+	return GetMockData().Program, nil
 }

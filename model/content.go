@@ -294,6 +294,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		return "", err
 	}
 
+	da.GetContentRedis().CleanContentCache(ctx, []string{pid})
 	return pid, nil
 }
 
@@ -411,11 +412,35 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		return "", err
 	}
 	if content.ContentType.IsAsset() {
+		log.Info(ctx, "asset handle", log.String("cid", cid))
 		return "", ErrInvalidContentType
 	}
 
 	if content.PublishStatus != entity.ContentStatusPublished {
+		log.Info(ctx, "invalid publish status", log.String("cid", cid))
 		return "", ErrInvalidPublishStatus
+	}
+
+	//被自己锁住，则返回锁定id
+	if content.LockedBy == user.UserID {
+		_, data, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+			SourceID: cid,
+		})
+		if err != nil{
+			log.Info(ctx, "search source content failed", log.String("cid", cid))
+			return "", err
+		}
+		if len(data) < 1 {
+			//被自己锁定且找不到content
+			log.Info(ctx, "no content in source content", log.String("cid", cid))
+			return "", ErrNoContent
+		}
+		if data[0].PublishStatus != entity.ContentStatusRejected && data[0].PublishStatus != entity.ContentStatusDraft {
+			log.Info(ctx, "invalid locked content status", log.String("lock cid", data[0].ID), log.String("status", string(data[0].PublishStatus)), log.String("cid", cid))
+			return "", ErrInvalidLockedContentPublishStatus
+		}
+		//找到data
+		return data[0].ID, nil
 	}
 
 	//更新锁定状态
@@ -610,6 +635,8 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 		return "", err
 	}
 
+	da.GetContentRedis().CleanContentCache(ctx, []string{id, obj.ID})
+
 	return id, nil
 }
 
@@ -692,6 +719,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 		return nil, ErrParseContentDataDetailsFailed
 	}
 	content.Data = filledContentData
+
 
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, []*entity.ContentInfo{content}, user)
 	if err != nil {
@@ -822,7 +850,7 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 
 func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	var err error
-	var contentData *entity.Content
+	var contentObj *entity.Content
 
 	cachedContent := da.GetContentRedis().GetContentCacheById(ctx, cid)
 	if cachedContent != nil {
@@ -833,27 +861,44 @@ func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBCon
 			if latestCachedContent != nil {
 				return latestCachedContent, nil
 			} else {
-				contentData = &entity.Content{LatestID: cachedContent.LatestID}
+				contentObj = &entity.Content{LatestID: cachedContent.LatestID}
 			}
 		}
 	}
 
-	if contentData == nil {
-		contentData, err = da.GetContentDA().GetContentById(ctx, tx, cid)
+	if contentObj == nil {
+		contentObj, err = da.GetContentDA().GetContentById(ctx, tx, cid)
 		if err != nil {
 			return nil, err
 		}
 	}
+	//补全相关内容
+	contentData, err := contentdata.CreateContentData(ctx, contentObj.ContentType, contentObj.Data)
+	if err != nil {
+		return nil, err
+	}
+	err = contentData.PrepareResult(ctx)
+	if err != nil {
+		log.Error(ctx, "can't get contentdata for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
+	}
+	filledContentData, err := contentData.Marshal(ctx)
+	if err != nil {
+		log.Error(ctx, "can't marshal contentdata for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
+	}
+	contentObj.Data = filledContentData
 
-	if contentData.LatestID != "" {
-		newContentData, err := da.GetContentDA().GetContentById(ctx, tx, contentData.LatestID)
+
+	if contentObj.LatestID != "" {
+		newContentData, err := da.GetContentDA().GetContentById(ctx, tx, contentObj.LatestID)
 		if err != nil {
 			return nil, err
 		}
-		contentData = newContentData
+		contentObj = newContentData
 	}
 
-	content, err := contentdata.ConvertContentObj(ctx, contentData)
+	content, err := contentdata.ConvertContentObj(ctx, contentObj)
 	if err != nil {
 		return nil, err
 	}

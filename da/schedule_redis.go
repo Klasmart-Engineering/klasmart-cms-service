@@ -109,7 +109,7 @@ func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []strin
 }
 func (r *ScheduleRedisDA) GetScheduleCacheByCondition(ctx context.Context, condition dbo.Conditions) ([]*entity.ScheduleListView, error) {
 	if !config.Get().RedisConfig.OpenCache {
-		return nil, errors.New("not open cache")
+		return nil, errors.New("not open cache ")
 	}
 	filed := r.conditionHash(condition)
 	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixScheduleCondition, filed).Result()
@@ -122,9 +122,9 @@ func (r *ScheduleRedisDA) GetScheduleCacheByCondition(ctx context.Context, condi
 		return nil, err
 	}
 	var result []*entity.ScheduleListView
-	err = json.Unmarshal([]byte(res), result)
+	err = json.Unmarshal([]byte(res), &result)
 	if err != nil {
-		log.Error(ctx, "unmarshal schedule error",
+		log.Error(ctx, "unmarshal schedule error ",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("filed", filed),

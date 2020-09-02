@@ -15,7 +15,6 @@ func (s Server) registeRoute() {
 	s.engine.NoRoute(func(c *gin.Context) {
 		c.AbortWithError(http.StatusNotFound, errRouteNotFound)
 	})
-
 	s.engine.GET("/v1/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
 	})
@@ -79,7 +78,6 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules/:id", MustLogin, s.getScheduleByID)
 		schedules.GET("/schedules", MustLogin, s.querySchedule)
 		schedules.GET("/schedules_time_view", MustLogin, s.getScheduleTimeView)
-		//schedules.GET("/schedule_attachment_upload/:ext", MustLogin, s.getAttachmentUploadPath)
 	}
 
 }

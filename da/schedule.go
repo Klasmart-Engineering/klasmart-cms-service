@@ -133,13 +133,14 @@ func GetScheduleDA() IScheduleDA {
 }
 
 type ScheduleCondition struct {
-	OrgID            sql.NullString
-	StartAtGe        sql.NullInt64
-	EndAtLe          sql.NullInt64
-	TeacherID        sql.NullString
-	TeacherIDs       entity.NullStrings
-	StartAndEndRange []sql.NullInt64
-	//ScheduleIDs entity.NullStrings
+	OrgID                    sql.NullString
+	StartAtGe                sql.NullInt64
+	EndAtLe                  sql.NullInt64
+	TeacherID                sql.NullString
+	TeacherIDs               entity.NullStrings
+	StartAndEndRange         []sql.NullInt64
+	StartAndEndTimeViewRange []sql.NullInt64
+	LessonPlanID             sql.NullString
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -160,11 +161,18 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "start_at >= ?")
 		params = append(params, c.StartAtGe.Int64)
 	}
+
 	if len(c.StartAndEndRange) == 2 {
 		startRange := c.StartAndEndRange[0]
 		endRange := c.StartAndEndRange[1]
 		wheres = append(wheres, "((start_at <= ? and end_at >= ?) or (start_at <= ? and end_at >= ?))")
 		params = append(params, startRange.Int64, startRange.Int64, endRange.Int64, endRange.Int64)
+	}
+	if len(c.StartAndEndTimeViewRange) == 2 {
+		startRange := c.StartAndEndTimeViewRange[0]
+		endRange := c.StartAndEndTimeViewRange[1]
+		wheres = append(wheres, "((start_at >= ? and start_at <= ?) or (end_at >= ? and end_at <= ?))")
+		params = append(params, startRange.Int64, endRange.Int64, startRange.Int64, endRange.Int64)
 	}
 	if c.EndAtLe.Valid {
 		wheres = append(wheres, "end_at <= ?")
@@ -181,6 +189,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 			constant.TableNameScheduleTeacher, c.TeacherIDs.SQLPlaceHolder(), constant.TableNameSchedule, constant.TableNameScheduleTeacher)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeacherIDs.ToInterfaceSlice()...)
+	}
+	if c.LessonPlanID.Valid {
+		wheres = append(wheres, "lesson_plan_id = ?")
+		params = append(params, c.LessonPlanID.String)
 	}
 
 	if c.DeleteAt.Valid {
