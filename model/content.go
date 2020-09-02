@@ -58,6 +58,26 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "update source content failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
+
+	//更新所有latestID为sourceContent的Content
+	_, oldContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+		LatestID: sourceContent.ID,
+	})
+	if err != nil {
+		log.Error(ctx, "update old content failed", log.Err(err), log.String("SourceID", sourceContent.ID))
+		return ErrUpdateContentFailed
+	}
+	for i := range oldContents {
+		oldContents[i].LockedBy = "-"
+		oldContents[i].PublishStatus = entity.ContentStatusHidden
+		oldContents[i].LatestID = contentId
+		err = da.GetContentDA().UpdateContent(ctx, tx, oldContents[i].ID, *oldContents[i])
+		if err != nil {
+			log.Error(ctx, "update old content failed", log.Err(err), log.String("OldID", oldContents[i].ID))
+			return ErrUpdateContentFailed
+		}
+	}
+
 	return nil
 }
 

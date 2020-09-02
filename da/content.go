@@ -76,6 +76,7 @@ type ContentCondition struct {
 	Author        string   `json:"author"`
 	Org           string   `json:"org"`
 	SourceID	string `json:"source_id"`
+	LatestID	string `json:"latest_id"`
 
 	OrderBy ContentOrderBy `json:"order_by"`
 	Pager   utils.Pager
@@ -118,6 +119,12 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.SourceID)
 	}
+	if s.LatestID != "" {
+		condition := " latest_id = ?"
+		conditions = append(conditions, condition)
+		params = append(params, s.LatestID)
+	}
+
 	if s.Author != "" {
 		condition := " author = ? "
 		conditions = append(conditions, condition)
