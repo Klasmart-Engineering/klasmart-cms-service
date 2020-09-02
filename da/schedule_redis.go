@@ -114,7 +114,7 @@ func (r *ScheduleRedisDA) GetScheduleCacheByCondition(ctx context.Context, condi
 	filed := r.conditionHash(condition)
 	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixScheduleCondition, filed).Result()
 	if err != nil {
-		log.Error(ctx, "Can't get schedule condition from cache",
+		log.Error(ctx, "Can't get schedule condition from cache ",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("filed", filed),
