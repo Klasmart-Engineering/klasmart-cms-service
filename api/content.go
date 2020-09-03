@@ -43,8 +43,6 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case entity.ErrRequirePublishScope:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
-	case entity.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
@@ -99,7 +97,7 @@ func (s *Server) publishContent(c *gin.Context) {
 	}
 }
 
-func (s *Server) GetContent(c *gin.Context) {
+func (s *Server) getContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	cid := c.Param("content_id")

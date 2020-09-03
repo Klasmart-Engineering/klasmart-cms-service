@@ -52,7 +52,7 @@ func (s Server) registeRoute() {
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", MustLogin, s.createContent)
-		content.GET("/contents/:content_id", MustLogin, s.GetContent)
+		content.GET("/contents/:content_id", MustLogin, s.getContent)
 		content.PUT("/contents/:content_id", MustLogin, s.updateContent)
 		content.PUT("/contents/:content_id/lock", MustLogin, s.lockContent)
 		content.PUT("/contents/:content_id/publish", MustLogin, s.publishContent)
