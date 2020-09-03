@@ -133,6 +133,7 @@ func GetScheduleDA() IScheduleDA {
 }
 
 type ScheduleCondition struct {
+	ID                       sql.NullString
 	OrgID                    sql.NullString
 	StartAtGe                sql.NullInt64
 	EndAtLe                  sql.NullInt64
@@ -151,6 +152,11 @@ type ScheduleCondition struct {
 func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	var wheres []string
 	var params []interface{}
+
+	if c.ID.Valid {
+		wheres = append(wheres, "id = ?")
+		params = append(params, c.ID.String)
+	}
 
 	if c.OrgID.Valid {
 		wheres = append(wheres, "org_id = ?")

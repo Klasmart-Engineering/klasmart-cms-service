@@ -31,6 +31,7 @@ type IScheduleModel interface {
 	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
+	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -671,6 +672,22 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 	condition := &da.ScheduleCondition{
 		LessonPlanID: sql.NullString{
 			String: lessonPlanID,
+			Valid:  true,
+		},
+	}
+	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
+	if err != nil {
+		log.Error(ctx, "get schedule count by condition error", log.Err(err), log.Any("condition", condition))
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool, error) {
+	condition := &da.ScheduleCondition{
+		ID: sql.NullString{
+			String: id,
 			Valid:  true,
 		},
 	}
