@@ -59,16 +59,18 @@ func (s Server) registeRoute() {
 		content.PUT("/contents_review/:content_id/approve", MustLogin, s.approve)
 		content.PUT("/contents_review/:content_id/reject", MustLogin, s.reject)
 		content.DELETE("/contents/:content_id", MustLogin, s.deleteContent)
-		content.GET("/contents", MustLogin, s.QueryContent)
-		content.GET("/contents_dynamo", MustLogin, s.QueryDynamoContent)
-		content.GET("/contents_private", MustLogin, s.QueryPrivateContent)
-		content.GET("/contents_pending", MustLogin, s.QueryPendingContent)
+		content.GET("/contents", MustLogin, s.queryContent)
+		content.GET("/contents_dynamo", MustLogin, s.queryDynamoContent)
+		content.GET("/contents_private", MustLogin, s.queryPrivateContent)
+		content.GET("/contents_pending", MustLogin, s.queryPendingContent)
+
+		content.GET("/contents_statistics", MustLogin, s.contentDataCount)
 
 		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)
 
-		content.GET("/contents_resources", MustLogin, s.GetUploadPath)
-		content.GET("/contents_resources/:resource_id", MustLogin, s.GetPath)
+		content.GET("/contents_resources", MustLogin, s.getUploadPath)
+		content.GET("/contents_resources/:resource_id", MustLogin, s.getPath)
 	}
 	schedules := s.engine.Group("/v1")
 	{

@@ -226,7 +226,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 	}
 }
 
-func (s *Server) QueryDynamoContent(c *gin.Context) {
+func (s *Server) queryDynamoContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
@@ -258,7 +258,19 @@ func (s *Server) QueryDynamoContent(c *gin.Context) {
 
 }
 
-func (s *Server) QueryContent(c *gin.Context) {
+func (s *Server) contentDataCount(c *gin.Context) {
+	ctx := c.Request.Context()
+	cid := c.Param("content_id")
+	res, err := model.GetContentModel().ContentDataCount(ctx, dbo.MustGetDB(ctx), cid)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, res)
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	condition := queryCondition(c, op)
@@ -274,7 +286,7 @@ func (s *Server) QueryContent(c *gin.Context) {
 	}
 }
 
-func (s *Server) QueryPrivateContent(c *gin.Context) {
+func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
@@ -291,7 +303,7 @@ func (s *Server) QueryPrivateContent(c *gin.Context) {
 	}
 }
 
-func (s *Server) QueryPendingContent(c *gin.Context) {
+func (s *Server) queryPendingContent(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	op := GetOperator(c)

@@ -339,6 +339,51 @@
         }
       }
     },
+    "/contents_statistics": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Approve a content review by content_id",
+        "operationId": "approveContentReview",
+        "responses": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content statistics info",
+                "subcontent_count": {
+                  "total": {
+                    "type": "integer",
+                    "description": "sub content count"
+                  },
+                  "outcomes_count": {
+                    "type": "integer",
+                    "description": "outcomes count"
+                  }
+                }
+              }
+            }
+          }
+        },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/contents_review/{content_id}/reject": {
       "put": {
         "tags": [
@@ -2539,8 +2584,7 @@
           }
         }
       }
-    }
-  },
+    },
   "components": {
     "securitySchemes": {
       "bearerAuth": {
@@ -2620,6 +2664,16 @@
                 "type": "string",
                 "description": "reject reason",
                 "example": "reject reason"
+              },
+              "outcomes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outcomes id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "developmental": {
                 "type": "array",
@@ -2845,6 +2899,16 @@
                   "type": "string"
                 },
                 "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "outcomes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outcomes id",
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
