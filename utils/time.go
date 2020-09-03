@@ -110,7 +110,7 @@ func TodayZero(now time.Time) time.Time {
 
 // offset:Second
 func GetTimeLocationByOffset(offset int) *time.Location {
-	return time.FixedZone("web/timezone", offset)
+	return time.FixedZone("UTC", offset)
 }
 
 func GetTimeLocationByName(tz string) (*time.Location, error) {
