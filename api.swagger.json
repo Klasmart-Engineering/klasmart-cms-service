@@ -39,6 +39,10 @@
     {
       "name": "tag",
       "description": "asset tag management"
+    },
+    {
+      "name": "learningOutcomes",
+      "description": "learning outcomes management"
     }
   ],
   "paths": {
@@ -2543,61 +2547,51 @@
     "/learning_outcomes": {
       "get": {
         "tags": [
-          "content"
+          "learningOutcomes"
         ],
-        "description": "Search content with condition",
-        "operationId": "searchContents",
+        "description": "Search learning outcomes with condition",
+        "operationId": "searchLearningOutcomes",
         "parameters": [
           {
-            "name": "name",
+            "name": "outcome_name",
             "in": "query",
-            "description": "Search content by name",
+            "description": "Search learning outcomes by name",
             "schema": {
               "type": "string",
               "nullable": true
             }
           },
           {
-            "name": "content_type",
+            "name": "description",
             "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "enum":["1", "2", "3"],
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
+            "description": "Search learning outcomes by description",
             "schema": {
               "type": "string",
               "nullable": true
             }
           },
           {
-            "name": "scope",
+            "name": "keyword",
             "in": "query",
-            "description": "Search content by scope",
+            "description": "Search learning outcomes by keyword",
             "schema": {
               "type": "string",
               "nullable": true
             }
           },
           {
-            "name": "author",
+            "name": "shortcode",
             "in": "query",
-            "description": "Search content by author",
+            "description": "Search learning outcomes by shortcode",
             "schema": {
               "type": "string",
               "nullable": true
             }
           },
           {
-            "name": "org",
+            "name": "author_name",
             "in": "query",
-            "description": "Search content by org",
+            "description": "Search learning outcomes by author_name",
             "schema": {
               "type": "string",
               "nullable": true
@@ -2624,18 +2618,14 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "Search order by, default with content_name",
+            "description": "Search order by, default with learning outcome's name",
             "schema": {
               "type": "string",
               "enum": [
-                "id",
-                "-id",
+                "name",
+                "-name",
                 "created_at",
-                "-created_at",
-                "updated_at",
-                "-updated_at",
-                "content_name",
-                "-content_name"
+                "-created_at"
               ],
               "nullable": true
             }
@@ -2648,7 +2638,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "content list",
+                  "description": "outcome list",
                   "properties": {
                     "total": {
                       "type": "integer",
@@ -2657,7 +2647,7 @@
                     "list": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Content"
+                        "$ref": "#/components/schemas/LearningOutcomes"
                       }
                     }
                   }
@@ -2693,11 +2683,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "content info",
+                  "description": "learning outcomes info",
                   "properties": {
-                    "id": {
+                    "outcome_id": {
                       "type": "string",
-                      "description": "content id",
+                      "description": "learning outcome id",
                       "example": "1"
                     }
                   }
@@ -3293,7 +3283,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "content list",
+                  "description": "learning outcome list",
                   "properties": {
                     "total": {
                       "type": "integer",
@@ -4788,17 +4778,25 @@
             "type": "object",
             "description": "Company",
             "properties": {
-              "content_type": {
-                "type": "integer",
-                "format": "int64",
-                "description": "content type",
-                "enum":[1,2,3],
-                "example": 1
-              },
-              "name": {
+              "outcome_name": {
                 "type": "string",
-                "description": "content name",
-                "example": "Content title"
+                "description": "learning outcome name",
+                "example": "Home Audio Recording For Everyone"
+              },
+              "author_id": {
+                "type": "string",
+                "description": "learning outcome author",
+                "example": "123"
+              },
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
+              },
+              "organization_id": {
+                "type": "string",
+                "description": "the top level organization which outcome belongs",
+                "example": "1"
               },
               "program": {
                 "type": "array",
@@ -4865,10 +4863,10 @@
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
               },
-              "suggest_time": {
+              "estimated_time": {
                 "type": "integer",
-                "description": "suggest time",
-                "example": 1
+                "description": "estimated time",
+                "example": 30
               },
               "keywords": {
                 "type": "array",
@@ -4882,28 +4880,8 @@
               },
               "description": {
                 "type": "string",
-                "description": "content description",
-                "example": "Content description"
-              },
-              "thumbnail": {
-                "type": "string",
-                "description": "content thumbnail",
-                "example": "Content thumbnail"
-              },
-              "data": {
-                "type": "string",
-                "description": "content data",
-                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
-              },
-              "extra": {
-                "type": "string",
-                "description": "content extra data",
-                "example": "{\"data\": \"hello\"}"
-              },
-              "publish_scope": {
-                "type": "string",
-                "description": "content publish scope id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "description": "outcome description",
+                "example": "description"
               }
             }
           }
@@ -4930,9 +4908,9 @@
             "type": "object",
             "description": "Company",
             "properties": {
-              "id": {
+              "outcome_ids": {
                 "type": "array",
-                "description": "content id list",
+                "description": "outcome id list",
                 "items": {
                   "type": "string"
                 },
@@ -4948,11 +4926,11 @@
         "allOf": [
           {
             "type": "object",
-            "description": "Lock content response",
+            "description": "Lock learning outcome response",
             "properties": {
-              "id": {
+              "outcome_id": {
                 "type": "string",
-                "description": "content id to edit"
+                "description": "outcome id to edit"
               }
             }
           }
@@ -4964,19 +4942,22 @@
             "type": "object",
             "description": "Company",
             "properties": {
-              "id": {
+              "outcome_id": {
                 "type": "string",
-                "description": "content id",
+                "description": "outcome id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
-              "content_type": {
-                "type": "integer",
-                "format": "int64",
-                "description": "content type",
-                "example": 1,
-                "enum":[1,2,3]
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
               },
-              "name": {
+              "assumed": {
+                "type": "boolean",
+                "description": "learning outcome assumed",
+                "example": "true"
+              },
+              "outcome_name": {
                 "type": "string",
                 "description": "content name",
                 "example": "Content title"
@@ -5000,16 +4981,6 @@
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
-              },
-              "suggest_time": {
-                "type": "integer",
-                "description": "suggest time",
-                "example": 1
-              },
-              "reject_reason": {
-                "type": "string",
-                "description": "reject reason",
-                "example": "reject reason"
               },
               "developmental": {
                 "type": "array",
@@ -5051,6 +5022,16 @@
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
               },
+              "estimated_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 30
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
               "keywords": {
                 "type": "array",
                 "description": "keywords id",
@@ -5066,17 +5047,6 @@
                 "description": "content description",
                 "example": "Content description"
               },
-              "thumbnail": {
-                "type": "string",
-                "description": "content thumbnail",
-                "example": "Content thumbnail"
-              },
-              "version": {
-                "type": "integer",
-                "format": "int64",
-                "description": "content version",
-                "example": 1
-              },
               "source_id": {
                 "type": "string",
                 "description": "content source id",
@@ -5087,19 +5057,7 @@
                 "description": "content locked by others id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
-              "data": {
-                "type": "string",
-                "description": "content data",
-                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
-              },
-              "extra": {
-                "type": "string",
-                "description": "content extra data",
-                "example": {
-                  "data": "hello"
-                }
-              },
-              "author": {
+              "author_id": {
                 "type": "string",
                 "description": "content author id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
@@ -5109,9 +5067,9 @@
                 "description": "content author name",
                 "example": "zhangsan"
               },
-              "org": {
+              "organization_id": {
                 "type": "string",
-                "description": "content org id",
+                "description": "org id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "publish_scope": {
@@ -5126,15 +5084,9 @@
                   "draft",
                   "pending",
                   "published",
-                  "rejected",
-                  "archive"
+                  "rejected"
                 ],
                 "example": "published"
-              },
-              "content_type_name": {
-                "type": "string",
-                "description": "content type name",
-                "example": "lesson"
               },
               "program_name": {
                 "type": "array",
@@ -5197,14 +5149,14 @@
                   "age"
                 ]
               },
-              "org_name": {
+              "organization_name": {
                 "type": "string",
                 "description": "org name",
                 "example": "school1"
               },
               "created_at": {
                 "type": "integer",
-                "description": "content create time",
+                "description": "outcome create time",
                 "example": 123
               }
             }
