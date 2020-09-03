@@ -3372,6 +3372,10 @@
                         "type": "object",
                         "description": "assessment view list",
                         "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "assessment id"
+                          },
                           "title": {
                             "type": "string",
                             "description": "assessment title"
@@ -3587,6 +3591,10 @@
                   "type": "object",
                   "description": "assessment detail",
                   "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "assessment id"
+                    },
                     "title": {
                       "type": "string",
                       "description": "assessment title"
@@ -3678,21 +3686,11 @@
                             "format": "bool",
                             "description": "assumed"
                           },
-                          "attendances": {
+                          "attendance_ids": {
                             "type": "array",
-                            "description": "attendances",
+                            "description": "attendance ids",
                             "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "description": "attendance id"
-                                },
-                                "name": {
-                                  "type": "string",
-                                  "description": "attendance name"
-                                }
-                              }
+                              "type": "string"
                             }
                           }
                         }
@@ -3751,46 +3749,52 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "schedule_id": {
+                  "action": {
                     "type": "string",
-                    "description": "schedule id"
+                    "description": "update assessment action",
+                    "enum": [
+                      "save",
+                      "complete"
+                    ]
                   },
-                  "class_name": {
+                  "id": {
                     "type": "string",
-                    "description": "class name"
+                    "description": "assessment id"
                   },
-                  "lesson_name": {
+                  "status": {
                     "type": "string",
-                    "description": "lesson_name"
+                    "description": "assessment status",
+                    "enum": [
+                      "in_progress",
+                      "complete"
+                    ]
                   },
                   "attendance_ids": {
                     "type": "array",
-                    "description": "attendances ids",
+                    "description": "attendance ids",
                     "items": {
                       "type": "string"
                     }
                   },
-                  "program_id": {
-                    "type": "string",
-                    "description": "program id"
-                  },
-                  "subject_id": {
-                    "type": "string",
-                    "description": "subject id"
-                  },
-                  "teacher_id": {
-                    "type": "string",
-                    "description": "teacher id"
-                  },
-                  "class_length": {
-                    "type": "integer",
-                    "format": "int",
-                    "description": "class length"
-                  },
-                  "class_end_time": {
-                    "type": "integer",
-                    "format": "int64",
-                    "description": "class end time (unix seconds)"
+                  "outcome_attendance_maps": {
+                    "type": "array",
+                    "description": "outcome attendance maps",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "outcome_id": {
+                          "type": "string",
+                          "description": "outcome id"
+                        },
+                        "attendance_ids": {
+                          "type": "array",
+                          "description": "attendance ids",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }

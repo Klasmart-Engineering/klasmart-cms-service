@@ -5,3 +5,7 @@ type OutcomeAttendance struct {
 	OutcomeID    string `json:"outcome_id"`
 	AttendanceID string `json:"attendance_id"`
 }
+
+func (OutcomeAttendance) TableName() string {
+	return "outcomes_attendances"
+}
