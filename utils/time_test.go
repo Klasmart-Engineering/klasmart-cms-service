@@ -11,6 +11,8 @@ func TestDemo(t *testing.T) {
 	time2 := BeginOfDayByTime(time.Now(), loc)
 	fmt.Println(time2.Unix())
 	fmt.Println(time.Unix(time2.Unix(), 0).In(loc))
+	loc = GetTimeLocationByOffset(8 * 60 * 60)
+	fmt.Println(time.Now().In(loc))
 }
 
 func TestTimeUtil_FindWeekTimeRange(t *testing.T) {

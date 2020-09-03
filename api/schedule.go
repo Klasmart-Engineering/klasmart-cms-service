@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"errors"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -22,7 +21,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	data := entity.ScheduleUpdateView{}
 	if err := c.ShouldBind(&data); err != nil {
 		log.Info(ctx, "update schedule: should bind body failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
@@ -31,7 +30,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	if !data.EditType.Valid() {
 		errMsg := "update schedule: invalid edit type"
 		log.Info(ctx, errMsg, log.String("edit_type", string(data.EditType)))
-		c.JSON(http.StatusBadRequest, errMsg)
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	//if strings.TrimSpace(data.Attachment) != "" {
@@ -60,11 +59,11 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		)
 		switch err {
 		case constant.ErrInvalidArgs:
-			c.JSON(http.StatusBadRequest, err.Error())
+			c.JSON(http.StatusBadRequest, L(Unknown))
 		case constant.ErrConflict:
-			c.JSON(http.StatusConflict, err.Error())
+			c.JSON(http.StatusConflict, L(Unknown))
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
-			c.JSON(http.StatusNotFound, err.Error())
+			c.JSON(http.StatusNotFound, L(Unknown))
 		default:
 			c.JSON(http.StatusInternalServerError, err.Error())
 		}
@@ -94,9 +93,9 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		)
 		switch err {
 		case constant.ErrInvalidArgs:
-			c.JSON(http.StatusBadRequest, err.Error())
+			c.JSON(http.StatusBadRequest, L(Unknown))
 		case dbo.ErrRecordNotFound:
-			c.JSON(http.StatusNotFound, err.Error())
+			c.JSON(http.StatusNotFound, L(Unknown))
 		default:
 			c.JSON(http.StatusInternalServerError, err.Error())
 		}
@@ -111,7 +110,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
 		log.Info(ctx, "add schedule: should bind body failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
@@ -135,7 +134,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	if err == constant.ErrFileNotFound {
 		log.Info(ctx, "add schedule: verify data failed,attachment not found", log.Err(err), log.Any("requestData", data))
-		c.JSON(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	if err == constant.ErrConflict {
@@ -175,14 +174,14 @@ func (s *Server) querySchedule(c *gin.Context) {
 			log.Info(ctx, "querySchedule:invalid start_at params",
 				log.String("startAt", startAtStr),
 				log.Any("condition", condition))
-			c.JSON(http.StatusBadRequest, "invalid 'start_at' params")
+			c.JSON(http.StatusBadRequest, L(Unknown))
 			return
 		}
 		offsetStr := c.Query("time_zone_offset")
 		offset, err := strconv.Atoi(offsetStr)
 		if err != nil {
 			log.Info(ctx, "querySchedule: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
-			c.JSON(http.StatusBadRequest, errors.New("time_zone_offset is required"))
+			c.JSON(http.StatusBadRequest, L(Unknown))
 			return
 		}
 		loc := utils.GetTimeLocationByOffset(offset)
@@ -215,7 +214,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 			log.Info(ctx, "querySchedule:teacher info not found",
 				log.String("teacherName", teacherName),
 				log.Any("condition", condition))
-			c.JSON(http.StatusBadRequest, "teacher info not found")
+			c.JSON(http.StatusBadRequest, L(Unknown))
 			return
 		}
 		teacherIDs := make([]string, len(teachers))
@@ -255,14 +254,14 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	timeAt, err := strconv.ParseInt(timeAtStr, 10, 64)
 	if err != nil {
 		log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("time_at", timeAtStr))
-		c.JSON(http.StatusBadRequest, errors.New("time_at is required"))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	offsetStr := c.Query("time_zone_offset")
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
 		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
-		c.JSON(http.StatusBadRequest, errors.New("time_zone_offset is required"))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	loc := utils.GetTimeLocationByOffset(offset)
@@ -285,7 +284,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		start, end = timeUtil.FindMonthRange()
 	default:
 		log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
-		c.JSON(http.StatusBadRequest, errors.New("view_type is required"))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	startAndEndTimeViewRange := make([]sql.NullInt64, 2)

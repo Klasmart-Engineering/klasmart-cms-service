@@ -2128,15 +2128,14 @@
             }
           },
           {
-            "name": "time_zone",
+            "name": "time_zone_offset",
             "in": "query",
-            "description": "time zone",
-            "example": "Asia/Shanghai",
+            "description": "time zone offset(second)",
+            "example": "28800",
             "schema": {
-              "type": "string",
-              "format": "string",
-              "nullable": true,
-              "default": ""
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
             },
             "required": true,
             "allowEmptyValue": false
@@ -2336,15 +2335,14 @@
             "allowEmptyValue": false
           },
           {
-            "name": "time_zone",
+            "name": "time_zone_offset",
             "in": "query",
-            "description": "time zone",
-            "example": "Asia/Shanghai",
+            "description": "time zone offset(second)",
+            "example": "28800",
             "schema": {
-              "type": "string",
-              "format": "string",
-              "nullable": true,
-              "default": ""
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
             },
             "required": true,
             "allowEmptyValue": false
@@ -3525,9 +3523,9 @@
             "type": "boolean",
             "description": "all_day flag"
           },
-          "time_zone": {
-            "type": "string",
-            "description": "time zone"
+          "time_zone_offset": {
+            "type": "integer",
+            "description": "time zone offset(second)"
           }
         }
       },
@@ -3775,9 +3773,9 @@
             "type": "boolean",
             "description": "all_day flag"
           },
-          "time_zone": {
-            "type": "string",
-            "description": "time zone"
+          "time_zone_offset": {
+            "type": "integer",
+            "description": "time zone offset(second)"
           }
         }
       },

@@ -108,6 +108,7 @@ func TodayZero(now time.Time) time.Time {
 	return now.Add(duration).Truncate(time.Hour * 24).Add(-duration)
 }
 
+// offset:Second
 func GetTimeLocationByOffset(offset int) *time.Location {
 	return time.FixedZone("web/timezone", offset)
 }
