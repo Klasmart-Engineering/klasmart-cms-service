@@ -147,7 +147,6 @@ type AddAssessmentCommand struct {
 	TeacherID     string   `json:"teacher_id"`
 	ClassLength   int      `json:"class_length"`
 	ClassEndTime  int64    `json:"class_end_time"`
-	CompleteTime  int64    `json:"complete_time"`
 }
 
 type UpdateAssessmentCommand struct {
