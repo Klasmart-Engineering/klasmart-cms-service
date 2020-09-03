@@ -234,6 +234,17 @@ func (s *scheduleModel) Update(ctx context.Context, tx *dbo.DBContext, operator 
 			return err
 		}
 		viewdata.RepeatID = schedule.RepeatID
+		if viewdata.EditType == entity.ScheduleEditWithFollowing && !viewdata.IsRepeat {
+			viewdata.IsRepeat = true
+			var repeat entity.RepeatOptions
+			if err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat); err != nil {
+				log.Error(ctx, "update schedule: json unmarshal failed",
+					log.Err(err),
+					log.Any("viewdata", viewdata),
+				)
+			}
+			viewdata.Repeat = repeat
+		}
 		id, err = s.Add(ctx, tx, operator, &viewdata.ScheduleAddView, location)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
@@ -357,10 +368,11 @@ func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition 
 	result := make([]*entity.ScheduleListView, len(scheduleList))
 	for i, item := range scheduleList {
 		result[i] = &entity.ScheduleListView{
-			ID:      item.ID,
-			Title:   item.Title,
-			StartAt: item.StartAt,
-			EndAt:   item.EndAt,
+			ID:       item.ID,
+			Title:    item.Title,
+			StartAt:  item.StartAt,
+			EndAt:    item.EndAt,
+			IsRepeat: item.RepeatID != "",
 		}
 	}
 	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)
@@ -604,7 +616,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, tx *dbo.DBContext, id strin
 		DueAt:       schedule.DueAt,
 		Description: schedule.Description,
 		Version:     schedule.ScheduleVersion,
-		RepeatID:    schedule.RepeatID,
+		IsRepeat:    schedule.RepeatID != "",
 	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo

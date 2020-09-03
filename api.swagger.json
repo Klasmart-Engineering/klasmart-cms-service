@@ -2128,6 +2128,19 @@
             }
           },
           {
+            "name": "time_zone_offset",
+            "in": "query",
+            "description": "time zone offset(second)",
+            "example": "28800",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "required": true,
+            "allowEmptyValue": false
+          },
+          {
             "name": "start_at",
             "in": "query",
             "description": "Search schedules by start_at",
@@ -2317,6 +2330,19 @@
               "format": "string",
               "nullable": true,
               "default": ""
+            },
+            "required": true,
+            "allowEmptyValue": false
+          },
+          {
+            "name": "time_zone_offset",
+            "in": "query",
+            "description": "time zone offset(second)",
+            "example": "28800",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
             },
             "required": true,
             "allowEmptyValue": false
@@ -3254,6 +3280,10 @@
           "end_at": {
             "type": "integer",
             "description": "schedule end time, timestamp"
+          },
+          "is_repeat":{
+            "type": "boolean",
+            "description": "If true, schedule is repeat"
           }
         }
       },
@@ -3492,6 +3522,10 @@
           "is_all_day": {
             "type": "boolean",
             "description": "all_day flag"
+          },
+          "time_zone_offset": {
+            "type": "integer",
+            "description": "time zone offset(second)"
           }
         }
       },
@@ -3738,6 +3772,10 @@
           "is_all_day": {
             "type": "boolean",
             "description": "all_day flag"
+          },
+          "time_zone_offset": {
+            "type": "integer",
+            "description": "time zone offset(second)"
           }
         }
       },
@@ -3967,6 +4005,10 @@
           "is_all_day": {
             "type": "boolean",
             "description": "all_day flag"
+          },
+          "is_repeat":{
+            "type": "boolean",
+            "description": "If true, schedule is repeat"
           }
         }
       },

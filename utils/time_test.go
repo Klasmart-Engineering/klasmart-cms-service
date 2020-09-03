@@ -11,6 +11,9 @@ func TestDemo(t *testing.T) {
 	time2 := BeginOfDayByTime(time.Now(), loc)
 	fmt.Println(time2.Unix())
 	fmt.Println(time.Unix(time2.Unix(), 0).In(loc))
+	loc = GetTimeLocationByOffset(8 * 60 * 60)
+	fmt.Println(time.Now().In(loc))
+	fmt.Println(time.Now().In(loc).Zone())
 }
 
 func TestTimeUtil_FindWeekTimeRange(t *testing.T) {
@@ -29,8 +32,8 @@ func TestTimeUtil_FindWeekTimeRange(t *testing.T) {
 		{targetTime: tm3.Unix()},
 	}
 	for _, item := range testData {
-		timeUtil := TimeUtil{TimeStamp: item.targetTime}
-		start, end := timeUtil.FindWeekTimeRangeFormat(time.Local, Second)
+		timeUtil := NewTimeUtil(item.targetTime, time.Local)
+		start, end := timeUtil.FindWeekTimeRangeFormat(Second)
 		fmt.Println("start:", start, "end:", end)
 	}
 }
@@ -50,8 +53,8 @@ func TestTimeUtil_FindWorkWeekTimeRange(t *testing.T) {
 		{targetTime: tm3.Unix()},
 	}
 	for _, item := range testData {
-		timeUtil := TimeUtil{TimeStamp: item.targetTime}
-		start, end := timeUtil.FindWorkWeekTimeRangeFormat(time.Local, Second)
+		timeUtil := NewTimeUtil(item.targetTime, time.Local)
+		start, end := timeUtil.FindWorkWeekTimeRangeFormat(Second)
 		fmt.Println("start:", start, "end:", end)
 	}
 }
@@ -72,14 +75,14 @@ func TestTimeUtil_FindMonthRange(t *testing.T) {
 		{targetTime: tm3.Unix()},
 	}
 	for _, item := range testData {
-		timeUtil := TimeUtil{TimeStamp: item.targetTime}
-		start, end := timeUtil.FindMonthRangeFormat(time.Local, Second)
+		timeUtil := NewTimeUtil(item.targetTime, time.Local)
+		start, end := timeUtil.FindMonthRangeFormat(Second)
 		fmt.Println("start:", start, "end:", end)
 	}
 }
 
 func TestTodayZero(t *testing.T) {
-	loc, _ := time.LoadLocation("America/Los_Angeles")
+	loc, _ := time.LoadLocation("Asia/Shanghai")
 	t2 := TodayZero(time.Now().In(loc))
 	fmt.Println(t2)
 }
