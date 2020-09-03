@@ -17,10 +17,13 @@ type IOutcomeModel interface {
 
 	PublishLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, scope string, operator *entity.Operator) error
 	BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, scope string, operator *entity.Operator) error
-	BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator)
+	BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) error
 
 	SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
 	SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
+
+	GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
+	GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
 }
 
 type OutcomeModel struct {
@@ -54,7 +57,7 @@ func (o OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBCont
 	panic("implement me")
 }
 
-func (o OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) {
+func (o OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) error {
 	panic("implement me")
 }
 
@@ -63,5 +66,13 @@ func (o OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBConte
 }
 
 func (o OutcomeModel) SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
+	panic("implement me")
+}
+
+func (o OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error) {
+	panic("implement me")
+}
+
+func (o OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error) {
 	panic("implement me")
 }
