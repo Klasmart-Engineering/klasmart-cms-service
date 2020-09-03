@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func (s *Server) updateSchedule(c *gin.Context) {
@@ -26,12 +25,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
-	loc, err := s.getLocation(c, data.TimeZone)
-	if err != nil {
-		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
-		c.JSON(http.StatusBadRequest, err.Error())
-		return
-	}
+	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
+	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", data.TimeZoneOffset))
 	data.ID = id
 	if !data.EditType.Valid() {
 		errMsg := "update schedule: invalid edit type"
@@ -119,12 +114,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
-	loc, err := s.getLocation(c, data.TimeZone)
-	if err != nil {
-		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
-		c.JSON(http.StatusBadRequest, err.Error())
-		return
-	}
+	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
+	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", data.TimeZoneOffset))
 	data.OrgID = op.OrgID
 
 	if data.IsAllDay {
@@ -187,12 +178,15 @@ func (s *Server) querySchedule(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, "invalid 'start_at' params")
 			return
 		}
-		loc, err := s.getLocation(c, c.Query("time_zone"))
+		offsetStr := c.Query("time_zone_offset")
+		offset, err := strconv.Atoi(offsetStr)
 		if err != nil {
-			log.Info(ctx, "update schedule: get time zone error", log.Err(err))
-			c.JSON(http.StatusBadRequest, err.Error())
+			log.Info(ctx, "querySchedule: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
+			c.JSON(http.StatusBadRequest, errors.New("time_zone_offset is required"))
 			return
 		}
+		loc := utils.GetTimeLocationByOffset(offset)
+		log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", offset))
 		timeUtil := utils.NewTimeUtil(startAt, loc)
 		startAt = timeUtil.BeginOfDayByTimeStamp().Unix()
 		condition.StartAtGe = sql.NullInt64{
@@ -246,26 +240,6 @@ func (s *Server) querySchedule(c *gin.Context) {
 	})
 }
 
-func (s *Server) getLocation(c *gin.Context, tz string) (*time.Location, error) {
-	if strings.TrimSpace(tz) == "" {
-		log.Info(c.Request.Context(), "getLocation: time zone is empty")
-		return nil, errors.New("time_zone is require")
-	}
-	loc, err := time.LoadLocation(tz)
-	if err != nil {
-		log.Info(c.Request.Context(), "getLocation: load location failed",
-			log.Err(err),
-			log.String("time_zone", tz),
-		)
-		return nil, err
-	}
-	log.Debug(c.Request.Context(), "getLocation: time location info",
-		log.String("time_zone", tz),
-		log.Any("location", loc),
-	)
-	return loc, nil
-}
-
 const (
 	ViewTypeDay      = "day"
 	ViewTypeWorkweek = "workWeek"
@@ -284,12 +258,15 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errors.New("time_at is required"))
 		return
 	}
-	loc, err := s.getLocation(c, c.Query("time_zone"))
+	offsetStr := c.Query("time_zone_offset")
+	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
-		log.Info(ctx, "update schedule: get time zone error", log.Err(err))
-		c.JSON(http.StatusBadRequest, err.Error())
+		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
+		c.JSON(http.StatusBadRequest, errors.New("time_zone_offset is required"))
 		return
 	}
+	loc := utils.GetTimeLocationByOffset(offset)
+	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", offset))
 	timeUtil := utils.NewTimeUtil(timeAt, loc)
 
 	var (

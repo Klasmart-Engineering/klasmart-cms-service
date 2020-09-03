@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"errors"
+	"strings"
 	"time"
 )
 
@@ -104,4 +106,19 @@ func TodayZero(now time.Time) time.Time {
 	_, offset := now.Zone()
 	duration := time.Second * time.Duration(offset)
 	return now.Add(duration).Truncate(time.Hour * 24).Add(-duration)
+}
+
+func GetTimeLocationByOffset(offset int) *time.Location {
+	return time.FixedZone("web/timezone", offset)
+}
+
+func GetTimeLocationByName(tz string) (*time.Location, error) {
+	if strings.TrimSpace(tz) == "" {
+		return nil, errors.New("time_zone is require")
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		return nil, err
+	}
+	return loc, nil
 }
