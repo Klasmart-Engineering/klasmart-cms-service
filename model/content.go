@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -59,6 +58,26 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "update source content failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
+
+	//更新所有latestID为sourceContent的Content
+	_, oldContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+		LatestID: sourceContent.ID,
+	})
+	if err != nil {
+		log.Error(ctx, "update old content failed", log.Err(err), log.String("SourceID", sourceContent.ID))
+		return ErrUpdateContentFailed
+	}
+	for i := range oldContents {
+		oldContents[i].LockedBy = "-"
+		oldContents[i].PublishStatus = entity.ContentStatusHidden
+		oldContents[i].LatestID = contentId
+		err = da.GetContentDA().UpdateContent(ctx, tx, oldContents[i].ID, *oldContents[i])
+		if err != nil {
+			log.Error(ctx, "update old content failed", log.Err(err), log.String("OldID", oldContents[i].ID))
+			return ErrUpdateContentFailed
+		}
+	}
+
 	return nil
 }
 
@@ -106,16 +125,17 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
 	//TODO:Check age, category...
-	if c.Thumbnail != "" {
-		parts := strings.Split(c.Thumbnail, "-")
-		if len(parts) != 2 {
-			return ErrInvalidResourceId
-		}
-		// _, exist := storage.DefaultStorage().ExistFile(ctx, parts[0], parts[1])
-		// if !exist {
-		// 	return ErrResourceNotFound
-		// }
+	err := c.Validate()
+	if err != nil {
+		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
+		return err
 	}
+	err = c.ContentType.Validate()
+	if err != nil {
+		log.Error(ctx, "content type invalid", log.Any("data", c), log.Bool("created", created), log.Err(err))
+		return err
+	}
+
 	return nil
 }
 
@@ -311,6 +331,9 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
 		return err
+	}
+	if content.ContentType.IsAsset() {
+		return ErrInvalidContentType
 	}
 
 	content, err = cm.checkUpdateContent(ctx, tx, content, user)
@@ -553,6 +576,19 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 
+func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.Content) error {
+	if content.PublishStatus == entity.ContentStatusArchive && content.ContentType == entity.ContentTypeLesson{
+		exist, err := GetScheduleModel().ExistScheduleByLessonPlanID(ctx, content.ID)
+		if err != nil{
+			return err
+		}
+		if exist {
+			return ErrDeleteLessonInSchedule
+		}
+	}
+	return nil
+}
+
 func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	if content.Author != user.UserID {
 		return ErrNoAuth
@@ -560,10 +596,15 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	if content.LockedBy != "-" && content.LockedBy != user.UserID {
 		return ErrContentAlreadyLocked
 	}
+	err := cm.checkDeleteContent(ctx, content)
+	if err != nil {
+		log.Error(ctx, "check delete content failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
+		return err
+	}
 
 	obj := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus)
 
-	err := da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
+	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
 	if err != nil {
 		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
 		return err

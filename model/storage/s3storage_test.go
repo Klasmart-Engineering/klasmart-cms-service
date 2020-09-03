@@ -9,10 +9,10 @@ import (
 
 func InitEnv() {
 	os.Setenv("cloud_env", "aws")
-	os.Setenv("storage_bucket", "kidsloop-global-resources-dev")
+	os.Setenv("storage_bucket", "kidsloop-global-resources-test")
 	os.Setenv("storage_region", "ap-northeast-2")
-	os.Setenv("secret_id", "AKIAXGKUAYT2P2IJ2KX7")
-	os.Setenv("secret_key", "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")
+	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAXGKUAYT2P2IJ2KX7")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "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")
 	os.Setenv("storage_accelerate", "true")
 	os.Setenv("db_env", "mysql")
 	os.Setenv("cdn_open", "true")
@@ -36,9 +36,9 @@ func TestS3Storage_ExitsFile(t *testing.T) {
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
 
-	_, ret := storage.ExistFile(context.Background(), "asset", "5f225eeee763b300cf63cb901.jpg")
+	_, ret := storage.ExistFile(context.Background(), "thumbnail", "5f48815e9be1b049508ccb2c.jpg")
 	t.Log(ret)
-	_, ret = storage.ExistFile(context.Background(), "asset", "5f225eeee763b300cf63cb90.jpg")
+	_, ret = storage.ExistFile(context.Background(), "thumbnail", "5f48815e9be1b049508ccb2b.jpg")
 	t.Log(ret)
 }
 
@@ -46,7 +46,22 @@ func TestCDNSignature(t *testing.T) {
 	InitEnv()
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
-	path, err := storage.GetFileTempPath(context.Background(), "ESL/Songs", "abby_cadabra_720p.mp4")
+	path, err := storage.GetFileTempPath(context.Background(), ThumbnailStoragePartition, "abby_cadabra_720p.mp4")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(path)
+}
+
+
+
+func TestS3Storage_GetUploadFileTempPath(t *testing.T) {
+	InitEnv()
+	config.LoadEnvConfig()
+	storage := DefaultStorage()
+	partition, _ := NewStoragePartition(ThumbnailStoragePartition)
+	path, err := storage.GetUploadFileTempPath(context.Background(),partition, "timg0.jpg")
 	if err != nil {
 		t.Error(err)
 		return

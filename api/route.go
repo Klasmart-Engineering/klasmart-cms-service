@@ -79,5 +79,5 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules", MustLogin, s.querySchedule)
 		schedules.GET("/schedules_time_view", MustLogin, s.getScheduleTimeView)
 	}
-
 }
+
