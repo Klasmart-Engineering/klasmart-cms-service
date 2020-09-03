@@ -2,6 +2,7 @@ package entity
 
 type Outcome struct {
 	ID            string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
+	AncestorID    string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"outcome_id" dynamoupdate:"-"`
 	Shortcode     string `gorm:"type:char(8);NOT NULL;column:shortcode" dynamodbav:"shortcode" json:"shortcode" dynamoupdate:":code"`
 	Name          string `gorm:"type:varchar(255);NOT NULL;column:outcome_name" dynamodbav:"outcome_name" json:"outcome_name" dynamoupdate:":n"`
 	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
