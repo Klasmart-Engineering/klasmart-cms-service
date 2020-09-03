@@ -1,5 +1,10 @@
 package entity
 
+import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"time"
+)
+
 type Outcome struct {
 	ID            string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
 	AncestorID    string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"outcome_id" dynamoupdate:"-"`
@@ -32,4 +37,52 @@ type Outcome struct {
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
 	DeleteAt int64 `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+}
+
+func (oc *Outcome) Update(data *Outcome) {
+	if data.Name != "" {
+		oc.Name = data.Name
+	}
+
+	oc.Program = data.Program
+	oc.Subject = data.Subject
+	oc.Developmental = data.Subject
+	oc.Skills = data.Skills
+	oc.Age = data.Age
+	oc.Grade = data.Grade
+	oc.EstimatedTime = data.EstimatedTime
+	oc.Keywords = data.Keywords
+	oc.Description = data.Description
+}
+
+func (oc *Outcome) Clone() Outcome {
+	now := time.Now().Unix()
+	return Outcome{
+		ID:            utils.NewID(),
+		AncestorID:    oc.AncestorID,
+		Shortcode:     oc.Shortcode,
+		Name:          oc.Name,
+		Program:       oc.Program,
+		Subject:       oc.Subject,
+		Developmental: oc.Developmental,
+		Skills:        oc.Skills,
+		Age:           oc.Age,
+		Grade:         oc.Grade,
+		Keywords:      oc.Keywords,
+		Description:   oc.Description,
+
+		EstimatedTime:  oc.EstimatedTime,
+		AuthorID:       oc.AuthorID,
+		AuthorName:     oc.AuthorName,
+		OrganizationID: oc.OrganizationID,
+
+		PublishStatus: ContentStatusDraft,
+
+		Version:  1,
+		SourceID: oc.ID,
+		Assumed:  oc.Assumed,
+
+		CreateAt: now,
+		UpdateAt: now,
+	}
 }
