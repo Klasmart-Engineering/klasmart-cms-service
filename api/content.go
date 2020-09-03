@@ -25,26 +25,26 @@ func (s *Server) createContent(c *gin.Context) {
 	err := c.ShouldBind(&data)
 	if err != nil {
 		log.Error(ctx, "create content failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest,L(Unknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
@@ -60,7 +60,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
@@ -82,14 +82,14 @@ func (s *Server) publishContent(c *gin.Context) {
 	}
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
 	err = model.GetContentModel().PublishContent(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		c.JSON(http.StatusNotFound, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -106,7 +106,7 @@ func (s *Server) getContent(c *gin.Context) {
 	}
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
@@ -126,35 +126,35 @@ func (s *Server) updateContent(c *gin.Context) {
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		c.JSON(http.StatusNotFound, L(Unknown))
 	case model.ErrInvalidContentType:
-		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		c.JSON(http.StatusNotFound, L(Unknown))
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, responseMsg(err.Error()))
+		c.JSON(http.StatusForbidden, L(Unknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -169,15 +169,15 @@ func (s *Server) lockContent(c *gin.Context) {
 	ncid, err := model.GetContentModel().LockContent(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		c.JSON(http.StatusNotFound, L(Unknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, responseMsg(err.Error()))
+		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case model.ErrInvalidLockedContentPublishStatus:
-		c.JSON(http.StatusConflict, responseMsg(err.Error()))
+		c.JSON(http.StatusConflict, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": ncid,
@@ -194,13 +194,13 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
-		c.JSON(http.StatusConflict, responseMsg(err.Error()))
+		c.JSON(http.StatusConflict, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -216,9 +216,9 @@ func (s *Server) deleteContent(c *gin.Context) {
 	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
-		c.JSON(http.StatusConflict, responseMsg(err.Error()))
+		c.JSON(http.StatusConflict, L(Unknown))
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
+		c.JSON(http.StatusNotFound, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
