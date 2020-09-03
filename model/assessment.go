@@ -7,8 +7,8 @@ import (
 )
 
 type IAssessmentModel interface {
-	List(ctx context.Context, tx dbo.DBContext, cmd entity.ListAssessmentCommand) ([]*entity.AssessmentListView, error)
+	List(ctx context.Context, tx dbo.DBContext, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error)
 	Detail(ctx context.Context, tx dbo.DBContext, id string) (*entity.AssessmentDetailView, error)
 	Add(ctx context.Context, tx dbo.DBContext, cmd entity.AddAssessmentCommand) (string, error)
-	PatchUpdate(ctx context.Context, tx dbo.DBContext, cmd entity.PatchUpdateAssessmentCommand) error
+	Update(ctx context.Context, tx dbo.DBContext, cmd entity.UpdateAssessmentCommand) error
 }

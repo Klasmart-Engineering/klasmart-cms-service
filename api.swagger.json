@@ -69,7 +69,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -533,7 +537,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -687,7 +695,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -825,7 +837,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -2382,7 +2398,6 @@
             "schema": {
               "type": "string"
             },
-            "required": true,
             "allowEmptyValue": false
           }
         ],
@@ -3053,7 +3068,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -3191,7 +3210,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -3302,6 +3325,447 @@
           },
           "500": {
             "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/assessments": {
+      "get": {
+        "tags": [
+          "assessment"
+        ],
+        "summary": "list assessment",
+        "description": "list assessment",
+        "operationId": "listAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "search assessment by status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "in_progress",
+                "complete"
+              ],
+              "default": "all"
+            }
+          },
+          {
+            "name": "teacher_name",
+            "in": "query",
+            "description": "fuzzy search assessment by teacher name",
+            "schema": {
+              "type": "string",
+              "default": "all"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if page_size <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "class_end_time",
+                "-class_end_time",
+                "complete_time",
+                "-complete_time"
+              ],
+              "default": "-class_end_time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "assessment view list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "assessment view list",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "description": "assessment title"
+                          },
+                          "subject": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "subject id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "subject name"
+                              }
+                            }
+                          },
+                          "program": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "program id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "program name"
+                              }
+                            }
+                          },
+                          "teacher": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "teacher id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "teacher name"
+                              }
+                            }
+                          },
+                          "class_end_time": {
+                            "type": "integer",
+                            "format": "int64",
+                            "description": "class end time(unix seconds)"
+                          },
+                          "complete_time": {
+                            "type": "integer",
+                            "format": "int64",
+                            "description": "class end time(unix seconds)"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "assessment status",
+                            "enum": [
+                              "in_progress",
+                              "complete"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "assessment"
+        ],
+        "summary": "add assessment",
+        "description": "add assessment",
+        "operationId": "addAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "assessment",
+                "properties": {
+                  "schedule_id": {
+                    "type": "string",
+                    "description": "schedule id"
+                  },
+                  "class_name": {
+                    "type": "string",
+                    "description": "class name"
+                  },
+                  "lesson_name": {
+                    "type": "string",
+                    "description": "lesson name"
+                  },
+                  "attendance_ids": {
+                    "type": "array",
+                    "description": "attendance id list",
+                    "items": {
+                      "type": "string",
+                      "description": "attendance id"
+                    }
+                  },
+                  "program_id": {
+                    "type": "string",
+                    "description": "program id"
+                  },
+                  "subject_id": {
+                    "type": "string",
+                    "description": "subject id"
+                  },
+                  "teacher_id": {
+                    "type": "string",
+                    "description": "teacher id"
+                  },
+                  "class_length": {
+                    "type": "integer",
+                    "format": "int",
+                    "description": "class length (unit: minute)"
+                  },
+                  "class_end_time": {
+                    "type": "string",
+                    "description": "class end time (unix seconds)"
+                  },
+                  "complete_time": {
+                    "type": "string",
+                    "description": "complete time (unix seconds)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "string",
+                  "description": "tag id"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/assessment/{id}": {
+      "get": {
+        "tags": [
+          "assessment"
+        ],
+        "summary": "get assessment by id",
+        "description": "get assessment by id",
+        "operationId": "getAssessmentByID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "assessment id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "assessment detail",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "description": "assessment title"
+                    },
+                    "attendances": {
+                      "type": "array",
+                      "description": "assessment attendances",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "attendance id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "attendance name"
+                          }
+                        }
+                      }
+                    },
+                    "subject": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "subject id"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "subject name"
+                        }
+                      }
+                  },
+                  "teacher": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "teacher id"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "teacher name"
+                      }
+                    }
+                  },
+                  "class_end_time": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "class end time"
+                  },
+                  "class_length": {
+                    "type": "integer",
+                    "format": "int",
+                    "description": "class length (unit: minute)"
+                  },
+                  "number_of_activities": {
+                    "type": "integer",
+                    "format": "int",
+                    "description": "number of activities"
+                  },
+                  "number_of_outcomes": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "number of learning outcomes"
+                  },
+                  "complete_time": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "class end time"
+                  },
+                  "outcome_attendance_maps": {
+                    "type": "array",
+                    "description": "outcome attendance maps",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "outcome_id": {
+                          "type": "string",
+                          "description": "outcome id"
+                        },
+                        "outcome_name": {
+                          "type": "string",
+                          "description": "outcome name"
+                        },
+                        "assumed": {
+                          "type": "string",
+                          "description": "assumed"
+                        },
+                        "attendances": {
+                          "type": "array",
+                          "description": "attendances",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "attendance id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "attendance name"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
           }
         }
       }

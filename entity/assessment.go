@@ -1,15 +1,16 @@
 package entity
 
 type Assessment struct {
-	ID           string `json:"id"`
-	ScheduleID   string `json:"schedule_id"`
-	Title        string `json:"title"`
-	ProgramID    string `json:"program_id"`
-	SubjectID    string `json:"subject"`
-	TeacherID    string `json:"teacher_id"`
-	ClassLength  int    `json:"class_length"`
-	ClassEndTime int64  `json:"class_end_time"`
-	CompleteTime int64  `json:"complete_time"`
+	ID           string           `json:"id"`
+	ScheduleID   string           `json:"schedule_id"`
+	Title        string           `json:"title"`
+	ProgramID    string           `json:"program_id"`
+	SubjectID    string           `json:"subject"`
+	TeacherID    string           `json:"teacher_id"`
+	ClassLength  int              `json:"class_length"`
+	ClassEndTime int64            `json:"class_end_time"`
+	CompleteTime int64            `json:"complete_time"`
+	Status       AssessmentStatus `json:"status"`
 
 	CreatedID string `json:"created_id"`
 	CreatedAt int64  `json:"created_at"`
@@ -23,10 +24,10 @@ type AssessmentListView struct {
 	Title        string            `json:"title"`
 	Subject      AssessmentSubject `json:"subject"`
 	Program      AssessmentProgram `json:"program"`
-	Status       AssessmentStatus  `json:"status"`
 	Teacher      AssessmentTeacher `json:"teacher"`
 	ClassEndTime int64             `json:"class_end_time"`
 	CompleteTime int64             `json:"complete_time"`
+	Status       AssessmentStatus  `json:"status"`
 }
 
 type AssessmentStatus string
@@ -45,28 +46,17 @@ func (s AssessmentStatus) Valid() bool {
 	}
 }
 
-func (s AssessmentStatus) String() string {
-	switch s {
-	case AssessmentStatusInProgress:
-		return "In Progress"
-	case AssessmentStatusComplete:
-		return "Complete"
-	default:
-		return ""
-	}
-}
-
 type AssessmentDetailView struct {
-	Title                    string                        `json:"title"`
-	Attendances              []AssessmentAttendanceStudent `json:"attendances"`
-	Subject                  AssessmentSubject             `json:"subject"`
-	Teacher                  AssessmentTeacher             `json:"teacher"`
-	ClassEndTime             int64                         `json:"class_end_time"`
-	ClassLength              int                           `json:"class_length"`
-	NumberOfActivities       int                           `json:"number_of_activities"`
-	NumberOfLearningOutcomes int                           `json:"number_of_learning_outcomes"`
-	CompleteTime             int64                         `json:"complete_time"`
-	OutcomeAttendanceMaps    []OutcomeAttendanceMapView    `json:"outcome_attendance_maps"`
+	Title                 string                        `json:"title"`
+	Attendances           []AssessmentAttendanceStudent `json:"attendances"`
+	Subject               AssessmentSubject             `json:"subject"`
+	Teacher               AssessmentTeacher             `json:"teacher"`
+	ClassEndTime          int64                         `json:"class_end_time"`
+	ClassLength           int                           `json:"class_length"`
+	NumberOfActivities    int                           `json:"number_of_activities"`
+	NumberOfOutcomes      int                           `json:"number_of_outcomes"`
+	CompleteTime          int64                         `json:"complete_time"`
+	OutcomeAttendanceMaps []OutcomeAttendanceMapView    `json:"outcome_attendance_maps"`
 }
 
 type OutcomeAttendanceMapView struct {
@@ -96,33 +86,55 @@ type AssessmentTeacher struct {
 	Name string `json:"name"`
 }
 
-type ListAssessmentCommand struct {
-	Status      *string                `json:"status"`
-	TeacherName *string                `json:"teacher_name"`
-	OrderBy     *ListAssessmentOrderBy `json:"order_by"`
-	Page        int                    `json:"page"`
-	Size        int                    `json:"size"`
+type ListAssessmentsCommand struct {
+	Status      *ListAssessmentsStatus  `json:"status"`
+	TeacherName *string                 `json:"teacher_name"`
+	OrderBy     *ListAssessmentsOrderBy `json:"order_by"`
+	Page        *int                    `json:"page"`
+	PageSize    *int                    `json:"page_size"`
 }
 
-type ListAssessmentOrderBy string
+type ListAssessmentsStatus string
 
 const (
-	ListAssessmentOrderByClassEndTime     ListAssessmentOrderBy = "class_end_time"
-	ListAssessmentOrderByClassEndTimeDesc ListAssessmentOrderBy = "class_end_time_desc"
-	ListAssessmentOrderByCompleteTime     ListAssessmentOrderBy = "complete_time"
-	ListAssessmentOrderByCompleteTimeDesc ListAssessmentOrderBy = "complete_time_desc"
+	ListAssessmentsStatusAll        ListAssessmentsStatus = "all"
+	ListAssessmentsStatusInProgress ListAssessmentsStatus = "in_progress"
+	ListAssessmentsStatusComplete   ListAssessmentsStatus = "complete"
 )
 
-func (ob ListAssessmentOrderBy) Valid() bool {
-	switch ob {
-	case ListAssessmentOrderByClassEndTime,
-		ListAssessmentOrderByClassEndTimeDesc,
-		ListAssessmentOrderByCompleteTime,
-		ListAssessmentOrderByCompleteTimeDesc:
+func (s ListAssessmentsStatus) Valid() bool {
+	switch s {
+	case ListAssessmentsStatusAll, ListAssessmentsStatusInProgress, ListAssessmentsStatusComplete:
 		return true
 	default:
 		return false
 	}
+}
+
+type ListAssessmentsOrderBy string
+
+const (
+	ListAssessmentsOrderByClassEndTime     ListAssessmentsOrderBy = "class_end_time"
+	ListAssessmentsOrderByClassEndTimeDesc ListAssessmentsOrderBy = "-class_end_time"
+	ListAssessmentsOrderByCompleteTime     ListAssessmentsOrderBy = "complete_time"
+	ListAssessmentsOrderByCompleteTimeDesc ListAssessmentsOrderBy = "-complete_time"
+)
+
+func (ob ListAssessmentsOrderBy) Valid() bool {
+	switch ob {
+	case ListAssessmentsOrderByClassEndTime,
+		ListAssessmentsOrderByClassEndTimeDesc,
+		ListAssessmentsOrderByCompleteTime,
+		ListAssessmentsOrderByCompleteTimeDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+type ListAssessmentsResult struct {
+	Total int                   `json:"total"`
+	Items []*AssessmentListView `json:"items"`
 }
 
 type AddAssessmentCommand struct {
@@ -131,14 +143,14 @@ type AddAssessmentCommand struct {
 	LessonName    string   `json:"lesson_name"`
 	AttendanceIDs []string `json:"attendance_ids"`
 	ProgramID     string   `json:"program_id"`
-	SubjectID     string   `json:"subject"`
+	SubjectID     string   `json:"subject_id"`
 	TeacherID     string   `json:"teacher_id"`
 	ClassLength   int      `json:"class_length"`
 	ClassEndTime  int64    `json:"class_end_time"`
 	CompleteTime  int64    `json:"complete_time"`
 }
 
-type PatchUpdateAssessmentCommand struct {
+type UpdateAssessmentCommand struct {
 	ID                    string                 `json:"id"`
 	AttendanceIDs         []string               `json:"attendance_ids"`
 	OutcomeAttendanceMaps []OutcomeAttendanceMap `json:"outcome_attendance_maps"`
