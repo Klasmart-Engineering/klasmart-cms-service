@@ -1,4 +1,34 @@
 include:
   - project: 'devops/ci-center'
-    ref: 'dev'
+    ref: 'master'
     file: 'gitlab-ci-kidsloopr/.gitlab-ci-cdk.yml'
+  - project: 'devops/ci-center'
+    ref: 'master'
+    file: 'gitlab-ci-kidsloopr/.gitlab-ci-api.yml'
+
+stages:
+  - deploy_swagger
+  - build_push_cdk
+  - deploy_push_cdk
+  - build_merge_cdk
+  - deploy_merge_cdk
+
+DEPLOY_SWAGGER_JOB:
+  extends:
+  - .DEPLOY_SWAGGER_API
+
+Build_Go_Push:
+  extends:
+  - .TIGGER_RULES_DEV
+
+Deploy_To_Lambda_Push:
+  extends:
+  - .TIGGER_RULES_DEV
+
+Build_Go_Merge:
+  extends:
+  - .TIGGER_RULES_TEST
+
+Deploy_To_Lambda_Merge:
+  extends:
+  - .TIGGER_RULES_TEST
