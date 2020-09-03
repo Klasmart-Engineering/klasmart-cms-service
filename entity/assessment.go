@@ -62,7 +62,7 @@ type AssessmentDetailView struct {
 type OutcomeAttendanceMapView struct {
 	OutcomeID   string                        `json:"outcome_id"`
 	OutcomeName string                        `json:"outcome_name"`
-	Assumed     string                        `json:"assumed"`
+	Assumed     bool                          `json:"assumed"`
 	Attendances []AssessmentAttendanceStudent `json:"attendances"`
 }
 

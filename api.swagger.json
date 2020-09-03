@@ -3674,7 +3674,8 @@
                             "description": "outcome name"
                           },
                           "assumed": {
-                            "type": "string",
+                            "type": "boolean",
+                            "format": "bool",
                             "description": "assumed"
                           },
                           "attendances": {
