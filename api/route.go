@@ -63,7 +63,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", MustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", MustLogin, s.queryPendingContent)
 
-		content.GET("/contents_statistics/:content_id", MustLogin, s.contentDataCount)
+		content.GET("/contents/:content_id/statistics", MustLogin, s.contentDataCount)
 
 		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)

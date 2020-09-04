@@ -304,42 +304,7 @@
         }
       }
     },
-    "/contents_review/{content_id}/approve": {
-      "put": {
-        "tags": [
-          "content"
-        ],
-        "parameters": [
-          {
-            "name": "content_id",
-            "in": "path",
-            "description": "content id",
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "allowEmptyValue": false
-          }
-        ],
-        "description": "Approve a content review by content_id",
-        "operationId": "approveContentReview",
-        "responses": {
-          "200": {
-            "description": "success"
-          },
-          "403": {
-            "description": "no auth to review"
-          },
-          "412": {
-            "description": "content status invalid"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_statistics/{content_id}": {
+    "/contents/{content_id}/statistics": {
       "put": {
         "tags": [
           "content"
@@ -380,6 +345,41 @@
         },
         "500": {
           "description": "Internal Server Error"
+        }
+      }
+    },
+    "/contents_review/{content_id}/approve": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Approve a content review by content_id",
+        "operationId": "approveContentReview",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "412": {
+            "description": "content status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
         }
       }
     },
