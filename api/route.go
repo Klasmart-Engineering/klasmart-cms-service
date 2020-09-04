@@ -56,14 +56,14 @@ func (s Server) registeRoute() {
 		content.PUT("/contents/:content_id", MustLogin, s.updateContent)
 		content.PUT("/contents/:content_id/lock", MustLogin, s.lockContent)
 		content.PUT("/contents/:content_id/publish", MustLogin, s.publishContent)
-		content.PUT("/contents_review/:content_id/approve", MustLogin, s.approve)
-		content.PUT("/contents_review/:content_id/reject", MustLogin, s.reject)
+		content.PUT("/contents/:content_id/review/approve", MustLogin, s.approve)
+		content.PUT("/contents/:content_id/review/reject", MustLogin, s.reject)
 		content.DELETE("/contents/:content_id", MustLogin, s.deleteContent)
 		content.GET("/contents", MustLogin, s.queryContent)
+		content.GET("/contents/:content_id/statistics", MustLogin, s.contentDataCount)
 		content.GET("/contents_private", MustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", MustLogin, s.queryPendingContent)
 
-		content.GET("/contents/:content_id/statistics", MustLogin, s.contentDataCount)
 
 		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)

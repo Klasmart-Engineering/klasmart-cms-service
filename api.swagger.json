@@ -348,7 +348,7 @@
         }
       }
     },
-    "/contents_review/{content_id}/approve": {
+    "/contents/{content_id}/review/approve": {
       "put": {
         "tags": [
           "content"
@@ -383,7 +383,7 @@
         }
       }
     },
-    "/contents_review/{content_id}/reject": {
+    "/contents/{content_id}/review/reject": {
       "put": {
         "tags": [
           "content"
