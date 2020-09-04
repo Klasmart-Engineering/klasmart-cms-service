@@ -369,11 +369,12 @@ func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition 
 	result := make([]*entity.ScheduleListView, len(scheduleList))
 	for i, item := range scheduleList {
 		result[i] = &entity.ScheduleListView{
-			ID:       item.ID,
-			Title:    item.Title,
-			StartAt:  item.StartAt,
-			EndAt:    item.EndAt,
-			IsRepeat: item.RepeatID != "",
+			ID:           item.ID,
+			Title:        item.Title,
+			StartAt:      item.StartAt,
+			EndAt:        item.EndAt,
+			IsRepeat:     item.RepeatID != "",
+			LessonPlanID: item.LessonPlanID,
 		}
 	}
 	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)

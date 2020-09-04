@@ -318,11 +318,12 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	StartAt  int64  `json:"start_at"`
-	EndAt    int64  `json:"end_at"`
-	IsRepeat bool   `json:"is_repeat"`
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	StartAt      int64  `json:"start_at"`
+	EndAt        int64  `json:"end_at"`
+	IsRepeat     bool   `json:"is_repeat"`
+	LessonPlanID string `json:"lesson_plan_id"`
 }
 
 type ScheduleDetailsView struct {
