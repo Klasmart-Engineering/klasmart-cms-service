@@ -339,7 +339,7 @@
         }
       }
     },
-    "/contents_statistics": {
+    "/contents_statistics/{content_id}": {
       "put": {
         "tags": [
           "content"
@@ -356,8 +356,8 @@
             "allowEmptyValue": false
           }
         ],
-        "description": "Approve a content review by content_id",
-        "operationId": "approveContentReview",
+        "description": "get content sub contents count and outcomes count by content_id",
+        "operationId": "getContentsStatistics",
         "responses": {
           "content": {
             "application/json": {
