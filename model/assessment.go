@@ -7,7 +7,9 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
+	"time"
 )
 
 type IAssessmentModel interface {
@@ -64,6 +66,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get student service failed",
 				log.Err(err),
+				log.String("id", id),
 			)
 			return nil, err
 		}
@@ -90,6 +93,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get subject service failed",
 				log.Err(err),
+				log.String("id", id),
 			)
 			return nil, err
 		}
@@ -115,6 +119,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get student service failed",
 				log.Err(err),
+				log.String("id", id),
 			)
 			return nil, err
 		}
@@ -142,13 +147,239 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 }
 
 func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error) {
-	panic("implement me")
+	if cmd.TeacherName != nil {
+		teacherService, err := external.GetTeacherServiceProvider()
+		if err != nil {
+			log.Error(ctx, "list assessments: get teacher service failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		items, err := teacherService.Query(ctx, *cmd.TeacherName)
+		if err != nil {
+			log.Error(ctx, "list assessments: query teacher service failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		for _, item := range items {
+			*cmd.TeacherIDs = append(*cmd.TeacherIDs, item.ID)
+		}
+	}
+	items, total, err := da.GetAssessmentDA().List(ctx, tx, cmd)
+	if err != nil {
+		log.Error(ctx, "list assessments: list failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+		)
+		return nil, err
+	}
+
+	var subjectIDs, programIDs, teacherIDs []string
+	for _, item := range items {
+		subjectIDs = append(subjectIDs, item.SubjectID)
+		programIDs = append(programIDs, item.ProgramID)
+		teacherIDs = append(teacherIDs, item.TeacherID)
+	}
+
+	subjectNameMap := map[string]string{}
+	{
+		subjectService, err := external.GetSubjectServiceProvider()
+		if err != nil {
+			log.Error(ctx, "list assessments: get subject service failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		items, err := subjectService.BatchGet(ctx, subjectIDs)
+		if err != nil {
+			log.Error(ctx, "list assessments: batch get subject failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		for _, item := range items {
+			subjectNameMap[item.ID] = item.Name
+		}
+	}
+
+	programNameMap := map[string]string{}
+	{
+		programService, err := external.GetProgramServiceProvider()
+		if err != nil {
+			log.Error(ctx, "list assessments: get program service failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		items, err := programService.BatchGet(ctx, subjectIDs)
+		if err != nil {
+			log.Error(ctx, "list assessments: batch get program failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		for _, item := range items {
+			programNameMap[item.ID] = item.Name
+		}
+	}
+
+	teacherNameMap := map[string]string{}
+	{
+		teacherNameService, err := external.GetTeacherServiceProvider()
+		if err != nil {
+			log.Error(ctx, "list assessments: get teacher service failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		items, err := teacherNameService.BatchGet(ctx, subjectIDs)
+		if err != nil {
+			log.Error(ctx, "list assessments: batch get teacher failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		for _, item := range items {
+			teacherNameMap[item.ID] = item.Name
+		}
+	}
+
+	result := entity.ListAssessmentsResult{Total: total}
+	for _, item := range items {
+		result.Items = append(result.Items, &entity.AssessmentListView{
+			ID:    item.ID,
+			Title: item.Title,
+			Subject: entity.AssessmentSubject{
+				ID:   item.SubjectID,
+				Name: subjectNameMap[item.SubjectID],
+			},
+			Program: entity.AssessmentProgram{
+				ID:   item.ProgramID,
+				Name: programNameMap[item.ProgramID],
+			},
+			Teacher: entity.AssessmentTeacher{
+				ID:   item.TeacherID,
+				Name: teacherNameMap[item.TeacherID],
+			},
+			ClassEndTime: item.ClassEndTime,
+			CompleteTime: item.CompleteTime,
+			Status:       item.Status,
+		})
+	}
+
+	return &result, err
 }
 
 func (a *assessmentModel) Add(ctx context.Context, tx *dbo.DBContext, cmd entity.AddAssessmentCommand) (string, error) {
-	panic("implement me")
+	nowUnix := time.Now().Unix()
+	newItem := entity.Assessment{
+		ID:           utils.NewID(),
+		ScheduleID:   cmd.ScheduleID,
+		Title:        cmd.Title(),
+		ProgramID:    cmd.ProgramID,
+		SubjectID:    cmd.SubjectID,
+		TeacherID:    cmd.TeacherID,
+		ClassLength:  cmd.ClassLength,
+		ClassEndTime: cmd.ClassEndTime,
+		CompleteTime: cmd.CompleteTime,
+		Status:       cmd.Status,
+		CreatedAt:    nowUnix,
+		UpdatedAt:    nowUnix,
+	}
+	newID, err := da.GetAssessmentDA().Add(ctx, tx, newItem)
+	if err != nil {
+		log.Error(ctx, "add assessment: add failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+			log.Any("new_item", newItem),
+		)
+		return "", err
+	}
+	return newID, nil
 }
 
 func (a *assessmentModel) Update(ctx context.Context, tx *dbo.DBContext, cmd entity.UpdateAssessmentCommand) error {
-	panic("implement me")
+	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		if cmd.Action == entity.UpdateAssessmentActionComplete {
+			if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, cmd.ID, entity.AssessmentStatusComplete); err != nil {
+				log.Error(ctx, "update assessment: update status to complete failed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+		}
+		if cmd.AttendanceIDs != nil {
+			if err := da.GetAssessmentAttendanceDA().DeleteByAssessmentID(ctx, tx, cmd.ID); err != nil {
+				log.Error(ctx, "update assessment: delete assessment attendance failed by assessment id",
+					log.Err(err),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+			var items []*entity.AssessmentAttendance
+			for _, attendanceID := range *cmd.AttendanceIDs {
+				items = append(items, &entity.AssessmentAttendance{
+					ID:           utils.NewID(),
+					AssessmentID: cmd.ID,
+					AttendanceID: attendanceID,
+				})
+			}
+			if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
+				log.Error(ctx, "update assessment: batch insert assessment attendance map failed",
+					log.Err(err),
+					log.Any("items", items),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+		}
+		if cmd.OutcomeAttendanceMaps != nil {
+			var outcomeIDs []string
+			for _, item := range *cmd.OutcomeAttendanceMaps {
+				outcomeIDs = append(outcomeIDs, item.OutcomeID)
+			}
+			if err := da.GetOutcomeAttendanceDA().BatchDeleteByOutcomeIDs(ctx, tx, outcomeIDs); err != nil {
+				log.Error(ctx, "update assessment: batch delete outcome attendance map failed by outcome ids",
+					log.Err(err),
+					log.Strings("outcome_ids", outcomeIDs),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+			var items []*entity.OutcomeAttendance
+			for _, item := range *cmd.OutcomeAttendanceMaps {
+				for _, attendanceID := range item.AttendanceIDs {
+					items = append(items, &entity.OutcomeAttendance{
+						ID:           utils.NewID(),
+						OutcomeID:    item.OutcomeID,
+						AttendanceID: attendanceID,
+					})
+				}
+			}
+			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
+				log.Error(ctx, "update assessment: batch insert outcome attendance map failed",
+					log.Err(err),
+					log.Any("items", items),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Error(ctx, "update assessment: tx failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+		)
+	}
 }

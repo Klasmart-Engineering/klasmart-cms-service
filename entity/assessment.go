@@ -97,7 +97,7 @@ type AssessmentTeacher struct {
 type ListAssessmentsCommand struct {
 	Status      *ListAssessmentsStatus  `json:"status"`
 	TeacherName *string                 `json:"teacher_name"`
-	TeacherIDs  []string                `json:"teacher_ids"`
+	TeacherIDs  *[]string               `json:"teacher_ids"`
 	OrderBy     *ListAssessmentsOrderBy `json:"order_by"`
 	Page        *int                    `json:"page"`
 	PageSize    *int                    `json:"page_size"`
@@ -170,9 +170,8 @@ func (cmd AddAssessmentCommand) Title() string {
 }
 
 type UpdateAssessmentCommand struct {
-	Action                UpdateAssessmentAction  `json:"action"`
 	ID                    string                  `json:"id"`
-	Status                *AssessmentStatus       `json:"-"`
+	Action                UpdateAssessmentAction  `json:"action"`
 	AttendanceIDs         *[]string               `json:"attendance_ids"`
 	OutcomeAttendanceMaps *[]OutcomeAttendanceMap `json:"outcome_attendance_maps"`
 }
