@@ -31,6 +31,7 @@ type IScheduleModel interface {
 	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
+	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -368,11 +369,12 @@ func (s *scheduleModel) Query(ctx context.Context, tx *dbo.DBContext, condition 
 	result := make([]*entity.ScheduleListView, len(scheduleList))
 	for i, item := range scheduleList {
 		result[i] = &entity.ScheduleListView{
-			ID:       item.ID,
-			Title:    item.Title,
-			StartAt:  item.StartAt,
-			EndAt:    item.EndAt,
-			IsRepeat: item.RepeatID != "",
+			ID:           item.ID,
+			Title:        item.Title,
+			StartAt:      item.StartAt,
+			EndAt:        item.EndAt,
+			IsRepeat:     item.RepeatID != "",
+			LessonPlanID: item.LessonPlanID,
 		}
 	}
 	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)
@@ -681,6 +683,77 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 	}
 
 	return count > 0, nil
+}
+
+func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool, error) {
+	condition := &da.ScheduleCondition{
+		ID: sql.NullString{
+			String: id,
+			Valid:  true,
+		},
+	}
+	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
+	if err != nil {
+		log.Error(ctx, "get schedule count by condition error", log.Err(err), log.Any("condition", condition))
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (s *scheduleModel) verifyData(ctx context.Context, v entity.ScheduleVerify) error {
+	// class
+	classService, err := external.GetClassServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = classService.BatchGet(ctx, []string{v.ClassID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// subject
+	subjectService, err := external.GetSubjectServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = subjectService.BatchGet(ctx, []string{v.SubjectID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// program
+	programService, err := external.GetProgramServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = programService.BatchGet(ctx, []string{v.ProgramID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// teacher
+	teacherIDs := utils.SliceDeduplication(v.TeacherIDs)
+	teacherService, err := external.GetTeacherServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = teacherService.BatchGet(ctx, teacherIDs)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// lessPlan
+	_, err = GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	return nil
 }
 
 var (

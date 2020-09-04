@@ -241,7 +241,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 
 const (
 	ViewTypeDay      = "day"
-	ViewTypeWorkweek = "workWeek"
+	ViewTypeWorkweek = "work_week"
 	ViewTypeWeek     = "week"
 	ViewTypeMonth    = "month"
 )
