@@ -53,6 +53,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		SuggestTime:   c.SuggestTime,
 		Data:          c.Data,
 		Extra:         c.Extra,
+		Outcomes: 		strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
 		AuthorName:    authorName,
 		LockedBy:      "-",
@@ -90,6 +91,9 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 	if data.Thumbnail != "" {
 		content.Thumbnail = data.Thumbnail
+	}
+	if data.Outcomes != nil {
+		content.Outcomes = strings.Join(data.Outcomes, "")
 	}
 	if data.Extra != "" {
 		content.Extra = data.Extra

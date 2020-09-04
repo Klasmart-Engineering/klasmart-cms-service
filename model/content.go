@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -37,6 +38,7 @@ type IContentModel interface {
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchContentByDynamoKey(ctx context.Context, tx *dbo.DBContext, condition da.DyKeyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error)
+	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
 
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 }
@@ -887,6 +889,52 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 
 func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	return cm.searchContent(ctx, tx, &condition, user)
+}
+
+func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error){
+	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err != nil{
+		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
+		return nil, err
+	}
+	if content.ContentType != entity.ContentTypeLesson {
+		log.Error(ctx, "invalid content type", log.Err(err), log.String("cid", cid), log.Int("contentType", int(content.ContentType)))
+		return nil, ErrInvalidContentType
+	}
+
+	cd, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
+	if err != nil{
+		log.Error(ctx, "can't parse content data", log.Err(err), log.String("cid", cid), log.Int("contentType", int(content.ContentType)), log.String("data", content.Data))
+		return nil, err
+	}
+	subContentIds, err := cd.SubContentIds(ctx)
+	if err != nil{
+		log.Error(ctx, "can't get subcontent", log.Err(err), log.String("cid", cid), log.Int("contentType", int(content.ContentType)), log.String("data", content.Data))
+		return nil, err
+	}
+	_, subContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+		IDS:           subContentIds,
+	})
+
+	identityOutComes := make(map[string] bool)
+	outcomesCount := 0
+	for i := range subContents {
+		if subContents[i].Outcomes == "" {
+			continue
+		}
+		subOutcomes := strings.Split(subContents[i].Outcomes, ",")
+		for j := range subOutcomes {
+			_, ok := identityOutComes[subOutcomes[j]]
+			if !ok {
+				outcomesCount ++
+			}
+			identityOutComes[subOutcomes[j]] = true
+		}
+	}
+	return &entity.ContentStatisticsInfo{
+		SubContentCount: len(subContentIds),
+		OutcomesCount:   outcomesCount,
+	}, nil
 }
 
 func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
