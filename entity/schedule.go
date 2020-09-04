@@ -247,25 +247,26 @@ func (s Schedule) Clone() Schedule {
 }
 
 type ScheduleAddView struct {
-	Title        string            `json:"title" binding:"required"`
-	ClassID      string            `json:"class_id" binding:"required"`
-	LessonPlanID string            `json:"lesson_plan_id" binding:"required"`
-	TeacherIDs   []string          `json:"teacher_ids" binding:"required"`
-	OrgID        string            `json:"org_id"`
-	StartAt      int64             `json:"start_at" binding:"required"`
-	EndAt        int64             `json:"end_at" binding:"required"`
-	SubjectID    string            `json:"subject_id" binding:"required"`
-	ProgramID    string            `json:"program_id" binding:"required"`
-	ClassType    string            `json:"class_type"`
-	DueAt        int64             `json:"due_at"`
-	Description  string            `json:"description"`
-	Attachment   ScheduleShortInfo `json:"attachment"`
-	Version      int64             `json:"version"`
-	RepeatID     string            `json:"-"`
-	Repeat       RepeatOptions     `json:"repeat"`
-	IsAllDay     bool              `json:"is_all_day"`
-	IsRepeat     bool              `json:"is_repeat"`
-	IsForce      bool              `json:"is_force"`
+	Title          string            `json:"title" binding:"required"`
+	ClassID        string            `json:"class_id" binding:"required"`
+	LessonPlanID   string            `json:"lesson_plan_id" binding:"required"`
+	TeacherIDs     []string          `json:"teacher_ids" binding:"required"`
+	OrgID          string            `json:"org_id"`
+	StartAt        int64             `json:"start_at" binding:"required"`
+	EndAt          int64             `json:"end_at" binding:"required"`
+	SubjectID      string            `json:"subject_id" binding:"required"`
+	ProgramID      string            `json:"program_id" binding:"required"`
+	ClassType      string            `json:"class_type"`
+	DueAt          int64             `json:"due_at"`
+	Description    string            `json:"description"`
+	Attachment     ScheduleShortInfo `json:"attachment"`
+	Version        int64             `json:"version"`
+	RepeatID       string            `json:"-"`
+	Repeat         RepeatOptions     `json:"repeat"`
+	IsAllDay       bool              `json:"is_all_day"`
+	IsRepeat       bool              `json:"is_repeat"`
+	IsForce        bool              `json:"is_force"`
+	TimeZoneOffset int               `json:"time_zone_offset"`
 }
 
 func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
@@ -284,10 +285,10 @@ func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
 		UpdatedAt:       0,
-		RepeatID:        s.RepeatID,
 		IsAllDay:        s.IsAllDay,
 	}
 	if s.IsRepeat {
+		schedule.RepeatID = s.RepeatID
 		b, err := json.Marshal(s.Repeat)
 		if err != nil {
 			return nil, err
@@ -317,10 +318,11 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	StartAt int64  `json:"start_at"`
-	EndAt   int64  `json:"end_at"`
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	StartAt  int64  `json:"start_at"`
+	EndAt    int64  `json:"end_at"`
+	IsRepeat bool   `json:"is_repeat"`
 }
 
 type ScheduleDetailsView struct {
@@ -335,7 +337,7 @@ type ScheduleDetailsView struct {
 	Description string            `json:"description"`
 	Version     int64             `json:"version"`
 	IsAllDay    bool              `json:"is_all_day"`
-	RepeatID    string            `json:"repeat_id"`
+	IsRepeat    bool              `json:"is_repeat"`
 	Repeat      RepeatOptions     `json:"repeat"`
 	ScheduleBasic
 }
