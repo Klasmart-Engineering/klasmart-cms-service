@@ -175,6 +175,11 @@ type ContentID struct {
 	ID string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
 }
 
+type ContentStatisticsInfo struct {
+	SubContentCount int `json:"subcontent_count"`
+	OutcomesCount int `json:"outcomes_count"`
+}
+
 type Content struct {
 	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
 	ContentType   ContentType `gorm:"type:int;NOTNULL; column:content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
@@ -189,6 +194,7 @@ type Content struct {
 	Description   string      `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
 	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
 
+	Outcomes 	string  		`gorm:"type:text;NOT NULL;column:outcomes"`
 	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
 	Extra string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
@@ -305,6 +311,8 @@ type CreateContentRequest struct {
 	SuggestTime   int         `json:"suggest_time"`
 	RejectReason  string      `json:"reject_reason"`
 
+	Outcomes	[]string `json:"outcomes"`
+
 	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
 
@@ -364,6 +372,8 @@ type ContentInfo struct {
 	Thumbnail     string      `json:"thumbnail"`
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
+
+	Outcomes	[]string `json:"outcomes"`
 
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`

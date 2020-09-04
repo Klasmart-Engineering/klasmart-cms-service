@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func (s *Server) GetUploadPath(c *gin.Context) {
+func (s *Server) getUploadPath(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	partition := c.Query("partition")
@@ -32,7 +32,7 @@ func (s *Server) GetUploadPath(c *gin.Context) {
 }
 
 
-func (s *Server) GetPath(c *gin.Context) {
+func (s *Server) getPath(c *gin.Context) {
 	ctx := c.Request.Context()
 	resourceId := c.Param("resource_id")
 
