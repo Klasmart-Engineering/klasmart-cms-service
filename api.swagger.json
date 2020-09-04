@@ -41,7 +41,7 @@
       "description": "asset tag management"
     },
     {
-      "name": "learningOutcomes",
+      "name": "learning_outcomes",
       "description": "learning outcomes management"
     }
   ],
@@ -2562,7 +2562,7 @@
     "/learning_outcomes": {
       "get": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "description": "Search learning outcomes with condition",
         "operationId": "searchLearningOutcomes",
@@ -2586,7 +2586,7 @@
             }
           },
           {
-            "name": "keyword",
+            "name": "keywords",
             "in": "query",
             "description": "Search learning outcomes by keyword",
             "schema": {
@@ -2642,7 +2642,8 @@
                 "created_at",
                 "-created_at"
               ],
-              "nullable": true
+              "nullable": true,
+              "example": "name"
             }
           }
         ],
@@ -2677,7 +2678,7 @@
       },
       "post": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "description": "Create learning outcomes",
         "operationId": "createLearningOutcomes",
@@ -2722,15 +2723,15 @@
     "/learning_outcomes/{outcome_id}": {
       "get": {
         "tags": [
-          "content"
+          "learning_outcomes"
         ],
         "description": "Get learning outcomes by id",
         "operationId": "getLearningOutcomesById",
         "parameters": [
           {
-            "name": "content_id",
+            "name": "outcome_id",
             "in": "path",
-            "description": "content id",
+            "description": "outcome id",
             "schema": {
               "type": "string"
             },
@@ -2751,7 +2752,7 @@
             }
           },
           "404": {
-            "description": "Content not found"
+            "description": "learning outcome not found"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2760,15 +2761,15 @@
       },
       "put": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "description": "Update learning outcomes by id",
         "operationId": "updateLearningOutcomes",
         "parameters": [
           {
-            "name": "content_id",
+            "name": "outcome_id",
             "in": "path",
-            "description": "content id",
+            "description": "learning outcome id",
             "schema": {
               "type": "string"
             },
@@ -2800,16 +2801,25 @@
       },
       "delete": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
         ],
         "description": "Delete learning outcomes by id",
         "operationId": "deleteLearningOutcome",
         "responses": {
           "200": {
             "description": "OK"
-          },
-          "404": {
-            "description": "Content not found"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2820,13 +2830,13 @@
     "/publish/learning_outcomes/{outcome_id}": {
       "put": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "description": "Publish learning outcomes",
         "operationId": "publishLearningOutcomes",
         "parameters": [
           {
-            "name": "content_id",
+            "name": "outcome_id",
             "in": "path",
             "description": "content id",
             "schema": {
@@ -2853,8 +2863,11 @@
           "400": {
             "description": "Bad request"
           },
+          "404": {
+            "description": "learning outcome not found"
+          },
           "406": {
-            "description": "Content status invalid"
+            "description": "learning outcome status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2865,13 +2878,13 @@
     "/lock/learning_outcomes/{outcome_id}": {
       "put": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "parameters": [
           {
-            "name": "content_id",
+            "name": "outcome_id",
             "in": "path",
-            "description": "content id",
+            "description": "outcome id",
             "schema": {
               "type": "string"
             },
@@ -2896,6 +2909,9 @@
           "403": {
             "description": "no auth to review"
           },
+          "404": {
+            "description": "learning outcome not found"
+          },
           "406": {
             "description": "content was locked"
           },
@@ -2908,13 +2924,13 @@
     "/approve/learning_outcomes/{outcome_id}": {
       "put": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "parameters": [
           {
-            "name": "content_id",
+            "name": "outcome_id",
             "in": "path",
-            "description": "content id",
+            "description": "outcome id",
             "schema": {
               "type": "string"
             },
@@ -2931,8 +2947,11 @@
           "403": {
             "description": "no auth to review"
           },
+          "404": {
+            "description": "learning outcome not found"
+          },
           "412": {
-            "description": "content status invalid"
+            "description": "learning outcome status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2943,13 +2962,13 @@
     "/reject/learning_outcomes/{outcome_id}": {
       "put": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "parameters": [
           {
-            "name": "content_id",
+            "name": "outcome_id",
             "in": "path",
-            "description": "content id",
+            "description": "outcome id",
             "schema": {
               "type": "string"
             },
@@ -2976,8 +2995,11 @@
           "403": {
             "description": "no auth to review"
           },
+          "404": {
+            "description": "learning outcome not found"
+          },
           "412": {
-            "description": "content status invalid"
+            "description": "learning outcome status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2988,7 +3010,7 @@
     "/bulk_publish/learning_outcomes": {
       "put": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "description": "Publish learning outcomes bulk",
         "operationId": "publishLearningOutcomesBulk",
@@ -3009,6 +3031,9 @@
           "400": {
             "description": "Bad request"
           },
+          "404": {
+            "description": "learning outcome not found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -3018,10 +3043,10 @@
     "/bulk/learning_outcomes": {
       "delete": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
-        "description": "Delete content bulk",
-        "operationId": "deleteContentBulk",
+        "description": "Delete learning outcome bulk",
+        "operationId": "deleteOutcomeBulk",
         "requestBody": {
           "required": true,
           "content": {
@@ -3039,6 +3064,9 @@
           "400": {
             "description": "Bad request"
           },
+          "404": {
+            "description": "learning outcome not found"
+          },
           "500": {
             "description": "Internal Server Error"
           }
@@ -3048,7 +3076,7 @@
     "/private_learning_outcomes": {
       "get": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "description": "Search user's private learning outcomes with condition",
         "operationId": "searchPrivateLearningOutcomes",
@@ -3165,7 +3193,7 @@
     "/pending_learning_outcomes": {
       "get": {
         "tags": [
-          "learningOutcomes"
+          "learning_outcomes"
         ],
         "description": "Search pending learning outcomes",
         "operationId": "searchPendingLearningOutcomes",
@@ -3517,11 +3545,11 @@
                     "description": "class length (unit: minute)"
                   },
                   "class_end_time": {
-                    "type": "string",
+                    "type": "integer",
                     "description": "class end time (unix seconds)"
                   },
                   "complete_time": {
-                    "type": "string",
+                    "type": "integer",
                     "description": "complete time (unix seconds)"
                   }
                 }
@@ -5505,7 +5533,7 @@
               "assumed": {
                 "type": "boolean",
                 "description": "learning outcome assumed",
-                "example": "true"
+                "example": true
               },
               "outcome_name": {
                 "type": "string",
@@ -5515,62 +5543,105 @@
               "program": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                },
-                "description": "program id",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                  "type": "object",
+                  "properties": {
+                    "program_id": {
+                      "type": "string",
+                      "description": "program id",
+                      "example": "p001"
+                    },
+                    "program_name": {
+                      "type": "string",
+                      "description": "program name",
+                      "example": "Little Star"
+                    }
+                  }
+                }
               },
               "subject": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                },
-                "description": "subject id",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                  "properties": {
+                    "subject_id": {
+                      "type": "string",
+                      "description": "subject id",
+                      "example": "s001"
+                    },
+                    "subject_name": {
+                      "type": "string",
+                      "description": "subject name",
+                      "example": "English"
+                    }
+                  }
+                }
               },
               "developmental": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                },
-                "description": "developmental id",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                  "properties": {
+                    "developmental_id": {
+                      "type": "string",
+                      "description": "developmental id",
+                      "example": "develop001"
+                    },
+                    "developmental_name": {
+                      "type": "string",
+                      "description": "developmental name",
+                      "example": "Hit"
+                    }
+                  }
+                }
               },
               "skills": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                },
-                "description": "skills id",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                  "properties": {
+                    "skill_id": {
+                      "type": "string",
+                      "description": "skill id",
+                      "example": "skill001"
+                    },
+                    "skill_name": {
+                      "type": "string",
+                      "description": "skill name",
+                      "example": "Hit"
+                    }
+                  }
+                }
               },
               "age": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                },
-                "description": "age id",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                  "properties": {
+                    "age_id": {
+                      "type": "string",
+                      "description": "age id",
+                      "example": "age001"
+                    },
+                    "age_name": {
+                      "type": "string",
+                      "description": "age name",
+                      "example": "3"
+                    }
+                  }
+                }
               },
               "grade": {
                 "type": "array",
                 "items": {
-                  "type": "string"
-                },
-                "description": "grade id",
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                  "properties": {
+                    "grade_id": {
+                      "type": "string",
+                      "description": "grade id",
+                      "example": "grade001"
+                    },
+                    "grade_name": {
+                      "type": "string",
+                      "description": "grade name",
+                      "example": "3-4"
+                    }
+                  }
+                }
               },
               "estimated_time": {
                 "type": "integer",
@@ -5591,11 +5662,6 @@
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
-              },
-              "description": {
-                "type": "string",
-                "description": "content description",
-                "example": "Content description"
               },
               "source_id": {
                 "type": "string",
@@ -5622,14 +5688,19 @@
                 "description": "org id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
+              "organization_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              },
               "publish_scope": {
                 "type": "string",
-                "description": "content publish scope id",
+                "description": "learning outcomes publish scope id,default as same as organization_id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "publish_status": {
                 "type": "string",
-                "description": "content publish status",
+                "description": "learning outcomes publish status",
                 "enum": [
                   "draft",
                   "pending",
@@ -5638,74 +5709,9 @@
                 ],
                 "example": "published"
               },
-              "program_name": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "program name",
-                "example": [
-                  "program1"
-                ]
-              },
-              "grade_name": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "grade name",
-                "example": [
-                  "program1"
-                ]
-              },
-              "subject_name": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "subject name",
-                "example": [
-                  "subject1"
-                ]
-              },
-              "developmental_name": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "developmental name",
-                "example": [
-                  "developmental"
-                ]
-              },
-              "skills_name": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "skills name",
-                "example": [
-                  "skills"
-                ]
-              },
-              "age_name": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "age name",
-                "example": [
-                  "age"
-                ]
-              },
-              "organization_name": {
-                "type": "string",
-                "description": "org name",
-                "example": "school1"
-              },
               "created_at": {
                 "type": "integer",
-                "description": "outcome create time",
+                "description": "learning outcome create time",
                 "example": 123
               }
             }
