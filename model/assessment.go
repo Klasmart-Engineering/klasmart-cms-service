@@ -36,7 +36,7 @@ type assessmentModel struct{}
 func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id string) (*entity.AssessmentDetailView, error) {
 	var result entity.AssessmentDetailView
 
-	item, err := da.GetAssessmentDA().Get(ctx, tx, id)
+	item, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get from da failed",
 			log.Err(err),
@@ -147,32 +147,52 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 }
 
 func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error) {
-	if cmd.TeacherName != nil {
-		teacherService, err := external.GetTeacherServiceProvider()
-		if err != nil {
-			log.Error(ctx, "list assessments: get teacher service failed",
-				log.Err(err),
-				log.Any("cmd", cmd),
-			)
-			return nil, err
-		}
-		items, err := teacherService.Query(ctx, *cmd.TeacherName)
-		if err != nil {
-			log.Error(ctx, "list assessments: query teacher service failed",
-				log.Err(err),
-				log.Any("cmd", cmd),
-			)
-			return nil, err
-		}
-		for _, item := range items {
-			*cmd.TeacherIDs = append(*cmd.TeacherIDs, item.ID)
+	cond := da.QueryAssessmentsCondition{
+		Status:   cmd.Status,
+		OrderBy:  cmd.OrderBy,
+		Page:     cmd.Page,
+		PageSize: cmd.PageSize,
+	}
+	{
+		if cmd.TeacherName != nil {
+			teacherService, err := external.GetTeacherServiceProvider()
+			if err != nil {
+				log.Error(ctx, "list assessments: get teacher service failed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+				)
+				return nil, err
+			}
+			items, err := teacherService.Query(ctx, *cmd.TeacherName)
+			if err != nil {
+				log.Error(ctx, "list assessments: query teacher service failed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+				)
+				return nil, err
+			}
+			for _, item := range items {
+				*cond.TeacherIDs = append(*cond.TeacherIDs, item.ID)
+			}
 		}
 	}
-	items, total, err := da.GetAssessmentDA().List(ctx, tx, cmd)
-	if err != nil {
-		log.Error(ctx, "list assessments: list failed",
+
+	var items []*entity.Assessment
+	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &items); err != nil {
+		log.Error(ctx, "list assessments: query tx failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
+			log.Any("cond", cond),
+		)
+		return nil, err
+	}
+
+	total, err := da.GetAssessmentDA().CountTx(ctx, tx, &cond, &entity.Assessment{})
+	if err != nil {
+		log.Error(ctx, "list assessments: count tx failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+			log.Any("cond", cond),
 		)
 		return nil, err
 	}
@@ -280,9 +300,12 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 }
 
 func (a *assessmentModel) Add(ctx context.Context, tx *dbo.DBContext, cmd entity.AddAssessmentCommand) (string, error) {
-	nowUnix := time.Now().Unix()
+	var (
+		nowUnix = time.Now().Unix()
+		newID   = utils.NewID()
+	)
 	newItem := entity.Assessment{
-		ID:           utils.NewID(),
+		ID:           newID,
 		ScheduleID:   cmd.ScheduleID,
 		Title:        cmd.Title(),
 		ProgramID:    cmd.ProgramID,
@@ -292,11 +315,10 @@ func (a *assessmentModel) Add(ctx context.Context, tx *dbo.DBContext, cmd entity
 		ClassEndTime: cmd.ClassEndTime,
 		CompleteTime: cmd.CompleteTime,
 		Status:       cmd.Status,
-		CreatedAt:    nowUnix,
-		UpdatedAt:    nowUnix,
+		CreateTime:   nowUnix,
+		UpdateTime:   nowUnix,
 	}
-	newID, err := da.GetAssessmentDA().Add(ctx, tx, newItem)
-	if err != nil {
+	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newItem); err != nil {
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
@@ -382,4 +404,5 @@ func (a *assessmentModel) Update(ctx context.Context, tx *dbo.DBContext, cmd ent
 			log.Any("cmd", cmd),
 		)
 	}
+	return nil
 }

@@ -17,9 +17,9 @@ type Assessment struct {
 	CompleteTime int64            `json:"complete_time"`
 	Status       AssessmentStatus `json:"status"`
 
-	CreatedAt int64 `json:"created_at"`
-	UpdatedAt int64 `json:"updated_at"`
-	DeletedAt int64 `json:"deleted_at"`
+	CreateTime int64 `json:"create_time"`
+	UpdateTime int64 `json:"update_time"`
+	DeleteTime int64 `json:"delete_time"`
 }
 
 func (Assessment) TableName() string {
@@ -95,12 +95,11 @@ type AssessmentTeacher struct {
 }
 
 type ListAssessmentsCommand struct {
-	Status      *ListAssessmentsStatus  `json:"status"`
+	Status      *AssessmentStatus       `json:"status"`
 	TeacherName *string                 `json:"teacher_name"`
-	TeacherIDs  *[]string               `json:"teacher_ids"`
 	OrderBy     *ListAssessmentsOrderBy `json:"order_by"`
-	Page        *int                    `json:"page"`
-	PageSize    *int                    `json:"page_size"`
+	Page        int                     `json:"page"`
+	PageSize    int                     `json:"page_size"`
 }
 
 type ListAssessmentsStatus string
@@ -118,6 +117,10 @@ func (s ListAssessmentsStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+func (s ListAssessmentsStatus) AssessmentStatus() AssessmentStatus {
+	return AssessmentStatus(s)
 }
 
 type ListAssessmentsOrderBy string

@@ -64,7 +64,6 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", MustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", MustLogin, s.queryPendingContent)
 
-
 		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)
 
@@ -80,5 +79,12 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules", MustLogin, s.querySchedule)
 		schedules.GET("/schedules_time_view", MustLogin, s.getScheduleTimeView)
 	}
-}
 
+	assessments := s.engine.Group("/v1")
+	{
+		assessments.GET("/assessments", s.listAssessments)
+		assessments.POST("/assessments", s.addAssessment)
+		assessments.GET("/assessments/:id", s.getAssessmentDetail)
+		assessments.PUT("/assessments/:id", s.updateAssessment)
+	}
+}
