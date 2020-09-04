@@ -700,6 +700,61 @@ func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool,
 	return count > 0, nil
 }
 
+func (s *scheduleModel) verifyData(ctx context.Context, v entity.ScheduleVerify) error {
+	// class
+	classService, err := external.GetClassServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = classService.BatchGet(ctx, []string{v.ClassID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// subject
+	subjectService, err := external.GetSubjectServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = subjectService.BatchGet(ctx, []string{v.SubjectID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// program
+	programService, err := external.GetProgramServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = programService.BatchGet(ctx, []string{v.ProgramID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// teacher
+	teacherIDs := utils.SliceDeduplication(v.TeacherIDs)
+	teacherService, err := external.GetTeacherServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	_, err = teacherService.BatchGet(ctx, teacherIDs)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// lessPlan
+	_, err = GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	return nil
+}
+
 var (
 	_scheduleOnce  sync.Once
 	_scheduleModel IScheduleModel
