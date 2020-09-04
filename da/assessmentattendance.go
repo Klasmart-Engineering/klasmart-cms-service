@@ -10,9 +10,9 @@ import (
 )
 
 type IAssessmentAttendanceDA interface {
-	GetAttendanceIDsByAssessmentID(ctx context.Context, tx dbo.DBContext, assessmentID string) ([]string, error)
-	BatchInsert(ctx context.Context, tx dbo.DBContext, items []*entity.AssessmentAttendance) error
-	DeleteByAssessmentID(ctx context.Context, tx dbo.DBContext, assessmentID string) error
+	GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
+	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error
+	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 }
 
 var (
@@ -29,7 +29,7 @@ func GetAssessmentAttendanceDA() IAssessmentAttendanceDA {
 
 type assessmentAttendanceDA struct{}
 
-func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Context, tx dbo.DBContext, assessmentID string) ([]string, error) {
+func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
 	var items []entity.AssessmentAttendance
 	if err := tx.Where("assessment_id = ?", assessmentID).Find(&items).Error; err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Contex
 	return ids, nil
 }
 
-func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx dbo.DBContext, items []*entity.AssessmentAttendance) error {
+func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
 	columns := []string{"id", "assessment_id", "attendance_id"}
 	var values [][]interface{}
 	for _, item := range items {
@@ -61,7 +61,7 @@ func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx dbo.DBContext
 	return nil
 }
 
-func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx dbo.DBContext, assessmentID string) error {
+func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
 	if err := tx.Where("assessment_id", assessmentID).Delete(entity.AssessmentAttendance{}).Error; err != nil {
 		log.Error(ctx, "delete attendances by id: delete failed from db",
 			log.Err(err),

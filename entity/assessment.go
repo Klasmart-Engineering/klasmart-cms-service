@@ -148,6 +148,7 @@ type ListAssessmentsResult struct {
 
 type AddAssessmentCommand struct {
 	ScheduleID    string           `json:"schedule_id"`
+	ClassID       string           `json:"class_id"`
 	ClassName     string           `json:"class_name"`
 	LessonName    string           `json:"lesson_name"`
 	AttendanceIDs []string         `json:"attendance_ids"`

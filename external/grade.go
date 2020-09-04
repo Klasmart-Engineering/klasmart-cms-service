@@ -7,8 +7,8 @@ type GradeServiceProvider interface {
 }
 
 type Grade struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetGradeServiceProvider() (GradeServiceProvider, error) {
@@ -18,5 +18,5 @@ func GetGradeServiceProvider() (GradeServiceProvider, error) {
 type mockGradeService struct{}
 
 func (s mockGradeService) BatchGet(ctx context.Context, ids []string) ([]*Grade, error) {
-	return GetMockData().Grade, nil
+	return GetMockData().Grades, nil
 }

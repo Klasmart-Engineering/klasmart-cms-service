@@ -7,8 +7,8 @@ type ProgramServiceProvider interface {
 }
 
 type Program struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetProgramServiceProvider() (ProgramServiceProvider, error) {
@@ -18,5 +18,5 @@ func GetProgramServiceProvider() (ProgramServiceProvider, error) {
 type mockProgramService struct{}
 
 func (s mockProgramService) BatchGet(ctx context.Context, ids []string) ([]*Program, error) {
-	return GetMockData().Program, nil
+	return GetMockData().Programs, nil
 }

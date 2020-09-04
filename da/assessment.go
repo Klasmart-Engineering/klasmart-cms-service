@@ -12,10 +12,10 @@ import (
 )
 
 type IAssessmentDA interface {
-	Get(ctx context.Context, tx dbo.DBContext, id string) (*entity.Assessment, error)
-	List(ctx context.Context, tx dbo.DBContext, cmd entity.ListAssessmentsCommand) ([]*entity.Assessment, error)
-	Add(ctx context.Context, tx dbo.DBContext, cmd entity.AddAssessmentCommand) (string, error)
-	UpdateStatus(ctx context.Context, tx dbo.DBContext, id string, status entity.AssessmentStatus) error
+	Get(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
+	List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsCommand) ([]*entity.Assessment, error)
+	Add(ctx context.Context, tx *dbo.DBContext, cmd entity.AddAssessmentCommand) (string, error)
+	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
 }
 
 var (
@@ -32,7 +32,7 @@ func GetAssessmentDA() IAssessmentDA {
 
 type assessmentDA struct{}
 
-func (a *assessmentDA) Get(ctx context.Context, tx dbo.DBContext, id string) (*entity.Assessment, error) {
+func (a *assessmentDA) Get(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error) {
 	item := entity.Assessment{}
 	if err := tx.Model(entity.Assessment{}).
 		Where(a.filterDeletedAtTemplate()).
@@ -46,7 +46,7 @@ func (a *assessmentDA) Get(ctx context.Context, tx dbo.DBContext, id string) (*e
 	return &item, nil
 }
 
-func (a *assessmentDA) List(ctx context.Context, tx dbo.DBContext, cmd entity.ListAssessmentsCommand) ([]*entity.Assessment, error) {
+func (a *assessmentDA) List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsCommand) ([]*entity.Assessment, error) {
 	db := tx.Model(entity.Assessment{}).Where(a.filterDeletedAtTemplate())
 	if cmd.Status != nil {
 		db = db.Where("status = ?", *cmd.Status)
@@ -78,7 +78,7 @@ func (a *assessmentDA) List(ctx context.Context, tx dbo.DBContext, cmd entity.Li
 	return items, nil
 }
 
-func (a *assessmentDA) Add(ctx context.Context, tx dbo.DBContext, cmd entity.AddAssessmentCommand) (string, error) {
+func (a *assessmentDA) Add(ctx context.Context, tx *dbo.DBContext, cmd entity.AddAssessmentCommand) (string, error) {
 	var (
 		newID   = utils.NewID()
 		nowUnix = time.Now().Unix()
@@ -107,7 +107,7 @@ func (a *assessmentDA) Add(ctx context.Context, tx dbo.DBContext, cmd entity.Add
 	return newID, nil
 }
 
-func (a *assessmentDA) UpdateStatus(ctx context.Context, tx dbo.DBContext, id string, status entity.AssessmentStatus) error {
+func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error {
 	if err := tx.Model(entity.Assessment{}).
 		Where(a.filterDeletedAtTemplate()).
 		Update("status", status).Error; err != nil {
