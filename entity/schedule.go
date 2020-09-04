@@ -250,7 +250,7 @@ type ScheduleAddView struct {
 	Title          string            `json:"title" binding:"required"`
 	ClassID        string            `json:"class_id" binding:"required"`
 	LessonPlanID   string            `json:"lesson_plan_id" binding:"required"`
-	TeacherIDs     []string          `json:"teacher_ids" binding:"required"`
+	TeacherIDs     []string          `json:"teacher_ids" binding:"required,min=1"`
 	OrgID          string            `json:"org_id"`
 	StartAt        int64             `json:"start_at" binding:"required"`
 	EndAt          int64             `json:"end_at" binding:"required"`
@@ -318,11 +318,12 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	StartAt  int64  `json:"start_at"`
-	EndAt    int64  `json:"end_at"`
-	IsRepeat bool   `json:"is_repeat"`
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	StartAt      int64  `json:"start_at"`
+	EndAt        int64  `json:"end_at"`
+	IsRepeat     bool   `json:"is_repeat"`
+	LessonPlanID string `json:"lesson_plan_id"`
 }
 
 type ScheduleDetailsView struct {
@@ -360,6 +361,13 @@ type ScheduleBasic struct {
 	Program    ScheduleShortInfo   `json:"program"`
 	Teachers   []ScheduleShortInfo `json:"teachers"`
 	LessonPlan ScheduleShortInfo   `json:"lesson_plan"`
+}
+type ScheduleVerify struct {
+	ClassID      string
+	SubjectID    string
+	ProgramID    string
+	TeacherIDs   []string
+	LessonPlanID string
 }
 
 // ScheduleEditType include delete and edit

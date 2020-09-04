@@ -3229,6 +3229,10 @@
           "is_repeat":{
             "type": "boolean",
             "description": "If true, schedule is repeat"
+          },
+          "lesson_plan_id":{
+            "type": "string",
+            "description": "lesson plan id"
           }
         }
       },
