@@ -2827,7 +2827,7 @@
         }
       }
     },
-    "/publish/learning_outcomes/{outcome_id}": {
+    "/learning_outcomes/{outcome_id}/publish": {
       "put": {
         "tags": [
           "learning_outcomes"
@@ -2875,7 +2875,7 @@
         }
       }
     },
-    "/lock/learning_outcomes/{outcome_id}": {
+    "/learning_outcomes/{outcome_id}/lock": {
       "put": {
         "tags": [
           "learning_outcomes"
@@ -2921,7 +2921,7 @@
         }
       }
     },
-    "/approve/learning_outcomes/{outcome_id}": {
+    "/learning_outcomes/{outcome_id}/approve": {
       "put": {
         "tags": [
           "learning_outcomes"
@@ -2959,7 +2959,7 @@
         }
       }
     },
-    "/reject/learning_outcomes/{outcome_id}": {
+    "/learning_outcomes/{outcome_id}/reject": {
       "put": {
         "tags": [
           "learning_outcomes"
