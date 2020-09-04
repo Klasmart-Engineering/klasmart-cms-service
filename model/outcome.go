@@ -299,7 +299,6 @@ func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DB
 	condition := da.OutcomeCondition{
 		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 	}
-	condition.Pager = dbo.NoPager
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &condition)
 	if err != nil {
 		log.Error(ctx, "GetLearningOutcomesByIDs: SearchOutcome failed",
@@ -314,8 +313,7 @@ func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DB
 func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (outcomes []*entity.Outcome, err error) {
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		cond1 := da.OutcomeCondition{
-			IDs:   dbo.NullStrings{Strings: outcomeIDs, Valid: true},
-			Pager: dbo.NoPager,
+			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 		}
 		total, otcs1, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &cond1)
 		if err != nil {
@@ -332,7 +330,7 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBCo
 			outcomes = []*entity.Outcome{}
 			return nil
 		}
-		cond2 := da.OutcomeCondition{Pager: dbo.NoPager}
+		cond2 := da.OutcomeCondition{}
 		for _, o := range otcs1 {
 			cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
 		}
