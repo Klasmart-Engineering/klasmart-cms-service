@@ -13,6 +13,7 @@ CREATE TABLE `cms_contents` (
    `thumbnail` TEXT  NULL  COMMENT  '封面',
    `data` JSON  NULL  COMMENT  '数据',
    `extra` TEXT  NULL  COMMENT  '附加数据',
+   `outcomes` TEXT NULL COMMENT 'Learning outcomes',
    `suggest_time` int  NOT  NULL  COMMENT  '建议时间',
    `author` VARCHAR( 50) NOT  NULL  COMMENT  '作者id',
    `author_name` VARCHAR( 128) NOT  NULL  COMMENT  '作者名',
