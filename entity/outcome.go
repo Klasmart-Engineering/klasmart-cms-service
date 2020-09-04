@@ -1,6 +1,8 @@
 package entity
 
 import (
+	"errors"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"time"
 )
@@ -85,4 +87,88 @@ func (oc *Outcome) Clone() Outcome {
 		CreateAt: now,
 		UpdateAt: now,
 	}
+}
+
+func (oc *Outcome) SetStatus(status ContentPublishStatus) error {
+	switch status {
+	//case ContentStatusArchive:
+	//	if oc.allowedToArchive() {
+	//		oc.PublishStatus = ContentStatusArchive
+	//	}
+	//	return nil
+	//case ContentStatusDraft:
+	//	//TODO
+	case ContentStatusHidden:
+		if oc.allowedToHidden() {
+			oc.PublishStatus = ContentStatusHidden
+		}
+		return nil
+	case ContentStatusPending:
+		if oc.allowedToPending() {
+			oc.PublishStatus = ContentStatusPending
+		}
+		return nil
+	case ContentStatusPublished:
+		if oc.allowedToBeReviewed() {
+			oc.PublishStatus = ContentStatusPublished
+		}
+		return nil
+	case ContentStatusRejected:
+		if oc.allowedToBeReviewed() {
+			oc.PublishStatus = ContentStatusRejected
+		}
+		return nil
+	}
+	return errors.New(fmt.Sprintf("unsupported:[%s]", status))
+}
+
+func (oc Outcome) allowedToArchive() bool {
+	switch oc.PublishStatus {
+	case ContentStatusPublished:
+		return true
+	}
+	return false
+}
+
+func (oc Outcome) allowedToAttachment() bool {
+	// TODO
+	return false
+}
+
+func (oc Outcome) allowedToPending() bool {
+	switch oc.PublishStatus {
+	case ContentStatusDraft:
+		return true
+	}
+	return false
+}
+
+func (oc Outcome) allowedToBeReviewed() bool {
+	switch oc.PublishStatus {
+	case ContentStatusPending:
+		return true
+	}
+	return false
+}
+
+func (oc Outcome) allowedToHidden() bool {
+	switch oc.PublishStatus {
+	case ContentStatusPublished:
+		return true
+	}
+	return false
+}
+
+func (oc Outcome) CanBeCancelled() bool {
+	if oc.PublishStatus == ContentStatusDraft {
+		return true
+	}
+	return false
+}
+
+func (oc Outcome) CanBeDeleted() bool {
+	if oc.PublishStatus == ContentStatusArchive {
+		return true
+	}
+	return false
 }

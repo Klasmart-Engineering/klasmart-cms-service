@@ -6,7 +6,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type OutcomeSqlDA struct {
@@ -14,14 +13,18 @@ type OutcomeSqlDA struct {
 }
 
 type OutcomeCondition struct {
+	IDs           dbo.NullStrings
 	Name          sql.NullString
 	Description   sql.NullString
 	Keyword       sql.NullString
 	Shortcode     sql.NullString
-	PublishStatus sql.NullString
+	PublishStatus dbo.NullStrings
+	PublishScope  sql.NullString
+	AuthorID      sql.NullString
 
-	OrderBy OutcomeOrderBy `json:"order_by"`
-	Pager   utils.Pager
+	OrderBy  OutcomeOrderBy `json:"order_by"`
+	Page     int
+	PageSize int
 }
 
 type OutcomeOrderBy int
@@ -41,12 +44,14 @@ func (s *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	conditions = append(conditions, " delete_at = 0")
 	return conditions, params
 }
+
 func (s *OutcomeCondition) GetPager() *dbo.Pager {
 	return &dbo.Pager{
-		Page:     int(s.Pager.PageIndex),
-		PageSize: int(s.Pager.PageSize),
+		Page:     s.Page,
+		PageSize: s.PageSize,
 	}
 }
+
 func (s *OutcomeCondition) GetOrderBy() string {
 	switch s.OrderBy {
 	case OrderByName:
