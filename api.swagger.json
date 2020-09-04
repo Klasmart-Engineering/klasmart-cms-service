@@ -308,7 +308,51 @@
         }
       }
     },
-    "/contents_review/{content_id}/approve": {
+    "/contents/{content_id}/statistics": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "get content sub contents count and outcomes count by content_id",
+        "operationId": "getContentsStatistics",
+        "responses": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content statistics info",
+                "subcontent_count": {
+                  "total": {
+                    "type": "integer",
+                    "description": "sub content count"
+                  },
+                  "outcomes_count": {
+                    "type": "integer",
+                    "description": "outcomes count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    },
+    "/contents/{content_id}/review/approve": {
       "put": {
         "tags": [
           "content"
@@ -343,7 +387,7 @@
         }
       }
     },
-    "/contents_review/{content_id}/reject": {
+    "/contents/{content_id}/review/reject": {
       "put": {
         "tags": [
           "content"
