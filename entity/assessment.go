@@ -54,17 +54,17 @@ func (s AssessmentStatus) Valid() bool {
 }
 
 type AssessmentDetailView struct {
-	ID                    string                        `json:"id"`
-	Title                 string                        `json:"title"`
-	Attendances           []AssessmentAttendanceStudent `json:"attendances"`
-	Subject               AssessmentSubject             `json:"subject"`
-	Teacher               AssessmentTeacher             `json:"teacher"`
-	ClassEndTime          int64                         `json:"class_end_time"`
-	ClassLength           int                           `json:"class_length"`
-	NumberOfActivities    int                           `json:"number_of_activities"`
-	NumberOfOutcomes      int                           `json:"number_of_outcomes"`
-	CompleteTime          int64                         `json:"complete_time"`
-	OutcomeAttendanceMaps []OutcomeAttendanceMapView    `json:"outcome_attendance_maps"`
+	ID                    string                     `json:"id"`
+	Title                 string                     `json:"title"`
+	Attendances           []AssessmentAttendanceView `json:"attendances"`
+	Subject               AssessmentSubject          `json:"subject"`
+	Teacher               AssessmentTeacher          `json:"teacher"`
+	ClassEndTime          int64                      `json:"class_end_time"`
+	ClassLength           int                        `json:"class_length"`
+	NumberOfActivities    int                        `json:"number_of_activities"`
+	NumberOfOutcomes      int                        `json:"number_of_outcomes"`
+	CompleteTime          int64                      `json:"complete_time"`
+	OutcomeAttendanceMaps []OutcomeAttendanceMapView `json:"outcome_attendance_maps"`
 }
 
 type OutcomeAttendanceMapView struct {
@@ -74,7 +74,7 @@ type OutcomeAttendanceMapView struct {
 	AttendanceIDs []string `json:"attendance_ids"`
 }
 
-type AssessmentAttendanceStudent struct {
+type AssessmentAttendanceView struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
