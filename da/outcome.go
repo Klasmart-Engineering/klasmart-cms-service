@@ -10,7 +10,7 @@ import (
 type IOutcomeDA interface {
 	CreateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error
 	UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error
-	DeleteOutcome(ctx context.Context, tx *dbo.DBContext, id string) error
+	DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error
 
 	GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Outcome, error)
 	SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (int, []*entity.Outcome, error)

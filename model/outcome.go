@@ -29,6 +29,9 @@ type IOutcomeModel interface {
 
 	GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
 	GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
+
+	ApproveLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) error
+	RejectLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, reason string, operator *entity.Operator) error
 }
 
 type OutcomeModel struct {
@@ -124,7 +127,7 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBCon
 }
 
 func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (string, error) {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentLock)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeLock)
 	if err != nil {
 		log.Error(ctx, "LockLearningOutcome: NewLock failed",
 			log.Err(err),
@@ -295,6 +298,108 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, tx *dbo.DBCon
 	return total, outcomes, nil
 }
 
+func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) error {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
+	if err != nil {
+		log.Error(ctx, "ApproveLearningOutcome: NewLock failed",
+			log.Err(err),
+			log.String("op", operator.UserID),
+			log.String("outcome_id", outcomeID))
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
+		if gorm.IsRecordNotFoundError(err) {
+			log.Warn(ctx, "ApproveLearningOutcome: GetOutcomeByID failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return ErrResourceNotFound
+		}
+		if err != nil {
+			log.Error(ctx, "ApproveLearningOutcome: GetOutcomeByID failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
+		err = outcome.SetStatus(entity.ContentStatusPublished)
+		if err != nil {
+			log.Error(ctx, "ApproveLearningOutcome: SetStatus failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
+		if err != nil {
+			log.Error(ctx, "ApproveLearningOutcome: UpdateOutcome failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		err = ocm.hideParent(ctx, tx, outcome)
+		if err != nil {
+			log.Error(ctx, "ApproveLearningOutcome: hideParent failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		err = ocm.updateLatestToHead(ctx, tx, outcome.LatestID, outcome.ID)
+		if err != nil {
+			log.Error(ctx, "ApproveLearningOutcome: updateLatestToHead failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
+func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, reason string, operator *entity.Operator) error {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
+	if err != nil {
+		log.Error(ctx, "RejectLearningOutcome: NewLock failed",
+			log.Err(err),
+			log.String("op", operator.UserID),
+			log.String("outcome_id", outcomeID))
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
+		if gorm.IsRecordNotFoundError(err) {
+			log.Warn(ctx, "RejectLearningOutcome: GetOutcomeByID failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return ErrResourceNotFound
+		}
+		if err != nil {
+			log.Error(ctx, "RejectLearningOutcome: GetOutcomeByID failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
+		err = outcome.SetStatus(entity.ContentStatusRejected)
+		outcome.RejectReason = reason
+		if err != nil {
+			log.Error(ctx, "RejectLearningOutcome: SetStatus failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
+		if err != nil {
+			log.Error(ctx, "RejectLearningOutcome: UpdateOutcome failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		return nil
+	})
+	return err
+}
 func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error) {
 	condition := da.OutcomeCondition{
 		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
@@ -453,7 +558,7 @@ func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, ou
 			log.Any("outcome", outcome))
 		return
 	}
-	err = da.GetOutcomeDA().DeleteOutcome(ctx, tx, outcome.ID)
+	err = da.GetOutcomeDA().DeleteOutcome(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "deleteOutcome: DeleteOutcome failed",
 			log.Err(err),
@@ -462,6 +567,7 @@ func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, ou
 	}
 	if outcome.SourceID != "" && outcome.SourceID != outcome.ID {
 		err = ocm.unlockOutcome(ctx, tx, outcome.SourceID)
+		// TODO: data maybe inconsistency, but seems can be ignore
 		//if gorm.IsRecordNotFoundError(err) {
 		//	log.Error(ctx, "deleteOutcome: unlockOutcome maybe inconsistency",
 		//		log.Any("outcome", outcome))
@@ -474,4 +580,42 @@ func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, ou
 		}
 	}
 	return
+}
+
+func (ocm OutcomeModel) hideParent(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+	// must in a transaction
+	if outcome.SourceID == "" || outcome.SourceID == outcome.ID {
+		return
+	}
+	parent, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcome.SourceID)
+	// TODO: data maybe inconsistency, but seems can be ignore
+	//if gorm.IsRecordNotFoundError(err) {
+	//	log.Error(ctx, "hideParent: data maybe inconsistency",
+	//		log.Any("outcome", outcome))
+	//	err = nil
+	//}
+	if err != nil {
+		log.Error(ctx, "hideParent: GetOutcomeByID failed",
+			log.Any("outcome", outcome))
+		return
+	}
+	parent.LockedBy = "-"
+	err = parent.SetStatus(entity.ContentStatusHidden)
+	if err != nil {
+		log.Error(ctx, "hideParent: SetStatus failed",
+			log.Any("outcome", parent))
+		return ErrInvalidPublishStatus
+	}
+	err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, parent)
+	if err != nil {
+		log.Error(ctx, "hideParent: UpdateOutcome failed",
+			log.Any("outcome", parent))
+		return err
+	}
+	return nil
+}
+
+func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) (err error) {
+	// must in a transaction
+	return nil
 }

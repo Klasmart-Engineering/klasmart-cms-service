@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"time"
 )
 
 type OutcomeSqlDA struct {
@@ -67,20 +68,50 @@ func (s *OutcomeCondition) GetOrderBy() string {
 	}
 }
 
-func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error {
-	panic("implement me")
+func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+	now := time.Now().Unix()
+	if outcome.CreateAt == 0 {
+		outcome.CreateAt = now
+	}
+	if outcome.UpdateAt == 0 {
+		outcome.UpdateAt = now
+	}
+	_, err = o.InsertTx(ctx, tx, outcome)
+	if err != nil {
+		log.Error(ctx, "CreateOutcome: InsertTx failed", log.Err(err), log.Any("outcome", outcome))
+	}
+	return
 }
 
-func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error {
-	panic("implement me")
+func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+	now := time.Now().Unix()
+	outcome.UpdateAt = now
+	_, err = o.UpdateTx(ctx, tx, outcome)
+	if err != nil {
+		log.Error(ctx, "UpdateOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
+	}
+	return
 }
 
-func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, tx *dbo.DBContext, id string) error {
-	panic("implement me")
+func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+	now := time.Now().Unix()
+	outcome.UpdateAt = now
+	outcome.DeleteAt = now
+	_, err = o.UpdateTx(ctx, tx, outcome)
+	if err != nil {
+		log.Error(ctx, "DeleteOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
+	}
+	return
 }
 
 func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Outcome, error) {
-	panic("implement me")
+	var outcome entity.Outcome
+	err := o.GetTx(ctx, tx, id, &outcome)
+	if err != nil {
+		log.Error(ctx, "GetOutcomeByID: GetTx failed", log.Err(err), log.Any("outcome", outcome))
+		return nil, err
+	}
+	return &outcome, nil
 }
 
 func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (total int, outcomes []*entity.Outcome, err error) {
