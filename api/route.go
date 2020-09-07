@@ -27,11 +27,6 @@ func (s Server) registeRoute() {
 		assets.PUT("/:id", s.updateAsset)
 		assets.DELETE("/:id", s.deleteAsset)
 	}
-	resource := s.engine.Group("/v1/resources")
-	{
-		resource.GET("/upload/:ext", s.getAssetUploadPath)
-		resource.GET("/path/:resource_name", s.getAssetResourcePath)
-	}
 	category := s.engine.Group("/v1/categories")
 	{
 		category.GET("/", MustLogin, s.searchCategories)
