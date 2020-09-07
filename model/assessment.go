@@ -190,7 +190,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 		for _, outcome := range outcomes {
 			outcomeMap[outcome.ID] = outcome
 		}
-		outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByOutcomeIDs(ctx, tx, outcomeIDs)
+		outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
 		outcomeAttendanceMap := map[string][]string{}
 		for _, item := range outcomeAttendances {
 			outcomeAttendanceMap[item.OutcomeID] = append(outcomeAttendanceMap[item.OutcomeID], item.AttendanceID)
@@ -551,7 +551,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 			for _, item := range *cmd.OutcomeAttendanceMaps {
 				outcomeIDs = append(outcomeIDs, item.OutcomeID)
 			}
-			if err := da.GetOutcomeAttendanceDA().BatchDeleteByOutcomeIDs(ctx, tx, outcomeIDs); err != nil {
+			if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, cmd.ID, outcomeIDs); err != nil {
 				log.Error(ctx, "update assessment: batch delete outcome attendance map failed by outcome ids",
 					log.Err(err),
 					log.Strings("outcome_ids", outcomeIDs),
@@ -564,6 +564,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 				for _, attendanceID := range item.AttendanceIDs {
 					items = append(items, &entity.OutcomeAttendance{
 						ID:           utils.NewID(),
+						AssessmentID: cmd.ID,
 						OutcomeID:    item.OutcomeID,
 						AttendanceID: attendanceID,
 					})
