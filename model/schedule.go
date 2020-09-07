@@ -32,6 +32,7 @@ type IScheduleModel interface {
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
+	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -699,6 +700,29 @@ func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool,
 	}
 
 	return count > 0, nil
+}
+
+func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error) {
+	var schedule = new(entity.Schedule)
+	err := da.GetScheduleDA().Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "GetPlainByID not found", log.Err(err), log.String("id", id))
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "GetPlainByID error", log.Err(err), log.String("id", id))
+		return nil, err
+	}
+	if schedule.DeleteAt != 0 {
+		log.Error(ctx, "GetPlainByID deleted", log.Err(err), log.Any("schedule", schedule))
+		return nil, constant.ErrRecordNotFound
+	}
+	result := &entity.SchedulePlain{
+		ID:           schedule.ID,
+		Title:        schedule.Title,
+		LessonPlanID: schedule.LessonPlanID,
+	}
+	return result, nil
 }
 
 func (s *scheduleModel) verifyData(ctx context.Context, v entity.ScheduleVerify) error {
