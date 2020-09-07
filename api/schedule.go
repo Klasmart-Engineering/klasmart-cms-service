@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (s *Server) updateSchedule(c *gin.Context) {
@@ -42,7 +43,15 @@ func (s *Server) updateSchedule(c *gin.Context) {
 
 	operator := GetOperator(c)
 	data.OrgID = operator.OrgID
-
+	now := time.Now().In(loc).Unix()
+	if data.StartAt < now || data.StartAt >= data.EndAt {
+		log.Info(ctx, "schedule start_at or end_at is invalid",
+			log.Int64("StartAt", data.StartAt),
+			log.Int64("EndAt", data.EndAt),
+			log.Int64("now", now))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
@@ -73,7 +82,6 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		"id": newID,
 	})
 }
-
 func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
@@ -103,7 +111,6 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 }
-
 func (s *Server) addSchedule(c *gin.Context) {
 	op := GetOperator(c)
 	ctx := c.Request.Context()
