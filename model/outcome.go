@@ -16,8 +16,8 @@ import (
 type IOutcomeModel interface {
 	CreateLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) error
 	GetLearningOutcomeByID(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (*entity.Outcome, error)
-	UpdateLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) error
-	DeleteLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) error
+	UpdateLearningOutcome(ctx context.Context, outcome *entity.Outcome, operator *entity.Operator) error
+	DeleteLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error
 	SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
 
 	LockLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (string, error)
@@ -89,29 +89,32 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, tx *dbo.DBCo
 	return outcome, nil
 }
 
-func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) error {
-	data, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcome.ID)
-	if err == dbo.ErrRecordNotFound {
-		return ErrNoContent
-	}
-	if err != nil {
-		log.Error(ctx, "UpdateLearningOutcome: GetOutcomeByID failed",
-			log.String("op", operator.UserID),
-			log.Any("data", outcome))
-		return err
-	}
-	data.Update(outcome)
-	err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, data)
-	if err != nil {
-		log.Error(ctx, "UpdateLearningOutcome: UpdateOutcome failed",
-			log.String("op", operator.UserID),
-			log.Any("data", outcome))
-		return err
-	}
-	return nil
+func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *entity.Outcome, operator *entity.Operator) error {
+	err := dbo.GetTrans(ctx, func(cxt context.Context, tx *dbo.DBContext) error {
+		data, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcome.ID)
+		if err == dbo.ErrRecordNotFound {
+			return ErrNoContent
+		}
+		if err != nil {
+			log.Error(ctx, "UpdateLearningOutcome: GetOutcomeByID failed",
+				log.String("op", operator.UserID),
+				log.Any("data", outcome))
+			return err
+		}
+		data.Update(outcome)
+		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, data)
+		if err != nil {
+			log.Error(ctx, "UpdateLearningOutcome: UpdateOutcome failed",
+				log.String("op", operator.UserID),
+				log.Any("data", outcome))
+			return err
+		}
+		return nil
+	})
+	return err
 }
 
-func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) error {
+func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err != nil && !gorm.IsRecordNotFoundError(err) {
@@ -133,7 +136,6 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, tx *dbo.DBCon
 }
 
 func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
-	//condition.PublishStatus = dbo.NullStrings{Strings: []string{entity.ContentStatusPublished}, Valid: true}
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {

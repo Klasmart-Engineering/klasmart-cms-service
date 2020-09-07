@@ -13,6 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/ro"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -90,13 +91,21 @@ func TestMain(m *testing.M) {
 const url = ""
 const prefix = "/v1"
 
-func DoHttp(method string, url string, body string) *http.Response {
+func DoHttp(method string, url string, body string) string {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(method, url, bytes.NewBufferString(body))
 	req.Header.Add("Authorization", "")
 	server.ServeHTTP(w, req)
 	res := w.Result()
-	return res
+	if res.StatusCode != http.StatusOK {
+		return fmt.Sprintf("StatusCode: %d", res.StatusCode)
+	}
+	data, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }
 
 func TestApprove(t *testing.T) {

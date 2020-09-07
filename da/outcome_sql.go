@@ -3,9 +3,11 @@ package da
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"strings"
 	"time"
 )
 
@@ -17,19 +19,83 @@ type OutcomeCondition struct {
 	IDs           dbo.NullStrings
 	Name          sql.NullString
 	Description   sql.NullString
-	Keyword       sql.NullString
+	Keywords      sql.NullString
 	Shortcode     sql.NullString
 	PublishStatus dbo.NullStrings
 	PublishScope  sql.NullString
+	AuthorName    sql.NullString
 	AuthorID      sql.NullString
 
-	OrderBy  OutcomeOrderBy `json:"order_by"`
-	Page     int
-	PageSize int
+	OrderBy OutcomeOrderBy `json:"order_by"`
+	Pager   dbo.Pager
+}
+
+func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
+	wheres := make([]string, 0)
+	params := make([]interface{}, 0)
+
+	var fullMatchValue []string
+	if c.Name.Valid {
+		fullMatchValue = append(fullMatchValue, "+"+c.Name.String)
+	}
+	if c.AuthorName.Valid {
+		fullMatchValue = append(fullMatchValue, "+"+c.AuthorName.String)
+	}
+	if c.Keywords.Valid {
+		fullMatchValue = append(fullMatchValue, "+"+c.Keywords.String)
+	}
+	if c.Shortcode.Valid {
+		fullMatchValue = append(fullMatchValue, "+"+c.Shortcode.String)
+	}
+	if c.Description.Valid {
+		fullMatchValue = append(fullMatchValue, "+"+c.Description.String)
+	}
+
+	if len(fullMatchValue) > 0 {
+		wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
+		params = append(params, strings.TrimSpace(strings.Join(fullMatchValue, " ")))
+	}
+
+	if c.IDs.Valid {
+		inValue := strings.TrimSuffix(strings.Repeat("?,", len(c.IDs.Strings)), ",")
+		wheres = append(wheres, fmt.Sprintf("id in (%s)", inValue))
+		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+
+	if c.PublishStatus.Valid {
+		inValue := strings.TrimSuffix(strings.Repeat("?,", len(c.PublishStatus.Strings)), ",")
+		wheres = append(wheres, fmt.Sprintf("publish_status in (%s)", inValue))
+		params = append(params, c.PublishStatus.ToInterfaceSlice()...)
+	}
+
+	if c.PublishScope.Valid {
+		wheres = append(wheres, "publish_scope=?")
+		params = append(params, c.PublishScope.String)
+	}
+
+	if c.AuthorID.Valid {
+		wheres = append(wheres, "author_id=?")
+		params = append(params, c.AuthorID.String)
+	}
+
+	wheres = append(wheres, " delete_at = 0")
+	return wheres, params
 }
 
 func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
-	return &OutcomeCondition{}
+	return &OutcomeCondition{
+		IDs:           dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
+		Name:          sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
+		Description:   sql.NullString{String: condition.Description, Valid: condition.Description != ""},
+		Keywords:      sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
+		Shortcode:     sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
+		PublishStatus: dbo.NullStrings{Strings: condition.PublishStatus, Valid: len(condition.PublishStatus) > 0},
+		PublishScope:  sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
+		AuthorID:      sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
+		AuthorName:    sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
+		OrderBy:       NewOrderBy(condition.OrderBy),
+		Pager:         NewPage(condition.Page, condition.PageSize),
+	}
 }
 
 type OutcomeOrderBy int
@@ -42,23 +108,46 @@ const (
 	OrderByCreatedAtDesc
 )
 
-func (s *OutcomeCondition) GetConditions() ([]string, []interface{}) {
-	conditions := make([]string, 0)
-	params := make([]interface{}, 0)
+const defaultPageIndex = 1
+const defaultPageSize = 20
 
-	conditions = append(conditions, " delete_at = 0")
-	return conditions, params
-}
-
-func (s *OutcomeCondition) GetPager() *dbo.Pager {
-	return &dbo.Pager{
-		Page:     s.Page,
-		PageSize: s.PageSize,
+func NewPage(page, pageSize int) dbo.Pager {
+	if page == -1 {
+		return dbo.NoPager
+	}
+	if page == 0 {
+		page = defaultPageIndex
+	}
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
+	return dbo.Pager{
+		Page:     page,
+		PageSize: pageSize,
 	}
 }
 
-func (s *OutcomeCondition) GetOrderBy() string {
-	switch s.OrderBy {
+func (c *OutcomeCondition) GetPager() *dbo.Pager {
+	return &c.Pager
+}
+
+func NewOrderBy(name string) OutcomeOrderBy {
+	switch name {
+	case "name":
+		return OrderByName
+	case "-name":
+		return OrderByNameDesc
+	case "created_at":
+		return OrderByCreatedAt
+	case "-created_at":
+		return OrderByCreatedAtDesc
+	default:
+		return OrderByCreatedAtDesc
+	}
+}
+
+func (c *OutcomeCondition) GetOrderBy() string {
+	switch c.OrderBy {
 	case OrderByName:
 		return "name"
 	case OrderByNameDesc:
