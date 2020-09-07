@@ -39,6 +39,10 @@
     {
       "name": "tag",
       "description": "asset tag management"
+    },
+    {
+      "name": "learning_outcomes",
+      "description": "learning outcomes management"
     }
   ],
   "paths": {
@@ -304,7 +308,51 @@
         }
       }
     },
-    "/contents_review/{content_id}/approve": {
+    "/contents/{content_id}/statistics": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "get content sub contents count and outcomes count by content_id",
+        "operationId": "getContentsStatistics",
+        "responses": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content statistics info",
+                "subcontent_count": {
+                  "total": {
+                    "type": "integer",
+                    "description": "sub content count"
+                  },
+                  "outcomes_count": {
+                    "type": "integer",
+                    "description": "outcomes count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    },
+    "/contents/{content_id}/review/approve": {
       "put": {
         "tags": [
           "content"
@@ -339,7 +387,7 @@
         }
       }
     },
-    "/contents_review/{content_id}/reject": {
+    "/contents/{content_id}/review/reject": {
       "put": {
         "tags": [
           "content"
@@ -475,124 +523,6 @@
           },
           "404": {
             "description": "Content not found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/contents_dynamo": {
-      "get": {
-        "tags": [
-          "content"
-        ],
-        "description": "Search user's private content with condition",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "pending",
-                "published",
-                "rejected",
-                "archive"
-              ],
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "content_type",
-            "in": "query",
-            "description": "Search content by content type",
-            "schema": {
-              "type": "string",
-              "enum":["1", "2", "3"],
-              "nullable": true
-            }
-          },
-          {
-            "name": "description",
-            "in": "query",
-            "description": "Search content by description",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "keywords",
-            "in": "query",
-            "description": "Search content by keywords",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "key",
-            "in": "query",
-            "description": "Search key",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
-                      }
-                    }
-                  }
-                }
-              }
-            }
           },
           "500": {
             "description": "Internal Server Error"
@@ -2565,6 +2495,1310 @@
           }
         }
       }
+    },
+    "/learning_outcomes": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Search learning outcomes with condition",
+        "operationId": "searchLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_name",
+            "in": "query",
+            "description": "Search learning outcomes by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "description": "Search learning outcomes by description",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "keywords",
+            "in": "query",
+            "description": "Search learning outcomes by keyword",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "shortcode",
+            "in": "query",
+            "description": "Search learning outcomes by shortcode",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author_name",
+            "in": "query",
+            "description": "Search learning outcomes by author_name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with learning outcome's name",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "created_at",
+                "-created_at"
+              ],
+              "nullable": true,
+              "example": "name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "outcome list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search key"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Create learning outcomes",
+        "operationId": "createLearningOutcomes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLearningOutComesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "learning outcomes info",
+                  "properties": {
+                    "outcome_id": {
+                      "type": "string",
+                      "description": "learning outcome id",
+                      "example": "1"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Get learning outcomes by id",
+        "operationId": "getLearningOutcomesById",
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "learning outcomes info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "$ref": "#/components/schemas/LearningOutcomes"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Update learning outcomes by id",
+        "operationId": "updateLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "learning outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLearningOutComesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Content not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Delete learning outcomes by id",
+        "operationId": "deleteLearningOutcome",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/publish": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Publish learning outcomes",
+        "operationId": "publishLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishLearningOutcomesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/lock": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Lock a learning outcomes by content_id",
+        "operationId": "lockLearningOutcomes",
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "$ref": "#/components/schemas/LockLearningOutcomesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "content was locked"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/approve": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Approve a learning outcomes by outcome_id",
+        "operationId": "approveLearningOutcomes",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "412": {
+            "description": "learning outcome status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/reject": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Reject a learning outcomes by outcome_id",
+        "operationId": "rejectLearningOutcomes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectReasonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "412": {
+            "description": "learning outcome status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/bulk_publish/learning_outcomes": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Publish learning outcomes bulk",
+        "operationId": "publishLearningOutcomesBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutcomesIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/bulk/learning_outcomes": {
+      "delete": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Delete learning outcome bulk",
+        "operationId": "deleteOutcomeBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutcomesIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/private_learning_outcomes": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Search user's private learning outcomes with condition",
+        "operationId": "searchPrivateLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_name",
+            "in": "query",
+            "description": "Search learning outcomes by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "description": "Search learning outcomes by description",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "Search learning outcomes by keyword",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "shortcode",
+            "in": "query",
+            "description": "Search learning outcomes by shortcode",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author_name",
+            "in": "query",
+            "description": "Search learning outcomes by author_name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with learning outcome's name",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "created_at",
+                "-created_at"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/pending_learning_outcomes": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Search pending learning outcomes",
+        "operationId": "searchPendingLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_name",
+            "in": "query",
+            "description": "Search learning outcomes by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "description": "Search learning outcomes by description",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "Search learning outcomes by keyword",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "shortcode",
+            "in": "query",
+            "description": "Search learning outcomes by shortcode",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author_name",
+            "in": "query",
+            "description": "Search learning outcomes by author_name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with learning outcome's name",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "created_at",
+                "-created_at"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "learning outcome list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/assessments": {
+      "get": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "list assessment",
+        "description": "list assessment",
+        "operationId": "listAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "search assessment by status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "in_progress",
+                "complete"
+              ],
+              "default": "all"
+            }
+          },
+          {
+            "name": "teacher_name",
+            "in": "query",
+            "description": "fuzzy search assessment by teacher name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if page_size <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "class_end_time",
+                "-class_end_time",
+                "complete_time",
+                "-complete_time"
+              ],
+              "default": "-class_end_time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "assessment view list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "assessment view list",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "assessment id"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "assessment title"
+                          },
+                          "subject": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "subject id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "subject name"
+                              }
+                            }
+                          },
+                          "program": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "program id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "program name"
+                              }
+                            }
+                          },
+                          "teacher": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "teacher id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "teacher name"
+                              }
+                            }
+                          },
+                          "class_end_time": {
+                            "type": "integer",
+                            "format": "int64",
+                            "description": "class end time(unix seconds)"
+                          },
+                          "complete_time": {
+                            "type": "integer",
+                            "format": "int64",
+                            "description": "class end time(unix seconds)"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "assessment status",
+                            "enum": [
+                              "in_progress",
+                              "complete"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "add assessment",
+        "description": "add assessment",
+        "operationId": "addAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "assessment",
+                "properties": {
+                  "schedule_id": {
+                    "type": "string",
+                    "description": "schedule id"
+                  },
+                  "class_id": {
+                    "type": "string",
+                    "description": "class id"
+                  },
+                  "class_name": {
+                    "type": "string",
+                    "description": "class name"
+                  },
+                  "lesson_name": {
+                    "type": "string",
+                    "description": "lesson name"
+                  },
+                  "attendance_ids": {
+                    "type": "array",
+                    "description": "attendance id list",
+                    "items": {
+                      "type": "string",
+                      "description": "attendance id"
+                    }
+                  },
+                  "program_id": {
+                    "type": "string",
+                    "description": "program id"
+                  },
+                  "subject_id": {
+                    "type": "string",
+                    "description": "subject id"
+                  },
+                  "teacher_id": {
+                    "type": "string",
+                    "description": "teacher id"
+                  },
+                  "class_length": {
+                    "type": "integer",
+                    "format": "int",
+                    "description": "class length (unit: minute)"
+                  },
+                  "class_end_time": {
+                    "type": "integer",
+                    "description": "class end time (unix seconds)"
+                  },
+                  "complete_time": {
+                    "type": "integer",
+                    "description": "complete time (unix seconds)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "new assessment id"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/assessment/{id}": {
+      "get": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "get assessment detail",
+        "description": "get assessment detail",
+        "operationId": "getAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "assessment id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "assessment detail",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "assessment id"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "assessment title"
+                    },
+                    "class_id": {
+                      "type": "string",
+                      "description": "class id"
+                    },
+                    "attendances": {
+                      "type": "array",
+                      "description": "assessment attendances",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "attendance id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "attendance name"
+                          }
+                        }
+                      }
+                    },
+                    "subject": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "subject id"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "subject name"
+                        }
+                      }
+                    },
+                    "teacher": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "teacher id"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "teacher name"
+                        }
+                      }
+                    },
+                    "class_end_time": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "class end time (unix seconds)"
+                    },
+                    "class_length": {
+                      "type": "integer",
+                      "format": "int",
+                      "description": "class length (unit: minute)"
+                    },
+                    "number_of_activities": {
+                      "type": "integer",
+                      "format": "int",
+                      "description": "number of activities"
+                    },
+                    "number_of_outcomes": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "number of learning outcomes"
+                    },
+                    "complete_time": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "class end time"
+                    },
+                    "outcome_attendance_maps": {
+                      "type": "array",
+                      "description": "outcome attendance maps",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "outcome_id": {
+                            "type": "string",
+                            "description": "outcome id"
+                          },
+                          "outcome_name": {
+                            "type": "string",
+                            "description": "outcome name"
+                          },
+                          "assumed": {
+                            "type": "boolean",
+                            "format": "bool",
+                            "description": "assumed"
+                          },
+                          "attendance_ids": {
+                            "type": "array",
+                            "description": "attendance ids",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "update assessment",
+        "description": "update assessment",
+        "operationId": "updateAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "assessment id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "update assessment action",
+                    "enum": [
+                      "save",
+                      "complete"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "description": "assessment id"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "assessment status",
+                    "enum": [
+                      "in_progress",
+                      "complete"
+                    ]
+                  },
+                  "attendance_ids": {
+                    "type": "array",
+                    "description": "attendance ids",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "outcome_attendance_maps": {
+                    "type": "array",
+                    "description": "outcome attendance maps",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "outcome_id": {
+                          "type": "string",
+                          "description": "outcome id"
+                        },
+                        "attendance_ids": {
+                          "type": "array",
+                          "description": "attendance ids",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2646,6 +3880,16 @@
                 "type": "string",
                 "description": "reject reason",
                 "example": "reject reason"
+              },
+              "outcomes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outcomes id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "developmental": {
                 "type": "array",
@@ -2871,6 +4115,16 @@
                   "type": "string"
                 },
                 "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "outcomes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outcomes id",
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
@@ -3284,10 +4538,6 @@
           "is_repeat":{
             "type": "boolean",
             "description": "If true, schedule is repeat"
-          },
-          "lesson_plan_id":{
-            "type": "string",
-            "description": "lesson plan id"
           }
         }
       },
@@ -4051,6 +5301,389 @@
             "description": "end after the time(unix timestamp)"
           }
         }
+      },
+      "CreateLearningOutComesRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_name": {
+                "type": "string",
+                "description": "learning outcome name",
+                "example": "Home Audio Recording For Everyone"
+              },
+              "author_id": {
+                "type": "string",
+                "description": "learning outcome author",
+                "example": "123"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "learning outcome author",
+                "example": "Mark"
+              },
+              "assumed": {
+                "type": "boolean",
+                "description": "learning outcome assumed",
+                "example": "true"
+              },
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
+              },
+              "organization_id": {
+                "type": "string",
+                "description": "the top level organization which outcome belongs",
+                "example": "1"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "estimated_time": {
+                "type": "integer",
+                "description": "estimated time",
+                "example": 30
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "outcome description",
+                "example": "description"
+              }
+            }
+          }
+        ]
+      },
+      "PublishLearningOutcomesRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "description": "content published scope list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "OutcomesIDListRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_ids": {
+                "type": "array",
+                "description": "outcome id list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "LockLearningOutcomesResponse": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Lock learning outcome response",
+            "properties": {
+              "outcome_id": {
+                "type": "string",
+                "description": "outcome id to edit"
+              }
+            }
+          }
+        ]
+      },
+      "LearningOutcomes": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_id": {
+                "type": "string",
+                "description": "outcome id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "ancestor_id": {
+                "type": "string",
+                "description": "outcome ancestor id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
+              },
+              "assumed": {
+                "type": "boolean",
+                "description": "learning outcome assumed",
+                "example": true
+              },
+              "outcome_name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "program_id": {
+                      "type": "string",
+                      "description": "program id",
+                      "example": "p001"
+                    },
+                    "program_name": {
+                      "type": "string",
+                      "description": "program name",
+                      "example": "Little Star"
+                    }
+                  }
+                }
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "subject_id": {
+                      "type": "string",
+                      "description": "subject id",
+                      "example": "s001"
+                    },
+                    "subject_name": {
+                      "type": "string",
+                      "description": "subject name",
+                      "example": "English"
+                    }
+                  }
+                }
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "developmental_id": {
+                      "type": "string",
+                      "description": "developmental id",
+                      "example": "develop001"
+                    },
+                    "developmental_name": {
+                      "type": "string",
+                      "description": "developmental name",
+                      "example": "Hit"
+                    }
+                  }
+                }
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "skill_id": {
+                      "type": "string",
+                      "description": "skill id",
+                      "example": "skill001"
+                    },
+                    "skill_name": {
+                      "type": "string",
+                      "description": "skill name",
+                      "example": "Hit"
+                    }
+                  }
+                }
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "age_id": {
+                      "type": "string",
+                      "description": "age id",
+                      "example": "age001"
+                    },
+                    "age_name": {
+                      "type": "string",
+                      "description": "age name",
+                      "example": "3"
+                    }
+                  }
+                }
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "grade_id": {
+                      "type": "string",
+                      "description": "grade id",
+                      "example": "grade001"
+                    },
+                    "grade_name": {
+                      "type": "string",
+                      "description": "grade name",
+                      "example": "3-4"
+                    }
+                  }
+                }
+              },
+              "estimated_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 30
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "source_id": {
+                "type": "string",
+                "description": "content source id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "locked_by": {
+                "type": "string",
+                "description": "content locked by others id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_id": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "organization_id": {
+                "type": "string",
+                "description": "org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "organization_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "learning outcomes publish scope id,default as same as organization_id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "learning outcomes publish status",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ],
+                "example": "published"
+              },
+              "created_at": {
+                "type": "integer",
+                "description": "learning outcome create time",
+                "example": 123
+              }
+            }
+          }
+        ]
       }
     }
   }
