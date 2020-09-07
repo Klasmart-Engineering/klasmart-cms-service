@@ -80,7 +80,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	newID, err := model.GetAssessmentModel().Add(ctx, dbo.MustGetDB(ctx), cmd)
+	newID, err := model.GetAssessmentModel().Add(ctx, cmd)
 	if err != nil {
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
@@ -136,7 +136,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		cmd.ID = id
 	}
 
-	if err := model.GetAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), cmd); err != nil {
+	if err := model.GetAssessmentModel().Update(ctx, cmd); err != nil {
 		log.Info(ctx, "update assessment: update failed")
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return

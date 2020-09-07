@@ -82,10 +82,10 @@ func (s Server) registeRoute() {
 
 	assessments := s.engine.Group("/v1")
 	{
-		assessments.GET("/assessments", s.listAssessments)
-		assessments.POST("/assessments", s.addAssessment)
-		assessments.GET("/assessments/:id", s.getAssessmentDetail)
-		assessments.PUT("/assessments/:id", s.updateAssessment)
+		assessments.GET("/assessments", MustLogin, s.listAssessments)
+		assessments.POST("/assessments", MustLogin, s.addAssessment)
+		assessments.GET("/assessments/:id", MustLogin, s.getAssessmentDetail)
+		assessments.PUT("/assessments/:id", MustLogin, s.updateAssessment)
 	}
 
 	outcomes := s.engine.Group("/v1")

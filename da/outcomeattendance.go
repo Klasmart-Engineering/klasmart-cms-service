@@ -10,10 +10,9 @@ import (
 )
 
 type IOutcomeAttendanceDA interface {
-	GetAttendanceIDsByOutcomeID(ctx context.Context, tx *dbo.DBContext, outcomeID string) ([]string, error)
+	BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error
-	//DeleteByOutcomeID(ctx context.Context, tx dbo.DBContext, outcomeID string) error
-	BatchDeleteByOutcomeIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) error
+	BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) error
 }
 
 var (
@@ -30,16 +29,15 @@ func GetOutcomeAttendanceDA() IOutcomeAttendanceDA {
 
 type outcomeAttendanceDA struct{}
 
-func (*outcomeAttendanceDA) GetAttendanceIDsByOutcomeID(ctx context.Context, tx *dbo.DBContext, outcomeID string) ([]string, error) {
-	var items []entity.OutcomeAttendance
-	if err := tx.Where("outcome_id = ?", outcomeID).Find(&items).Error; err != nil {
+func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
+	var items []*entity.OutcomeAttendance
+	if err := tx.
+		Where("assessment_id = ?", assessmentID).
+		Where("outcome_id in ?", outcomeIDs).
+		Find(&items).Error; err != nil {
 		return nil, err
 	}
-	var ids []string
-	for _, item := range items {
-		ids = append(ids, item.ID)
-	}
-	return ids, nil
+	return items, nil
 }
 
 func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error {
@@ -65,11 +63,14 @@ func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 	return nil
 }
 
-func (*outcomeAttendanceDA) BatchDeleteByOutcomeIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) error {
+func (*outcomeAttendanceDA) BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) error {
 	if len(outcomeIDs) == 0 {
 		return nil
 	}
-	if err := tx.Where("outcome_id in ?", outcomeIDs).Delete(entity.OutcomeAttendance{}).Error; err != nil {
+	if err := tx.
+		Where("assessment_id = ?", assessmentID).
+		Where("outcome_id in ?", outcomeIDs).
+		Delete(entity.OutcomeAttendance{}).Error; err != nil {
 		log.Error(ctx, "batch delete attendances by outcome ids: batch delete failed",
 			log.Err(err),
 			log.Strings("outcome_ids", outcomeIDs),
