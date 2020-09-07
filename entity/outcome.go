@@ -54,6 +54,7 @@ func (oc *Outcome) Update(data *Outcome) {
 		oc.Name = data.Name
 	}
 
+	oc.Assumed = data.Assumed
 	oc.Program = data.Program
 	oc.Subject = data.Subject
 	oc.Developmental = data.Subject
@@ -182,13 +183,16 @@ func (oc Outcome) CanBeDeleted() bool {
 }
 
 type OutcomeCondition struct {
-	OutcomeName   string   `json:"outcome_name"`
-	Description   string   `json:"description"`
-	Keywords      string   `json:"keywords"`
-	Shortcode     string   `json:"shortcode"`
-	AuthorName    string   `json:"author_name"`
-	Page          int      `json:"page"`
-	PageSize      int      `json:"page_size"`
-	OrderBy       string   `json:"order_by"`
-	PublishStatus []string `json:"publish_status"`
+	IDs           []string `json:"ids" form:"ids"`
+	OutcomeName   string   `json:"outcome_name" form:"outcome_name"`
+	Description   string   `json:"description" form:"description"`
+	Keywords      string   `json:"keywords" form:"keywords"`
+	Shortcode     string   `json:"shortcode" form:"shortcode"`
+	AuthorID      string   `json:"author_id" form:"author_id"`
+	AuthorName    string   `json:"author_name" form:"author_name"`
+	Page          int      `json:"page" form:"page"`
+	PageSize      int      `json:"page_size" form:"page_size"`
+	OrderBy       string   `json:"order_by" form:"order_by"`
+	PublishStatus []string `json:"publish_status" form:"publish_status"`
+	PublishScope  string   `json:"publish_scope" form:"publish_scope"`
 }

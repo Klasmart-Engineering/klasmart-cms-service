@@ -96,7 +96,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	err = model.GetOutcomeModel().UpdateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
+	err = model.GetOutcomeModel().UpdateLearningOutcome(ctx, outcome, op)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
@@ -124,7 +124,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
 
-	err := model.GetOutcomeModel().DeleteLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, op)
+	err := model.GetOutcomeModel().DeleteLearningOutcome(ctx, outcomeID, op)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
@@ -150,13 +150,6 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 func (s *Server) queryOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-	//c.Query("outcome_name")
-	//c.Query("description")
-	//c.Query("keywords")
-	//c.Query("shortcode")
-	//c.Query("author_name")
-	//c.Query("page")
-	//c.Query("page_size")
 	var condition entity.OutcomeCondition
 	err := c.ShouldBindQuery(&condition)
 	if err != nil {
@@ -389,21 +382,15 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-	var data OutcomeCreateView
-	err := c.ShouldBindJSON(&data)
+	var condition entity.OutcomeCondition
+	err := c.ShouldBindQuery(&condition)
 	if err != nil {
 		log.Warn(ctx, "queryPrivateOutcomes: ShouldBind failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
-	outcome, err := data.outcome()
-	if err != nil {
-		log.Warn(ctx, "createOutcome: outcome failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
-		return
-	}
-	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
+	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
@@ -421,7 +408,8 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
-			"outcome_id": outcome.ID,
+			"total": total,
+			"list":  outcomes,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
@@ -431,21 +419,15 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-	var data OutcomeCreateView
-	err := c.ShouldBindJSON(&data)
+	var condition entity.OutcomeCondition
+	err := c.ShouldBindQuery(&condition)
 	if err != nil {
 		log.Warn(ctx, "queryPrivateOutcomes: ShouldBind failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
-	outcome, err := data.outcome()
-	if err != nil {
-		log.Warn(ctx, "createOutcome: outcome failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
-		return
-	}
-	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
+	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
@@ -463,7 +445,8 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
-			"outcome_id": outcome.ID,
+			"total": total,
+			"list":  outcomes,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
