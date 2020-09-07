@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -63,8 +64,13 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-
-	err = model.GetContentModel().PublishContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := model.GetContentModel().PublishContentBulk(ctx, tx, ids.ID, op)
+		if err != nil{
+			return err
+		}
+		return nil
+	})
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
@@ -166,7 +172,13 @@ func (s *Server) lockContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	cid := c.Param("content_id")
-	ncid, err := model.GetContentModel().LockContent(ctx, dbo.MustGetDB(ctx), cid, op)
+	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		ncid, err := model.GetContentModel().LockContent(ctx, tx, cid, op)
+		if err != nil{
+			return nil, err
+		}
+		return ncid, nil
+	})
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(Unknown))
@@ -197,7 +209,13 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	err = model.GetContentModel().DeleteContentBulk(ctx, dbo.MustGetDB(ctx), ids.ID, op)
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err = model.GetContentModel().DeleteContentBulk(ctx, tx, ids.ID, op)
+		if err != nil{
+			return err
+		}
+		return nil
+	})
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
 		c.JSON(http.StatusConflict, L(Unknown))
@@ -213,7 +231,13 @@ func (s *Server) deleteContent(c *gin.Context) {
 	op := GetOperator(c)
 	cid := c.Param("content_id")
 
-	err := model.GetContentModel().DeleteContent(ctx, dbo.MustGetDB(ctx), cid, op)
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
+		if err != nil{
+			return err
+		}
+		return nil
+	})
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
 		c.JSON(http.StatusConflict, L(Unknown))
