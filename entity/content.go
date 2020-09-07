@@ -313,7 +313,6 @@ type CreateContentRequest struct {
 
 	Outcomes	[]string `json:"outcomes"`
 
-	DoPublish    bool   `json:"do_publish"`
 	PublishScope string `json:"publish_scope"`
 
 	Data  string `json:"data"`
