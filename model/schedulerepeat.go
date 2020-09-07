@@ -66,7 +66,7 @@ func (s *scheduleModel) repeatScheduleDaily(ctx context.Context, template *entit
 		result       []*entity.Schedule
 		originStart  = time.Unix(template.StartAt, 0).In(location)
 		originEnd    = time.Unix(template.EndAt, 0).In(location)
-		minStartTime = s.nextWeekStart(originStart)
+		minStartTime = s.nextDayStart(originStart)
 		maxEndTime   = time.Now().AddDate(s.getMaxRepeatYear(), 0, 0).In(location)
 	)
 	switch options.End.Type {

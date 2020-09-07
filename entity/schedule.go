@@ -354,6 +354,11 @@ type ScheduleShortInfo struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
+type SchedulePlain struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	LessonPlanID string `json:"lesson_plan_id"`
+}
 
 type ScheduleBasic struct {
 	Class      ScheduleShortInfo   `json:"class"`
