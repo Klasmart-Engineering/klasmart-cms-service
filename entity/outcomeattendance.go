@@ -1,9 +1,9 @@
 package entity
 
 type OutcomeAttendance struct {
-	ID           string `json:"id"`
-	OutcomeID    string `json:"outcome_id"`
-	AttendanceID string `json:"attendance_id"`
+	ID           string `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
+	OutcomeID    string `gorm:"column:outcome_id;type:varchar(64);not null" json:"outcome_id"`
+	AttendanceID string `gorm:"column:attendance_id;type:varchar(64);not null" json:"attendance_id"`
 }
 
 func (OutcomeAttendance) TableName() string {

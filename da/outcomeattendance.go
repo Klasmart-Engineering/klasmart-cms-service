@@ -11,8 +11,8 @@ import (
 
 type IOutcomeAttendanceDA interface {
 	GetAttendanceIDsByOutcomeID(ctx context.Context, tx *dbo.DBContext, outcomeID string) ([]string, error)
+	BatchGetByOutcomeIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.OutcomeAttendance, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error
-	//DeleteByOutcomeID(ctx context.Context, tx dbo.DBContext, outcomeID string) error
 	BatchDeleteByOutcomeIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) error
 }
 
@@ -31,7 +31,7 @@ func GetOutcomeAttendanceDA() IOutcomeAttendanceDA {
 type outcomeAttendanceDA struct{}
 
 func (*outcomeAttendanceDA) GetAttendanceIDsByOutcomeID(ctx context.Context, tx *dbo.DBContext, outcomeID string) ([]string, error) {
-	var items []entity.OutcomeAttendance
+	var items []*entity.OutcomeAttendance
 	if err := tx.Where("outcome_id = ?", outcomeID).Find(&items).Error; err != nil {
 		return nil, err
 	}
@@ -40,6 +40,14 @@ func (*outcomeAttendanceDA) GetAttendanceIDsByOutcomeID(ctx context.Context, tx 
 		ids = append(ids, item.ID)
 	}
 	return ids, nil
+}
+
+func (d *outcomeAttendanceDA) BatchGetByOutcomeIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.OutcomeAttendance, error) {
+	var items []*entity.OutcomeAttendance
+	if err := tx.Where("outcome_id in ?", outcomeIDs).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error {

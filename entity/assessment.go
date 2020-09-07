@@ -6,20 +6,20 @@ import (
 )
 
 type Assessment struct {
-	ID           string           `json:"id"`
-	ScheduleID   string           `json:"schedule_id"`
-	Title        string           `json:"title"`
-	ProgramID    string           `json:"program_id"`
-	SubjectID    string           `json:"subject"`
-	TeacherID    string           `json:"teacher_id"`
-	ClassLength  int              `json:"class_length"`
-	ClassEndTime int64            `json:"class_end_time"`
-	CompleteTime int64            `json:"complete_time"`
-	Status       AssessmentStatus `json:"status"`
+	ID           string           `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
+	ScheduleID   string           `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
+	Title        string           `gorm:"column:title;type:varchar(1024);not null" json:"title"`
+	ProgramID    string           `gorm:"column:program_id;type:varchar(64);not null" json:"program_id"`
+	SubjectID    string           `gorm:"column:subject_id;type:varchar(64);not null" json:"subject"`
+	TeacherID    string           `gorm:"column:teacher_id;type:varchar(64);not null" json:"teacher_id"`
+	ClassLength  int              `gorm:"column:class_length;type:int;not null" json:"class_length"`
+	ClassEndTime int64            `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
+	CompleteTime int64            `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
+	Status       AssessmentStatus `gorm:"column:status;type:varchar(128);not null" json:"status"`
 
-	CreateTime int64 `json:"create_time"`
-	UpdateTime int64 `json:"update_time"`
-	DeleteTime int64 `json:"delete_time"`
+	CreateTime int64 `gorm:"column:create_time;type:bigint;not null" json:"create_time"`
+	UpdateTime int64 `gorm:"column:update_time;type:bigint;not null" json:"update_time"`
+	DeleteTime int64 `gorm:"column:delete_time;type:bigint;not null" json:"delete_time"`
 }
 
 func (Assessment) TableName() string {
