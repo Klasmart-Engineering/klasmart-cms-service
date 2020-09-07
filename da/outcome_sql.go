@@ -28,6 +28,10 @@ type OutcomeCondition struct {
 	PageSize int
 }
 
+func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
+	return &OutcomeCondition{}
+}
+
 type OutcomeOrderBy int
 
 const (

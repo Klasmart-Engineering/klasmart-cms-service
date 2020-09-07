@@ -10,13 +10,15 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"sync"
 )
 
 type IOutcomeModel interface {
 	CreateLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) error
+	GetLearningOutcomeByID(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (*entity.Outcome, error)
 	UpdateLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) error
 	DeleteLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) error
-	SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
+	SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
 
 	LockLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (string, error)
 
@@ -41,6 +43,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	// outcome get value from api lay, this lay add some information
 	outcome.ID = utils.NewID()
 	outcome.AncestorID = outcome.ID
+	outcome.AuthorID = operator.UserID
 	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, outcome.AuthorID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: getAuthorNameByID failed",
@@ -62,6 +65,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 			log.Any("outcome", outcome))
 		return
 	}
+	outcome.PublishStatus = entity.ContentStatusDraft
 	err = da.GetOutcomeDA().CreateOutcome(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: CreateOutcome failed",
@@ -69,6 +73,20 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 			log.Any("outcome", outcome))
 	}
 	return err
+}
+
+func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (*entity.Outcome, error) {
+	outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
+	if err == dbo.ErrRecordNotFound {
+		return nil, ErrNoContent
+	}
+	if err != nil {
+		log.Error(ctx, "GetLearningOutcomeByID: GetOutcomeByID failed",
+			log.String("op", operator.UserID),
+			log.String("outcome_id", outcomeID))
+		return nil, err
+	}
+	return outcome, nil
 }
 
 func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) error {
@@ -114,9 +132,10 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	return err
 }
 
-func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
-	condition.PublishStatus = dbo.NullStrings{Strings: []string{entity.ContentStatusPublished}, Valid: true}
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, condition)
+func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
+	//condition.PublishStatus = dbo.NullStrings{Strings: []string{entity.ContentStatusPublished}, Valid: true}
+	condition.PublishStatus = []string{entity.ContentStatusPublished}
+	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
 		log.Error(ctx, "SearchLearningOutcome: DeleteOutcome failed",
 			log.String("op", user.UserID),
@@ -468,6 +487,7 @@ func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name 
 			log.Err(err),
 			log.String("author_id", id))
 	}
+	name = "mock name 001"
 	return
 }
 
@@ -498,15 +518,18 @@ func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id st
 			log.Err(err),
 			log.String("author_id", id))
 	}
+	orgID = "1"
+	orgName = "mock name org001"
 	return
 }
 
 func (ocm OutcomeModel) getShortCode(ctx context.Context) (shortcode string, err error) {
 	// TODO:
 	if err != nil {
-		log.Error(ctx, "getRootOrganizationByOrgID failed",
+		log.Error(ctx, "getShortCode failed",
 			log.Err(err))
 	}
+	shortcode = "mock: A01"
 	return
 }
 
@@ -618,4 +641,16 @@ func (ocm OutcomeModel) hideParent(ctx context.Context, tx *dbo.DBContext, outco
 func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) (err error) {
 	// must in a transaction
 	return nil
+}
+
+var (
+	_outcomeModel     IOutcomeModel
+	_outcomeModelOnce sync.Once
+)
+
+func GetOutcomeModel() IOutcomeModel {
+	_outcomeModelOnce.Do(func() {
+		_outcomeModel = new(OutcomeModel)
+	})
+	return _outcomeModel
 }
