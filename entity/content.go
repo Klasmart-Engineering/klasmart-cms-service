@@ -425,11 +425,11 @@ func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {
 			return nil
 		}
 	case ContentStatusPublished:
+		fmt.Println(cInfo.PublishStatus)
 		if cInfo.allowedToBeReviewed() {
 			cInfo.PublishStatus = ContentStatusPublished
 			return nil
 		}
-		fmt.Println(cInfo.PublishStatus)
 	case ContentStatusRejected:
 		if cInfo.allowedToBeReviewed() {
 			cInfo.PublishStatus = ContentStatusRejected
