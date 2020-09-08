@@ -5733,6 +5733,11 @@
                 ],
                 "example": "published"
               },
+              "description": {
+                "type": "string",
+                "description": "description",
+                "example": "description001"
+              },
               "created_at": {
                 "type": "integer",
                 "description": "learning outcome create time",
