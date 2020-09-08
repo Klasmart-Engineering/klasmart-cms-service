@@ -2550,6 +2550,25 @@
             }
           },
           {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ]
+              },
+              "nullable": true,
+              "example": "name"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "description": "Search page",
@@ -3064,6 +3083,25 @@
             }
           },
           {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ]
+              },
+              "nullable": true,
+              "example": "name"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "description": "Search page",
@@ -3178,6 +3216,25 @@
             "schema": {
               "type": "string",
               "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ]
+              },
+              "nullable": true,
+              "example": "name"
             }
           },
           {
