@@ -547,7 +547,7 @@ func Test_repeatScheduleYearly(t *testing.T) {
 					OnDateDay:   1,
 					End: entity.RepeatEnd{
 						Type:      entity.RepeatEndAfterTime,
-						AfterTime: time.Date(2021, 12, 1, 0, 0, 0, 0, time.Local).Unix(),
+						AfterTime: time.Date(2023, 12, 1, 0, 0, 0, 0, time.Local).Unix(),
 					},
 				},
 				location: time.Local,
