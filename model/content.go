@@ -874,7 +874,18 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
 		return nil, err
 	}
-	return strings.Split(content.Outcomes, ","), nil
+	if content.Outcomes == "" {
+		return nil, nil
+	}
+	outcomes := strings.Split(content.Outcomes, ",")
+	ret := make([]string, 0)
+	for i := range outcomes {
+		if outcomes[i] != ""{
+			ret = append(ret, outcomes[i])
+		}
+	}
+
+	return ret, nil
 }
 
 func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error) {
