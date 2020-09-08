@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -10,6 +11,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"gitlab.badanamu.com.cn/calmisland/ro"
+	"strings"
 	"sync"
 )
 
@@ -32,7 +35,7 @@ type IOutcomeModel interface {
 	GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
 	GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
 
-	ApproveLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) error
+	ApproveLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error
 	RejectLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, reason string, operator *entity.Operator) error
 }
 
@@ -58,7 +61,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 			log.Any("outcome", outcome))
 		return
 	}
-	outcome.Shortcode, err = ocm.getShortCode(ctx)
+	outcome.Shortcode, err = ocm.getShortCode(ctx, outcome.OrganizationID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: getShortCode failed",
 			log.String("op", operator.UserID),
@@ -197,7 +200,7 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, tx *dbo.DBCo
 			log.String("outcome_id", outcomeID))
 		return err
 	}
-	err = outcome.SetStatus(entity.ContentStatusPublished)
+	err = outcome.SetStatus(entity.ContentStatusPending)
 	if err != nil {
 		log.Error(ctx, "PublishLearningOutcome: SetStatus failed",
 			log.Err(err),
@@ -319,7 +322,7 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, tx *dbo.DBCon
 	return total, outcomes, nil
 }
 
-func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) error {
+func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
 	if err != nil {
 		log.Error(ctx, "ApproveLearningOutcome: NewLock failed",
@@ -421,6 +424,7 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	})
 	return err
 }
+
 func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error) {
 	condition := da.OutcomeCondition{
 		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
@@ -525,13 +529,14 @@ func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id st
 	return
 }
 
-func (ocm OutcomeModel) getShortCode(ctx context.Context) (shortcode string, err error) {
-	// TODO:
+func (ocm OutcomeModel) getShortCode(ctx context.Context, orgID string) (shortcode string, err error) {
+	redisKey := fmt.Sprintf("%s:%s", da.RedisKeyPrefixOutcomeShortcode, orgID)
+	num, err := ro.MustGetRedis(ctx).Incr(redisKey).Result()
 	if err != nil {
 		log.Error(ctx, "getShortCode failed",
 			log.Err(err))
 	}
-	shortcode = "mock: A01"
+	shortcode = PaddingStr(NumToBHex(int(num), DecimalCust), ShowLength)
 	return
 }
 
@@ -642,7 +647,8 @@ func (ocm OutcomeModel) hideParent(ctx context.Context, tx *dbo.DBContext, outco
 
 func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) (err error) {
 	// must in a transaction
-	return nil
+	err = da.GetOutcomeDA().UpdateLatestHead(ctx, tx, oldHeader, newHeader)
+	return
 }
 
 var (
@@ -655,4 +661,27 @@ func GetOutcomeModel() IOutcomeModel {
 		_outcomeModel = new(OutcomeModel)
 	})
 	return _outcomeModel
+}
+
+const DecimalCust = 36
+const ShowLength = 3
+
+var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+func NumToBHex(num int, n int) string {
+	num_str := ""
+	for num != 0 {
+		yu := num % n
+		num_str = string(num2char[yu]) + num_str
+		num = num / n
+	}
+	return strings.ToUpper(num_str)
+}
+
+func PaddingStr(s string, l int) string {
+
+	if l <= len(s) {
+		return s
+	}
+	return strings.Repeat("0", l-len(s)) + s
 }

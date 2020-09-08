@@ -309,7 +309,7 @@ type CreateContentRequest struct {
 	Description   string      `json:"description"`
 	Thumbnail     string      `json:"thumbnail"`
 	SuggestTime   int         `json:"suggest_time"`
-	RejectReason  string      `json:"reject_reason"`
+	//RejectReason  string      `json:"reject_reason"`
 
 	Outcomes	[]string `json:"outcomes"`
 
