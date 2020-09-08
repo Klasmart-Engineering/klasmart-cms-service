@@ -249,7 +249,7 @@ func (s *Server) approveOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
-	err := model.GetOutcomeModel().ApproveLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, op)
+	err := model.GetOutcomeModel().ApproveLearningOutcome(ctx, outcomeID, op)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
