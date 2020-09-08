@@ -85,7 +85,7 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		values  []interface{}
 	)
 
-	formats = append(formats, "delete_time != 0")
+	formats = append(formats, "delete_time == 0")
 
 	if c.Status != nil {
 		formats = append(formats, "status = ?")
