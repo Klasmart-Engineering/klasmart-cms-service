@@ -150,18 +150,16 @@ type ListAssessmentsResult struct {
 }
 
 type AddAssessmentCommand struct {
-	ScheduleID    string           `json:"schedule_id"`
-	ClassID       string           `json:"class_id"`
-	ClassName     string           `json:"class_name"`
-	LessonName    string           `json:"lesson_name"`
-	AttendanceIDs []string         `json:"attendance_ids"`
-	ProgramID     string           `json:"program_id"`
-	SubjectID     string           `json:"subject_id"`
-	TeacherID     string           `json:"teacher_id"`
-	ClassLength   int              `json:"class_length"`
-	ClassEndTime  int64            `json:"class_end_time"`
-	CompleteTime  int64            `json:"-"`
-	Status        AssessmentStatus `json:"-"`
+	ScheduleID    string   `json:"schedule_id"`
+	ClassID       string   `json:"class_id"`
+	ClassName     string   `json:"class_name"`
+	LessonName    string   `json:"lesson_name"`
+	AttendanceIDs []string `json:"attendance_ids"`
+	ProgramID     string   `json:"program_id"`
+	SubjectID     string   `json:"subject_id"`
+	TeacherID     string   `json:"teacher_id"`
+	ClassLength   int      `json:"class_length"`
+	ClassEndTime  int64    `json:"class_end_time"`
 }
 
 func (cmd AddAssessmentCommand) Title() string {

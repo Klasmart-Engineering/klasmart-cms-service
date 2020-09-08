@@ -49,9 +49,13 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 }
 
 func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error {
+	nowUnix := time.Now().Unix()
 	updateFields := map[string]interface{}{
 		"status":      status,
-		"update_time": time.Now().Unix(),
+		"update_time": nowUnix,
+	}
+	if status == entity.AssessmentStatusComplete {
+		updateFields["complete_time"] = nowUnix
 	}
 	if err := tx.Model(entity.Assessment{}).
 		Where(a.filterSoftDeletedTemplate()).
