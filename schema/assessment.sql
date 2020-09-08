@@ -17,7 +17,7 @@ create table `assessments`
     key `assessments_status` (status),
     key `assessments_schedule_id` (schedule_id),
     key `assessments_complete_time` (complete_time)
-) comment 'assessments';
+) comment 'assessment';
 
 create table assessments_attendances
 (
@@ -27,7 +27,7 @@ create table assessments_attendances
     primary key (`id`),
     key `assessments_attendances_assessment_id` (`assessment_id`),
     key `assessments_attendances_attendance_id` (`attendance_id`)
-);
+) comment 'assessment and attendance map';
 
 create table assessments_outcomes
 (
