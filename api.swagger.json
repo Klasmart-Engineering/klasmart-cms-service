@@ -3829,7 +3829,7 @@
                 "type": "integer",
                 "format": "int64",
                 "description": "content type",
-                "enum":[1,2,3],
+                "enum":[1,2,10,11,12,13],
                 "example": 1
               },
               "name": {
@@ -4078,7 +4078,7 @@
                 "format": "int64",
                 "description": "content type",
                 "example": 1,
-                "enum":[1,2,3]
+                "enum":[1,2,10,11,12,13]
               },
               "name": {
                 "type": "string",
