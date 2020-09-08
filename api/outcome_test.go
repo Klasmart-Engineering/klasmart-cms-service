@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
@@ -78,19 +77,19 @@ func TestQueryOutcome(t *testing.T) {
 }
 
 func TestLockOutcome(t *testing.T) {
-	outcomeID := "5f55d43f3695b7ca67729069"
+	outcomeID := "5f5726af0944d7c38e20696f"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/lock", "")
 	fmt.Println(res)
 }
 
 func TestPublishOutcome(t *testing.T) {
-	outcomeID := "5f56def450275d71418a1d4b"
+	outcomeID := "5f5728fc14a58b1efaa90ade"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/publish", "")
 	fmt.Println(res)
 }
 
 func TestApproveOutcome(t *testing.T) {
-	outcomeID := "5f55e3a89cb75a329b44e23d"
+	outcomeID := "5f5728fc14a58b1efaa90ade"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/approve", "")
 	fmt.Println(res)
 }
@@ -125,13 +124,6 @@ func TestQueryPendingOutcome(t *testing.T) {
 }
 
 func TestRedis(t *testing.T) {
-
-	ro.SetConfig(&redis.Options{
-		Addr:         "192.168.1.15:16379",
-		Password:     "",
-		PoolSize:     10,
-		MinIdleConns: 4,
-	})
 
 	redisKey := fmt.Sprintf("%s:%s", da.RedisKeyPrefixOutcomeShortcode, "1")
 	num, err := ro.MustGetRedis(context.Background()).Incr(redisKey).Result()

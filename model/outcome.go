@@ -25,7 +25,7 @@ type IOutcomeModel interface {
 
 	LockLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (string, error)
 
-	PublishLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, scope string, operator *entity.Operator) error
+	PublishLearningOutcome(ctx context.Context, outcomeID string, scope string, operator *entity.Operator) error
 	BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, scope string, operator *entity.Operator) error
 	BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) error
 
@@ -46,6 +46,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	// outcome get value from api lay, this lay add some information
 	outcome.ID = utils.NewID()
 	outcome.AncestorID = outcome.ID
+	outcome.SourceID = outcome.ID
 	outcome.AuthorID = operator.UserID
 	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, outcome.AuthorID)
 	if err != nil {
@@ -120,7 +121,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
-		if err != nil && !gorm.IsRecordNotFoundError(err) {
+		if err != nil && err != dbo.ErrRecordNotFound {
 			log.Error(ctx, "DeleteLearningOutcome: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
@@ -161,62 +162,87 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
-	if err == dbo.ErrRecordNotFound {
-		return "", ErrNoContent
-	}
-	if err != nil {
-		log.Error(ctx, "LockLearningOutcome: GetOutcomeByID failed",
-			log.Err(err),
-			log.String("op", operator.UserID),
-			log.String("outcome_id", outcomeID))
-		return "", err
-	}
+	var newVersion entity.Outcome
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
+		if err == dbo.ErrRecordNotFound {
+			return ErrResourceNotFound
+		}
+		if err != nil {
+			log.Error(ctx, "LockLearningOutcome: GetOutcomeByID failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
 
-	err = ocm.lockOutcome(ctx, tx, outcome, operator)
+		err = ocm.lockOutcome(ctx, tx, outcome, operator)
+		if err != nil {
+			return err
+		}
+		newVersion = outcome.Clone()
+		err = da.GetOutcomeDA().CreateOutcome(ctx, tx, &newVersion)
+		if err != nil {
+			log.Error(ctx, "LockLearningOutcome: CreateOutcome failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID),
+				log.Any("outcome", newVersion))
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		return "", err
-	}
-	newVersion := outcome.Clone()
-	err = da.GetOutcomeDA().CreateOutcome(ctx, tx, &newVersion)
-	if err != nil {
-		log.Error(ctx, "LockLearningOutcome: CreateOutcome failed",
-			log.String("op", operator.UserID),
-			log.String("outcome_id", outcomeID),
-			log.Any("outcome", newVersion))
 		return "", err
 	}
 	return newVersion.ID, nil
 }
 
-func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, scope string, operator *entity.Operator) error {
-	outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
-	if err == dbo.ErrRecordNotFound {
-		err = ErrNoContent
+func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID string, scope string, operator *entity.Operator) error {
+	if scope == "" {
+		scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
+		if err != nil {
+			log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+		}
+		scope = scopeID
 	}
-	if err != nil {
-		log.Error(ctx, "PublishLearningOutcome: GetOutcomeByID failed",
-			log.String("op", operator.UserID),
-			log.String("outcome_id", outcomeID))
-		return err
-	}
-	err = outcome.SetStatus(entity.ContentStatusPending)
-	if err != nil {
-		log.Error(ctx, "PublishLearningOutcome: SetStatus failed",
-			log.Err(err),
-			log.String("op", operator.UserID),
-			log.Any("outcome", outcome))
-		return ErrInvalidContentStatusToPublish
-	}
-	err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
-	if err != nil {
-		log.Error(ctx, "PublishLearningOutcome: UpdateOutcome failed",
-			log.Err(err),
-			log.String("op", operator.UserID),
-			log.Any("outcome", outcome))
-		return err
-	}
-	return nil
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
+		if err == dbo.ErrRecordNotFound {
+			err = ErrResourceNotFound
+		}
+		if err != nil {
+			log.Error(ctx, "PublishLearningOutcome: GetOutcomeByID failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
+		err = outcome.SetStatus(ctx, entity.ContentStatusPending)
+		if err != nil {
+			log.Error(ctx, "PublishLearningOutcome: SetStatus failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return ErrInvalidContentStatusToPublish
+		}
+		if outcome.PublishScope != "" && outcome.PublishScope != scope {
+			log.Error(ctx, "PublishLearningOutcome: scope mismatch",
+				log.String("op", operator.UserID),
+				log.String("scope", scope),
+				log.Any("outcome", outcome))
+			return ErrInvalidContentStatusToPublish
+		}
+		outcome.PublishScope = scope
+		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
+		if err != nil {
+			log.Error(ctx, "PublishLearningOutcome: UpdateOutcome failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		return nil
+	})
+	return err
 }
 
 func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, scope string, operator *entity.Operator) error {
@@ -240,7 +266,7 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBCo
 			return ErrResourceNotFound
 		}
 		for _, o := range outcomes {
-			err = o.SetStatus(entity.ContentStatusPublished)
+			err = o.SetStatus(ctx, entity.ContentStatusPublished)
 			if err != nil {
 				log.Error(ctx, "BulkPubLearningOutcome: SetStatus failed",
 					log.String("op", operator.UserID),
@@ -347,12 +373,15 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, outcomeID st
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(entity.ContentStatusPublished)
+		err = outcome.SetStatus(ctx, entity.ContentStatusPublished)
 		if err != nil {
 			log.Error(ctx, "ApproveLearningOutcome: SetStatus failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
+		}
+		if outcome.LatestID == "" {
+			outcome.LatestID = outcome.ID
 		}
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
 		if err != nil {
@@ -368,7 +397,7 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, outcomeID st
 				log.Any("outcome", outcome))
 			return err
 		}
-		err = ocm.updateLatestToHead(ctx, tx, outcome.LatestID, outcome.ID)
+		err = ocm.updateLatestToHead(ctx, tx, outcome)
 		if err != nil {
 			log.Error(ctx, "ApproveLearningOutcome: updateLatestToHead failed",
 				log.String("op", operator.UserID),
@@ -405,7 +434,7 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(entity.ContentStatusRejected)
+		err = outcome.SetStatus(ctx, entity.ContentStatusRejected)
 		outcome.RejectReason = reason
 		if err != nil {
 			log.Error(ctx, "RejectLearningOutcome: SetStatus failed",
@@ -542,6 +571,13 @@ func (ocm OutcomeModel) getShortCode(ctx context.Context, orgID string) (shortco
 
 func (ocm OutcomeModel) lockOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) (err error) {
 	// must in a transaction
+	if outcome.PublishStatus != entity.ContentStatusPublished {
+		err = ErrInvalidPublishStatus
+		log.Warn(ctx, "lockOutcome: invalid lock status",
+			log.Err(err),
+			log.String("op", operator.UserID))
+		return
+	}
 	if outcome.LockedBy != "" && outcome.LockedBy != "-" {
 		err = ErrContentAlreadyLocked
 		log.Warn(ctx, "lockOutcome: invalid lock status",
@@ -630,7 +666,7 @@ func (ocm OutcomeModel) hideParent(ctx context.Context, tx *dbo.DBContext, outco
 		return
 	}
 	parent.LockedBy = "-"
-	err = parent.SetStatus(entity.ContentStatusHidden)
+	err = parent.SetStatus(ctx, entity.ContentStatusHidden)
 	if err != nil {
 		log.Error(ctx, "hideParent: SetStatus failed",
 			log.Any("outcome", parent))
@@ -645,9 +681,12 @@ func (ocm OutcomeModel) hideParent(ctx context.Context, tx *dbo.DBContext, outco
 	return nil
 }
 
-func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) (err error) {
+func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	// must in a transaction
-	err = da.GetOutcomeDA().UpdateLatestHead(ctx, tx, oldHeader, newHeader)
+	if outcome.LatestID == outcome.ID {
+		return nil
+	}
+	err = da.GetOutcomeDA().UpdateLatestHead(ctx, tx, outcome.LatestID, outcome.ID)
 	return
 }
 
