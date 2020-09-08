@@ -72,7 +72,7 @@ func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id s
 }
 
 func (a *assessmentDA) filterSoftDeletedTemplate() string {
-	return "delete_time == 0"
+	return "delete_time = 0"
 }
 
 type QueryAssessmentsCondition struct {
