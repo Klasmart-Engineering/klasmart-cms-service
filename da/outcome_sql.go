@@ -218,6 +218,15 @@ func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, cond
 }
 
 func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error {
-	sql := fmt.Sprintf("update %s set latest_id=%s where latest_id=%s and delete_at=0", entity.Outcome{}.TableName(), newHeader, oldHeader)
-	return tx.Raw(sql).Error
+	sql := fmt.Sprintf("update %s set latest_id='%s' where latest_id='%s' and delete_at=0", entity.Outcome{}.TableName(), newHeader, oldHeader)
+	err := tx.Exec(sql).Error
+	if err != nil {
+		log.Error(ctx, "UpdateLatestHead failed",
+			log.Err(err),
+			log.String("old", oldHeader),
+			log.String("new", newHeader),
+			log.String("sql", sql))
+		return err
+	}
+	return nil
 }
