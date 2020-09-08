@@ -2448,20 +2448,35 @@
             }
           },
           {
+            "name": "search_key",
+            "in": "query",
+            "description": "fuzzy search",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "assumed",
+            "in": "query",
+            "description": "filter outcomes by assumed",
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            }
+          },
+          {
             "name": "publish_status",
             "in": "query",
             "description": "Search learning outcomes by publish_status",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "draft",
-                  "pending",
-                  "published",
-                  "rejected"
-                ]
-              },
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected"
+              ],
               "nullable": true,
               "example": "name"
             }
@@ -2553,14 +2568,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "learning outcomes info",
-                  "properties": {
-                    "outcome_id": {
-                      "type": "string",
-                      "description": "learning outcome id",
-                      "example": "1"
-                    }
-                  }
+                  "$ref": "#/components/schemas/LearningOutcomes"
                 }
               }
             }
@@ -2954,7 +2962,7 @@
             }
           },
           {
-            "name": "keyword",
+            "name": "keywords",
             "in": "query",
             "description": "Search learning outcomes by keyword",
             "schema": {
@@ -2981,20 +2989,35 @@
             }
           },
           {
+            "name": "search_key",
+            "in": "query",
+            "description": "fuzzy search",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "assumed",
+            "in": "query",
+            "description": "filter outcomes by assumed",
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            }
+          },
+          {
             "name": "publish_status",
             "in": "query",
             "description": "Search learning outcomes by publish_status",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "draft",
-                  "pending",
-                  "published",
-                  "rejected"
-                ]
-              },
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected"
+              ],
               "nullable": true,
               "example": "name"
             }
@@ -3090,7 +3113,7 @@
             }
           },
           {
-            "name": "keyword",
+            "name": "keywords",
             "in": "query",
             "description": "Search learning outcomes by keyword",
             "schema": {
@@ -3117,20 +3140,35 @@
             }
           },
           {
+            "name": "search_key",
+            "in": "query",
+            "description": "fuzzy search",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "assumed",
+            "in": "query",
+            "description": "filter outcomes by assumed",
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            }
+          },
+          {
             "name": "publish_status",
             "in": "query",
             "description": "Search learning outcomes by publish_status",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "draft",
-                  "pending",
-                  "published",
-                  "rejected"
-                ]
-              },
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected"
+              ],
               "nullable": true,
               "example": "name"
             }
