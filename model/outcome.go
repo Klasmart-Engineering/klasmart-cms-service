@@ -150,8 +150,9 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBCon
 		}
 		condition.OrganizationID = orgID
 	}
-
-	condition.PublishStatus = []string{entity.ContentStatusPublished}
+	if condition.PublishStatus == "" { // Must search published outcomes
+		condition.PublishStatus = entity.ContentStatusPublished
+	}
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
 		log.Error(ctx, "SearchLearningOutcome: DeleteOutcome failed",

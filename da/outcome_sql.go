@@ -95,7 +95,7 @@ func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
 		Keywords:       sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
 		Shortcode:      sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-		PublishStatus:  dbo.NullStrings{Strings: condition.PublishStatus, Valid: len(condition.PublishStatus) > 0},
+		PublishStatus:  dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
 		PublishScope:   sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
 		AuthorID:       sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
 		AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
