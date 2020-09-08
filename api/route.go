@@ -59,7 +59,6 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", MustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", MustLogin, s.queryPendingContent)
 
-
 		content.PUT("/contents_bulk/publish", MustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", MustLogin, s.deleteContentBulk)
 
@@ -75,5 +74,32 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules", MustLogin, s.querySchedule)
 		schedules.GET("/schedules_time_view", MustLogin, s.getScheduleTimeView)
 	}
-}
 
+	assessments := s.engine.Group("/v1")
+	{
+		assessments.GET("/assessments", MustLogin, s.listAssessments)
+		assessments.POST("/assessments", MustLogin, s.addAssessment)
+		assessments.GET("/assessments/:id", MustLogin, s.getAssessmentDetail)
+		assessments.PUT("/assessments/:id", MustLogin, s.updateAssessment)
+	}
+
+	outcomes := s.engine.Group("/v1")
+	{
+		outcomes.POST("/learning_outcomes", MustLogin, s.createOutcome)
+		outcomes.GET("/learning_outcomes/:id", MustLogin, s.getOutcome)
+		outcomes.PUT("/learning_outcomes/:id", MustLogin, s.updateOutcome)
+		outcomes.DELETE("/learning_outcomes/:id", MustLogin, s.deleteOutcome)
+		outcomes.GET("/learning_outcomes", MustLogin, s.queryOutcomes)
+
+		outcomes.PUT("/learning_outcomes/:id/lock", MustLogin, s.lockOutcome)
+		outcomes.PUT("/learning_outcomes/:id/publish", MustLogin, s.publishOutcome)
+		outcomes.PUT("/learning_outcomes/:id/approve", MustLogin, s.approveOutcome)
+		outcomes.PUT("/learning_outcomes/:id/reject", MustLogin, s.rejectOutcome)
+
+		outcomes.PUT("/bulk_publish/learning_outcomes", MustLogin, s.bulkPublishOutcomes)
+		outcomes.DELETE("/bulk/learning_outcomes", MustLogin, s.bulkDeleteOutcomes)
+
+		outcomes.GET("/private_learning_outcomes", MustLogin, s.queryPrivateOutcomes)
+		outcomes.GET("/pending_learning_outcomes", MustLogin, s.queryPendingOutcomes)
+	}
+}

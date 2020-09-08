@@ -10,9 +10,9 @@ type OrganizationServiceProvider interface {
 }
 
 type Organization struct {
-	ID       string
-	Name     string
-	ParentID string
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	ParentID string `json:"parent_id"`
 }
 
 func GetOrganizationServiceProvider() (OrganizationServiceProvider, error) {
@@ -22,61 +22,17 @@ func GetOrganizationServiceProvider() (OrganizationServiceProvider, error) {
 type mockOrganizationService struct{}
 
 func (s mockOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*Organization, error) {
-	return []*Organization{
-		{
-			ID:       "org-1",
-			Name:     "org1",
-			ParentID: "0",
-		},
-		{
-			ID:       "org-2",
-			Name:     "org2",
-			ParentID: "0",
-		},
-	}, nil
+	return GetMockData().Organizations, nil
 }
 
 func (s mockOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {
-	return []*Organization{
-		{
-			ID:       "org-1",
-			Name:     "org1",
-			ParentID: "0",
-		},
-		{
-			ID:       "org-2",
-			Name:     "org2",
-			ParentID: "0",
-		},
-	}, nil
+	return GetMockData().Organizations, nil
 }
 
 func (s mockOrganizationService) GetParents(ctx context.Context, orgID string) ([]*Organization, error) {
-	return []*Organization{
-		{
-			ID:       "org-1",
-			Name:     "org1",
-			ParentID: "0",
-		},
-		{
-			ID:       "org-2",
-			Name:     "org2",
-			ParentID: "0",
-		},
-	}, nil
+	return GetMockData().Organizations, nil
 }
 
 func (s mockOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
-	return []*Organization{
-		{
-			ID:       "org-1",
-			Name:     "org1",
-			ParentID: "0",
-		},
-		{
-			ID:       "org-2",
-			Name:     "org2",
-			ParentID: "0",
-		},
-	}, nil
+	return GetMockData().Organizations, nil
 }

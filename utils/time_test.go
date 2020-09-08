@@ -14,6 +14,9 @@ func TestDemo(t *testing.T) {
 	loc = GetTimeLocationByOffset(8 * 60 * 60)
 	fmt.Println(time.Now().In(loc))
 	fmt.Println(time.Now().In(loc).Zone())
+
+	fmt.Println(time.Now().In(loc).Unix())
+	fmt.Println(time.Now().Unix())
 }
 
 func TestTimeUtil_FindWeekTimeRange(t *testing.T) {

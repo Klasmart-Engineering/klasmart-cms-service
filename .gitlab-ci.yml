@@ -22,4 +22,3 @@ Build_Go_Push:
 Deploy_To_Lambda_Push:
   extends:
   - .TIGGER_RULES_DEPLOY
-    

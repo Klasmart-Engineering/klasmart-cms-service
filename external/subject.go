@@ -7,8 +7,8 @@ type SubjectServiceProvider interface {
 }
 
 type Subject struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetSubjectServiceProvider() (SubjectServiceProvider, error) {
@@ -18,5 +18,5 @@ func GetSubjectServiceProvider() (SubjectServiceProvider, error) {
 type mockSubjectService struct{}
 
 func (s mockSubjectService) BatchGet(ctx context.Context, ids []string) ([]*Subject, error) {
-	return GetMockData().Subject, nil
+	return GetMockData().Subjects, nil
 }
