@@ -8,8 +8,8 @@ type TeacherServiceProvider interface {
 }
 
 type Teacher struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetTeacherServiceProvider() (TeacherServiceProvider, error) {
@@ -19,27 +19,9 @@ func GetTeacherServiceProvider() (TeacherServiceProvider, error) {
 type mockTeacherService struct{}
 
 func (s mockTeacherService) BatchGet(ctx context.Context, ids []string) ([]*Teacher, error) {
-	return []*Teacher{
-		{
-			ID:   "Teacher-1",
-			Name: "Teacher1",
-		},
-		{
-			ID:   "Teacher-2",
-			Name: "Teacher2",
-		},
-	}, nil
+	return GetMockData().Teachers, nil
 }
 
 func (s mockTeacherService) Query(ctx context.Context, keyword string) ([]*Teacher, error) {
-	return []*Teacher{
-		{
-			ID:   "Teacher-1",
-			Name: "Teacher1",
-		},
-		{
-			ID:   "Teacher-2",
-			Name: "Teacher2",
-		},
-	}, nil
+	return GetMockData().Teachers, nil
 }

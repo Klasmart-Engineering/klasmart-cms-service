@@ -552,10 +552,10 @@ func (s *scheduleModel) nextWeekStart(t time.Time) time.Time {
 
 func (s *scheduleModel) nextMonthStart(t time.Time) time.Time {
 	newTime := t.AddDate(0, 1, 0)
-	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, t.Location())
+	return time.Date(newTime.Year(), newTime.Month(), 1, 0, 0, 0, 0, t.Location())
 }
 
 func (s *scheduleModel) nextYearStart(t time.Time) time.Time {
 	newTime := t.AddDate(1, 0, 0)
-	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, t.Location())
+	return time.Date(newTime.Year(), 1, 1, 0, 0, 0, 0, t.Location())
 }

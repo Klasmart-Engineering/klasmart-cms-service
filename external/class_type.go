@@ -7,8 +7,8 @@ type ClassTypeServiceProvider interface {
 }
 
 type ClassType struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetClassTypeServiceProvider() (ClassTypeServiceProvider, error) {
@@ -18,14 +18,5 @@ func GetClassTypeServiceProvider() (ClassTypeServiceProvider, error) {
 type mockClassTypeService struct{}
 
 func (s mockClassTypeService) BatchGet(ctx context.Context, ids []string) ([]*ClassType, error) {
-	return []*ClassType{
-		{
-			ID:   "ClassType-1",
-			Name: "ClassType1",
-		},
-		{
-			ID:   "ClassType-2",
-			Name: "ClassType2",
-		},
-	}, nil
+	return GetMockData().ClassTypes, nil
 }
