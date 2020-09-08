@@ -75,6 +75,7 @@ type OutcomeView struct {
 	OrganizationName string          `json:"organization_name"`
 	PublishScope     string          `json:"publish_scope"`
 	PublishStatus    string          `json:"publish_status"`
+	Description      string          `json:"description"`
 	CreatedAt        int64           `json:"create_at"`
 }
 
@@ -117,6 +118,7 @@ func newOutcomeView(outcome *entity.Outcome) OutcomeView {
 		OrganizationID: outcome.OrganizationID,
 		PublishScope:   outcome.PublishScope,
 		PublishStatus:  string(outcome.PublishStatus),
+		Description:    outcome.Description,
 		CreatedAt:      outcome.CreateAt,
 	}
 	pIDs := strings.Split(outcome.Program, ",")
