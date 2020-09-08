@@ -140,6 +140,17 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 }
 
 func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
+	if condition.OrganizationID == "" {
+		orgID, _, err := ocm.getRootOrganizationByAuthorID(ctx, user.UserID)
+		if err != nil {
+			log.Error(ctx, "SearchLearningOutcome: getRootOrganizationByAuthorID failed",
+				log.String("op", user.UserID),
+				log.Any("condition", condition))
+			return 0, nil, err
+		}
+		condition.OrganizationID = orgID
+	}
+
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
@@ -246,6 +257,15 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID st
 }
 
 func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, scope string, operator *entity.Operator) error {
+	if scope == "" {
+		scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
+		if err != nil {
+			log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+		}
+		scope = scopeID
+	}
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		condition := da.OutcomeCondition{
 			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
@@ -270,6 +290,13 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBCo
 			if err != nil {
 				log.Error(ctx, "BulkPubLearningOutcome: SetStatus failed",
 					log.String("op", operator.UserID),
+					log.Any("outcome", o))
+				return ErrInvalidContentStatusToPublish
+			}
+			if o.PublishScope != "" && o.PublishScope != scope {
+				log.Error(ctx, "PublishLearningOutcome: scope mismatch",
+					log.String("op", operator.UserID),
+					log.String("scope", scope),
 					log.Any("outcome", o))
 				return ErrInvalidContentStatusToPublish
 			}
