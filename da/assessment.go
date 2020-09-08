@@ -36,7 +36,7 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 	item := entity.Assessment{}
 	if err := tx.Model(entity.Assessment{}).
 		Where(a.filterSoftDeletedTemplate()).
-		Where("id = ?").
+		Where("id = ?", id).
 		First(&item).
 		Error; err != nil {
 		log.Error(ctx, "get assessment: get from db failed",
