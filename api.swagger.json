@@ -911,7 +911,8 @@
               "enum": [
                 "assets",
                 "thumbnail",
-                "attachment"
+                "attachment",
+                "schedule_attachment"
               ],
               "nullable": false
             }
@@ -2447,6 +2448,25 @@
             }
           },
           {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ]
+              },
+              "nullable": true,
+              "example": "name"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "description": "Search page",
@@ -2961,6 +2981,25 @@
             }
           },
           {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ]
+              },
+              "nullable": true,
+              "example": "name"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "description": "Search page",
@@ -3075,6 +3114,25 @@
             "schema": {
               "type": "string",
               "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ]
+              },
+              "nullable": true,
+              "example": "name"
             }
           },
           {
@@ -4666,6 +4724,10 @@
           "is_repeat":{
             "type": "boolean",
             "description": "If true, schedule is repeat"
+          },
+          "lesson_plan_id":{
+            "type": "string",
+            "description": "schedule lesson_plan_id"
           }
         }
       },
