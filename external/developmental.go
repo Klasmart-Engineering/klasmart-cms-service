@@ -7,8 +7,8 @@ type DevelopmentalServiceProvider interface {
 }
 
 type Developmental struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetDevelopmentalServiceProvider() (DevelopmentalServiceProvider, error) {
@@ -18,5 +18,5 @@ func GetDevelopmentalServiceProvider() (DevelopmentalServiceProvider, error) {
 type mockDevelopmentalService struct{}
 
 func (s mockDevelopmentalService) BatchGet(ctx context.Context, ids []string) ([]*Developmental, error) {
-	return GetMockData().Developmental, nil
+	return GetMockData().Developmentals, nil
 }

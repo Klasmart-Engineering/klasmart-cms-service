@@ -370,6 +370,14 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 		)
 		switch options.OnType {
 		case entity.RepeatYearlyOnDate:
+			if !s.validateTimeWidely(options.OnDateMonth, options.OnDateDay) {
+				log.Info(ctx, "repeat schedule yearly never: validate time widely failed",
+					log.Any("template", template),
+					log.Any("options", options),
+					log.String("location", location.String()),
+				)
+				return nil, constant.ErrInvalidArgs
+			}
 			for {
 				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -411,6 +419,14 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 		)
 		switch options.OnType {
 		case entity.RepeatYearlyOnDate:
+			if !s.validateTimeWidely(options.OnDateMonth, options.OnDateDay) {
+				log.Info(ctx, "repeat schedule yearly after count: validate time widely failed",
+					log.Any("template", template),
+					log.Any("options", options),
+					log.String("location", location.String()),
+				)
+				return nil, constant.ErrInvalidArgs
+			}
 			for len(result) < options.End.AfterCount {
 				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -453,6 +469,14 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 		)
 		switch options.OnType {
 		case entity.RepeatYearlyOnDate:
+			if !s.validateTimeWidely(options.OnDateMonth, options.OnDateDay) {
+				log.Info(ctx, "repeat schedule yearly after time: validate time widely failed",
+					log.Any("template", template),
+					log.Any("options", options),
+					log.String("location", location.String()),
+				)
+				return nil, constant.ErrInvalidArgs
+			}
 			for {
 				start = s.setTimeDatePart(start, timer.Year(), time.Month(options.OnDateMonth), options.OnDateDay)
 				end = originEnd.Add(start.Sub(originStart))
@@ -552,10 +576,33 @@ func (s *scheduleModel) nextWeekStart(t time.Time) time.Time {
 
 func (s *scheduleModel) nextMonthStart(t time.Time) time.Time {
 	newTime := t.AddDate(0, 1, 0)
-	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, t.Location())
+	return time.Date(newTime.Year(), newTime.Month(), 1, 0, 0, 0, 0, t.Location())
 }
 
 func (s *scheduleModel) nextYearStart(t time.Time) time.Time {
 	newTime := t.AddDate(1, 0, 0)
-	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, t.Location())
+	return time.Date(newTime.Year(), 1, 1, 0, 0, 0, 0, t.Location())
+}
+
+func (s *scheduleModel) validateTimeWidely(month, day int) bool {
+	if day < 1 {
+		return false
+	}
+	switch month {
+	case 1, 3, 5, 7, 8, 10, 12:
+		if day > 31 {
+			return false
+		}
+	case 4, 6, 9, 11:
+		if day > 30 {
+			return false
+		}
+	case 2:
+		if day > 29 {
+			return false
+		}
+	default:
+		return false
+	}
+	return true
 }
