@@ -11,16 +11,21 @@ import (
 )
 
 type mockData struct {
-	Program            []*Program       `json:"program"`
-	Subject            []*Subject       `json:"subject"`
-	Developmental      []*Developmental `json:"developmental"`
+	Programs           []*Program       `json:"program"`
+	Subjects           []*Subject       `json:"subject"`
+	Developmentals     []*Developmental `json:"developmental"`
 	Skills             []*Skill         `json:"skills"`
-	Age                []*Age           `json:"age"`
-	Grade              []*Grade         `json:"grade"`
+	Ages               []*Age           `json:"age"`
+	Grades             []*Grade         `json:"grade"`
 	VisibilitySettings []struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	} `json:"visibility_settings"`
+	Classes       []*Class        `json:"classes"`
+	ClassTypes    []*ClassType    `json:"class_types"`
+	Organizations []*Organization `json:"organizations"`
+	Teachers      []*Teacher      `json:"teachers"`
+	Students      []*Student      `json:"students"`
 }
 
 var (

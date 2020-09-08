@@ -7,8 +7,8 @@ type AgeServiceProvider interface {
 }
 
 type Age struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetAgeServiceProvider() (AgeServiceProvider, error) {
@@ -18,5 +18,5 @@ func GetAgeServiceProvider() (AgeServiceProvider, error) {
 type mockAgeService struct{}
 
 func (s mockAgeService) BatchGet(ctx context.Context, ids []string) ([]*Age, error) {
-	return GetMockData().Age, nil
+	return GetMockData().Ages, nil
 }
