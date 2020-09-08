@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"net/http"
 	"testing"
@@ -137,5 +138,9 @@ func TestRedis(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(num)
+	fmt.Println(model.NumToBHex(int(num), 36))
+}
+
+func TestNumToBHex(t *testing.T) {
+	fmt.Println(model.PaddingStr(model.NumToBHex(900, 36), 3))
 }

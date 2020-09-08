@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/ro"
+	"strings"
 	"sync"
 )
 
@@ -535,8 +536,7 @@ func (ocm OutcomeModel) getShortCode(ctx context.Context, orgID string) (shortco
 		log.Error(ctx, "getShortCode failed",
 			log.Err(err))
 	}
-	shortcode = "mock: A01"
-	fmt.Println(num)
+	shortcode = PaddingStr(NumToBHex(int(num), DecimalCust), ShowLength)
 	return
 }
 
@@ -661,4 +661,27 @@ func GetOutcomeModel() IOutcomeModel {
 		_outcomeModel = new(OutcomeModel)
 	})
 	return _outcomeModel
+}
+
+const DecimalCust = 36
+const ShowLength = 3
+
+var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+func NumToBHex(num int, n int) string {
+	num_str := ""
+	for num != 0 {
+		yu := num % n
+		num_str = string(num2char[yu]) + num_str
+		num = num / n
+	}
+	return strings.ToUpper(num_str)
+}
+
+func PaddingStr(s string, l int) string {
+
+	if l <= len(s) {
+		return s
+	}
+	return strings.Repeat("0", l-len(s)) + s
 }
