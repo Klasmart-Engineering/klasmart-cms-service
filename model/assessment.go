@@ -498,13 +498,15 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 					OutcomeID:    outcomeID,
 				})
 			}
-			if err := da.GetAssessmentOutcomeDA().BatchInsert(ctx, tx, items); err != nil {
-				log.Error(ctx, "add assessment: batch insert assessment outcome map failed",
-					log.Err(err),
-					log.Any("cmd", cmd),
-					log.Any("items", items),
-				)
-				return err
+			if len(items) > 0 {
+				if err := da.GetAssessmentOutcomeDA().BatchInsert(ctx, tx, items); err != nil {
+					log.Error(ctx, "add assessment: batch insert assessment outcome map failed",
+						log.Err(err),
+						log.Any("cmd", cmd),
+						log.Any("items", items),
+					)
+					return err
+				}
 			}
 		}
 		return nil
