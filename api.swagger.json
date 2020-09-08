@@ -911,7 +911,8 @@
               "enum": [
                 "assets",
                 "thumbnail",
-                "attachment"
+                "attachment",
+                "schedule_attachment"
               ],
               "nullable": false
             }
@@ -4538,6 +4539,10 @@
           "is_repeat":{
             "type": "boolean",
             "description": "If true, schedule is repeat"
+          },
+          "lesson_plan_id":{
+            "type": "string",
+            "description": "schedule lesson_plan_id"
           }
         }
       },
