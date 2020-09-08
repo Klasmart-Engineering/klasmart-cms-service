@@ -21,11 +21,11 @@ func (s Server) registeRoute() {
 
 	assets := s.engine.Group("/v1/assets")
 	{
-		assets.GET("/", s.searchAssets)
-		assets.POST("/", s.createAsset)
-		assets.GET("/:id", s.getAssetByID)
-		assets.PUT("/:id", s.updateAsset)
-		assets.DELETE("/:id", s.deleteAsset)
+		assets.GET("/", MustLogin, s.searchAssets)
+		assets.POST("/", MustLogin, s.createAsset)
+		assets.GET("/:id", MustLogin, s.getAssetByID)
+		assets.PUT("/:id", MustLogin, s.updateAsset)
+		assets.DELETE("/:id", MustLogin, s.deleteAsset)
 	}
 	category := s.engine.Group("/v1/categories")
 	{

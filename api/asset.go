@@ -8,8 +8,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
-	"strconv"
-	"strings"
 )
 
 func (s *Server) createAsset(c *gin.Context) {
@@ -23,12 +21,13 @@ func (s *Server) createAsset(c *gin.Context) {
 		return
 	}
 
-	err = s.checkAssets(c.Request.Context(), &data)
+	err = s.checkAssets(c.Request.Context(), data)
 	if err != nil {
 		log.Error(ctx, "Invalid content type", log.Err(err), log.Any("data", data))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
+	s.fillAssetsRequest(c.Request.Context(), &data)
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
@@ -65,12 +64,13 @@ func (s *Server) updateAsset(c *gin.Context){
 		return
 	}
 
-	err = s.checkAssets(c.Request.Context(), &data)
+	err = s.checkAssets(c.Request.Context(), data)
 	if err != nil {
 		log.Error(ctx, "Invalid content type", log.Err(err), log.Any("data", data))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
+	s.fillAssetsRequest(c.Request.Context(), &data)
 
 	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
 	switch err {
@@ -181,35 +181,17 @@ func responseMsg(msg string) interface{}{
 		"msg": msg,
 	}
 }
-func buildAssetSearchCondition(c *gin.Context) *entity.SearchAssetCondition{
-	PageSize, _ := strconv.Atoi("page_size")
-	Page, _ := strconv.Atoi("page")
-	rawSearchWord := c.Query("search_words")
-	isSelfStr := c.Query("is_self")
-	fuzzyQuery := c.Query("fuzzy_query")
-	orderBy := c.Query("order_by")
 
-	searchWords := strings.Split(rawSearchWord, " ")
-	isSelf, _ := strconv.ParseBool(isSelfStr)
-
-	data := &entity.SearchAssetCondition{
-		SearchWords:  searchWords,
-		FuzzyQuery: fuzzyQuery,
-		IsSelf:  isSelf,
-		OrderBy: orderBy,
-		PageSize: PageSize,
-		Page:     Page,
-	}
-
-	return data
-}
-
-func (s *Server) checkAssets(ctx context.Context, data *entity.CreateContentRequest) error{
+func (s *Server) checkAssets(ctx context.Context, data entity.CreateContentRequest) error{
 	if !data.ContentType.IsAsset() {
 		log.Error(ctx, "Invalid content type", log.Err(entity.ErrInvalidContentType), log.Any("data", data))
 		return entity.ErrInvalidContentType
 	}
+	return nil
+}
+
+
+func (s *Server) fillAssetsRequest(ctx context.Context, data *entity.CreateContentRequest){
 	data.Outcomes = nil
 	data.SuggestTime = 0
-	return nil
 }

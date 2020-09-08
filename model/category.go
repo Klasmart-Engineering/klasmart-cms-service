@@ -48,9 +48,7 @@ func (cm *CategoryModel) GetCategoryByID(ctx context.Context, op *entity.Operato
 }
 
 func (cm *CategoryModel) SearchCategories(ctx context.Context, op *entity.Operator, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error) {
-
 	return da.GetCategoryDA().SearchCategories(ctx, condition)
-
 }
 
 func (cm *CategoryModel) PageCategories(ctx context.Context, op *entity.Operator, condition *entity.SearchCategoryCondition) (int64, []*entity.CategoryObject, error) {
