@@ -911,7 +911,8 @@
               "enum": [
                 "assets",
                 "thumbnail",
-                "attachment"
+                "attachment",
+                "schedule_attachment"
               ],
               "nullable": false
             }
