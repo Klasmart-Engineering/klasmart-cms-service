@@ -7,8 +7,8 @@ type SkillServiceProvider interface {
 }
 
 type Skill struct {
-	ID   string
-	Name string
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetSkillServiceProvider() (SkillServiceProvider, error) {

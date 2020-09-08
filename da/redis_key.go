@@ -8,4 +8,7 @@ const (
 
 	RedisKeyPrefixScheduleID        = "schedule:id"
 	RedisKeyPrefixScheduleCondition = "schedule:condition"
+
+	RedisKeyPrefixOutcomeLock      = "outcome:lock"
+	RedisKeyPrefixOutcomeReview    = "outcome:review"
 )
