@@ -37,12 +37,12 @@ func initDB() {
 	dbo.ReplaceGlobal(dboHandler)
 }
 func initCache() {
-	if config.Get().RedisConfig.OpenCache {
-		ro.SetConfig(&redis.Options{
-			Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-			Password: config.Get().RedisConfig.Password,
-		})
-	}
+	//if config.Get().RedisConfig.OpenCache {
+	ro.SetConfig(&redis.Options{
+		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
+		Password: config.Get().RedisConfig.Password,
+	})
+	//}
 }
 
 func main() {

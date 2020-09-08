@@ -198,17 +198,11 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrResourceNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidPublishStatus:
 		c.JSON(http.StatusBadRequest, L(Unknown))
-	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
-	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
-	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
-	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
-	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrContentAlreadyLocked:
+		c.JSON(http.StatusConflict, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"outcome_id": newID,
@@ -222,7 +216,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
-	err := model.GetOutcomeModel().PublishLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, "", op)
+	err := model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, "", op)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))

@@ -1,8 +1,10 @@
 package entity
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"time"
 )
@@ -88,6 +90,8 @@ func (oc *Outcome) Clone() Outcome {
 		OrganizationID: oc.OrganizationID,
 
 		PublishStatus: ContentStatusDraft,
+		PublishScope:  oc.PublishScope,
+		LatestID:      oc.LatestID,
 
 		Version:  1,
 		SourceID: oc.ID,
@@ -98,7 +102,7 @@ func (oc *Outcome) Clone() Outcome {
 	}
 }
 
-func (oc *Outcome) SetStatus(status ContentPublishStatus) error {
+func (oc *Outcome) SetStatus(ctx context.Context, status ContentPublishStatus) error {
 	switch status {
 	//case ContentStatusArchive:
 	//	if oc.allowedToArchive() {
@@ -110,25 +114,29 @@ func (oc *Outcome) SetStatus(status ContentPublishStatus) error {
 	case ContentStatusHidden:
 		if oc.allowedToHidden() {
 			oc.PublishStatus = ContentStatusHidden
+			return nil
 		}
-		return nil
 	case ContentStatusPending:
 		if oc.allowedToPending() {
 			oc.PublishStatus = ContentStatusPending
+			return nil
 		}
-		return nil
 	case ContentStatusPublished:
 		if oc.allowedToBeReviewed() {
 			oc.PublishStatus = ContentStatusPublished
+			return nil
 		}
-		return nil
 	case ContentStatusRejected:
 		if oc.allowedToBeReviewed() {
 			oc.PublishStatus = ContentStatusRejected
+			return nil
 		}
-		return nil
 	}
-	return errors.New(fmt.Sprintf("unsupported:[%s]", status))
+	err := errors.New(fmt.Sprintf("unsupported:[%s]", status))
+	log.Error(ctx, "SetStatus failed",
+		log.Err(err),
+		log.String("status", string(status)))
+	return err
 }
 
 func (oc Outcome) allowedToArchive() bool {
@@ -183,16 +191,17 @@ func (oc Outcome) CanBeDeleted() bool {
 }
 
 type OutcomeCondition struct {
-	IDs           []string `json:"ids" form:"ids"`
-	OutcomeName   string   `json:"outcome_name" form:"outcome_name"`
-	Description   string   `json:"description" form:"description"`
-	Keywords      string   `json:"keywords" form:"keywords"`
-	Shortcode     string   `json:"shortcode" form:"shortcode"`
-	AuthorID      string   `json:"author_id" form:"author_id"`
-	AuthorName    string   `json:"author_name" form:"author_name"`
-	Page          int      `json:"page" form:"page"`
-	PageSize      int      `json:"page_size" form:"page_size"`
-	OrderBy       string   `json:"order_by" form:"order_by"`
-	PublishStatus []string `json:"publish_status" form:"publish_status"`
-	PublishScope  string   `json:"publish_scope" form:"publish_scope"`
+	IDs            []string `json:"ids" form:"ids"`
+	OutcomeName    string   `json:"outcome_name" form:"outcome_name"`
+	Description    string   `json:"description" form:"description"`
+	Keywords       string   `json:"keywords" form:"keywords"`
+	Shortcode      string   `json:"shortcode" form:"shortcode"`
+	AuthorID       string   `json:"author_id" form:"author_id"`
+	AuthorName     string   `json:"author_name" form:"author_name"`
+	Page           int      `json:"page" form:"page"`
+	PageSize       int      `json:"page_size" form:"page_size"`
+	OrderBy        string   `json:"order_by" form:"order_by"`
+	PublishStatus  []string `json:"publish_status" form:"publish_status"`
+	PublishScope   string   `json:"publish_scope" form:"publish_scope"`
+	OrganizationID string   `json:"organization_id" form:"organization_id"`
 }

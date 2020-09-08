@@ -471,10 +471,14 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				TeacherID:    cmd.TeacherID,
 				ClassLength:  cmd.ClassLength,
 				ClassEndTime: cmd.ClassEndTime,
-				CompleteTime: cmd.CompleteTime,
-				Status:       cmd.Status,
 				CreateTime:   nowUnix,
 				UpdateTime:   nowUnix,
+			}
+			if len(outcomeIDs) == 0 {
+				newItem.Status = entity.AssessmentStatusComplete
+				newItem.CompleteTime = time.Now().Unix()
+			} else {
+				newItem.Status = entity.AssessmentStatusInProgress
 			}
 			if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newItem); err != nil {
 				log.Error(ctx, "add assessment: add failed",

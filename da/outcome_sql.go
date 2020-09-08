@@ -16,15 +16,16 @@ type OutcomeSqlDA struct {
 }
 
 type OutcomeCondition struct {
-	IDs           dbo.NullStrings
-	Name          sql.NullString
-	Description   sql.NullString
-	Keywords      sql.NullString
-	Shortcode     sql.NullString
-	PublishStatus dbo.NullStrings
-	PublishScope  sql.NullString
-	AuthorName    sql.NullString
-	AuthorID      sql.NullString
+	IDs            dbo.NullStrings
+	Name           sql.NullString
+	Description    sql.NullString
+	Keywords       sql.NullString
+	Shortcode      sql.NullString
+	PublishStatus  dbo.NullStrings
+	PublishScope   sql.NullString
+	AuthorName     sql.NullString
+	AuthorID       sql.NullString
+	OrganizationID sql.NullString
 
 	OrderBy OutcomeOrderBy `json:"order_by"`
 	Pager   dbo.Pager
@@ -78,23 +79,29 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.AuthorID.String)
 	}
 
+	if c.OrganizationID.Valid {
+		wheres = append(wheres, "organization_id=?")
+		params = append(params, c.OrganizationID.String)
+	}
+
 	wheres = append(wheres, " delete_at = 0")
 	return wheres, params
 }
 
 func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 	return &OutcomeCondition{
-		IDs:           dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
-		Name:          sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
-		Description:   sql.NullString{String: condition.Description, Valid: condition.Description != ""},
-		Keywords:      sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
-		Shortcode:     sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-		PublishStatus: dbo.NullStrings{Strings: condition.PublishStatus, Valid: len(condition.PublishStatus) > 0},
-		PublishScope:  sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
-		AuthorID:      sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
-		AuthorName:    sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
-		OrderBy:       NewOrderBy(condition.OrderBy),
-		Pager:         NewPage(condition.Page, condition.PageSize),
+		IDs:            dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
+		Name:           sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
+		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
+		Keywords:       sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
+		Shortcode:      sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
+		PublishStatus:  dbo.NullStrings{Strings: condition.PublishStatus, Valid: len(condition.PublishStatus) > 0},
+		PublishScope:   sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
+		AuthorID:       sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
+		AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
+		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
+		OrderBy:        NewOrderBy(condition.OrderBy),
+		Pager:          NewPage(condition.Page, condition.PageSize),
 	}
 }
 
@@ -218,6 +225,15 @@ func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, cond
 }
 
 func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error {
-	sql := fmt.Sprintf("update %s set latest_id=%s where latest_id=%s and delete_at=0", entity.Outcome{}.TableName(), newHeader, oldHeader)
-	return tx.Raw(sql).Error
+	sql := fmt.Sprintf("update %s set latest_id='%s' where latest_id='%s' and delete_at=0", entity.Outcome{}.TableName(), newHeader, oldHeader)
+	err := tx.Exec(sql).Error
+	if err != nil {
+		log.Error(ctx, "UpdateLatestHead failed",
+			log.Err(err),
+			log.String("old", oldHeader),
+			log.String("new", newHeader),
+			log.String("sql", sql))
+		return err
+	}
+	return nil
 }
