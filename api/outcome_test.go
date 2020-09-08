@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"net/http"
@@ -121,6 +123,40 @@ func TestQueryPrivateOutcome(t *testing.T) {
 
 func TestQueryPendingOutcome(t *testing.T) {
 
+}
+
+func TestGetLearningOutcomesByIDs(t *testing.T) {
+	op := &entity.Operator{
+		UserID: "1",
+		OrgID:  "1",
+		Role:   "admin",
+	}
+	ctx := context.Background()
+	ids := []string{"5f5726af0944d7c38e20696f"}
+	outcomes, err := model.GetOutcomeModel().GetLearningOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range outcomes {
+		fmt.Printf("%+v\n", o)
+	}
+}
+
+func TestGetLatestOutcomesByIDs(t *testing.T) {
+	op := &entity.Operator{
+		UserID: "1",
+		OrgID:  "1",
+		Role:   "admin",
+	}
+	ctx := context.Background()
+	ids := []string{"5f5726af0944d7c38e20696f"}
+	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range outcomes {
+		fmt.Printf("%+v\n", o)
+	}
 }
 
 func TestRedis(t *testing.T) {

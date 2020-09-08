@@ -17,7 +17,7 @@ import (
 func ExtractSession(c *gin.Context) (string, error) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
-		log.Warn(c.Request.Context(), "ExtractSession", log.String("session", "no session"))
+		log.Info(c.Request.Context(), "ExtractSession", log.String("session", "no session"))
 		// TODO: for mock
 		//return "", constant.ErrUnAuthorized
 		return "", nil
