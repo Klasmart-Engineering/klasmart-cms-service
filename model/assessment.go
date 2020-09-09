@@ -242,8 +242,13 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 				)
 				return nil, err
 			}
-			for _, item := range items {
-				*cond.TeacherIDs = append(*cond.TeacherIDs, item.ID)
+			if len(items) > 0 {
+				if cond.TeacherIDs == nil {
+					cond.TeacherIDs = &[]string{}
+				}
+				for _, item := range items {
+					*cond.TeacherIDs = append(*cond.TeacherIDs, item.ID)
+				}
 			}
 		}
 	}

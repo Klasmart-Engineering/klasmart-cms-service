@@ -288,6 +288,9 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
 	//检查数据信息是否正确
 	log.Info(ctx, "create content")
+	if c.ContentType.IsAsset() {
+		c.PublishScope = "default"
+	}
 	err := cm.checkContentInfo(ctx, c, true)
 	if err != nil {
 		log.Warn(ctx, "check content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
@@ -1115,7 +1118,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		outcomeIds = append(outcomeIds, contentList[i].Outcomes...)
 	}
 	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIds, user)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIds), log.String("uid", user.UserID))
 	}
 	outcomeMaps := make(map[string]*entity.Outcome)
@@ -1161,7 +1164,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			AgeName:           ageNames,
 			GradeName:         gradeNames,
 			OrgName:           orgName,
-			OutcomeEntities: 	cm.pickOutcomes(ctx, contentList[i].Outcomes, outcomeMaps),
+			OutcomeEntities:   cm.pickOutcomes(ctx, contentList[i].Outcomes, outcomeMaps),
 		}
 	}
 
