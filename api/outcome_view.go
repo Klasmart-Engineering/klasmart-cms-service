@@ -7,6 +7,7 @@ import (
 )
 
 type OutcomeCreateView struct {
+	OutcomeID   string `json:"outcome_id"`
 	OutcomeName string `json:"outcome_name"`
 	Assumed     bool   `json:"assumed"`
 	//AuthorID string `json:"author_id"`
