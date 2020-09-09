@@ -96,7 +96,7 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		values = append(values, *c.Status)
 	}
 
-	if c.TeacherIDs != nil {
+	if c.TeacherIDs != nil && len(*c.TeacherIDs) > 0 {
 		temp := entity.NullStrings{
 			Strings: *c.TeacherIDs,
 			Valid:   true,
