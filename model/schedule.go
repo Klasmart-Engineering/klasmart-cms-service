@@ -17,8 +17,6 @@ import (
 	"sync"
 )
 
-const ()
-
 type IScheduleModel interface {
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
