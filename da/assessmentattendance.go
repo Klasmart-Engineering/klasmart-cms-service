@@ -42,6 +42,9 @@ func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Contex
 }
 
 func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
+	if len(items) == 0 {
+		return nil
+	}
 	columns := []string{"id", "assessment_id", "attendance_id"}
 	var values [][]interface{}
 	for _, item := range items {
