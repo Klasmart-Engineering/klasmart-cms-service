@@ -25,7 +25,9 @@ type OutcomeCondition struct {
 	PublishScope   sql.NullString
 	AuthorName     sql.NullString
 	AuthorID       sql.NullString
+	Assumed        sql.NullBool
 	OrganizationID sql.NullString
+	FuzzyKey       sql.NullString
 
 	OrderBy OutcomeOrderBy `json:"order_by"`
 	Pager   dbo.Pager
@@ -35,26 +37,31 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	var fullMatchValue []string
-	if c.Name.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Name.String)
-	}
-	if c.AuthorName.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.AuthorName.String)
-	}
-	if c.Keywords.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Keywords.String)
-	}
-	if c.Shortcode.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Shortcode.String)
-	}
-	if c.Description.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Description.String)
-	}
+	//var fullMatchValue []string
+	//if c.Name.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Name.String)
+	//}
+	//if c.AuthorName.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.AuthorName.String)
+	//}
+	//if c.Keywords.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Keywords.String)
+	//}
+	//if c.Shortcode.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Shortcode.String)
+	//}
+	//if c.Description.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Description.String)
+	//}
+	//
+	//if len(fullMatchValue) > 0 {
+	//	wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
+	//	params = append(params, strings.TrimSpace(strings.Join(fullMatchValue, " ")))
+	//}
 
-	if len(fullMatchValue) > 0 {
+	if c.FuzzyKey.Valid {
 		wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
-		params = append(params, strings.TrimSpace(strings.Join(fullMatchValue, " ")))
+		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
 	}
 
 	if c.IDs.Valid {
@@ -84,6 +91,11 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.OrganizationID.String)
 	}
 
+	if c.Assumed.Valid {
+		wheres = append(wheres, "assumed=?")
+		params = append(params, c.Assumed.Bool)
+	}
+
 	wheres = append(wheres, " delete_at = 0")
 	return wheres, params
 }
@@ -95,11 +107,13 @@ func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
 		Keywords:       sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
 		Shortcode:      sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-		PublishStatus:  dbo.NullStrings{Strings: condition.PublishStatus, Valid: len(condition.PublishStatus) > 0},
+		PublishStatus:  dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
 		PublishScope:   sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
 		AuthorID:       sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
 		AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
 		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
+		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
+		Assumed:        sql.NullBool{Bool: condition.Assumed == 1, Valid: condition.Assumed != -1},
 		OrderBy:        NewOrderBy(condition.OrderBy),
 		Pager:          NewPage(condition.Page, condition.PageSize),
 	}

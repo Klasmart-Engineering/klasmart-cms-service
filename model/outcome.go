@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -29,8 +28,8 @@ type IOutcomeModel interface {
 	BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, scope string, operator *entity.Operator) error
 	BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) error
 
-	SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
-	SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
+	SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
+	SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error)
 
 	GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
 	GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error)
@@ -150,8 +149,9 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBCon
 		}
 		condition.OrganizationID = orgID
 	}
-
-	condition.PublishStatus = []string{entity.ContentStatusPublished}
+	if condition.PublishStatus == "" { // Must search published outcomes
+		condition.PublishStatus = entity.ContentStatusPublished
+	}
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
 		log.Error(ctx, "SearchLearningOutcome: DeleteOutcome failed",
@@ -341,13 +341,17 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 	return err
 }
 
-func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
-	condition.PublishStatus = dbo.NullStrings{
-		Strings: []string{entity.ContentStatusDraft, entity.ContentStatusPending, entity.ContentStatusRejected},
-		Valid:   true,
+func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
+	if condition.PublishStatus != entity.ContentStatusDraft &&
+		condition.PublishStatus != entity.ContentStatusPending &&
+		condition.PublishStatus != entity.ContentStatusRejected {
+		log.Error(ctx, "SearchPrivateOutcomes: SearchPendingOutcomes failed",
+			log.String("op", user.UserID),
+			log.Any("condition", condition))
+		return 0, nil, ErrBadRequest
 	}
-	condition.AuthorID = sql.NullString{String: user.UserID, Valid: true}
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, condition)
+	condition.AuthorID = user.UserID
+	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
 		log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
 			log.Err(err),
@@ -358,13 +362,22 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBCon
 	return total, outcomes, nil
 }
 
-func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *da.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
-	condition.PublishStatus = dbo.NullStrings{
-		Strings: []string{entity.ContentStatusDraft, entity.ContentStatusPending},
-		Valid:   true,
+func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
+	if condition.PublishStatus != entity.ContentStatusPending {
+		log.Error(ctx, "SearchPendingOutcomes: SearchPendingOutcomes failed",
+			log.String("op", user.UserID),
+			log.Any("condition", condition))
+		return 0, nil, ErrBadRequest
 	}
-	condition.PublishScope = sql.NullString{String: "user's top org id", Valid: true}
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, condition)
+	orgID, _, err := ocm.getRootOrganizationByOrgID(ctx, user.UserID)
+	if err != nil {
+		log.Error(ctx, "SearchPendingOutcomes: SearchPendingOutcomes failed",
+			log.String("op", user.UserID),
+			log.Any("condition", condition))
+		return 0, nil, err
+	}
+	condition.PublishScope = orgID
+	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
 		log.Error(ctx, "SearchPendingOutcomes: SearchOutcome failed",
 			log.Err(err),
