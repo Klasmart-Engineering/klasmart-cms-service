@@ -54,6 +54,60 @@ func (req OutcomeCreateView) outcomeWithID(outcomeID string) (*entity.Outcome, e
 	return outcome, nil
 }
 
+type OutcomeCreateResponse struct {
+	OutcomeID        string   `json:"outcome_id"`
+	OutcomeName      string   `json:"outcome_name"`
+	AncestorID       string   `json:"ancestor_id"`
+	Shortcode        string   `json:"shortcode"`
+	Assumed          bool     `json:"assumed"`
+	Program          []string `json:"program"`
+	Subject          []string `json:"subject"`
+	Developmental    []string `json:"developmental"`
+	Skills           []string `json:"skills"`
+	Age              []string `json:"age"`
+	Grade            []string `json:"grade"`
+	EstimatedTime    int      `json:"estimated_time"`
+	Keywords         []string `json:"keywords"`
+	SourceID         string   `json:"source_id"`
+	LockedBy         string   `json:"locked_by"`
+	AuthorID         string   `json:"author_id"`
+	AuthorName       string   `json:"author_name"`
+	OrganizationID   string   `json:"organization_id"`
+	OrganizationName string   `json:"organization_name"`
+	PublishScope     string   `json:"publish_scope"`
+	PublishStatus    string   `json:"publish_status"`
+	Description      string   `json:"description"`
+	CreatedAt        int64    `json:"created_at"`
+}
+
+func newOutcomeCreateResponse(createView *OutcomeCreateView, outcome *entity.Outcome) OutcomeCreateResponse {
+	return OutcomeCreateResponse{
+		OutcomeID:        outcome.ID,
+		OutcomeName:      createView.OutcomeName,
+		AncestorID:       outcome.AncestorID,
+		Shortcode:        outcome.Shortcode,
+		Assumed:          outcome.Assumed,
+		Program:          createView.Program,
+		Subject:          createView.Subject,
+		Developmental:    createView.Developmental,
+		Skills:           createView.Skills,
+		Age:              createView.Age,
+		Grade:            createView.Grade,
+		EstimatedTime:    createView.Estimated,
+		Keywords:         createView.Keywords,
+		SourceID:         outcome.SourceID,
+		LockedBy:         outcome.LockedBy,
+		AuthorID:         outcome.AuthorID,
+		AuthorName:       outcome.AuthorName,
+		OrganizationID:   outcome.OrganizationID,
+		OrganizationName: getProgramName(outcome.OrganizationID),
+		PublishScope:     outcome.PublishScope,
+		PublishStatus:    string(outcome.PublishStatus),
+		Description:      outcome.Description,
+		CreatedAt:        outcome.CreateAt,
+	}
+}
+
 type OutcomeView struct {
 	OutcomeID        string          `json:"outcome_id"`
 	OutcomeName      string          `json:"outcome_name"`
@@ -123,35 +177,35 @@ func newOutcomeView(outcome *entity.Outcome) OutcomeView {
 		CreatedAt:      outcome.CreateAt,
 	}
 	pIDs := strings.Split(outcome.Program, ",")
-	pNames := getProgramName(pIDs)
+	pNames := getProgramsName(pIDs)
 	view.Program = make([]Program, len(pIDs))
 	for k, id := range pIDs {
 		view.Program[k].ProgramID = id
 		view.Program[k].ProgramName = pNames[id]
 	}
 	sIDs := strings.Split(outcome.Subject, ",")
-	sNames := getSubjectName(sIDs)
+	sNames := getSubjectsName(sIDs)
 	view.Subject = make([]Subject, len(sIDs))
 	for k, id := range sIDs {
 		view.Subject[k].SubjectID = id
 		view.Subject[k].SubjectName = sNames[id]
 	}
 	dIDs := strings.Split(outcome.Developmental, ",")
-	dNames := getDevelopmentalName(dIDs)
+	dNames := getDevelopmentalsName(dIDs)
 	view.Developmental = make([]Developmental, len(dIDs))
 	for k, id := range dIDs {
 		view.Developmental[k].DevelopmentalID = id
 		view.Developmental[k].DevelopmentalName = dNames[id]
 	}
 	skIDs := strings.Split(outcome.Skills, ",")
-	skNames := getSkillName(skIDs)
+	skNames := getSkillsName(skIDs)
 	view.Skills = make([]Skill, len(skIDs))
 	for k, id := range skIDs {
 		view.Skills[k].SkillID = id
 		view.Skills[k].SkillName = skNames[id]
 	}
 	aIDs := strings.Split(outcome.Age, ",")
-	aNames := getAgeName(aIDs)
+	aNames := getAgesName(aIDs)
 	view.Age = make([]Age, len(aIDs))
 	for k, id := range aIDs {
 		view.Age[k].AgeID = id
@@ -167,7 +221,12 @@ func newOutcomeView(outcome *entity.Outcome) OutcomeView {
 	return view
 }
 
-func getProgramName(IDs []string) (names map[string]string) {
+func getProgramName(id string) (name string) {
+	// TODO : now is mock
+	name = "mock Program" + id
+	return
+}
+func getProgramsName(IDs []string) (names map[string]string) {
 	// TODO : now is mock
 	names = make(map[string]string, len(IDs))
 	for _, id := range IDs {
@@ -176,7 +235,7 @@ func getProgramName(IDs []string) (names map[string]string) {
 	return
 }
 
-func getSubjectName(IDs []string) (names map[string]string) {
+func getSubjectsName(IDs []string) (names map[string]string) {
 	// TODO : now is mock
 	names = make(map[string]string, len(IDs))
 	for _, id := range IDs {
@@ -185,7 +244,7 @@ func getSubjectName(IDs []string) (names map[string]string) {
 	return
 }
 
-func getDevelopmentalName(IDs []string) (names map[string]string) {
+func getDevelopmentalsName(IDs []string) (names map[string]string) {
 	// TODO : now is mock
 	names = make(map[string]string, len(IDs))
 	for _, id := range IDs {
@@ -194,7 +253,7 @@ func getDevelopmentalName(IDs []string) (names map[string]string) {
 	return
 }
 
-func getSkillName(IDs []string) (names map[string]string) {
+func getSkillsName(IDs []string) (names map[string]string) {
 	// TODO : now is mock
 	names = make(map[string]string, len(IDs))
 	for _, id := range IDs {
@@ -203,7 +262,7 @@ func getSkillName(IDs []string) (names map[string]string) {
 	return
 }
 
-func getAgeName(IDs []string) (names map[string]string) {
+func getAgesName(IDs []string) (names map[string]string) {
 	// TODO : now is mock
 	names = make(map[string]string, len(IDs))
 	for _, id := range IDs {
