@@ -130,8 +130,9 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			log.Err(err),
 			log.Any("viewData", viewData),
 		)
+		return "",err
 	}
-	return id.(string), err
+	return id.(string), nil
 }
 func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	err := s.verifyData(ctx, &entity.ScheduleVerify{
