@@ -200,31 +200,44 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 	da.GetScheduleRedisDA().Clean(ctx, nil)
 	return schedule.ID, nil
 }
-func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewdata *entity.ScheduleUpdateView) (string, error) {
+func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
+	err := s.verifyData(ctx, &entity.ScheduleVerify{
+		ClassID:      viewData.ClassID,
+		SubjectID:    viewData.SubjectID,
+		ProgramID:    viewData.ProgramID,
+		TeacherIDs:   viewData.TeacherIDs,
+		LessonPlanID: viewData.LessonPlanID,
+	})
+	if err != nil {
+		log.Error(ctx, "add schedule: verify data error",
+			log.Err(err),
+			log.Any("viewData", viewData))
+		return "", constant.ErrInvalidArgs
+	}
 	var schedule entity.Schedule
-	if err := da.GetScheduleDA().Get(ctx, viewdata.ID, &schedule); err != nil {
+	if err := da.GetScheduleDA().Get(ctx, viewData.ID, &schedule); err != nil {
 		log.Error(ctx, "update schedule: get schedule by id failed",
 			log.Err(err),
-			log.String("id", viewdata.ID),
-			log.String("edit_type", string(viewdata.EditType)),
+			log.String("id", viewData.ID),
+			log.String("edit_type", string(viewData.EditType)),
 		)
 		return "", err
 	}
 	if schedule.DeleteAt != 0 {
 		log.Error(ctx, "update schedule: get schedule by id failed, schedule not found",
-			log.String("id", viewdata.ID),
-			log.String("edit_type", string(viewdata.EditType)),
+			log.String("id", viewData.ID),
+			log.String("edit_type", string(viewData.EditType)),
 		)
 		return "", constant.ErrRecordNotFound
 	}
 
-	if !viewdata.IsForce {
-		conflict, err := s.IsScheduleConflict(ctx, operator, viewdata.StartAt, viewdata.EndAt)
+	if !viewData.IsForce {
+		conflict, err := s.IsScheduleConflict(ctx, operator, viewData.StartAt, viewData.EndAt)
 		if err != nil {
 			log.Error(ctx, "update schedule: check time conflict failed",
 				log.Err(err),
 				log.Any("operator", operator),
-				log.Any("viewData", viewdata),
+				log.Any("viewData", viewData),
 			)
 			return "", err
 		}
@@ -232,7 +245,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		if conflict {
 			log.Info(ctx, "update schedule: time conflict",
 				log.Any("operator", operator),
-				log.Any("viewData", viewdata),
+				log.Any("viewData", viewData),
 			)
 			return "", constant.ErrConflict
 		}
@@ -241,31 +254,31 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	var id string
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
-		if err = s.DeleteTx(ctx, tx, operator, viewdata.ID, viewdata.EditType); err != nil {
+		if err = s.DeleteTx(ctx, tx, operator, viewData.ID, viewData.EditType); err != nil {
 			log.Error(ctx, "update schedule: delete failed",
 				log.Err(err),
-				log.String("id", viewdata.ID),
-				log.String("edit_type", string(viewdata.EditType)),
+				log.String("id", viewData.ID),
+				log.String("edit_type", string(viewData.EditType)),
 			)
 			return err
 		}
-		viewdata.RepeatID = schedule.RepeatID
-		if viewdata.EditType == entity.ScheduleEditWithFollowing && !viewdata.IsRepeat {
-			viewdata.IsRepeat = true
+		viewData.RepeatID = schedule.RepeatID
+		if viewData.EditType == entity.ScheduleEditWithFollowing && !viewData.IsRepeat {
+			viewData.IsRepeat = true
 			var repeat entity.RepeatOptions
 			if err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat); err != nil {
 				log.Error(ctx, "update schedule: json unmarshal failed",
 					log.Err(err),
-					log.Any("viewdata", viewdata),
+					log.Any("viewData", viewData),
 				)
 			}
-			viewdata.Repeat = repeat
+			viewData.Repeat = repeat
 		}
-		id, err = s.AddTx(ctx, tx, operator, &viewdata.ScheduleAddView)
+		id, err = s.AddTx(ctx, tx, operator, &viewData.ScheduleAddView)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
 				log.Err(err),
-				log.Any("schedule_add_view", viewdata.ScheduleAddView),
+				log.Any("schedule_add_view", viewData.ScheduleAddView),
 			)
 			return err
 		}
@@ -274,7 +287,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		log.Error(ctx, "update schedule: tx failed", log.Err(err))
 		return "", err
 	}
-	da.GetScheduleRedisDA().Clean(ctx, []string{viewdata.ID})
+	da.GetScheduleRedisDA().Clean(ctx, []string{viewData.ID})
 	return id, nil
 }
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
@@ -793,10 +806,14 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		return err
 	}
 	// lessPlan
-	_, err = GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
+	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
+	}
+	if lessonPlanInfo.ContentType != entity.ContentTypeLesson{
+		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo",lessonPlanInfo), log.Any("ScheduleVerify", v))
+		return constant.ErrInvalidArgs
 	}
 	return nil
 }

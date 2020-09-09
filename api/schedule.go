@@ -149,6 +149,11 @@ func (s *Server) addSchedule(c *gin.Context) {
 		})
 		return
 	}
+	if err == constant.ErrInvalidArgs{
+		log.Info(ctx, "add schedule: verify data failed,invalid args", log.Err(err), log.Any("requestData", data))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
 	if err == constant.ErrFileNotFound {
 		log.Info(ctx, "add schedule: verify data failed,attachment not found", log.Err(err), log.Any("requestData", data))
 		c.JSON(http.StatusBadRequest, L(Unknown))
