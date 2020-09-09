@@ -69,7 +69,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -613,7 +617,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -751,7 +759,11 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum":["1", "2", "3"],
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ],
               "nullable": true
             }
           },
@@ -3802,7 +3814,12 @@
                 "format": "int64",
                 "description": "content type",
                 "example": 1,
-                "enum":[10,11,12,13]
+                "enum": [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
               },
               "name": {
                 "type": "string",
@@ -3913,7 +3930,14 @@
                 "type": "integer",
                 "format": "int64",
                 "description": "content type",
-                "enum":[1,2,10,11,12,13],
+                "enum": [
+                  1,
+                  2,
+                  10,
+                  11,
+                  12,
+                  13
+                ],
                 "example": 1
               },
               "name": {
@@ -4108,7 +4132,11 @@
                 "type": "string",
                 "description": "content type list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3",
-                "enum":["1","2","3"]
+                "enum": [
+                  "1",
+                  "2",
+                  "3"
+                ]
               },
               "scope": {
                 "type": "string",
@@ -4162,7 +4190,14 @@
                 "format": "int64",
                 "description": "content type",
                 "example": 1,
-                "enum":[1,2,10,11,12,13]
+                "enum": [
+                  1,
+                  2,
+                  10,
+                  11,
+                  12,
+                  13
+                ]
               },
               "name": {
                 "type": "string",
@@ -4350,7 +4385,6 @@
                   "type": "string"
                 },
                 "description": "grade name",
-
                 "example": [
                   "program1"
                 ]
@@ -4400,6 +4434,43 @@
                 "description": "org name",
                 "example": "school1"
               },
+              "outcome_entities": {
+                "type": "array",
+                "description": "outcome info",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "outcome_id": {
+                      "type": "string",
+                      "description": "outcome id"
+                    },
+                    "outcome_name": {
+                      "type": "string",
+                      "description": "outcome name"
+                    },
+                    "shortcode": {
+                      "type": "string",
+                      "description": "outcome shortcode"
+                    },
+                    "assumed": {
+                      "type": "boolean",
+                      "description": "outcome shortcode"
+                    },
+                    "author_id": {
+                      "type": "string",
+                      "description": "outcome author id"
+                    },
+                    "author_name": {
+                      "type": "string",
+                      "description": "outcome author name"
+                    },
+                    "ancestor_id": {
+                      "type": "string",
+                      "description": "outcome ancestor id"
+                    }
+                  }
+                }
+              },
               "created_at": {
                 "type": "integer",
                 "description": "content create time",
@@ -4425,7 +4496,12 @@
                 "format": "int64",
                 "description": "content type",
                 "example": 1,
-                "enum":[10,11,12,13]
+                "enum": [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
               },
               "name": {
                 "type": "string",
@@ -4592,7 +4668,6 @@
                   "type": "string"
                 },
                 "description": "grade name",
-
                 "example": [
                   "program1"
                 ]
@@ -4747,11 +4822,11 @@
             "type": "integer",
             "description": "schedule end time, timestamp"
           },
-          "is_repeat":{
+          "is_repeat": {
             "type": "boolean",
             "description": "If true, schedule is repeat"
           },
-          "lesson_plan_id":{
+          "lesson_plan_id": {
             "type": "string",
             "description": "schedule lesson_plan_id"
           }
@@ -5476,7 +5551,7 @@
             "type": "boolean",
             "description": "all_day flag"
           },
-          "is_repeat":{
+          "is_repeat": {
             "type": "boolean",
             "description": "If true, schedule is repeat"
           }

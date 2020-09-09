@@ -33,7 +33,7 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Co
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
-		Where("outcome_id in ?", outcomeIDs).
+		Where("outcome_id in (?)", outcomeIDs).
 		Find(&items).Error; err != nil {
 		return nil, err
 	}
@@ -44,13 +44,13 @@ func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{"id", "outcome_id", "attendance_id"}
+	columns := []string{"id", "assessment_id", "outcome_id", "attendance_id"}
 	var values [][]interface{}
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.OutcomeID, item.AttendanceID})
+		values = append(values, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.AttendanceID})
 	}
 	template := SQLBatchInsert(entity.OutcomeAttendance{}.TableName(), columns, values)
 	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {

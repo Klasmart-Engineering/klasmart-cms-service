@@ -688,8 +688,8 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 	cachedContent := da.GetContentRedis().GetContentCacheById(ctx, cid)
 	if cachedContent != nil {
 		return &entity.ContentName{
-			ID:   cid,
-			Name: cachedContent.Name,
+			ID:          cid,
+			Name:        cachedContent.Name,
 			ContentType: cachedContent.ContentType,
 		}, nil
 	}
@@ -699,8 +699,8 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 		return nil, err
 	}
 	return &entity.ContentName{
-		ID:   cid,
-		Name: obj.Name,
+		ID:          cid,
+		Name:        obj.Name,
 		ContentType: obj.ContentType,
 	}, nil
 }
@@ -767,8 +767,8 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 	nid, cachedContent := da.GetContentRedis().GetContentCacheByIdList(ctx, cids)
 	for i := range cachedContent {
 		resp = append(resp, &entity.ContentName{
-			ID:   cachedContent[i].ID,
-			Name: cachedContent[i].Name,
+			ID:          cachedContent[i].ID,
+			Name:        cachedContent[i].Name,
 			ContentType: cachedContent[i].ContentType,
 		})
 	}
@@ -785,8 +785,8 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 	}
 	for i := range data {
 		resp = append(resp, &entity.ContentName{
-			ID:   data[i].ID,
-			Name: data[i].Name,
+			ID:          data[i].ID,
+			Name:        data[i].Name,
 			ContentType: data[i].ContentType,
 		})
 	}
@@ -884,7 +884,7 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 	outcomes := strings.Split(content.Outcomes, ",")
 	ret := make([]string, 0)
 	for i := range outcomes {
-		if outcomes[i] != ""{
+		if outcomes[i] != "" {
 			ret = append(ret, outcomes[i])
 		}
 	}
@@ -940,69 +940,29 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 
 func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	var err error
-	var contentObj *entity.Content
 
 	cachedContent := da.GetContentRedis().GetContentCacheById(ctx, cid)
 	if cachedContent != nil {
 		if cachedContent.LatestID == "" {
 			return cachedContent, nil
 		} else {
-			latestCachedContent := da.GetContentRedis().GetContentCacheById(ctx, cachedContent.LatestID)
-			if latestCachedContent != nil {
-				return latestCachedContent, nil
-			} else {
-				contentObj = &entity.Content{LatestID: cachedContent.LatestID}
-			}
+			return cm.GetContentByID(ctx, tx, cachedContent.LatestID, user)
 		}
 	}
 
-	if contentObj == nil {
-		contentObj, err = da.GetContentDA().GetContentById(ctx, tx, cid)
-		if err != nil {
-			return nil, err
-		}
+	contentObj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return nil, ErrNoContent
 	}
-	//补全相关内容
-	contentData, err := contentdata.CreateContentData(ctx, contentObj.ContentType, contentObj.Data)
 	if err != nil {
+		log.Error(ctx, "can't read contentdata", log.Err(err))
 		return nil, err
 	}
-	err = contentData.PrepareResult(ctx)
-	if err != nil {
-		log.Error(ctx, "can't get contentdata for details", log.Err(err))
-		return nil, ErrParseContentDataDetailsFailed
+	if contentObj.LatestID == "" {
+		return cm.GetContentByID(ctx, tx, cid, user)
 	}
-	filledContentData, err := contentData.Marshal(ctx)
-	if err != nil {
-		log.Error(ctx, "can't marshal contentdata for details", log.Err(err))
-		return nil, ErrParseContentDataDetailsFailed
-	}
-	contentObj.Data = filledContentData
-
-	if contentObj.LatestID != "" {
-		newContentData, err := da.GetContentDA().GetContentById(ctx, tx, contentObj.LatestID)
-		if err != nil {
-			return nil, err
-		}
-		contentObj = newContentData
-	}
-
-	content, err := contentdata.ConvertContentObj(ctx, contentObj)
-	if err != nil {
-		return nil, err
-	}
-	contentWithDetails, err := cm.buildContentWithDetails(ctx, []*entity.ContentInfo{content}, user)
-	if err != nil {
-		log.Error(ctx, "can't parse contentdata", log.Err(err))
-		return nil, ErrReadContentFailed
-	}
-	if len(contentWithDetails) < 1 {
-		return &entity.ContentInfoWithDetails{
-			ContentInfo: *content,
-		}, nil
-	}
-	da.GetContentRedis().SaveContentCacheList(ctx, contentWithDetails)
-	return contentWithDetails[0], nil
+	return cm.GetContentByID(ctx, tx, contentObj.LatestID, user)
 }
 
 func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status []string) []string {
@@ -1149,6 +1109,20 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		}
 	}
 
+	//Outcomes
+	outcomeIds := make([]string, 0)
+	for i := range contentList {
+		outcomeIds = append(outcomeIds, contentList[i].Outcomes...)
+	}
+	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIds, user)
+	if err != nil{
+		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIds), log.String("uid", user.UserID))
+	}
+	outcomeMaps := make(map[string]*entity.Outcome)
+	for i := range outcomeEntities {
+		outcomeMaps[outcomeEntities[i].ID] = outcomeEntities[i]
+	}
+
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
 		programNames := make([]string, len(contentList[i].Program))
@@ -1187,10 +1161,22 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			AgeName:           ageNames,
 			GradeName:         gradeNames,
 			OrgName:           orgName,
+			OutcomeEntities: 	cm.pickOutcomes(ctx, contentList[i].Outcomes, outcomeMaps),
 		}
 	}
 
 	return contentDetailsList, nil
+}
+
+func (cm *ContentModel) pickOutcomes(ctx context.Context, pickIds []string, outcomeMaps map[string]*entity.Outcome) []*entity.Outcome {
+	ret := make([]*entity.Outcome, 0)
+	for i := range pickIds {
+		outcome, ok := outcomeMaps[pickIds[i]]
+		if ok {
+			ret = append(ret, outcome)
+		}
+	}
+	return ret
 }
 
 func (cm *ContentModel) listVisibleScopes(ctx context.Context, operator *entity.Operator) []string {
