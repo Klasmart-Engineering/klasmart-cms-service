@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"net/http"
@@ -72,25 +73,25 @@ func TestDeleteOutcome(t *testing.T) {
 }
 
 func TestQueryOutcome(t *testing.T) {
-	query := fmt.Sprintf("outcome_name=%s&keywords=%s", "TestOutcomeYY", "A01")
+	query := fmt.Sprintf("search_key=%s&assumed=%d", "TestOutcomeYY", 1)
 	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes"+"?"+query, "")
 	fmt.Println(res)
 }
 
 func TestLockOutcome(t *testing.T) {
-	outcomeID := "5f55d43f3695b7ca67729069"
+	outcomeID := "5f5726af0944d7c38e20696f"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/lock", "")
 	fmt.Println(res)
 }
 
 func TestPublishOutcome(t *testing.T) {
-	outcomeID := "5f56def450275d71418a1d4b"
+	outcomeID := "5f5728fc14a58b1efaa90ade"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/publish", "")
 	fmt.Println(res)
 }
 
 func TestApproveOutcome(t *testing.T) {
-	outcomeID := "5f55e3a89cb75a329b44e23d"
+	outcomeID := "5f5728fc14a58b1efaa90ade"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/approve", "")
 	fmt.Println(res)
 }
@@ -124,14 +125,41 @@ func TestQueryPendingOutcome(t *testing.T) {
 
 }
 
-func TestRedis(t *testing.T) {
+func TestGetLearningOutcomesByIDs(t *testing.T) {
+	op := &entity.Operator{
+		UserID: "1",
+		OrgID:  "1",
+		Role:   "admin",
+	}
+	ctx := context.Background()
+	ids := []string{"5f5726af0944d7c38e20696f"}
+	outcomes, err := model.GetOutcomeModel().GetLearningOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range outcomes {
+		fmt.Printf("%+v\n", o)
+	}
+}
 
-	ro.SetConfig(&redis.Options{
-		Addr:         "192.168.1.15:16379",
-		Password:     "",
-		PoolSize:     10,
-		MinIdleConns: 4,
-	})
+func TestGetLatestOutcomesByIDs(t *testing.T) {
+	op := &entity.Operator{
+		UserID: "1",
+		OrgID:  "1",
+		Role:   "admin",
+	}
+	ctx := context.Background()
+	ids := []string{"5f5726af0944d7c38e20696f"}
+	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range outcomes {
+		fmt.Printf("%+v\n", o)
+	}
+}
+
+func TestRedis(t *testing.T) {
 
 	redisKey := fmt.Sprintf("%s:%s", da.RedisKeyPrefixOutcomeShortcode, "1")
 	num, err := ro.MustGetRedis(context.Background()).Incr(redisKey).Result()

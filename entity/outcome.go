@@ -1,8 +1,10 @@
 package entity
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"time"
 )
@@ -11,7 +13,7 @@ type Outcome struct {
 	ID            string `gorm:"type:varchar(50);column:id" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
 	Name          string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"outcome_name" json:"outcome_name" dynamoupdate:":n"`
 	Shortcode     string `gorm:"type:char(8);NOT NULL;column:shortcode" dynamodbav:"shortcode" json:"shortcode" dynamoupdate:":code"`
-	AncestorID    string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"outcome_id" dynamoupdate:"-"`
+	AncestorID    string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"ancestor_id" dynamoupdate:"-"`
 	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
 	Subject       string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
 	Developmental string `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
@@ -34,7 +36,7 @@ type Outcome struct {
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
 	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
-	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"latest_id" dynamoupdate:":asum"`
+	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"assumed" dynamoupdate:":asum"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
@@ -88,6 +90,8 @@ func (oc *Outcome) Clone() Outcome {
 		OrganizationID: oc.OrganizationID,
 
 		PublishStatus: ContentStatusDraft,
+		PublishScope:  oc.PublishScope,
+		LatestID:      oc.LatestID,
 
 		Version:  1,
 		SourceID: oc.ID,
@@ -98,7 +102,7 @@ func (oc *Outcome) Clone() Outcome {
 	}
 }
 
-func (oc *Outcome) SetStatus(status ContentPublishStatus) error {
+func (oc *Outcome) SetStatus(ctx context.Context, status ContentPublishStatus) error {
 	switch status {
 	//case ContentStatusArchive:
 	//	if oc.allowedToArchive() {
@@ -110,25 +114,29 @@ func (oc *Outcome) SetStatus(status ContentPublishStatus) error {
 	case ContentStatusHidden:
 		if oc.allowedToHidden() {
 			oc.PublishStatus = ContentStatusHidden
+			return nil
 		}
-		return nil
 	case ContentStatusPending:
 		if oc.allowedToPending() {
 			oc.PublishStatus = ContentStatusPending
+			return nil
 		}
-		return nil
 	case ContentStatusPublished:
 		if oc.allowedToBeReviewed() {
 			oc.PublishStatus = ContentStatusPublished
+			return nil
 		}
-		return nil
 	case ContentStatusRejected:
 		if oc.allowedToBeReviewed() {
 			oc.PublishStatus = ContentStatusRejected
+			return nil
 		}
-		return nil
 	}
-	return errors.New(fmt.Sprintf("unsupported:[%s]", status))
+	err := errors.New(fmt.Sprintf("unsupported:[%s]", status))
+	log.Error(ctx, "SetStatus failed",
+		log.Err(err),
+		log.String("status", string(status)))
+	return err
 }
 
 func (oc Outcome) allowedToArchive() bool {
@@ -183,16 +191,19 @@ func (oc Outcome) CanBeDeleted() bool {
 }
 
 type OutcomeCondition struct {
-	IDs           []string `json:"ids" form:"ids"`
-	OutcomeName   string   `json:"outcome_name" form:"outcome_name"`
-	Description   string   `json:"description" form:"description"`
-	Keywords      string   `json:"keywords" form:"keywords"`
-	Shortcode     string   `json:"shortcode" form:"shortcode"`
-	AuthorID      string   `json:"author_id" form:"author_id"`
-	AuthorName    string   `json:"author_name" form:"author_name"`
-	Page          int      `json:"page" form:"page"`
-	PageSize      int      `json:"page_size" form:"page_size"`
-	OrderBy       string   `json:"order_by" form:"order_by"`
-	PublishStatus []string `json:"publish_status" form:"publish_status"`
-	PublishScope  string   `json:"publish_scope" form:"publish_scope"`
+	IDs            []string `json:"ids" form:"ids"`
+	OutcomeName    string   `json:"outcome_name" form:"outcome_name"`
+	Description    string   `json:"description" form:"description"`
+	Keywords       string   `json:"keywords" form:"keywords"`
+	Shortcode      string   `json:"shortcode" form:"shortcode"`
+	AuthorID       string   `json:"author_id" form:"author_id"`
+	AuthorName     string   `json:"author_name" form:"author_name"`
+	Page           int      `json:"page" form:"page"`
+	PageSize       int      `json:"page_size" form:"page_size"`
+	OrderBy        string   `json:"order_by" form:"order_by"`
+	PublishStatus  string   `json:"publish_status" form:"publish_status"`
+	FuzzyKey       string   `json:"search_key" form:"search_key"`
+	Assumed        int      `json:"assumed" form:"assumed"`
+	PublishScope   string   `json:"publish_scope" form:"publish_scope"`
+	OrganizationID string   `json:"organization_id" form:"organization_id"`
 }
