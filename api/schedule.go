@@ -143,29 +143,21 @@ func (s *Server) addSchedule(c *gin.Context) {
 	// add schedule
 	data.Location = loc
 	id, err := model.GetScheduleModel().Add(ctx, op, data)
-	if err == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"id": id,
-		})
+	if err != nil {
+		log.Info(ctx, "add schedule error", log.Err(err), log.Any("requestData", data))
+		switch err {
+		case constant.ErrInvalidArgs:
+			c.JSON(http.StatusBadRequest, L(Unknown))
+		case constant.ErrConflict:
+			c.JSON(http.StatusConflict, L(Unknown))
+		case constant.ErrFileNotFound:
+			c.JSON(http.StatusBadRequest, L(Unknown))
+		default:
+			c.JSON(http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
-	if err == constant.ErrInvalidArgs{
-		log.Info(ctx, "add schedule: verify data failed,invalid args", log.Err(err), log.Any("requestData", data))
-		c.JSON(http.StatusBadRequest, L(Unknown))
-		return
-	}
-	if err == constant.ErrFileNotFound {
-		log.Info(ctx, "add schedule: verify data failed,attachment not found", log.Err(err), log.Any("requestData", data))
-		c.JSON(http.StatusBadRequest, L(Unknown))
-		return
-	}
-	if err == constant.ErrConflict {
-		log.Info(ctx, "add schedule: schedule start_at or end_at conflict", log.Err(err), log.Any("requestData", data))
-		c.JSON(http.StatusConflict, err.Error())
-		return
-	}
-	log.Error(ctx, "add schedule error", log.Err(err), log.Any("schedule", data))
-	c.JSON(http.StatusInternalServerError, err.Error())
+	c.JSON(http.StatusOK, gin.H{"id": id})
 }
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
