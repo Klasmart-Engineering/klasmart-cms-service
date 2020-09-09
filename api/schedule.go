@@ -59,7 +59,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
-	newID, err := model.GetScheduleModel().Update(ctx, dbo.MustGetDB(ctx), operator, &data, loc)
+	data.Location = loc
+	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
 	if err != nil {
 		log.Info(ctx, "update schedule: update failed",
 			log.Err(err),
@@ -93,7 +94,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		return
 	}
 	operator := GetOperator(c)
-	if err := model.GetScheduleModel().Delete(ctx, dbo.MustGetDB(ctx), operator, id, editType); err != nil {
+	if err := model.GetScheduleModel().Delete(ctx, operator, id, editType); err != nil {
 		log.Info(ctx, "delete schedule: delete failed",
 			log.Err(err),
 			log.String("schedule_id", id),
@@ -140,7 +141,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
-	id, err := model.GetScheduleModel().Add(ctx, dbo.MustGetDB(ctx), op, data, loc)
+	data.Location = loc
+	id, err := model.GetScheduleModel().Add(ctx, op, data)
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{
 			"id": id,
@@ -164,7 +166,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	log.Info(ctx, "getScheduleByID", log.String("scheduleID", id))
-	result, err := model.GetScheduleModel().GetByID(ctx, dbo.MustGetDB(ctx), id)
+	result, err := model.GetScheduleModel().GetByID(ctx, id)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
@@ -242,7 +244,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 		}
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
-	total, result, err := model.GetScheduleModel().Page(ctx, dbo.MustGetDB(ctx), condition)
+	total, result, err := model.GetScheduleModel().Page(ctx, condition)
 	if err != nil {
 		log.Error(ctx, "querySchedule:error", log.Any("condition", condition), log.Err(err))
 		c.JSON(http.StatusInternalServerError, err.Error())
@@ -320,7 +322,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "condition info", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
-	result, err := model.GetScheduleModel().Query(ctx, dbo.MustGetDB(ctx), condition)
+	result, err := model.GetScheduleModel().Query(ctx, condition)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
