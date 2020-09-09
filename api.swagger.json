@@ -2459,9 +2459,9 @@
           {
             "name": "assumed",
             "in": "query",
-            "description": "filter outcomes by assumed",
+            "description": "filter outcomes by assumed: 1 true, 0 false, -1 all",
             "schema": {
-              "type": "boolean",
+              "type": "integer",
               "nullable": true
             }
           },
@@ -3000,9 +3000,9 @@
           {
             "name": "assumed",
             "in": "query",
-            "description": "filter outcomes by assumed",
+            "description": "filter outcomes by assumed: 1 true, 0 false -1 all",
             "schema": {
-              "type": "boolean",
+              "type": "integer",
               "nullable": true
             }
           },
@@ -3151,9 +3151,9 @@
           {
             "name": "assumed",
             "in": "query",
-            "description": "filter outcomes by assumed",
+            "description": "filter outcomes by assumed: 1 true, 0 false, -1 all",
             "schema": {
-              "type": "boolean",
+              "type": "integer",
               "nullable": true
             }
           },
