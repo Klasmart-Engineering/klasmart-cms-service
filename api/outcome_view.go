@@ -76,7 +76,7 @@ type OutcomeView struct {
 	PublishScope     string          `json:"publish_scope"`
 	PublishStatus    string          `json:"publish_status"`
 	Description      string          `json:"description"`
-	CreatedAt        int64           `json:"create_at"`
+	CreatedAt        int64           `json:"created_at"`
 }
 
 type Program struct {
