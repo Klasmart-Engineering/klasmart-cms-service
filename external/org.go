@@ -36,3 +36,7 @@ func (s mockOrganizationService) GetParents(ctx context.Context, orgID string) (
 func (s mockOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
 	return GetMockData().Organizations, nil
 }
+
+func (s mockOrganizationService) GetMyTopOrg(ctx context.Context, orgID string) (*Organization, error) {
+	return GetMockData().Organizations[0], nil
+}

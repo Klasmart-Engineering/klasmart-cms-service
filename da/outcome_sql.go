@@ -16,15 +16,18 @@ type OutcomeSqlDA struct {
 }
 
 type OutcomeCondition struct {
-	IDs           dbo.NullStrings
-	Name          sql.NullString
-	Description   sql.NullString
-	Keywords      sql.NullString
-	Shortcode     sql.NullString
-	PublishStatus dbo.NullStrings
-	PublishScope  sql.NullString
-	AuthorName    sql.NullString
-	AuthorID      sql.NullString
+	IDs            dbo.NullStrings
+	Name           sql.NullString
+	Description    sql.NullString
+	Keywords       sql.NullString
+	Shortcode      sql.NullString
+	PublishStatus  dbo.NullStrings
+	PublishScope   sql.NullString
+	AuthorName     sql.NullString
+	AuthorID       sql.NullString
+	Assumed        sql.NullBool
+	OrganizationID sql.NullString
+	FuzzyKey       sql.NullString
 
 	OrderBy OutcomeOrderBy `json:"order_by"`
 	Pager   dbo.Pager
@@ -34,26 +37,31 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	var fullMatchValue []string
-	if c.Name.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Name.String)
-	}
-	if c.AuthorName.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.AuthorName.String)
-	}
-	if c.Keywords.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Keywords.String)
-	}
-	if c.Shortcode.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Shortcode.String)
-	}
-	if c.Description.Valid {
-		fullMatchValue = append(fullMatchValue, "+"+c.Description.String)
-	}
+	//var fullMatchValue []string
+	//if c.Name.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Name.String)
+	//}
+	//if c.AuthorName.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.AuthorName.String)
+	//}
+	//if c.Keywords.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Keywords.String)
+	//}
+	//if c.Shortcode.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Shortcode.String)
+	//}
+	//if c.Description.Valid {
+	//	fullMatchValue = append(fullMatchValue, "+"+c.Description.String)
+	//}
+	//
+	//if len(fullMatchValue) > 0 {
+	//	wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
+	//	params = append(params, strings.TrimSpace(strings.Join(fullMatchValue, " ")))
+	//}
 
-	if len(fullMatchValue) > 0 {
+	if c.FuzzyKey.Valid {
 		wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
-		params = append(params, strings.TrimSpace(strings.Join(fullMatchValue, " ")))
+		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
 	}
 
 	if c.IDs.Valid {
@@ -78,23 +86,36 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.AuthorID.String)
 	}
 
+	if c.OrganizationID.Valid {
+		wheres = append(wheres, "organization_id=?")
+		params = append(params, c.OrganizationID.String)
+	}
+
+	if c.Assumed.Valid {
+		wheres = append(wheres, "assumed=?")
+		params = append(params, c.Assumed.Bool)
+	}
+
 	wheres = append(wheres, " delete_at = 0")
 	return wheres, params
 }
 
 func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 	return &OutcomeCondition{
-		IDs:           dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
-		Name:          sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
-		Description:   sql.NullString{String: condition.Description, Valid: condition.Description != ""},
-		Keywords:      sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
-		Shortcode:     sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-		PublishStatus: dbo.NullStrings{Strings: condition.PublishStatus, Valid: len(condition.PublishStatus) > 0},
-		PublishScope:  sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
-		AuthorID:      sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
-		AuthorName:    sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
-		OrderBy:       NewOrderBy(condition.OrderBy),
-		Pager:         NewPage(condition.Page, condition.PageSize),
+		IDs:            dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
+		Name:           sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
+		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
+		Keywords:       sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
+		Shortcode:      sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
+		PublishStatus:  dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
+		PublishScope:   sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
+		AuthorID:       sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
+		AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
+		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
+		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
+		Assumed:        sql.NullBool{Bool: condition.Assumed == 1, Valid: condition.Assumed != -1},
+		OrderBy:        NewOrderBy(condition.OrderBy),
+		Pager:          NewPage(condition.Page, condition.PageSize),
 	}
 }
 
@@ -215,4 +236,18 @@ func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, cond
 			log.Any("condition", condition))
 	}
 	return
+}
+
+func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error {
+	sql := fmt.Sprintf("update %s set latest_id='%s' where latest_id='%s' and delete_at=0", entity.Outcome{}.TableName(), newHeader, oldHeader)
+	err := tx.Exec(sql).Error
+	if err != nil {
+		log.Error(ctx, "UpdateLatestHead failed",
+			log.Err(err),
+			log.String("old", oldHeader),
+			log.String("new", newHeader),
+			log.String("sql", sql))
+		return err
+	}
+	return nil
 }

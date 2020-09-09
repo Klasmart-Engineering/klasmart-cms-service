@@ -19,7 +19,7 @@ const (
 
 	ContentTypeMaterial = 1
 	ContentTypeLesson   = 2
-	ContentTypeAssets 	= 3
+	ContentTypeAssets   = 3
 
 	ContentTypeAssetImage    = 10
 	ContentTypeAssetVideo    = 11
@@ -27,10 +27,10 @@ const (
 	ContentTypeAssetDocument = 13
 )
 
-var(
-	ErrRequireContentName = errors.New("content name required")
+var (
+	ErrRequireContentName  = errors.New("content name required")
 	ErrRequirePublishScope = errors.New("publish scope required")
-	ErrInvalidResourceId  = errors.New("invalid resource id")
+	ErrInvalidResourceId   = errors.New("invalid resource id")
 	ErrInvalidContentType  = errors.New("invalid content type")
 )
 
@@ -177,7 +177,7 @@ type ContentID struct {
 
 type ContentStatisticsInfo struct {
 	SubContentCount int `json:"subcontent_count"`
-	OutcomesCount int `json:"outcomes_count"`
+	OutcomesCount   int `json:"outcomes_count"`
 }
 
 type Content struct {
@@ -194,9 +194,9 @@ type Content struct {
 	Description   string      `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
 	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
 
-	Outcomes 	string  		`gorm:"type:text;NOT NULL;column:outcomes"`
-	Data  string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
-	Extra string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
+	Outcomes string `gorm:"type:text;NOT NULL;column:outcomes"`
+	Data     string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
+	Extra    string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
 	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
 	Author      string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
@@ -309,9 +309,9 @@ type CreateContentRequest struct {
 	Description   string      `json:"description"`
 	Thumbnail     string      `json:"thumbnail"`
 	SuggestTime   int         `json:"suggest_time"`
-	RejectReason  string      `json:"reject_reason"`
+	//RejectReason  string      `json:"reject_reason"`
 
-	Outcomes	[]string `json:"outcomes"`
+	Outcomes []string `json:"outcomes"`
 
 	PublishScope string `json:"publish_scope"`
 
@@ -354,6 +354,7 @@ type ContentInfoWithDetails struct {
 type ContentName struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	ContentType ContentType `json:"content_type"`
 }
 
 type ContentInfo struct {
@@ -372,7 +373,7 @@ type ContentInfo struct {
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
 
-	Outcomes	[]string `json:"outcomes"`
+	Outcomes []string `json:"outcomes"`
 
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`
@@ -406,8 +407,8 @@ func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {
 	case ContentStatusArchive:
 		if cInfo.allowedToArchive() {
 			cInfo.PublishStatus = ContentStatusArchive
+			return nil
 		}
-		return nil
 	case ContentStatusAttachment:
 		//TODO
 		fmt.Println(cInfo.PublishStatus)
@@ -417,24 +418,24 @@ func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {
 	case ContentStatusHidden:
 		if cInfo.allowedToHidden() {
 			cInfo.PublishStatus = ContentStatusHidden
+			return nil
 		}
-		return nil
 	case ContentStatusPending:
 		if cInfo.allowedToPending() {
 			cInfo.PublishStatus = ContentStatusPending
+			return nil
 		}
-		return nil
 	case ContentStatusPublished:
+		fmt.Println(cInfo.PublishStatus)
 		if cInfo.allowedToBeReviewed() {
 			cInfo.PublishStatus = ContentStatusPublished
+			return nil
 		}
-		return nil
-		fmt.Println(cInfo.PublishStatus)
 	case ContentStatusRejected:
 		if cInfo.allowedToBeReviewed() {
 			cInfo.PublishStatus = ContentStatusRejected
+			return nil
 		}
-		return nil
 	}
 	return errors.New(fmt.Sprintf("unsupported:[%s]", status))
 }

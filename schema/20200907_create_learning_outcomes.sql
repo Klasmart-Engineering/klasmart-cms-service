@@ -1,7 +1,7 @@
 CREATE TABLE `learning_outcomes` (
    `id` VARCHAR(50) NOT  NULL  COMMENT  'outcome_id',
    `ancestor_id` VARCHAR(50)  NOT  NULL  COMMENT  'ancestor_id',
-   `shortcode` CHAR(50)  NOT  NULL  COMMENT  'ancestor_id',
+   `shortcode` CHAR(20)  NOT  NULL  COMMENT  'ancestor_id',
    `name` VARCHAR( 255) NOT  NULL  COMMENT  'outcome_name',
    `program` VARCHAR( 1024) NOT  NULL  COMMENT  'program',
    `subject` VARCHAR( 1024) NOT  NULL  COMMENT  'subject',

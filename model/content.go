@@ -690,6 +690,7 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 		return &entity.ContentName{
 			ID:   cid,
 			Name: cachedContent.Name,
+			ContentType: cachedContent.ContentType,
 		}, nil
 	}
 	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
@@ -700,6 +701,7 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 	return &entity.ContentName{
 		ID:   cid,
 		Name: obj.Name,
+		ContentType: obj.ContentType,
 	}, nil
 }
 
@@ -767,6 +769,7 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 		resp = append(resp, &entity.ContentName{
 			ID:   cachedContent[i].ID,
 			Name: cachedContent[i].Name,
+			ContentType: cachedContent[i].ContentType,
 		})
 	}
 	if len(nid) < 1 {
@@ -784,6 +787,7 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 		resp = append(resp, &entity.ContentName{
 			ID:   data[i].ID,
 			Name: data[i].Name,
+			ContentType: data[i].ContentType,
 		})
 	}
 	return resp, nil
@@ -874,7 +878,18 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
 		return nil, err
 	}
-	return strings.Split(content.Outcomes, ","), nil
+	if content.Outcomes == "" {
+		return nil, nil
+	}
+	outcomes := strings.Split(content.Outcomes, ",")
+	ret := make([]string, 0)
+	for i := range outcomes {
+		if outcomes[i] != ""{
+			ret = append(ret, outcomes[i])
+		}
+	}
+
+	return ret, nil
 }
 
 func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error) {
