@@ -3279,7 +3279,7 @@
             "description": "page index, not paging if page <= 0",
             "schema": {
               "type": "integer",
-              "format": "int32",
+              "format": "int",
               "default": 1
             }
           },
@@ -3289,7 +3289,7 @@
             "description": "records per page, not paging if page_size <= 0",
             "schema": {
               "type": "integer",
-              "format": "int32",
+              "format": "int",
               "default": 10
             }
           },
@@ -3523,7 +3523,7 @@
         }
       }
     },
-    "/assessment/{id}": {
+    "/assessments/{id}": {
       "get": {
         "tags": [
           "assessments"
@@ -3724,18 +3724,6 @@
                     "description": "update assessment action",
                     "enum": [
                       "save",
-                      "complete"
-                    ]
-                  },
-                  "id": {
-                    "type": "string",
-                    "description": "assessment id"
-                  },
-                  "status": {
-                    "type": "string",
-                    "description": "assessment status",
-                    "enum": [
-                      "in_progress",
                       "complete"
                     ]
                   },
