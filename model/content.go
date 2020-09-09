@@ -690,6 +690,7 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 		return &entity.ContentName{
 			ID:   cid,
 			Name: cachedContent.Name,
+			ContentType: cachedContent.ContentType,
 		}, nil
 	}
 	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
@@ -700,6 +701,7 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 	return &entity.ContentName{
 		ID:   cid,
 		Name: obj.Name,
+		ContentType: obj.ContentType,
 	}, nil
 }
 
@@ -767,6 +769,7 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 		resp = append(resp, &entity.ContentName{
 			ID:   cachedContent[i].ID,
 			Name: cachedContent[i].Name,
+			ContentType: cachedContent[i].ContentType,
 		})
 	}
 	if len(nid) < 1 {
@@ -784,6 +787,7 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 		resp = append(resp, &entity.ContentName{
 			ID:   data[i].ID,
 			Name: data[i].Name,
+			ContentType: data[i].ContentType,
 		})
 	}
 	return resp, nil

@@ -354,6 +354,7 @@ type ContentInfoWithDetails struct {
 type ContentName struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	ContentType ContentType `json:"content_type"`
 }
 
 type ContentInfo struct {
