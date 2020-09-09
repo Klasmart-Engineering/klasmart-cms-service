@@ -27,6 +27,11 @@ func (s *Server) createOutcome(c *gin.Context) {
 		return
 	}
 	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
+
+	if err != nil {
+
+	}
+	outcomeView := newOutcomeView(outcome)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
@@ -43,9 +48,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"outcome_id": outcome.ID,
-		})
+		c.JSON(http.StatusOK, outcomeView)
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -384,7 +387,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
+	total, outcomes, err := model.GetOutcomeModel().SearchPrivateOutcomes(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
@@ -421,8 +424,10 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
+	total, outcomes, err := model.GetOutcomeModel().SearchPendingOutcomes(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
+	case model.ErrBadRequest:
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrResourceNotFound:
