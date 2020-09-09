@@ -349,6 +349,8 @@ type ContentInfoWithDetails struct {
 	AgeName           []string `json:"age_name"`
 	GradeName         []string `json:"grade_name"`
 	OrgName           string   `json:"org_name"`
+
+	OutcomeEntities	 []*Outcome `json:"outcome_entities"`
 }
 
 type ContentName struct {

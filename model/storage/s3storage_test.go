@@ -2,9 +2,10 @@ package storage
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"os"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
 
 func InitEnv() {
@@ -54,14 +55,12 @@ func TestCDNSignature(t *testing.T) {
 	t.Log(path)
 }
 
-
-
 func TestS3Storage_GetUploadFileTempPath(t *testing.T) {
 	InitEnv()
 	config.LoadEnvConfig()
 	storage := DefaultStorage()
-	partition, _ := NewStoragePartition(ThumbnailStoragePartition)
-	path, err := storage.GetUploadFileTempPath(context.Background(),partition, "timg0.jpg")
+	partition := ThumbnailStoragePartition
+	path, err := storage.GetUploadFileTempPath(context.Background(), partition, "timg0.jpg")
 	if err != nil {
 		t.Error(err)
 		return

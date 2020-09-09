@@ -4400,6 +4400,19 @@
                 "description": "org name",
                 "example": "school1"
               },
+              "outcome_entities": {
+                "type": "array",
+                "description": "outcome info",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "outcome_id": {
+                      "type": "string",
+                      "description": "outcome id"
+                    }
+                  }
+                }
+              },
               "created_at": {
                 "type": "integer",
                 "description": "content create time",
