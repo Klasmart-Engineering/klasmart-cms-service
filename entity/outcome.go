@@ -203,7 +203,7 @@ type OutcomeCondition struct {
 	OrderBy        string   `json:"order_by" form:"order_by"`
 	PublishStatus  string   `json:"publish_status" form:"publish_status"`
 	FuzzyKey       string   `json:"search_key" form:"search_key"`
-	Assumed        string   `json:"assumed" form:"assumed"`
+	Assumed        int      `json:"assumed" form:"assumed"`
 	PublishScope   string   `json:"publish_scope" form:"publish_scope"`
 	OrganizationID string   `json:"organization_id" form:"organization_id"`
 }
