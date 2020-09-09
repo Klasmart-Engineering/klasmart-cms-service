@@ -33,7 +33,7 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Co
 	var items []*entity.OutcomeAttendance
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
-		Where("outcome_id in ?", outcomeIDs).
+		Where("outcome_id in (?)", outcomeIDs).
 		Find(&items).Error; err != nil {
 		return nil, err
 	}
