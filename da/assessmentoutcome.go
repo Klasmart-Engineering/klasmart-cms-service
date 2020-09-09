@@ -36,7 +36,7 @@ func (*assessmentOutcomeDA) GetOutcomeIDsByAssessmentID(ctx context.Context, tx 
 	}
 	var ids []string
 	for _, item := range items {
-		ids = append(ids, item.ID)
+		ids = append(ids, item.OutcomeID)
 	}
 	return ids, nil
 }
