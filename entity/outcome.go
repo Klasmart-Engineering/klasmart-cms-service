@@ -13,7 +13,7 @@ type Outcome struct {
 	ID            string `gorm:"type:varchar(50);column:id" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
 	Name          string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"outcome_name" json:"outcome_name" dynamoupdate:":n"`
 	Shortcode     string `gorm:"type:char(8);NOT NULL;column:shortcode" dynamodbav:"shortcode" json:"shortcode" dynamoupdate:":code"`
-	AncestorID    string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"outcome_id" dynamoupdate:"-"`
+	AncestorID    string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"ancestor_id" dynamoupdate:"-"`
 	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
 	Subject       string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
 	Developmental string `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
@@ -36,7 +36,7 @@ type Outcome struct {
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
 	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
-	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"latest_id" dynamoupdate:":asum"`
+	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"assumed" dynamoupdate:":asum"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`

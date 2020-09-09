@@ -73,7 +73,7 @@ func TestDeleteOutcome(t *testing.T) {
 }
 
 func TestQueryOutcome(t *testing.T) {
-	query := fmt.Sprintf("outcome_name=%s&keywords=%s", "TestOutcomeYY", "A01")
+	query := fmt.Sprintf("search_key=%s&assumed=%d", "TestOutcomeYY", 1)
 	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes"+"?"+query, "")
 	fmt.Println(res)
 }
