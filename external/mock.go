@@ -26,6 +26,7 @@ type mockData struct {
 	Organizations []*Organization `json:"organizations"`
 	Teachers      []*Teacher      `json:"teachers"`
 	Students      []*Student      `json:"students"`
+	Users         []*UserInfo     `json:"users"`
 }
 
 var (

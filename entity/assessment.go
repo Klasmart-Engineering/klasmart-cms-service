@@ -17,9 +17,9 @@ type Assessment struct {
 	CompleteTime int64            `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
 	Status       AssessmentStatus `gorm:"column:status;type:varchar(128);not null" json:"status"`
 
-	CreateTime int64 `gorm:"column:create_time;type:bigint;not null" json:"create_time"`
-	UpdateTime int64 `gorm:"column:update_time;type:bigint;not null" json:"update_time"`
-	DeleteTime int64 `gorm:"column:delete_time;type:bigint;not null" json:"delete_time"`
+	CreateAt int64 `gorm:"column:create_at;type:bigint;not null" json:"create_at"`
+	UpdateAt int64 `gorm:"column:update_at;type:bigint;not null" json:"update_at"`
+	DeleteAt int64 `gorm:"column:delete_at;type:bigint;not null" json:"delete_at"`
 }
 
 func (Assessment) TableName() string {
@@ -71,6 +71,7 @@ type OutcomeAttendanceMapView struct {
 	OutcomeID     string   `json:"outcome_id"`
 	OutcomeName   string   `json:"outcome_name"`
 	Assumed       bool     `json:"assumed"`
+	Skip          bool     `json:"skip"`
 	AttendanceIDs []string `json:"attendance_ids"`
 }
 
@@ -195,5 +196,6 @@ func (a UpdateAssessmentAction) Valid() bool {
 
 type OutcomeAttendanceMap struct {
 	OutcomeID     string   `json:"outcome_id"`
+	Skip          bool     `json:"skip"`
 	AttendanceIDs []string `json:"attendance_i_ds"`
 }
