@@ -76,6 +76,7 @@ type OutcomeCreateResponse struct {
 	OrganizationName string   `json:"organization_name"`
 	PublishScope     string   `json:"publish_scope"`
 	PublishStatus    string   `json:"publish_status"`
+	RejectReason     string   `json:"reject_reason"`
 	Description      string   `json:"description"`
 	CreatedAt        int64    `json:"created_at"`
 }
@@ -103,6 +104,7 @@ func newOutcomeCreateResponse(createView *OutcomeCreateView, outcome *entity.Out
 		OrganizationName: getProgramName(outcome.OrganizationID),
 		PublishScope:     outcome.PublishScope,
 		PublishStatus:    string(outcome.PublishStatus),
+		RejectReason:     outcome.RejectReason,
 		Description:      outcome.Description,
 		CreatedAt:        outcome.CreateAt,
 	}
@@ -130,6 +132,7 @@ type OutcomeView struct {
 	OrganizationName string          `json:"organization_name"`
 	PublishScope     string          `json:"publish_scope"`
 	PublishStatus    string          `json:"publish_status"`
+	RejectReason     string          `json:"reject_reason"`
 	Description      string          `json:"description"`
 	CreatedAt        int64           `json:"created_at"`
 }
@@ -173,6 +176,7 @@ func newOutcomeView(outcome *entity.Outcome) OutcomeView {
 		OrganizationID: outcome.OrganizationID,
 		PublishScope:   outcome.PublishScope,
 		PublishStatus:  string(outcome.PublishStatus),
+		RejectReason:   outcome.RejectReason,
 		Description:    outcome.Description,
 		CreatedAt:      outcome.CreateAt,
 	}
