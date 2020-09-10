@@ -54,6 +54,7 @@ func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentTyp
 	}
 	ext := parts[len(parts) - 1]
 	flag := false
+	ext = strings.ToLower(ext)
 	switch contentType {
 	case entity.ContentTypeAssetImage:
 		flag = a.isArray(ext, []string{"jpg", "jpeg", "png", "bmp", "gif"})
