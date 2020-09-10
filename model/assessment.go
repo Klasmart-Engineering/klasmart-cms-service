@@ -500,8 +500,8 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				TeacherID:    cmd.TeacherID,
 				ClassLength:  cmd.ClassLength,
 				ClassEndTime: cmd.ClassEndTime,
-				CreateTime:   nowUnix,
-				UpdateTime:   nowUnix,
+				CreateAt:     nowUnix,
+				UpdateAt:     nowUnix,
 			}
 			if len(outcomeIDs) == 0 {
 				newItem.Status = entity.AssessmentStatusComplete
