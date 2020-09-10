@@ -3792,6 +3792,75 @@
           }
         }
       }
+    },
+    "/live/token/{schedule_id}": {
+      "get": {
+        "tags": [
+          "live"
+        ],
+        "summary": "get live token",
+        "description": "get live token",
+        "operationId": "getLiveToken",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "schedule id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          },
+          {
+            "name": "env_path",
+            "in": "query",
+            "description": "live env path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "live token",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "live token"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
     }
   },
   "components": {
