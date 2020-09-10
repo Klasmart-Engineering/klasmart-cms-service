@@ -23,7 +23,7 @@ type OutcomeCreateView struct {
 	Skills         []string `json:"skills"`
 	Age            []string `json:"age"`
 	Grade          []string `json:"grade"`
-	Estimated      int      `json:"estimated"`
+	Estimated      int      `json:"estimated_time"`
 	Keywords       []string `json:"keywords"`
 	Description    string   `json:"description"`
 }

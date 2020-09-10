@@ -174,14 +174,13 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 				Skip          bool
 			}{}
 			for _, item := range outcomeAttendances {
-				v, ok := outcomeAttendanceMap[item.OutcomeID]
-				if !ok {
-					v = &struct {
+				if _, ok := outcomeAttendanceMap[item.OutcomeID]; !ok {
+					outcomeAttendanceMap[item.OutcomeID] = &struct {
 						AttendanceIDs []string
 						Skip          bool
 					}{}
 				}
-				v.AttendanceIDs = append(outcomeAttendanceMap[item.OutcomeID].AttendanceIDs, item.AttendanceID)
+				outcomeAttendanceMap[item.OutcomeID].AttendanceIDs = append(outcomeAttendanceMap[item.OutcomeID].AttendanceIDs, item.AttendanceID)
 			}
 			if err != nil {
 				log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
