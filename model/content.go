@@ -29,8 +29,8 @@ type IContentModel interface {
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
-	
+	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error)
+
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
@@ -177,10 +177,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	if err != nil {
 		return err
 	}
-	subContentIds, err := contentData.SubContentIds(ctx)
-	if err != nil {
-		return err
-	}
+	subContentIds := contentData.SubContentIds(ctx)
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		IDS: subContentIds,
 	})
@@ -703,7 +700,7 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 }
 
 
-func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
+func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
@@ -714,7 +711,26 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 		return nil, err
 	}
-	return cd.SubContentIds(ctx)
+	ids := cd.SubContentIds(ctx)
+	subContents, err := da.GetContentDA().GetContentByIdList(ctx, tx, ids)
+	if err != nil{
+		log.Error(ctx, "can't get sub contents", log.Err(err), log.Strings("ids", ids))
+		return nil, err
+	}
+	subContentMap := make(map[string]string)
+	for i := range subContents{
+		subContentMap[subContents[i].ID] = subContents[i].Name
+	}
+
+	ret := make([]*entity.SubContentsWithName, len(ids))
+	for i := range ids {
+		ret[i] = &entity.SubContentsWithName{
+			ID:   ids[i],
+			Name: subContentMap[ids[i]],
+		}
+	}
+
+	return ret, nil
 }
 
 func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error) {
@@ -809,9 +825,7 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 		return resp, nil
 	}
 
-	_, data, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
-		IDS: cids,
-	})
+	data, err := da.GetContentDA().GetContentByIdList(ctx, tx, cids)
 	if err != nil {
 		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
 		return nil, ErrReadContentFailed
@@ -836,9 +850,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 		return cachedContent, nil
 	}
 
-	_, data, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
-		IDS: cids,
-	})
+	data, err := da.GetContentDA().GetContentByIdList(ctx, tx, cids)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err))
 		return nil, ErrReadContentFailed
@@ -941,11 +953,7 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 		log.Error(ctx, "can't parse content data", log.Err(err), log.String("cid", cid), log.Int("contentType", int(content.ContentType)), log.String("data", content.Data))
 		return nil, err
 	}
-	subContentIds, err := cd.SubContentIds(ctx)
-	if err != nil {
-		log.Error(ctx, "can't get subcontent", log.Err(err), log.String("cid", cid), log.Int("contentType", int(content.ContentType)), log.String("data", content.Data))
-		return nil, err
-	}
+	subContentIds := cd.SubContentIds(ctx)
 	_, subContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		IDS: subContentIds,
 	})

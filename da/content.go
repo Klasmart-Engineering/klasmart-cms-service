@@ -35,6 +35,7 @@ type IContentDA interface {
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error
 	GetContentById(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
 
+	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	Count(context.Context, dbo.Conditions) (int, error)
@@ -255,6 +256,17 @@ func (cd *DBContentDA) GetContentById(ctx context.Context, tx *dbo.DBContext, ci
 	}
 
 	return obj, nil
+}
+func (cd *DBContentDA) GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error) {
+	objs := make([]*entity.Content, 0)
+	err := cd.s.QueryTx(ctx, tx, &ContentCondition{
+		IDS:           cids,
+	}, &objs)
+	if err != nil {
+		return nil, err
+	}
+
+	return objs, nil
 }
 
 func (cd *DBContentDA) SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error) {
