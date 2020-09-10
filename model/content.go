@@ -127,7 +127,6 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
-	//TODO:Check age, category...
 	err := c.Validate()
 	if err != nil {
 		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
@@ -296,6 +295,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		}
 		c.PublishScope = provider.DefaultPublishScope(ctx)
 	}
+
 	err := cm.checkContentInfo(ctx, c, true)
 	if err != nil {
 		log.Warn(ctx, "check content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
@@ -321,6 +321,15 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 }
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
+	if data.ContentType.IsAsset() {
+		provider, err := external.GetPublishScopeProvider()
+		if err != nil{
+			log.Warn(ctx, "get publishScope provider failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
+			return err
+		}
+		data.PublishScope = provider.DefaultPublishScope(ctx)
+	}
+
 	err := cm.checkContentInfo(ctx, data, false)
 	if err != nil {
 		return err
