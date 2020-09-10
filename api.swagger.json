@@ -2406,6 +2406,60 @@
         }
       }
     },
+    "/schedules/{schedule_id}/live/token": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "get live token",
+        "description": "get live token",
+        "operationId": "getLiveToken",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "schedule id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/learning_outcomes": {
       "get": {
         "tags": [
@@ -3792,7 +3846,7 @@
           }
         }
       }
-    }
+    },
   },
   "components": {
     "securitySchemes": {
@@ -5980,6 +6034,16 @@
             }
           }
         ]
+      },
+      "LiveToken": {
+        "type": "object",
+        "description": "live token",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "live token"
+          }
+        }
       }
     }
   }
