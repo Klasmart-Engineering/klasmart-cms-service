@@ -59,6 +59,7 @@ func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id s
 	}
 	if err := tx.Model(entity.Assessment{}).
 		Where(a.filterSoftDeletedTemplate()).
+		Where("id = ?", id).
 		Updates(updateFields).
 		Error; err != nil {
 		log.Error(ctx, "update assessment status: update failed in db",
