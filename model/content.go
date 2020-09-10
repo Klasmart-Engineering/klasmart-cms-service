@@ -29,7 +29,8 @@ type IContentModel interface {
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-
+	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
+	
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
@@ -699,6 +700,21 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	//TODO: Check org scope
 
 	return ErrGetUnauthorizedContent
+}
+
+
+func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
+	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
+		return nil, err
+	}
+	cd, err := contentdata.CreateContentData(ctx, obj.ContentType, obj.Data)
+	if err != nil{
+		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
+		return nil, err
+	}
+	return cd.SubContentIds(ctx)
 }
 
 func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error) {
