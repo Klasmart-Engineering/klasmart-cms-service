@@ -71,6 +71,7 @@ type OutcomeAttendanceMapView struct {
 	OutcomeID     string   `json:"outcome_id"`
 	OutcomeName   string   `json:"outcome_name"`
 	Assumed       bool     `json:"assumed"`
+	Skip          bool     `json:"skip"`
 	AttendanceIDs []string `json:"attendance_ids"`
 }
 
@@ -195,5 +196,6 @@ func (a UpdateAssessmentAction) Valid() bool {
 
 type OutcomeAttendanceMap struct {
 	OutcomeID     string   `json:"outcome_id"`
+	Skip          bool     `json:"skip"`
 	AttendanceIDs []string `json:"attendance_i_ds"`
 }
