@@ -44,7 +44,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, newOutcomeCreateResponse(&data, outcome))
+		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, &data, outcome))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -71,7 +71,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, newOutcomeView(outcome))
+		c.JSON(http.StatusOK, newOutcomeView(ctx, outcome))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
