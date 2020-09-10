@@ -27,11 +27,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 		return
 	}
 	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
-
-	if err != nil {
-
-	}
-	outcomeView := newOutcomeView(outcome)
+	data.OutcomeID = outcome.ID
 	switch err {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
@@ -48,7 +44,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, outcomeView)
+		c.JSON(http.StatusOK, newOutcomeCreateResponse(&data, outcome))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
