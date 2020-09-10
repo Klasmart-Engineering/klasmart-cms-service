@@ -54,8 +54,8 @@ create table outcomes_attendances
 
 /* 20200910 Patch (already updated to above ddl) */
 /*
-alter table assessments change create_time create_at bigint not null comment 'create time (unix seconds)';
-alter table assessments change update_time update_at bigint not null comment 'update time (unix seconds)';
-alter table assessments change delete_time delete_at bigint not null comment 'delete time (unix seconds)';
+alter table assessments change `create_time` `create_at` bigint not null comment 'create time (unix seconds)';
+alter table assessments change `update_time` `update_at` bigint not null comment 'update time (unix seconds)';
+alter table assessments change `delete_time` `delete_at` bigint not null comment 'delete time (unix seconds)';
 alter table assessments_outcomes add column `skip` boolean not null comment 'skip';
 */
