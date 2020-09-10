@@ -2634,7 +2634,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "$ref": "#/components/schemas/LearningOutcomes"
+                  "$ref": "#/components/schemas/CreateLearningOutcomesResponse"
                 }
               }
             }
@@ -5750,23 +5750,194 @@
               },
               "estimated_time": {
                 "type": "integer",
-                "description": "estimated time",
+                "description": "estimated time, unit: minute",
                 "example": 30
               },
               "keywords": {
                 "type": "array",
-                "description": "keywords id",
+                "description": "keywords",
                 "items": {
                   "type": "string"
                 },
                 "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                  "LetterA"
                 ]
               },
               "description": {
                 "type": "string",
                 "description": "outcome description",
                 "example": "description"
+              }
+            }
+          }
+        ]
+      },
+      "CreateLearningOutcomesResponse": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_id": {
+                "type": "string",
+                "description": "outcome id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "ancestor_id": {
+                "type": "string",
+                "description": "outcome ancestor id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
+              },
+              "assumed": {
+                "type": "boolean",
+                "description": "learning outcome assumed",
+                "example": true
+              },
+              "outcome_name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "estimated_time": {
+                "type": "integer",
+                "description": "estimated time, unit：minute",
+                "example": 30
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "LetterA"
+                ]
+              },
+              "source_id": {
+                "type": "string",
+                "description": "content source id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "locked_by": {
+                "type": "string",
+                "description": "content locked by others id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_id": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "organization_id": {
+                "type": "string",
+                "description": "org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "organization_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "learning outcomes publish scope id,default as same as organization_id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "learning outcomes publish status",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ],
+                "example": "published"
+              },
+              "description": {
+                "type": "string",
+                "description": "description",
+                "example": "description001"
+              },
+              "created_at": {
+                "type": "integer",
+                "description": "learning outcome create time",
+                "example": 123
               }
             }
           }
@@ -5957,7 +6128,7 @@
               },
               "estimated_time": {
                 "type": "integer",
-                "description": "suggest time",
+                "description": "estimated time, unit: minute",
                 "example": 30
               },
               "reject_reason": {
@@ -5967,12 +6138,12 @@
               },
               "keywords": {
                 "type": "array",
-                "description": "keywords id",
+                "description": "keywords",
                 "items": {
                   "type": "string"
                 },
                 "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                  "LetterA"
                 ]
               },
               "source_id": {
