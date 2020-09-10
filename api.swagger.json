@@ -5696,17 +5696,17 @@
               },
               "estimated_time": {
                 "type": "integer",
-                "description": "estimated time",
+                "description": "estimated time, unit: minute",
                 "example": 30
               },
               "keywords": {
                 "type": "array",
-                "description": "keywords id",
+                "description": "keywords",
                 "items": {
                   "type": "string"
                 },
                 "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                  "LetterA"
                 ]
               },
               "description": {
@@ -5816,17 +5816,17 @@
               },
               "estimated_time": {
                 "type": "integer",
-                "description": "estimated time",
+                "description": "estimated time, unit：minute",
                 "example": 30
               },
               "keywords": {
                 "type": "array",
-                "description": "keywords id",
+                "description": "keywords",
                 "items": {
                   "type": "string"
                 },
                 "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                  "LetterA"
                 ]
               },
               "source_id": {
@@ -6074,7 +6074,7 @@
               },
               "estimated_time": {
                 "type": "integer",
-                "description": "suggest time",
+                "description": "estimated time, unit: minute",
                 "example": 30
               },
               "reject_reason": {
@@ -6084,12 +6084,12 @@
               },
               "keywords": {
                 "type": "array",
-                "description": "keywords id",
+                "description": "keywords",
                 "items": {
                   "type": "string"
                 },
                 "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                  "LetterA"
                 ]
               },
               "source_id": {
