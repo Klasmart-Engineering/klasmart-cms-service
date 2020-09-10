@@ -82,7 +82,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (*entity.Outcome, error) {
 	outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 	if err == dbo.ErrRecordNotFound {
-		return nil, ErrNoContent
+		return nil, ErrResourceNotFound
 	}
 	if err != nil {
 		log.Error(ctx, "GetLearningOutcomeByID: GetOutcomeByID failed",
@@ -97,7 +97,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 	err := dbo.GetTrans(ctx, func(cxt context.Context, tx *dbo.DBContext) error {
 		data, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcome.ID)
 		if err == dbo.ErrRecordNotFound {
-			return ErrNoContent
+			return ErrResourceNotFound
 		}
 		if err != nil {
 			log.Error(ctx, "UpdateLearningOutcome: GetOutcomeByID failed",
@@ -402,7 +402,7 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, outcomeID st
 	defer locker.Unlock()
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
-		if gorm.IsRecordNotFoundError(err) {
+		if err == dbo.ErrRecordNotFound || gorm.IsRecordNotFoundError(err) {
 			log.Warn(ctx, "ApproveLearningOutcome: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
@@ -463,7 +463,7 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	defer locker.Unlock()
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
-		if gorm.IsRecordNotFoundError(err) {
+		if err == dbo.ErrRecordNotFound || gorm.IsRecordNotFoundError(err) {
 			log.Warn(ctx, "RejectLearningOutcome: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
