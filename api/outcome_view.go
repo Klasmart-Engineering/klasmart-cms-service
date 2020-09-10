@@ -181,6 +181,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 		PublishStatus:  string(outcome.PublishStatus),
 		Keywords:       strings.Split(outcome.Keywords, ","),
 		RejectReason:   outcome.RejectReason,
+		EstimatedTime:  outcome.EstimatedTime,
 		Description:    outcome.Description,
 		CreatedAt:      outcome.CreateAt,
 	}
