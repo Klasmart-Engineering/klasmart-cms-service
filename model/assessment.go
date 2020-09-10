@@ -169,9 +169,19 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 				outcomeMap[outcome.ID] = outcome
 			}
 			outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
-			outcomeAttendanceMap := map[string][]string{}
+			outcomeAttendanceMap := map[string]*struct {
+				AttendanceIDs []string
+				Skip          bool
+			}{}
 			for _, item := range outcomeAttendances {
-				outcomeAttendanceMap[item.OutcomeID] = append(outcomeAttendanceMap[item.OutcomeID], item.AttendanceID)
+				v, ok := outcomeAttendanceMap[item.OutcomeID]
+				if !ok {
+					v = &struct {
+						AttendanceIDs []string
+						Skip          bool
+					}{}
+				}
+				v.AttendanceIDs = append(outcomeAttendanceMap[item.OutcomeID].AttendanceIDs, item.AttendanceID)
 			}
 			if err != nil {
 				log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
@@ -181,12 +191,16 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 				return nil, err
 			}
 			for _, outcome := range outcomes {
-				result.OutcomeAttendanceMaps = append(result.OutcomeAttendanceMaps, entity.OutcomeAttendanceMapView{
-					OutcomeID:     outcome.ID,
-					OutcomeName:   outcome.Name,
-					Assumed:       outcome.Assumed,
-					AttendanceIDs: outcomeAttendanceMap[outcome.ID],
-				})
+				newItem := entity.OutcomeAttendanceMapView{
+					OutcomeID:   outcome.ID,
+					OutcomeName: outcome.Name,
+					Assumed:     outcome.Assumed,
+				}
+				if outcomeAttendanceMap[outcome.ID] != nil {
+					newItem.Skip = outcomeAttendanceMap[outcome.ID].Skip
+					newItem.AttendanceIDs = outcomeAttendanceMap[outcome.ID].AttendanceIDs
+				}
+				result.OutcomeAttendanceMaps = append(result.OutcomeAttendanceMaps, newItem)
 			}
 		}
 	}
@@ -510,6 +524,7 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 					ID:           utils.NewID(),
 					AssessmentID: newID,
 					OutcomeID:    outcomeID,
+					Skip:         false,
 				})
 			}
 			if len(items) > 0 {
@@ -588,6 +603,15 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 						OutcomeID:    item.OutcomeID,
 						AttendanceID: attendanceID,
 					})
+				}
+				if err := da.GetAssessmentOutcomeDA().UpdateSkipField(ctx, tx, cmd.ID, item.OutcomeID, item.Skip); err != nil {
+					log.Error(ctx, "update assessment: batch insert outcome attendance map failed",
+						log.Err(err),
+						log.Any("cmd", cmd),
+						log.String("id", cmd.ID),
+						log.String("outcome_id", item.OutcomeID),
+						log.Bool("skip", item.Skip),
+					)
 				}
 			}
 			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
