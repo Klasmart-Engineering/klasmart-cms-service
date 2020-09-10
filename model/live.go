@@ -11,17 +11,17 @@ type ILiveModel interface {
 }
 
 func (s *liveModel) MakeLiveToken(ctx context.Context, op *entity.Operator, data *entity.LiveToken) (string, error) {
-	//payload := op.ToLivePayload()
-	//
-	//liveContent := entity.LiveContentInfo{
-	//	UserID: op.UserID,
-	//}
-	//schedule, err := GetScheduleModel().GetPlainByID(ctx, data.ScheduleID)
-	//if err != nil {
-	//	return "", err
-	//}
-	//liveContent.RoomID = schedule.ID
-	//var h5pList []*entity.H5pFileInfo
+	payload := op.ToLivePayload()
+
+	liveContent := entity.LiveContentInfo{
+		UserID: op.UserID,
+	}
+	schedule, err := GetScheduleModel().GetPlainByID(ctx, data.ScheduleID)
+	if err != nil {
+		return "", err
+	}
+	liveContent.ScheduleID = schedule.ID
+	var h5pList []*entity.H5pFileInfo
 
 	return "", nil
 }
