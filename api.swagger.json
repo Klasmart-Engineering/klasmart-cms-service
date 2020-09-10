@@ -3668,6 +3668,11 @@
                             "format": "bool",
                             "description": "assumed"
                           },
+                          "skip": {
+                            "type": "boolean",
+                            "format": "bool",
+                            "description": "skip"
+                          },
                           "attendance_ids": {
                             "type": "array",
                             "description": "attendance ids",
@@ -3755,6 +3760,11 @@
                         "outcome_id": {
                           "type": "string",
                           "description": "outcome id"
+                        },
+                        "skip": {
+                          "type": "boolean",
+                          "format": "bool",
+                          "description": "skip"
                         },
                         "attendance_ids": {
                           "type": "array",
