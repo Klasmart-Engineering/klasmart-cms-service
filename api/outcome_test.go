@@ -38,7 +38,7 @@ func TestCreateOutcome(t *testing.T) {
 }
 
 func TestGetOutcome(t *testing.T) {
-	outcomeID := "5f55d43f3695b7ca67729069"
+	outcomeID := "5f59f5cace0c92ac4478237e"
 	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes/"+outcomeID, "")
 	fmt.Println(res)
 }
