@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"net/http"
@@ -171,4 +172,25 @@ func TestRedis(t *testing.T) {
 
 func TestNumToBHex(t *testing.T) {
 	fmt.Println(model.PaddingStr(model.NumToBHex(900, 36), 3))
+}
+
+func TestFindRoot(t *testing.T) {
+	orgs := []*external.Organization{
+		{ID: "1", ParentID: "3"},
+		{ID: "2", ParentID: "1"},
+		{ID: "3", ParentID: "4"},
+		{ID: "4", ParentID: ""},
+	}
+	root := orgs[3]
+	for i := 0; i < len(orgs); i++ {
+		if root.ParentID != "" && root.ParentID != root.ID {
+			for _, o := range orgs {
+				if o.ID == root.ParentID {
+					root = o
+					break
+				}
+			}
+		}
+	}
+	fmt.Printf("%+v", root)
 }

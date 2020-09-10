@@ -8,6 +8,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/ro"
@@ -555,49 +556,6 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBCo
 	return
 }
 
-func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name string, err error) {
-	//TODO:
-	if err != nil {
-		log.Error(ctx, "getAuthorNameByID failed",
-			log.Err(err),
-			log.String("author_id", id))
-	}
-	name = "mock name 001"
-	return
-}
-
-func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) (orgName string, err error) {
-	//TODO:
-	if err != nil {
-		log.Error(ctx, "getOrganizationNameByID failed",
-			log.Err(err),
-			log.String("org_id", id))
-	}
-	return
-}
-
-func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id string) (orgID, orgName string, err error) {
-	// TODO:
-	if err != nil {
-		log.Error(ctx, "getRootOrganizationByOrgID failed",
-			log.Err(err),
-			log.String("org_id", id))
-	}
-	return
-}
-
-func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id string) (orgID, orgName string, err error) {
-	// TODO:
-	if err != nil {
-		log.Error(ctx, "getRootOrganizationByOrgID failed",
-			log.Err(err),
-			log.String("author_id", id))
-	}
-	orgID = "1"
-	orgName = "mock name org001"
-	return
-}
-
 func (ocm OutcomeModel) getShortCode(ctx context.Context, orgID string) (shortcode string, err error) {
 	redisKey := fmt.Sprintf("%s:%s", da.RedisKeyPrefixOutcomeShortcode, orgID)
 	num, err := ro.MustGetRedis(ctx).Incr(redisKey).Result()
@@ -728,6 +686,100 @@ func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContex
 	}
 	err = da.GetOutcomeDA().UpdateLatestHead(ctx, tx, outcome.LatestID, outcome.ID)
 	return
+}
+
+func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name string, err error) {
+	provider, err := external.GetUserServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getAuthorNameByID: GetUserServiceProvider failed",
+			log.Err(err),
+			log.String("user_id", id))
+		return "", err
+	}
+	user, err := provider.GetUserInfoByID(ctx, id)
+	if err != nil {
+		log.Error(ctx, "getAuthorNameByID: GetUserInfoByID failed",
+			log.Err(err),
+			log.String("user_id", id))
+		return "", err
+	}
+	return user.Name, nil
+}
+
+func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) (orgName string, err error) {
+	provider, err := external.GetOrganizationServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getOrganizationNameByID: GetOrganizationServiceProvider failed",
+			log.Err(err),
+			log.String("org_id", id))
+		return "", err
+	}
+	orgs, err := provider.BatchGet(ctx, []string{id})
+	if err != nil {
+		log.Error(ctx, "getOrganizationNameByID: BatchGet failed",
+			log.Err(err),
+			log.String("org_id", id))
+		return "", err
+	}
+	if len(orgs) == 0 {
+		log.Error(ctx, "getOrganizationNameByID: org list is empty",
+			log.String("org_id", id))
+		return "", nil
+	}
+	return orgs[0].Name, nil
+}
+
+func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id string) (orgID, orgName string, err error) {
+	provider, err := external.GetOrganizationServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getRootOrganizationByOrgID: GetOrganizationServiceProvider failed",
+			log.Err(err),
+			log.String("org_id", id))
+		return "", "", err
+	}
+	orgs, err := provider.GetParents(ctx, orgID)
+	if err != nil {
+		log.Error(ctx, "getRootOrganizationByOrgID: GetMyTopOrg failed",
+			log.Err(err),
+			log.String("org_id", id))
+		return "", "", err
+	}
+	if len(orgs) == 0 {
+		log.Error(ctx, "getRootOrganizationByOrgID: parents is empty",
+			log.Err(err),
+			log.String("org_id", id))
+		return "", "", nil
+	}
+	root := orgs[0]
+	for i := 0; i < len(orgs); i++ {
+		if root.ParentID != "" && root.ParentID != root.ID {
+			for _, o := range orgs {
+				if o.ID == root.ParentID {
+					root = o
+					break
+				}
+			}
+		}
+	}
+	return root.ID, root.Name, nil
+}
+
+func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id string) (orgID, orgName string, err error) {
+	provider, err := external.GetUserServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getRootOrganizationByAuthorID: GetUserServiceProvider failed",
+			log.Err(err),
+			log.String("user_id", id))
+		return "", "", err
+	}
+
+	user, err := provider.GetUserInfoByID(ctx, id)
+	if err != nil {
+		log.Error(ctx, "getRootOrganizationByAuthorID failed",
+			log.Err(err),
+			log.String("user_id", id))
+	}
+	return ocm.getRootOrganizationByOrgID(ctx, user.OrgID)
 }
 
 var (
