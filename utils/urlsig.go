@@ -7,13 +7,19 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"io/ioutil"
 	"math/rand"
 	rand2 "crypto/rand"
 	"time"
 )
 
+var (
+	ErrInvalidPrivateKeyFile = errors.New("invalid private key file")
+)
 type SignatureResult struct {
 	Signature string `json:"signature"`
 	RandNum int64 `json:"rand_num"`
@@ -38,6 +44,19 @@ func readPrivateKeyDerBase64() (*rsa.PrivateKey, error){
 	}
 	return x509.ParsePKCS1PrivateKey(privateKeyDer)
 }
+
+func ReadPrivateKeyPEM(path string) (*rsa.PrivateKey, error){
+	privateKeyPEM, err := ioutil.ReadFile(path)
+	if err != nil{
+		return nil, err
+	}
+	block, _ := pem.Decode(privateKeyPEM)
+	if block.Type != "RSA PRIVATE KEY" {
+		return nil, ErrInvalidPrivateKeyFile
+	}
+	return x509.ParsePKCS1PrivateKey(block.Bytes)
+}
+
 
 func URLSignature(id string, url string)(*SignatureResult, error){
 	privateKey, err := readPrivateKeyDerBase64()
