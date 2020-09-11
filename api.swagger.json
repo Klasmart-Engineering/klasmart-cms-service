@@ -3492,16 +3492,20 @@
                               }
                             }
                           },
-                          "teacher": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "description": "teacher id"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "teacher name"
+                          "teachers": {
+                            "type": "array",
+                            "description": "teachers",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "teacher id"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "teacher name"
+                                }
                               }
                             }
                           },
@@ -3699,16 +3703,20 @@
                         }
                       }
                     },
-                    "teacher": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "description": "teacher id"
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "teacher name"
+                    "teachers": {
+                      "type": "array",
+                      "description": "teachers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "teacher id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "teacher name"
+                          }
                         }
                       }
                     },
