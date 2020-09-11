@@ -51,14 +51,15 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error {
 	nowUnix := time.Now().Unix()
 	updateFields := map[string]interface{}{
-		"status":      status,
-		"update_time": nowUnix,
+		"status":    status,
+		"update_at": nowUnix,
 	}
 	if status == entity.AssessmentStatusComplete {
 		updateFields["complete_time"] = nowUnix
 	}
 	if err := tx.Model(entity.Assessment{}).
 		Where(a.filterSoftDeletedTemplate()).
+		Where("id = ?", id).
 		Updates(updateFields).
 		Error; err != nil {
 		log.Error(ctx, "update assessment status: update failed in db",
@@ -72,7 +73,7 @@ func (a *assessmentDA) UpdateStatus(ctx context.Context, tx *dbo.DBContext, id s
 }
 
 func (a *assessmentDA) filterSoftDeletedTemplate() string {
-	return "delete_time = 0"
+	return "delete_at = 0"
 }
 
 type QueryAssessmentsCondition struct {
@@ -89,7 +90,7 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		values  []interface{}
 	)
 
-	formats = append(formats, "delete_time = 0")
+	formats = append(formats, "delete_at = 0")
 
 	if c.Status != nil {
 		formats = append(formats, "status = ?")

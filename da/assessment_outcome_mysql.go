@@ -13,6 +13,7 @@ type IAssessmentOutcomeDA interface {
 	GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
+	UpdateSkipField(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeID string, skip bool) error
 }
 
 var (
@@ -67,6 +68,17 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 			log.Err(err),
 			log.String("assessment_id", assessmentID),
 		)
+		return err
+	}
+	return nil
+}
+
+func (d *assessmentOutcomeDA) UpdateSkipField(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeID string, skip bool) error {
+	if err := tx.
+		Model(entity.AssessmentOutcome{}).
+		Where("assessment_id = ? and outcome_id = ?", assessmentID, outcomeID).
+		Update("skip", skip).
+		Error; err != nil {
 		return err
 	}
 	return nil
