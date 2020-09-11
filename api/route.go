@@ -103,8 +103,8 @@ func (s Server) registeRoute() {
 		outcomes.GET("/pending_learning_outcomes", MustLogin, s.queryPendingOutcomes)
 	}
 
-	crypto := s.engine.Group("/v1")
+	crypto := s.engine.Group("/v1/crypto")
 	{
-		crypto.GET("/crypto/h5p/signature", MustLogin, s.h5pSignature)
+		crypto.GET("/h5p/signature", MustLogin, s.h5pSignature)
 	}
 }
