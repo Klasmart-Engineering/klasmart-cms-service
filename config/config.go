@@ -73,8 +73,8 @@ type ScheduleConfig struct {
 }
 
 type Auth struct {
-	PrivateKey string `json:"privateKey"`
-	PublicKey  string `json:"publicKey"`
+	PrivateKey string `yaml:"private_key"`
+	PublicKey  string `yaml:"public_key"`
 }
 
 func assertGetEnv(key string) string {
@@ -214,12 +214,8 @@ func loadDBEnvConfig(ctx context.Context) {
 }
 
 func loadAuthEnvConfig(ctx context.Context) {
-	type Auth struct {
-		PrivateKey string `json:"privateKey"`
-		PublicKey  string `json:"publicKey"`
-	}
-	config.Auth.PrivateKey = assertGetEnv("private_key")
-	config.Auth.PublicKey = assertGetEnv("public_key")
+	config.Auth.PrivateKey = os.Getenv("private_key")
+	config.Auth.PublicKey = os.Getenv("public_key")
 }
 
 func Get() *Config {
