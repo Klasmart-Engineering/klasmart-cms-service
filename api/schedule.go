@@ -61,27 +61,18 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
 	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
-	if err != nil {
-		log.Info(ctx, "update schedule: update failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("data", data),
-		)
-		switch err {
-		case constant.ErrInvalidArgs:
-			c.JSON(http.StatusBadRequest, L(Unknown))
-		case constant.ErrConflict:
-			c.JSON(http.StatusConflict, L(Unknown))
-		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
-			c.JSON(http.StatusNotFound, L(Unknown))
-		default:
-			c.JSON(http.StatusInternalServerError, err.Error())
-		}
-		return
+	switch err {
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case constant.ErrConflict:
+		c.JSON(http.StatusConflict, L(Unknown))
+	case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, gin.H{"id": newID})
+	default:
+		c.JSON(http.StatusInternalServerError, err.Error())
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id": newID,
-	})
 }
 func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -94,23 +85,18 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		return
 	}
 	operator := GetOperator(c)
-	if err := model.GetScheduleModel().Delete(ctx, operator, id, editType); err != nil {
-		log.Info(ctx, "delete schedule: delete failed",
-			log.Err(err),
-			log.String("schedule_id", id),
-			log.String("repeat_edit_options", string(editType)),
-		)
-		switch err {
-		case constant.ErrInvalidArgs:
-			c.JSON(http.StatusBadRequest, L(Unknown))
-		case dbo.ErrRecordNotFound:
-			c.JSON(http.StatusNotFound, L(Unknown))
-		default:
-			c.JSON(http.StatusInternalServerError, err.Error())
-		}
-		return
+
+	err := model.GetScheduleModel().Delete(ctx, operator, id, editType)
+	switch err {
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case dbo.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
+	default:
+		c.JSON(http.StatusInternalServerError, err.Error())
 	}
-	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 }
 func (s *Server) addSchedule(c *gin.Context) {
 	op := GetOperator(c)
@@ -143,21 +129,18 @@ func (s *Server) addSchedule(c *gin.Context) {
 	// add schedule
 	data.Location = loc
 	id, err := model.GetScheduleModel().Add(ctx, op, data)
-	if err != nil {
-		log.Info(ctx, "add schedule error", log.Err(err), log.Any("requestData", data))
-		switch err {
-		case constant.ErrInvalidArgs:
-			c.JSON(http.StatusBadRequest, L(Unknown))
-		case constant.ErrConflict:
-			c.JSON(http.StatusConflict, L(Unknown))
-		case constant.ErrFileNotFound:
-			c.JSON(http.StatusBadRequest, L(Unknown))
-		default:
-			c.JSON(http.StatusInternalServerError, err.Error())
-		}
-		return
+	switch err {
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case constant.ErrConflict:
+		c.JSON(http.StatusConflict, L(Unknown))
+	case constant.ErrFileNotFound:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, gin.H{"id": id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(Unknown))
 	}
-	c.JSON(http.StatusOK, gin.H{"id": id})
 }
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
