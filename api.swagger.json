@@ -3487,8 +3487,8 @@
         "tags": [
           "assessments"
         ],
-        "summary": "add assessment",
-        "description": "add assessment",
+        "summary": "assessment callback",
+        "description": "assessment callback",
         "operationId": "addAssessment",
         "security": [
           {
@@ -3856,7 +3856,7 @@
           }
         }
       }
-    },
+    }
   },
   "components": {
     "securitySchemes": {
