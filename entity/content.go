@@ -359,6 +359,11 @@ type ContentName struct {
 	ContentType ContentType `json:"content_type"`
 }
 
+type SubContentsWithName struct {
+	ID string `json:"id"`
+	Name string `json:"name"`
+}
+
 type ContentInfo struct {
 	ID            string      `json:"id"`
 	ContentType   ContentType `json:"content_type"`
@@ -401,7 +406,7 @@ type ContentData interface {
 
 	Validate(ctx context.Context, contentType ContentType) error
 	PrepareResult(ctx context.Context) error
-	SubContentIds(ctx context.Context) ([]string, error)
+	SubContentIds(ctx context.Context) []string
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {

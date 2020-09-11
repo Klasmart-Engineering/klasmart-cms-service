@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"strings"
 )
 
 type OutcomeCreateView struct {
+	OutcomeID   string `json:"outcome_id"`
 	OutcomeName string `json:"outcome_name"`
 	Assumed     bool   `json:"assumed"`
 	//AuthorID string `json:"author_id"`
@@ -19,7 +23,7 @@ type OutcomeCreateView struct {
 	Skills         []string `json:"skills"`
 	Age            []string `json:"age"`
 	Grade          []string `json:"grade"`
-	Estimated      int      `json:"estimated"`
+	Estimated      int      `json:"estimated_time"`
 	Keywords       []string `json:"keywords"`
 	Description    string   `json:"description"`
 }
@@ -53,6 +57,62 @@ func (req OutcomeCreateView) outcomeWithID(outcomeID string) (*entity.Outcome, e
 	return outcome, nil
 }
 
+type OutcomeCreateResponse struct {
+	OutcomeID        string   `json:"outcome_id"`
+	OutcomeName      string   `json:"outcome_name"`
+	AncestorID       string   `json:"ancestor_id"`
+	Shortcode        string   `json:"shortcode"`
+	Assumed          bool     `json:"assumed"`
+	Program          []string `json:"program"`
+	Subject          []string `json:"subject"`
+	Developmental    []string `json:"developmental"`
+	Skills           []string `json:"skills"`
+	Age              []string `json:"age"`
+	Grade            []string `json:"grade"`
+	EstimatedTime    int      `json:"estimated_time"`
+	Keywords         []string `json:"keywords"`
+	SourceID         string   `json:"source_id"`
+	LockedBy         string   `json:"locked_by"`
+	AuthorID         string   `json:"author_id"`
+	AuthorName       string   `json:"author_name"`
+	OrganizationID   string   `json:"organization_id"`
+	OrganizationName string   `json:"organization_name"`
+	PublishScope     string   `json:"publish_scope"`
+	PublishStatus    string   `json:"publish_status"`
+	RejectReason     string   `json:"reject_reason"`
+	Description      string   `json:"description"`
+	CreatedAt        int64    `json:"created_at"`
+}
+
+func newOutcomeCreateResponse(ctx context.Context, createView *OutcomeCreateView, outcome *entity.Outcome) OutcomeCreateResponse {
+	return OutcomeCreateResponse{
+		OutcomeID:        outcome.ID,
+		OutcomeName:      createView.OutcomeName,
+		AncestorID:       outcome.AncestorID,
+		Shortcode:        outcome.Shortcode,
+		Assumed:          outcome.Assumed,
+		Program:          createView.Program,
+		Subject:          createView.Subject,
+		Developmental:    createView.Developmental,
+		Skills:           createView.Skills,
+		Age:              createView.Age,
+		Grade:            createView.Grade,
+		EstimatedTime:    createView.Estimated,
+		Keywords:         createView.Keywords,
+		SourceID:         outcome.SourceID,
+		LockedBy:         outcome.LockedBy,
+		AuthorID:         outcome.AuthorID,
+		AuthorName:       outcome.AuthorName,
+		OrganizationID:   outcome.OrganizationID,
+		OrganizationName: getProgramName(ctx, outcome.OrganizationID),
+		PublishScope:     outcome.PublishScope,
+		PublishStatus:    string(outcome.PublishStatus),
+		RejectReason:     outcome.RejectReason,
+		Description:      outcome.Description,
+		CreatedAt:        outcome.CreateAt,
+	}
+}
+
 type OutcomeView struct {
 	OutcomeID        string          `json:"outcome_id"`
 	OutcomeName      string          `json:"outcome_name"`
@@ -75,6 +135,7 @@ type OutcomeView struct {
 	OrganizationName string          `json:"organization_name"`
 	PublishScope     string          `json:"publish_scope"`
 	PublishStatus    string          `json:"publish_status"`
+	RejectReason     string          `json:"reject_reason"`
 	Description      string          `json:"description"`
 	CreatedAt        int64           `json:"created_at"`
 }
@@ -104,7 +165,7 @@ type Grade struct {
 	GradeName string `json:"grade_name"`
 }
 
-func newOutcomeView(outcome *entity.Outcome) OutcomeView {
+func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 	view := OutcomeView{
 		OutcomeID:      outcome.ID,
 		OutcomeName:    outcome.Name,
@@ -118,46 +179,49 @@ func newOutcomeView(outcome *entity.Outcome) OutcomeView {
 		OrganizationID: outcome.OrganizationID,
 		PublishScope:   outcome.PublishScope,
 		PublishStatus:  string(outcome.PublishStatus),
+		Keywords:       strings.Split(outcome.Keywords, ","),
+		RejectReason:   outcome.RejectReason,
+		EstimatedTime:  outcome.EstimatedTime,
 		Description:    outcome.Description,
 		CreatedAt:      outcome.CreateAt,
 	}
 	pIDs := strings.Split(outcome.Program, ",")
-	pNames := getProgramName(pIDs)
+	pNames := getProgramsName(ctx, pIDs)
 	view.Program = make([]Program, len(pIDs))
 	for k, id := range pIDs {
 		view.Program[k].ProgramID = id
 		view.Program[k].ProgramName = pNames[id]
 	}
 	sIDs := strings.Split(outcome.Subject, ",")
-	sNames := getSubjectName(sIDs)
+	sNames := getSubjectsName(ctx, sIDs)
 	view.Subject = make([]Subject, len(sIDs))
 	for k, id := range sIDs {
 		view.Subject[k].SubjectID = id
 		view.Subject[k].SubjectName = sNames[id]
 	}
 	dIDs := strings.Split(outcome.Developmental, ",")
-	dNames := getDevelopmentalName(dIDs)
+	dNames := getDevelopmentalsName(ctx, dIDs)
 	view.Developmental = make([]Developmental, len(dIDs))
 	for k, id := range dIDs {
 		view.Developmental[k].DevelopmentalID = id
 		view.Developmental[k].DevelopmentalName = dNames[id]
 	}
 	skIDs := strings.Split(outcome.Skills, ",")
-	skNames := getSkillName(skIDs)
+	skNames := getSkillsName(ctx, skIDs)
 	view.Skills = make([]Skill, len(skIDs))
 	for k, id := range skIDs {
 		view.Skills[k].SkillID = id
 		view.Skills[k].SkillName = skNames[id]
 	}
 	aIDs := strings.Split(outcome.Age, ",")
-	aNames := getAgeName(aIDs)
+	aNames := getAgesName(ctx, aIDs)
 	view.Age = make([]Age, len(aIDs))
 	for k, id := range aIDs {
 		view.Age[k].AgeID = id
 		view.Age[k].AgeName = aNames[id]
 	}
 	gIDs := strings.Split(outcome.Grade, ",")
-	gNames := getGradeName(gIDs)
+	gNames := getGradeName(ctx, gIDs)
 	view.Grade = make([]Grade, len(gIDs))
 	for k, id := range gIDs {
 		view.Grade[k].GradeID = id
@@ -166,56 +230,158 @@ func newOutcomeView(outcome *entity.Outcome) OutcomeView {
 	return view
 }
 
-func getProgramName(IDs []string) (names map[string]string) {
-	// TODO : now is mock
-	names = make(map[string]string, len(IDs))
-	for _, id := range IDs {
-		names[id] = "mock Program" + id
+func getProgramName(ctx context.Context, id string) (name string) {
+	provider, err := external.GetProgramServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getProgramName: GetProgramServiceProvider failed",
+			log.Err(err),
+			log.String("program_id", id))
+		return ""
+	}
+	programs, err := provider.BatchGet(ctx, []string{id})
+	if err != nil {
+		log.Error(ctx, "getProgramName: BatchGet failed",
+			log.Err(err),
+			log.String("program_id", id))
+		return ""
+	}
+	if len(programs) == 0 {
+		log.Error(ctx, "getProgramName: program list is empty",
+			log.Err(err),
+			log.String("program_id", id))
+
+	}
+	name = programs[0].Name
+	return
+}
+func getProgramsName(ctx context.Context, ids []string) (names map[string]string) {
+	provider, err := external.GetProgramServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getProgramName: GetProgramServiceProvider failed",
+			log.Err(err),
+			log.Strings("program_ids", ids))
+		return nil
+	}
+	programs, err := provider.BatchGet(ctx, ids)
+	if err != nil {
+		log.Error(ctx, "getProgramName: BatchGet failed",
+			log.Err(err),
+			log.Strings("program_ids", ids))
+		return nil
+	}
+	names = make(map[string]string, len(ids))
+	for _, p := range programs {
+		names[p.ID] = p.Name
 	}
 	return
 }
 
-func getSubjectName(IDs []string) (names map[string]string) {
-	// TODO : now is mock
-	names = make(map[string]string, len(IDs))
-	for _, id := range IDs {
-		names[id] = "mock Subject" + id
+func getSubjectsName(ctx context.Context, ids []string) (names map[string]string) {
+	provider, err := external.GetSubjectServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getSubjectsName: GetSubjectServiceProvider failed",
+			log.Err(err),
+			log.Strings("subjects_ids", ids))
+		return nil
+	}
+	subjects, err := provider.BatchGet(ctx, ids)
+	if err != nil {
+		log.Error(ctx, "getSubjectsName: BatchGet failed",
+			log.Err(err),
+			log.Strings("subjects_ids", ids))
+		return nil
+	}
+	names = make(map[string]string, len(ids))
+	for _, s := range subjects {
+		names[s.ID] = s.Name
 	}
 	return
 }
 
-func getDevelopmentalName(IDs []string) (names map[string]string) {
-	// TODO : now is mock
-	names = make(map[string]string, len(IDs))
-	for _, id := range IDs {
-		names[id] = "mock Developmental" + id
+func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]string) {
+	provider, err := external.GetDevelopmentalServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getDevelopmentalsName: GetDevelopmentalServiceProvider failed",
+			log.Err(err),
+			log.Strings("development_ids", ids))
+		return nil
+	}
+	developmentals, err := provider.BatchGet(ctx, ids)
+	if err != nil {
+		log.Error(ctx, "getDevelopmentalsName: BatchGet failed",
+			log.Err(err),
+			log.Strings("development_ids", ids))
+		return nil
+	}
+	names = make(map[string]string, len(ids))
+	for _, d := range developmentals {
+		names[d.ID] = d.Name
 	}
 	return
 }
 
-func getSkillName(IDs []string) (names map[string]string) {
-	// TODO : now is mock
-	names = make(map[string]string, len(IDs))
-	for _, id := range IDs {
-		names[id] = "mock Skill" + id
+func getSkillsName(ctx context.Context, ids []string) (names map[string]string) {
+	provider, err := external.GetSkillServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getSkillsName: GetSkillServiceProvider failed",
+			log.Err(err),
+			log.Strings("skill_ids", ids))
+		return nil
+	}
+	skills, err := provider.BatchGet(ctx, ids)
+	if err != nil {
+		log.Error(ctx, "getSkillsName: BatchGet failed",
+			log.Err(err),
+			log.Strings("skill_ids", ids))
+		return nil
+	}
+	names = make(map[string]string, len(ids))
+	for _, s := range skills {
+		names[s.ID] = s.Name
 	}
 	return
 }
 
-func getAgeName(IDs []string) (names map[string]string) {
-	// TODO : now is mock
-	names = make(map[string]string, len(IDs))
-	for _, id := range IDs {
-		names[id] = "mock Age" + id
+func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
+	provider, err := external.GetAgeServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getAgesName: GetAgeServiceProvider failed",
+			log.Err(err),
+			log.Strings("age_ids", ids))
+		return nil
+	}
+	ages, err := provider.BatchGet(ctx, ids)
+	if err != nil {
+		log.Error(ctx, "getAgesName: BatchGet failed",
+			log.Err(err),
+			log.Strings("age_ids", ids))
+		return nil
+	}
+	names = make(map[string]string, len(ids))
+	for _, a := range ages {
+		names[a.ID] = a.Name
 	}
 	return
 }
 
-func getGradeName(IDs []string) (names map[string]string) {
-	// TODO : now is mock
-	names = make(map[string]string, len(IDs))
-	for _, id := range IDs {
-		names[id] = "mock Grade" + id
+func getGradeName(ctx context.Context, ids []string) (names map[string]string) {
+	provider, err := external.GetGradeServiceProvider()
+	if err != nil {
+		log.Error(ctx, "getGradeName: GetAgeServiceProvider failed",
+			log.Err(err),
+			log.Strings("grade_ids", ids))
+		return nil
+	}
+	grades, err := provider.BatchGet(ctx, ids)
+	if err != nil {
+		log.Error(ctx, "getGradeName: BatchGet failed",
+			log.Err(err),
+			log.Strings("grade_ids", ids))
+		return nil
+	}
+	names = make(map[string]string, len(ids))
+	for _, g := range grades {
+		names[g.ID] = g.Name
 	}
 	return
 }

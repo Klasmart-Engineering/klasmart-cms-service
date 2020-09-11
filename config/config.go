@@ -17,10 +17,16 @@ type Config struct {
 	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
 	DBConfig      DBConfig       `yaml:"db_config"`
 	RedisConfig   RedisConfig    `yaml:"redis_config"`
-	Auth          Auth           `json:"auth"`
+
+	CryptoConfig CryptoConfig `yaml:"crypto_config"`
+	Auth         Auth         `json:"auth"`
 }
 
 var config *Config
+
+type CryptoConfig struct {
+	PrivateKey string `yaml:"crypto_private_key"`
+}
 
 type RedisConfig struct {
 	OpenCache bool   `yaml:"open_cache"`
@@ -86,8 +92,14 @@ func LoadEnvConfig() {
 	loadDBEnvConfig(ctx)
 	loadRedisEnvConfig(ctx)
 	loadScheduleEnvConfig(ctx)
+	loadCryptoEnvConfig(ctx)
 	loadAuthEnvConfig(ctx)
 }
+
+func loadCryptoEnvConfig(ctx context.Context) {
+	config.CryptoConfig.PrivateKey = os.Getenv("crypto_private_key")
+}
+
 func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
