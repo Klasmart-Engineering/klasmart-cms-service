@@ -64,6 +64,7 @@ type AssessmentDetailView struct {
 	NumberOfActivities    int                        `json:"number_of_activities"`
 	NumberOfOutcomes      int                        `json:"number_of_outcomes"`
 	CompleteTime          int64                      `json:"complete_time"`
+	Status                AssessmentStatus           `json:"status"`
 	OutcomeAttendanceMaps []OutcomeAttendanceMapView `json:"outcome_attendance_maps"`
 }
 
