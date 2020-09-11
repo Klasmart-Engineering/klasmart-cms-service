@@ -69,7 +69,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 			log.Any("outcome", outcome))
 		return
 	}
-	outcome.PublishStatus = entity.ContentStatusDraft
+	outcome.PublishStatus = entity.OutcomeStatusDraft
 	err = da.GetOutcomeDA().CreateOutcome(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: CreateOutcome failed",
@@ -105,7 +105,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 				log.Any("data", outcome))
 			return err
 		}
-		if data.PublishStatus != entity.ContentStatusDraft && data.PublishStatus != entity.ContentStatusRejected {
+		if data.PublishStatus != entity.OutcomeStatusDraft && data.PublishStatus != entity.OutcomeStatusRejected {
 			log.Error(ctx, "UpdateLearningOutcome: publish status not allowed edit",
 				log.String("op", operator.UserID),
 				log.Any("data", data))
@@ -157,7 +157,7 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBCon
 		condition.OrganizationID = orgID
 	}
 	if condition.PublishStatus == "" { // Must search published outcomes
-		condition.PublishStatus = entity.ContentStatusPublished
+		condition.PublishStatus = entity.OutcomeStatusPublished
 	}
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
@@ -236,7 +236,7 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID st
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(ctx, entity.ContentStatusPending)
+		err = outcome.SetStatus(ctx, entity.OutcomeStatusPending)
 		if err != nil {
 			log.Error(ctx, "PublishLearningOutcome: SetStatus failed",
 				log.String("op", operator.UserID),
@@ -293,7 +293,7 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBCo
 			return ErrResourceNotFound
 		}
 		for _, o := range outcomes {
-			err = o.SetStatus(ctx, entity.ContentStatusPublished)
+			err = o.SetStatus(ctx, entity.OutcomeStatusPublished)
 			if err != nil {
 				log.Error(ctx, "BulkPubLearningOutcome: SetStatus failed",
 					log.String("op", operator.UserID),
@@ -349,9 +349,9 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 }
 
 func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
-	if condition.PublishStatus != entity.ContentStatusDraft &&
-		condition.PublishStatus != entity.ContentStatusPending &&
-		condition.PublishStatus != entity.ContentStatusRejected {
+	if condition.PublishStatus != entity.OutcomeStatusDraft &&
+		condition.PublishStatus != entity.OutcomeStatusPending &&
+		condition.PublishStatus != entity.OutcomeStatusRejected {
 		log.Error(ctx, "SearchPrivateOutcomes: SearchPendingOutcomes failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
@@ -370,7 +370,7 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBCon
 }
 
 func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
-	if condition.PublishStatus != entity.ContentStatusPending {
+	if condition.PublishStatus != entity.OutcomeStatusPending {
 		log.Error(ctx, "SearchPendingOutcomes: SearchPendingOutcomes failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
@@ -420,7 +420,7 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, outcomeID st
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(ctx, entity.ContentStatusPublished)
+		err = outcome.SetStatus(ctx, entity.OutcomeStatusPublished)
 		if err != nil {
 			log.Error(ctx, "ApproveLearningOutcome: SetStatus failed",
 				log.String("op", operator.UserID),
@@ -481,7 +481,7 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(ctx, entity.ContentStatusRejected)
+		err = outcome.SetStatus(ctx, entity.OutcomeStatusRejected)
 		outcome.RejectReason = reason
 		if err != nil {
 			log.Error(ctx, "RejectLearningOutcome: SetStatus failed",
@@ -575,7 +575,7 @@ func (ocm OutcomeModel) getShortCode(ctx context.Context, orgID string) (shortco
 
 func (ocm OutcomeModel) lockOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) (err error) {
 	// must in a transaction
-	if outcome.PublishStatus != entity.ContentStatusPublished {
+	if outcome.PublishStatus != entity.OutcomeStatusPublished {
 		err = ErrInvalidPublishStatus
 		log.Warn(ctx, "lockOutcome: invalid lock status",
 			log.Err(err),
@@ -670,7 +670,7 @@ func (ocm OutcomeModel) hideParent(ctx context.Context, tx *dbo.DBContext, outco
 		return
 	}
 	parent.LockedBy = "-"
-	err = parent.SetStatus(ctx, entity.ContentStatusHidden)
+	err = parent.SetStatus(ctx, entity.OutcomeStatusHidden)
 	if err != nil {
 		log.Error(ctx, "hideParent: SetStatus failed",
 			log.Any("outcome", parent))
