@@ -74,7 +74,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules/:id", MustLogin, s.getScheduleByID)
 		schedules.GET("/schedules", MustLogin, s.querySchedule)
 		schedules.GET("/schedules_time_view", MustLogin, s.getScheduleTimeView)
-		schedules.GET("/schedules/:schedule_id/live/token", MustLogin, s.getScheduleLiveToken)
+		schedules.GET("/schedules/:id/live/token", MustLogin, s.getScheduleLiveToken)
 	}
 
 	assessments := s.engine.Group("/v1")

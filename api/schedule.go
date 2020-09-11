@@ -319,7 +319,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 func (s *Server) getScheduleLiveToken(c *gin.Context) {
 	op := GetOperator(c)
 	ctx := c.Request.Context()
-	scheduleID := c.Param("schedule_id")
+	scheduleID := c.Param("id")
 	token, err := model.GetLiveTokenModel().MakeLiveToken(ctx, op, scheduleID)
 	if err != nil {
 		log.Error(ctx, "make schedule live token error", log.String("scheduleID", scheduleID), log.Err(err))
