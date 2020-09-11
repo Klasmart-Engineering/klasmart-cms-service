@@ -162,10 +162,6 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {
 	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID)
-	log.Info(ctx, "getMaterials:get content sub by id error",
-		log.Err(err),
-		log.Any("contentList", contentList),
-		log.String("contentID", contentID))
 	if err != nil {
 		log.Error(ctx, "getMaterials:get content sub by id error",
 			log.Err(err),
@@ -180,8 +176,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 		}
 		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
 			entity.LiveTokenEnvPath,
-			item.ID,
-		)
+			item.ID)
 		materials[i] = materialItem
 	}
 	return materials, nil
