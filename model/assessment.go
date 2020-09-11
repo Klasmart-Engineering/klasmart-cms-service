@@ -485,7 +485,6 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 			newItem := entity.Assessment{
 				ID:           newID,
 				ScheduleID:   cmd.ScheduleID,
-				Title:        a.title(cmd.ClassEndTime, "", schedule.Title),
 				ProgramID:    schedule.ProgramID,
 				SubjectID:    schedule.SubjectID,
 				ClassLength:  cmd.ClassLength,
