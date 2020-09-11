@@ -19,8 +19,6 @@ const (
 	LiveTokenEnvPath = "v1"
 )
 
-const ValidDays = 30
-
 type LiveTokenInfo struct {
 	Name       string          `json:"name,omitempty"`
 	ScheduleID string          `json:"schedule_id,omitempty"`

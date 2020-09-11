@@ -47,3 +47,5 @@ const (
 	PresignDurationMinutes       = 60 * 24 * time.Minute
 	PresignUploadDurationMinutes = 60 * time.Minute
 )
+
+const LiveTokenValidDays = 30
