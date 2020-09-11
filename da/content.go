@@ -33,9 +33,9 @@ type IContentDA interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error
-	GetContentById(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
+	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
 
-	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
+	GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	Count(context.Context, dbo.Conditions) (int, error)
@@ -245,7 +245,7 @@ func (cd *DBContentDA) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid
 	}
 	return nil
 }
-func (cd *DBContentDA) GetContentById(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error) {
+func (cd *DBContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error) {
 	obj := new(entity.Content)
 	err := cd.s.GetTx(ctx, tx, cid, obj)
 	if err != nil {
@@ -257,7 +257,7 @@ func (cd *DBContentDA) GetContentById(ctx context.Context, tx *dbo.DBContext, ci
 
 	return obj, nil
 }
-func (cd *DBContentDA) GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error) {
+func (cd *DBContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error) {
 	objs := make([]*entity.Content, 0)
 	err := cd.s.QueryTx(ctx, tx, &ContentCondition{
 		IDS:           cids,

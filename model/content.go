@@ -28,7 +28,7 @@ type IContentModel interface {
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
-	GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
+	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
@@ -49,7 +49,7 @@ type ContentModel struct {
 }
 
 func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBContext, contentId, sourceId string) error {
-	sourceContent, err := da.GetContentDA().GetContentById(ctx, tx, sourceId)
+	sourceContent, err := da.GetContentDA().GetContentByID(ctx, tx, sourceId)
 	if err != nil {
 		return err
 	}
@@ -332,7 +332,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if err != nil {
 		return err
 	}
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
@@ -371,7 +371,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 }
 
 func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error {
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
 		return err
@@ -401,7 +401,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 }
 
 func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
@@ -425,7 +425,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	locker.Lock()
 	defer locker.Unlock()
 
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return "", ErrNoContent
@@ -517,7 +517,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 }
 
 func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
@@ -617,7 +617,7 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 }
 
 func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "content not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
@@ -637,7 +637,7 @@ func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, ci
 }
 
 func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error) {
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return "", ErrNoContent
@@ -701,7 +701,7 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 
 
 func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error) {
-	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
 		return nil, err
@@ -712,12 +712,12 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		return nil, err
 	}
 	ids := cd.SubContentIds(ctx)
-	subContents, err := da.GetContentDA().GetContentByIdList(ctx, tx, ids)
+	subContents, err := da.GetContentDA().GetContentByIDList(ctx, tx, ids)
 	if err != nil{
 		log.Error(ctx, "can't get sub contents", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
-	subContentMap := make(map[string]string)
+	subContentMap := make(map[string]string, len(subContents))
 	for i := range subContents{
 		subContentMap[subContents[i].ID] = subContents[i].Name
 	}
@@ -734,7 +734,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 }
 
 func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error) {
-	cachedContent := da.GetContentRedis().GetContentCacheById(ctx, cid)
+	cachedContent := da.GetContentRedis().GetContentCacheByID(ctx, cid)
 	if cachedContent != nil {
 		return &entity.ContentName{
 			ID:          cid,
@@ -742,7 +742,7 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 			ContentType: cachedContent.ContentType,
 		}, nil
 	}
-	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
 		return nil, err
@@ -755,12 +755,12 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 }
 
 func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
-	cachedContent := da.GetContentRedis().GetContentCacheById(ctx, cid)
+	cachedContent := da.GetContentRedis().GetContentCacheByID(ctx, cid)
 	if cachedContent != nil {
 		return cachedContent, nil
 	}
 
-	obj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return nil, ErrNoContent
@@ -807,7 +807,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	return contentWithDetails[0], nil
 }
 
-func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error) {
+func (cm *ContentModel) GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error) {
 	if len(cids) < 1 {
 		return nil, nil
 	}
@@ -825,7 +825,7 @@ func (cm *ContentModel) GetContentNameByIdList(ctx context.Context, tx *dbo.DBCo
 		return resp, nil
 	}
 
-	data, err := da.GetContentDA().GetContentByIdList(ctx, tx, cids)
+	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
 	if err != nil {
 		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
 		return nil, ErrReadContentFailed
@@ -850,7 +850,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 		return cachedContent, nil
 	}
 
-	data, err := da.GetContentDA().GetContentByIdList(ctx, tx, cids)
+	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err))
 		return nil, ErrReadContentFailed
@@ -919,7 +919,7 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 }
 
 func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
 		return nil, err
@@ -939,7 +939,7 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 }
 
 func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error) {
-	content, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
 		return nil, err
@@ -983,7 +983,7 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	var err error
 
-	cachedContent := da.GetContentRedis().GetContentCacheById(ctx, cid)
+	cachedContent := da.GetContentRedis().GetContentCacheByID(ctx, cid)
 	if cachedContent != nil {
 		if cachedContent.LatestID == "" {
 			return cachedContent, nil
@@ -992,7 +992,7 @@ func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBCon
 		}
 	}
 
-	contentObj, err := da.GetContentDA().GetContentById(ctx, tx, cid)
+	contentObj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return nil, ErrNoContent
@@ -1160,7 +1160,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	if err != nil {
 		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIds), log.String("uid", user.UserID))
 	}
-	outcomeMaps := make(map[string]*entity.Outcome)
+	outcomeMaps := make(map[string]*entity.Outcome, len(outcomeEntities))
 	for i := range outcomeEntities {
 		outcomeMaps[outcomeEntities[i].ID] = outcomeEntities[i]
 	}
