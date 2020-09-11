@@ -105,10 +105,10 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 				log.Any("data", outcome))
 			return err
 		}
-		if data.PublishStatus != entity.ContentStatusDraft || data.PublishStatus != entity.ContentStatusRejected {
+		if data.PublishStatus != entity.ContentStatusDraft && data.PublishStatus != entity.ContentStatusRejected {
 			log.Error(ctx, "UpdateLearningOutcome: publish status not allowed edit",
 				log.String("op", operator.UserID),
-				log.Any("data", outcome))
+				log.Any("data", data))
 			return ErrInvalidPublishStatus
 		}
 		data.Update(outcome)
