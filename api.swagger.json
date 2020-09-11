@@ -1347,12 +1347,6 @@
           "401": {
             "description": "User not login"
           },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
-          },
           "500": {
             "description": "Server error"
           }
