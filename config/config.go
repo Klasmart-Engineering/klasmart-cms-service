@@ -214,8 +214,8 @@ func loadDBEnvConfig(ctx context.Context) {
 }
 
 func loadAuthEnvConfig(ctx context.Context) {
-	config.Auth.PrivateKey = os.Getenv("private_key")
-	config.Auth.PublicKey = os.Getenv("public_key")
+	config.Auth.PrivateKey = os.Getenv("auth_private_key")
+	config.Auth.PublicKey = os.Getenv("auth_public_key")
 }
 
 func Get() *Config {
