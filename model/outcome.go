@@ -425,7 +425,7 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, outcomeID st
 			log.Error(ctx, "ApproveLearningOutcome: SetStatus failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
-			return err
+			return ErrInvalidPublishStatus
 		}
 		if outcome.LatestID == "" {
 			outcome.LatestID = outcome.ID
@@ -487,7 +487,7 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 			log.Error(ctx, "RejectLearningOutcome: SetStatus failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
-			return err
+			return ErrInvalidPublishStatus
 		}
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
 		if err != nil {
