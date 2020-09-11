@@ -363,7 +363,7 @@ func parseOrg(c *gin.Context, u *entity.Operator) string {
 
 func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 
-	contentType, _ := strconv.Atoi(c.Query("content_type"))
+	contentTypeStr := c.Query("content_type")
 	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
 	publish := c.Query("publish_status")
@@ -377,9 +377,17 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//if len(keywords) > 0 {
 	//	condition.Name = keywords
 	//}
-	if contentType != 0 {
-		ct := entity.NewContentType(contentType)
-		condition.ContentType = append(condition.ContentType, ct.ContentTypeInt()...)
+	if contentTypeStr != "" {
+		contentTypeList := strings.Split(contentTypeStr, ",")
+		for i := range contentTypeList{
+			contentType, err := strconv.Atoi(contentTypeList[i])
+			if err != nil{
+				log.Warn(c.Request.Context(), "parse contentType failed", log.Err(err), log.String("contentType", contentTypeStr))
+				continue
+			}
+			ct := entity.NewContentType(contentType)
+			condition.ContentType = append(condition.ContentType, ct.ContentTypeInt()...)
+		}
 	}
 	if scope != "" {
 		condition.Scope = append(condition.Scope, scope)

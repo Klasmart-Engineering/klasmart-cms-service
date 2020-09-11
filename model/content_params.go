@@ -93,7 +93,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.Thumbnail = data.Thumbnail
 	}
 	if data.Outcomes != nil {
-		content.Outcomes = strings.Join(data.Outcomes, "")
+		content.Outcomes = strings.Join(data.Outcomes, ",")
 	}
 	if data.Extra != "" {
 		content.Extra = data.Extra
