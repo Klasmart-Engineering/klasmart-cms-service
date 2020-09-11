@@ -687,6 +687,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 			log.Err(err),
 			log.Any("cmd", cmd),
 		)
+		return err
 	}
 	return nil
 }
