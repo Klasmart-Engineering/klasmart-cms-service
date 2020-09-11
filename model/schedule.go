@@ -31,7 +31,7 @@ type IScheduleModel interface {
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
-	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
+	GetPlainByID(ctx context.Context, id string) (*entity.Schedule, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -130,7 +130,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			log.Err(err),
 			log.Any("viewData", viewData),
 		)
-		return "",err
+		return "", err
 	}
 	return id.(string), nil
 }
@@ -737,7 +737,7 @@ func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool,
 	return count > 0, nil
 }
 
-func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error) {
+func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Schedule, error) {
 	var schedule = new(entity.Schedule)
 	err := da.GetScheduleDA().Get(ctx, id, schedule)
 	if err == dbo.ErrRecordNotFound {
@@ -752,12 +752,7 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 		log.Error(ctx, "GetPlainByID deleted", log.Err(err), log.Any("schedule", schedule))
 		return nil, constant.ErrRecordNotFound
 	}
-	result := &entity.SchedulePlain{
-		ID:           schedule.ID,
-		Title:        schedule.Title,
-		LessonPlanID: schedule.LessonPlanID,
-	}
-	return result, nil
+	return schedule, nil
 }
 
 func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify) error {
@@ -812,8 +807,8 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-	if lessonPlanInfo.ContentType != entity.ContentTypeLesson{
-		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo",lessonPlanInfo), log.Any("ScheduleVerify", v))
+	if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
+		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
 		return constant.ErrInvalidArgs
 	}
 	return nil
