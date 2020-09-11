@@ -956,6 +956,60 @@
         }
       }
     },
+    "/contents/{content_id}/live/token": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "get live token",
+        "description": "get live token",
+        "operationId": "getLiveToken",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "content id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/assets": {
       "get": {
         "tags": [
@@ -3531,8 +3585,8 @@
         "tags": [
           "assessments"
         ],
-        "summary": "add assessment",
-        "description": "add assessment",
+        "summary": "assessment callback",
+        "description": "assessment callback",
         "operationId": "addAssessment",
         "security": [
           {
@@ -3551,18 +3605,6 @@
                     "type": "string",
                     "description": "schedule id"
                   },
-                  "class_id": {
-                    "type": "string",
-                    "description": "class id"
-                  },
-                  "class_name": {
-                    "type": "string",
-                    "description": "class name"
-                  },
-                  "lesson_name": {
-                    "type": "string",
-                    "description": "lesson name"
-                  },
                   "attendance_ids": {
                     "type": "array",
                     "description": "attendance id list",
@@ -3570,18 +3612,6 @@
                       "type": "string",
                       "description": "attendance id"
                     }
-                  },
-                  "program_id": {
-                    "type": "string",
-                    "description": "program id"
-                  },
-                  "subject_id": {
-                    "type": "string",
-                    "description": "subject id"
-                  },
-                  "teacher_id": {
-                    "type": "string",
-                    "description": "teacher id"
                   },
                   "class_length": {
                     "type": "integer",
@@ -3591,10 +3621,6 @@
                   "class_end_time": {
                     "type": "integer",
                     "description": "class end time (unix seconds)"
-                  },
-                  "complete_time": {
-                    "type": "integer",
-                    "description": "complete time (unix seconds)"
                   }
                 }
               }
@@ -3746,6 +3772,14 @@
                       "type": "integer",
                       "format": "int64",
                       "description": "class end time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "assessment status",
+                      "enum": [
+                        "in_progress",
+                        "complete"
+                      ]
                     },
                     "outcome_attendance_maps": {
                       "type": "array",
@@ -3900,7 +3934,7 @@
           }
         }
       }
-    },
+    }
   },
   "components": {
     "securitySchemes": {
