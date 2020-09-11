@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -590,6 +591,20 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 
 func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmentCommand) error {
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, cmd.ID)
+		if err != nil {
+			log.Error(ctx, "update assessment: get assessment exclude soft deleted failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return err
+		}
+		if assessment.Status == entity.AssessmentStatusComplete {
+			log.Info(ctx, "update assessment: assessment has completed, not allow update",
+				log.Any("cmd", cmd),
+			)
+			return errors.New("update assessment: assessment has completed, not allow update")
+		}
 		if cmd.Action == entity.UpdateAssessmentActionComplete {
 			if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, cmd.ID, entity.AssessmentStatusComplete); err != nil {
 				log.Error(ctx, "update assessment: update status to complete failed",
@@ -672,6 +687,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 			log.Err(err),
 			log.Any("cmd", cmd),
 		)
+		return err
 	}
 	return nil
 }
