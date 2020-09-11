@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -19,8 +20,8 @@ type Config struct {
 	DBConfig      DBConfig       `yaml:"db_config"`
 	RedisConfig   RedisConfig    `yaml:"redis_config"`
 
-	CryptoConfig CryptoConfig `yaml:"crypto_config"`
-	Auth         Auth         `json:"auth"`
+	CryptoConfig    CryptoConfig    `yaml:"crypto_config"`
+	LiveTokenConfig LiveTokenConfig `yaml:"live_token_config"`
 }
 
 var config *Config
@@ -73,9 +74,9 @@ type ScheduleConfig struct {
 	CacheExpiration time.Duration `yaml:"cache_expiration"`
 }
 
-type Auth struct {
-	PrivateKey string `yaml:"private_key"`
-	PublicKey  string `yaml:"public_key"`
+type LiveTokenConfig struct {
+	PrivateKey interface{} `yaml:"private_key"`
+	//PublicKey  string      `yaml:"public_key"`
 }
 
 func assertGetEnv(key string) string {
@@ -94,7 +95,7 @@ func LoadEnvConfig() {
 	loadRedisEnvConfig(ctx)
 	loadScheduleEnvConfig(ctx)
 	loadCryptoEnvConfig(ctx)
-	loadAuthEnvConfig(ctx)
+	loadLiveTokenEnvConfig(ctx)
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
@@ -214,23 +215,18 @@ func loadDBEnvConfig(ctx context.Context) {
 
 }
 
-func loadAuthEnvConfig(ctx context.Context) {
-	privateKeyPath := os.Getenv("auth_private_key_path") //"./auth_private_key.pem"
-	publicKeyPath := os.Getenv("auth_public_key_path")   //"./auth_public_key.pem"
-
+func loadLiveTokenEnvConfig(ctx context.Context) {
+	privateKeyPath := os.Getenv("live_token_private_key_path") //"./auth_private_key.pem"
 	content, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
 		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
 		return
 	}
-	config.Auth.PrivateKey = string(content)
-
-	content, err = ioutil.ReadFile(publicKeyPath)
+	key, err := jwt.ParseRSAPrivateKeyFromPEM(content)
 	if err != nil {
-		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("publicKeyPath", publicKeyPath))
-		return
+		log.Panic(ctx, "CreateJWT:create jwt error", log.Err(err))
 	}
-	config.Auth.PublicKey = string(content)
+	config.LiveTokenConfig.PrivateKey = key
 }
 
 func Get() *Config {

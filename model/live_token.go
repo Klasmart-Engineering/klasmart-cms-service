@@ -6,6 +6,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -150,7 +152,7 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 		StandardClaims: stdClaims,
 		LiveTokenInfo:  liveTokenInfo,
 	}
-	token, err := utils.CreateJWT(ctx, claims)
+	token, err := utils.CreateJWT(ctx, claims, config.Get().LiveTokenConfig.PrivateKey)
 	if err != nil {
 		log.Error(ctx, "MakeLiveToken:create jwt error",
 			log.Err(err),
@@ -182,7 +184,9 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 	return materials, nil
 }
 
-type liveTokenModel struct{}
+type liveTokenModel struct {
+	PrivateKey interface{}
+}
 
 var (
 	_liveTokenOnce  sync.Once
