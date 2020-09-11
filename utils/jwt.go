@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"github.com/dgrijalva/jwt-go"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"sync"
 )
 
@@ -13,9 +14,9 @@ var (
 )
 
 func InitJwtKey() {
-	//c := config.Get()
-	prvKey = []byte("c.Auth.PrivateKey")
-	pubKey = []byte("c.Auth.PublicKey")
+	c := config.Get()
+	prvKey = []byte(c.Auth.PrivateKey)
+	pubKey = []byte(c.Auth.PublicKey)
 }
 
 func CreateJWT(claims jwt.Claims) (signedToken string, err error) {

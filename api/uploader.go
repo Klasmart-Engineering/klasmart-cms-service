@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"net/http"
@@ -23,14 +24,13 @@ func (s *Server) getUploadPath(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
-			"path":       path,
+			"path":        path,
 			"resource_id": name,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
-
 
 func (s *Server) getPath(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -51,4 +51,19 @@ func (s *Server) getPath(c *gin.Context) {
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
+}
+
+func (s *Server) getContentLiveToken(c *gin.Context) {
+	op := GetOperator(c)
+	ctx := c.Request.Context()
+	contentID := c.Param("content_id")
+	token, err := model.GetLiveTokenModel().MakeLivePreviewToken(ctx, op, contentID)
+	if err != nil {
+		log.Error(ctx, "make content live token error", log.String("contentID", contentID), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+	})
 }

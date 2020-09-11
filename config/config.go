@@ -17,6 +17,7 @@ type Config struct {
 	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
 	DBConfig      DBConfig       `yaml:"db_config"`
 	RedisConfig   RedisConfig    `yaml:"redis_config"`
+	Auth          Auth           `json:"auth"`
 }
 
 var config *Config
@@ -65,6 +66,11 @@ type ScheduleConfig struct {
 	CacheExpiration time.Duration `yaml:"cache_expiration"`
 }
 
+type Auth struct {
+	PrivateKey string `json:"privateKey"`
+	PublicKey  string `json:"publicKey"`
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -80,6 +86,7 @@ func LoadEnvConfig() {
 	loadDBEnvConfig(ctx)
 	loadRedisEnvConfig(ctx)
 	loadScheduleEnvConfig(ctx)
+	loadAuthEnvConfig(ctx)
 }
 func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
@@ -192,6 +199,15 @@ func loadDBEnvConfig(ctx context.Context) {
 	}
 	config.DBConfig.ShowSQL = showSQL
 
+}
+
+func loadAuthEnvConfig(ctx context.Context) {
+	type Auth struct {
+		PrivateKey string `json:"privateKey"`
+		PublicKey  string `json:"publicKey"`
+	}
+	config.Auth.PrivateKey = assertGetEnv("private_key")
+	config.Auth.PublicKey = assertGetEnv("public_key")
 }
 
 func Get() *Config {

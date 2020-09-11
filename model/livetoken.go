@@ -15,67 +15,124 @@ import (
 
 type ILiveTokenModel interface {
 	MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
+	MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error)
 }
 
 func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error) {
-	liveTokenInfo := entity.LiveTokenInfo{
-		UserID: op.UserID,
-		Type:   entity.LiveTokenTypeLive,
-	}
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, scheduleID)
 	if err != nil {
 		return "", err
 	}
+
+	liveTokenInfo := entity.LiveTokenInfo{
+		UserID: op.UserID,
+		Type:   entity.LiveTokenTypeLive,
+	}
 	liveTokenInfo.ScheduleID = schedule.ID
-	type ContentTemp struct {
-		Name       string
-		MaterialID string
+
+	name, err := s.getUserName(ctx, op)
+	if err != nil {
+		log.Error(ctx, "MakeLiveToken:get user name by id error",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("scheduleID", scheduleID))
+		return "", err
 	}
-	contentList := make([]ContentTemp, 0)
-	liveTokenInfo.Materials = make([]*entity.LiveMaterial, len(contentList))
-	for i, item := range contentList {
-		materialItem := &entity.LiveMaterial{
-			Name:     item.Name,
-			TypeName: entity.MaterialTypeH5P,
-		}
-		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
-			entity.LiveTokenEnvPath,
-			item.MaterialID,
-		)
-		liveTokenInfo.Materials[i] = materialItem
+	liveTokenInfo.Name = name
+
+	liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
+	if err != nil {
+		log.Error(ctx, "MakeLiveToken:get material error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("liveTokenInfo", liveTokenInfo),
+			log.Any("schedule", schedule))
+		return "", err
 	}
+
+	token, err := s.createJWT(ctx, liveTokenInfo)
+	if err != nil {
+		log.Error(ctx, "MakeLiveToken:create jwt error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("liveTokenInfo", liveTokenInfo),
+			log.Any("schedule", schedule))
+		return "", err
+	}
+	return token, nil
+}
+func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error) {
+	liveTokenInfo := entity.LiveTokenInfo{
+		UserID: op.UserID,
+		Type:   entity.LiveTokenTypePreview,
+	}
+
+	name, err := s.getUserName(ctx, op)
+	if err != nil {
+		log.Error(ctx, "MakeLivePreviewToken:get user name by id error",
+			log.Err(err),
+			log.Any("op", op))
+		return "", err
+	}
+	liveTokenInfo.Name = name
+
+	liveTokenInfo.Materials, err = s.getMaterials(ctx, contentID)
+	if err != nil {
+		log.Error(ctx, "MakeLivePreviewToken:get material error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("liveTokenInfo", liveTokenInfo),
+			log.String("contentID", contentID))
+		return "", err
+	}
+
+	token, err := s.createJWT(ctx, liveTokenInfo)
+	if err != nil {
+		log.Error(ctx, "MakeLivePreviewToken:create jwt error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("liveTokenInfo", liveTokenInfo),
+			log.String("contentID", contentID))
+		return "", err
+	}
+	return token, nil
+}
+
+func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (string, error) {
 	switch op.Role {
 	case entity.RoleTeacher:
 		teacherService, err := external.GetTeacherServiceProvider()
 		if err != nil {
-			log.Error(ctx, "MakeLiveToken:GetTeacherServiceProvider error",
+			log.Error(ctx, "getUserName:GetTeacherServiceProvider error",
 				log.Err(err),
-				log.Any("op", op),
-				log.String("scheduleID", scheduleID))
+				log.Any("op", op))
 			return "", err
 		}
 		teacherInfos, err := teacherService.BatchGet(ctx, []string{op.UserID})
 		if err != nil {
-			log.Error(ctx, "MakeLiveToken:GetTeacherServiceProvider BatchGet error",
+			log.Error(ctx, "getUserName:GetTeacherServiceProvider BatchGet error",
 				log.Err(err),
-				log.Any("op", op),
-				log.String("scheduleID", scheduleID))
+				log.Any("op", op))
 			return "", err
 		}
 		if len(teacherInfos) <= 0 {
-			log.Error(ctx, "MakeLiveToken:teacher info not found",
+			log.Error(ctx, "getUserName:teacher info not found",
 				log.Err(err),
-				log.Any("op", op),
-				log.String("scheduleID", scheduleID))
+				log.Any("op", op))
 			return "", constant.ErrRecordNotFound
 		}
-		liveTokenInfo.Name = teacherInfos[0].Name
-		liveTokenInfo.Teacher = true
+		return teacherInfos[0].Name, nil
 	case entity.RoleStudent:
-		// TODO
+		return entity.RoleStudent, nil
+	case entity.RoleAdmin:
+		return entity.RoleAdmin, nil
 	default:
-		liveTokenInfo.Name = op.Role
+		log.Error(ctx, "getUserName:user role invalid", log.Any("op", op))
+		return "", constant.ErrRecordNotFound
 	}
+}
+
+func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo) (string, error) {
 	now := time.Now()
 	stdClaims := &jwt.StandardClaims{
 		Audience:  "kidsloop-live",
@@ -94,14 +151,36 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	if err != nil {
 		log.Error(ctx, "MakeLiveToken:create jwt error",
 			log.Err(err),
-			log.Any("op", op),
-			log.String("scheduleID", scheduleID))
+			log.Any("liveTokenInfo", liveTokenInfo))
 		return "", err
 	}
 	return token, nil
 }
-func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error) {
-	return "", nil
+
+func (s *liveTokenModel) getSubContent() []*entity.LiveTokenShort {
+	return []*entity.LiveTokenShort{
+		&entity.LiveTokenShort{
+			ID:   "001",
+			Name: "h5p",
+		},
+	}
+}
+
+func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {
+	contentList := s.getSubContent()
+	materials := make([]*entity.LiveMaterial, len(contentList))
+	for i, item := range contentList {
+		materialItem := &entity.LiveMaterial{
+			Name:     item.Name,
+			TypeName: entity.MaterialTypeH5P,
+		}
+		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
+			entity.LiveTokenEnvPath,
+			item.ID,
+		)
+		materials[i] = materialItem
+	}
+	return materials, nil
 }
 
 type liveTokenModel struct{}

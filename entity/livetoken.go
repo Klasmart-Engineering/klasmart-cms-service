@@ -31,6 +31,10 @@ type LiveMaterial struct {
 	URL      string `json:"url,omitempty"`
 	TypeName string `json:"__typename"`
 }
+type LiveTokenShort struct {
+	ID   string
+	Name string
+}
 
 type LiveTokenClaims struct {
 	*jwt.StandardClaims
