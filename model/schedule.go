@@ -130,7 +130,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 			log.Err(err),
 			log.Any("viewData", viewData),
 		)
-		return "",err
+		return "", err
 	}
 	return id.(string), nil
 }
@@ -752,10 +752,23 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 		log.Error(ctx, "GetPlainByID deleted", log.Err(err), log.Any("schedule", schedule))
 		return nil, constant.ErrRecordNotFound
 	}
-	result := &entity.SchedulePlain{
-		ID:           schedule.ID,
-		Title:        schedule.Title,
-		LessonPlanID: schedule.LessonPlanID,
+	result := new(entity.SchedulePlain)
+	result.Schedule = *schedule
+
+	var scheduleTeacherList []*entity.ScheduleTeacher
+	err = da.GetScheduleTeacherDA().Query(ctx, &da.ScheduleTeacherCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleTeacherList)
+	if err != nil {
+		log.Error(ctx, "GetPlainByID:get schedule_teacher error", log.Err(err), log.Any("schedule", schedule))
+		return nil, err
+	}
+	result.TeacherIDs = make([]string, len(scheduleTeacherList))
+	for i, item := range scheduleTeacherList {
+		result.TeacherIDs[i] = item.TeacherID
 	}
 	return result, nil
 }
@@ -812,8 +825,8 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-	if lessonPlanInfo.ContentType != entity.ContentTypeLesson{
-		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo",lessonPlanInfo), log.Any("ScheduleVerify", v))
+	if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
+		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
 		return constant.ErrInvalidArgs
 	}
 	return nil
