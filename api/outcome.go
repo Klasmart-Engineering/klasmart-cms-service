@@ -99,8 +99,6 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	switch err {
 	//case model.ErrInvalidResourceId:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
-	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
 	//case model.ErrNoContentData:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
 	//case model.ErrInvalidContentData:
@@ -111,6 +109,10 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -281,6 +283,8 @@ func (s *Server) approveOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(Unknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -319,6 +323,8 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(Unknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:

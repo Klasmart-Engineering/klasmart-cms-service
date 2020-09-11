@@ -73,11 +73,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -621,11 +616,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -763,11 +753,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -967,6 +952,60 @@
           },
           "500": {
             "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents/{content_id}/live/token": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "get live token",
+        "description": "get live token",
+        "operationId": "getLiveToken",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "content id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
           }
         }
       }
@@ -4246,11 +4285,6 @@
                 "type": "string",
                 "description": "content type list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3",
-                "enum": [
-                  "1",
-                  "2",
-                  "3"
-                ]
               },
               "scope": {
                 "type": "string",

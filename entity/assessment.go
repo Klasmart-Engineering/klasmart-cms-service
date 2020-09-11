@@ -64,6 +64,7 @@ type AssessmentDetailView struct {
 	NumberOfActivities    int                        `json:"number_of_activities"`
 	NumberOfOutcomes      int                        `json:"number_of_outcomes"`
 	CompleteTime          int64                      `json:"complete_time"`
+	Status                AssessmentStatus           `json:"status"`
 	OutcomeAttendanceMaps []OutcomeAttendanceMapView `json:"outcome_attendance_maps"`
 }
 
@@ -197,5 +198,5 @@ func (a UpdateAssessmentAction) Valid() bool {
 type OutcomeAttendanceMap struct {
 	OutcomeID     string   `json:"outcome_id"`
 	Skip          bool     `json:"skip"`
-	AttendanceIDs []string `json:"attendance_i_ds"`
+	AttendanceIDs []string `json:"attendance_ids"`
 }
