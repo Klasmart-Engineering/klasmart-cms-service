@@ -2,14 +2,19 @@ package entity
 
 import "github.com/dgrijalva/jwt-go"
 
-const (
-	LiveTokenTypePreview = "preview"
-	LiveTokenTypeLive    = "live"
-)
+type LiveTokenType string
 
 const (
-	MaterialTypeH5P = "Iframe"
+	LiveTokenTypePreview LiveTokenType = "preview"
+	LiveTokenTypeLive    LiveTokenType = "live"
 )
+
+type MaterialType string
+
+const (
+	MaterialTypeH5P MaterialType = "Iframe"
+)
+
 const (
 	LiveTokenEnvPath = "v1"
 )
