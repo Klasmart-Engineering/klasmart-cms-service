@@ -22,7 +22,7 @@ type IContentRedis interface {
 	GetContentCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *ContentListWithKey
 
 	SaveContentCache(ctx context.Context, content *entity.ContentInfoWithDetails)
-	GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails
+	GetContentCacheByID(ctx context.Context, id string) *entity.ContentInfoWithDetails
 
 	CleanContentCache(ctx context.Context, ids []string)
 
@@ -79,7 +79,7 @@ func (r *ContentRedis) SaveContentCache(ctx context.Context, content *entity.Con
 		content,
 	})
 }
-func (r *ContentRedis) GetContentCacheById(ctx context.Context, id string) *entity.ContentInfoWithDetails {
+func (r *ContentRedis) GetContentCacheByID(ctx context.Context, id string) *entity.ContentInfoWithDetails {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}

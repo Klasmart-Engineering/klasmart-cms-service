@@ -18,7 +18,7 @@ var (
 )
 
 const (
-	AssetStoragePartition        StoragePartition      = "asset"
+	AssetStoragePartition        StoragePartition      = "assets"
 	ThumbnailStoragePartition      StoragePartition    = "thumbnail"
 	ScheduleAttachmentStoragePartition StoragePartition = "schedule_attachment"
 

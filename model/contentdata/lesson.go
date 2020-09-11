@@ -62,12 +62,12 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 	}
 }
 
-func (l *LessonData) SubContentIds(ctx context.Context) ([]string, error) {
+func (l *LessonData) SubContentIds(ctx context.Context) []string {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
 	})
-	return materialList, nil
+	return materialList
 }
 
 func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentType) error {

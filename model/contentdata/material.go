@@ -54,8 +54,8 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 
 	return nil
 }
-func (h *MaterialData) SubContentIds(ctx context.Context) ([]string ,error){
-	return nil, nil
+func (h *MaterialData) SubContentIds(ctx context.Context) []string{
+	return nil
 }
 func (h *MaterialData) PrepareResult(ctx context.Context) error {
 	return nil
