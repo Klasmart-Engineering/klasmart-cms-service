@@ -422,11 +422,38 @@ func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []st
 	return teacherNameMap, nil
 }
 
+func (a *assessmentModel) getClassNameMap(ctx context.Context, classIDs []string) (map[string]string, error) {
+	classNameMap := map[string]string{}
+	classService, err := external.GetClassServiceProvider()
+	if err != nil {
+		log.Error(ctx, "get class name map: get class service failed",
+			log.Err(err),
+			log.Strings("class_ids", classIDs),
+		)
+		return nil, err
+	}
+	items, err := classService.BatchGet(ctx, classIDs)
+	if err != nil {
+		log.Error(ctx, "get class name map: batch get class failed",
+			log.Err(err),
+			log.Strings("class_ids", classIDs),
+		)
+		return nil, err
+	}
+	for _, item := range items {
+		classNameMap[item.ID] = item.Name
+	}
+	return classNameMap, nil
+}
+
 func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentCommand) (string, error) {
-	panic("updating")
-	var outcomeIDs []string
+	var (
+		outcomeIDs []string
+		schedule   *entity.SchedulePlain
+	)
 	{
-		schedule, err := GetScheduleModel().GetPlainByID(ctx, cmd.ScheduleID)
+		var err error
+		schedule, err = GetScheduleModel().GetPlainByID(ctx, cmd.ScheduleID)
 		if err != nil {
 			log.Error(ctx, "add assessment: get schedule failed by id",
 				log.Err(err),
@@ -458,10 +485,30 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 			newItem := entity.Assessment{
 				ID:           newID,
 				ScheduleID:   cmd.ScheduleID,
+				Title:        a.title(cmd.ClassEndTime, "", schedule.Title),
+				ProgramID:    schedule.ProgramID,
+				SubjectID:    schedule.SubjectID,
 				ClassLength:  cmd.ClassLength,
 				ClassEndTime: cmd.ClassEndTime,
 				CreateAt:     nowUnix,
 				UpdateAt:     nowUnix,
+			}
+			classNameMap, err := a.getClassNameMap(ctx, []string{schedule.ClassID})
+			if err != nil {
+				log.Error(ctx, "add assessment: get class name map failed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+			newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], newItem.Title)
+			if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
+				log.Error(ctx, "add assessment: encode and set teacher ids failed",
+					log.Err(err),
+					log.Strings("teacher_ids", schedule.TeacherIDs),
+					log.Any("cmd", cmd),
+				)
+				return err
 			}
 			if len(outcomeIDs) == 0 {
 				newItem.Status = entity.AssessmentStatusComplete

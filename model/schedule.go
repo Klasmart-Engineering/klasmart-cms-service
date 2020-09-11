@@ -31,7 +31,7 @@ type IScheduleModel interface {
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
-	GetPlainByID(ctx context.Context, id string) (*entity.Schedule, error)
+	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -737,7 +737,7 @@ func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool,
 	return count > 0, nil
 }
 
-func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Schedule, error) {
+func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error) {
 	var schedule = new(entity.Schedule)
 	err := da.GetScheduleDA().Get(ctx, id, schedule)
 	if err == dbo.ErrRecordNotFound {
@@ -752,7 +752,25 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 		log.Error(ctx, "GetPlainByID deleted", log.Err(err), log.Any("schedule", schedule))
 		return nil, constant.ErrRecordNotFound
 	}
-	return schedule, nil
+	result := new(entity.SchedulePlain)
+	result.Schedule = *schedule
+
+	var scheduleTeacherList []*entity.ScheduleTeacher
+	err = da.GetScheduleTeacherDA().Query(ctx, &da.ScheduleTeacherCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleTeacherList)
+	if err != nil {
+		log.Error(ctx, "GetPlainByID:get schedule_teacher error", log.Err(err), log.Any("schedule", schedule))
+		return nil, err
+	}
+	result.TeacherIDs = make([]string, len(scheduleTeacherList))
+	for i, item := range scheduleTeacherList {
+		result.TeacherIDs[i] = item.TeacherID
+	}
+	return result, nil
 }
 
 func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify) error {
