@@ -73,11 +73,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -621,11 +616,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -763,11 +753,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -4255,11 +4240,6 @@
                 "type": "string",
                 "description": "content type list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3",
-                "enum": [
-                  "1",
-                  "2",
-                  "3"
-                ]
               },
               "scope": {
                 "type": "string",
