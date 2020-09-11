@@ -52,6 +52,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 		ClassEndTime: item.ClassEndTime,
 		ClassLength:  item.ClassLength,
 		CompleteTime: item.CompleteTime,
+		Status:       item.Status,
 	}
 
 	// fill attendances

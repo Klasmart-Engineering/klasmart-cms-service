@@ -69,7 +69,7 @@ func (*outcomeAttendanceDA) BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.C
 	}
 	if err := tx.
 		Where("assessment_id = ?", assessmentID).
-		Where("outcome_id in ?", outcomeIDs).
+		Where("outcome_id in (?)", outcomeIDs).
 		Delete(entity.OutcomeAttendance{}).Error; err != nil {
 		log.Error(ctx, "batch delete attendances by outcome ids: batch delete failed",
 			log.Err(err),
