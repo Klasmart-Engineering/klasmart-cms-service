@@ -220,14 +220,14 @@ func loadAuthEnvConfig(ctx context.Context) {
 
 	content, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
-		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.String("privateKeyPath", privateKeyPath))
+		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
 		return
 	}
 	config.Auth.PrivateKey = string(content)
 
 	content, err = ioutil.ReadFile(publicKeyPath)
 	if err != nil {
-		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.String("publicKeyPath", publicKeyPath))
+		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("publicKeyPath", publicKeyPath))
 		return
 	}
 	config.Auth.PublicKey = string(content)
