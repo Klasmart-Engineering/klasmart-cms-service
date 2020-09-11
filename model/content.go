@@ -914,6 +914,7 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 }
 
 func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
