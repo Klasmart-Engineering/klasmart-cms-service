@@ -2818,7 +2818,10 @@
             "description": "OK"
           },
           "404": {
-            "description": "Content not found"
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2939,7 +2942,7 @@
             "description": "learning outcome not found"
           },
           "406": {
-            "description": "content was locked"
+            "description": "learning outcome was locked"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2976,7 +2979,7 @@
           "404": {
             "description": "learning outcome not found"
           },
-          "412": {
+          "406": {
             "description": "learning outcome status invalid"
           },
           "500": {
@@ -3024,7 +3027,7 @@
           "404": {
             "description": "learning outcome not found"
           },
-          "412": {
+          "406": {
             "description": "learning outcome status invalid"
           },
           "500": {
