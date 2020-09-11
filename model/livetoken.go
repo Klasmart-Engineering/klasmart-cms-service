@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -39,6 +40,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 		return "", err
 	}
 	liveTokenInfo.Name = name
+	liveTokenInfo.Teacher = op.Role == entity.RoleTeacher
 
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
 	if err != nil {
@@ -75,6 +77,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Name = name
+	liveTokenInfo.Teacher = op.Role == entity.RoleTeacher
 
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, contentID)
 	if err != nil {
@@ -157,17 +160,14 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 	return token, nil
 }
 
-func (s *liveTokenModel) getSubContent() []*entity.LiveTokenShort {
-	return []*entity.LiveTokenShort{
-		&entity.LiveTokenShort{
-			ID:   "001",
-			Name: "h5p",
-		},
-	}
-}
-
 func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {
-	contentList := s.getSubContent()
+	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID)
+	if err != nil {
+		log.Error(ctx, "getMaterials:get content sub by id error",
+			log.Err(err),
+			log.String("contentID", contentID))
+		return nil, err
+	}
 	materials := make([]*entity.LiveMaterial, len(contentList))
 	for i, item := range contentList {
 		materialItem := &entity.LiveMaterial{
