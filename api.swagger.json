@@ -3507,18 +3507,6 @@
                     "type": "string",
                     "description": "schedule id"
                   },
-                  "class_id": {
-                    "type": "string",
-                    "description": "class id"
-                  },
-                  "class_name": {
-                    "type": "string",
-                    "description": "class name"
-                  },
-                  "lesson_name": {
-                    "type": "string",
-                    "description": "lesson name"
-                  },
                   "attendance_ids": {
                     "type": "array",
                     "description": "attendance id list",
@@ -3526,18 +3514,6 @@
                       "type": "string",
                       "description": "attendance id"
                     }
-                  },
-                  "program_id": {
-                    "type": "string",
-                    "description": "program id"
-                  },
-                  "subject_id": {
-                    "type": "string",
-                    "description": "subject id"
-                  },
-                  "teacher_id": {
-                    "type": "string",
-                    "description": "teacher id"
                   },
                   "class_length": {
                     "type": "integer",
@@ -3547,10 +3523,6 @@
                   "class_end_time": {
                     "type": "integer",
                     "description": "class end time (unix seconds)"
-                  },
-                  "complete_time": {
-                    "type": "integer",
-                    "description": "complete time (unix seconds)"
                   }
                 }
               }
