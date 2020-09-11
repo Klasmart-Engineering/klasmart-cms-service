@@ -1,8 +1,9 @@
 package utils
 
 import (
-	"errors"
+	"context"
 	"github.com/dgrijalva/jwt-go"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"sync"
 )
@@ -19,21 +20,15 @@ func InitJwtKey() {
 	pubKey = []byte(c.Auth.PublicKey)
 }
 
-func CreateJWT(claims jwt.Claims) (signedToken string, err error) {
+func CreateJWT(ctx context.Context, claims jwt.Claims) (string, error) {
 	jwtOnce.Do(InitJwtKey)
-	defer func() {
-		if err != nil {
-			err = errors.New("failed to create jwt")
-		}
-	}()
-
-	if err != nil {
-		return
-	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	key, err := jwt.ParseRSAPrivateKeyFromPEM(prvKey)
 	if err != nil {
-		return
+		log.Error(ctx, "CreateJWT:create jwt error",
+			log.Err(err),
+			log.Any("claims", claims))
+		return "", err
 	}
 
 	return token.SignedString(key)

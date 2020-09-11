@@ -150,7 +150,7 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 		StandardClaims: stdClaims,
 		LiveTokenInfo:  liveTokenInfo,
 	}
-	token, err := utils.CreateJWT(claims)
+	token, err := utils.CreateJWT(ctx, claims)
 	if err != nil {
 		log.Error(ctx, "MakeLiveToken:create jwt error",
 			log.Err(err),
