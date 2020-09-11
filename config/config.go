@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -214,8 +215,22 @@ func loadDBEnvConfig(ctx context.Context) {
 }
 
 func loadAuthEnvConfig(ctx context.Context) {
-	config.Auth.PrivateKey = os.Getenv("auth_private_key.pem")
-	config.Auth.PublicKey = os.Getenv("auth_public_key.pem")
+	privateKeyPath := os.Getenv("auth_private_key_path") //"./auth_private_key.pem"
+	publicKeyPath := os.Getenv("auth_public_key_path")   //"./auth_public_key.pem"
+
+	content, err := ioutil.ReadFile(privateKeyPath)
+	if err != nil {
+		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.String("privateKeyPath", privateKeyPath))
+		return
+	}
+	config.Auth.PrivateKey = string(content)
+
+	content, err = ioutil.ReadFile(publicKeyPath)
+	if err != nil {
+		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.String("publicKeyPath", publicKeyPath))
+		return
+	}
+	config.Auth.PublicKey = string(content)
 }
 
 func Get() *Config {
