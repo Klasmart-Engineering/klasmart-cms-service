@@ -9,6 +9,15 @@ import (
 	"time"
 )
 
+const (
+	OutcomeStatusDraft     = "draft"
+	OutcomeStatusPending   = "pending"
+	OutcomeStatusPublished = "published"
+	OutcomeStatusRejected  = "rejected"
+	OutcomeStatusHidden    = "hidden"
+)
+
+type OutcomeStatus string
 type Outcome struct {
 	ID            string `gorm:"type:varchar(50);column:id" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
 	Name          string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"outcome_name" json:"outcome_name" dynamoupdate:":n"`
@@ -28,8 +37,8 @@ type Outcome struct {
 	AuthorName     string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
 	OrganizationID string `gorm:"type:varchar(50);NOT NULL;column:organization_id" dynamodbav:"org_id" json:"organization_id" dynamoupdate:":og"`
 
-	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index" dynamodbav:"publish_scope" json:"publish_scope" dynamoupdate:":ps"`
-	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index" dynamodbav:"publish_status" json:"publish_status" dynamoupdate:":pst"`
+	PublishScope  string        `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index" dynamodbav:"publish_scope" json:"publish_scope" dynamoupdate:":ps"`
+	PublishStatus OutcomeStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index" dynamodbav:"publish_status" json:"publish_status" dynamoupdate:":pst"`
 
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason" dynamodbav:"reject_reason" json:"reject_reason" dynamoupdate:":rr"`
 	Version      int    `gorm:"type:int;NOT NULL;column:version" dynamodbav:"version" json:"version" dynamoupdate:":ve"`
@@ -66,6 +75,7 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.EstimatedTime = data.EstimatedTime
 	oc.Keywords = data.Keywords
 	oc.Description = data.Description
+	oc.PublishStatus = OutcomeStatusDraft
 }
 
 func (oc *Outcome) Clone() Outcome {
@@ -89,7 +99,7 @@ func (oc *Outcome) Clone() Outcome {
 		AuthorName:     oc.AuthorName,
 		OrganizationID: oc.OrganizationID,
 
-		PublishStatus: ContentStatusDraft,
+		PublishStatus: OutcomeStatusDraft,
 		PublishScope:  oc.PublishScope,
 		LatestID:      oc.LatestID,
 
@@ -102,33 +112,26 @@ func (oc *Outcome) Clone() Outcome {
 	}
 }
 
-func (oc *Outcome) SetStatus(ctx context.Context, status ContentPublishStatus) error {
+func (oc *Outcome) SetStatus(ctx context.Context, status OutcomeStatus) error {
 	switch status {
-	//case ContentStatusArchive:
-	//	if oc.allowedToArchive() {
-	//		oc.PublishStatus = ContentStatusArchive
-	//	}
-	//	return nil
-	//case ContentStatusDraft:
-	//	//TODO
-	case ContentStatusHidden:
+	case OutcomeStatusHidden:
 		if oc.allowedToHidden() {
-			oc.PublishStatus = ContentStatusHidden
+			oc.PublishStatus = OutcomeStatusHidden
 			return nil
 		}
-	case ContentStatusPending:
+	case OutcomeStatusPending:
 		if oc.allowedToPending() {
-			oc.PublishStatus = ContentStatusPending
+			oc.PublishStatus = OutcomeStatusPending
 			return nil
 		}
-	case ContentStatusPublished:
+	case OutcomeStatusPublished:
 		if oc.allowedToBeReviewed() {
-			oc.PublishStatus = ContentStatusPublished
+			oc.PublishStatus = OutcomeStatusPublished
 			return nil
 		}
-	case ContentStatusRejected:
+	case OutcomeStatusRejected:
 		if oc.allowedToBeReviewed() {
-			oc.PublishStatus = ContentStatusRejected
+			oc.PublishStatus = OutcomeStatusRejected
 			return nil
 		}
 	}
@@ -141,7 +144,7 @@ func (oc *Outcome) SetStatus(ctx context.Context, status ContentPublishStatus) e
 
 func (oc Outcome) allowedToArchive() bool {
 	switch oc.PublishStatus {
-	case ContentStatusPublished:
+	case OutcomeStatusPublished:
 		return true
 	}
 	return false
@@ -154,7 +157,7 @@ func (oc Outcome) allowedToAttachment() bool {
 
 func (oc Outcome) allowedToPending() bool {
 	switch oc.PublishStatus {
-	case ContentStatusDraft:
+	case OutcomeStatusDraft, OutcomeStatusRejected:
 		return true
 	}
 	return false
@@ -162,7 +165,7 @@ func (oc Outcome) allowedToPending() bool {
 
 func (oc Outcome) allowedToBeReviewed() bool {
 	switch oc.PublishStatus {
-	case ContentStatusPending:
+	case OutcomeStatusPending:
 		return true
 	}
 	return false
@@ -170,21 +173,7 @@ func (oc Outcome) allowedToBeReviewed() bool {
 
 func (oc Outcome) allowedToHidden() bool {
 	switch oc.PublishStatus {
-	case ContentStatusPublished:
-		return true
-	}
-	return false
-}
-
-func (oc Outcome) CanBeCancelled() bool {
-	if oc.PublishStatus == ContentStatusDraft {
-		return true
-	}
-	return false
-}
-
-func (oc Outcome) CanBeDeleted() bool {
-	if oc.PublishStatus == ContentStatusArchive {
+	case OutcomeStatusPublished:
 		return true
 	}
 	return false

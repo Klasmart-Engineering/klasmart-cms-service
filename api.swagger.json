@@ -73,11 +73,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -621,11 +616,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -763,11 +753,6 @@
             "description": "Search content by content type",
             "schema": {
               "type": "string",
-              "enum": [
-                "1",
-                "2",
-                "3"
-              ],
               "nullable": true
             }
           },
@@ -967,6 +952,60 @@
           },
           "500": {
             "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents/{content_id}/live/token": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "get live token",
+        "description": "get live token",
+        "operationId": "getLiveToken",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "content id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Recorde not found"
+          },
+          "500": {
+            "description": "Server error"
           }
         }
       }
@@ -2779,7 +2818,10 @@
             "description": "OK"
           },
           "404": {
-            "description": "Content not found"
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2900,7 +2942,7 @@
             "description": "learning outcome not found"
           },
           "406": {
-            "description": "content was locked"
+            "description": "learning outcome was locked"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2937,7 +2979,7 @@
           "404": {
             "description": "learning outcome not found"
           },
-          "412": {
+          "406": {
             "description": "learning outcome status invalid"
           },
           "500": {
@@ -2985,7 +3027,7 @@
           "404": {
             "description": "learning outcome not found"
           },
-          "412": {
+          "406": {
             "description": "learning outcome status invalid"
           },
           "500": {
@@ -3489,16 +3531,20 @@
                               }
                             }
                           },
-                          "teacher": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "description": "teacher id"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "teacher name"
+                          "teachers": {
+                            "type": "array",
+                            "description": "teachers",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "teacher id"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "teacher name"
+                                }
                               }
                             }
                           },
@@ -3546,8 +3592,8 @@
         "tags": [
           "assessments"
         ],
-        "summary": "add assessment",
-        "description": "add assessment",
+        "summary": "assessment callback",
+        "description": "assessment callback",
         "operationId": "addAssessment",
         "security": [
           {
@@ -3566,18 +3612,6 @@
                     "type": "string",
                     "description": "schedule id"
                   },
-                  "class_id": {
-                    "type": "string",
-                    "description": "class id"
-                  },
-                  "class_name": {
-                    "type": "string",
-                    "description": "class name"
-                  },
-                  "lesson_name": {
-                    "type": "string",
-                    "description": "lesson name"
-                  },
                   "attendance_ids": {
                     "type": "array",
                     "description": "attendance id list",
@@ -3585,18 +3619,6 @@
                       "type": "string",
                       "description": "attendance id"
                     }
-                  },
-                  "program_id": {
-                    "type": "string",
-                    "description": "program id"
-                  },
-                  "subject_id": {
-                    "type": "string",
-                    "description": "subject id"
-                  },
-                  "teacher_id": {
-                    "type": "string",
-                    "description": "teacher id"
                   },
                   "class_length": {
                     "type": "integer",
@@ -3606,10 +3628,6 @@
                   "class_end_time": {
                     "type": "integer",
                     "description": "class end time (unix seconds)"
-                  },
-                  "complete_time": {
-                    "type": "integer",
-                    "description": "complete time (unix seconds)"
                   }
                 }
               }
@@ -3724,16 +3742,20 @@
                         }
                       }
                     },
-                    "teacher": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "description": "teacher id"
-                        },
-                        "name": {
-                          "type": "string",
-                          "description": "teacher name"
+                    "teachers": {
+                      "type": "array",
+                      "description": "teachers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "teacher id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "teacher name"
+                          }
                         }
                       }
                     },
@@ -3761,6 +3783,14 @@
                       "type": "integer",
                       "format": "int64",
                       "description": "class end time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "assessment status",
+                      "enum": [
+                        "in_progress",
+                        "complete"
+                      ]
                     },
                     "outcome_attendance_maps": {
                       "type": "array",
@@ -3915,7 +3945,7 @@
           }
         }
       }
-    },
+    }
   },
   "components": {
     "securitySchemes": {
@@ -4255,11 +4285,6 @@
                 "type": "string",
                 "description": "content type list",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3",
-                "enum": [
-                  "1",
-                  "2",
-                  "3"
-                ]
               },
               "scope": {
                 "type": "string",

@@ -1009,9 +1009,17 @@ func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBCon
 
 func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status []string) []string {
 	newStatus := make([]string, 0)
+	if len(status) < 1 {
+		return []string{
+			entity.ContentStatusPublished,
+			entity.ContentStatusPending,
+			entity.ContentStatusDraft,
+			entity.ContentStatusRejected,
+		}
+	}
+
 	for i := range status {
 		if status[i] != entity.ContentStatusAttachment &&
-			status[i] != entity.ContentStatusArchive &&
 			status[i] != entity.ContentStatusHidden {
 			newStatus = append(newStatus, status[i])
 		}

@@ -752,10 +752,23 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 		log.Error(ctx, "GetPlainByID deleted", log.Err(err), log.Any("schedule", schedule))
 		return nil, constant.ErrRecordNotFound
 	}
-	result := &entity.SchedulePlain{
-		ID:           schedule.ID,
-		Title:        schedule.Title,
-		LessonPlanID: schedule.LessonPlanID,
+	result := new(entity.SchedulePlain)
+	result.Schedule = *schedule
+
+	var scheduleTeacherList []*entity.ScheduleTeacher
+	err = da.GetScheduleTeacherDA().Query(ctx, &da.ScheduleTeacherCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+	}, &scheduleTeacherList)
+	if err != nil {
+		log.Error(ctx, "GetPlainByID:get schedule_teacher error", log.Err(err), log.Any("schedule", schedule))
+		return nil, err
+	}
+	result.TeacherIDs = make([]string, len(scheduleTeacherList))
+	for i, item := range scheduleTeacherList {
+		result.TeacherIDs[i] = item.TeacherID
 	}
 	return result, nil
 }

@@ -65,7 +65,7 @@ func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContex
 }
 
 func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
-	if err := tx.Where("assessment_id", assessmentID).Delete(entity.AssessmentAttendance{}).Error; err != nil {
+	if err := tx.Where("assessment_id = ?", assessmentID).Delete(entity.AssessmentAttendance{}).Error; err != nil {
 		log.Error(ctx, "delete attendances by id: delete failed from db",
 			log.Err(err),
 			log.String("assessment_id", assessmentID),
