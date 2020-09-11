@@ -283,6 +283,8 @@ func (s *Server) approveOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(Unknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -321,6 +323,8 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(Unknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
