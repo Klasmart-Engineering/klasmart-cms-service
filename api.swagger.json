@@ -43,6 +43,10 @@
     {
       "name": "learning_outcomes",
       "description": "learning outcomes management"
+    },
+    {
+      "name": "crypto",
+      "description": "crypto operation"
     }
   ],
   "paths": {
