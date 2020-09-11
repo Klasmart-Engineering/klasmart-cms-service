@@ -66,6 +66,7 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.EstimatedTime = data.EstimatedTime
 	oc.Keywords = data.Keywords
 	oc.Description = data.Description
+	oc.PublishStatus = ContentStatusDraft
 }
 
 func (oc *Outcome) Clone() Outcome {
@@ -154,7 +155,7 @@ func (oc Outcome) allowedToAttachment() bool {
 
 func (oc Outcome) allowedToPending() bool {
 	switch oc.PublishStatus {
-	case ContentStatusDraft:
+	case ContentStatusDraft, ContentStatusRejected:
 		return true
 	}
 	return false
