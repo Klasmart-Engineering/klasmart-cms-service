@@ -532,7 +532,7 @@ func (s *scheduleModel) getLessonPlanMapByLessonPlanIDs(ctx context.Context, tx 
 	lessonPlanMap := make(map[string]*entity.ScheduleShortInfo)
 	if len(lessonPlanIDs) != 0 {
 		lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
-		lessonPlans, err := GetContentModel().GetContentNameByIdList(ctx, tx, lessonPlanIDs)
+		lessonPlans, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
 			return nil, err

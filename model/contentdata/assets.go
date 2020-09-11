@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 )
@@ -39,8 +40,8 @@ func (this *AssetsData) Marshal(ctx context.Context) (string, error) {
 
 	return string(data), nil
 }
-func (a *AssetsData) SubContentIds(ctx context.Context) ([]string ,error){
-	return nil, nil
+func (a *AssetsData) SubContentIds(ctx context.Context) []string{
+	return nil
 }
 
 func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentType) error {
@@ -54,15 +55,16 @@ func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentTyp
 	}
 	ext := parts[len(parts) - 1]
 	flag := false
+	ext = strings.ToLower(ext)
 	switch contentType {
 	case entity.ContentTypeAssetImage:
-		flag = a.isArray(ext, []string{"jpg", "jpeg", "png", "bmp", "gif"})
+		flag = a.isArray(ext, constant.AssetsImageExtension)
 	case entity.ContentTypeAssetDocument:
-		flag = a.isArray(ext, []string{"doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf"})
+		flag = a.isArray(ext, constant.AssetsDocExtension)
 	case entity.ContentTypeAssetAudio:
-		flag = a.isArray(ext, []string{"mp3", "wav"})
+		flag = a.isArray(ext, constant.AssetsAudioExtension)
 	case entity.ContentTypeAssetVideo:
-		flag = a.isArray(ext, []string{"mp4", "avi", "mov"})
+		flag = a.isArray(ext, constant.AssetsVideoExtension)
 	}
 	if !flag {
 		return errors.New("invalid source extension")
