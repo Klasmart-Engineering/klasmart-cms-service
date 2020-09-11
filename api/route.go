@@ -64,7 +64,7 @@ func (s Server) registeRoute() {
 
 		content.GET("/contents_resources", MustLogin, s.getUploadPath)
 		content.GET("/contents_resources/:resource_id", MustLogin, s.getPath)
-		content.GET("/contents/:content_id/live/token", MustLogin, s.getScheduleLiveToken)
+		content.GET("/contents/:content_id/live/token", MustLogin, s.getContentLiveToken)
 	}
 	schedules := s.engine.Group("/v1")
 	{
