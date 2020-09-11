@@ -3734,6 +3734,14 @@
                       "format": "int64",
                       "description": "class end time"
                     },
+                    "status": {
+                      "type": "string",
+                      "description": "assessment status",
+                      "enum": [
+                        "in_progress",
+                        "complete"
+                      ]
+                    },
                     "outcome_attendance_maps": {
                       "type": "array",
                       "description": "outcome attendance maps",
