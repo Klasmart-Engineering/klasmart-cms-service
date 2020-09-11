@@ -141,8 +141,8 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 	now := time.Now()
 	stdClaims := &jwt.StandardClaims{
 		Audience:  "kidsloop-live",
-		ExpiresAt: now.Add(time.Hour * 24 * constant.LiveTokenValidDays).Unix(),
-		IssuedAt:  now.Add(-30 * time.Second).Unix(),
+		ExpiresAt: now.Add(constant.LiveTokenExpiresAt).Unix(),
+		IssuedAt:  now.Add(-constant.LiveTokenIssuedAt).Unix(),
 		Issuer:    "KidsLoopUser-live",
 		NotBefore: 0,
 		Subject:   "authorization",
