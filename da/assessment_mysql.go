@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"strings"
 	"sync"
 	"time"
 )
@@ -98,10 +99,16 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.TeacherIDs != nil && len(*c.TeacherIDs) > 0 {
+		var (
+			teacherFormats []string
+			teacherValues  []interface{}
+		)
 		for _, teacherID := range *c.TeacherIDs {
-			formats = append(formats, fmt.Sprintf("json_contains(teacher_ids, json_array(?))"))
-			values = append(values, teacherID)
+			teacherFormats = append(teacherFormats, fmt.Sprintf("json_contains(teacher_ids, json_array(?))"))
+			teacherValues = append(teacherValues, teacherID)
 		}
+		formats = append(formats, "("+strings.Join(teacherFormats, " or ")+")")
+		values = append(values, teacherValues...)
 	}
 
 	return formats, values

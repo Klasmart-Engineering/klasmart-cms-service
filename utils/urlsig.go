@@ -2,18 +2,23 @@ package utils
 
 import (
 	"crypto"
+	rand2 "crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"io/ioutil"
 	"math/rand"
-	rand2 "crypto/rand"
 	"time"
 )
 
+var (
+	ErrInvalidPrivateKeyFile = errors.New("invalid private key file")
+)
 type SignatureResult struct {
 	Signature string `json:"signature"`
 	RandNum int64 `json:"rand_num"`
@@ -29,18 +34,31 @@ func SHA256Hash(msg string) []byte {
 	msgHash := hash.Sum(nil)
 	return msgHash
 }
-func readPrivateKeyDerBase64() (*rsa.PrivateKey, error){
-	privateKeyDerBase64 := []byte(config.Get().CryptoConfig.PrivateKey)
+//func readPrivateKeyDerBase64() (*rsa.PrivateKey, error){
+//	privateKeyDerBase64 := []byte(config.Get().CryptoConfig.PrivateKey)
+//
+//	privateKeyDer, err := base64.StdEncoding.DecodeString(string(privateKeyDerBase64))
+//	if err != nil{
+//		return nil, err
+//	}
+//	return x509.ParsePKCS1PrivateKey(privateKeyDer)
+//}
 
-	privateKeyDer, err := base64.StdEncoding.DecodeString(string(privateKeyDerBase64))
+func readPrivateKeyPEM() (*rsa.PrivateKey, error){
+	privateKeyPEM, err := ioutil.ReadFile(config.Get().CryptoConfig.PrivateKeyPath)
 	if err != nil{
 		return nil, err
 	}
-	return x509.ParsePKCS1PrivateKey(privateKeyDer)
+	block, _ := pem.Decode(privateKeyPEM)
+	if block.Type != "RSA PRIVATE KEY" {
+		return nil, ErrInvalidPrivateKeyFile
+	}
+	return x509.ParsePKCS1PrivateKey(block.Bytes)
 }
 
+
 func URLSignature(id string, url string)(*SignatureResult, error){
-	privateKey, err := readPrivateKeyDerBase64()
+	privateKey, err := readPrivateKeyPEM()
 	if err != nil{
 		return nil, err
 	}

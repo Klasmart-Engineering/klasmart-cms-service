@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"io"
@@ -287,19 +287,48 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition Storage
 	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
 	keyID := cdnConf.CDNKeyId
 
-	privateKeyDer, err := base64.StdEncoding.DecodeString(cdnConf.CDNPrivateKey)
+	privateKeyPEM, err := ioutil.ReadFile(cdnConf.CDNPrivateKeyPath)
 	if err != nil {
+		log.Error(ctx, "read cdn path failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+			)
 		return "", err
 	}
-	privKey, err := x509.ParsePKCS1PrivateKey(privateKeyDer)
+	block, _ := pem.Decode(privateKeyPEM)
+	if block.Type != "RSA PRIVATE KEY" {
+		log.Error(ctx, "parse key pem failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+		)
+		return "", ErrInvalidPrivateKeyFile
+	}
+	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
+		log.Error(ctx, "parse public key failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+			log.Err(err),
+		)
 		return "", err
 	}
 
 	signer := sign.NewURLSigner(keyID, privKey)
 	signedURL, err := signer.Sign(path, time.Now().Add(constant.PresignDurationMinutes))
 	if err != nil {
-		log.Error(ctx, "Get presigned url failed", log.Err(err))
+		log.Error(ctx, "Get presigned url failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+			log.Err(err),
+		)
 		return "", err
 	}
 
@@ -321,6 +350,12 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 
 	request, err := http.NewRequest("POST", cdnConf.CDNServicePath, bytes.NewReader(data))
 	if err != nil {
+		log.Error(ctx, "post url failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
 		return "", err
 	}
 	request.Header.Set("Content-Type", "application/json")
@@ -329,18 +364,45 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
+		log.Error(ctx, "do http request failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
 		return "", err
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Error(ctx, "get http resp failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
 		return "", err
 	}
 	respData := new(CDNServiceResponse)
 	err = json.Unmarshal(respBody, respData)
 	if err != nil {
+		log.Error(ctx, "parse http resp failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("response", string(respBody)),
+			log.Err(err),
+		)
 		return "", err
 	}
 	if len(respData.Result) < 1 {
+		log.Error(ctx, "parse http resp failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("response", string(respBody)),
+			log.Any("respData", respData),
+			log.Err(err),
+		)
 		return "", ErrInvalidCDNSignatureServiceResponse
 	}
 
