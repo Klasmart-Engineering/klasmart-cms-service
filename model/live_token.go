@@ -68,7 +68,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error) {
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
-		Type:   string(entity.LiveTokenTypeLive),
+		Type:   string(entity.LiveTokenTypePreview),
 	}
 
 	name, err := s.getUserName(ctx, op)
@@ -174,7 +174,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 	for i, item := range contentList {
 		materialItem := &entity.LiveMaterial{
 			Name:     item.Name,
-			TypeName: string(entity.LiveTokenTypeLive),
+			TypeName: string(entity.MaterialTypeH5P),
 		}
 		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
 			entity.LiveTokenEnvPath,
