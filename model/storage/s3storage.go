@@ -287,10 +287,15 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition Storage
 	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
 	keyID := cdnConf.CDNKeyId
 
-	privateKeyDer, err := base64.StdEncoding.DecodeString(cdnConf.CDNPrivateKey)
+	privateKeyBytes, err := ioutil.ReadFile(cdnConf.CDNPrivateKeyPath)
 	if err != nil {
 		return "", err
 	}
+	privateKeyDer, err := base64.StdEncoding.DecodeString(string(privateKeyBytes))
+	if err != nil {
+		return "", err
+	}
+
 	privKey, err := x509.ParsePKCS1PrivateKey(privateKeyDer)
 	if err != nil {
 		return "", err
