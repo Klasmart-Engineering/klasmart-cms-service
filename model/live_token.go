@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -178,9 +179,13 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			Name:     item.Name,
 			TypeName: string(entity.MaterialTypeH5P),
 		}
+		mData, ok := item.Data.(*contentdata.MaterialData)
+		if !ok {
+			continue
+		}
 		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
 			entity.LiveTokenEnvPath,
-			item.ID)
+			mData.Source)
 		materials[i] = materialItem
 	}
 	return materials, nil
