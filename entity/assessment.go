@@ -77,18 +77,18 @@ func (s AssessmentStatus) Valid() bool {
 }
 
 type AssessmentDetailView struct {
-	ID                    string                     `json:"id"`
-	Title                 string                     `json:"title"`
-	Attendances           []AssessmentAttendanceView `json:"attendances"`
-	Subject               AssessmentSubject          `json:"subject"`
-	Teachers              []AssessmentTeacher        `json:"teachers"`
-	ClassEndTime          int64                      `json:"class_end_time"`
-	ClassLength           int                        `json:"class_length"`
-	NumberOfActivities    int                        `json:"number_of_activities"`
-	NumberOfOutcomes      int                        `json:"number_of_outcomes"`
-	CompleteTime          int64                      `json:"complete_time"`
-	Status                AssessmentStatus           `json:"status"`
-	OutcomeAttendanceMaps []OutcomeAttendanceMapView `json:"outcome_attendance_maps"`
+	ID                    string                      `json:"id"`
+	Title                 string                      `json:"title"`
+	Attendances           []*AssessmentAttendanceView `json:"attendances"`
+	Subject               AssessmentSubject           `json:"subject"`
+	Teachers              []*AssessmentTeacher        `json:"teachers"`
+	ClassEndTime          int64                       `json:"class_end_time"`
+	ClassLength           int                         `json:"class_length"`
+	NumberOfActivities    int                         `json:"number_of_activities"`
+	NumberOfOutcomes      int                         `json:"number_of_outcomes"`
+	CompleteTime          int64                       `json:"complete_time"`
+	Status                AssessmentStatus            `json:"status"`
+	OutcomeAttendanceMaps []OutcomeAttendanceMapView  `json:"outcome_attendance_maps"`
 }
 
 type OutcomeAttendanceMapView struct {

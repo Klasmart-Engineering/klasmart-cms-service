@@ -84,7 +84,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			return nil, err
 		}
 		for _, student := range students {
-			result.Attendances = append(result.Attendances, entity.AssessmentAttendanceView{
+			result.Attendances = append(result.Attendances, &entity.AssessmentAttendanceView{
 				ID:   student.ID,
 				Name: student.Name,
 			})
@@ -137,7 +137,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			return nil, err
 		}
 		for _, item := range items {
-			result.Teachers = append(result.Teachers, entity.AssessmentTeacher{
+			result.Teachers = append(result.Teachers, &entity.AssessmentTeacher{
 				ID:   item.ID,
 				Name: item.Name,
 			})
