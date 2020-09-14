@@ -178,7 +178,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			Name:     item.Name,
 			TypeName: string(entity.MaterialTypeH5P),
 		}
-		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
+		materialItem.URL = fmt.Sprintf("/api/%v/h5p-www/play/%v",
 			entity.LiveTokenEnvPath,
 			item.ID)
 		materials[i] = materialItem
