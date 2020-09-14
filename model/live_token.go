@@ -181,6 +181,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 		}
 		mData, ok := item.Data.(*contentdata.MaterialData)
 		if !ok {
+			// TODO
 			continue
 		}
 		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
