@@ -68,7 +68,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error) {
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
-		Type:   string(entity.LiveTokenTypeLive),
+		Type:   string(entity.LiveTokenTypePreview),
 	}
 
 	name, err := s.getUserName(ctx, op)
