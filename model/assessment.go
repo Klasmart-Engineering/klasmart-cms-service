@@ -192,11 +192,27 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 				outcomeMap[outcome.ID] = outcome
 			}
 			outcomeAttendanceItems, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
+			if err != nil {
+				log.Error(ctx, "get assessment detail: batch get outcome attendance failed by assessment id and outcome ids",
+					log.Err(err),
+					log.String("id", id),
+					log.Strings("outcome_ids", outcomeIDs),
+				)
+				return nil, err
+			}
 			outcomeAttendanceMap := map[string][]string{}
 			for _, item := range outcomeAttendanceItems {
 				outcomeAttendanceMap[item.OutcomeID] = append(outcomeAttendanceMap[item.OutcomeID], item.AttendanceID)
 			}
 			assessmentOutcomeItems, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
+			if err != nil {
+				log.Error(ctx, "get assessment detail: batch get assessment outcome failed by assessment id and outcome ids",
+					log.Err(err),
+					log.String("id", id),
+					log.Strings("outcome_ids", outcomeIDs),
+				)
+				return nil, err
+			}
 			assessmentOutcomeMap := map[string]entity.AssessmentOutcome{}
 			for _, item := range assessmentOutcomeItems {
 				assessmentOutcomeMap[item.OutcomeID] = *item
