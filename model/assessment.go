@@ -193,7 +193,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			}
 			outcomeAttendanceItems, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
 			if err != nil {
-				log.Error(ctx, "get assessment detail: batch get outcome attendance failed by assessment id and outcome ids",
+				log.Error(ctx, "get assessment detail: batch get outcome attendances failed by assessment id and outcome ids",
 					log.Err(err),
 					log.String("id", id),
 					log.Strings("outcome_ids", outcomeIDs),
@@ -206,7 +206,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			}
 			assessmentOutcomeItems, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
 			if err != nil {
-				log.Error(ctx, "get assessment detail: batch get assessment outcome failed by assessment id and outcome ids",
+				log.Error(ctx, "get assessment detail: batch get assessment outcomes failed by assessment id and outcome ids",
 					log.Err(err),
 					log.String("id", id),
 					log.Strings("outcome_ids", outcomeIDs),
