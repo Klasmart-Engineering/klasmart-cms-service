@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	"github.com/dgrijalva/jwt-go"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -18,7 +20,8 @@ type Config struct {
 	DBConfig      DBConfig       `yaml:"db_config"`
 	RedisConfig   RedisConfig    `yaml:"redis_config"`
 
-	CryptoConfig  CryptoConfig	  `yaml:"crypto_config"`
+	CryptoConfig    CryptoConfig    `yaml:"crypto_config"`
+	LiveTokenConfig LiveTokenConfig `yaml:"live_token_config"`
 }
 
 var config *Config
@@ -71,6 +74,11 @@ type ScheduleConfig struct {
 	CacheExpiration time.Duration `yaml:"cache_expiration"`
 }
 
+type LiveTokenConfig struct {
+	PrivateKey interface{} `yaml:"private_key"`
+	//PublicKey  string      `yaml:"public_key"`
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -87,6 +95,7 @@ func LoadEnvConfig() {
 	loadRedisEnvConfig(ctx)
 	loadScheduleEnvConfig(ctx)
 	loadCryptoEnvConfig(ctx)
+	loadLiveTokenEnvConfig(ctx)
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
@@ -204,6 +213,19 @@ func loadDBEnvConfig(ctx context.Context) {
 	}
 	config.DBConfig.ShowSQL = showSQL
 
+}
+
+func loadLiveTokenEnvConfig(ctx context.Context) {
+	privateKeyPath := os.Getenv("live_token_private_key_path") //"./live_token_private_key.pem"
+	content, err := ioutil.ReadFile(privateKeyPath)
+	if err != nil {
+		log.Panic(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
+	}
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(content))
+	if err != nil {
+		log.Panic(ctx, "CreateJWT:create jwt error", log.Err(err))
+	}
+	config.LiveTokenConfig.PrivateKey = key
 }
 
 func Get() *Config {

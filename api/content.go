@@ -35,7 +35,7 @@ func (s *Server) createContent(c *gin.Context) {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest,L(Unknown))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case model.ErrInvalidContentData:
@@ -66,7 +66,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err := model.GetContentModel().PublishContentBulk(ctx, tx, ids.ID, op)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		return nil
@@ -174,7 +174,7 @@ func (s *Server) lockContent(c *gin.Context) {
 	cid := c.Param("content_id")
 	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
 		ncid, err := model.GetContentModel().LockContent(ctx, tx, cid, op)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 		return ncid, nil
@@ -211,7 +211,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err = model.GetContentModel().DeleteContentBulk(ctx, tx, ids.ID, op)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		return nil
@@ -233,7 +233,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		return nil
@@ -379,9 +379,9 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//}
 	if contentTypeStr != "" {
 		contentTypeList := strings.Split(contentTypeStr, ",")
-		for i := range contentTypeList{
+		for i := range contentTypeList {
 			contentType, err := strconv.Atoi(contentTypeList[i])
-			if err != nil{
+			if err != nil {
 				log.Warn(c.Request.Context(), "parse contentType failed", log.Err(err), log.String("contentType", contentTypeStr))
 				continue
 			}

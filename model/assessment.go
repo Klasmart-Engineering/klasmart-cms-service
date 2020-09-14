@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -38,7 +39,7 @@ type assessmentModel struct{}
 func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id string) (*entity.AssessmentDetailView, error) {
 	var result entity.AssessmentDetailView
 
-	item, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
+	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get from da failed",
 			log.Err(err),
@@ -47,12 +48,12 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 		return nil, err
 	}
 	result = entity.AssessmentDetailView{
-		ID:           item.ID,
-		Title:        item.Title,
-		ClassEndTime: item.ClassEndTime,
-		ClassLength:  item.ClassLength,
-		CompleteTime: item.CompleteTime,
-		Status:       item.Status,
+		ID:           assessment.ID,
+		Title:        assessment.Title,
+		ClassEndTime: assessment.ClassEndTime,
+		ClassLength:  assessment.ClassLength,
+		CompleteTime: assessment.CompleteTime,
+		Status:       assessment.Status,
 	}
 
 	// fill attendances
@@ -83,7 +84,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			return nil, err
 		}
 		for _, student := range students {
-			result.Attendances = append(result.Attendances, entity.AssessmentAttendanceView{
+			result.Attendances = append(result.Attendances, &entity.AssessmentAttendanceView{
 				ID:   student.ID,
 				Name: student.Name,
 			})
@@ -92,46 +93,66 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 
 	// fill subject
 	{
-		nameMap, err := a.getSubjectNameMap(ctx, []string{item.SubjectID})
+		nameMap, err := a.getSubjectNameMap(ctx, []string{assessment.SubjectID})
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get subject name map failed",
 				log.Err(err),
 				log.String("id", id),
-				log.String("subject_id", item.SubjectID),
+				log.String("subject_id", assessment.SubjectID),
 			)
 			return nil, err
 		}
 		result.Subject = entity.AssessmentSubject{
-			ID:   item.SubjectID,
-			Name: nameMap[item.SubjectID],
+			ID:   assessment.SubjectID,
+			Name: nameMap[assessment.SubjectID],
 		}
 	}
 
 	// fill teacher
 	{
-		nameMap, err := a.getTeacherNameMap(ctx, []string{item.TeacherID})
+		teacherIDs, err := assessment.DecodeTeacherIDs()
 		if err != nil {
-			log.Error(ctx, "get assessment detail: get teacher name map failed",
+			log.Error(ctx, "get assessment detail: decode teacher ids failed",
 				log.Err(err),
 				log.String("id", id),
-				log.String("teacher_id", item.TeacherID),
+				log.Any("assessment", assessment),
 			)
 			return nil, err
 		}
-		result.Teacher = entity.AssessmentTeacher{
-			ID:   item.TeacherID,
-			Name: nameMap[item.TeacherID],
+		teacherNameService, err := external.GetTeacherServiceProvider()
+		if err != nil {
+			log.Error(ctx, "get assessment detail: get teacher service failed",
+				log.Err(err),
+				log.Strings("teacher_ids", teacherIDs),
+				log.Any("id", id),
+			)
+			return nil, err
+		}
+		items, err := teacherNameService.BatchGet(ctx, teacherIDs)
+		if err != nil {
+			log.Error(ctx, "get assessment detail: batch get teacher failed",
+				log.Err(err),
+				log.Strings("teacher_ids", teacherIDs),
+				log.Any("id", id),
+			)
+			return nil, err
+		}
+		for _, item := range items {
+			result.Teachers = append(result.Teachers, &entity.AssessmentTeacher{
+				ID:   item.ID,
+				Name: item.Name,
+			})
 		}
 	}
 
 	// fill number of outcomes and activities
 	{
-		schedule, err := GetScheduleModel().GetPlainByID(ctx, item.ScheduleID)
+		schedule, err := GetScheduleModel().GetPlainByID(ctx, assessment.ScheduleID)
 		if err != nil {
 			log.Error(ctx, "add assessment: get schedule failed by id",
 				log.Err(err),
 				log.Any("id", id),
-				log.Any("schedule_id", item.ScheduleID),
+				log.Any("schedule_id", assessment.ScheduleID),
 			)
 			return nil, err
 		}
@@ -170,36 +191,39 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			for _, outcome := range outcomes {
 				outcomeMap[outcome.ID] = outcome
 			}
-			outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
-			outcomeAttendanceMap := map[string]*struct {
-				AttendanceIDs []string
-				Skip          bool
-			}{}
-			for _, item := range outcomeAttendances {
-				if _, ok := outcomeAttendanceMap[item.OutcomeID]; !ok {
-					outcomeAttendanceMap[item.OutcomeID] = &struct {
-						AttendanceIDs []string
-						Skip          bool
-					}{}
-				}
-				outcomeAttendanceMap[item.OutcomeID].AttendanceIDs = append(outcomeAttendanceMap[item.OutcomeID].AttendanceIDs, item.AttendanceID)
-			}
+			outcomeAttendanceItems, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
 			if err != nil {
-				log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
+				log.Error(ctx, "get assessment detail: batch get outcome attendances failed by assessment id and outcome ids",
 					log.Err(err),
+					log.String("id", id),
 					log.Strings("outcome_ids", outcomeIDs),
 				)
 				return nil, err
 			}
+			outcomeAttendanceMap := map[string][]string{}
+			for _, item := range outcomeAttendanceItems {
+				outcomeAttendanceMap[item.OutcomeID] = append(outcomeAttendanceMap[item.OutcomeID], item.AttendanceID)
+			}
+			assessmentOutcomeItems, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
+			if err != nil {
+				log.Error(ctx, "get assessment detail: batch get assessment outcomes failed by assessment id and outcome ids",
+					log.Err(err),
+					log.String("id", id),
+					log.Strings("outcome_ids", outcomeIDs),
+				)
+				return nil, err
+			}
+			assessmentOutcomeMap := map[string]entity.AssessmentOutcome{}
+			for _, item := range assessmentOutcomeItems {
+				assessmentOutcomeMap[item.OutcomeID] = *item
+			}
 			for _, outcome := range outcomes {
 				newItem := entity.OutcomeAttendanceMapView{
-					OutcomeID:   outcome.ID,
-					OutcomeName: outcome.Name,
-					Assumed:     outcome.Assumed,
-				}
-				if outcomeAttendanceMap[outcome.ID] != nil {
-					newItem.Skip = outcomeAttendanceMap[outcome.ID].Skip
-					newItem.AttendanceIDs = outcomeAttendanceMap[outcome.ID].AttendanceIDs
+					OutcomeID:     outcome.ID,
+					OutcomeName:   outcome.Name,
+					Assumed:       outcome.Assumed,
+					AttendanceIDs: outcomeAttendanceMap[outcome.ID],
+					Skip:          assessmentOutcomeMap[outcome.ID].Skip,
 				}
 				result.OutcomeAttendanceMaps = append(result.OutcomeAttendanceMaps, newItem)
 			}
@@ -266,10 +290,16 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 	}
 
 	var subjectIDs, programIDs, teacherIDs []string
+
 	for _, item := range items {
 		subjectIDs = append(subjectIDs, item.SubjectID)
 		programIDs = append(programIDs, item.ProgramID)
-		teacherIDs = append(teacherIDs, item.TeacherID)
+		teacherIDs, err := item.DecodeTeacherIDs()
+		if err != nil {
+			log.Error(ctx, "list assessment: decode teacher ids failed")
+			return nil, err
+		}
+		teacherIDs = append(teacherIDs, teacherIDs...)
 	}
 
 	subjectNameMap, err := a.getSubjectNameMap(ctx, subjectIDs)
@@ -301,7 +331,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 
 	result := entity.ListAssessmentsResult{Total: total}
 	for _, item := range items {
-		result.Items = append(result.Items, &entity.AssessmentListView{
+		newItem := entity.AssessmentListView{
 			ID:    item.ID,
 			Title: item.Title,
 			Subject: entity.AssessmentSubject{
@@ -312,14 +342,26 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 				ID:   item.ProgramID,
 				Name: programNameMap[item.ProgramID],
 			},
-			Teacher: entity.AssessmentTeacher{
-				ID:   item.TeacherID,
-				Name: teacherNameMap[item.TeacherID],
-			},
 			ClassEndTime: item.ClassEndTime,
 			CompleteTime: item.CompleteTime,
 			Status:       item.Status,
-		})
+		}
+		teacherIDs, err := item.DecodeTeacherIDs()
+		if err != nil {
+			log.Error(ctx, "list assessment: decode teacher ids failed",
+				log.Err(err),
+				log.Any("item", item),
+				log.Any("cmd", cmd),
+			)
+			return nil, err
+		}
+		for _, teacherID := range teacherIDs {
+			newItem.Teachers = append(newItem.Teachers, entity.AssessmentTeacher{
+				ID:   teacherID,
+				Name: teacherNameMap[teacherID],
+			})
+		}
+		result.Items = append(result.Items, &newItem)
 	}
 
 	return &result, err
@@ -397,73 +439,38 @@ func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []st
 	return teacherNameMap, nil
 }
 
+func (a *assessmentModel) getClassNameMap(ctx context.Context, classIDs []string) (map[string]string, error) {
+	classNameMap := map[string]string{}
+	classService, err := external.GetClassServiceProvider()
+	if err != nil {
+		log.Error(ctx, "get class name map: get class service failed",
+			log.Err(err),
+			log.Strings("class_ids", classIDs),
+		)
+		return nil, err
+	}
+	items, err := classService.BatchGet(ctx, classIDs)
+	if err != nil {
+		log.Error(ctx, "get class name map: batch get class failed",
+			log.Err(err),
+			log.Strings("class_ids", classIDs),
+		)
+		return nil, err
+	}
+	for _, item := range items {
+		classNameMap[item.ID] = item.Name
+	}
+	return classNameMap, nil
+}
+
 func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentCommand) (string, error) {
-	// validate teacher id
+	var (
+		outcomeIDs []string
+		schedule   *entity.SchedulePlain
+	)
 	{
-		ok, err := a.existsTeacherByID(ctx, cmd.TeacherID)
-		if err != nil {
-			log.Error(ctx, "add assessment: check teacher exists failed",
-				log.Err(err),
-				log.Any("cmd", cmd),
-				log.String("teacher_id", cmd.TeacherID),
-			)
-			return "", err
-		}
-		if !ok {
-			log.Info(ctx, "add assessment: teacher not found by id",
-				log.Err(err),
-				log.Any("cmd", cmd),
-				log.String("teacher_id", cmd.TeacherID),
-			)
-			return "", constant.ErrInvalidArgs
-		}
-	}
-
-	// validate subject id
-	{
-		ok, err := a.existsSubjectByID(ctx, cmd.SubjectID)
-		if err != nil {
-			log.Error(ctx, "add assessment: check subject exists failed",
-				log.Err(err),
-				log.Any("cmd", cmd),
-				log.String("subject_id", cmd.SubjectID),
-			)
-			return "", err
-		}
-		if !ok {
-			log.Info(ctx, "add assessment: subject not found by id",
-				log.Err(err),
-				log.Any("cmd", cmd),
-				log.String("subject_id", cmd.SubjectID),
-			)
-			return "", constant.ErrInvalidArgs
-		}
-	}
-
-	// validate program id
-	{
-		ok, err := a.existsProgramByID(ctx, cmd.ProgramID)
-		if err != nil {
-			log.Error(ctx, "add assessment: check program exists failed",
-				log.Err(err),
-				log.Any("cmd", cmd),
-				log.String("program_id", cmd.ProgramID),
-			)
-			return "", err
-		}
-		if !ok {
-			log.Info(ctx, "add assessment: program not found by id",
-				log.Err(err),
-				log.Any("cmd", cmd),
-				log.String("program_id", cmd.ProgramID),
-			)
-			return "", constant.ErrInvalidArgs
-		}
-	}
-
-	var outcomeIDs []string
-	{
-		schedule, err := GetScheduleModel().GetPlainByID(ctx, cmd.ScheduleID)
+		var err error
+		schedule, err = GetScheduleModel().GetPlainByID(ctx, cmd.ScheduleID)
 		if err != nil {
 			log.Error(ctx, "add assessment: get schedule failed by id",
 				log.Err(err),
@@ -495,14 +502,29 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 			newItem := entity.Assessment{
 				ID:           newID,
 				ScheduleID:   cmd.ScheduleID,
-				Title:        cmd.Title(),
-				ProgramID:    cmd.ProgramID,
-				SubjectID:    cmd.SubjectID,
-				TeacherID:    cmd.TeacherID,
+				ProgramID:    schedule.ProgramID,
+				SubjectID:    schedule.SubjectID,
 				ClassLength:  cmd.ClassLength,
 				ClassEndTime: cmd.ClassEndTime,
 				CreateAt:     nowUnix,
 				UpdateAt:     nowUnix,
+			}
+			classNameMap, err := a.getClassNameMap(ctx, []string{schedule.ClassID})
+			if err != nil {
+				log.Error(ctx, "add assessment: get class name map failed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+			newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], newItem.Title)
+			if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
+				log.Error(ctx, "add assessment: encode and set teacher ids failed",
+					log.Err(err),
+					log.Strings("teacher_ids", schedule.TeacherIDs),
+					log.Any("cmd", cmd),
+				)
+				return err
 			}
 			if len(outcomeIDs) == 0 {
 				newItem.Status = entity.AssessmentStatusComplete
@@ -588,6 +610,10 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 	}
 
 	return newID, nil
+}
+
+func (a *assessmentModel) title(classEndTime int64, className string, lessonName string) string {
+	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, lessonName)
 }
 
 func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmentCommand) error {
@@ -693,26 +719,26 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 	return nil
 }
 
-func (a *assessmentModel) existsTeacherByID(ctx context.Context, id string) (bool, error) {
+func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string) (bool, error) {
 	teacherService, err := external.GetTeacherServiceProvider()
 	if err != nil {
 		log.Error(ctx, "check teacher exists: get teacher service failed",
 			log.Err(err),
-			log.String("id", id),
+			log.Strings("ids", ids),
 		)
 	}
-	if _, err := teacherService.BatchGet(ctx, []string{id}); err != nil {
+	if _, err := teacherService.BatchGet(ctx, ids); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 			log.Info(ctx, "check teacher exists: not found teachers",
 				log.Err(err),
-				log.String("id", id),
+				log.Strings("ids", ids),
 			)
 			return false, nil
 		default:
 			log.Error(ctx, "check teacher exists: batch get teachers failed",
 				log.Err(err),
-				log.String("id", id),
+				log.Strings("ids", ids),
 			)
 			return false, err
 		}

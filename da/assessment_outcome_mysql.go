@@ -11,6 +11,7 @@ import (
 
 type IAssessmentOutcomeDA interface {
 	GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
+	BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.AssessmentOutcome, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	UpdateSkipField(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeID string, skip bool) error
@@ -82,4 +83,15 @@ func (d *assessmentOutcomeDA) UpdateSkipField(ctx context.Context, tx *dbo.DBCon
 		return err
 	}
 	return nil
+}
+
+func (d *assessmentOutcomeDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.AssessmentOutcome, error) {
+	var items []*entity.AssessmentOutcome
+	if err := tx.
+		Where("assessment_id = ?", assessmentID).
+		Where("outcome_id in (?)", outcomeIDs).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
 }

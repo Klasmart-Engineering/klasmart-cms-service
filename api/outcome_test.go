@@ -80,19 +80,20 @@ func TestQueryOutcome(t *testing.T) {
 }
 
 func TestLockOutcome(t *testing.T) {
-	outcomeID := "5f5726af0944d7c38e20696f"
+	// 5f5f3e5187b49d411d747cd0
+	outcomeID := "5f5f3e12f6521cd26d88da97"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/lock", "")
 	fmt.Println(res)
 }
 
 func TestPublishOutcome(t *testing.T) {
-	outcomeID := "5f5728fc14a58b1efaa90ade"
+	outcomeID := "5f5f3e12f6521cd26d88da97"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/publish", "")
 	fmt.Println(res)
 }
 
 func TestApproveOutcome(t *testing.T) {
-	outcomeID := "5f5728fc14a58b1efaa90ade"
+	outcomeID := "5f5f3e12f6521cd26d88da97"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/approve", "")
 	fmt.Println(res)
 }

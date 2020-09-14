@@ -1,8 +1,7 @@
 package entity
 
 import (
-	"fmt"
-	"time"
+	"encoding/json"
 )
 
 type Assessment struct {
@@ -11,7 +10,7 @@ type Assessment struct {
 	Title        string           `gorm:"column:title;type:varchar(1024);not null" json:"title"`
 	ProgramID    string           `gorm:"column:program_id;type:varchar(64);not null" json:"program_id"`
 	SubjectID    string           `gorm:"column:subject_id;type:varchar(64);not null" json:"subject"`
-	TeacherID    string           `gorm:"column:teacher_id;type:varchar(64);not null" json:"teacher_id"`
+	TeacherIDs   string           `gorm:"column:teacher_ids;type:json;not null" json:"teacher_ids"`
 	ClassLength  int              `gorm:"column:class_length;type:int;not null" json:"class_length"`
 	ClassEndTime int64            `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
 	CompleteTime int64            `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
@@ -26,15 +25,39 @@ func (Assessment) TableName() string {
 	return "assessments"
 }
 
+func (a Assessment) DecodeTeacherIDs() ([]string, error) {
+	if a.TeacherIDs == "[]" {
+		return nil, nil
+	}
+	var result []string
+	if err := json.Unmarshal([]byte(a.TeacherIDs), &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (a *Assessment) EncodeAndSetTeacherIDs(teacherIDs []string) error {
+	if len(teacherIDs) == 0 {
+		a.TeacherIDs = "[]"
+		return nil
+	}
+	bs, err := json.Marshal(teacherIDs)
+	if err != nil {
+		return err
+	}
+	a.TeacherIDs = string(bs)
+	return nil
+}
+
 type AssessmentListView struct {
-	ID           string            `json:"id"`
-	Title        string            `json:"title"`
-	Subject      AssessmentSubject `json:"subject"`
-	Program      AssessmentProgram `json:"program"`
-	Teacher      AssessmentTeacher `json:"teacher"`
-	ClassEndTime int64             `json:"class_end_time"`
-	CompleteTime int64             `json:"complete_time"`
-	Status       AssessmentStatus  `json:"status"`
+	ID           string              `json:"id"`
+	Title        string              `json:"title"`
+	Subject      AssessmentSubject   `json:"subject"`
+	Program      AssessmentProgram   `json:"program"`
+	Teachers     []AssessmentTeacher `json:"teachers"`
+	ClassEndTime int64               `json:"class_end_time"`
+	CompleteTime int64               `json:"complete_time"`
+	Status       AssessmentStatus    `json:"status"`
 }
 
 type AssessmentStatus string
@@ -54,18 +77,18 @@ func (s AssessmentStatus) Valid() bool {
 }
 
 type AssessmentDetailView struct {
-	ID                    string                     `json:"id"`
-	Title                 string                     `json:"title"`
-	Attendances           []AssessmentAttendanceView `json:"attendances"`
-	Subject               AssessmentSubject          `json:"subject"`
-	Teacher               AssessmentTeacher          `json:"teacher"`
-	ClassEndTime          int64                      `json:"class_end_time"`
-	ClassLength           int                        `json:"class_length"`
-	NumberOfActivities    int                        `json:"number_of_activities"`
-	NumberOfOutcomes      int                        `json:"number_of_outcomes"`
-	CompleteTime          int64                      `json:"complete_time"`
-	Status                AssessmentStatus           `json:"status"`
-	OutcomeAttendanceMaps []OutcomeAttendanceMapView `json:"outcome_attendance_maps"`
+	ID                    string                      `json:"id"`
+	Title                 string                      `json:"title"`
+	Attendances           []*AssessmentAttendanceView `json:"attendances"`
+	Subject               AssessmentSubject           `json:"subject"`
+	Teachers              []*AssessmentTeacher        `json:"teachers"`
+	ClassEndTime          int64                       `json:"class_end_time"`
+	ClassLength           int                         `json:"class_length"`
+	NumberOfActivities    int                         `json:"number_of_activities"`
+	NumberOfOutcomes      int                         `json:"number_of_outcomes"`
+	CompleteTime          int64                       `json:"complete_time"`
+	Status                AssessmentStatus            `json:"status"`
+	OutcomeAttendanceMaps []OutcomeAttendanceMapView  `json:"outcome_attendance_maps"`
 }
 
 type OutcomeAttendanceMapView struct {
@@ -152,24 +175,16 @@ type ListAssessmentsResult struct {
 }
 
 type AddAssessmentCommand struct {
-	ScheduleID    string   `json:"schedule_id"`
-	ClassID       string   `json:"class_id"`
-	ClassName     string   `json:"class_name"`
-	LessonName    string   `json:"lesson_name"`
+	ScheduleID string `json:"schedule_id"`
+	//ClassID    string `json:"class_id"`
+	//ClassName     string   `json:"class_name"`
+	//LessonName    string   `json:"lesson_name"`
 	AttendanceIDs []string `json:"attendance_ids"`
-	ProgramID     string   `json:"program_id"`
-	SubjectID     string   `json:"subject_id"`
-	TeacherID     string   `json:"teacher_id"`
-	ClassLength   int      `json:"class_length"`
-	ClassEndTime  int64    `json:"class_end_time"`
-}
-
-func (cmd AddAssessmentCommand) Title() string {
-	return fmt.Sprintf("%s-%s-%s",
-		time.Unix(cmd.ClassEndTime, 0).Format("20060102"),
-		cmd.ClassName,
-		cmd.LessonName,
-	)
+	//ProgramID     string   `json:"program_id"`
+	//SubjectID     string   `json:"subject_id"`
+	//TeacherIDs    []string `json:"teacher_ids"`
+	ClassLength  int   `json:"class_length"`
+	ClassEndTime int64 `json:"class_end_time"`
 }
 
 type UpdateAssessmentCommand struct {
