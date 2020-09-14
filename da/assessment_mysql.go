@@ -100,12 +100,12 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 
 	if c.TeacherIDs != nil && len(*c.TeacherIDs) > 0 {
 		var (
-			teacherFormats []string
-			teacherValues  []interface{}
+			teacherFormats = make([]string, 0, len(*c.TeacherIDs))
+			teacherValues  = make([]interface{}, 0, len(*c.TeacherIDs))
 		)
-		for _, teacherID := range *c.TeacherIDs {
-			teacherFormats = append(teacherFormats, fmt.Sprintf("json_contains(teacher_ids, json_array(?))"))
-			teacherValues = append(teacherValues, teacherID)
+		for i, teacherID := range *c.TeacherIDs {
+			teacherFormats[i] = fmt.Sprintf("json_contains(teacher_ids, json_array(?))")
+			teacherValues[i] = teacherID
 		}
 		formats = append(formats, "("+strings.Join(teacherFormats, " or ")+")")
 		values = append(values, teacherValues...)
