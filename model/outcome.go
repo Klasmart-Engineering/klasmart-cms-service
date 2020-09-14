@@ -194,6 +194,18 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 			return err
 		}
 
+		if outcome.LockedBy == operator.UserID {
+			copyValue, err := da.GetOutcomeDA().GetOutcomeBySourceID(ctx, tx, outcomeID)
+			if err != nil {
+				log.Error(ctx, "LockLearningOutcome: GetOutcomeBySourceID failed",
+					log.String("op", operator.UserID),
+					log.String("outcome_id", outcomeID))
+				return err
+			}
+			newVersion = *copyValue
+			return nil
+		}
+
 		err = ocm.lockOutcome(ctx, tx, outcome, operator)
 		if err != nil {
 			return err

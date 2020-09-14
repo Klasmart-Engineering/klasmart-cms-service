@@ -228,6 +228,17 @@ func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id 
 	return &outcome, nil
 }
 
+func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
+	var outcome entity.Outcome
+	sql := fmt.Sprintf("select * from %s where source_id='%s'", outcome.TableName(), sourceID)
+	err := tx.Raw(sql).Scan(&outcome).Error
+	if err != nil {
+		log.Error(ctx, "GetOutcomeByID: GetTx failed", log.Err(err), log.Any("outcome", outcome))
+		return nil, err
+	}
+	return &outcome, nil
+}
+
 func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (total int, outcomes []*entity.Outcome, err error) {
 	total, err = o.PageTx(ctx, tx, condition, &outcomes)
 	if err != nil {

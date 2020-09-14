@@ -13,6 +13,7 @@ type IOutcomeDA interface {
 	DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error
 
 	GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Outcome, error)
+	GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error)
 	SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (int, []*entity.Outcome, error)
 
 	UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error
