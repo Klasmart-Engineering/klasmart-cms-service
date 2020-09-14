@@ -23,14 +23,13 @@ func (s *Server) getUploadPath(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
-			"path":       path,
+			"path":        path,
 			"resource_id": name,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
-
 
 func (s *Server) getPath(c *gin.Context) {
 	ctx := c.Request.Context()
