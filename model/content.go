@@ -717,16 +717,22 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		log.Error(ctx, "can't get sub contents", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
-	subContentMap := make(map[string]string, len(subContents))
+	subContentMap := make(map[string]*entity.Content, len(subContents))
 	for i := range subContents{
-		subContentMap[subContents[i].ID] = subContents[i].Name
+		subContentMap[subContents[i].ID] = subContents[i]
 	}
 
 	ret := make([]*entity.SubContentsWithName, len(ids))
 	for i := range ids {
+		cd, err := contentdata.CreateContentData(ctx, subContentMap[ids[i]].ContentType, subContentMap[ids[i]].Data)
+		if err != nil{
+			log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", subContentMap[ids[i]]))
+			return nil, err
+		}
 		ret[i] = &entity.SubContentsWithName{
 			ID:   ids[i],
-			Name: subContentMap[ids[i]],
+			Name: subContentMap[ids[i]].Name,
+			Data: cd,
 		}
 	}
 
