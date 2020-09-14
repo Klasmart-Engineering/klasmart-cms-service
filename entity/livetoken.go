@@ -25,6 +25,7 @@ type LiveTokenInfo struct {
 	UserID     string          `json:"user_id,omitempty"`
 	Type       string          `json:"type"`
 	Teacher    bool            `json:"teacher"`
+	RoomID     string          `json:"roomid"`
 	Materials  []*LiveMaterial `json:"materials,omitempty"`
 }
 
