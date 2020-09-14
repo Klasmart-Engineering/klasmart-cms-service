@@ -43,7 +43,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	liveTokenInfo.Teacher = op.Role == entity.RoleTeacher
+	liveTokenInfo.Teacher = true //op.Role == entity.RoleTeacher
 
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	liveTokenInfo.Teacher = op.Role == entity.RoleTeacher
+	liveTokenInfo.Teacher = true //op.Role == entity.RoleTeacher
 
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, contentID)
 	if err != nil {
