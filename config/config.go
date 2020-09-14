@@ -220,7 +220,6 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 	content, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
 		log.Panic(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
-		return
 	}
 	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(content))
 	if err != nil {
