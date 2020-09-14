@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"github.com/dgrijalva/jwt-go"
 	"os"
 	"strconv"
 	"strings"
@@ -220,12 +221,7 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 	//	log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
 	//	return
 	//}
-	//key, err := jwt.ParseRSAPrivateKeyFromPEM(content)
-	//if err != nil {
-	//	log.Panic(ctx, "CreateJWT:create jwt error", log.Err(err))
-	//}
-	//config.LiveTokenConfig.PrivateKey = key
-	config.LiveTokenConfig.PrivateKey = `
+	content := `
 	-----BEGIN RSA PRIVATE KEY-----
 	MIICXQIBAAKBgQDAGN9KAcc61KBz8EQAH54bFwGK6PEQNVXXlsObwFd3Zos83bRm
 	+3grzP0pKWniZ6TL/y7ZgFh4OlUMh9qJjIt6Lpz9l4uDxkgDDrKHn8IrflBxjJKq
@@ -242,6 +238,11 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 	byUU2j8ZyKNaLnzwnHUOoolzxoaUryO+vdWT+Sy7y73D
 	-----END RSA PRIVATE KEY-----
 	`
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(content))
+	if err != nil {
+		log.Panic(ctx, "CreateJWT:create jwt error", log.Err(err))
+	}
+	config.LiveTokenConfig.PrivateKey = key
 }
 
 func Get() *Config {
