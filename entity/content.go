@@ -362,6 +362,7 @@ type ContentName struct {
 type SubContentsWithName struct {
 	ID string `json:"id"`
 	Name string `json:"name"`
+	Data ContentData `json:"data"`
 }
 
 type ContentInfo struct {
