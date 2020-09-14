@@ -99,7 +99,7 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 
 	if c.TeacherIDs != nil && len(*c.TeacherIDs) > 0 {
 		for _, teacherID := range *c.TeacherIDs {
-			formats = append(formats, fmt.Sprintf("json_contains(teacher_ids, ?)"))
+			formats = append(formats, fmt.Sprintf("json_contains(teacher_ids, json_array(?))"))
 			values = append(values, teacherID)
 		}
 	}
