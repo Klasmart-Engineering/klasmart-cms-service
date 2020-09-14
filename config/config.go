@@ -219,7 +219,7 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 	privateKeyPath := os.Getenv("live_token_private_key_path") //"./live_token_private_key.pem"
 	content, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
-		log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
+		log.Panic(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
 		return
 	}
 	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(content))
