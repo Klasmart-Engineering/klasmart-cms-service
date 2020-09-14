@@ -27,6 +27,7 @@ type OutcomeCondition struct {
 	AuthorID       sql.NullString
 	Assumed        sql.NullBool
 	OrganizationID sql.NullString
+	SourceID       sql.NullString
 	FuzzyKey       sql.NullString
 
 	OrderBy OutcomeOrderBy `json:"order_by"`
@@ -89,6 +90,11 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	if c.OrganizationID.Valid {
 		wheres = append(wheres, "organization_id=?")
 		params = append(params, c.OrganizationID.String)
+	}
+
+	if c.SourceID.Valid {
+		wheres = append(wheres, "source_id=?")
+		params = append(params, c.SourceID.String)
 	}
 
 	if c.Assumed.Valid {
@@ -223,6 +229,20 @@ func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id 
 	err := o.GetTx(ctx, tx, id, &outcome)
 	if err != nil {
 		log.Error(ctx, "GetOutcomeByID: GetTx failed", log.Err(err), log.Any("outcome", outcome))
+		return nil, err
+	}
+	return &outcome, nil
+}
+
+func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
+	var outcome entity.Outcome
+	err := o.QueryTx(ctx, tx, &OutcomeCondition{SourceID: sql.NullString{String: sourceID, Valid: true}}, &outcome)
+	//sql := fmt.Sprintf("select * from %s where source_id='%s'", outcome.TableName(), sourceID)
+	//err := tx.Raw(sql).Scan(&outcome).Error
+	if err != nil {
+		log.Error(ctx, "GetOutcomeBySourceID: GetTx failed",
+			log.Err(err),
+			log.String("source_id", sourceID))
 		return nil, err
 	}
 	return &outcome, nil
