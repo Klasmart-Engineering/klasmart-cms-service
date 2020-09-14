@@ -30,6 +30,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   string(entity.LiveTokenTypeLive),
+		RoomID: utils.NewID(),
 	}
 	liveTokenInfo.ScheduleID = schedule.ID
 
@@ -69,6 +70,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   string(entity.LiveTokenTypePreview),
+		RoomID: utils.NewID(),
 	}
 
 	name, err := s.getUserName(ctx, op)
