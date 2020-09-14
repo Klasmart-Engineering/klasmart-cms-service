@@ -98,12 +98,10 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.TeacherIDs != nil && len(*c.TeacherIDs) > 0 {
-		temp := entity.NullStrings{
-			Strings: *c.TeacherIDs,
-			Valid:   true,
+		for _, teacherID := range *c.TeacherIDs {
+			formats = append(formats, fmt.Sprintf("json_contains(teacher_ids, ?)"))
+			values = append(values, teacherID)
 		}
-		formats = append(formats, fmt.Sprintf("json_contains(teacher_ids, json_array(%s))", temp.SQLPlaceHolder()))
-		values = append(values, temp.ToInterfaceSlice()...)
 	}
 
 	return formats, values
