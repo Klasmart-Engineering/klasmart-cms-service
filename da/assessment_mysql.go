@@ -102,7 +102,7 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 			Strings: *c.TeacherIDs,
 			Valid:   true,
 		}
-		formats = append(formats, fmt.Sprintf("teacher_id in (%s)", temp.SQLPlaceHolder()))
+		formats = append(formats, fmt.Sprintf("json_contains(teacher_ids, json_array(%s)", temp.SQLPlaceHolder()))
 		values = append(values, temp.ToInterfaceSlice()...)
 	}
 
