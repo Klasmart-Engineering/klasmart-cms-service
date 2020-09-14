@@ -15,6 +15,7 @@ import (
 
 var (
 	ErrInvalidUploadPartition = errors.New("unknown storage partition")
+	ErrInvalidPrivateKeyFile = errors.New("invalid private key file")
 )
 
 const (
