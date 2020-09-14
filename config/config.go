@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"github.com/dgrijalva/jwt-go"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -215,29 +216,11 @@ func loadDBEnvConfig(ctx context.Context) {
 }
 
 func loadLiveTokenEnvConfig(ctx context.Context) {
-	//privateKeyPath := os.Getenv("live_token_private_key_path") //"./auth_private_key.pem"
-	//content, err := ioutil.ReadFile(privateKeyPath)
-	//if err != nil {
-	//	log.Error(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
-	//	return
-	//}
-	content := `
------BEGIN RSA PRIVATE KEY-----
-MIICXQIBAAKBgQDAGN9KAcc61KBz8EQAH54bFwGK6PEQNVXXlsObwFd3Zos83bRm
-+3grzP0pKWniZ6TL/y7ZgFh4OlUMh9qJjIt6Lpz9l4uDxkgDDrKHn8IrflBxjJKq
-0OyXqwIYChnFoi/HGjcRtJhi8oTFToSvKMqIeUuLmWmLA8nXdDnMl7zwoQIDAQAB
-AoGAHi0KDn8fA9/Y4L2SgQ52cLz5cg/LpocqV/aH/dSGKOyD3Oja6P6BzyehcTDf
-QECVw7Hvcx1VSHWpXJGOw+K/Ggmt/+k+vxQKOuauFLPV72dKUChYQWXZnUWp7Ok2
-wui1TbW3HIKQ3D5FujjQYxX3V9u8Y777F4icGSR3ie+OvZ0CQQDoqFxun6EBFVp+
-sczV5wLKTjLRicBh+YEg4bMw28BWTlpVK1DA8kLTy9IEicxvj4/57fbyN20LiUW8
-ne0kSWi/AkEA016+q5QGT0xljLiOxufvNNLwHIafPBKQ4CJ36u4yRKOfEvT4b9Kd
-xE8Oh3WnW8vljB2pdQTyYuOAEqcgmUGenwJBALdRyZskzmEjKS4A/OxiXPF5ElPG
-nb7VMOjuzhmmXXPjwwuu2K9fdEacJ/yJc3tH/GMrHNSX1aUsYbWQHoXkDdMCQCn2
-jl4b9iC6JxMH9PiSRVA0bI0NQQG5IeANl8chYQN1hHhMACKbKs01cMn91qsH0Nu/
-a8wanlB5oAyT94nVmDsCQQDctlxgTAyLwqHYdvsfZ+ao6xaTZkrhscU+PL81EXGQ
-byUU2j8ZyKNaLnzwnHUOoolzxoaUryO+vdWT+Sy7y73D
------END RSA PRIVATE KEY-----
-`
+	privateKeyPath := os.Getenv("live_token_private_key_path") //"./live_token_private_key.pem"
+	content, err := ioutil.ReadFile(privateKeyPath)
+	if err != nil {
+		log.Panic(ctx, "loadAuthEnvConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
+	}
 	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(content))
 	if err != nil {
 		log.Panic(ctx, "CreateJWT:create jwt error", log.Err(err))
