@@ -114,9 +114,10 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 		if err != nil {
 			log.Error(ctx, "get assessment detail: decode teacher ids failed",
 				log.Err(err),
+				log.String("id", id),
 				log.Any("assessment", assessment),
-				log.Any("id", id),
 			)
+			return nil, err
 		}
 		teacherNameService, err := external.GetTeacherServiceProvider()
 		if err != nil {
