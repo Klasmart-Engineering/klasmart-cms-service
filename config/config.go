@@ -24,7 +24,7 @@ type Config struct {
 var config *Config
 
 type CryptoConfig struct {
-	PrivateKey string `yaml:"crypto_private_key"`
+	PrivateKeyPath string `yaml:"h5p_private_key_path"`
 }
 
 type RedisConfig struct {
@@ -58,9 +58,9 @@ type CDNConfig struct {
 	CDNOpen bool   `yaml:"cdn_open"`
 	CDNMode string `yaml:"cdn_mode"`
 
-	CDNPath       string `yaml:"cdn_path"`
-	CDNKeyId      string `yaml:"cdn_key_id"`
-	CDNPrivateKey string `yaml:"cdn_private_key"`
+	CDNPath           string `yaml:"cdn_path"`
+	CDNKeyId          string `yaml:"cdn_key_id"`
+	CDNPrivateKeyPath string `yaml:"cdn_private_key_path"`
 
 	CDNServicePath  string `yaml:"cdn_service_path"`
 	CDNServiceToken string `yaml:"cdn_service_token"`
@@ -90,7 +90,7 @@ func LoadEnvConfig() {
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
-	config.CryptoConfig.PrivateKey = os.Getenv("crypto_private_key")
+	config.CryptoConfig.PrivateKeyPath = os.Getenv("h5p_private_key_path")
 }
 
 func loadStorageEnvConfig(ctx context.Context) {
@@ -124,7 +124,7 @@ func loadStorageEnvConfig(ctx context.Context) {
 			config.CDNConfig.CDNServiceToken = assertGetEnv("cdn_service_token")
 		} else if config.CDNConfig.CDNMode == "key" {
 			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
-			config.CDNConfig.CDNPrivateKey = assertGetEnv("cdn_private_key")
+			config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
 		} else {
 			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
 		}
