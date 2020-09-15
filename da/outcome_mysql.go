@@ -38,42 +38,18 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	//var fullMatchValue []string
-	//if c.Name.Valid {
-	//	fullMatchValue = append(fullMatchValue, "+"+c.Name.String)
-	//}
-	//if c.AuthorName.Valid {
-	//	fullMatchValue = append(fullMatchValue, "+"+c.AuthorName.String)
-	//}
-	//if c.Keywords.Valid {
-	//	fullMatchValue = append(fullMatchValue, "+"+c.Keywords.String)
-	//}
-	//if c.Shortcode.Valid {
-	//	fullMatchValue = append(fullMatchValue, "+"+c.Shortcode.String)
-	//}
-	//if c.Description.Valid {
-	//	fullMatchValue = append(fullMatchValue, "+"+c.Description.String)
-	//}
-	//
-	//if len(fullMatchValue) > 0 {
-	//	wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
-	//	params = append(params, strings.TrimSpace(strings.Join(fullMatchValue, " ")))
-	//}
-
 	if c.FuzzyKey.Valid {
 		wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
 		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
 	}
 
 	if c.IDs.Valid {
-		//inValue := strings.TrimSuffix(strings.Repeat("?,", len(c.IDs.Strings)), ",")
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
 	}
 
 	if c.PublishStatus.Valid {
-		inValue := strings.TrimSuffix(strings.Repeat("?,", len(c.PublishStatus.Strings)), ",")
-		wheres = append(wheres, fmt.Sprintf("publish_status in (%s)", inValue))
+		wheres = append(wheres, fmt.Sprintf("publish_status in (%s)", c.PublishStatus.SQLPlaceHolder()))
 		params = append(params, c.PublishStatus.ToInterfaceSlice()...)
 	}
 
