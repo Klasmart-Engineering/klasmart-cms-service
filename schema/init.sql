@@ -36,7 +36,7 @@ CREATE TABLE `cms_contents` (
     KEY `content_source_id` (`source_id`),
     KEY `content_latest_id` (`latest_id`),
     FULLTEXT INDEX `name_description_keywords_author_index` (`content_name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
-) COMMENT '内容表';
+) COMMENT '内容表' DEFAULT CHARSET=utf8mb4_unicode_ci ;
 
 
 CREATE TABLE IF NOT EXISTS `schedules` (
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   KEY `schedules_start_at` (`start_at`),
   KEY `schedules_end_at` (`end_at`),
   KEY `schedules_deleted_at` (`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='schedules';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4_unicode_ci  COMMENT='schedules';
 
 CREATE TABLE IF NOT EXISTS `schedules_teachers` (
   `id` varchar(50) NOT NULL COMMENT 'id',
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS `schedules_teachers` (
   KEY `schedules_teacher_id` (`teacher_id`),
   KEY `schedules_schedule_id` (`schedule_id`),
   KEY `schedules_deleted_at` (`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='schedules_teachers';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4_unicode_ci COMMENT='schedules_teachers';
 
 CREATE TABLE `learning_outcomes` (
    `id` VARCHAR(50) NOT  NULL  COMMENT  'outcome_id',
@@ -116,4 +116,4 @@ CREATE TABLE `learning_outcomes` (
     KEY `index_publish_status` (`publish_status`),
     KEY `index_source_id` (`source_id`),
     FULLTEXT INDEX `fullindex_name_description_keywords_author_shortcode` (`name`, `keywords`, `description`, `author_name`, `shortcode`) WITH PARSER ngram
-) COMMENT 'outcomes table';
+) COMMENT 'outcomes table' DEFAULT CHARSET=utf8mb4_unicode_ci;
