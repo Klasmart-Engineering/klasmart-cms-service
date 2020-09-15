@@ -151,7 +151,8 @@ func TestGetLatestOutcomesByIDs(t *testing.T) {
 		Role:   "admin",
 	}
 	ctx := context.Background()
-	ids := []string{"5f5726af0944d7c38e20696f"}
+	//ids := []string{"5f5726af0944d7c38e20696f"}
+	ids := []string{}
 	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
 	if err != nil {
 		t.Fatal(err)

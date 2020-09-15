@@ -37,17 +37,23 @@ func GetAssessmentModel() IAssessmentModel {
 
 type assessmentModel struct{}
 
-type outcomeSliceSortByName []*entity.Outcome
+type outcomeSliceSortByAssumedAndName []*entity.Outcome
 
-func (s outcomeSliceSortByName) Len() int {
+func (s outcomeSliceSortByAssumedAndName) Len() int {
 	return len(s)
 }
 
-func (s outcomeSliceSortByName) Less(i, j int) bool {
-	return s[i].Name < s[j].Name
+func (s outcomeSliceSortByAssumedAndName) Less(i, j int) bool {
+	if s[i].Assumed && !s[j].Assumed {
+		return true
+	} else if !s[i].Assumed && s[j].Assumed {
+		return false
+	} else {
+		return s[i].Name < s[j].Name
+	}
 }
 
-func (s outcomeSliceSortByName) Swap(i, j int) {
+func (s outcomeSliceSortByAssumedAndName) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
@@ -206,7 +212,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			for _, outcome := range outcomes {
 				outcomeMap[outcome.ID] = outcome
 			}
-			sort.Sort(outcomeSliceSortByName(outcomes))
+			sort.Sort(outcomeSliceSortByAssumedAndName(outcomes))
 			outcomeAttendanceItems, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
 			if err != nil {
 				log.Error(ctx, "get assessment detail: batch get outcome attendances failed by assessment id and outcome ids",
