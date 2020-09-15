@@ -1002,7 +1002,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1222,7 +1222,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1284,7 +1284,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1329,7 +1329,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1927,7 +1927,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1989,7 +1989,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2034,7 +2034,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2367,7 +2367,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2437,7 +2437,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2496,7 +2496,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2550,7 +2550,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -3841,7 +3841,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -3938,7 +3938,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
