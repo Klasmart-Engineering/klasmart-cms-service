@@ -517,7 +517,7 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				)
 				return err
 			}
-			newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], newItem.Title)
+			newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
 			if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
 				log.Error(ctx, "add assessment: encode and set teacher ids failed",
 					log.Err(err),
