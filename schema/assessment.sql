@@ -17,7 +17,7 @@ create table `assessments`
     key `assessments_status` (status),
     key `assessments_schedule_id` (schedule_id),
     key `assessments_complete_time` (complete_time)
-) comment 'assessment';
+) comment 'assessment' DEFAULT CHARSET=utf8mb4_unicode_ci;
 
 create table assessments_attendances
 (
@@ -27,7 +27,7 @@ create table assessments_attendances
     primary key (`id`),
     key `assessments_attendances_assessment_id` (`assessment_id`),
     key `assessments_attendances_attendance_id` (`attendance_id`)
-) comment 'assessment and attendance map';
+) comment 'assessment and attendance map' DEFAULT CHARSET=utf8mb4_unicode_ci;
 
 create table assessments_outcomes
 (
@@ -38,7 +38,7 @@ create table assessments_outcomes
     primary key (`id`),
     key `assessments_outcomes_assessment_id` (`assessment_id`),
     key `assessments_outcomes_outcome_id` (`outcome_id`)
-) comment 'assessment and outcome map';
+) comment 'assessment and outcome map' DEFAULT CHARSET=utf8mb4_unicode_ci;
 
 create table outcomes_attendances
 (
@@ -50,7 +50,7 @@ create table outcomes_attendances
     key `outcomes_attendances_assessment_id` (`outcome_id`),
     key `outcomes_attendances_outcome_id` (`outcome_id`),
     key `outcomes_attendances_attendance_id` (`attendance_id`)
-) comment 'outcome and attendance map';
+) comment 'outcome and attendance map' DEFAULT CHARSET=utf8mb4_unicode_ci;
 
 /* 20200910 Patch (already updated to above ddl) */
 /*

@@ -32,4 +32,4 @@ CREATE TABLE `learning_outcomes` (
     KEY `index_publish_status` (`publish_status`),
     KEY `index_source_id` (`source_id`),
     FULLTEXT INDEX `fullindex_name_description_keywords_author_shortcode` (`name`, `keywords`, `description`, `author_name`, `shortcode`) WITH PARSER ngram
-) COMMENT 'outcomes table';
+) COMMENT 'outcomes table' DEFAULT CHARSET=utf8mb4_unicode_ci;
