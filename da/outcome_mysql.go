@@ -66,8 +66,8 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.IDs.Valid {
-		inValue := strings.TrimSuffix(strings.Repeat("?,", len(c.IDs.Strings)), ",")
-		wheres = append(wheres, fmt.Sprintf("id in (%s)", inValue))
+		//inValue := strings.TrimSuffix(strings.Repeat("?,", len(c.IDs.Strings)), ",")
+		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
 	}
 
