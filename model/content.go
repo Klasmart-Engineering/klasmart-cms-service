@@ -714,11 +714,6 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	ids := cd.SubContentIds(ctx)
 	//若不存在子内容，则返回当前内容
 	if len(ids) < 1 {
-		cd, err := contentdata.CreateContentData(ctx, obj.ContentType, obj.Data)
-		if err != nil{
-			log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", obj))
-			return nil, err
-		}
 		ret := []*entity.SubContentsWithName{
 			{
 				ID:   cid,
