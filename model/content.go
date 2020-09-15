@@ -712,6 +712,24 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		return nil, err
 	}
 	ids := cd.SubContentIds(ctx)
+	//若不存在子内容，则返回当前内容
+	if len(ids) < 1 {
+		cd, err := contentdata.CreateContentData(ctx, obj.ContentType, obj.Data)
+		if err != nil{
+			log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", obj))
+			return nil, err
+		}
+		ret := []*entity.SubContentsWithName{
+			{
+				ID:   cid,
+				Name: obj.Name,
+				Data: cd,
+			},
+		}
+		return ret, nil
+	}
+
+	//存在子内容，则返回子内容
 	subContents, err := da.GetContentDA().GetContentByIDList(ctx, tx, ids)
 	if err != nil{
 		log.Error(ctx, "can't get sub contents", log.Err(err), log.Strings("ids", ids))
