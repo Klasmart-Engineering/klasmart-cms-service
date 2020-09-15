@@ -119,6 +119,9 @@ func (s *scheduleModel) addRepeatScheduleTx(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "schedules batchInsert error,schedules is empty", log.Any("schedule", schedule), log.Any("options", options))
 		return "", errors.New("schedules is empty")
 	}
+
+	da.GetScheduleRedisDA().Clean(ctx, nil)
+
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
