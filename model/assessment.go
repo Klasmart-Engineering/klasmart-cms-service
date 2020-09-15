@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"sort"
 	"sync"
 	"time"
 )
@@ -35,6 +36,20 @@ func GetAssessmentModel() IAssessmentModel {
 }
 
 type assessmentModel struct{}
+
+type outcomeSliceSortByName []*entity.Outcome
+
+func (s outcomeSliceSortByName) Len() int {
+	return len(s)
+}
+
+func (s outcomeSliceSortByName) Less(i, j int) bool {
+	return s[i].Name < s[j].Name
+}
+
+func (s outcomeSliceSortByName) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
 
 func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id string) (*entity.AssessmentDetailView, error) {
 	var result entity.AssessmentDetailView
@@ -191,6 +206,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			for _, outcome := range outcomes {
 				outcomeMap[outcome.ID] = outcome
 			}
+			sort.Sort(outcomeSliceSortByName(outcomes))
 			outcomeAttendanceItems, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
 			if err != nil {
 				log.Error(ctx, "get assessment detail: batch get outcome attendances failed by assessment id and outcome ids",
