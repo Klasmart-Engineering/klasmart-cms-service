@@ -46,7 +46,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	// outcome get value from api lay, this lay add some information
 	outcome.ID = utils.NewID()
 	outcome.AncestorID = outcome.ID
-	outcome.SourceID = outcome.ID
+	//outcome.SourceID = outcome.ID
 	outcome.AuthorID = operator.UserID
 	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, outcome.AuthorID)
 	if err != nil {
