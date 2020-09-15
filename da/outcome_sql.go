@@ -32,8 +32,6 @@ type OutcomeCondition struct {
 
 	OrderBy OutcomeOrderBy `json:"order_by"`
 	Pager   dbo.Pager
-
-	NegateID sql.NullString
 }
 
 func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
@@ -97,11 +95,6 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	if c.SourceID.Valid {
 		wheres = append(wheres, "source_id=?")
 		params = append(params, c.SourceID.String)
-	}
-
-	if c.NegateID.Valid {
-		wheres = append(wheres, "id<>?")
-		params = append(params, c.NegateID.String)
 	}
 
 	if c.Assumed.Valid {
@@ -243,10 +236,7 @@ func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id 
 
 func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
 	var outcome entity.Outcome
-	err := o.QueryTx(ctx, tx, &OutcomeCondition{
-		SourceID: sql.NullString{String: sourceID, Valid: true},
-		NegateID: sql.NullString{String: sourceID, Valid: true},
-	}, &outcome)
+	err := o.QueryTx(ctx, tx, &OutcomeCondition{SourceID: sql.NullString{String: sourceID, Valid: true}}, &outcome)
 	//sql := fmt.Sprintf("select * from %s where source_id='%s'", outcome.TableName(), sourceID)
 	//err := tx.Raw(sql).Scan(&outcome).Error
 	if err != nil {
