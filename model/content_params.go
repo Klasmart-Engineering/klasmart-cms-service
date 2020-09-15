@@ -47,6 +47,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Developmental: strings.Join(c.Developmental, ","),
 		Skills:        strings.Join(c.Skills, ","),
 		Age:           strings.Join(c.Age, ","),
+		Grade:			strings.Join(c.Grade, ","),
 		Keywords:      strings.Join(c.Keywords, ","),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
@@ -85,6 +86,9 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 	if data.Age != nil {
 		content.Age = strings.Join(data.Age, ",")
+	}
+	if data.Grade != nil {
+		content.Grade = strings.Join(data.Grade, ",")
 	}
 	if data.Description != "" {
 		content.Description = data.Description
