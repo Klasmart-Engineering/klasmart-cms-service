@@ -713,7 +713,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	}
 	ids := cd.SubContentIds(ctx)
 	//若不存在子内容，则返回当前内容
-	if len(ids) < 1 {
+	if obj.ContentType == entity.ContentTypeMaterial {
 		ret := []*entity.SubContentsWithName{
 			{
 				ID:   cid,
