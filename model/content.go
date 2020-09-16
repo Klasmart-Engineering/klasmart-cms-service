@@ -1091,17 +1091,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Subjects
-	subjectsProvider, err := external.GetSubjectServiceProvider()
+	subjectsProvider := external.GetSubjectServiceProvider()
+	subjects, err := subjectsProvider.BatchGet(ctx, subjectIds)
 	if err != nil {
-		log.Error(ctx, "can't get subjectsProvider", log.Err(err))
+		log.Error(ctx, "can't get subjects info", log.Err(err))
 	} else {
-		subjects, err := subjectsProvider.BatchGet(ctx, subjectIds)
-		if err != nil {
-			log.Error(ctx, "can't get subjects info", log.Err(err))
-		} else {
-			for i := range subjects {
-				subjectNameMap[subjects[i].ID] = subjects[i].Name
-			}
+		for i := range subjects {
+			subjectNameMap[subjects[i].ID] = subjects[i].Name
 		}
 	}
 

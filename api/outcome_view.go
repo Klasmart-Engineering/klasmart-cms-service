@@ -266,13 +266,7 @@ func getProgramsName(ctx context.Context, ids []string) (names map[string]string
 }
 
 func getSubjectsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetSubjectServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getSubjectsName: GetSubjectServiceProvider failed",
-			log.Err(err),
-			log.Strings("subjects_ids", ids))
-		return nil
-	}
+	provider := external.GetSubjectServiceProvider()
 	subjects, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getSubjectsName: BatchGet failed",

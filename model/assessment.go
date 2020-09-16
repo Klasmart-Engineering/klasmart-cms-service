@@ -402,14 +402,7 @@ func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []st
 
 func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []string) (map[string]string, error) {
 	subjectNameMap := map[string]string{}
-	subjectService, err := external.GetSubjectServiceProvider()
-	if err != nil {
-		log.Error(ctx, "list assessments: get subject service failed",
-			log.Err(err),
-			log.Strings("subject_ids", subjectIDs),
-		)
-		return nil, err
-	}
+	subjectService := external.GetSubjectServiceProvider()
 	items, err := subjectService.BatchGet(ctx, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get subject failed",
@@ -749,13 +742,7 @@ func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string)
 }
 
 func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (bool, error) {
-	subjectService, err := external.GetSubjectServiceProvider()
-	if err != nil {
-		log.Error(ctx, "check subject exists: get subject service failed",
-			log.Err(err),
-			log.String("id", id),
-		)
-	}
+	subjectService := external.GetSubjectServiceProvider()
 	if _, err := subjectService.BatchGet(ctx, []string{id}); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:

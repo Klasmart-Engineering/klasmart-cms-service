@@ -576,16 +576,13 @@ func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjec
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
 		subjectIDs = utils.SliceDeduplication(subjectIDs)
-		subjectService, err := external.GetSubjectServiceProvider()
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
-			return nil, err
-		}
+		subjectService := external.GetSubjectServiceProvider()
 		subjectInfos, err := subjectService.BatchGet(ctx, subjectIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 			return nil, err
 		}
+
 		for _, item := range subjectInfos {
 			subjectMap[item.ID] = &entity.ScheduleShortInfo{
 				ID:   item.ID,
@@ -778,11 +775,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		return err
 	}
 	// subject
-	subjectService, err := external.GetSubjectServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
+	subjectService := external.GetSubjectServiceProvider()
 	_, err = subjectService.BatchGet(ctx, []string{v.SubjectID})
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
