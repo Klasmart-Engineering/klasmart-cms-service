@@ -1117,17 +1117,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//skill
-	skillProvider, err := external.GetSkillServiceProvider()
+	skillProvider := external.GetSkillServiceProvider()
+	skills, err := skillProvider.BatchGet(ctx, skillsIds)
 	if err != nil {
-		log.Error(ctx, "can't get skillProvider", log.Err(err))
+		log.Error(ctx, "can't get skills info", log.Err(err))
 	} else {
-		skills, err := skillProvider.BatchGet(ctx, skillsIds)
-		if err != nil {
-			log.Error(ctx, "can't get skills info", log.Err(err))
-		} else {
-			for i := range skills {
-				skillsNameMap[skills[i].ID] = skills[i].Name
-			}
+		for i := range skills {
+			skillsNameMap[skills[i].ID] = skills[i].Name
 		}
 	}
 

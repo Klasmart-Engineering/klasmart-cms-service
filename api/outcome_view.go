@@ -304,13 +304,7 @@ func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]
 }
 
 func getSkillsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetSkillServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getSkillsName: GetSkillServiceProvider failed",
-			log.Err(err),
-			log.Strings("skill_ids", ids))
-		return nil
-	}
+	provider := external.GetSkillServiceProvider()
 	skills, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getSkillsName: BatchGet failed",
