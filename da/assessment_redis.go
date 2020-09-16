@@ -166,7 +166,7 @@ func (da *baseAssessmentRedisDA) get(ctx context.Context, key string) (string, e
 		)
 		return "", err
 	}
-	return redisResult.String(), nil
+	return redisResult.Val(), nil
 }
 
 func (da *baseAssessmentRedisDA) getAndUnmarshalJSON(ctx context.Context, key string, result interface{}) error {
