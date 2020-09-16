@@ -300,13 +300,7 @@ func getSubjectsName(ctx context.Context, ids []string) (names map[string]string
 }
 
 func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetDevelopmentalServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getDevelopmentalsName: GetDevelopmentalServiceProvider failed",
-			log.Err(err),
-			log.Strings("development_ids", ids))
-		return nil
-	}
+	provider := external.GetDevelopmentalServiceProvider()
 	developmentals, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getDevelopmentalsName: BatchGet failed",

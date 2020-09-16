@@ -1122,17 +1122,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//developmental
-	developmentalsProvider, err := external.GetDevelopmentalServiceProvider()
+	developmentalsProvider := external.GetDevelopmentalServiceProvider()
+	developmentals, err := developmentalsProvider.BatchGet(ctx, developmentalIds)
 	if err != nil {
-		log.Error(ctx, "can't get developmentalsProvider", log.Err(err))
+		log.Error(ctx, "can't get developmentals info", log.Err(err))
 	} else {
-		developmentals, err := developmentalsProvider.BatchGet(ctx, developmentalIds)
-		if err != nil {
-			log.Error(ctx, "can't get developmentals info", log.Err(err))
-		} else {
-			for i := range developmentals {
-				developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
-			}
+		for i := range developmentals {
+			developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
 		}
 	}
 
