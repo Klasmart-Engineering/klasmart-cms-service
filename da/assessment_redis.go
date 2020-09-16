@@ -108,24 +108,29 @@ func (da *assessmentRedisDA) List(ctx context.Context, cmd entity.ListAssessment
 }
 
 func (da *assessmentRedisDA) CacheList(ctx context.Context, cmd entity.ListAssessmentsCommand, result *entity.ListAssessmentsResult) error {
-	key := da.listCacheField(cmd)
+	field := da.listCacheField(cmd)
 	bs, err := json.Marshal(result)
 	if err != nil {
 		log.Error(ctx, "cache assessment list: json marshal failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
 			log.Any("result", result),
-			log.String("key", key),
+			log.String("field", field),
 		)
 		return err
 	}
 	value := string(bs)
-	if err := da.cacheHash(ctx, RedisKeyPrefixAssessmentList, key, value); err != nil {
+	log.Debug(ctx, "cache list",
+		log.String("key", RedisKeyPrefixAssessmentList),
+		log.String("field", field),
+		log.String("value", value),
+	)
+	if err := da.cacheHash(ctx, RedisKeyPrefixAssessmentList, field, value); err != nil {
 		log.Error(ctx, "cache assessment list: cache hash failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
 			log.Any("result", result),
-			log.String("key", key),
+			log.String("field", field),
 			log.String("value", value),
 		)
 		return err
@@ -175,7 +180,7 @@ func (da *baseAssessmentRedisDA) getHash(ctx context.Context, key string, field 
 	}
 	redisResult := ro.MustGetRedis(ctx).HGet(key, field)
 	if err := redisResult.Err(); err != nil {
-		log.Error(ctx, "get hash cache: getfailed from redis",
+		log.Error(ctx, "get hash cache: get failed from redis",
 			log.Err(err),
 			log.String("key", key),
 			log.String("field", field),
