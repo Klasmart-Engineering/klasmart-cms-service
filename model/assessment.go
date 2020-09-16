@@ -66,6 +66,10 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			log.String("id", "id"),
 		)
 	} else if cacheResult == nil {
+		log.Info(ctx, "get assessment detail: hit cache",
+			log.String("id", id),
+			log.Any("cache_result", cacheResult),
+		)
 		return cacheResult, nil
 	}
 
@@ -267,6 +271,10 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 			log.Any("cmd", cmd),
 		)
 	} else if cacheResult != nil {
+		log.Info(ctx, "list assessment: hit cache",
+			log.Any("cmd", cmd),
+			log.Any("cache_result", cacheResult),
+		)
 		return cacheResult, nil
 	}
 
