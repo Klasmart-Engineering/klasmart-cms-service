@@ -6,7 +6,6 @@ import (
 )
 
 const (
-	TableNameTag             = "tags"
 	TableNameSchedule        = "schedules"
 	TableNameScheduleTeacher = "schedules_teachers"
 )
