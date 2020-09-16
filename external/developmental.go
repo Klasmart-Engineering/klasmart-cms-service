@@ -7,16 +7,21 @@ type DevelopmentalServiceProvider interface {
 }
 
 type Developmental struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID    string   `json:"id"`
+	Name  string   `json:"name"`
+	Skill []*Skill `json:"skills"`
 }
 
-func GetDevelopmentalServiceProvider() (DevelopmentalServiceProvider, error) {
-	return &mockDevelopmentalService{}, nil
+func GetDevelopmentalServiceProvider() DevelopmentalServiceProvider {
+	return &mockDevelopmentalService{}
 }
 
 type mockDevelopmentalService struct{}
 
 func (s mockDevelopmentalService) BatchGet(ctx context.Context, ids []string) ([]*Developmental, error) {
-	return GetMockData().Developmentals, nil
+	var developments []*Developmental
+	for _, option := range GetMockData().Options {
+		developments = append(developments, option.Developmental...)
+	}
+	return developments, nil
 }

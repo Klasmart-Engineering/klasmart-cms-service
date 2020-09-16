@@ -11,12 +11,16 @@ type Subject struct {
 	Name string `json:"name"`
 }
 
-func GetSubjectServiceProvider() (SubjectServiceProvider, error) {
-	return &mockSubjectService{}, nil
+func GetSubjectServiceProvider() SubjectServiceProvider {
+	return &mockSubjectService{}
 }
 
 type mockSubjectService struct{}
 
 func (s mockSubjectService) BatchGet(ctx context.Context, ids []string) ([]*Subject, error) {
-	return GetMockData().Subjects, nil
+	var subjects []*Subject
+	for _, option := range GetMockData().Options {
+		subjects = append(subjects, option.Subject...)
+	}
+	return subjects, nil
 }

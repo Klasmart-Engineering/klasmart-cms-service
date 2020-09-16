@@ -11,12 +11,16 @@ type Program struct {
 	Name string `json:"name"`
 }
 
-func GetProgramServiceProvider() (ProgramServiceProvider, error) {
-	return &mockProgramService{}, nil
+func GetProgramServiceProvider() ProgramServiceProvider {
+	return &mockProgramService{}
 }
 
 type mockProgramService struct{}
 
 func (s mockProgramService) BatchGet(ctx context.Context, ids []string) ([]*Program, error) {
-	return GetMockData().Programs, nil
+	var programs []*Program
+	for _, option := range GetMockData().Options {
+		programs = append(programs, option.Program)
+	}
+	return programs, nil
 }

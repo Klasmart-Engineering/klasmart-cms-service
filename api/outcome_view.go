@@ -3,10 +3,11 @@ package api
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"strings"
 )
 
 type OutcomeCreateView struct {
@@ -231,13 +232,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 }
 
 func getProgramName(ctx context.Context, id string) (name string) {
-	provider, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getProgramName: GetProgramServiceProvider failed",
-			log.Err(err),
-			log.String("program_id", id))
-		return ""
-	}
+	provider := external.GetProgramServiceProvider()
 	programs, err := provider.BatchGet(ctx, []string{id})
 	if err != nil {
 		log.Error(ctx, "getProgramName: BatchGet failed",
@@ -255,13 +250,7 @@ func getProgramName(ctx context.Context, id string) (name string) {
 	return
 }
 func getProgramsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getProgramName: GetProgramServiceProvider failed",
-			log.Err(err),
-			log.Strings("program_ids", ids))
-		return nil
-	}
+	provider := external.GetProgramServiceProvider()
 	programs, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getProgramName: BatchGet failed",
@@ -277,13 +266,7 @@ func getProgramsName(ctx context.Context, ids []string) (names map[string]string
 }
 
 func getSubjectsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetSubjectServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getSubjectsName: GetSubjectServiceProvider failed",
-			log.Err(err),
-			log.Strings("subjects_ids", ids))
-		return nil
-	}
+	provider := external.GetSubjectServiceProvider()
 	subjects, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getSubjectsName: BatchGet failed",
@@ -299,13 +282,7 @@ func getSubjectsName(ctx context.Context, ids []string) (names map[string]string
 }
 
 func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetDevelopmentalServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getDevelopmentalsName: GetDevelopmentalServiceProvider failed",
-			log.Err(err),
-			log.Strings("development_ids", ids))
-		return nil
-	}
+	provider := external.GetDevelopmentalServiceProvider()
 	developmentals, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getDevelopmentalsName: BatchGet failed",
@@ -321,13 +298,7 @@ func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]
 }
 
 func getSkillsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetSkillServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getSkillsName: GetSkillServiceProvider failed",
-			log.Err(err),
-			log.Strings("skill_ids", ids))
-		return nil
-	}
+	provider := external.GetSkillServiceProvider()
 	skills, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getSkillsName: BatchGet failed",
@@ -343,13 +314,7 @@ func getSkillsName(ctx context.Context, ids []string) (names map[string]string) 
 }
 
 func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetAgeServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getAgesName: GetAgeServiceProvider failed",
-			log.Err(err),
-			log.Strings("age_ids", ids))
-		return nil
-	}
+	provider := external.GetAgeServiceProvider()
 	ages, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getAgesName: BatchGet failed",
@@ -365,13 +330,7 @@ func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
 }
 
 func getGradeName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetGradeServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getGradeName: GetAgeServiceProvider failed",
-			log.Err(err),
-			log.Strings("grade_ids", ids))
-		return nil
-	}
+	provider := external.GetGradeServiceProvider()
 	grades, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getGradeName: BatchGet failed",

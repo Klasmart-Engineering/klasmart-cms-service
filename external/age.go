@@ -11,12 +11,16 @@ type Age struct {
 	Name string `json:"name"`
 }
 
-func GetAgeServiceProvider() (AgeServiceProvider, error) {
-	return &mockAgeService{}, nil
+func GetAgeServiceProvider() AgeServiceProvider {
+	return &mockAgeService{}
 }
 
 type mockAgeService struct{}
 
 func (s mockAgeService) BatchGet(ctx context.Context, ids []string) ([]*Age, error) {
-	return GetMockData().Ages, nil
+	var ages []*Age
+	for _, option := range GetMockData().Options {
+		ages = append(ages, option.Age...)
+	}
+	return ages, nil
 }
