@@ -77,7 +77,7 @@ func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachm
 
 func (s *scheduleModel) addRepeatScheduleTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	options := &viewData.Repeat
-	schedule, err := viewData.Convert(ctx)
+	schedule, err := viewData.ToSchedule(ctx)
 	if err != nil {
 		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData), log.Any("options", options))
 		return "", err
@@ -175,7 +175,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 	if viewData.IsRepeat {
 		return s.addRepeatScheduleTx(ctx, tx, op, viewData)
 	}
-	schedule, err := viewData.Convert(ctx)
+	schedule, err := viewData.ToSchedule(ctx)
 	if err != nil {
 		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData))
 		return "", err
@@ -274,6 +274,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 					log.Err(err),
 					log.Any("viewData", viewData),
 				)
+				return err
 			}
 			viewData.Repeat = repeat
 		}
