@@ -11,8 +11,8 @@ type Program struct {
 	Name string `json:"name"`
 }
 
-func GetProgramServiceProvider() (ProgramServiceProvider, error) {
-	return &mockProgramService{}, nil
+func GetProgramServiceProvider() ProgramServiceProvider {
+	return &mockProgramService{}
 }
 
 type mockProgramService struct{}

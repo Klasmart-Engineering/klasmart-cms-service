@@ -11,8 +11,8 @@ type Subject struct {
 	Name string `json:"name"`
 }
 
-func GetSubjectServiceProvider() (SubjectServiceProvider, error) {
-	return &mockSubjectService{}, nil
+func GetSubjectServiceProvider() SubjectServiceProvider {
+	return &mockSubjectService{}
 }
 
 type mockSubjectService struct{}

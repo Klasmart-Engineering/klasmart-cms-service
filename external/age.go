@@ -11,8 +11,8 @@ type Age struct {
 	Name string `json:"name"`
 }
 
-func GetAgeServiceProvider() (AgeServiceProvider, error) {
-	return &mockAgeService{}, nil
+func GetAgeServiceProvider() AgeServiceProvider {
+	return &mockAgeService{}
 }
 
 type mockAgeService struct{}

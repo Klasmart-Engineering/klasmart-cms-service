@@ -12,8 +12,8 @@ type Developmental struct {
 	Skill []*Skill `json:"skills"`
 }
 
-func GetDevelopmentalServiceProvider() (DevelopmentalServiceProvider, error) {
-	return &mockDevelopmentalService{}, nil
+func GetDevelopmentalServiceProvider() DevelopmentalServiceProvider {
+	return &mockDevelopmentalService{}
 }
 
 type mockDevelopmentalService struct{}
