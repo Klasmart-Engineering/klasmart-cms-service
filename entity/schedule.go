@@ -270,7 +270,7 @@ type ScheduleAddView struct {
 	Location       *time.Location
 }
 
-func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
+func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 	schedule := &Schedule{
 		Title:           s.Title,
 		ClassID:         s.ClassID,
