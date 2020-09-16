@@ -483,11 +483,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedules []*entity.Sc
 			scheduleTeacherMap[item.ScheduleID] = append(scheduleTeacherMap[item.ScheduleID], item.TeacherID)
 		}
 		teacherIDs = utils.SliceDeduplication(teacherIDs)
-		teacherService, err := external.GetTeacherServiceProvider()
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider error", log.Err(err), log.Any("schedules", schedules))
-			return nil, err
-		}
+		teacherService := external.GetTeacherServiceProvider()
 		teacherInfos, err := teacherService.BatchGet(ctx, teacherIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedules", schedules))
@@ -680,11 +676,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, id string) (*entity.Schedul
 }
 
 func (s *scheduleModel) GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error) {
-	teacherService, err := external.GetTeacherServiceProvider()
-	if err != nil {
-		log.Error(ctx, "querySchedule:get teacher service provider error", log.Err(err), log.String("name", name))
-		return nil, err
-	}
+	teacherService := external.GetTeacherServiceProvider()
 	teachers, err := teacherService.Query(ctx, name)
 	if err != nil {
 		log.Error(ctx, "querySchedule:query teacher info error", log.Err(err), log.String("name", name))
@@ -790,11 +782,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 	}
 	// teacher
 	teacherIDs := utils.SliceDeduplication(v.TeacherIDs)
-	teacherService, err := external.GetTeacherServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
+	teacherService := external.GetTeacherServiceProvider()
 	_, err = teacherService.BatchGet(ctx, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))

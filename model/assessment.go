@@ -134,15 +134,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			)
 			return nil, err
 		}
-		teacherNameService, err := external.GetTeacherServiceProvider()
-		if err != nil {
-			log.Error(ctx, "get assessment detail: get teacher service failed",
-				log.Err(err),
-				log.Strings("teacher_ids", teacherIDs),
-				log.Any("id", id),
-			)
-			return nil, err
-		}
+		teacherNameService := external.GetTeacherServiceProvider()
 		items, err := teacherNameService.BatchGet(ctx, teacherIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get teacher failed",
@@ -258,14 +250,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 	}
 	{
 		if cmd.TeacherName != nil {
-			teacherService, err := external.GetTeacherServiceProvider()
-			if err != nil {
-				log.Error(ctx, "list assessments: get teacher service failed",
-					log.Err(err),
-					log.Any("cmd", cmd),
-				)
-				return nil, err
-			}
+			teacherService := external.GetTeacherServiceProvider()
 			items, err := teacherService.Query(ctx, *cmd.TeacherName)
 			if err != nil {
 				log.Error(ctx, "list assessments: query teacher service failed",
@@ -419,14 +404,7 @@ func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []st
 
 func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []string) (map[string]string, error) {
 	teacherNameMap := map[string]string{}
-	teacherNameService, err := external.GetTeacherServiceProvider()
-	if err != nil {
-		log.Error(ctx, "list assessments: get teacher service failed",
-			log.Err(err),
-			log.Strings("teacher_ids", teacherIDs),
-		)
-		return nil, err
-	}
+	teacherNameService := external.GetTeacherServiceProvider()
 	items, err := teacherNameService.BatchGet(ctx, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get teacher failed",
@@ -715,13 +693,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 }
 
 func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string) (bool, error) {
-	teacherService, err := external.GetTeacherServiceProvider()
-	if err != nil {
-		log.Error(ctx, "check teacher exists: get teacher service failed",
-			log.Err(err),
-			log.Strings("ids", ids),
-		)
-	}
+	teacherService := external.GetTeacherServiceProvider()
 	if _, err := teacherService.BatchGet(ctx, ids); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
