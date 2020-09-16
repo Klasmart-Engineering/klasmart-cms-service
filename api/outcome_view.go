@@ -3,10 +3,11 @@ package api
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"strings"
 )
 
 type OutcomeCreateView struct {
@@ -343,13 +344,7 @@ func getSkillsName(ctx context.Context, ids []string) (names map[string]string) 
 }
 
 func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetAgeServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getAgesName: GetAgeServiceProvider failed",
-			log.Err(err),
-			log.Strings("age_ids", ids))
-		return nil
-	}
+	provider := external.GetAgeServiceProvider()
 	ages, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getAgesName: BatchGet failed",

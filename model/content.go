@@ -287,7 +287,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
 		provider, err := external.GetPublishScopeProvider()
-		if err != nil{
+		if err != nil {
 			log.Warn(ctx, "get publishScope provider failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 			return "", err
 		}
@@ -321,7 +321,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
 	if data.ContentType.IsAsset() {
 		provider, err := external.GetPublishScopeProvider()
-		if err != nil{
+		if err != nil {
 			log.Warn(ctx, "get publishScope provider failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
 			return err
 		}
@@ -699,7 +699,6 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	return ErrGetUnauthorizedContent
 }
 
-
 func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
@@ -707,7 +706,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		return nil, err
 	}
 	cd, err := contentdata.CreateContentData(ctx, obj.ContentType, obj.Data)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 		return nil, err
 	}
@@ -726,12 +725,12 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 
 	//存在子内容，则返回子内容
 	subContents, err := da.GetContentDA().GetContentByIDList(ctx, tx, ids)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "can't get sub contents", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
 	subContentMap := make(map[string]*entity.Content, len(subContents))
-	for i := range subContents{
+	for i := range subContents {
 		subContentMap[subContents[i].ID] = subContents[i]
 	}
 
@@ -742,7 +741,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			continue
 		}
 		cd, err := contentdata.CreateContentData(ctx, subContent.ContentType, subContent.Data)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", subContentMap[ids[i]]))
 			return nil, err
 		}
@@ -1153,17 +1152,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//age
-	ageProvider, err := external.GetAgeServiceProvider()
+	ageProvider := external.GetAgeServiceProvider()
+	ages, err := ageProvider.BatchGet(ctx, ageIds)
 	if err != nil {
-		log.Error(ctx, "can't get ageProvider", log.Err(err))
+		log.Error(ctx, "can't get age info", log.Err(err))
 	} else {
-		ages, err := ageProvider.BatchGet(ctx, ageIds)
-		if err != nil {
-			log.Error(ctx, "can't get age info", log.Err(err))
-		} else {
-			for i := range ages {
-				ageNameMap[ages[i].ID] = ages[i].Name
-			}
+		for i := range ages {
+			ageNameMap[ages[i].ID] = ages[i].Name
 		}
 	}
 
