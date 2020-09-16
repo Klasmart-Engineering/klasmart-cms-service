@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,9 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sort"
-	"sync"
-	"time"
 )
 
 type IAssessmentModel interface {
@@ -463,14 +464,7 @@ func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []st
 
 func (a *assessmentModel) getClassNameMap(ctx context.Context, classIDs []string) (map[string]string, error) {
 	classNameMap := map[string]string{}
-	classService, err := external.GetClassServiceProvider()
-	if err != nil {
-		log.Error(ctx, "get class name map: get class service failed",
-			log.Err(err),
-			log.Strings("class_ids", classIDs),
-		)
-		return nil, err
-	}
+	classService := external.GetClassServiceProvider()
 	items, err := classService.BatchGet(ctx, classIDs)
 	if err != nil {
 		log.Error(ctx, "get class name map: batch get class failed",

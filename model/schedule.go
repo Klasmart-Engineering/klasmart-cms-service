@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -13,8 +16,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
-	"sync"
 )
 
 type IScheduleModel interface {
@@ -555,11 +556,7 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs 
 	var classMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(classIDs) != 0 {
 		classIDs = utils.SliceDeduplication(classIDs)
-		classService, err := external.GetClassServiceProvider()
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Strings("classIDs", classIDs))
-			return nil, err
-		}
+		classService := external.GetClassServiceProvider()
 		classInfos, err := classService.BatchGet(ctx, classIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Strings("classIDs", classIDs))
@@ -778,12 +775,8 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 
 func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify) error {
 	// class
-	classService, err := external.GetClassServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetClassServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
-	_, err = classService.BatchGet(ctx, []string{v.ClassID})
+	classService := external.GetClassServiceProvider()
+	_, err := classService.BatchGet(ctx, []string{v.ClassID})
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
