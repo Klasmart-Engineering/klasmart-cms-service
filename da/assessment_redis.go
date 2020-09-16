@@ -133,11 +133,6 @@ func (da *assessmentRedisDA) CacheList(ctx context.Context, cmd entity.ListAsses
 		return err
 	}
 	value := string(bs)
-	log.Debug(ctx, "cache list",
-		log.String("key", RedisKeyPrefixAssessmentList),
-		log.String("field", field),
-		log.String("value", value),
-	)
 	if err := da.cacheHash(ctx, RedisKeyPrefixAssessmentList, field, value); err != nil {
 		log.Error(ctx, "cache assessment list: cache hash failed",
 			log.Err(err),
