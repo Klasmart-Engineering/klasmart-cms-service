@@ -1159,17 +1159,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//grade
-	gradeProvider, err := external.GetGradeServiceProvider()
+	gradeProvider := external.GetGradeServiceProvider()
+	grades, err := gradeProvider.BatchGet(ctx, gradeIds)
 	if err != nil {
-		log.Error(ctx, "can't get gradeProvider", log.Err(err))
+		log.Error(ctx, "can't get grade info", log.Err(err))
 	} else {
-		grades, err := gradeProvider.BatchGet(ctx, gradeIds)
-		if err != nil {
-			log.Error(ctx, "can't get grade info", log.Err(err))
-		} else {
-			for i := range grades {
-				gradeNameMap[grades[i].ID] = grades[i].Name
-			}
+		for i := range grades {
+			gradeNameMap[grades[i].ID] = grades[i].Name
 		}
 	}
 

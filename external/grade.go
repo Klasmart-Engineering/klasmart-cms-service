@@ -11,8 +11,8 @@ type Grade struct {
 	Name string `json:"name"`
 }
 
-func GetGradeServiceProvider() (GradeServiceProvider, error) {
-	return &mockGradeService{}, nil
+func GetGradeServiceProvider() GradeServiceProvider {
+	return &mockGradeService{}
 }
 
 type mockGradeService struct{}

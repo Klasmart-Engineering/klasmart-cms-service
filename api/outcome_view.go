@@ -354,13 +354,7 @@ func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
 }
 
 func getGradeName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetGradeServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getGradeName: GetAgeServiceProvider failed",
-			log.Err(err),
-			log.Strings("grade_ids", ids))
-		return nil
-	}
+	provider := external.GetGradeServiceProvider()
 	grades, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getGradeName: BatchGet failed",
