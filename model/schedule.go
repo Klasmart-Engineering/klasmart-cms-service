@@ -274,6 +274,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 					log.Err(err),
 					log.Any("viewData", viewData),
 				)
+				return err
 			}
 			viewData.Repeat = repeat
 		}

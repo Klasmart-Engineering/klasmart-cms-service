@@ -285,7 +285,7 @@ func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
 		Description:     s.Description,
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
-		UpdatedAt:       0,
+		UpdatedAt:       time.Now().Unix(),
 		IsAllDay:        s.IsAllDay,
 		RepeatID:        s.RepeatID,
 	}
@@ -299,7 +299,8 @@ func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
 		if schedule.RepeatID == "" {
 			schedule.RepeatID = utils.NewID()
 		}
-	} else {
+	}
+	if schedule.RepeatJson == "" {
 		schedule.RepeatJson = "{}"
 	}
 	b, err := json.Marshal(s.Attachment)
