@@ -3,6 +3,9 @@ package model
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -12,8 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"strings"
-	"sync"
 )
 
 type IOutcomeModel interface {
@@ -725,13 +726,7 @@ func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name 
 }
 
 func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) (orgName string, err error) {
-	provider, err := external.GetOrganizationServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getOrganizationNameByID: GetOrganizationServiceProvider failed",
-			log.Err(err),
-			log.String("org_id", id))
-		return "", err
-	}
+	provider := external.GetOrganizationServiceProvider()
 	orgs, err := provider.BatchGet(ctx, []string{id})
 	if err != nil {
 		log.Error(ctx, "getOrganizationNameByID: BatchGet failed",
@@ -748,13 +743,7 @@ func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) 
 }
 
 func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id string) (orgID, orgName string, err error) {
-	provider, err := external.GetOrganizationServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getRootOrganizationByOrgID: GetOrganizationServiceProvider failed",
-			log.Err(err),
-			log.String("org_id", id))
-		return "", "", err
-	}
+	provider := external.GetOrganizationServiceProvider()
 	orgs, err := provider.GetParents(ctx, orgID)
 	if err != nil {
 		log.Error(ctx, "getRootOrganizationByOrgID: GetMyTopOrg failed",

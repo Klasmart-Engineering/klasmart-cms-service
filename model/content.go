@@ -1056,16 +1056,12 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 
 func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
-	orgProvider, err := external.GetOrganizationServiceProvider()
-	if err != nil {
-		log.Error(ctx, "can't get org provider", log.Err(err))
+	orgProvider := external.GetOrganizationServiceProvider()
+	orgs, err := orgProvider.BatchGet(ctx, []string{user.OrgID})
+	if err != nil || len(orgs) < 1 {
+		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
-		orgs, err := orgProvider.BatchGet(ctx, []string{user.OrgID})
-		if err != nil || len(orgs) < 1 {
-			log.Error(ctx, "can't get org info", log.Err(err))
-		} else {
-			orgName = orgs[0].Name
-		}
+		orgName = orgs[0].Name
 	}
 
 	programNameMap := make(map[string]string)
