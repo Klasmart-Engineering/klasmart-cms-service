@@ -8,10 +8,10 @@ type PublishScopeProvider interface {
 
 type mockPublishScopeService struct{}
 
-func (m *mockPublishScopeService) DefaultPublishScope(ctx context.Context) string{
+func (m *mockPublishScopeService) DefaultPublishScope(ctx context.Context) string {
 	return "default"
 }
 
-func GetPublishScopeProvider() (PublishScopeProvider, error) {
-	return &mockPublishScopeService{}, nil
+func GetPublishScopeProvider() PublishScopeProvider {
+	return &mockPublishScopeService{}
 }

@@ -18,8 +18,8 @@ type UserInfo struct {
 	OrgType   string `json:"org_type"`
 }
 
-func GetUserServiceProvider() (UserServiceProvider, error) {
-	return &mockUserService{}, nil
+func GetUserServiceProvider() UserServiceProvider {
+	return &mockUserService{}
 }
 
 type mockUserService struct{}

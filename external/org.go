@@ -15,8 +15,8 @@ type Organization struct {
 	ParentID string `json:"parent_id"`
 }
 
-func GetOrganizationServiceProvider() (OrganizationServiceProvider, error) {
-	return &mockOrganizationService{}, nil
+func GetOrganizationServiceProvider() OrganizationServiceProvider {
+	return &mockOrganizationService{}
 }
 
 type mockOrganizationService struct{}

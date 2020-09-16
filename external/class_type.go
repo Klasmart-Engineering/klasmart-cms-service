@@ -11,8 +11,8 @@ type ClassType struct {
 	Name string `json:"name"`
 }
 
-func GetClassTypeServiceProvider() (ClassTypeServiceProvider, error) {
-	return &mockClassTypeService{}, nil
+func GetClassTypeServiceProvider() ClassTypeServiceProvider {
+	return &mockClassTypeService{}
 }
 
 type mockClassTypeService struct{}

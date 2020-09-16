@@ -3,18 +3,20 @@ package model
 import (
 	"context"
 	"fmt"
+
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 type ILiveTokenModel interface {
@@ -109,13 +111,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (string, error) {
 	switch op.Role {
 	case entity.RoleTeacher:
-		teacherService, err := external.GetTeacherServiceProvider()
-		if err != nil {
-			log.Error(ctx, "getUserName:GetTeacherServiceProvider error",
-				log.Err(err),
-				log.Any("op", op))
-			return "", err
-		}
+		teacherService := external.GetTeacherServiceProvider()
 		teacherInfos, err := teacherService.BatchGet(ctx, []string{op.UserID})
 		if err != nil {
 			log.Error(ctx, "getUserName:GetTeacherServiceProvider BatchGet error",

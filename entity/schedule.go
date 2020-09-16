@@ -287,9 +287,9 @@ func (s *ScheduleAddView) Convert(ctx context.Context) (*Schedule, error) {
 		CreatedAt:       time.Now().Unix(),
 		UpdatedAt:       0,
 		IsAllDay:        s.IsAllDay,
+		RepeatID:        s.RepeatID,
 	}
 	if s.IsRepeat {
-		schedule.RepeatID = s.RepeatID
 		b, err := json.Marshal(s.Repeat)
 		if err != nil {
 			return nil, err
