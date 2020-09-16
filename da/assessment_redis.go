@@ -95,9 +95,15 @@ func (da *assessmentRedisDA) detailCacheKey(id string) string {
 
 func (da *assessmentRedisDA) List(ctx context.Context, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error) {
 	result := &entity.ListAssessmentsResult{}
-	field := da.listCacheField(cmd)
+	field, err := da.listCacheField(cmd)
+	if err != nil {
+		log.Error(ctx, "get assessment list cache: get list cache field failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+		)
+	}
 	if err := da.getHashAndUnmarshalJSON(ctx, RedisKeyPrefixAssessmentList, field, result); err != nil {
-		log.Error(ctx, "get assessment list cache: decode redis value failed",
+		log.Error(ctx, "get assessment list cache: get or unmarshal redis value failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
 			log.String("field", field),
@@ -108,7 +114,14 @@ func (da *assessmentRedisDA) List(ctx context.Context, cmd entity.ListAssessment
 }
 
 func (da *assessmentRedisDA) CacheList(ctx context.Context, cmd entity.ListAssessmentsCommand, result *entity.ListAssessmentsResult) error {
-	field := da.listCacheField(cmd)
+	field, err := da.listCacheField(cmd)
+	if err != nil {
+		log.Error(ctx, "cache assessment list: get list cache field failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+			log.Any("result", result),
+		)
+	}
 	bs, err := json.Marshal(result)
 	if err != nil {
 		log.Error(ctx, "cache assessment list: json marshal failed",
@@ -150,11 +163,15 @@ func (da *assessmentRedisDA) CleanList(ctx context.Context) error {
 	return nil
 }
 
-func (da *assessmentRedisDA) listCacheField(cmd entity.ListAssessmentsCommand) string {
+func (da *assessmentRedisDA) listCacheField(cmd entity.ListAssessmentsCommand) (string, error) {
+	bs, err := json.Marshal(cmd)
+	if err != nil {
+		return "", err
+	}
 	hash := md5.New()
-	hash.Write([]byte(fmt.Sprintf("%+v", cmd)))
-	bytes := hash.Sum(nil)
-	return fmt.Sprintf("%x", bytes)
+	hash.Write(bs)
+	result := hash.Sum(nil)
+	return fmt.Sprintf("%x", result), nil
 }
 
 type baseAssessmentRedisDA struct{}
