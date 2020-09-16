@@ -385,7 +385,7 @@ type ContentInfo struct {
 
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`
-	RejectReason string `json:"reject_reason"`
+	RejectReason []string `json:"reject_reason"`
 	LatestID     string `json:"latest_id"`
 
 	Data  string `json:"data"`
