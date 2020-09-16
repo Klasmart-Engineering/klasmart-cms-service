@@ -708,13 +708,7 @@ func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContex
 }
 
 func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name string, err error) {
-	provider, err := external.GetUserServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getAuthorNameByID: GetUserServiceProvider failed",
-			log.Err(err),
-			log.String("user_id", id))
-		return "", err
-	}
+	provider := external.GetUserServiceProvider()
 	user, err := provider.GetUserInfoByID(ctx, id)
 	if err != nil {
 		log.Error(ctx, "getAuthorNameByID: GetUserInfoByID failed",
@@ -772,14 +766,7 @@ func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id strin
 }
 
 func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id string) (orgID, orgName string, err error) {
-	provider, err := external.GetUserServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getRootOrganizationByAuthorID: GetUserServiceProvider failed",
-			log.Err(err),
-			log.String("user_id", id))
-		return "", "", err
-	}
-
+	provider := external.GetUserServiceProvider()
 	user, err := provider.GetUserInfoByID(ctx, id)
 	if err != nil {
 		log.Error(ctx, "getRootOrganizationByAuthorID failed",
