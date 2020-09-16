@@ -286,11 +286,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	//检查数据信息是否正确
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
-		provider, err := external.GetPublishScopeProvider()
-		if err != nil {
-			log.Warn(ctx, "get publishScope provider failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
-			return "", err
-		}
+		provider := external.GetPublishScopeProvider()
 		c.PublishScope = provider.DefaultPublishScope(ctx)
 	}
 
@@ -320,11 +316,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
 	if data.ContentType.IsAsset() {
-		provider, err := external.GetPublishScopeProvider()
-		if err != nil {
-			log.Warn(ctx, "get publishScope provider failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
-			return err
-		}
+		provider := external.GetPublishScopeProvider()
 		data.PublishScope = provider.DefaultPublishScope(ctx)
 	}
 
