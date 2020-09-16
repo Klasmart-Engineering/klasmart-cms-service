@@ -269,7 +269,6 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		}
 		viewData.RepeatID = schedule.RepeatID
 		if viewData.EditType == entity.ScheduleEditWithFollowing && !viewData.IsRepeat {
-			viewData.IsRepeat = true
 			var repeat entity.RepeatOptions
 			if err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat); err != nil {
 				log.Error(ctx, "update schedule: json unmarshal failed",
@@ -279,6 +278,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			}
 			viewData.Repeat = repeat
 		}
+		viewData.IsRepeat = schedule.RepeatID != ""
 		id, err = s.AddTx(ctx, tx, operator, &viewData.ScheduleAddView)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
