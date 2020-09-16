@@ -31,7 +31,7 @@ type IContentModel interface {
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error)
 
-	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error
+	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -362,7 +362,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	return nil
 }
 
-func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid, reason, status string) error {
+func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, status string) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
@@ -373,7 +373,10 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	content.PublishStatus = entity.NewContentPublishStatus(status)
-	content.RejectReason = reason
+	if status == entity.ContentStatusRejected && len(reason) < 1 {
+		return ErrNoRejectReason
+	}
+	content.RejectReason = strings.Join(reason, ",")
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 	if err != nil {
 		log.Error(ctx, "update contentdata scope failed", log.Err(err))
@@ -502,8 +505,6 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 			updateIds = append(updateIds, contents[i].SourceID)
 		}
 	}
-	return nil
-
 	da.GetContentRedis().CleanContentCache(ctx, updateIds)
 	return err
 }

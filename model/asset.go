@@ -39,6 +39,7 @@ var (
 	ErrBadRequest         = errors.New("bad reqeust")
 	ErrResourceNotFound   = errors.New("resource not found")
 	ErrInvalidContentType = errors.New("invalid content type")
+	ErrNoRejectReason = errors.New("no reject reason")
 )
 
 type IAssetModel interface {
