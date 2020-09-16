@@ -95,12 +95,12 @@ func (da *assessmentRedisDA) detailCacheKey(id string) string {
 
 func (da *assessmentRedisDA) List(ctx context.Context, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error) {
 	result := &entity.ListAssessmentsResult{}
-	key := da.listCacheKey(cmd)
-	if err := da.getAndUnmarshalJSON(ctx, key, result); err != nil {
+	field := da.listCacheField(cmd)
+	if err := da.getHashAndUnmarshalJSON(ctx, RedisKeyPrefixAssessmentList, field, result); err != nil {
 		log.Error(ctx, "get assessment list cache: decode redis value failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
-			log.String("key", key),
+			log.String("field", field),
 		)
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (da *assessmentRedisDA) List(ctx context.Context, cmd entity.ListAssessment
 }
 
 func (da *assessmentRedisDA) CacheList(ctx context.Context, cmd entity.ListAssessmentsCommand, result *entity.ListAssessmentsResult) error {
-	key := da.listCacheKey(cmd)
+	key := da.listCacheField(cmd)
 	bs, err := json.Marshal(result)
 	if err != nil {
 		log.Error(ctx, "cache assessment list: json marshal failed",
@@ -145,7 +145,7 @@ func (da *assessmentRedisDA) CleanList(ctx context.Context) error {
 	return nil
 }
 
-func (da *assessmentRedisDA) listCacheKey(cmd entity.ListAssessmentsCommand) string {
+func (da *assessmentRedisDA) listCacheField(cmd entity.ListAssessmentsCommand) string {
 	hash := md5.New()
 	hash.Write([]byte(fmt.Sprintf("%+v", cmd)))
 	bytes := hash.Sum(nil)
@@ -169,6 +169,22 @@ func (da *baseAssessmentRedisDA) get(ctx context.Context, key string) (string, e
 	return redisResult.Val(), nil
 }
 
+func (da *baseAssessmentRedisDA) getHash(ctx context.Context, key string, field string) (string, error) {
+	if !da.enable() {
+		return "", nil
+	}
+	redisResult := ro.MustGetRedis(ctx).HGet(key, field)
+	if err := redisResult.Err(); err != nil {
+		log.Error(ctx, "get hash cache: getfailed from redis",
+			log.Err(err),
+			log.String("key", key),
+			log.String("field", field),
+		)
+		return "", err
+	}
+	return redisResult.Val(), nil
+}
+
 func (da *baseAssessmentRedisDA) getAndUnmarshalJSON(ctx context.Context, key string, result interface{}) error {
 	value, err := da.get(ctx, key)
 	if err != nil {
@@ -182,6 +198,28 @@ func (da *baseAssessmentRedisDA) getAndUnmarshalJSON(ctx context.Context, key st
 		log.Error(ctx, "get cache and unmarshal json: json unmarshal value failed",
 			log.Err(err),
 			log.String("key", key),
+			log.Any("value", value),
+		)
+		return err
+	}
+	return nil
+}
+
+func (da *baseAssessmentRedisDA) getHashAndUnmarshalJSON(ctx context.Context, key string, field string, result interface{}) error {
+	value, err := da.getHash(ctx, key, field)
+	if err != nil {
+		log.Error(ctx, "get hash cache and unmarshal json: get failed",
+			log.Err(err),
+			log.String("key", key),
+			log.String("field", field),
+		)
+		return err
+	}
+	if err := json.Unmarshal([]byte(value), result); err != nil {
+		log.Error(ctx, "get hash cache and unmarshal json: json unmarshal value failed",
+			log.Err(err),
+			log.String("key", key),
+			log.String("field", field),
 			log.Any("value", value),
 		)
 		return err

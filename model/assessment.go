@@ -65,7 +65,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			log.Err(err),
 			log.String("id", "id"),
 		)
-	} else if cacheResult == nil {
+	} else if cacheResult != nil {
 		log.Info(ctx, "get assessment detail: hit cache",
 			log.String("id", id),
 			log.Any("cache_result", cacheResult),
