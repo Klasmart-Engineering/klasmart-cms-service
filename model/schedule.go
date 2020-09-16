@@ -136,6 +136,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		)
 		return "", err
 	}
+	da.GetScheduleRedisDA().Clean(ctx, nil)
 	return id.(string), nil
 }
 func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
@@ -201,8 +202,6 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		log.Error(ctx, "schedules_teachers batchInsert error", log.Err(err), log.Any("scheduleTeachers", scheduleTeachers))
 		return "", err
 	}
-
-	da.GetScheduleRedisDA().Clean(ctx, nil)
 	return schedule.ID, nil
 }
 func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
@@ -278,7 +277,6 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			}
 			viewData.Repeat = repeat
 		}
-		viewData.IsRepeat = schedule.RepeatID != ""
 		id, err = s.AddTx(ctx, tx, operator, &viewData.ScheduleAddView)
 		if err != nil {
 			log.Error(ctx, "update schedule: delete failed",
@@ -307,6 +305,7 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		)
 		return err
 	}
+	da.GetScheduleRedisDA().Clean(ctx, []string{id})
 	return nil
 }
 func (s *scheduleModel) DeleteTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
@@ -354,7 +353,6 @@ func (s *scheduleModel) DeleteTx(ctx context.Context, tx *dbo.DBContext, op *ent
 		)
 		return err
 	}
-	da.GetScheduleRedisDA().Clean(ctx, []string{id})
 	return nil
 }
 
