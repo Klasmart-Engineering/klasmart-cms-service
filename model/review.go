@@ -13,7 +13,7 @@ import (
 
 type IReviewerModel interface {
 	Approve(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
-	Reject(ctx context.Context, tx *dbo.DBContext, cid string, reason string, user *entity.Operator) error
+	Reject(ctx context.Context, tx *dbo.DBContext, cid string, reasons []string, user *entity.Operator) error
 }
 
 type Reviewer struct {
@@ -42,7 +42,7 @@ func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, 
 		log.Error(ctx, "Approve: SetStatus failed: ", log.Err(err))
 		return err
 	}
-	err = cm.UpdateContentPublishStatus(ctx, tx, cid, "", string(content.PublishStatus))
+	err = cm.UpdateContentPublishStatus(ctx, tx, cid, []string{}, string(content.PublishStatus))
 	if err != nil {
 		log.Error(ctx, "Approve: Update Status failed: ", log.Err(err))
 		return err
@@ -50,7 +50,7 @@ func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, 
 	return nil
 }
 
-func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, reason string, user *entity.Operator) error {
+func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, reasons []string, user *entity.Operator) error {
 	// TODO:
 	// 1. check auth
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentReview, cid)
@@ -73,7 +73,7 @@ func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, r
 		log.Error(ctx, "Reject: SetStatus failed: ", log.Err(err))
 		return err
 	}
-	err = cm.UpdateContentPublishStatus(ctx, tx, cid, reason, string(content.PublishStatus))
+	err = cm.UpdateContentPublishStatus(ctx, tx, cid, reasons, string(content.PublishStatus))
 	if err != nil {
 		log.Error(ctx, "Reject: Update Status failed: ", log.Err(err))
 		return err
