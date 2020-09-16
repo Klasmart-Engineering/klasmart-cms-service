@@ -88,14 +88,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			)
 			return nil, err
 		}
-		studentService, err := external.GetStudentServiceProvider()
-		if err != nil {
-			log.Error(ctx, "get assessment detail: get student service failed",
-				log.Err(err),
-				log.String("id", id),
-			)
-			return nil, err
-		}
+		studentService := external.GetStudentServiceProvider()
 		students, err := studentService.BatchGet(ctx, attendanceIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get student failed",
