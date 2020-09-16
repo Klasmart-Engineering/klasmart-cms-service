@@ -297,7 +297,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
 	var reason struct {
-		RejectReason string `json:"reject_reason"'`
+		RejectReason string `json:"reject_reason"`
 	}
 	err := c.ShouldBindJSON(&reason)
 	if err != nil {
