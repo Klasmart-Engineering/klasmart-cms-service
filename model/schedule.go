@@ -276,6 +276,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 				)
 			}
 			viewData.Repeat = repeat
+			viewData.IsRepeat = true
 		}
 		id, err = s.AddTx(ctx, tx, operator, &viewData.ScheduleAddView)
 		if err != nil {
