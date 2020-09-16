@@ -15,6 +15,5 @@ const (
 )
 
 const (
-	RedisKeyPrefixAssessmentDetail = "assessment:detail"
-	RedisKeyPrefixAssessmentList   = "assessment:list"
+	RedisKeyPrefixAssessmentItem = "assessment:item"
 )

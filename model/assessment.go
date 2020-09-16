@@ -59,20 +59,6 @@ func (s outcomeSliceSortByAssumedAndName) Swap(i, j int) {
 }
 
 func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id string) (*entity.AssessmentDetailView, error) {
-	cacheResult, err := da.GetAssessmentRedisDA().Detail(ctx, id)
-	if err != nil {
-		log.Info(ctx, "get assessment detail: get failed from cache",
-			log.Err(err),
-			log.String("id", "id"),
-		)
-	} else if cacheResult != nil {
-		log.Info(ctx, "get assessment detail: hit cache",
-			log.String("id", id),
-			log.Any("cache_result", cacheResult),
-		)
-		return cacheResult, nil
-	}
-
 	var result entity.AssessmentDetailView
 
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
@@ -251,33 +237,10 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			}
 		}
 	}
-
-	if err := da.GetAssessmentRedisDA().CacheDetail(ctx, id, &result); err != nil {
-		log.Info(ctx, "get assessment detail: cache failed",
-			log.Err(err),
-			log.String("id", "id"),
-			log.Any("result", result),
-		)
-	}
-
 	return &result, nil
 }
 
 func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error) {
-	cacheResult, err := da.GetAssessmentRedisDA().List(ctx, cmd)
-	if err != nil {
-		log.Info(ctx, "list assessment: get cache list failed",
-			log.Err(err),
-			log.Any("cmd", cmd),
-		)
-	} else if cacheResult != nil {
-		log.Info(ctx, "list assessment: hit cache",
-			log.Any("cmd", cmd),
-			log.Any("cache_result", cacheResult),
-		)
-		return cacheResult, nil
-	}
-
 	cond := da.QueryAssessmentsCondition{
 		Status:   cmd.Status,
 		OrderBy:  cmd.OrderBy,
@@ -399,14 +362,6 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 			})
 		}
 		result.Items = append(result.Items, &newItem)
-	}
-
-	if err := da.GetAssessmentRedisDA().CacheList(ctx, cmd, &result); err != nil {
-		log.Info(ctx, "list assessment: cache list failed",
-			log.Err(err),
-			log.Any("cmd", cmd),
-			log.Any("result", result),
-		)
 	}
 
 	return &result, err
@@ -625,14 +580,6 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 	}); err != nil {
 		return "", err
 	}
-
-	if err := da.GetAssessmentRedisDA().CleanList(ctx); err != nil {
-		log.Info(ctx, "add assessment: clean list cache failed",
-			log.Err(err),
-			log.Any("cmd", cmd),
-		)
-	}
-
 	return newID, nil
 }
 
@@ -740,20 +687,6 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 		)
 		return err
 	}
-
-	if err := da.GetAssessmentRedisDA().CleanDetail(ctx, cmd.ID); err != nil {
-		log.Info(ctx, "update assessment: clean detail cache failed",
-			log.Err(err),
-			log.Any("cmd", cmd),
-		)
-	}
-	if err := da.GetAssessmentRedisDA().CleanList(ctx); err != nil {
-		log.Info(ctx, "update assessment: clean list cache failed",
-			log.Err(err),
-			log.Any("cmd", cmd),
-		)
-	}
-
 	return nil
 }
 
