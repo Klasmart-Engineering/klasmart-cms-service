@@ -277,7 +277,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			}
 			viewData.Repeat = repeat
 		}
-		if schedule.RepeatID != "" {
+		if viewData.EditType == entity.ScheduleEditWithFollowing {
 			viewData.IsRepeat = true
 		}
 
