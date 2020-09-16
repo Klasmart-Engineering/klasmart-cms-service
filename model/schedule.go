@@ -600,11 +600,7 @@ func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, progr
 	var programMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(programIDs) != 0 {
 		programIDs = utils.SliceDeduplication(programIDs)
-		programService, err := external.GetProgramServiceProvider()
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Strings("programIDs", programIDs))
-			return nil, err
-		}
+		programService := external.GetProgramServiceProvider()
 		programInfos, err := programService.BatchGet(ctx, programIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Strings("programIDs", programIDs))
@@ -793,11 +789,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		return err
 	}
 	// program
-	programService, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
+	programService := external.GetProgramServiceProvider()
 	_, err = programService.BatchGet(ctx, []string{v.ProgramID})
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))

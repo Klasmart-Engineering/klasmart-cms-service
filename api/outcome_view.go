@@ -232,13 +232,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 }
 
 func getProgramName(ctx context.Context, id string) (name string) {
-	provider, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getProgramName: GetProgramServiceProvider failed",
-			log.Err(err),
-			log.String("program_id", id))
-		return ""
-	}
+	provider := external.GetProgramServiceProvider()
 	programs, err := provider.BatchGet(ctx, []string{id})
 	if err != nil {
 		log.Error(ctx, "getProgramName: BatchGet failed",
@@ -256,13 +250,7 @@ func getProgramName(ctx context.Context, id string) (name string) {
 	return
 }
 func getProgramsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "getProgramName: GetProgramServiceProvider failed",
-			log.Err(err),
-			log.Strings("program_ids", ids))
-		return nil
-	}
+	provider := external.GetProgramServiceProvider()
 	programs, err := provider.BatchGet(ctx, ids)
 	if err != nil {
 		log.Error(ctx, "getProgramName: BatchGet failed",

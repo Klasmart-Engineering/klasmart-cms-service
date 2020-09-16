@@ -1088,17 +1088,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programProvider, err := external.GetProgramServiceProvider()
+	programProvider := external.GetProgramServiceProvider()
+	programs, err := programProvider.BatchGet(ctx, programIds)
 	if err != nil {
-		log.Error(ctx, "can't get programProvider", log.Err(err))
+		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
-		programs, err := programProvider.BatchGet(ctx, programIds)
-		if err != nil {
-			log.Error(ctx, "can't get org info", log.Err(err))
-		} else {
-			for i := range programs {
-				programNameMap[programs[i].ID] = programs[i].Name
-			}
+		for i := range programs {
+			programNameMap[programs[i].ID] = programs[i].Name
 		}
 	}
 

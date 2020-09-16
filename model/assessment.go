@@ -392,14 +392,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 
 func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []string) (map[string]string, error) {
 	programNameMap := map[string]string{}
-	programService, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "list assessments: get program service failed",
-			log.Err(err),
-			log.Strings("program_ids", programIDs),
-		)
-		return nil, err
-	}
+	programService := external.GetProgramServiceProvider()
 	items, err := programService.BatchGet(ctx, programIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get program failed",
@@ -790,13 +783,7 @@ func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (boo
 }
 
 func (a *assessmentModel) existsProgramByID(ctx context.Context, id string) (bool, error) {
-	programService, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "check program exists: get program service failed",
-			log.Err(err),
-			log.String("id", id),
-		)
-	}
+	programService := external.GetProgramServiceProvider()
 	if _, err := programService.BatchGet(ctx, []string{id}); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
