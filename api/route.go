@@ -27,23 +27,6 @@ func (s Server) registeRoute() {
 		assets.PUT("/:id", MustLogin, s.updateAsset)
 		assets.DELETE("/:id", MustLogin, s.deleteAsset)
 	}
-	category := s.engine.Group("/v1/categories")
-	{
-		category.GET("/", MustLogin, s.searchCategories)
-		category.GET("/:id", MustLogin, s.getCategoryByID)
-		category.POST("/", MustLogin, s.createCategory)
-		category.PUT("/:id", MustLogin, s.updateCategory)
-		category.DELETE("/:id", MustLogin, s.deleteCategory)
-	}
-
-	tag := s.engine.Group("/v1/tag")
-	{
-		tag.GET("/", s.queryTag)
-		tag.GET("/:id", s.getTagByID)
-		tag.POST("/", s.addTag)
-		tag.PUT("/:id", s.updateTag)
-		tag.DELETE("/:id", s.delTag)
-	}
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", MustLogin, s.createContent)

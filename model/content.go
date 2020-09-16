@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 
@@ -13,6 +14,38 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 )
+
+
+var (
+	ErrNoSuchURL           = errors.New("no such url")
+	ErrRequestItemIsNil    = errors.New("request item is nil")
+	ErrNoAuth              = errors.New("no auth to operate")
+	ErrCreateContentFailed = errors.New("create contentdata into data access failed")
+
+	ErrNoContentData                     = errors.New("no content data")
+	ErrInvalidResourceId                 = errors.New("invalid resource id")
+	ErrInvalidContentData                = errors.New("invalid content data")
+	ErrInvalidPublishStatus              = errors.New("invalid publish status")
+	ErrInvalidLockedContentPublishStatus = errors.New("invalid locked content publish status")
+	ErrInvalidContentStatusToPublish     = errors.New("content status is invalid to publish")
+	ErrNoContent                         = errors.New("no content")
+	ErrContentAlreadyLocked              = errors.New("content is already locked")
+	ErrDeleteLessonInSchedule            = errors.New("can't delete lesson in schedule")
+	ErrGetUnpublishedContent             = errors.New("unpublished content")
+	ErrGetUnauthorizedContent            = errors.New("unauthorized content")
+	ErrCloneContentFailed                = errors.New("clone content failed")
+	ErrParseContentDataFailed            = errors.New("parse content data failed")
+	ErrParseContentDataDetailsFailed     = errors.New("parse content data details failed")
+	ErrUpdateContentFailed               = errors.New("update contentdata into data access failed")
+	ErrReadContentFailed                 = errors.New("read content failed")
+	ErrDeleteContentFailed               = errors.New("delete contentdata into data access failed")
+
+	ErrBadRequest         = errors.New("bad reqeust")
+	ErrResourceNotFound   = errors.New("resource not found")
+	ErrInvalidContentType = errors.New("invalid content type")
+	ErrNoRejectReason = errors.New("no reject reason")
+)
+
 
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
@@ -38,8 +71,6 @@ type IContentModel interface {
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	SearchContentByDynamoKey(ctx context.Context, tx *dbo.DBContext, condition da.DyKeyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error)
-
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
@@ -190,29 +221,6 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	}
 
 	return nil
-}
-
-func (cm *ContentModel) SearchContentByDynamoKey(ctx context.Context, tx *dbo.DBContext, condition da.DyKeyContentCondition, user *entity.Operator) (string, []*entity.ContentInfoWithDetails, error) {
-	condition.OrgUserId = condition.Org + condition.Author
-	key, objs, err := da.GetDyContentDA().SearchContentByKey(ctx, condition)
-	if err != nil {
-		log.Error(ctx, "can't read contentdata", log.Err(err))
-		return "", nil, ErrReadContentFailed
-	}
-	response := make([]*entity.ContentInfo, len(objs))
-	for i := range objs {
-		temp, err := contentdata.ConvertContentObj(ctx, objs[i])
-		if err != nil {
-			log.Error(ctx, "Can't parse contentdata, contentId: %v, error: %v", log.String("id", objs[i].ID), log.Err(err))
-			return "", nil, err
-		}
-		response[i] = temp
-	}
-	contentWithDetails, err := cm.buildContentWithDetails(ctx, response, user)
-	if err != nil {
-		return "", nil, err
-	}
-	return key, contentWithDetails, nil
 }
 
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
