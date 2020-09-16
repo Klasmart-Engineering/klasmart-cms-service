@@ -20,7 +20,7 @@ type IAssessmentRedisDA interface {
 	CleanDetail(ctx context.Context, id string) error
 	List(ctx context.Context, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error)
 	CacheList(ctx context.Context, cmd entity.ListAssessmentsCommand, result *entity.ListAssessmentsResult) error
-	CleanList(ctx context.Context, cmd entity.ListAssessmentsCommand) error
+	CleanList(ctx context.Context) error
 }
 
 var (
@@ -133,12 +133,11 @@ func (da *assessmentRedisDA) CacheList(ctx context.Context, cmd entity.ListAsses
 	return nil
 }
 
-func (da *assessmentRedisDA) CleanList(ctx context.Context, cmd entity.ListAssessmentsCommand) error {
-	key := da.listCacheKey(cmd)
+func (da *assessmentRedisDA) CleanList(ctx context.Context) error {
+	key := RedisKeyPrefixAssessmentList
 	if err := da.clean(ctx, key); err != nil {
 		log.Error(ctx, "clean assessment list: clean failed",
 			log.Err(err),
-			log.Any("cmd", cmd),
 			log.String("key", key),
 		)
 		return err
@@ -148,7 +147,7 @@ func (da *assessmentRedisDA) CleanList(ctx context.Context, cmd entity.ListAsses
 
 func (da *assessmentRedisDA) listCacheKey(cmd entity.ListAssessmentsCommand) string {
 	hash := md5.New()
-	hash.Write([]byte(fmt.Sprintf("%v", cmd)))
+	hash.Write([]byte(fmt.Sprintf("%+v", cmd)))
 	bytes := hash.Sum(nil)
 	return fmt.Sprintf("%x", bytes)
 }
