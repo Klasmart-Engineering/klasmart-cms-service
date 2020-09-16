@@ -7,22 +7,22 @@ import (
 
 type AssetObject struct {
 	ID            string   `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT;column:id" json:"id" dynamodbav:"id"`
-	Name          string   `gorm:"type:char(256);NOT NULL;column:name json:"name" dynamodbav:"name"`
-	Program       string    `gorm:"type:varchar(50);NOT NULL;column:name program:"program" dynamodbav:"program"`
-	Subject       string    `gorm:"type:varchar(50);NOT NULL;column:name subject:"subject" dynamodbav:"subject`
-	Developmental string    `gorm:"type:varchar(50);NOT NULL;column:developmental json:"developmental" dynamodbav:"developmental`
-	Skills        string    `gorm:"type:varchar(50);NOT NULL;column:skills json:"skills" dynamodbav:"skills`
-	Age           string    `gorm:"type:varchar(50);NOT NULL;column:age json:"age" dynamodbav:"age`
-	Keywords      string `gorm:"type:text;NOT NULL;column:keywords json:"keywords" dynamodbav:"keywords"`
-	Description   string   `gorm:"type:text;NOT NULL;column:description json:"description" dynamodbay: "description"`
-	Thumbnail     string   `gorm:"type:text;NOT NULL;column:thumbnail json:"thumbnail" dynamodbav:"thumbnail"`
+	Name          string   `gorm:"type:char(256);NOT NULL;column:name" json:"name" dynamodbav:"name"`
+	Program       string    `gorm:"type:varchar(50);NOT NULL;column:program" program:"program" dynamodbav:"program"`
+	Subject       string    `gorm:"type:varchar(50);NOT NULL;column:subject" subject:"subject" dynamodbav:"subject"`
+	Developmental string    `gorm:"type:varchar(50);NOT NULL;column:developmental" json:"developmental" dynamodbav:"developmental"`
+	Skills        string    `gorm:"type:varchar(50);NOT NULL;column:skills" json:"skills" dynamodbav:"skills"`
+	Age           string    `gorm:"type:varchar(50);NOT NULL;column:age" json:"age" dynamodbav:"age"`
+	Keywords      string `gorm:"type:text;NOT NULL;column:keywords" json:"keywords" dynamodbav:"keywords"`
+	Description   string   `gorm:"type:text;NOT NULL;column:description" json:"description" dynamodbay:"description"`
+	Thumbnail     string   `gorm:"type:text;NOT NULL;column:thumbnail" json:"thumbnail" dynamodbav:"thumbnail"`
 
-	Size     int64  `gorm:"type:bigint;NOT NULL;column:size json:"size" dynamodbav:"size"`
-	Resource string `gorm:"type:text;NOT NULL;column:resource json:"resource" dynamodbav:"resource"`
+	Size     int64  `gorm:"type:bigint;NOT NULL;column:size" json:"size" dynamodbav:"size"`
+	Resource string `gorm:"type:text;NOT NULL;column:resource" json:"resource" dynamodbav:"resource"`
 
-	Author 		string `gorm:"type:varchar(50);NOT NULL;column:author json:"author" dynamodbav:"author"`
-	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name json:"author_name" dynamodbav:"author_name"`
-	Org 		string `gorm:"type:varchar(50);NOT NULL;column:org json:"org" dynamodbav:"org"`
+	Author 		string `gorm:"type:varchar(50);NOT NULL;column:author" json:"author" dynamodbav:"author"`
+	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name" json:"author_name" dynamodbav:"author_name"`
+	Org 		string `gorm:"type:varchar(50);NOT NULL;column:org" json:"org" dynamodbav:"org"`
 
 	CreatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:created_at" json:"created_at" dynamodbav:"created_at"`
 	UpdatedAt *time.Time `gorm:"type:datetime;NOT NULL;column:updated_at" json:"updated_at" dynamodbav:"updated_at"`

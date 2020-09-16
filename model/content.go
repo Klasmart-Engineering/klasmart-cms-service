@@ -510,8 +510,6 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 			updateIds = append(updateIds, contents[i].SourceID)
 		}
 	}
-	return nil
-
 	da.GetContentRedis().CleanContentCache(ctx, updateIds)
 	return err
 }
