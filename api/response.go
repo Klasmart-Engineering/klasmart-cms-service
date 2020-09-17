@@ -12,7 +12,7 @@ func L(label ResponseLabel) interface{} {
 }
 
 type ErrorResponse struct {
-	Label string `json:"label,omitempty" example:"unknown"`
+	Label string `json:"label,omitempty" example:"unknown" enums:"unknown"`
 }
 
 type BadRequestResponse ErrorResponse
