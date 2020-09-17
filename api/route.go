@@ -94,12 +94,13 @@ func (s Server) registeRoute() {
 }
 
 // Ping godoc
+// @ID ping
 // @Summary Ping
 // @Description Ping and test service
 // @Tags common
 // @Accept  json
 // @Produce  plain
-// @Success 200 {string} string
+// @Success 200 {object} string
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
