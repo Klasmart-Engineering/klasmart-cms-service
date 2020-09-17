@@ -29,7 +29,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}
 
 	//get publishScope&authorName
-	publishScope := operator.OrgID
+	publishScope := c.PublishScope
 	//TODO: To get real name
 	authorName := "Bada"
 
