@@ -1,4 +1,3 @@
-basePath: /v1
 definitions:
   api.BadRequestResponse:
     properties:
@@ -10,7 +9,7 @@ definitions:
     type: object
   api.NotFoundResponse:
     type: object
-host: https://kl2-test.kidsloop.net
+host: https://kl2-test.kidsloop.net/v1
 info:
   contact: {}
   description: '"KidsLoop 2.0 backend rest api'

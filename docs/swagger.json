@@ -8,8 +8,7 @@
         "license": {},
         "version": "1.0.0"
     },
-    "host": "https://kl2-test.kidsloop.net",
-    "basePath": "/v1",
+    "host": "https://kl2-test.kidsloop.net/v1",
     "paths": {
         "/ping": {
             "get": {
