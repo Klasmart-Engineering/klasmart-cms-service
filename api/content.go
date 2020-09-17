@@ -19,6 +19,20 @@ type contentBulkOperateRequest struct {
 	ID []string `json:"id"`
 }
 
+type CreateContentResponse struct {
+	ID string `json:"id"`
+}
+
+// @Summary createContent
+// @Description create lesson plan, lesson material or assets
+// @Accept json
+// @Produce json
+// @Param content body entity.CreateContentRequest true "create request"
+// @Tags content
+// @Success 200 {object} CreateContentResponse
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents [post]
 func (s *Server) createContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -55,6 +69,16 @@ func (s *Server) createContent(c *gin.Context) {
 	}
 }
 
+// @Summary publishContentBulk
+// @Description publish contents bulk
+// @Accept json
+// @Produce json
+// @Param contentIds body contentBulkOperateRequest true "content bulk id list"
+// @Tags content
+// @Success 200 {string} string "ok"
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents_bulk/publish [put]
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -79,6 +103,16 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	}
 }
 
+// @Summary publishContent
+// @Description publish a content
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to publish"
+// @Tags content
+// @Success 200 {string} string "ok"
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id}/publish [put]
 func (s *Server) publishContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -103,6 +137,16 @@ func (s *Server) publishContent(c *gin.Context) {
 	}
 }
 
+// @Summary getContent
+// @Description get a content by id
+// @Accept json
+// @Produce json
+// @Param content_id path string true "get content id"
+// @Tags content
+// @Success 200 {object} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [get]
 func (s *Server) getContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -125,6 +169,17 @@ func (s *Server) getContent(c *gin.Context) {
 	}
 }
 
+// @Summary updateContent
+// @Description update a content data
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to publish"
+// @Param contentData body entity.CreateContentRequest true "content data to update"
+// @Tags content
+// @Success 200 {string} string "ok"
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [put]
 func (s *Server) updateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -168,6 +223,16 @@ func (s *Server) updateContent(c *gin.Context) {
 	}
 }
 
+// @Summary lockContent
+// @Description lock a content to edit
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to lock"
+// @Tags content
+// @Success 200 {object} CreateContentResponse
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id}/lock [put]
 func (s *Server) lockContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -199,6 +264,16 @@ func (s *Server) lockContent(c *gin.Context) {
 	}
 }
 
+// @Summary deleteContentBulk
+// @Description delete contents bulk
+// @Accept json
+// @Produce json
+// @Param contentIds body contentBulkOperateRequest true "content bulk id list"
+// @Tags content
+// @Success 200 {string} string "ok"
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents_bulk [delete]
 func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -226,6 +301,16 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	}
 }
 
+// @Summary deleteContent
+// @Description delete a content
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to delete"
+// @Tags content
+// @Success 200 {string} string ok
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [delete]
 func (s *Server) deleteContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -250,6 +335,16 @@ func (s *Server) deleteContent(c *gin.Context) {
 	}
 }
 
+// @Summary contentDataCount
+// @Description get content data count
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to get count"
+// @Tags content
+// @Success 200 {string} entity.ContentStatisticsInfo
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [delete]
 func (s *Server) contentDataCount(c *gin.Context) {
 	ctx := c.Request.Context()
 	cid := c.Param("content_id")
@@ -262,6 +357,22 @@ func (s *Server) contentDataCount(c *gin.Context) {
 	}
 }
 
+// @Summary queryContent
+// @Description query content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query int false "search content type" Enums(1, 2, 3)
+// @Param scope query string false "search content scope"
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {array} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents [get]
 func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -278,6 +389,22 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 }
 
+// @Summary queryPrivateContent
+// @Description query private content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query int false "search content type" Enums(1, 2, 3)
+// @Param scope query string false "search content scope"
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {array} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -295,6 +422,22 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	}
 }
 
+// @Summary queryPendingContent
+// @Description query pending content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query int false "search content type" Enums(1, 2, 3)
+// @Param scope query string false "search content scope"
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {array} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/pending [get]
 func (s *Server) queryPendingContent(c *gin.Context) {
 
 	ctx := c.Request.Context()
