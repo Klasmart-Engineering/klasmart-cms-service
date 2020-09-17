@@ -9,6 +9,17 @@ import (
 	"net/http"
 )
 
+// @ID createLearningOutcomes
+// @Summary createOutcome
+// @Tags learning_outcomes
+// @Description Create learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome body OutcomeCreateView true "create outcome"
+// @Success 200 {object} OutcomeCreateResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes [post]
 func (s *Server) createOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -50,6 +61,18 @@ func (s *Server) createOutcome(c *gin.Context) {
 	}
 }
 
+// @ID getLearningOutcomesById
+// @Summary getLearningOutcome
+// @Tags learning_outcomes
+// @Description learning outcomes info
+// @Accept json
+// @Produce json
+// @Param outcome_id path string true "outcome id"
+// @Success 200 {object} OutcomeView
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes/{outcome_id} [get]
 func (s *Server) getOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -77,6 +100,19 @@ func (s *Server) getOutcome(c *gin.Context) {
 	}
 }
 
+// @ID updateLearningOutcomes
+// @Summary update learning outcome
+// @Tags learning_outcomes
+// @Description update learning outcomes by id
+// @Accept json
+// @Produce json
+// @Param outcome_id path string true "outcome id"
+// @Param outcome body OutcomeCreateView true "learning outcome"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes/{outcome_id} [put]
 func (s *Server) updateOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -120,6 +156,18 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	}
 }
 
+// @ID deleteLearningOutcome
+// @Summary delete learning outcome
+// @Tags learning_outcomes
+// @Description delete learning outcomes by id
+// @Accept json
+// @Produce json
+// @Param outcome_id path string true "outcome id"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes/{outcome_id} [delete]
 func (s *Server) deleteOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -155,6 +203,28 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 	}
 }
 
+// @ID searchLearningOutcomes
+// @Summary search learning outcome
+// @Tags learning_outcomes
+// @Description search learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome_name query string false "search by name"
+// @Param description query string false "search by description"
+// @Param keywords query string false "search by keywords"
+// @Param shortcode query string false "search by shortcode"
+// @Param author_name query string false "search by author_name"
+// @Param search_key query string false "search by search_key"
+// @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
+// @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
+// @Param page query integer false "page"
+// @Param page_size query integer false "page size"
+// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Success 200 {object} SearchResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes [get]
 func (s *Server) queryOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -197,6 +267,19 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	}
 }
 
+// @ID lockLearningOutcomes
+// @Summary lock learning outcome
+// @Tags learning_outcomes
+// @Description edit published learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome_id path string true "outcome id"
+// @Success 200 {string} LockResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes/{outcome_id}/lock [put]
 func (s *Server) lockOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -227,6 +310,19 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	}
 }
 
+// @ID publishLearningOutcomes
+// @Summary publish learning outcome
+// @Tags learning_outcomes
+// @Description submit publish learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome_id path string true "outcome id"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes/{outcome_id}/publish [put]
 func (s *Server) publishOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -261,6 +357,19 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	}
 }
 
+// @ID approveLearningOutcomes
+// @Summary approve learning outcome
+// @Tags learning_outcomes
+// @Description approve learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome_id path string true "outcome id"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes/{outcome_id}/approve [put]
 func (s *Server) approveOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -292,12 +401,25 @@ func (s *Server) approveOutcome(c *gin.Context) {
 	}
 }
 
+// @ID rejectLearningOutcomes
+// @Summary reject learning outcome
+// @Tags learning_outcomes
+// @Description reject learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome_id path string true "outcome id"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes/{outcome_id}/reject [put]
 func (s *Server) rejectOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
 	var reason struct {
-		RejectReason string `json:"reject_reason"'`
+		RejectReason string `json:"reject_reason"`
 	}
 	err := c.ShouldBindJSON(&reason)
 	if err != nil {
@@ -332,6 +454,19 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	}
 }
 
+// @ID publishLearningOutcomesBulk
+// @Summary publish bulk learning outcome
+// @Tags learning_outcomes
+// @Description submit publish learning outcomes
+// @Accept json
+// @Produce json
+// @Param id_list body OutcomeIDList true "outcome id list"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/bulk_publish/learning_outcomes [put]
 func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -368,6 +503,19 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 	}
 }
 
+// @ID deleteOutcomeBulk
+// @Summary bulk delete learning outcome
+// @Tags learning_outcomes
+// @Description bulk delete learning outcomes
+// @Accept json
+// @Produce json
+// @Param id_list body OutcomeIDList true "outcome id list"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/bulk/learning_outcomes [delete]
 func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -403,6 +551,28 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 	}
 }
 
+// @ID searchPrivateLearningOutcomes
+// @Summary search private learning outcome
+// @Tags learning_outcomes
+// @Description search private learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome_name query string false "search by name"
+// @Param description query string false "search by description"
+// @Param keywords query string false "search by keywords"
+// @Param shortcode query string false "search by shortcode"
+// @Param author_name query string false "search by author_name"
+// @Param search_key query string false "search by search_key"
+// @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
+// @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
+// @Param page query integer false "page"
+// @Param page_size query integer false "page size"
+// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Success 200 {object} SearchResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes [get]
 func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -440,6 +610,28 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	}
 }
 
+// @ID searchPendingLearningOutcomes
+// @Summary search pending learning outcome
+// @Tags learning_outcomes
+// @Description search pending learning outcomes
+// @Accept json
+// @Produce json
+// @Param outcome_name query string false "search by name"
+// @Param description query string false "search by description"
+// @Param keywords query string false "search by keywords"
+// @Param shortcode query string false "search by shortcode"
+// @Param author_name query string false "search by author_name"
+// @Param search_key query string false "search by search_key"
+// @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
+// @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
+// @Param page query integer false "page"
+// @Param page_size query integer false "page size"
+// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Success 200 {object} SearchResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /v1/learning_outcomes [get]
 func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)

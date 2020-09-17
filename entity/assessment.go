@@ -119,7 +119,7 @@ type AssessmentTeacher struct {
 	Name string `json:"name"`
 }
 
-type ListAssessmentsCommand struct {
+type ListAssessmentsQuery struct {
 	Status      *AssessmentStatus       `json:"status"`
 	TeacherName *string                 `json:"teacher_name"`
 	OrderBy     *ListAssessmentsOrderBy `json:"order_by"`
@@ -175,21 +175,19 @@ type ListAssessmentsResult struct {
 }
 
 type AddAssessmentCommand struct {
-	ScheduleID string `json:"schedule_id"`
-	//ClassID    string `json:"class_id"`
-	//ClassName     string   `json:"class_name"`
-	//LessonName    string   `json:"lesson_name"`
+	ScheduleID    string   `json:"schedule_id"`
 	AttendanceIDs []string `json:"attendance_ids"`
-	//ProgramID     string   `json:"program_id"`
-	//SubjectID     string   `json:"subject_id"`
-	//TeacherIDs    []string `json:"teacher_ids"`
-	ClassLength  int   `json:"class_length"`
-	ClassEndTime int64 `json:"class_end_time"`
+	ClassLength   int      `json:"class_length"`
+	ClassEndTime  int64    `json:"class_end_time"`
+}
+
+type AddAssessmentResult struct {
+	ID string `json:"id"`
 }
 
 type UpdateAssessmentCommand struct {
 	ID                    string                  `json:"id"`
-	Action                UpdateAssessmentAction  `json:"action"`
+	Action                UpdateAssessmentAction  `json:"action" enums:"save,completed"`
 	AttendanceIDs         *[]string               `json:"attendance_ids"`
 	OutcomeAttendanceMaps *[]OutcomeAttendanceMap `json:"outcome_attendance_maps"`
 }

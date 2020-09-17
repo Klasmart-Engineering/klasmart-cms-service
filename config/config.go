@@ -22,6 +22,8 @@ type Config struct {
 
 	CryptoConfig    CryptoConfig    `yaml:"crypto_config"`
 	LiveTokenConfig LiveTokenConfig `yaml:"live_token_config"`
+
+	Assessment AssessmentConfig `yaml:"assessment_config"`
 }
 
 var config *Config
@@ -77,6 +79,10 @@ type ScheduleConfig struct {
 type LiveTokenConfig struct {
 	PrivateKey interface{} `yaml:"private_key"`
 	//PublicKey  string      `yaml:"public_key"`
+}
+
+type AssessmentConfig struct {
+	CacheExpiration time.Duration `yaml:"cache_expiration"`
 }
 
 func assertGetEnv(key string) string {
@@ -226,6 +232,15 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 		log.Panic(ctx, "CreateJWT:create jwt error", log.Err(err))
 	}
 	config.LiveTokenConfig.PrivateKey = key
+}
+
+func loadAssessmentConfig(ctx context.Context) {
+	cacheExpiration, err := time.ParseDuration(os.Getenv("assessment_cache_expiration"))
+	if err != nil {
+		config.Assessment.CacheExpiration = constant.ScheduleDefaultCacheExpiration
+	} else {
+		config.Assessment.CacheExpiration = cacheExpiration
+	}
 }
 
 func Get() *Config {

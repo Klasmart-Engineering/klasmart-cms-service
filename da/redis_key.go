@@ -13,3 +13,7 @@ const (
 	RedisKeyPrefixOutcomeReview    = "outcome:review"
 	RedisKeyPrefixOutcomeShortcode = "outcome:shortcode"
 )
+
+const (
+	RedisKeyPrefixAssessmentItem = "assessment:item"
+)
