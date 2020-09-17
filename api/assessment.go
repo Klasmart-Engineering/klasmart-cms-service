@@ -26,7 +26,7 @@ import (
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	cmd := entity.ListAssessmentsCommand{}
+	cmd := entity.ListAssessmentsQuery{}
 	{
 		status := c.Query("status")
 		if status != "" {
@@ -87,8 +87,8 @@ func (s *Server) listAssessments(c *gin.Context) {
 // @ID addAssessment
 // @Accept json
 // @Produce json
-// @Param assessment entity.AddAssessmentCommand true "add assessment command"
-// @Success 200 {object} Res {"id":""}
+// @Param assessment body entity.AddAssessmentCommand true "add assessment command"
+// @Success 200 {object} entity.AddAssessmentResult
 // @Router /assessments [post]
 func (s *Server) addAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -111,7 +111,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"id": newID})
+	c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 }
 
 // @Summary get assessment detail

@@ -19,7 +19,7 @@ import (
 
 type IAssessmentModel interface {
 	Detail(ctx context.Context, tx *dbo.DBContext, id string) (*entity.AssessmentDetailView, error)
-	List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error)
+	List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error)
 	Add(ctx context.Context, cmd entity.AddAssessmentCommand) (string, error)
 	Update(ctx context.Context, cmd entity.UpdateAssessmentCommand) error
 }
@@ -240,7 +240,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 	return &result, nil
 }
 
-func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsCommand) (*entity.ListAssessmentsResult, error) {
+func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error) {
 	cond := da.QueryAssessmentsCondition{
 		Status:   cmd.Status,
 		OrderBy:  cmd.OrderBy,
