@@ -20,3 +20,5 @@ type BadRequestResponse ErrorResponse
 type NotFoundResponse ErrorResponse
 
 type InternalServerErrorResponse ErrorResponse
+
+type ConflictResponse ErrorResponse
