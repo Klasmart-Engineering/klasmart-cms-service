@@ -17,6 +17,8 @@ type ErrorResponse struct {
 
 type BadRequestResponse ErrorResponse
 
+type ForbiddenResponse ErrorResponse
+
 type NotFoundResponse ErrorResponse
 
 type InternalServerErrorResponse ErrorResponse

@@ -17,10 +17,10 @@ import (
 // @Produce json
 // @Param content_id path string true "content id"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /contents/{content_id}/review/approve [put]
 func (s *Server) approve(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -55,10 +55,10 @@ func (s *Server) approve(c *gin.Context) {
 // @Produce json
 // @Param content_id path string true "content id"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /contents/{content_id}/review/reject [put]
 func (s *Server) reject(c *gin.Context) {
 	ctx := c.Request.Context()
