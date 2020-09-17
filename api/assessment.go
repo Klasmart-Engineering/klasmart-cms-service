@@ -151,6 +151,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 // @ID updateAssessment
 // @Accept json
 // @Produce json
+// @Param id path int true "assessment id"
 // @Param id body entity.UpdateAssessmentCommand true "update assessment assessment command"
 // @Success 200 {string} string "OK"
 // @Router /assessments/{id} [put]
