@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -75,24 +76,79 @@ func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachm
 	return true
 }
 
-func (s *scheduleModel) addRepeatScheduleTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
-	options := &viewData.Repeat
-	schedule, err := viewData.Convert(ctx)
+func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
+	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		return s.AddTx(ctx, tx, op, viewData)
+	})
 	if err != nil {
-		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData), log.Any("options", options))
+		log.Error(ctx, "add schedule error",
+			log.Err(err),
+			log.Any("viewData", viewData),
+		)
 		return "", err
 	}
+	da.GetScheduleRedisDA().Clean(ctx, nil)
+	return id.(string), nil
+}
+func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
+	// verify data
+	err := s.verifyData(ctx, &entity.ScheduleVerify{
+		ClassID:      viewData.ClassID,
+		SubjectID:    viewData.SubjectID,
+		ProgramID:    viewData.ProgramID,
+		TeacherIDs:   viewData.TeacherIDs,
+		LessonPlanID: viewData.LessonPlanID,
+	})
+	if err != nil {
+		log.Error(ctx, "add schedule: verify data error",
+			log.Err(err),
+			log.Any("viewData", viewData))
+		return "", constant.ErrInvalidArgs
+	}
+
+	// not force add need conflict detection
+	if !viewData.IsForce {
+		conflict, err := GetScheduleModel().IsScheduleConflict(ctx, op, viewData.StartAt, viewData.EndAt)
+		if err != nil {
+			log.Error(ctx, "add schedule: check conflict failed",
+				log.Int64("start_at", viewData.StartAt),
+				log.Int64("end_at", viewData.EndAt),
+			)
+			return "", err
+		}
+		if conflict {
+			log.Warn(ctx, "add schedule: time conflict",
+				log.Int64("start_at", viewData.StartAt),
+				log.Int64("end_at", viewData.EndAt),
+			)
+			return "", constant.ErrConflict
+		}
+	}
+	schedule, err := viewData.ToSchedule(ctx)
 	schedule.CreatedID = op.UserID
-	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, viewData.Location)
+	scheduleID, err := s.addSchedule(ctx, tx, schedule, viewData.TeacherIDs, &viewData.Repeat, viewData.Location)
+	if err != nil {
+		log.Error(ctx, "add schedule: error",
+			log.Err(err),
+			log.Any("viewData", viewData),
+			log.Any("schedule", schedule),
+		)
+		return "", err
+	}
+	return scheduleID, nil
+}
+
+func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, teacherIDs []string, options *entity.RepeatOptions, location *time.Location) (string, error) {
+	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
 	}
-	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(viewData.TeacherIDs))
+	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(teacherIDs))
 	index := 0
 	for _, item := range scheduleList {
 		item.ID = utils.NewID()
-		for _, teacherID := range viewData.TeacherIDs {
+		for _, teacherID := range teacherIDs {
 			tsItem := &entity.ScheduleTeacher{
 				ID:         utils.NewID(),
 				TeacherID:  teacherID,
@@ -118,93 +174,13 @@ func (s *scheduleModel) addRepeatScheduleTx(ctx context.Context, tx *dbo.DBConte
 	}
 	if len(scheduleList) <= 0 {
 		log.Error(ctx, "schedules batchInsert error,schedules is empty", log.Any("schedule", schedule), log.Any("options", options))
-		return "", errors.New("schedules is empty")
+		return "", constant.ErrRecordNotFound
 	}
-
-	da.GetScheduleRedisDA().Clean(ctx, nil)
 
 	return scheduleList[0].ID, nil
 }
-func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
-	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		return s.AddTx(ctx, tx, op, viewData)
-	})
-	if err != nil {
-		log.Error(ctx, "add schedule error",
-			log.Err(err),
-			log.Any("viewData", viewData),
-		)
-		return "", err
-	}
-	da.GetScheduleRedisDA().Clean(ctx, nil)
-	return id.(string), nil
-}
-func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
-	err := s.verifyData(ctx, &entity.ScheduleVerify{
-		ClassID:      viewData.ClassID,
-		SubjectID:    viewData.SubjectID,
-		ProgramID:    viewData.ProgramID,
-		TeacherIDs:   viewData.TeacherIDs,
-		LessonPlanID: viewData.LessonPlanID,
-	})
-	if err != nil {
-		log.Error(ctx, "add schedule: verify data error",
-			log.Err(err),
-			log.Any("viewData", viewData))
-		return "", constant.ErrInvalidArgs
-	}
-
-	// is force add
-	if !viewData.IsForce {
-		conflict, err := GetScheduleModel().IsScheduleConflict(ctx, op, viewData.StartAt, viewData.EndAt)
-		if err != nil {
-			log.Error(ctx, "add schedule: check conflict failed",
-				log.Int64("start_at", viewData.StartAt),
-				log.Int64("end_at", viewData.EndAt),
-			)
-			return "", err
-		}
-		if conflict {
-			log.Warn(ctx, "add schedule: time conflict",
-				log.Int64("start_at", viewData.StartAt),
-				log.Int64("end_at", viewData.EndAt),
-			)
-			return "", constant.ErrConflict
-		}
-	}
-	if viewData.IsRepeat {
-		return s.addRepeatScheduleTx(ctx, tx, op, viewData)
-	}
-	schedule, err := viewData.Convert(ctx)
-	if err != nil {
-		log.Error(ctx, "schedule convert error", log.Err(err), log.Any("viewData", viewData))
-		return "", err
-	}
-	schedule.CreatedID = op.UserID
-	schedule.ID = utils.NewID()
-	_, err = da.GetScheduleDA().InsertTx(ctx, tx, schedule)
-	if err != nil {
-		return "", err
-	}
-	scheduleTeachers := make([]*entity.ScheduleTeacher, len(viewData.TeacherIDs))
-	for i, item := range viewData.TeacherIDs {
-		scheduleTeacher := &entity.ScheduleTeacher{
-			ID:         utils.NewID(),
-			TeacherID:  item,
-			ScheduleID: schedule.ID,
-			DeleteAt:   0,
-		}
-		scheduleTeachers[i] = scheduleTeacher
-	}
-	// add to teachers_schedules
-	_, err = da.GetScheduleTeacherDA().BatchInsert(ctx, tx, scheduleTeachers)
-	if err != nil {
-		log.Error(ctx, "schedules_teachers batchInsert error", log.Err(err), log.Any("scheduleTeachers", scheduleTeachers))
-		return "", err
-	}
-	return schedule.ID, nil
-}
 func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
+	// verify data
 	err := s.verifyData(ctx, &entity.ScheduleVerify{
 		ClassID:      viewData.ClassID,
 		SubjectID:    viewData.SubjectID,
@@ -213,13 +189,14 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		LessonPlanID: viewData.LessonPlanID,
 	})
 	if err != nil {
-		log.Error(ctx, "add schedule: verify data error",
+		log.Error(ctx, "update schedule: verify data error",
 			log.Err(err),
 			log.Any("viewData", viewData))
 		return "", constant.ErrInvalidArgs
 	}
-	var schedule entity.Schedule
-	if err := da.GetScheduleDA().Get(ctx, viewData.ID, &schedule); err != nil {
+	// get old schedule by id
+	var schedule = new(entity.Schedule)
+	if err := da.GetScheduleDA().Get(ctx, viewData.ID, schedule); err != nil {
 		log.Error(ctx, "update schedule: get schedule by id failed",
 			log.Err(err),
 			log.String("id", viewData.ID),
@@ -235,6 +212,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		return "", constant.ErrRecordNotFound
 	}
 
+	// not force add need conflict detection
 	if !viewData.IsForce {
 		conflict, err := s.IsScheduleConflict(ctx, operator, viewData.StartAt, viewData.EndAt)
 		if err != nil {
@@ -255,8 +233,10 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		}
 	}
 
+	// update schedule
 	var id string
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		// delete schedule
 		var err error
 		if err = s.DeleteTx(ctx, tx, operator, viewData.ID, viewData.EditType); err != nil {
 			log.Error(ctx, "update schedule: delete failed",
@@ -266,22 +246,68 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			)
 			return err
 		}
-		viewData.RepeatID = schedule.RepeatID
-		if viewData.EditType == entity.ScheduleEditWithFollowing && !viewData.IsRepeat {
-			var repeat entity.RepeatOptions
-			if err := json.Unmarshal([]byte(schedule.RepeatJson), &repeat); err != nil {
-				log.Error(ctx, "update schedule: json unmarshal failed",
-					log.Err(err),
-					log.Any("viewData", viewData),
-				)
-			}
-			viewData.Repeat = repeat
-		}
-		id, err = s.AddTx(ctx, tx, operator, &viewData.ScheduleAddView)
+		// add schedule,update old schedule fields that need to be updated
+		schedule.ID = utils.NewID()
+		schedule.LessonPlanID = viewData.LessonPlanID
+		schedule.ProgramID = viewData.ProgramID
+		schedule.SubjectID = viewData.SubjectID
+		schedule.ClassID = viewData.ClassID
+		schedule.StartAt = viewData.StartAt
+		schedule.EndAt = viewData.EndAt
+		schedule.Title = viewData.Title
+		schedule.IsAllDay = viewData.IsAllDay
+		schedule.Description = viewData.Description
+		schedule.DueAt = viewData.DueAt
+		schedule.ClassType = viewData.ClassType
+		schedule.CreatedID = operator.UserID
+		schedule.CreatedAt = time.Now().Unix()
+		schedule.UpdatedID = operator.UserID
+		schedule.UpdatedAt = time.Now().Unix()
+		schedule.DeletedID = ""
+		schedule.DeleteAt = 0
+		// attachment
+		b, err := json.Marshal(viewData.Attachment)
 		if err != nil {
-			log.Error(ctx, "update schedule: delete failed",
+			log.Warn(ctx, "update schedule:marshal attachment error", log.Any("attachment", viewData.Attachment))
+			return err
+		}
+		schedule.Attachment = string(b)
+
+		// update repeat rule
+		var repeatOptions *entity.RepeatOptions
+		// if repeat selected, use repeat rule
+		if viewData.IsRepeat {
+			b, err := json.Marshal(viewData.Repeat)
+			if err != nil {
+				return err
+			}
+			schedule.RepeatJson = string(b)
+			// if following selected, set repeat rule
+			if viewData.EditType == entity.ScheduleEditWithFollowing {
+				repeatOptions = &viewData.Repeat
+			}
+		} else {
+			// if repeat not selected,but need to update follow schedule, use old schedule repeat rule
+			if viewData.EditType == entity.ScheduleEditWithFollowing {
+				var repeat = new(entity.RepeatOptions)
+				if err := json.Unmarshal([]byte(schedule.RepeatJson), repeat); err != nil {
+					log.Error(ctx, "update schedule:unmarshal schedule repeatJson error",
+						log.Err(err),
+						log.Any("viewData", viewData),
+						log.Any("schedule", schedule),
+					)
+					return err
+				}
+				repeatOptions = repeat
+			}
+		}
+
+		id, err = s.addSchedule(ctx, tx, schedule, viewData.TeacherIDs, repeatOptions, viewData.Location)
+		if err != nil {
+			log.Error(ctx, "update schedule: add failed",
 				log.Err(err),
-				log.Any("schedule_add_view", viewData.ScheduleAddView),
+				log.Any("schedule", schedule),
+				log.Any("viewData", viewData),
 			)
 			return err
 		}

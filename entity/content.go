@@ -43,6 +43,8 @@ func NewContentType(contentType int) ContentType {
 		return ContentTypeMaterial
 	case ContentTypeLesson:
 		return ContentTypeLesson
+	case ContentTypeAssets:
+		return ContentTypeAssets
 	case ContentTypeAssetDocument:
 		return ContentTypeAssetDocument
 	case ContentTypeAssetAudio:
@@ -198,7 +200,7 @@ type Content struct {
 	Data     string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
 	Extra    string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
 
-	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"extra" dynamoupdate:":sut"`
+	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"suggest_time" dynamoupdate:":sut"`
 	Author      string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
 	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
 	Org         string `gorm:"type:varchar(50);NOT NULL;column:org" dynamodbav:"org" json:"org" dynamoupdate:":og"`
@@ -385,7 +387,7 @@ type ContentInfo struct {
 
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`
-	RejectReason string `json:"reject_reason"`
+	RejectReason []string `json:"reject_reason"`
 	LatestID     string `json:"latest_id"`
 
 	Data  string `json:"data"`

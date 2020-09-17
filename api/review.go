@@ -43,7 +43,7 @@ func (s *Server) reject(c *gin.Context) {
 		return
 	}
 	var req struct {
-		Reason string `json:"reject_reason"`
+		Reasons []string `json:"reject_reason"`
 	}
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *Server) reject(c *gin.Context) {
 		return
 	}
 	// extract reject reason
-	err = model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, req.Reason, op)
+	err = model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, req.Reasons, op)
 	switch err {
 	case model.ErrNoContent:
 		log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))

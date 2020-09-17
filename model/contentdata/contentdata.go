@@ -48,6 +48,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	grades := make([]string, 0)
 	keywords := make([]string, 0)
 	outcomes := make([]string, 0)
+	rejectReason := make([]string, 0)
 	if obj.Program != "" {
 		programs = strings.Split(obj.Program, ",")
 	}
@@ -72,6 +73,9 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	if obj.Outcomes != "" {
 		outcomes = strings.Split(obj.Outcomes, ",")
 	}
+	if obj.RejectReason != "" {
+		rejectReason = strings.Split(obj.RejectReason, ",")
+	}
 
 	cm := &entity.ContentInfo{
 		ID:            obj.ID,
@@ -85,12 +89,12 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Grade:         grades,
 		Keywords:      keywords,
 		SuggestTime:   obj.SuggestTime,
-		RejectReason:  obj.RejectReason,
+		RejectReason:  rejectReason,
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
 		Data:          obj.Data,
 		Extra:         obj.Extra,
-		Outcomes:		outcomes,
+		Outcomes:      outcomes,
 		Author:        obj.Author,
 		AuthorName:    obj.AuthorName,
 		Org:           obj.Org,

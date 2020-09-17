@@ -19,6 +19,21 @@ type contentBulkOperateRequest struct {
 	ID []string `json:"id"`
 }
 
+type CreateContentResponse struct {
+	ID string `json:"id"`
+}
+
+// @Summary createContent
+// @ID createContent
+// @Description create lesson plan, lesson material or assets
+// @Accept json
+// @Produce json
+// @Param content body entity.CreateContentRequest true "create request"
+// @Tags content
+// @Success 200 {object} CreateContentResponse
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents [post]
 func (s *Server) createContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -55,6 +70,17 @@ func (s *Server) createContent(c *gin.Context) {
 	}
 }
 
+// @Summary publishContentBulk
+// @ID publishContentBulk
+// @Description publish contents bulk
+// @Accept json
+// @Produce json
+// @Param contentIds body contentBulkOperateRequest true "content bulk id list"
+// @Tags content
+// @Success 200 {object} string
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents_bulk/publish [put]
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -73,12 +99,23 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	})
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
 
+// @Summary publishContent
+// @ID publishContent
+// @Description publish a content
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to publish"
+// @Tags content
+// @Success 200 {object} string
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id}/publish [put]
 func (s *Server) publishContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -97,12 +134,23 @@ func (s *Server) publishContent(c *gin.Context) {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
 
+// @Summary getContent
+// @ID getContentById
+// @Description get a content by id
+// @Accept json
+// @Produce json
+// @Param content_id path string true "get content id"
+// @Tags content
+// @Success 200 {object} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [get]
 func (s *Server) getContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -125,6 +173,18 @@ func (s *Server) getContent(c *gin.Context) {
 	}
 }
 
+// @Summary updateContent
+// @ID updateContent
+// @Description update a content data
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to publish"
+// @Param contentData body entity.CreateContentRequest true "content data to update"
+// @Tags content
+// @Success 200 {object} string
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [put]
 func (s *Server) updateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -162,12 +222,23 @@ func (s *Server) updateContent(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
 
+// @Summary lockContent
+// @ID lockContent
+// @Description lock a content to edit
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to lock"
+// @Tags content
+// @Success 200 {object} CreateContentResponse
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id}/lock [put]
 func (s *Server) lockContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -199,6 +270,17 @@ func (s *Server) lockContent(c *gin.Context) {
 	}
 }
 
+// @Summary deleteContentBulk
+// @ID deleteContentBulk
+// @Description delete contents bulk
+// @Accept json
+// @Produce json
+// @Param contentIds body contentBulkOperateRequest true "content bulk id list"
+// @Tags content
+// @Success 200 {object} string
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents_bulk [delete]
 func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -220,12 +302,23 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	case model.ErrDeleteLessonInSchedule:
 		c.JSON(http.StatusConflict, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
 
+// @Summary deleteContent
+// @ID deleteContent
+// @Description delete a content
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to delete"
+// @Tags content
+// @Success 200 {object} string ok
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [delete]
 func (s *Server) deleteContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -244,44 +337,23 @@ func (s *Server) deleteContent(c *gin.Context) {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
 
-func (s *Server) queryDynamoContent(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := GetOperator(c)
-
-	ctoips := ""
-	if c.Query("content_type") != "" {
-		ctoips = c.Query("content_type") + c.Query("org") + c.Query("publish_status")
-	}
-
-	condition := da.DyKeyContentCondition{
-		PublishStatus:                 c.Query("publish_status"),
-		Author:                        c.Query("author"),
-		ContentTypeOrgIdPublishStatus: ctoips,
-		Name:                          c.Query("name"),
-		Org:                           c.Query("org"),
-		KeyWords:                      c.Query("keywords"),
-		LastKey:                       c.Query("key"),
-	}
-
-	key, results, err := model.GetContentModel().SearchContentByDynamoKey(ctx, dbo.MustGetDB(ctx), condition, op)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"key":  key,
-			"list": results,
-		})
-	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-	}
-
-}
-
+// @Summary contentDataCount
+// @ID getContentsStatistics
+// @Description get content data count
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to get count"
+// @Tags content
+// @Success 200 {object} entity.ContentStatisticsInfo
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/{content_id} [delete]
 func (s *Server) contentDataCount(c *gin.Context) {
 	ctx := c.Request.Context()
 	cid := c.Param("content_id")
@@ -294,6 +366,23 @@ func (s *Server) contentDataCount(c *gin.Context) {
 	}
 }
 
+// @Summary queryContent
+// @ID searchContents
+// @Description query content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query int false "search content type" Enums(1, 2, 3)
+// @Param scope query string false "search content scope"
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {array} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents [get]
 func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -310,6 +399,23 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 }
 
+// @Summary queryPrivateContent
+// @ID searchPrivateContents
+// @Description query private content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query int false "search content type" Enums(1, 2, 3)
+// @Param scope query string false "search content scope"
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {array} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -327,6 +433,23 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	}
 }
 
+// @Summary queryPendingContent
+// @ID searchPendingContents
+// @Description query pending content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query int false "search content type" Enums(1, 2, 3)
+// @Param scope query string false "search content scope"
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {array} entity.ContentInfoWithDetails
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents/pending [get]
 func (s *Server) queryPendingContent(c *gin.Context) {
 
 	ctx := c.Request.Context()

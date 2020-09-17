@@ -53,7 +53,16 @@ func (r *ScheduleRedisDA) AddScheduleByCondition(ctx context.Context, condition 
 		return
 	}
 	filed := r.conditionHash(condition)
-	ro.MustGetRedis(ctx).Expire(RedisKeyPrefixScheduleCondition, r.expiration)
+	err = ro.MustGetRedis(ctx).Expire(RedisKeyPrefixScheduleCondition, r.expiration).Err()
+	if err != nil {
+		log.Error(ctx, "set schedule condition key expire error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("filed", filed),
+			log.Any("schedules", schedules),
+		)
+		return
+	}
 	err = ro.MustGetRedis(ctx).HSet(RedisKeyPrefixScheduleCondition, filed, string(b)).Err()
 	if err != nil {
 		log.Error(ctx, "Can't save schedule into cache",
