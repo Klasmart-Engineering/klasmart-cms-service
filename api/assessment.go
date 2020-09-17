@@ -10,6 +10,19 @@ import (
 	"net/http"
 )
 
+// @Summary list assessments
+// @Description list assessments
+// @Tags assessments
+// @ID listAssessment
+// @Accept json
+// @Produce json
+// @Param status query string false "status search"
+// @Param teacher_name query string false "teacher name fuzzy search"
+// @Param page query int false "page number" default(1)
+// @Param page_size query integer false "page size" format(int) default(10)
+// @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
+// @Success 200 {object} entity.ListAssessmentsResult
+// @Router /assessments [get]
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -68,6 +81,15 @@ func (s *Server) listAssessments(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// @Summary add assessments
+// @Description add assessments
+// @Tags assessments
+// @ID addAssessment
+// @Accept json
+// @Produce json
+// @Param assessment entity.AddAssessmentCommand true "add assessment command"
+// @Success 200 {object} Res {"id":""}
+// @Router /assessments [post]
 func (s *Server) addAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -92,6 +114,15 @@ func (s *Server) addAssessment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"id": newID})
 }
 
+// @Summary get assessment detail
+// @Description get assessment detail
+// @Tags assessments
+// @ID getAssessment
+// @Accept json
+// @Produce json
+// @Param id path int true "assessment id"
+// @Success 200 {object} entity.AssessmentDetailView
+// @Router /assessments/{id} [get]
 func (s *Server) getAssessmentDetail(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -114,6 +145,15 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, item)
 }
 
+// @Summary update assessment
+// @Description update assessment
+// @Tags assessments
+// @ID updateAssessment
+// @Accept json
+// @Produce json
+// @Param id body entity.UpdateAssessmentCommand true "update assessment assessment command"
+// @Success 200 {string} string "OK"
+// @Router /assessments/{id} [put]
 func (s *Server) updateAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 
