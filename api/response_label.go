@@ -12,10 +12,7 @@ type ErrorResponse struct {
 
 // L create response object with label
 func L(label ResponseLabel) interface{} {
-	//return map[string]interface{}{
-	//	"label": string(label),
-	//}
-	return &ErrorResponse{
-		Label: label,
+	return map[string]interface{}{
+		"label": string(label),
 	}
 }
