@@ -220,7 +220,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
-// @Success 200 {object} SearchResponse
+// @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -258,10 +258,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": total,
-			"list":  outcomes,
-		})
+		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, total, outcomes))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -274,7 +271,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Success 200 {string} LockResponse
+// @Success 200 {string} OutcomeLockResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -302,9 +299,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	case model.ErrContentAlreadyLocked:
 		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"outcome_id": newID,
-		})
+		c.JSON(http.StatusOK, OutcomeIDList{[]string{newID}})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -568,7 +563,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
-// @Success 200 {object} SearchResponse
+// @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -601,10 +596,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": total,
-			"list":  outcomes,
-		})
+		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, total, outcomes))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -627,7 +619,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
-// @Success 200 {object} SearchResponse
+// @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -662,10 +654,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": total,
-			"list":  outcomes,
-		})
+		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, total, outcomes))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
