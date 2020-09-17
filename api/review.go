@@ -9,6 +9,19 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
+// @ID approveContentReview
+// @Summary approve content
+// @Tags content
+// @Description approve content by id
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /contents/{content_id}/review/approve [put]
 func (s *Server) approve(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -34,6 +47,19 @@ func (s *Server) approve(c *gin.Context) {
 	}
 }
 
+// @ID rejectContentReview
+// @Summary reject content
+// @Tags content
+// @Description reject content by id
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /contents/{content_id}/review/reject [put]
 func (s *Server) reject(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
