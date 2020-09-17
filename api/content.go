@@ -77,7 +77,7 @@ func (s *Server) createContent(c *gin.Context) {
 // @Produce json
 // @Param contentIds body contentBulkOperateRequest true "content bulk id list"
 // @Tags content
-// @Success 200 {string} string "ok"
+// @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
 // @Router /v1/contents_bulk/publish [put]
@@ -99,7 +99,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	})
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -112,7 +112,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 // @Produce json
 // @Param content_id path string true "content id to publish"
 // @Tags content
-// @Success 200 {string} string "ok"
+// @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
 // @Router /v1/contents/{content_id}/publish [put]
@@ -134,7 +134,7 @@ func (s *Server) publishContent(c *gin.Context) {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -181,7 +181,7 @@ func (s *Server) getContent(c *gin.Context) {
 // @Param content_id path string true "content id to publish"
 // @Param contentData body entity.CreateContentRequest true "content data to update"
 // @Tags content
-// @Success 200 {string} string "ok"
+// @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
 // @Router /v1/contents/{content_id} [put]
@@ -222,7 +222,7 @@ func (s *Server) updateContent(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -277,7 +277,7 @@ func (s *Server) lockContent(c *gin.Context) {
 // @Produce json
 // @Param contentIds body contentBulkOperateRequest true "content bulk id list"
 // @Tags content
-// @Success 200 {string} string "ok"
+// @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
 // @Router /v1/contents_bulk [delete]
@@ -302,7 +302,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	case model.ErrDeleteLessonInSchedule:
 		c.JSON(http.StatusConflict, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -315,7 +315,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 // @Produce json
 // @Param content_id path string true "content id to delete"
 // @Tags content
-// @Success 200 {string} string ok
+// @Success 200 {object} string ok
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
 // @Router /v1/contents/{content_id} [delete]
@@ -337,7 +337,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, "ok")
+		c.JSON(http.StatusOK, "")
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -350,7 +350,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 // @Produce json
 // @Param content_id path string true "content id to get count"
 // @Tags content
-// @Success 200 {string} entity.ContentStatisticsInfo
+// @Success 200 {object} entity.ContentStatisticsInfo
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
 // @Router /v1/contents/{content_id} [delete]
