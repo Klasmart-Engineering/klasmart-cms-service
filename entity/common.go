@@ -1,5 +1,7 @@
 package entity
 
+import "strings"
+
 type NullInts struct {
 	Ints  []int
 	Valid bool
@@ -10,12 +12,32 @@ type NullStrings struct {
 	Valid   bool
 }
 
+func (s NullStrings) SQLPlaceHolder() string {
+	if len(s.Strings) == 0 && s.Valid {
+		return "null"
+	}
+
+	return strings.TrimSuffix(strings.Repeat("?,", len(s.Strings)), ",")
+}
+func (s NullStrings) ToInterfaceSlice() []interface{} {
+	slice := make([]interface{}, len(s.Strings))
+	for index, value := range s.Strings {
+		slice[index] = value
+	}
+
+	return slice
+}
+
 type NullString struct {
-	Strings string
-	Valid   bool
+	String string
+	Valid  bool
 }
 
 type NullInt struct {
-	Int int
-	Valid   bool
+	Int   int
+	Valid bool
+}
+type NullInt64 struct {
+	Int64 int64
+	Valid bool
 }

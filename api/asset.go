@@ -1,115 +1,178 @@
 package api
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
-	"strconv"
 )
 
 func (s *Server) createAsset(c *gin.Context) {
-	data := new(entity.AssetObject)
-	err := c.ShouldBind(data)
-	if err != nil{
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	var data entity.CreateContentRequest
+	err := c.ShouldBind(&data)
+	if err != nil {
+		log.Error(ctx, "create content failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
-	id, err := model.GetAssetModel().CreateAsset(c.Request.Context(), *data)
-	if err != nil{
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	err = s.checkAssets(c.Request.Context(), data)
+	if err != nil {
+		log.Error(ctx, "Invalid content type", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"id": id,
-	})
+	s.fillAssetsRequest(c.Request.Context(), &data)
+
+	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
+	switch err {
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest,L(Unknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": cid,
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
 }
 func (s *Server) updateAsset(c *gin.Context){
-	id := c.Param("id")
-
-	data := new(entity.UpdateAssetRequest)
-	err := c.ShouldBind(data)
-	if err != nil{
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	cid := c.Param("content_id")
+	var data entity.CreateContentRequest
+	err := c.ShouldBind(&data)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	data.ID = id
 
-	err = model.GetAssetModel().UpdateAsset(c.Request.Context(), *data)
-	if err != nil{
+	err = s.checkAssets(c.Request.Context(), data)
+	if err != nil {
+		log.Error(ctx, "Invalid content type", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+	s.fillAssetsRequest(c.Request.Context(), &data)
+
+	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
+	switch err {
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidContentType:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrNoAuth:
+		c.JSON(http.StatusForbidden, L(Unknown))
+	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case entity.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
 	}
-	c.JSON(http.StatusOK, responseMsg("success"))
 }
-func (s *Server) deleteAsset(c *gin.Context) {
-	id := c.Param("id")
-	err := model.GetAssetModel().DeleteAsset(c.Request.Context(), id)
-	if err != nil{
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
-	}
 
-	c.JSON(http.StatusOK, responseMsg("success"))
+func (s *Server) deleteAsset(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	cid := c.Param("content_id")
+
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
+		if err != nil{
+			return err
+		}
+		return nil
+	})
+	switch err {
+	case model.ErrDeleteLessonInSchedule:
+		c.JSON(http.StatusConflict, L(Unknown))
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
 }
 
 func (s *Server) getAssetByID(c *gin.Context) {
-	id := c.Param("id")
-	assetInfo, err := model.GetAssetModel().GetAssetByID(c.Request.Context(), id)
-	if err == da.ErrRecordNotFound{
-		c.JSON(http.StatusNotFound, responseMsg(err.Error()))
-		return
-	}
-	if err != nil{
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
-	}
+		ctx := c.Request.Context()
+		op := GetOperator(c)
+		cid := c.Param("content_id")
+		var data struct {
+			Scope string `json:"scope"`
+		}
+		err := c.ShouldBind(&data)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, L(Unknown))
+			return
+		}
 
-	c.JSON(http.StatusOK, gin.H{
-		"asset": assetInfo,
-	})
+		result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
+		switch err {
+		case nil:
+			c.JSON(http.StatusOK, result)
+		default:
+			c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		}
 }
 func (s *Server) searchAssets(c *gin.Context){
-	data := buildAssetSearchCondition(c)
-	count, assetsList, err := model.GetAssetModel().SearchAssets(c.Request.Context(), data)
-	if err != nil{
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	condition := queryCondition(c, op)
+
+	if condition.ContentType == nil {
+		condition.ContentType = []int{entity.ContentTypeAssets}
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": count,
-		"assets": assetsList,
-	})
+
+	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"total": key,
+			"list":  results,
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
 }
 
-func (s *Server) getAssetUploadPath(c *gin.Context) {
-	ext := c.Param("ext")
-
-	resource, err := model.GetAssetModel().GetAssetUploadPath(c.Request.Context(), ext)
-	if err != nil{
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"path": resource.Path,
-		"name": resource.Name,
-	})
-}
-
-
-func (s *Server) getAssetResourcePath(c *gin.Context) {
-	name := c.Param("resource_name")
-
-	path, err := model.GetAssetModel().GetAssetResourcePath(c.Request.Context(), name)
-	if err != nil{
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"path": path,
-	})
+func (s *Server) getOperator(c *gin.Context) entity.Operator{
+	return entity.Operator{}
 }
 
 
@@ -118,22 +181,17 @@ func responseMsg(msg string) interface{}{
 		"msg": msg,
 	}
 }
-func buildAssetSearchCondition(c *gin.Context) *entity.SearchAssetCondition{
-	sizeMin, _ := strconv.Atoi("size_min")
-	sizeMax, _ := strconv.Atoi("size_max")
-	PageSize, _ := strconv.Atoi("page_size")
-	Page, _ := strconv.Atoi("page")
 
-	data := &entity.SearchAssetCondition{
-		ID:       c.Query("id"),
-		Name:     c.Query("name"),
-		Category: c.Query("category"),
-		SizeMin:  sizeMin,
-		SizeMax:  sizeMax,
-		Tag:      c.Query("tag"),
-		PageSize: PageSize,
-		Page:     Page,
+func (s *Server) checkAssets(ctx context.Context, data entity.CreateContentRequest) error{
+	if !data.ContentType.IsAsset() {
+		log.Error(ctx, "Invalid content type", log.Err(entity.ErrInvalidContentType), log.Any("data", data))
+		return entity.ErrInvalidContentType
 	}
+	return nil
+}
 
-	return data
+
+func (s *Server) fillAssetsRequest(ctx context.Context, data *entity.CreateContentRequest){
+	data.Outcomes = nil
+	data.SuggestTime = 0
 }

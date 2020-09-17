@@ -1,27 +1,32 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "KidsLoop 2.0 Asset REST API",
-    "description": "Kidsloop 2.0 Asset backend rest api",
-    "version": "1.0.0",
-    "contact": {
-      "email": "peter.yang@badanamu.com.cn"
-    }
+    "title": "KidsLoop 2.0 REST API",
+    "description": "KidsLoop 2.0 backend rest api",
+    "version": "1.0.0"
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:12345/1.0",
-      "description": "local dev"
+      "url": "http://127.0.0.1:12345/v1",
+      "description": "dev"
     },
     {
-      "url": "http://192.168.1.234:12345/1.0",
-      "description": "local test"
+      "url": "https://cp03fzjc58.execute-api.ap-northeast-2.amazonaws.com/v1",
+      "description": "temp test"
+    },
+    {
+      "url": "https://kl2-test.kidsloop.net/v1",
+      "description": "test"
     }
   ],
   "tags": [
     {
       "name": "content",
-      "description": "content tag management"
+      "description": "content management"
+    },
+    {
+      "name": "schedule",
+      "description": "schedule management"
     },
     {
       "name": "asset",
@@ -34,6 +39,14 @@
     {
       "name": "tag",
       "description": "asset tag management"
+    },
+    {
+      "name": "learning_outcomes",
+      "description": "learning outcomes management"
+    },
+    {
+      "name": "crypto",
+      "description": "crypto operation"
     }
   ],
   "paths": {
@@ -100,11 +113,39 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with content_name",
             "schema": {
               "type": "string",
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -118,8 +159,8 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
+                    "total": {
+                      "type": "integer",
                       "description": "search key"
                     },
                     "list": {
@@ -163,7 +204,7 @@
                   "type": "object",
                   "description": "content info",
                   "properties": {
-                    "total": {
+                    "id": {
                       "type": "string",
                       "description": "content id",
                       "example": "1"
@@ -215,11 +256,11 @@
           "200": {
             "description": "OK"
           },
-          "406": {
-            "description": "Content status invalid"
-          },
           "400": {
             "description": "Bad request"
+          },
+          "406": {
+            "description": "Content status invalid"
           },
           "500": {
             "description": "Internal Server Error"
@@ -270,7 +311,51 @@
         }
       }
     },
-    "/contents_review/{content_id}/approve": {
+    "/contents/{content_id}/statistics": {
+      "put": {
+        "tags": [
+          "content"
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "get content sub contents count and outcomes count by content_id",
+        "operationId": "getContentsStatistics",
+        "responses": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "content statistics info",
+                "subcontent_count": {
+                  "total": {
+                    "type": "integer",
+                    "description": "sub content count"
+                  },
+                  "outcomes_count": {
+                    "type": "integer",
+                    "description": "outcomes count"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
+      }
+    },
+    "/contents/{content_id}/review/approve": {
       "put": {
         "tags": [
           "content"
@@ -305,7 +390,7 @@
         }
       }
     },
-    "/contents_review/{content_id}/reject": {
+    "/contents/{content_id}/review/reject": {
       "put": {
         "tags": [
           "content"
@@ -448,100 +533,59 @@
         }
       }
     },
-    "/contents_dynamo": {
-      "get": {
+    "/contents_bulk/publish": {
+      "put": {
         "tags": [
           "content"
         ],
-        "description": "Search user's private content with condition",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "description": "Search content by name",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "publish_status",
-            "in": "query",
-            "description": "Search content by publish status",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "author",
-            "in": "query",
-            "description": "Search content by author",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "description",
-            "in": "query",
-            "description": "Search content by description",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "keywords",
-            "in": "query",
-            "description": "Search content by keywords",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "org",
-            "in": "query",
-            "description": "Search content by org",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "key",
-            "in": "query",
-            "description": "Search key",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "content list",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
-                    },
-                    "list": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Content"
-                      }
-                    }
-                  }
-                }
+        "description": "Publish content bulk",
+        "operationId": "publishContentBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentIDListRequest"
               }
             }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_bulk": {
+      "delete": {
+        "tags": [
+          "content"
+        ],
+        "description": "Delete content bulk",
+        "operationId": "deleteContentBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
           },
           "500": {
             "description": "Internal Server Error"
@@ -581,6 +625,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -612,11 +663,39 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
             "schema": {
               "type": "string",
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -630,9 +709,9 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
@@ -683,6 +762,13 @@
             "description": "Search content by publish status",
             "schema": {
               "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected",
+                "archive"
+              ],
               "nullable": true
             }
           },
@@ -714,11 +800,39 @@
             }
           },
           {
-            "name": "key",
+            "name": "page",
             "in": "query",
-            "description": "Search key",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by",
             "schema": {
               "type": "string",
+              "enum": [
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
+              ],
               "nullable": true
             }
           }
@@ -732,9 +846,9 @@
                   "type": "object",
                   "description": "content list",
                   "properties": {
-                    "key": {
-                      "type": "string",
-                      "description": "search key"
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
                     },
                     "list": {
                       "type": "array",
@@ -749,6 +863,149 @@
           },
           "500": {
             "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_resources/{resource_id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource path",
+        "operationId": "getContentResourcePath",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "param",
+            "description": "Resource id",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents_resources": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "description": "Get content resource upload path",
+        "operationId": "getContentResourceUploadPath",
+        "parameters": [
+          {
+            "name": "partition",
+            "in": "query",
+            "description": "Resource partition",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "assets",
+                "thumbnail",
+                "attachment",
+                "schedule_attachment"
+              ],
+              "nullable": false
+            }
+          },
+          {
+            "name": "extension",
+            "in": "query",
+            "description": "Resource extension",
+            "schema": {
+              "type": "string",
+              "nullable": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "resource path info",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "resource path"
+                    },
+                    "resource_id": {
+                      "type": "string",
+                      "description": "resource id"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/contents/{content_id}/live/token": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "get live token",
+        "description": "get live token",
+        "operationId": "getLiveToken",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "content_id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "content id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "500": {
+            "description": "Server error"
           }
         }
       }
@@ -786,46 +1043,6 @@
             }
           },
           {
-            "name": "category",
-            "in": "query",
-            "description": "Search asset by category",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
-            "name": "size_min",
-            "in": "query",
-            "description": "Search asset by size_min",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 2
-            }
-          },
-          {
-            "name": "size_max",
-            "in": "query",
-            "description": "Search asset by size_max",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "nullable": true,
-              "default": 1
-            }
-          },
-          {
-            "name": "tag",
-            "in": "query",
-            "description": "Search asset by tag",
-            "schema": {
-              "type": "string",
-              "nullable": true
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "description": "page index, not paging if page <= 0",
@@ -854,22 +1071,21 @@
           {
             "name": "order_by",
             "in": "query",
-            "description": "order by enum",
+            "description": "Search order by, default with content_name",
             "schema": {
               "type": "string",
               "enum": [
-                "name",
-                "-name",
-                "create_at",
-                "-create_at",
-                "last_update_at",
-                "-last_update_at"
+                "id",
+                "-id",
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at",
+                "content_name",
+                "-content_name"
               ],
-              "nullable": true,
-              "default": "create_at"
-            },
-            "required": false,
-            "allowEmptyValue": true
+              "nullable": true
+            }
           }
         ],
         "responses": {
@@ -1006,7 +1222,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1068,7 +1284,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1113,7 +1329,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1121,14 +1337,14 @@
         }
       }
     },
-    "/assets/{ext}/upload": {
+    "/crypto/h5p/signature": {
       "get": {
         "tags": [
-          "asset"
+          "crypto"
         ],
-        "summary": "GetAssetUploadPath",
-        "description": "GetAssetUploadPath",
-        "operationId": "getAssetUploadPath",
+        "summary": "SignH5pURL",
+        "description": "Sign a h5p url",
+        "operationId": "signH5pURL",
         "security": [
           {
             "bearerAuth": []
@@ -1136,9 +1352,9 @@
         ],
         "parameters": [
           {
-            "name": "ext",
-            "in": "path",
-            "description": "File Extension",
+            "name": "url",
+            "in": "query",
+            "description": "url to sign",
             "schema": {
               "type": "string"
             },
@@ -1153,12 +1369,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "category list",
+                  "description": "signed url",
                   "properties": {
-                    "path": {
+                    "url": {
                       "type": "string",
-                      "description": "upload asset path",
-                      "example": "https://badanamu.com/upload/bada.mp3"
+                      "description": "signed url"
                     }
                   }
                 }
@@ -1170,12 +1385,6 @@
           },
           "401": {
             "description": "User not login"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Recorde not found"
           },
           "500": {
             "description": "Server error"
@@ -1718,7 +1927,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1780,7 +1989,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1825,7 +2034,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -1833,7 +2042,6 @@
         }
       }
     },
-
     "/schedules": {
       "get": {
         "tags": [
@@ -1841,7 +2049,7 @@
         ],
         "summary": "query schedules",
         "description": "query schedules",
-        "operationId": "queryschedules",
+        "operationId": "querySchedules",
         "security": [
           {
             "bearerAuth": []
@@ -1858,14 +2066,53 @@
             }
           },
           {
-            "name": "last_key",
+            "name": "time_zone_offset",
             "in": "query",
-            "description": "The key value of the last record",
+            "description": "time zone offset(second)",
+            "example": "28800",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "required": true,
+            "allowEmptyValue": false
+          },
+          {
+            "name": "start_at",
+            "in": "query",
+            "description": "Search schedules by start_at",
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "default": "datetime now"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by enum",
             "schema": {
               "type": "string",
-              "format": "string",
+              "enum": [
+                "create_at",
+                "-create_at",
+                "start_at",
+                "-start_at"
+              ],
               "nullable": true,
-              "default": ""
+              "default": "start_at"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <=0",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true,
+              "default": 1
             },
             "required": false,
             "allowEmptyValue": true
@@ -1873,7 +2120,7 @@
           {
             "name": "page_size",
             "in": "query",
-            "description": "records per page, not paging if pageSize <= 0",
+            "description": "records per page, not paging if page_size <= 0",
             "schema": {
               "type": "integer",
               "format": "int32",
@@ -1952,9 +2199,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "string",
-                  "description": "schedule id"
+                  "type": "object",
+                  "description": "new schedule id",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "string",
+                      "description": "new schedule id"
+                    }
+                  }
                 }
               }
             }
@@ -1977,14 +2230,14 @@
         }
       }
     },
-    "/schedules_home": {
+    "/schedules_time_view": {
       "get": {
         "tags": [
           "schedule"
         ],
-        "summary": "query schedules",
+        "summary": "query schedules time view",
         "description": "query schedules",
-        "operationId": "queryschedules_home",
+        "operationId": "schedules_time_view",
         "security": [
           {
             "bearerAuth": []
@@ -1996,6 +2249,12 @@
             "in": "query",
             "description": "Search schedules by view_type",
             "schema": {
+              "enum": [
+                "day",
+                "workWeek",
+                "week",
+                "month"
+              ],
               "type": "string",
               "nullable": false
             }
@@ -2012,6 +2271,19 @@
             },
             "required": true,
             "allowEmptyValue": false
+          },
+          {
+            "name": "time_zone_offset",
+            "in": "query",
+            "description": "time zone offset(second)",
+            "example": "28800",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "required": true,
+            "allowEmptyValue": false
           }
         ],
         "responses": {
@@ -2023,16 +2295,10 @@
                   "type": "object",
                   "description": "schedule list",
                   "properties": {
-                    "total": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "total records",
-                      "example": 1
-                    },
-                    "data": {
+                    "list": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/ScheduleHome"
+                        "$ref": "#/components/schemas/ScheduleTimeView"
                       }
                     }
                   }
@@ -2101,7 +2367,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2148,9 +2414,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "format": "string",
-                  "description": "schedule id"
+                  "type": "object",
+                  "description": "new schedule id",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "string",
+                      "description": "new schedule id"
+                    }
+                  }
                 }
               }
             }
@@ -2165,7 +2437,7 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2198,10 +2470,13 @@
           {
             "name": "repeat_edit_options",
             "in": "query",
-            "description": "Search schedules by teacher_id",
+            "description": "repeat edit option",
             "schema": {
               "type": "string",
-              "enum": ["only_current", "with_following"],
+              "enum": [
+                "only_current",
+                "with_following"
+              ],
               "nullable": true,
               "description": "repeat edit option"
             }
@@ -2221,7 +2496,1449 @@
             "description": "Forbidden"
           },
           "404": {
-            "description": "Recorde not found"
+            "description": "Record not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/schedules/{schedule_id}/live/token": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "get live token",
+        "description": "get live token",
+        "operationId": "getLiveToken",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "schedule id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Search learning outcomes with condition",
+        "operationId": "searchLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_name",
+            "in": "query",
+            "description": "Search learning outcomes by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "description": "Search learning outcomes by description",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "keywords",
+            "in": "query",
+            "description": "Search learning outcomes by keyword",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "shortcode",
+            "in": "query",
+            "description": "Search learning outcomes by shortcode",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author_name",
+            "in": "query",
+            "description": "Search learning outcomes by author_name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "search_key",
+            "in": "query",
+            "description": "fuzzy search",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "assumed",
+            "in": "query",
+            "description": "filter outcomes by assumed: 1 true, 0 false, -1 all",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected"
+              ],
+              "nullable": true,
+              "example": "name"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with learning outcome's name",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "created_at",
+                "-created_at"
+              ],
+              "nullable": true,
+              "example": "name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "outcome list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search key"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Create learning outcomes",
+        "operationId": "createLearningOutcomes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLearningOutComesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "$ref": "#/components/schemas/CreateLearningOutcomesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Get learning outcomes by id",
+        "operationId": "getLearningOutcomesById",
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "learning outcomes info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "$ref": "#/components/schemas/LearningOutcomes"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Update learning outcomes by id",
+        "operationId": "updateLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "learning outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLearningOutComesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Delete learning outcomes by id",
+        "operationId": "deleteLearningOutcome",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/publish": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Publish learning outcomes",
+        "operationId": "publishLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "content id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishLearningOutcomesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/lock": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Lock a learning outcomes by content_id",
+        "operationId": "lockLearningOutcomes",
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "$ref": "#/components/schemas/LockLearningOutcomesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome was locked"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/approve": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Approve a learning outcomes by outcome_id",
+        "operationId": "approveLearningOutcomes",
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/learning_outcomes/{outcome_id}/reject": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "parameters": [
+          {
+            "name": "outcome_id",
+            "in": "path",
+            "description": "outcome id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "description": "Reject a learning outcomes by outcome_id",
+        "operationId": "rejectLearningOutcomes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectReasonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "403": {
+            "description": "no auth to review"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "406": {
+            "description": "learning outcome status invalid"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/bulk_publish/learning_outcomes": {
+      "put": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Publish learning outcomes bulk",
+        "operationId": "publishLearningOutcomesBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutcomesIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/bulk/learning_outcomes": {
+      "delete": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Delete learning outcome bulk",
+        "operationId": "deleteOutcomeBulk",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutcomesIDListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "learning outcome not found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/private_learning_outcomes": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Search user's private learning outcomes with condition",
+        "operationId": "searchPrivateLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_name",
+            "in": "query",
+            "description": "Search learning outcomes by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "description": "Search learning outcomes by description",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "keywords",
+            "in": "query",
+            "description": "Search learning outcomes by keyword",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "shortcode",
+            "in": "query",
+            "description": "Search learning outcomes by shortcode",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author_name",
+            "in": "query",
+            "description": "Search learning outcomes by author_name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "search_key",
+            "in": "query",
+            "description": "fuzzy search",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "assumed",
+            "in": "query",
+            "description": "filter outcomes by assumed: 1 true, 0 false -1 all",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected"
+              ],
+              "nullable": true,
+              "example": "name"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with learning outcome's name",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "created_at",
+                "-created_at"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "content list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/pending_learning_outcomes": {
+      "get": {
+        "tags": [
+          "learning_outcomes"
+        ],
+        "description": "Search pending learning outcomes",
+        "operationId": "searchPendingLearningOutcomes",
+        "parameters": [
+          {
+            "name": "outcome_name",
+            "in": "query",
+            "description": "Search learning outcomes by name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "description": "Search learning outcomes by description",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "keywords",
+            "in": "query",
+            "description": "Search learning outcomes by keyword",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "shortcode",
+            "in": "query",
+            "description": "Search learning outcomes by shortcode",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "author_name",
+            "in": "query",
+            "description": "Search learning outcomes by author_name",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "search_key",
+            "in": "query",
+            "description": "fuzzy search",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "assumed",
+            "in": "query",
+            "description": "filter outcomes by assumed: 1 true, 0 false, -1 all",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "publish_status",
+            "in": "query",
+            "description": "Search learning outcomes by publish_status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending",
+                "published",
+                "rejected"
+              ],
+              "nullable": true,
+              "example": "name"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Search page",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Search page size",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Search order by, default with learning outcome's name",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "-name",
+                "created_at",
+                "-created_at"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "learning outcome list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "description": "search result total"
+                    },
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LearningOutcomes"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/assessments": {
+      "get": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "list assessment",
+        "description": "list assessment",
+        "operationId": "listAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "search assessment by status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "in_progress",
+                "complete"
+              ],
+              "default": "all"
+            }
+          },
+          {
+            "name": "teacher_name",
+            "in": "query",
+            "description": "fuzzy search assessment by teacher name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "page index, not paging if page <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int",
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "records per page, not paging if page_size <= 0",
+            "schema": {
+              "type": "integer",
+              "format": "int",
+              "default": 10
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "order by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "class_end_time",
+                "-class_end_time",
+                "complete_time",
+                "-complete_time"
+              ],
+              "default": "-class_end_time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "assessment view list",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "total records",
+                      "example": 1
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "assessment view list",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "assessment id"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "assessment title"
+                          },
+                          "subject": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "subject id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "subject name"
+                              }
+                            }
+                          },
+                          "program": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "program id"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "program name"
+                              }
+                            }
+                          },
+                          "teachers": {
+                            "type": "array",
+                            "description": "teachers",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "teacher id"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "teacher name"
+                                }
+                              }
+                            }
+                          },
+                          "class_end_time": {
+                            "type": "integer",
+                            "format": "int64",
+                            "description": "class end time(unix seconds)"
+                          },
+                          "complete_time": {
+                            "type": "integer",
+                            "format": "int64",
+                            "description": "class end time(unix seconds)"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "assessment status",
+                            "enum": [
+                              "in_progress",
+                              "complete"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "assessment callback",
+        "description": "assessment callback",
+        "operationId": "addAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "assessment",
+                "properties": {
+                  "schedule_id": {
+                    "type": "string",
+                    "description": "schedule id"
+                  },
+                  "attendance_ids": {
+                    "type": "array",
+                    "description": "attendance id list",
+                    "items": {
+                      "type": "string",
+                      "description": "attendance id"
+                    }
+                  },
+                  "class_length": {
+                    "type": "integer",
+                    "format": "int",
+                    "description": "class length (unit: minute)"
+                  },
+                  "class_end_time": {
+                    "type": "integer",
+                    "description": "class end time (unix seconds)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "new assessment id"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/assessments/{id}": {
+      "get": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "get assessment detail",
+        "description": "get assessment detail",
+        "operationId": "getAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "description": "assessment id"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "assessment detail",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "assessment id"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "assessment title"
+                    },
+                    "class_id": {
+                      "type": "string",
+                      "description": "class id"
+                    },
+                    "attendances": {
+                      "type": "array",
+                      "description": "assessment attendances",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "attendance id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "attendance name"
+                          }
+                        }
+                      }
+                    },
+                    "subject": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "subject id"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "subject name"
+                        }
+                      }
+                    },
+                    "teachers": {
+                      "type": "array",
+                      "description": "teachers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "teacher id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "teacher name"
+                          }
+                        }
+                      }
+                    },
+                    "class_end_time": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "class end time (unix seconds)"
+                    },
+                    "class_length": {
+                      "type": "integer",
+                      "format": "int",
+                      "description": "class length (unit: minute)"
+                    },
+                    "number_of_activities": {
+                      "type": "integer",
+                      "format": "int",
+                      "description": "number of activities"
+                    },
+                    "number_of_outcomes": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "number of learning outcomes"
+                    },
+                    "complete_time": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "class end time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "assessment status",
+                      "enum": [
+                        "in_progress",
+                        "complete"
+                      ]
+                    },
+                    "outcome_attendance_maps": {
+                      "type": "array",
+                      "description": "outcome attendance maps",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "outcome_id": {
+                            "type": "string",
+                            "description": "outcome id"
+                          },
+                          "outcome_name": {
+                            "type": "string",
+                            "description": "outcome name"
+                          },
+                          "assumed": {
+                            "type": "boolean",
+                            "format": "bool",
+                            "description": "assumed"
+                          },
+                          "skip": {
+                            "type": "boolean",
+                            "format": "bool",
+                            "description": "skip"
+                          },
+                          "attendance_ids": {
+                            "type": "array",
+                            "description": "attendance ids",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Record not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "update assessment",
+        "description": "update assessment",
+        "operationId": "updateAssessment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "assessment id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "allowEmptyValue": false
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "update assessment action",
+                    "enum": [
+                      "save",
+                      "complete"
+                    ]
+                  },
+                  "attendance_ids": {
+                    "type": "array",
+                    "description": "attendance ids",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "outcome_attendance_maps": {
+                    "type": "array",
+                    "description": "outcome attendance maps",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "outcome_id": {
+                          "type": "string",
+                          "description": "outcome id"
+                        },
+                        "skip": {
+                          "type": "boolean",
+                          "format": "bool",
+                          "description": "skip"
+                        },
+                        "attendance_ids": {
+                          "type": "array",
+                          "description": "attendance ids",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "User not login"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Record not found"
           },
           "500": {
             "description": "Server error"
@@ -2240,34 +3957,6 @@
     },
     "schemas": {
       "AssetCreateRequest": {
-        "type": "object",
-        "description": "Asset",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "asset name",
-            "example": "Asset #1"
-          },
-          "size": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "category": {
-            "$ref": "#/components/schemas/Category"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Tag"
-            }
-          },
-          "url": {
-            "type": "string",
-            "example": "https://badanamu.com/song.mp3"
-          }
-        }
-      },
-      "CreateContentRequest": {
         "allOf": [
           {
             "type": "object",
@@ -2277,7 +3966,13 @@
                 "type": "integer",
                 "format": "int64",
                 "description": "content type",
-                "example": 1
+                "example": 1,
+                "enum": [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
               },
               "name": {
                 "type": "string",
@@ -2285,29 +3980,64 @@
                 "example": "Content title"
               },
               "program": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "subject": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "developmental": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "skills": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "age": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "keywords": {
                 "type": "array",
@@ -2329,24 +4059,149 @@
                 "description": "content thumbnail",
                 "example": "Content thumbnail"
               },
-              "do_publish": {
-                "type": "boolean",
-                "description": "content create & publish",
-                "example": false
-              },
               "data": {
-                "type": "object",
+                "type": "string",
                 "description": "content data",
-                "example": {
-                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
-                }
+                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
               },
               "extra": {
                 "type": "string",
                 "description": "content extra data",
-                "example": {
-                  "data": "hello"
-                }
+                "example": "{\"data\": \"hello\"}"
+              }
+            }
+          }
+        ]
+      },
+      "CreateContentRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "content_type": {
+                "type": "integer",
+                "format": "int64",
+                "description": "content type",
+                "enum": [
+                  1,
+                  2,
+                  10,
+                  11,
+                  12,
+                  13
+                ],
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "outcomes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outcomes id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 1
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "data": {
+                "type": "string",
+                "description": "content data",
+                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": "{\"data\": \"hello\"}"
               },
               "publish_scope": {
                 "type": "string",
@@ -2366,6 +4221,24 @@
               "scope": {
                 "type": "string",
                 "description": "content published scope list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "ContentIDListRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "id": {
+                "type": "array",
+                "description": "content id list",
+                "items": {
+                  "type": "string"
+                },
                 "example": [
                   "ede1995ebdb440ebb9526c53e07a9ff3"
                 ]
@@ -2388,13 +4261,30 @@
           }
         ]
       },
+      "RejectCMSReasonRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Reject reason",
+            "properties": {
+              "reject_reason": {
+                "type": "array",
+                "item": {
+                  "type": "string"
+                },
+                "description": "content reject reason"
+              }
+            }
+          }
+        ]
+      },
       "LockContentResponse": {
         "allOf": [
           {
             "type": "object",
             "description": "Lock content response",
             "properties": {
-              "content_id": {
+              "id": {
                 "type": "string",
                 "description": "content id to edit"
               }
@@ -2409,34 +4299,26 @@
             "description": "Company",
             "properties": {
               "content_type": {
-                "type": "array",
+                "type": "string",
                 "description": "content type list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3",
               },
               "scope": {
-                "type": "array",
+                "type": "string",
                 "description": "content published scope list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "publish_status": {
-                "type": "array",
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
                 "description": "content published status list",
-                "items": {
-                  "type": "string"
-                },
-                "example": [
-                  "ede1995ebdb440ebb9526c53e07a9ff3"
-                ]
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "author": {
                 "type": "string",
@@ -2472,7 +4354,15 @@
                 "type": "integer",
                 "format": "int64",
                 "description": "content type",
-                "example": 1
+                "example": 1,
+                "enum": [
+                  1,
+                  2,
+                  10,
+                  11,
+                  12,
+                  13
+                ]
               },
               "name": {
                 "type": "string",
@@ -2480,29 +4370,84 @@
                 "example": "Content title"
               },
               "program": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "outcomes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outcomes id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "subject": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "suggest_time": {
+                "type": "integer",
+                "description": "suggest time",
+                "example": 1
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
               },
               "developmental": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "skills": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "age": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age id",
-                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
               },
               "keywords": {
                 "type": "array",
@@ -2541,11 +4486,9 @@
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
               "data": {
-                "type": "object",
+                "type": "string",
                 "description": "content data",
-                "example": {
-                  "source": "ede1995ebdb440ebb9526c53e07a9ff3.jpg"
-                }
+                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
               },
               "extra": {
                 "type": "string",
@@ -2577,6 +4520,13 @@
               "publish_status": {
                 "type": "string",
                 "description": "content publish status",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
                 "example": "published"
               },
               "content_type_name": {
@@ -2585,34 +4535,111 @@
                 "example": "lesson"
               },
               "program_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "program name",
-                "example": "program1"
+                "example": [
+                  "program1"
+                ]
+              },
+              "grade_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade name",
+                "example": [
+                  "program1"
+                ]
               },
               "subject_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "subject name",
-                "example": "subject1"
+                "example": [
+                  "subject1"
+                ]
               },
               "developmental_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "developmental name",
-                "example": "developmental1"
+                "example": [
+                  "developmental"
+                ]
               },
               "skills_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "skills name",
-                "example": "skills1"
+                "example": [
+                  "skills"
+                ]
               },
               "age_name": {
-                "type": "string",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "age name",
-                "example": "6-9months"
+                "example": [
+                  "age"
+                ]
               },
               "org_name": {
                 "type": "string",
                 "description": "org name",
                 "example": "school1"
+              },
+              "outcome_entities": {
+                "type": "array",
+                "description": "outcome info",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "outcome_id": {
+                      "type": "string",
+                      "description": "outcome id"
+                    },
+                    "outcome_name": {
+                      "type": "string",
+                      "description": "outcome name"
+                    },
+                    "shortcode": {
+                      "type": "string",
+                      "description": "outcome shortcode"
+                    },
+                    "assumed": {
+                      "type": "boolean",
+                      "description": "outcome shortcode"
+                    },
+                    "author_id": {
+                      "type": "string",
+                      "description": "outcome author id"
+                    },
+                    "author_name": {
+                      "type": "string",
+                      "description": "outcome author name"
+                    },
+                    "ancestor_id": {
+                      "type": "string",
+                      "description": "outcome ancestor id"
+                    }
+                  }
+                }
+              },
+              "created_at": {
+                "type": "integer",
+                "description": "content create time",
+                "example": 123
               }
             }
           }
@@ -2621,92 +4648,248 @@
       "Asset": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/AssetCreateRequest"
-          },
-          {
             "type": "object",
             "description": "Company",
             "properties": {
               "id": {
                 "type": "string",
-                "description": "AssetID",
+                "description": "content id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
               },
-              "uploader": {
-                "type": "string",
+              "content_type": {
+                "type": "integer",
                 "format": "int64",
-                "description": "asset uploader",
+                "description": "content type",
+                "example": 1,
+                "enum": [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              },
+              "name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "outcomes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outcomes id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords id",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "content description",
+                "example": "Content description"
+              },
+              "thumbnail": {
+                "type": "string",
+                "description": "content thumbnail",
+                "example": "Content thumbnail"
+              },
+              "data": {
+                "type": "string",
+                "description": "content data",
+                "example": "{\"source\": \"ede1995ebdb440ebb9526c53e07a9ff3.jpg\"}"
+              },
+              "extra": {
+                "type": "string",
+                "description": "content extra data",
+                "example": {
+                  "data": "hello"
+                }
+              },
+              "author": {
+                "type": "string",
+                "description": "content author id",
                 "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "org": {
+                "type": "string",
+                "description": "content org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "content publish scope id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "content publish status",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected",
+                  "archive"
+                ],
+                "example": "published"
+              },
+              "content_type_name": {
+                "type": "string",
+                "description": "content type name",
+                "example": "lesson"
+              },
+              "program_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program name",
+                "example": [
+                  "program1"
+                ]
+              },
+              "grade_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade name",
+                "example": [
+                  "program1"
+                ]
+              },
+              "subject_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject name",
+                "example": [
+                  "subject1"
+                ]
+              },
+              "developmental_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental name",
+                "example": [
+                  "developmental"
+                ]
+              },
+              "skills_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills name",
+                "example": [
+                  "skills"
+                ]
+              },
+              "age_name": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age name",
+                "example": [
+                  "age"
+                ]
+              },
+              "org_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
               },
               "created_at": {
                 "type": "integer",
-                "format": "int64",
-                "description": "create at timestamp in seconds",
-                "example": 1595916114
-              },
-              "updated_at": {
-                "type": "integer",
-                "format": "int64",
-                "description": "last updated at timestamp in seconds(秒)",
-                "example": 1595916114
+                "description": "content create time",
+                "example": 123
               }
             }
           }
         ]
-      },
-      "TagCreate": {
-        "type": "object",
-        "description": "create tag request",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "tag name"
-          }
-        }
-      },
-      "TagUpdate": {
-        "type": "object",
-        "description": "update tag request",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "tag name"
-          },
-          "states": {
-            "type": "integer",
-            "enum": [
-              1,
-              2
-            ],
-            "description": "\n * 1 - enable \n * 2 - disable\n"
-          }
-        }
-      },
-      "Tag": {
-        "type": "object",
-        "description": "Asset",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "tag id"
-          },
-          "name": {
-            "type": "string",
-            "description": "tag name"
-          },
-          "states": {
-            "type": "integer",
-            "enum": [
-              1,
-              2
-            ],
-            "description": "\n * 1 - enable \n * 2 - disable\n"
-          },
-          "created_at": {
-            "type": "integer",
-            "description": "tag create time, timestamp"
-          }
-        }
       },
       "CategoryCreateRequest": {
         "type": "object",
@@ -2784,7 +4967,7 @@
           }
         }
       },
-      "ScheduleHome": {
+      "ScheduleTimeView": {
         "type": "object",
         "description": "schedule home short info",
         "properties": {
@@ -2803,11 +4986,19 @@
           "end_at": {
             "type": "integer",
             "description": "schedule end time, timestamp"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule is repeat"
+          },
+          "lesson_plan_id": {
+            "type": "string",
+            "description": "schedule lesson_plan_id"
           }
         }
       },
       "ScheduleCreate": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "title": {
@@ -2824,7 +5015,7 @@
           },
           "teacher_ids": {
             "type": "array",
-            "items":{
+            "items": {
               "type": "string"
             },
             "description": "schedule teacher_ids"
@@ -2837,21 +5028,18 @@
             "type": "integer",
             "description": "schedule end time, timestamp"
           },
-          "mode_type": {
-            "type": "string",
-            "enum": [
-              "AllDay",
-              "Repeat"
-            ],
-            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
-          },
           "repeat": {
             "type": "object",
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  "yearly"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -2877,9 +5065,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -2898,7 +5094,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -2907,12 +5106,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -2930,7 +5143,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -2947,12 +5163,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -2988,18 +5218,29 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_id": {
-            "type": "string",
-            "description": "schedule attachment id"
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
           },
           "is_force": {
             "type": "boolean",
             "description": "If true, skip the conflict detection"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule will repeat"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
+          },
+          "time_zone_offset": {
+            "type": "integer",
+            "description": "time zone offset(second)"
           }
         }
       },
       "ScheduleUpdate": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "title": {
@@ -3016,7 +5257,7 @@
           },
           "teacher_ids": {
             "type": "array",
-            "items":{
+            "items": {
               "type": "string"
             },
             "description": "schedule lessonPlan name"
@@ -3029,17 +5270,12 @@
             "type": "integer",
             "description": "schedule end time, timestamp"
           },
-          "mode_type": {
-            "type": "string",
-            "enum": [
-              "AllDay",
-              "Repeat"
-            ],
-            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
-          },
           "repeat_edit_options": {
             "type": "string",
-            "enum": ["only_current", "with_following"],
+            "enum": [
+              "only_current",
+              "with_following"
+            ],
             "description": "repeat edit option"
           },
           "repeat": {
@@ -3047,8 +5283,13 @@
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  "yearly"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -3074,9 +5315,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3095,7 +5344,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -3104,12 +5356,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3127,7 +5393,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -3144,12 +5413,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3185,18 +5468,29 @@
             "type": "string",
             "description": "schedule description"
           },
-          "attachment_id": {
-            "type": "string",
-            "description": "schedule attachment id"
+          "attachment": {
+            "$ref": "#/components/schemas/CommonShort"
           },
           "is_force": {
             "type": "boolean",
             "description": "If true, skip the conflict detection"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule will repeat"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
+          },
+          "time_zone_offset": {
+            "type": "integer",
+            "description": "time zone offset(second)"
           }
         }
       },
       "ScheduleDetailed": {
-        "type":"object",
+        "type": "object",
         "description": "schedule create info",
         "properties": {
           "id": {
@@ -3227,21 +5521,18 @@
             "type": "integer",
             "description": "schedule end time, timestamp"
           },
-          "mode_type": {
-            "type": "string",
-            "enum": [
-              "AllDay",
-              "Repeat"
-            ],
-            "description": "\n * AllDay - this class will last for 24 hours for the whole day \n * Repeat - repeat it daily/weekly/monthly/yearly \n"
-          },
           "repeat": {
             "type": "object",
             "description": "repeat options, only work when mode_type equal Repeat,",
             "properties": {
               "type": {
-                "type":"string",
-                "enum": ["never", "after_count", "after_time"],
+                "type": "string",
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  "yearly"
+                ],
                 "description": "repeat type"
               },
               "daily": {
@@ -3267,9 +5558,17 @@
                   },
                   "on": {
                     "type": "array",
-                    "items":{
+                    "items": {
                       "type": "string",
-                      "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"]
+                      "enum": [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
+                      ]
                     },
                     "description": "on weekdays"
                   },
@@ -3288,7 +5587,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_day": {
@@ -3297,12 +5599,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3320,7 +5636,10 @@
                   },
                   "on_type": {
                     "type": "string",
-                    "enum": ["date", "week"],
+                    "enum": [
+                      "date",
+                      "week"
+                    ],
                     "description": "on type"
                   },
                   "on_date_month": {
@@ -3337,12 +5656,26 @@
                   },
                   "on_week_seq": {
                     "type": "string",
-                    "enum": ["first", "second", "third", "fourth", "last"],
+                    "enum": [
+                      "first",
+                      "second",
+                      "third",
+                      "fourth",
+                      "last"
+                    ],
                     "description": "on week seq"
                   },
                   "on_week": {
                     "type": "string",
-                    "enum": ["sun", "mon", "tue", "wed", "thu","fri", "sat"],
+                    "enum": [
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday"
+                    ],
                     "description": "on week"
                   },
                   "end": {
@@ -3378,6 +5711,14 @@
           },
           "attachment": {
             "$ref": "#/components/schemas/CommonShort"
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "all_day flag"
+          },
+          "is_repeat": {
+            "type": "boolean",
+            "description": "If true, schedule is repeat"
           }
         }
       },
@@ -3401,7 +5742,11 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["never", "after_count", "after_time"]
+            "enum": [
+              "never",
+              "after_count",
+              "after_time"
+            ]
           },
           "after_count": {
             "type": "integer",
@@ -3410,6 +5755,575 @@
           "after_time": {
             "type": "integer",
             "description": "end after the time(unix timestamp)"
+          }
+        }
+      },
+      "CreateLearningOutComesRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_name": {
+                "type": "string",
+                "description": "learning outcome name",
+                "example": "Home Audio Recording For Everyone"
+              },
+              "author_id": {
+                "type": "string",
+                "description": "learning outcome author",
+                "example": "123"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "learning outcome author",
+                "example": "Mark"
+              },
+              "assumed": {
+                "type": "boolean",
+                "description": "learning outcome assumed",
+                "example": "true"
+              },
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
+              },
+              "organization_id": {
+                "type": "string",
+                "description": "the top level organization which outcome belongs",
+                "example": "1"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "estimated_time": {
+                "type": "integer",
+                "description": "estimated time, unit: minute",
+                "example": 30
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "LetterA"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "outcome description",
+                "example": "description"
+              }
+            }
+          }
+        ]
+      },
+      "CreateLearningOutcomesResponse": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_id": {
+                "type": "string",
+                "description": "outcome id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "ancestor_id": {
+                "type": "string",
+                "description": "outcome ancestor id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
+              },
+              "assumed": {
+                "type": "boolean",
+                "description": "learning outcome assumed",
+                "example": true
+              },
+              "outcome_name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "program id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "subject id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "developmental id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "skills id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "age id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "grade id",
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              },
+              "estimated_time": {
+                "type": "integer",
+                "description": "estimated time, unit：minute",
+                "example": 30
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "LetterA"
+                ]
+              },
+              "source_id": {
+                "type": "string",
+                "description": "content source id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "locked_by": {
+                "type": "string",
+                "description": "content locked by others id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_id": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "organization_id": {
+                "type": "string",
+                "description": "org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "organization_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "learning outcomes publish scope id,default as same as organization_id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "learning outcomes publish status",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ],
+                "example": "published"
+              },
+              "description": {
+                "type": "string",
+                "description": "description",
+                "example": "description001"
+              },
+              "created_at": {
+                "type": "integer",
+                "description": "learning outcome create time",
+                "example": 123
+              }
+            }
+          }
+        ]
+      },
+      "PublishLearningOutcomesRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "description": "content published scope list",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              }
+            }
+          }
+        ]
+      },
+      "OutcomesIDListRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_ids": {
+                "type": "array",
+                "description": "outcome id list",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "ede1995ebdb440ebb9526c53e07a9ff3"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "LockLearningOutcomesResponse": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Lock learning outcome response",
+            "properties": {
+              "outcome_id": {
+                "type": "string",
+                "description": "outcome id to edit"
+              }
+            }
+          }
+        ]
+      },
+      "LearningOutcomes": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Company",
+            "properties": {
+              "outcome_id": {
+                "type": "string",
+                "description": "outcome id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "ancestor_id": {
+                "type": "string",
+                "description": "outcome ancestor id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "shortcode": {
+                "type": "string",
+                "description": "learning outcome shortcode",
+                "example": "A3Z"
+              },
+              "assumed": {
+                "type": "boolean",
+                "description": "learning outcome assumed",
+                "example": true
+              },
+              "outcome_name": {
+                "type": "string",
+                "description": "content name",
+                "example": "Content title"
+              },
+              "program": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "program_id": {
+                      "type": "string",
+                      "description": "program id",
+                      "example": "p001"
+                    },
+                    "program_name": {
+                      "type": "string",
+                      "description": "program name",
+                      "example": "Little Star"
+                    }
+                  }
+                }
+              },
+              "subject": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "subject_id": {
+                      "type": "string",
+                      "description": "subject id",
+                      "example": "s001"
+                    },
+                    "subject_name": {
+                      "type": "string",
+                      "description": "subject name",
+                      "example": "English"
+                    }
+                  }
+                }
+              },
+              "developmental": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "developmental_id": {
+                      "type": "string",
+                      "description": "developmental id",
+                      "example": "develop001"
+                    },
+                    "developmental_name": {
+                      "type": "string",
+                      "description": "developmental name",
+                      "example": "Hit"
+                    }
+                  }
+                }
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "skill_id": {
+                      "type": "string",
+                      "description": "skill id",
+                      "example": "skill001"
+                    },
+                    "skill_name": {
+                      "type": "string",
+                      "description": "skill name",
+                      "example": "Hit"
+                    }
+                  }
+                }
+              },
+              "age": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "age_id": {
+                      "type": "string",
+                      "description": "age id",
+                      "example": "age001"
+                    },
+                    "age_name": {
+                      "type": "string",
+                      "description": "age name",
+                      "example": "3"
+                    }
+                  }
+                }
+              },
+              "grade": {
+                "type": "array",
+                "items": {
+                  "properties": {
+                    "grade_id": {
+                      "type": "string",
+                      "description": "grade id",
+                      "example": "grade001"
+                    },
+                    "grade_name": {
+                      "type": "string",
+                      "description": "grade name",
+                      "example": "3-4"
+                    }
+                  }
+                }
+              },
+              "estimated_time": {
+                "type": "integer",
+                "description": "estimated time, unit: minute",
+                "example": 30
+              },
+              "reject_reason": {
+                "type": "string",
+                "description": "reject reason",
+                "example": "reject reason"
+              },
+              "keywords": {
+                "type": "array",
+                "description": "keywords",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "LetterA"
+                ]
+              },
+              "source_id": {
+                "type": "string",
+                "description": "content source id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "locked_by": {
+                "type": "string",
+                "description": "content locked by others id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_id": {
+                "type": "string",
+                "description": "content author id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "author_name": {
+                "type": "string",
+                "description": "content author name",
+                "example": "zhangsan"
+              },
+              "organization_id": {
+                "type": "string",
+                "description": "org id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "organization_name": {
+                "type": "string",
+                "description": "org name",
+                "example": "school1"
+              },
+              "publish_scope": {
+                "type": "string",
+                "description": "learning outcomes publish scope id,default as same as organization_id",
+                "example": "ede1995ebdb440ebb9526c53e07a9ff3"
+              },
+              "publish_status": {
+                "type": "string",
+                "description": "learning outcomes publish status",
+                "enum": [
+                  "draft",
+                  "pending",
+                  "published",
+                  "rejected"
+                ],
+                "example": "published"
+              },
+              "description": {
+                "type": "string",
+                "description": "description",
+                "example": "description001"
+              },
+              "created_at": {
+                "type": "integer",
+                "description": "learning outcome create time",
+                "example": 123
+              }
+            }
+          }
+        ]
+      },
+      "LiveToken": {
+        "type": "object",
+        "description": "live token",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "live token"
           }
         }
       }
