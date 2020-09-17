@@ -68,7 +68,7 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.Assumed = data.Assumed
 	oc.Program = data.Program
 	oc.Subject = data.Subject
-	oc.Developmental = data.Subject
+	oc.Developmental = data.Developmental
 	oc.Skills = data.Skills
 	oc.Age = data.Age
 	oc.Grade = data.Grade

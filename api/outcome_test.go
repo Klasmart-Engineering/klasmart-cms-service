@@ -49,7 +49,7 @@ func TestUpdateOutcome(t *testing.T) {
 		Assumed:       false,
 		Program:       []string{"Modify_prg001", "pr002"},
 		Subject:       []string{"Modify_sbj001", "sbj002"},
-		Developmental: []string{"Modify_dvt001", "dvt002"},
+		Developmental: []string{"Modify_dvt001"},
 		Skills:        []string{"Modify_skl001", "skl002"},
 		Age:           []string{"Modify_age001", "age002"},
 		Grade:         []string{"Modify_grd001", "grd002"},
@@ -62,7 +62,7 @@ func TestUpdateOutcome(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(string(data))
-	outcomeID := "5f6300a1d1ca94079e90160e"
+	outcomeID := "5f63336202bf949d92fa955b"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID, string(data))
 	fmt.Println(res)
 }
