@@ -43,6 +43,8 @@ func NewContentType(contentType int) ContentType {
 		return ContentTypeMaterial
 	case ContentTypeLesson:
 		return ContentTypeLesson
+	case ContentTypeAssets:
+		return ContentTypeAssets
 	case ContentTypeAssetDocument:
 		return ContentTypeAssetDocument
 	case ContentTypeAssetAudio:

@@ -24,6 +24,7 @@ type CreateContentResponse struct {
 }
 
 // @Summary createContent
+// @ID createContent
 // @Description create lesson plan, lesson material or assets
 // @Accept json
 // @Produce json
@@ -70,6 +71,7 @@ func (s *Server) createContent(c *gin.Context) {
 }
 
 // @Summary publishContentBulk
+// @ID publishContentBulk
 // @Description publish contents bulk
 // @Accept json
 // @Produce json
@@ -104,6 +106,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 }
 
 // @Summary publishContent
+// @ID publishContent
 // @Description publish a content
 // @Accept json
 // @Produce json
@@ -138,6 +141,7 @@ func (s *Server) publishContent(c *gin.Context) {
 }
 
 // @Summary getContent
+// @ID getContentById
 // @Description get a content by id
 // @Accept json
 // @Produce json
@@ -170,6 +174,7 @@ func (s *Server) getContent(c *gin.Context) {
 }
 
 // @Summary updateContent
+// @ID updateContent
 // @Description update a content data
 // @Accept json
 // @Produce json
@@ -224,6 +229,7 @@ func (s *Server) updateContent(c *gin.Context) {
 }
 
 // @Summary lockContent
+// @ID lockContent
 // @Description lock a content to edit
 // @Accept json
 // @Produce json
@@ -265,6 +271,7 @@ func (s *Server) lockContent(c *gin.Context) {
 }
 
 // @Summary deleteContentBulk
+// @ID deleteContentBulk
 // @Description delete contents bulk
 // @Accept json
 // @Produce json
@@ -302,6 +309,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 }
 
 // @Summary deleteContent
+// @ID deleteContent
 // @Description delete a content
 // @Accept json
 // @Produce json
@@ -336,6 +344,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 }
 
 // @Summary contentDataCount
+// @ID getContentsStatistics
 // @Description get content data count
 // @Accept json
 // @Produce json
@@ -358,6 +367,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 }
 
 // @Summary queryContent
+// @ID searchContents
 // @Description query content by condition
 // @Accept json
 // @Produce json
@@ -390,6 +400,7 @@ func (s *Server) queryContent(c *gin.Context) {
 }
 
 // @Summary queryPrivateContent
+// @ID searchPrivateContents
 // @Description query private content by condition
 // @Accept json
 // @Produce json
@@ -423,6 +434,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 }
 
 // @Summary queryPendingContent
+// @ID searchPendingContents
 // @Description query pending content by condition
 // @Accept json
 // @Produce json
