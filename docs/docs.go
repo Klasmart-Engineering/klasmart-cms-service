@@ -49,19 +49,19 @@ var doc = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/api.ErrorResponse"
+                            "$ref": "#/definitions/api.BadRequestResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/api.ErrorResponse"
+                            "$ref": "#/definitions/api.NotFoundResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/api.ErrorResponse"
+                            "$ref": "#/definitions/api.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -69,7 +69,7 @@ var doc = `{
         }
     },
     "definitions": {
-        "api.ErrorResponse": {
+        "api.BadRequestResponse": {
             "type": "object",
             "properties": {
                 "label": {
@@ -77,6 +77,12 @@ var doc = `{
                     "example": "unknown"
                 }
             }
+        },
+        "api.InternalServerErrorResponse": {
+            "type": "object"
+        },
+        "api.NotFoundResponse": {
+            "type": "object"
         }
     }
 }`

@@ -1,9 +1,13 @@
 definitions:
-  api.ErrorResponse:
+  api.BadRequestResponse:
     properties:
       label:
         example: unknown
         type: string
+    type: object
+  api.InternalServerErrorResponse:
+    type: object
+  api.NotFoundResponse:
     type: object
 info:
   contact: {}
@@ -28,15 +32,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.ErrorResponse'
+            $ref: '#/definitions/api.BadRequestResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/api.ErrorResponse'
+            $ref: '#/definitions/api.NotFoundResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/api.ErrorResponse'
+            $ref: '#/definitions/api.InternalServerErrorResponse'
       summary: Ping
       tags:
       - common

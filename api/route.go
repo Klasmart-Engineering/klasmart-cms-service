@@ -100,9 +100,9 @@ func (s Server) registeRoute() {
 // @Accept  json
 // @Produce  plain
 // @Success 200 {string} string
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /ping [get]
 func (s Server) ping(c *gin.Context) {
 	c.String(http.StatusOK, "pong")

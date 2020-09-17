@@ -1,8 +1,13 @@
 package api
 
-type ErrorResponse struct {
+type BadRequestResponse struct {
 	Label string `json:"label" example:"unknown"`
 }
+
+type NotFoundResponse struct{}
+
+type InternalServerErrorResponse struct{}
+
 type ResponseLabel string
 
 const (
@@ -11,5 +16,5 @@ const (
 
 // L create response object with label
 func L(label ResponseLabel) interface{} {
-	return ErrorResponse{Label: string(label)}
+	return BadRequestResponse{Label: string(label)}
 }
