@@ -567,7 +567,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /learning_outcomes [get]
+// @Router /private_learning_outcomes [get]
 func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -623,7 +623,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /learning_outcomes [get]
+// @Router /pending_learning_outcomes [get]
 func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
