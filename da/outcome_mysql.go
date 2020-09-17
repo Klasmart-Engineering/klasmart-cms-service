@@ -176,6 +176,11 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	if err != nil {
 		log.Error(ctx, "CreateOutcome: InsertTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
+	if outcome.SourceID != "" && outcome.SourceID != "-" && outcome.SourceID != outcome.ID {
+		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID, outcome.SourceID})
+	} else {
+		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
+	}
 	return
 }
 
@@ -186,6 +191,7 @@ func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	if err != nil {
 		log.Error(ctx, "UpdateOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
+	GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
 	return
 }
 
@@ -197,40 +203,59 @@ func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	if err != nil {
 		log.Error(ctx, "DeleteOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
+	GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
 	return
 }
 
 func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Outcome, error) {
+	hit := GetOutcomeRedis().GetOutcomeCacheByID(ctx, id)
+	if hit != nil {
+		return hit, nil
+	}
+	// not hit
 	var outcome entity.Outcome
 	err := o.GetTx(ctx, tx, id, &outcome)
 	if err != nil {
 		log.Error(ctx, "GetOutcomeByID: GetTx failed", log.Err(err), log.Any("outcome", outcome))
 		return nil, err
 	}
+	GetOutcomeRedis().SaveOutcomeCache(ctx, &outcome)
 	return &outcome, nil
 }
 
 func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
+	condition := OutcomeCondition{SourceID: sql.NullString{String: sourceID, Valid: true}}
+	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, &condition)
+	if hits != nil && len(hits.OutcomeList) == 1 {
+		return hits.OutcomeList[0], nil
+	}
+
+	// not hit
 	var outcome entity.Outcome
-	err := o.QueryTx(ctx, tx, &OutcomeCondition{SourceID: sql.NullString{String: sourceID, Valid: true}}, &outcome)
-	//sql := fmt.Sprintf("select * from %s where source_id='%s'", outcome.TableName(), sourceID)
-	//err := tx.Raw(sql).Scan(&outcome).Error
+	err := o.QueryTx(ctx, tx, &condition, &outcome)
 	if err != nil {
 		log.Error(ctx, "GetOutcomeBySourceID: GetTx failed",
 			log.Err(err),
 			log.String("source_id", sourceID))
 		return nil, err
 	}
+	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, &condition, &OutcomeListWithKey{1, []*entity.Outcome{&outcome}})
 	return &outcome, nil
 }
 
 func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (total int, outcomes []*entity.Outcome, err error) {
+	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, condition)
+	if hits != nil {
+		return hits.Total, hits.OutcomeList, nil
+	}
+	// not hit
 	total, err = o.PageTx(ctx, tx, condition, &outcomes)
 	if err != nil {
 		log.Error(ctx, "SearchOutcome failed",
 			log.Err(err),
 			log.Any("condition", condition))
 	}
+	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, condition, &OutcomeListWithKey{total, outcomes})
 	return
 }
 
@@ -245,5 +270,27 @@ func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, o
 			log.String("sql", sql))
 		return err
 	}
+
+	// clean cache
+	var outcomes []*entity.Outcome
+	err = tx.Where("latest_id=? and delete_at=0", newHeader).Find(&outcomes).Error
+	if err != nil {
+		log.Error(ctx, "UpdateLatestHead: Find failed",
+			log.Err(err),
+			log.String("old", oldHeader),
+			log.String("new", newHeader))
+		return err
+	}
+	if len(outcomes) < 1 {
+		log.Info(ctx, "UpdateLatestHead: Find outcomes return empty",
+			log.String("old", oldHeader),
+			log.String("new", newHeader))
+		return nil
+	}
+	ids := make([]string, len(outcomes))
+	for i := range outcomes {
+		ids[i] = outcomes[i].ID
+	}
+	GetOutcomeRedis().CleanOutcomeCache(ctx, ids)
 	return nil
 }
