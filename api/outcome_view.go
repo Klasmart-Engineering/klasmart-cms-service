@@ -126,6 +126,7 @@ type OutcomeView struct {
 	EstimatedTime    int             `json:"estimated_time"`
 	Keywords         []string        `json:"keywords"`
 	SourceID         string          `json:"source_id"`
+	LatestID         string          `json:"latest_id"`
 	LockedBy         string          `json:"locked_by"`
 	AuthorID         string          `json:"author_id"`
 	AuthorName       string          `json:"author_name"`
@@ -139,8 +140,18 @@ type OutcomeView struct {
 }
 
 type SearchResponse struct {
-	Total int               `json:"total"`
-	List  []*entity.Outcome `json:"list"`
+	Total int            `json:"total"`
+	List  []*OutcomeView `json:"list"`
+}
+
+func newSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcome) (res SearchResponse) {
+	res.Total = total
+	res.List = make([]*OutcomeView, len(outcomes))
+	for i := range outcomes {
+		view := newOutcomeView(ctx, outcomes[i])
+		res.List[i] = &view
+	}
+	return
 }
 
 type LockResponse struct {
@@ -183,6 +194,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 		Shortcode:      outcome.Shortcode,
 		Assumed:        outcome.Assumed,
 		SourceID:       outcome.SourceID,
+		LatestID:       outcome.LatestID,
 		LockedBy:       outcome.LockedBy,
 		AuthorID:       outcome.AuthorID,
 		AuthorName:     outcome.AuthorName,

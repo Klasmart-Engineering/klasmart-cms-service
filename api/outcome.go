@@ -258,10 +258,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": total,
-			"list":  outcomes,
-		})
+		c.JSON(http.StatusOK, newSearchResponse(ctx, total, outcomes))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -302,9 +299,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	case model.ErrContentAlreadyLocked:
 		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"outcome_id": newID,
-		})
+		c.JSON(http.StatusOK, OutcomeIDList{[]string{newID}})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -601,10 +596,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": total,
-			"list":  outcomes,
-		})
+		c.JSON(http.StatusOK, newSearchResponse(ctx, total, outcomes))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -662,10 +654,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": total,
-			"list":  outcomes,
-		})
+		c.JSON(http.StatusOK, newSearchResponse(ctx, total, outcomes))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
