@@ -12,4 +12,11 @@ const (
 	RedisKeyPrefixOutcomeLock      = "outcome:lock"
 	RedisKeyPrefixOutcomeReview    = "outcome:review"
 	RedisKeyPrefixOutcomeShortcode = "outcome:shortcode"
+
+	RedisKeyPrefixOutcomeCondition = "outcome:condition"
+	RedisKeyPrefixOutcomeId        = "outcome:id"
+)
+
+const (
+	RedisKeyPrefixAssessmentItem = "assessment:item"
 )

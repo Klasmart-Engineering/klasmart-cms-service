@@ -16,6 +16,20 @@ import (
 	"time"
 )
 
+// @Summary updateSchedule
+// @ID updateSchedule
+// @Description update a schedule data
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Param scheduleData body entity.ScheduleUpdateView true "schedule data to update"
+// @Tags schedule
+// @Success 200 {object} entity.IDResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 409 {object} ConflictResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
@@ -69,11 +83,25 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{"id": newID})
+		c.JSON(http.StatusOK, entity.IDResponse{ID: newID})
 	default:
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
 }
+
+// @Summary deleteSchedule
+// @ID deleteSchedule
+// @Description delete a schedule data
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Param repeat_edit_options query string true "repeat edit options" enums(only_current,with_following)
+// @Tags schedule
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
@@ -98,6 +126,19 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
 }
+
+// @Summary addSchedule
+// @ID addSchedule
+// @Description add a schedule data
+// @Accept json
+// @Produce json
+// @Param scheduleData body entity.ScheduleAddView true "schedule data to add"
+// @Tags schedule
+// @Success 200 {object} entity.IDResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 409 {object} ConflictResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules [post]
 func (s *Server) addSchedule(c *gin.Context) {
 	op := GetOperator(c)
 	ctx := c.Request.Context()
@@ -137,11 +178,24 @@ func (s *Server) addSchedule(c *gin.Context) {
 	case constant.ErrFileNotFound:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{"id": id})
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 	}
 }
+
+// @Summary getScheduleByID
+// @ID getScheduleByID
+// @Description get schedule by id
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleDetailsView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id} [get]
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
@@ -158,6 +212,24 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
 	c.JSON(http.StatusInternalServerError, err.Error())
 }
+
+// @Summary querySchedule
+// @ID querySchedule
+// @Description query schedule
+// @Accept json
+// @Produce json
+// @Param teacher_name query string false "teacher name"
+// @Param time_zone_offset query integer true "time zone offset"
+// @Param start_at query integer false "search schedules by start_at"
+// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
+// @Param page query integer false "page index, not paging if page <=0"
+// @Param page_size query integer false "records per page, not paging if page_size <= 0"
+// @Tags schedule
+// @Success 200 {object} entity.SchedulePageView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules [get]
 func (s *Server) querySchedule(c *gin.Context) {
 	op := GetOperator(c)
 	ctx := c.Request.Context()
@@ -230,9 +302,9 @@ func (s *Server) querySchedule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total": total,
-		"data":  result,
+	c.JSON(http.StatusOK, entity.SchedulePageView{
+		Total: total,
+		Data:  result,
 	})
 }
 
@@ -243,6 +315,20 @@ const (
 	ViewTypeMonth    = "month"
 )
 
+// @Summary getScheduleTimeView
+// @ID getScheduleTimeView
+// @Description get schedule time view
+// @Accept json
+// @Produce json
+// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month)
+// @Param time_at query integer true "search schedules by time_at"
+// @Param time_zone_offset query integer true "time zone offset"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleListView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	op := GetOperator(c)
 	ctx := c.Request.Context()

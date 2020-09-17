@@ -11,12 +11,9 @@ import (
 )
 
 type OutcomeCreateView struct {
-	OutcomeID   string `json:"outcome_id"`
-	OutcomeName string `json:"outcome_name"`
-	Assumed     bool   `json:"assumed"`
-	//AuthorID string `json:"author_id"`
-	//AuthorName string `json:"author_name"`
-	//Shortcode string `json:"shortcode"`
+	OutcomeID      string   `json:"outcome_id"`
+	OutcomeName    string   `json:"outcome_name"`
+	Assumed        bool     `json:"assumed"`
 	OrganizationID string   `json:"organization_id"`
 	Program        []string `json:"program"`
 	Subject        []string `json:"subject"`
@@ -129,6 +126,7 @@ type OutcomeView struct {
 	EstimatedTime    int             `json:"estimated_time"`
 	Keywords         []string        `json:"keywords"`
 	SourceID         string          `json:"source_id"`
+	LatestID         string          `json:"latest_id"`
 	LockedBy         string          `json:"locked_by"`
 	AuthorID         string          `json:"author_id"`
 	AuthorName       string          `json:"author_name"`
@@ -141,6 +139,28 @@ type OutcomeView struct {
 	CreatedAt        int64           `json:"created_at"`
 }
 
+type OutcomeSearchResponse struct {
+	Total int            `json:"total"`
+	List  []*OutcomeView `json:"list"`
+}
+
+func newOutcomeSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcome) (res OutcomeSearchResponse) {
+	res.Total = total
+	res.List = make([]*OutcomeView, len(outcomes))
+	for i := range outcomes {
+		view := newOutcomeView(ctx, outcomes[i])
+		res.List[i] = &view
+	}
+	return
+}
+
+type OutcomeLockResponse struct {
+	OutcomeID string `json:"outcome_id"`
+}
+
+type OutcomeIDList struct {
+	OutcomeIDs []string `json:"outcome_ids"`
+}
 type Program struct {
 	ProgramID   string `json:"program_id"`
 	ProgramName string `json:"program_name"`
@@ -174,6 +194,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 		Shortcode:      outcome.Shortcode,
 		Assumed:        outcome.Assumed,
 		SourceID:       outcome.SourceID,
+		LatestID:       outcome.LatestID,
 		LockedBy:       outcome.LockedBy,
 		AuthorID:       outcome.AuthorID,
 		AuthorName:     outcome.AuthorName,

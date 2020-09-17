@@ -153,7 +153,7 @@ func (s RepeatWeekSeq) Offset() int {
 }
 
 type RepeatOptions struct {
-	Type    RepeatType    `json:"type,omitempty"`
+	Type    RepeatType    `json:"type,omitempty" enums:"daily,weekly,monthly,yearly"`
 	Daily   RepeatDaily   `json:"daily,omitempty"`
 	Weekly  RepeatWeekly  `json:"weekly,omitempty"`
 	Monthly RepeatMonthly `json:"monthly,omitempty"`
@@ -167,32 +167,32 @@ type RepeatDaily struct {
 
 type RepeatWeekly struct {
 	Interval int             `json:"interval,omitempty"`
-	On       []RepeatWeekday `json:"on,omitempty"`
+	On       []RepeatWeekday `json:"on,omitempty" enums:"Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"`
 	End      RepeatEnd       `json:"end,omitempty"`
 }
 
 type RepeatMonthly struct {
 	Interval  int                 `json:"interval,omitempty"`
-	OnType    RepeatMonthlyOnType `json:"on_type,omitempty"`
+	OnType    RepeatMonthlyOnType `json:"on_type,omitempty" enums:"date,week"`
 	OnDateDay int                 `json:"on_date_day,omitempty"`
-	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq,omitempty"`
-	OnWeek    RepeatWeekday       `json:"on_week,omitempty"`
+	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq,omitempty" enums:"first,second,third,fourth,last"`
+	OnWeek    RepeatWeekday       `json:"on_week,omitempty" enums:"Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"`
 	End       RepeatEnd           `json:"end,omitempty"`
 }
 
 type RepeatYearly struct {
 	Interval    int                `json:"interval,omitempty"`
-	OnType      RepeatYearlyOnType `json:"on_type,omitempty"`
+	OnType      RepeatYearlyOnType `json:"on_type,omitempty" enums:"date,week"`
 	OnDateMonth int                `json:"on_date_month,omitempty"`
 	OnDateDay   int                `json:"on_date_day,omitempty"`
 	OnWeekMonth int                `json:"on_week_month,omitempty"`
-	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq,omitempty"`
-	OnWeek      RepeatWeekday      `json:"on_week,omitempty"`
+	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq,omitempty" enums:"first,second,third,fourth,last"`
+	OnWeek      RepeatWeekday      `json:"on_week,omitempty" enums:"Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"`
 	End         RepeatEnd          `json:"end,omitempty"`
 }
 
 type RepeatEnd struct {
-	Type       RepeatEndType `json:"type,omitempty"`
+	Type       RepeatEndType `json:"type,omitempty"  enums:"never,after_count,after_time"`
 	AfterCount int           `json:"after_count,omitempty"`
 	AfterTime  int64         `json:"after_time,omitempty"`
 }
@@ -316,7 +316,7 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 
 type ScheduleUpdateView struct {
 	ID       string           `json:"id"`
-	EditType ScheduleEditType `json:"repeat_edit_options"`
+	EditType ScheduleEditType `json:"repeat_edit_options"  enums:"only_current,with_following"`
 
 	ScheduleAddView
 }
@@ -347,7 +347,7 @@ type ScheduleDetailsView struct {
 	ScheduleBasic
 }
 
-type ScheduleSeachView struct {
+type ScheduleSearchView struct {
 	ID      string `json:"id"`
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
@@ -393,4 +393,9 @@ func (t ScheduleEditType) Valid() bool {
 	default:
 		return false
 	}
+}
+
+type SchedulePageView struct {
+	Total int                   `json:"total"`
+	Data  []*ScheduleSearchView `json:"data"`
 }
