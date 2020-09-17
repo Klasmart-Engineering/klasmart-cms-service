@@ -11,12 +11,9 @@ import (
 )
 
 type OutcomeCreateView struct {
-	OutcomeID   string `json:"outcome_id"`
-	OutcomeName string `json:"outcome_name"`
-	Assumed     bool   `json:"assumed"`
-	//AuthorID string `json:"author_id"`
-	//AuthorName string `json:"author_name"`
-	//Shortcode string `json:"shortcode"`
+	OutcomeID      string   `json:"outcome_id"`
+	OutcomeName    string   `json:"outcome_name"`
+	Assumed        bool     `json:"assumed"`
 	OrganizationID string   `json:"organization_id"`
 	Program        []string `json:"program"`
 	Subject        []string `json:"subject"`
@@ -141,6 +138,18 @@ type OutcomeView struct {
 	CreatedAt        int64           `json:"created_at"`
 }
 
+type SearchResponse struct {
+	Total int               `json:"total"`
+	List  []*entity.Outcome `json:"list"`
+}
+
+type LockResponse struct {
+	OutcomeID string `json:"outcome_id"`
+}
+
+type OutcomeIDList struct {
+	OutcomeIDs []string `json:"outcome_ids"`
+}
 type Program struct {
 	ProgramID   string `json:"program_id"`
 	ProgramName string `json:"program_name"`

@@ -16,3 +16,7 @@ const (
 	RedisKeyPrefixOutcomeCondition = "content:condition"
 	RedisKeyPrefixOutcomeId        = "content:id"
 )
+
+const (
+	RedisKeyPrefixAssessmentItem = "assessment:item"
+)
