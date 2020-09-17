@@ -15,65 +15,64 @@ import (
 	"time"
 )
 
-//type ScheduleRedisCondition struct {
-//	OrgID   string
-//	StartAt int64
-//	EndAt   int64
-//}
-
 func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules []*entity.ScheduleDetailsView) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
-	go func() {
-		for _, item := range schedules {
-			key := r.scheduleKey(item.ID)
-			b, err := json.Marshal(item)
-			if err != nil {
-				log.Error(ctx, "Can't parse schedule into json",
-					log.Err(err),
-					log.Any("schedule", item),
-				)
-				continue
-			}
-			err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
-			if err != nil {
-				log.Error(ctx, "Can't save schedule into cache",
-					log.Err(err),
-					log.Any("schedule", item),
-				)
-				continue
-			}
+	for _, item := range schedules {
+		key := r.scheduleKey(item.ID)
+		b, err := json.Marshal(item)
+		if err != nil {
+			log.Error(ctx, "Can't parse schedule into json",
+				log.Err(err),
+				log.Any("schedule", item),
+			)
+			continue
 		}
-	}()
+		err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
+		if err != nil {
+			log.Error(ctx, "Can't save schedule into cache",
+				log.Err(err),
+				log.Any("schedule", item),
+			)
+			continue
+		}
+	}
 }
 func (r *ScheduleRedisDA) AddScheduleByCondition(ctx context.Context, condition dbo.Conditions, schedules []*entity.ScheduleListView) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
-	go func() {
-		b, err := json.Marshal(schedules)
-		if err != nil {
-			log.Error(ctx, "Can't parse schedule list into json",
-				log.Err(err),
-				log.Any("condition", condition),
-				log.Any("schedules", schedules),
-			)
-			return
-		}
-		filed := r.conditionHash(condition)
-		ro.MustGetRedis(ctx).Expire(RedisKeyPrefixScheduleCondition, r.expiration)
-		err = ro.MustGetRedis(ctx).HSet(RedisKeyPrefixScheduleCondition, filed, string(b)).Err()
-		if err != nil {
-			log.Error(ctx, "Can't save schedule into cache",
-				log.Err(err),
-				log.Any("condition", condition),
-				log.Any("filed", filed),
-				log.Any("schedules", schedules),
-			)
-			return
-		}
-	}()
+	b, err := json.Marshal(schedules)
+	if err != nil {
+		log.Error(ctx, "Can't parse schedule list into json",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("schedules", schedules),
+		)
+		return
+	}
+	filed := r.conditionHash(condition)
+	err = ro.MustGetRedis(ctx).Expire(RedisKeyPrefixScheduleCondition, r.expiration).Err()
+	if err != nil {
+		log.Error(ctx, "set schedule condition key expire error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("filed", filed),
+			log.Any("schedules", schedules),
+		)
+		return
+	}
+	err = ro.MustGetRedis(ctx).HSet(RedisKeyPrefixScheduleCondition, filed, string(b)).Err()
+	if err != nil {
+		log.Error(ctx, "Can't save schedule into cache",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("filed", filed),
+			log.Any("schedules", schedules),
+		)
+		return
+	}
 }
 func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []string) ([]*entity.ScheduleDetailsView, error) {
 	if !config.Get().RedisConfig.OpenCache {

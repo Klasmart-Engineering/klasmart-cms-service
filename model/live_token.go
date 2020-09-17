@@ -3,18 +3,20 @@ package model
 import (
 	"context"
 	"fmt"
+
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 type ILiveTokenModel interface {
@@ -109,13 +111,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (string, error) {
 	switch op.Role {
 	case entity.RoleTeacher:
-		teacherService, err := external.GetTeacherServiceProvider()
-		if err != nil {
-			log.Error(ctx, "getUserName:GetTeacherServiceProvider error",
-				log.Err(err),
-				log.Any("op", op))
-			return "", err
-		}
+		teacherService := external.GetTeacherServiceProvider()
 		teacherInfos, err := teacherService.BatchGet(ctx, []string{op.UserID})
 		if err != nil {
 			log.Error(ctx, "getUserName:GetTeacherServiceProvider BatchGet error",
@@ -167,6 +163,7 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {
 	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID)
+	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err != nil {
 		log.Error(ctx, "getMaterials:get content sub by id error",
 			log.Err(err),
@@ -182,6 +179,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 		mData, ok := item.Data.(*contentdata.MaterialData)
 		if !ok {
 			// TODO
+			log.Debug(ctx, "content data convert materialdata error", log.Any("item", item))
 			continue
 		}
 		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",

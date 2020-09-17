@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,8 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 type IAssessmentModel interface {
@@ -35,6 +37,26 @@ func GetAssessmentModel() IAssessmentModel {
 }
 
 type assessmentModel struct{}
+
+type outcomeSliceSortByAssumedAndName []*entity.Outcome
+
+func (s outcomeSliceSortByAssumedAndName) Len() int {
+	return len(s)
+}
+
+func (s outcomeSliceSortByAssumedAndName) Less(i, j int) bool {
+	if s[i].Assumed && !s[j].Assumed {
+		return true
+	} else if !s[i].Assumed && s[j].Assumed {
+		return false
+	} else {
+		return s[i].Name < s[j].Name
+	}
+}
+
+func (s outcomeSliceSortByAssumedAndName) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
 
 func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id string) (*entity.AssessmentDetailView, error) {
 	var result entity.AssessmentDetailView
@@ -66,14 +88,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			)
 			return nil, err
 		}
-		studentService, err := external.GetStudentServiceProvider()
-		if err != nil {
-			log.Error(ctx, "get assessment detail: get student service failed",
-				log.Err(err),
-				log.String("id", id),
-			)
-			return nil, err
-		}
+		studentService := external.GetStudentServiceProvider()
 		students, err := studentService.BatchGet(ctx, attendanceIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get student failed",
@@ -119,15 +134,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			)
 			return nil, err
 		}
-		teacherNameService, err := external.GetTeacherServiceProvider()
-		if err != nil {
-			log.Error(ctx, "get assessment detail: get teacher service failed",
-				log.Err(err),
-				log.Strings("teacher_ids", teacherIDs),
-				log.Any("id", id),
-			)
-			return nil, err
-		}
+		teacherNameService := external.GetTeacherServiceProvider()
 		items, err := teacherNameService.BatchGet(ctx, teacherIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get teacher failed",
@@ -191,6 +198,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			for _, outcome := range outcomes {
 				outcomeMap[outcome.ID] = outcome
 			}
+			sort.Sort(outcomeSliceSortByAssumedAndName(outcomes))
 			outcomeAttendanceItems, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
 			if err != nil {
 				log.Error(ctx, "get assessment detail: batch get outcome attendances failed by assessment id and outcome ids",
@@ -242,14 +250,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 	}
 	{
 		if cmd.TeacherName != nil {
-			teacherService, err := external.GetTeacherServiceProvider()
-			if err != nil {
-				log.Error(ctx, "list assessments: get teacher service failed",
-					log.Err(err),
-					log.Any("cmd", cmd),
-				)
-				return nil, err
-			}
+			teacherService := external.GetTeacherServiceProvider()
 			items, err := teacherService.Query(ctx, *cmd.TeacherName)
 			if err != nil {
 				log.Error(ctx, "list assessments: query teacher service failed",
@@ -369,14 +370,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 
 func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []string) (map[string]string, error) {
 	programNameMap := map[string]string{}
-	programService, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "list assessments: get program service failed",
-			log.Err(err),
-			log.Strings("program_ids", programIDs),
-		)
-		return nil, err
-	}
+	programService := external.GetProgramServiceProvider()
 	items, err := programService.BatchGet(ctx, programIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get program failed",
@@ -393,14 +387,7 @@ func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []st
 
 func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []string) (map[string]string, error) {
 	subjectNameMap := map[string]string{}
-	subjectService, err := external.GetSubjectServiceProvider()
-	if err != nil {
-		log.Error(ctx, "list assessments: get subject service failed",
-			log.Err(err),
-			log.Strings("subject_ids", subjectIDs),
-		)
-		return nil, err
-	}
+	subjectService := external.GetSubjectServiceProvider()
 	items, err := subjectService.BatchGet(ctx, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get subject failed",
@@ -417,14 +404,7 @@ func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []st
 
 func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []string) (map[string]string, error) {
 	teacherNameMap := map[string]string{}
-	teacherNameService, err := external.GetTeacherServiceProvider()
-	if err != nil {
-		log.Error(ctx, "list assessments: get teacher service failed",
-			log.Err(err),
-			log.Strings("teacher_ids", teacherIDs),
-		)
-		return nil, err
-	}
+	teacherNameService := external.GetTeacherServiceProvider()
 	items, err := teacherNameService.BatchGet(ctx, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get teacher failed",
@@ -441,14 +421,7 @@ func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []st
 
 func (a *assessmentModel) getClassNameMap(ctx context.Context, classIDs []string) (map[string]string, error) {
 	classNameMap := map[string]string{}
-	classService, err := external.GetClassServiceProvider()
-	if err != nil {
-		log.Error(ctx, "get class name map: get class service failed",
-			log.Err(err),
-			log.Strings("class_ids", classIDs),
-		)
-		return nil, err
-	}
+	classService := external.GetClassServiceProvider()
 	items, err := classService.BatchGet(ctx, classIDs)
 	if err != nil {
 		log.Error(ctx, "get class name map: batch get class failed",
@@ -517,7 +490,7 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				)
 				return err
 			}
-			newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], newItem.Title)
+			newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
 			if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
 				log.Error(ctx, "add assessment: encode and set teacher ids failed",
 					log.Err(err),
@@ -720,13 +693,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 }
 
 func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string) (bool, error) {
-	teacherService, err := external.GetTeacherServiceProvider()
-	if err != nil {
-		log.Error(ctx, "check teacher exists: get teacher service failed",
-			log.Err(err),
-			log.Strings("ids", ids),
-		)
-	}
+	teacherService := external.GetTeacherServiceProvider()
 	if _, err := teacherService.BatchGet(ctx, ids); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
@@ -747,13 +714,7 @@ func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string)
 }
 
 func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (bool, error) {
-	subjectService, err := external.GetSubjectServiceProvider()
-	if err != nil {
-		log.Error(ctx, "check subject exists: get subject service failed",
-			log.Err(err),
-			log.String("id", id),
-		)
-	}
+	subjectService := external.GetSubjectServiceProvider()
 	if _, err := subjectService.BatchGet(ctx, []string{id}); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
@@ -774,13 +735,7 @@ func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (boo
 }
 
 func (a *assessmentModel) existsProgramByID(ctx context.Context, id string) (bool, error) {
-	programService, err := external.GetProgramServiceProvider()
-	if err != nil {
-		log.Error(ctx, "check program exists: get program service failed",
-			log.Err(err),
-			log.String("id", id),
-		)
-	}
+	programService := external.GetProgramServiceProvider()
 	if _, err := programService.BatchGet(ctx, []string{id}); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:

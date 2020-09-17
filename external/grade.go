@@ -11,12 +11,16 @@ type Grade struct {
 	Name string `json:"name"`
 }
 
-func GetGradeServiceProvider() (GradeServiceProvider, error) {
-	return &mockGradeService{}, nil
+func GetGradeServiceProvider() GradeServiceProvider {
+	return &mockGradeService{}
 }
 
 type mockGradeService struct{}
 
 func (s mockGradeService) BatchGet(ctx context.Context, ids []string) ([]*Grade, error) {
-	return GetMockData().Grades, nil
+	var grades []*Grade
+	for _, option := range GetMockData().Options {
+		grades = append(grades, option.Grade...)
+	}
+	return grades, nil
 }

@@ -286,11 +286,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	//检查数据信息是否正确
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
-		provider, err := external.GetPublishScopeProvider()
-		if err != nil{
-			log.Warn(ctx, "get publishScope provider failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
-			return "", err
-		}
+		provider := external.GetPublishScopeProvider()
 		c.PublishScope = provider.DefaultPublishScope(ctx)
 	}
 
@@ -319,11 +315,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
 	if data.ContentType.IsAsset() {
-		provider, err := external.GetPublishScopeProvider()
-		if err != nil{
-			log.Warn(ctx, "get publishScope provider failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
-			return err
-		}
+		provider := external.GetPublishScopeProvider()
 		data.PublishScope = provider.DefaultPublishScope(ctx)
 	}
 
@@ -697,7 +689,6 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	return ErrGetUnauthorizedContent
 }
 
-
 func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
@@ -705,7 +696,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		return nil, err
 	}
 	cd, err := contentdata.CreateContentData(ctx, obj.ContentType, obj.Data)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 		return nil, err
 	}
@@ -724,12 +715,12 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 
 	//存在子内容，则返回子内容
 	subContents, err := da.GetContentDA().GetContentByIDList(ctx, tx, ids)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "can't get sub contents", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
 	subContentMap := make(map[string]*entity.Content, len(subContents))
-	for i := range subContents{
+	for i := range subContents {
 		subContentMap[subContents[i].ID] = subContents[i]
 	}
 
@@ -740,7 +731,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			continue
 		}
 		cd, err := contentdata.CreateContentData(ctx, subContent.ContentType, subContent.Data)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", subContentMap[ids[i]]))
 			return nil, err
 		}
@@ -1060,16 +1051,12 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 
 func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
-	orgProvider, err := external.GetOrganizationServiceProvider()
-	if err != nil {
-		log.Error(ctx, "can't get org provider", log.Err(err))
+	orgProvider := external.GetOrganizationServiceProvider()
+	orgs, err := orgProvider.BatchGet(ctx, []string{user.OrgID})
+	if err != nil || len(orgs) < 1 {
+		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
-		orgs, err := orgProvider.BatchGet(ctx, []string{user.OrgID})
-		if err != nil || len(orgs) < 1 {
-			log.Error(ctx, "can't get org info", log.Err(err))
-		} else {
-			orgName = orgs[0].Name
-		}
+		orgName = orgs[0].Name
 	}
 
 	programNameMap := make(map[string]string)
@@ -1096,92 +1083,68 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programProvider, err := external.GetProgramServiceProvider()
+	programProvider := external.GetProgramServiceProvider()
+	programs, err := programProvider.BatchGet(ctx, programIds)
 	if err != nil {
-		log.Error(ctx, "can't get programProvider", log.Err(err))
+		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
-		programs, err := programProvider.BatchGet(ctx, programIds)
-		if err != nil {
-			log.Error(ctx, "can't get org info", log.Err(err))
-		} else {
-			for i := range programs {
-				programNameMap[programs[i].ID] = programs[i].Name
-			}
+		for i := range programs {
+			programNameMap[programs[i].ID] = programs[i].Name
 		}
 	}
 
 	//Subjects
-	subjectsProvider, err := external.GetSubjectServiceProvider()
+	subjectsProvider := external.GetSubjectServiceProvider()
+	subjects, err := subjectsProvider.BatchGet(ctx, subjectIds)
 	if err != nil {
-		log.Error(ctx, "can't get subjectsProvider", log.Err(err))
+		log.Error(ctx, "can't get subjects info", log.Err(err))
 	} else {
-		subjects, err := subjectsProvider.BatchGet(ctx, subjectIds)
-		if err != nil {
-			log.Error(ctx, "can't get subjects info", log.Err(err))
-		} else {
-			for i := range subjects {
-				subjectNameMap[subjects[i].ID] = subjects[i].Name
-			}
+		for i := range subjects {
+			subjectNameMap[subjects[i].ID] = subjects[i].Name
 		}
 	}
 
 	//developmental
-	developmentalsProvider, err := external.GetDevelopmentalServiceProvider()
+	developmentalsProvider := external.GetDevelopmentalServiceProvider()
+	developmentals, err := developmentalsProvider.BatchGet(ctx, developmentalIds)
 	if err != nil {
-		log.Error(ctx, "can't get developmentalsProvider", log.Err(err))
+		log.Error(ctx, "can't get developmentals info", log.Err(err))
 	} else {
-		developmentals, err := developmentalsProvider.BatchGet(ctx, developmentalIds)
-		if err != nil {
-			log.Error(ctx, "can't get developmentals info", log.Err(err))
-		} else {
-			for i := range developmentals {
-				developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
-			}
+		for i := range developmentals {
+			developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
 		}
 	}
 
 	//skill
-	skillProvider, err := external.GetSkillServiceProvider()
+	skillProvider := external.GetSkillServiceProvider()
+	skills, err := skillProvider.BatchGet(ctx, skillsIds)
 	if err != nil {
-		log.Error(ctx, "can't get skillProvider", log.Err(err))
+		log.Error(ctx, "can't get skills info", log.Err(err))
 	} else {
-		skills, err := skillProvider.BatchGet(ctx, skillsIds)
-		if err != nil {
-			log.Error(ctx, "can't get skills info", log.Err(err))
-		} else {
-			for i := range skills {
-				skillsNameMap[skills[i].ID] = skills[i].Name
-			}
+		for i := range skills {
+			skillsNameMap[skills[i].ID] = skills[i].Name
 		}
 	}
 
 	//age
-	ageProvider, err := external.GetAgeServiceProvider()
+	ageProvider := external.GetAgeServiceProvider()
+	ages, err := ageProvider.BatchGet(ctx, ageIds)
 	if err != nil {
-		log.Error(ctx, "can't get ageProvider", log.Err(err))
+		log.Error(ctx, "can't get age info", log.Err(err))
 	} else {
-		ages, err := ageProvider.BatchGet(ctx, ageIds)
-		if err != nil {
-			log.Error(ctx, "can't get age info", log.Err(err))
-		} else {
-			for i := range ages {
-				ageNameMap[ages[i].ID] = ages[i].Name
-			}
+		for i := range ages {
+			ageNameMap[ages[i].ID] = ages[i].Name
 		}
 	}
 
 	//grade
-	gradeProvider, err := external.GetGradeServiceProvider()
+	gradeProvider := external.GetGradeServiceProvider()
+	grades, err := gradeProvider.BatchGet(ctx, gradeIds)
 	if err != nil {
-		log.Error(ctx, "can't get gradeProvider", log.Err(err))
+		log.Error(ctx, "can't get grade info", log.Err(err))
 	} else {
-		grades, err := gradeProvider.BatchGet(ctx, gradeIds)
-		if err != nil {
-			log.Error(ctx, "can't get grade info", log.Err(err))
-		} else {
-			for i := range grades {
-				gradeNameMap[grades[i].ID] = grades[i].Name
-			}
+		for i := range grades {
+			gradeNameMap[grades[i].ID] = grades[i].Name
 		}
 	}
 

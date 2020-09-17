@@ -15,9 +15,8 @@ func (s Server) registeRoute() {
 	s.engine.NoRoute(func(c *gin.Context) {
 		c.AbortWithError(http.StatusNotFound, errRouteNotFound)
 	})
-	s.engine.GET("/v1/ping", func(c *gin.Context) {
-		c.String(http.StatusOK, "pong")
-	})
+
+	s.engine.GET("/v1/ping", s.ping)
 
 	assets := s.engine.Group("/v1/assets")
 	{
@@ -92,4 +91,20 @@ func (s Server) registeRoute() {
 	{
 		crypto.GET("/h5p/signature", MustLogin, s.h5pSignature)
 	}
+}
+
+// Ping godoc
+// @ID ping
+// @Summary Ping
+// @Description Ping and test service
+// @Tags common
+// @Accept  json
+// @Produce  plain
+// @Success 200 {object} string
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /ping [get]
+func (s Server) ping(c *gin.Context) {
+	c.String(http.StatusOK, "pong")
 }

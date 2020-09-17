@@ -11,12 +11,18 @@ type Skill struct {
 	Name string `json:"name"`
 }
 
-func GetSkillServiceProvider() (SkillServiceProvider, error) {
-	return &mockSkillService{}, nil
+func GetSkillServiceProvider() SkillServiceProvider {
+	return &mockSkillService{}
 }
 
 type mockSkillService struct{}
 
 func (s mockSkillService) BatchGet(ctx context.Context, ids []string) ([]*Skill, error) {
-	return GetMockData().Skills, nil
+	var skills []*Skill
+	for _, option := range GetMockData().Options {
+		for _, development := range option.Developmental {
+			skills = append(skills, development.Skill...)
+		}
+	}
+	return skills, nil
 }
