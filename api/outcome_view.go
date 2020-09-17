@@ -144,7 +144,7 @@ type OutcomeSearchResponse struct {
 	List  []*OutcomeView `json:"list"`
 }
 
-func newSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcome) (res OutcomeSearchResponse) {
+func newOutcomeSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcome) (res OutcomeSearchResponse) {
 	res.Total = total
 	res.List = make([]*OutcomeView, len(outcomes))
 	for i := range outcomes {
@@ -154,7 +154,7 @@ func newSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcom
 	return
 }
 
-type LockResponse struct {
+type OutcomeLockResponse struct {
 	OutcomeID string `json:"outcome_id"`
 }
 
