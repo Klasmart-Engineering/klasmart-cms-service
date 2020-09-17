@@ -45,6 +45,11 @@ func initCache() {
 	//}
 }
 
+// @title KidsLoop 2.0 REST API
+// @version 1.0.0
+// @description "KidsLoop 2.0 backend rest api
+// @termsOfService http://swagger.io/terms/
+// @host https://kl2-test.kidsloop.net/v1
 func main() {
 	log.Info(context.TODO(), "start kidsloop2 api service")
 	defer func() {

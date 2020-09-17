@@ -233,12 +233,16 @@ type Schedule struct {
 	DeleteAt        int64  `gorm:"column:delete_at;type:bigint"`
 }
 
+type ScheduleStatus string
+
+const (
+	ScheduleStatusNotStart ScheduleStatus = "NotStart"
+	ScheduleStatusStarted  ScheduleStatus = "Started"
+	ScheduleStatusClosed   ScheduleStatus = "Closed"
+)
+
 func (Schedule) TableName() string {
 	return constant.TableNameSchedule
-}
-
-func (Schedule) IndexNameRepeatIDAndStartAt() string {
-	return "repeat_id_and_start_at"
 }
 
 func (s Schedule) Clone() Schedule {
@@ -272,6 +276,7 @@ type ScheduleAddView struct {
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 	schedule := &Schedule{
+		ID:              utils.NewID(),
 		Title:           s.Title,
 		ClassID:         s.ClassID,
 		LessonPlanID:    s.LessonPlanID,
@@ -282,30 +287,27 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		ProgramID:       s.ProgramID,
 		ClassType:       s.ClassType,
 		DueAt:           s.DueAt,
+		Status:          string(ScheduleStatusNotStart),
 		Description:     s.Description,
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
 		UpdatedAt:       time.Now().Unix(),
 		IsAllDay:        s.IsAllDay,
-		RepeatID:        s.RepeatID,
 	}
 	if s.IsRepeat {
 		b, err := json.Marshal(s.Repeat)
 		if err != nil {
+			log.Warn(ctx, "ToSchedule:marshal schedule repeat error", log.Any("repeat", s.Repeat))
 			return nil, err
 		}
 		schedule.RepeatJson = string(b)
-
-		if schedule.RepeatID == "" {
-			schedule.RepeatID = utils.NewID()
-		}
-	}
-	if schedule.RepeatJson == "" {
+		schedule.RepeatID = utils.NewID()
+	} else {
 		schedule.RepeatJson = "{}"
 	}
 	b, err := json.Marshal(s.Attachment)
 	if err != nil {
-		log.Info(ctx, "marshal attachment error", log.Any("attachment", s.Attachment))
+		log.Warn(ctx, "ToSchedule:marshal attachment error", log.Any("attachment", s.Attachment))
 		return nil, err
 	}
 	schedule.Attachment = string(b)
