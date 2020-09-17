@@ -6,6 +6,10 @@ const (
 	Unknown ResponseLabel = "unknown"
 )
 
+type ErrorResponse struct {
+	Label string `json:"label"`
+}
+
 // L create response object with label
 func L(label ResponseLabel) interface{} {
 	return map[string]interface{}{
