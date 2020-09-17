@@ -1,0 +1,43 @@
+definitions:
+  api.ErrorResponse:
+    properties:
+      label:
+        example: unknown
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is a sample server celler server.
+  license: {}
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /ping:
+    get:
+      consumes:
+      - application/json
+      description: Ping and test service
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/api.ErrorResponse'
+      summary: Ping
+      tags:
+      - common
+swagger: "2.0"
