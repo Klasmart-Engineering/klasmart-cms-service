@@ -4261,6 +4261,23 @@
           }
         ]
       },
+      "RejectCMSReasonRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "Reject reason",
+            "properties": {
+              "reject_reason": {
+                "type": "array",
+                "item": {
+                  "type": "string"
+                },
+                "description": "content reject reason"
+              }
+            }
+          }
+        ]
+      },
       "LockContentResponse": {
         "allOf": [
           {

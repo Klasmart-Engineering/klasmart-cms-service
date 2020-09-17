@@ -7,6 +7,23 @@ import (
 	"net/http"
 )
 
+type UploadPathResponse struct {
+	Path string `json:"path"`
+	ResourceId string `json:"resource_id"`
+}
+
+// @Summary getContentResourceUploadPath
+// @ID getContentResourceUploadPath
+// @Description get path to upload resource
+// @Accept json
+// @Produce json
+// @Param partition query string true "Resource partition"
+// @Param extension query string true "Resource extension"
+// @Tags content
+// @Success 302 {string} UploadPathResponse
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents_resources [get]
 func (s *Server) getUploadPath(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -22,15 +39,26 @@ func (s *Server) getUploadPath(c *gin.Context) {
 	case storage.ErrInvalidUploadPartition:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"path":        path,
-			"resource_id": name,
+		c.JSON(http.StatusOK, UploadPathResponse{
+			Path:       path,
+			ResourceId: name,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
 
+// @Summary getContentResourcePath
+// @ID getContentResourcePath
+// @Description get the path of a resource
+// @Accept json
+// @Produce json
+// @Param resource_id path string true "Resource id"
+// @Tags content
+// @Success 302 {string} string Found
+// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /v1/contents_resources/{resource_id} [get]
 func (s *Server) getPath(c *gin.Context) {
 	ctx := c.Request.Context()
 	resourceId := c.Param("resource_id")
