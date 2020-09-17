@@ -182,9 +182,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			log.Debug(ctx, "content data convert materialdata error", log.Any("item", item))
 			continue
 		}
-		materialItem.URL = fmt.Sprintf("/%v/h5p-www/play/%v",
-			entity.LiveTokenEnvPath,
-			mData.Source)
+		materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
 		materials[i] = materialItem
 	}
 	return materials, nil

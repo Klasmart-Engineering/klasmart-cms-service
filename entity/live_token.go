@@ -15,10 +15,6 @@ const (
 	MaterialTypeH5P MaterialType = "Iframe"
 )
 
-const (
-	LiveTokenEnvPath = "v1"
-)
-
 type LiveTokenInfo struct {
 	Name       string          `json:"name,omitempty"`
 	ScheduleID string          `json:"schedule_id,omitempty"`
