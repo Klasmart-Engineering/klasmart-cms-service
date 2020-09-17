@@ -45,10 +45,12 @@ func initCache() {
 	//}
 }
 
-// @title Swagger Example API
-// @version 1.0
-// @description This is a sample server celler server.
+// @title KidsLoop 2.0 REST API
+// @version 1.0.0
+// @description "KidsLoop 2.0 backend rest api
 // @termsOfService http://swagger.io/terms/
+// @host https://kl2-test.kidsloop.net
+// @BasePath /v1
 func main() {
 	log.Info(context.TODO(), "start kidsloop2 api service")
 	defer func() {
