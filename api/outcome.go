@@ -299,7 +299,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	case model.ErrContentAlreadyLocked:
 		c.JSON(http.StatusNotAcceptable, L(Unknown))
 	case nil:
-		c.JSON(http.StatusOK, OutcomeIDList{[]string{newID}})
+		c.JSON(http.StatusOK, OutcomeLockResponse{newID})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
