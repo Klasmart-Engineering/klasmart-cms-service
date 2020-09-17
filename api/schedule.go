@@ -25,10 +25,10 @@ import (
 // @Param scheduleData body entity.ScheduleUpdateView true "schedule data to update"
 // @Tags schedule
 // @Success 200 {object} entity.IDResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 409 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 409 {object} ConflictResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -98,9 +98,9 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Param repeat_edit_options query string true "repeat edit options" enums(only_current,with_following)
 // @Tags schedule
 // @Success 200 {string} string "OK"
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -135,9 +135,9 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Param scheduleData body entity.ScheduleAddView true "schedule data to add"
 // @Tags schedule
 // @Success 200 {object} entity.IDResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 409 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 409 {object} ConflictResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [post]
 func (s *Server) addSchedule(c *gin.Context) {
 	op := GetOperator(c)
@@ -192,9 +192,9 @@ func (s *Server) addSchedule(c *gin.Context) {
 // @Param schedule_id path string true "schedule id"
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleDetailsView
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [get]
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -226,9 +226,9 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 // @Param page_size query integer false "records per page, not paging if page_size <= 0"
 // @Tags schedule
 // @Success 200 {object} entity.SchedulePageView
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [get]
 func (s *Server) querySchedule(c *gin.Context) {
 	op := GetOperator(c)
@@ -325,9 +325,9 @@ const (
 // @Param time_zone_offset query integer true "time zone offset"
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleListView
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	op := GetOperator(c)

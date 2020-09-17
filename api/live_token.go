@@ -18,9 +18,9 @@ import (
 // @Param schedule_id path string true "schedule id"
 // @Tags schedule
 // @Success 200 {object} entity.LiveTokenView
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id}/live/token [get]
 func (s *Server) getScheduleLiveToken(c *gin.Context) {
 	op := GetOperator(c)
@@ -47,9 +47,9 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 // @Param content_id path string true "content id"
 // @Tags content
 // @Success 200 {object} entity.LiveTokenView
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /contents/{content_id}/live/token [get]
 func (s *Server) getContentLiveToken(c *gin.Context) {
 	op := GetOperator(c)
