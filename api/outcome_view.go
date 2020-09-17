@@ -139,12 +139,12 @@ type OutcomeView struct {
 	CreatedAt        int64           `json:"created_at"`
 }
 
-type SearchResponse struct {
+type OutcomeSearchResponse struct {
 	Total int            `json:"total"`
 	List  []*OutcomeView `json:"list"`
 }
 
-func newSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcome) (res SearchResponse) {
+func newSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcome) (res OutcomeSearchResponse) {
 	res.Total = total
 	res.List = make([]*OutcomeView, len(outcomes))
 	for i := range outcomes {

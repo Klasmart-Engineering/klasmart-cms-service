@@ -220,7 +220,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
-// @Success 200 {object} SearchResponse
+// @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -563,7 +563,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
-// @Success 200 {object} SearchResponse
+// @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -619,7 +619,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
-// @Success 200 {object} SearchResponse
+// @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
