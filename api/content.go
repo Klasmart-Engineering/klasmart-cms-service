@@ -250,38 +250,6 @@ func (s *Server) deleteContent(c *gin.Context) {
 	}
 }
 
-func (s *Server) queryDynamoContent(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := GetOperator(c)
-
-	ctoips := ""
-	if c.Query("content_type") != "" {
-		ctoips = c.Query("content_type") + c.Query("org") + c.Query("publish_status")
-	}
-
-	condition := da.DyKeyContentCondition{
-		PublishStatus:                 c.Query("publish_status"),
-		Author:                        c.Query("author"),
-		ContentTypeOrgIdPublishStatus: ctoips,
-		Name:                          c.Query("name"),
-		Org:                           c.Query("org"),
-		KeyWords:                      c.Query("keywords"),
-		LastKey:                       c.Query("key"),
-	}
-
-	key, results, err := model.GetContentModel().SearchContentByDynamoKey(ctx, dbo.MustGetDB(ctx), condition, op)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"key":  key,
-			"list": results,
-		})
-	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-	}
-
-}
-
 func (s *Server) contentDataCount(c *gin.Context) {
 	ctx := c.Request.Context()
 	cid := c.Param("content_id")
