@@ -233,6 +233,14 @@ type Schedule struct {
 	DeleteAt        int64  `gorm:"column:delete_at;type:bigint"`
 }
 
+type ScheduleStatus string
+
+const (
+	ScheduleStatusNotStart ScheduleStatus = "NotStart"
+	ScheduleStatusStarted  ScheduleStatus = "Started"
+	ScheduleStatusClosed   ScheduleStatus = "Closed"
+)
+
 func (Schedule) TableName() string {
 	return constant.TableNameSchedule
 }
@@ -279,6 +287,7 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		ProgramID:       s.ProgramID,
 		ClassType:       s.ClassType,
 		DueAt:           s.DueAt,
+		Status:          string(ScheduleStatusNotStart),
 		Description:     s.Description,
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
