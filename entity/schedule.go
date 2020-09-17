@@ -271,7 +271,7 @@ type ScheduleAddView struct {
 	IsRepeat       bool              `json:"is_repeat"`
 	IsForce        bool              `json:"is_force"`
 	TimeZoneOffset int               `json:"time_zone_offset"`
-	Location       *time.Location
+	Location       *time.Location    `json:"-"`
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
