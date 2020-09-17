@@ -18,13 +18,13 @@ import (
 type IOutcomeRedis interface {
 	SaveOutcomeCacheList(ctx context.Context, outcomes []*entity.Outcome)
 	SaveOutcomeCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *OutcomeListWithKey)
-	GetOutcomeCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.Outcome)
+	GetOutcomeCacheByIdList(ctx context.Context, IDs []string) ([]string, []*entity.Outcome)
 	GetOutcomeCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *OutcomeListWithKey
 
 	SaveOutcomeCache(ctx context.Context, outcome *entity.Outcome)
-	GetOutcomeCacheByID(ctx context.Context, id string) *entity.Outcome
+	GetOutcomeCacheByID(ctx context.Context, ID string) *entity.Outcome
 
-	CleanOutcomeCache(ctx context.Context, ids []string)
+	CleanOutcomeCache(ctx context.Context, IDs []string)
 
 	SetExpiration(t time.Duration)
 }
@@ -38,8 +38,8 @@ type OutcomeListWithKey struct {
 	OutcomeList []*entity.Outcome `json:"outcome_list"`
 }
 
-func (r *OutcomeRedis) outcomeKey(id string) string {
-	return fmt.Sprintf("%v:%v", RedisKeyPrefixOutcomeId, id)
+func (r *OutcomeRedis) outcomeKey(ID string) string {
+	return fmt.Sprintf("%v:%v", RedisKeyPrefixOutcomeId, ID)
 }
 
 func (r *OutcomeRedis) conditionHash(condition dbo.Conditions) string {
@@ -79,11 +79,11 @@ func (r *OutcomeRedis) SaveOutcomeCache(ctx context.Context, outcome *entity.Out
 		outcome,
 	})
 }
-func (r *OutcomeRedis) GetOutcomeCacheByID(ctx context.Context, id string) *entity.Outcome {
+func (r *OutcomeRedis) GetOutcomeCacheByID(ctx context.Context, ID string) *entity.Outcome {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
-	_, res := r.GetOutcomeCacheByIdList(ctx, []string{id})
+	_, res := r.GetOutcomeCacheByIdList(ctx, []string{ID})
 	if len(res) > 0 {
 		return res[0]
 	}
@@ -111,18 +111,18 @@ func (r *OutcomeRedis) SaveOutcomeCacheListBySearchCondition(ctx context.Context
 	//}()
 }
 
-func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.Outcome) {
+func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, IDs []string) ([]string, []*entity.Outcome) {
 	if !config.Get().RedisConfig.OpenCache {
-		return ids, nil
+		return IDs, nil
 	}
-	keys := make([]string, len(ids))
-	for i := range ids {
-		keys[i] = r.outcomeKey(ids[i])
+	keys := make([]string, len(IDs))
+	for i := range IDs {
+		keys[i] = r.outcomeKey(IDs[i])
 	}
 	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
 	if err != nil {
-		log.Error(ctx, "Can't get outcome list from cache", log.Err(err), log.Strings("keys", keys), log.Strings("ids", ids))
-		return ids, nil
+		log.Error(ctx, "Can't get outcome list from cache", log.Err(err), log.Strings("keys", keys), log.Strings("ids", IDs))
+		return IDs, nil
 	}
 
 	// parse cachedOutcomes
@@ -143,10 +143,10 @@ func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, ids []string
 	}
 
 	// mark id which need to be deleted
-	deletedMarks := make([]bool, len(ids))
-	for i := range ids {
+	deletedMarks := make([]bool, len(IDs))
+	for i := range IDs {
 		for j := range cachedOutcomes {
-			if ids[i] == cachedOutcomes[j].ID {
+			if IDs[i] == cachedOutcomes[j].ID {
 				deletedMarks[i] = true
 			}
 		}
@@ -154,9 +154,9 @@ func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, ids []string
 
 	//获取剩余ids
 	restIds := make([]string, 0)
-	for i := range ids {
+	for i := range IDs {
 		if !deletedMarks[i] {
-			restIds = append(restIds, ids[i])
+			restIds = append(restIds, IDs[i])
 		}
 	}
 
@@ -193,18 +193,18 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, con
 	return outcomeLists
 }
 
-func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, ids []string) {
+func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, IDs []string) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
 
-	if len(ids) < 1 {
+	if len(IDs) < 1 {
 		return
 	}
 	//delete related id
 	keys := make([]string, 0)
-	for i := range ids {
-		keys = append(keys, r.outcomeKey(ids[i]))
+	for i := range IDs {
+		keys = append(keys, r.outcomeKey(IDs[i]))
 	}
 
 	//delete condition cache
