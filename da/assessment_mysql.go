@@ -40,7 +40,6 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 			log.Err(err),
 			log.String("id", id),
 		)
-		return nil, err
 	} else if cacheResult != nil {
 		log.Info(ctx, "get assessment exclude soft deleted: hit cache")
 		return cacheResult, nil
