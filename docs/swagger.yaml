@@ -1,3 +1,4 @@
+basePath: /v1
 definitions:
   api.BadRequestResponse:
     properties:
@@ -9,13 +10,14 @@ definitions:
     type: object
   api.NotFoundResponse:
     type: object
+host: https://kl2-test.kidsloop.net
 info:
   contact: {}
-  description: This is a sample server celler server.
+  description: '"KidsLoop 2.0 backend rest api'
   license: {}
   termsOfService: http://swagger.io/terms/
-  title: Swagger Example API
-  version: "1.0"
+  title: KidsLoop 2.0 REST API
+  version: 1.0.0
 paths:
   /ping:
     get:
