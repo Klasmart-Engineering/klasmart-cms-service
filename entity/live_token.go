@@ -43,3 +43,7 @@ type LiveTokenClaims struct {
 	*jwt.StandardClaims
 	LiveTokenInfo
 }
+
+type LiveTokenView struct {
+	Token string `json:"token"`
+}
