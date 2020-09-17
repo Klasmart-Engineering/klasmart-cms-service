@@ -94,21 +94,21 @@ func (r *OutcomeRedis) SaveOutcomeCacheListBySearchCondition(ctx context.Context
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
-	go func() {
-		key := r.outcomeConditionKey(condition)
-		log.Info(ctx, "save outcome into cache", log.Any("condition", condition), log.String("key", key))
-		outcomeListJSON, err := json.Marshal(c)
-		if err != nil {
-			log.Error(ctx, "Can't parse outcome list into json", log.Err(err), log.String("key", key), log.String("data", string(outcomeListJSON)))
-			return
-		}
-		ro.MustGetRedis(ctx).Expire(RedisKeyPrefixOutcomeCondition, r.expiration)
-		err = ro.MustGetRedis(ctx).HSetNX(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition), string(outcomeListJSON)).Err()
-		//err = ro.MustGetRedis(ctx).SetNX(key, string(outcomeListJSON), r.expiration).Err()
-		if err != nil {
-			log.Error(ctx, "Can't save outcome list into cache", log.Err(err), log.String("key", key), log.String("data", string(outcomeListJSON)))
-		}
-	}()
+	//go func() {
+	key := r.outcomeConditionKey(condition)
+	log.Info(ctx, "save outcome into cache", log.Any("condition", condition), log.String("key", key))
+	outcomeListJSON, err := json.Marshal(c)
+	if err != nil {
+		log.Error(ctx, "Can't parse outcome list into json", log.Err(err), log.String("key", key), log.String("data", string(outcomeListJSON)))
+		return
+	}
+	ro.MustGetRedis(ctx).Expire(RedisKeyPrefixOutcomeCondition, r.expiration)
+	err = ro.MustGetRedis(ctx).HSetNX(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition), string(outcomeListJSON)).Err()
+	//err = ro.MustGetRedis(ctx).SetNX(key, string(outcomeListJSON), r.expiration).Err()
+	if err != nil {
+		log.Error(ctx, "Can't save outcome list into cache", log.Err(err), log.String("key", key), log.String("data", string(outcomeListJSON)))
+	}
+	//}()
 }
 
 func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.Outcome) {
@@ -125,7 +125,7 @@ func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, ids []string
 		return ids, nil
 	}
 
-	//解析cachedOutcomes
+	// parse cachedOutcomes
 	cachedOutcomes := make([]*entity.Outcome, 0)
 	for i := range res {
 		resJSON, ok := res[i].(string)
@@ -142,7 +142,7 @@ func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, ids []string
 		cachedOutcomes = append(cachedOutcomes, outcome)
 	}
 
-	//标记需要被删掉的id
+	// mark id which need to be deleted
 	deletedMarks := make([]bool, len(ids))
 	for i := range ids {
 		for j := range cachedOutcomes {
@@ -201,13 +201,13 @@ func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, ids []string) {
 	if len(ids) < 1 {
 		return
 	}
-	//删除对应的id
+	//delete related id
 	keys := make([]string, 0)
 	for i := range ids {
 		keys = append(keys, r.outcomeKey(ids[i]))
 	}
 
-	//删除所有condition cache
+	//delete condition cache
 	//conditionKeys := ro.MustGetRedis(ctx).Keys(RedisKeyPrefixOutcomeCondition + ":*").Val()
 	//keys = append(keys, conditionKeys...)
 	keys = append(keys, RedisKeyPrefixOutcomeCondition)

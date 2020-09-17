@@ -13,8 +13,8 @@ const (
 	RedisKeyPrefixOutcomeReview    = "outcome:review"
 	RedisKeyPrefixOutcomeShortcode = "outcome:shortcode"
 
-	RedisKeyPrefixOutcomeCondition = "content:condition"
-	RedisKeyPrefixOutcomeId        = "content:id"
+	RedisKeyPrefixOutcomeCondition = "outcome:condition"
+	RedisKeyPrefixOutcomeId        = "outcome:id"
 )
 
 const (
