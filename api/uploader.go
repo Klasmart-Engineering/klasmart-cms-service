@@ -23,7 +23,7 @@ type UploadPathResponse struct {
 // @Success 302 {string} UploadPathResponse
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents_resources [get]
+// @Router /contents_resources [get]
 func (s *Server) getUploadPath(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -58,7 +58,7 @@ func (s *Server) getUploadPath(c *gin.Context) {
 // @Success 302 {string} string Found
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents_resources/{resource_id} [get]
+// @Router /contents_resources/{resource_id} [get]
 func (s *Server) getPath(c *gin.Context) {
 	ctx := c.Request.Context()
 	resourceId := c.Param("resource_id")
