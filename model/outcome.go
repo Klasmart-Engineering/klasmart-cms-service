@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"sync"
@@ -516,7 +517,8 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 
 func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error) {
 	condition := da.OutcomeCondition{
-		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		IDs:            dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		IgnoreDeleteAt: sql.NullInt64{Valid: true},
 	}
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &condition)
 	if err != nil {
