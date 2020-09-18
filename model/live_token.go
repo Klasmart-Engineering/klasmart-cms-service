@@ -32,7 +32,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
-		Type:   string(entity.LiveTokenTypeLive),
+		Type:   entity.LiveTokenTypeLive,
 		RoomID: utils.NewID(),
 	}
 	liveTokenInfo.ScheduleID = schedule.ID
@@ -72,7 +72,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error) {
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
-		Type:   string(entity.LiveTokenTypePreview),
+		Type:   entity.LiveTokenTypePreview,
 		RoomID: utils.NewID(),
 	}
 
@@ -170,11 +170,14 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			log.String("contentID", contentID))
 		return nil, err
 	}
-	materials := make([]*entity.LiveMaterial, len(contentList))
-	for i, item := range contentList {
+	materials := make([]*entity.LiveMaterial, 0, len(contentList))
+	for _, item := range contentList {
+		if item == nil {
+			continue
+		}
 		materialItem := &entity.LiveMaterial{
 			Name:     item.Name,
-			TypeName: string(entity.MaterialTypeH5P),
+			TypeName: entity.MaterialTypeH5P,
 		}
 		mData, ok := item.Data.(*contentdata.MaterialData)
 		if !ok {
@@ -183,7 +186,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			continue
 		}
 		materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
-		materials[i] = materialItem
+		materials = append(materials, materialItem)
 	}
 	return materials, nil
 }

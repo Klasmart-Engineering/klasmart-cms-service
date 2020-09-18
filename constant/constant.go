@@ -31,12 +31,6 @@ var (
 	ErrConflict    = errors.New("conflict")
 )
 
-// tag States
-const (
-	Enable   = 1
-	Disabled = 2
-)
-
 const (
 	DefaultPageSize  = 10
 	DefaultPageIndex = 1
@@ -50,4 +44,8 @@ const (
 const (
 	LiveTokenExpiresAt = 24 * 30 * time.Hour
 	LiveTokenIssuedAt  = 30 * time.Second
+)
+
+const (
+	LockedByNoBody = "-"
 )
