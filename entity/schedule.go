@@ -207,30 +207,30 @@ const (
 )
 
 type Schedule struct {
-	ID              string `gorm:"column:id;PRIMARY_KEY"`
-	Title           string `gorm:"column:title;type:varchar(100)"`
-	ClassID         string `gorm:"column:class_id;type:varchar(100)"`
-	LessonPlanID    string `gorm:"column:lesson_plan_id;type:varchar(100)"`
-	OrgID           string `gorm:"column:org_id;type:varchar(100)"`
-	StartAt         int64  `gorm:"column:start_at;type:bigint"`
-	EndAt           int64  `gorm:"column:end_at;type:bigint"`
-	Status          string `gorm:"column:status;type:varchar(100)"`
-	IsAllDay        bool   `gorm:"column:is_all_day;default:false"`
-	SubjectID       string `gorm:"column:subject_id;type:varchar(100)"`
-	ProgramID       string `gorm:"column:program_id;type:varchar(100)"`
-	ClassType       string `gorm:"column:class_type;type:varchar(100)"`
-	DueAt           int64  `gorm:"column:due_at;type:bigint"`
-	Description     string `gorm:"column:description;type:varchar(500)"`
-	Attachment      string `gorm:"column:attachment;type:text;"`
-	ScheduleVersion int64  `gorm:"column:version;type:bigint"`
-	RepeatID        string `gorm:"column:repeat_id;type:varchar(100)"`
-	RepeatJson      string `gorm:"column:repeat;type:json;"`
-	CreatedID       string `gorm:"column:created_id;type:varchar(100)"`
-	UpdatedID       string `gorm:"column:updated_id;type:varchar(100)"`
-	DeletedID       string `gorm:"column:deleted_id;type:varchar(100)"`
-	CreatedAt       int64  `gorm:"column:created_at;type:bigint"`
-	UpdatedAt       int64  `gorm:"column:updated_at;type:bigint"`
-	DeleteAt        int64  `gorm:"column:delete_at;type:bigint"`
+	ID              string            `gorm:"column:id;PRIMARY_KEY"`
+	Title           string            `gorm:"column:title;type:varchar(100)"`
+	ClassID         string            `gorm:"column:class_id;type:varchar(100)"`
+	LessonPlanID    string            `gorm:"column:lesson_plan_id;type:varchar(100)"`
+	OrgID           string            `gorm:"column:org_id;type:varchar(100)"`
+	StartAt         int64             `gorm:"column:start_at;type:bigint"`
+	EndAt           int64             `gorm:"column:end_at;type:bigint"`
+	Status          ScheduleStatus    `gorm:"column:status;type:varchar(100)"`
+	IsAllDay        bool              `gorm:"column:is_all_day;default:false"`
+	SubjectID       string            `gorm:"column:subject_id;type:varchar(100)"`
+	ProgramID       string            `gorm:"column:program_id;type:varchar(100)"`
+	ClassType       ScheduleClassType `gorm:"column:class_type;type:varchar(100)"`
+	DueAt           int64             `gorm:"column:due_at;type:bigint"`
+	Description     string            `gorm:"column:description;type:varchar(500)"`
+	Attachment      string            `gorm:"column:attachment;type:text;"`
+	ScheduleVersion int64             `gorm:"column:version;type:bigint"`
+	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)"`
+	RepeatJson      string            `gorm:"column:repeat;type:json;"`
+	CreatedID       string            `gorm:"column:created_id;type:varchar(100)"`
+	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)"`
+	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)"`
+	CreatedAt       int64             `gorm:"column:created_at;type:bigint"`
+	UpdatedAt       int64             `gorm:"column:updated_at;type:bigint"`
+	DeleteAt        int64             `gorm:"column:delete_at;type:bigint"`
 }
 
 type ScheduleStatus string
@@ -260,7 +260,7 @@ type ScheduleAddView struct {
 	EndAt          int64             `json:"end_at" binding:"required"`
 	SubjectID      string            `json:"subject_id" binding:"required"`
 	ProgramID      string            `json:"program_id" binding:"required"`
-	ClassType      string            `json:"class_type"`
+	ClassType      ScheduleClassType `json:"class_type"`
 	DueAt          int64             `json:"due_at"`
 	Description    string            `json:"description"`
 	Attachment     ScheduleShortInfo `json:"attachment"`
@@ -287,7 +287,7 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		ProgramID:       s.ProgramID,
 		ClassType:       s.ClassType,
 		DueAt:           s.DueAt,
-		Status:          string(ScheduleStatusNotStart),
+		Status:          ScheduleStatusNotStart,
 		Description:     s.Description,
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
@@ -337,7 +337,7 @@ type ScheduleDetailsView struct {
 	OrgID       string            `json:"org_id"`
 	StartAt     int64             `json:"start_at"`
 	EndAt       int64             `json:"end_at"`
-	ClassType   string            `json:"class_type"`
+	ClassType   ScheduleClassType `json:"class_type"`
 	DueAt       int64             `json:"due_at"`
 	Description string            `json:"description"`
 	Version     int64             `json:"version"`
