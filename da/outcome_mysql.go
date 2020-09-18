@@ -202,8 +202,8 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 }
 
 func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
-	now := time.Now().Unix()
-	outcome.UpdateAt = now
+	//now := time.Now().Unix()
+	//outcome.UpdateAt = now
 	_, err = o.UpdateTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "UpdateOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
