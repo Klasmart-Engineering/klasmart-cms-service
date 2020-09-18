@@ -26,6 +26,7 @@ type PublishContentRequest struct {
 	Scope string `json:"scope"`
 }
 
+
 // @Summary createContent
 // @ID createContent
 // @Description create lesson plan, lesson material or assets
@@ -34,8 +35,8 @@ type PublishContentRequest struct {
 // @Param content body entity.CreateContentRequest true "create request"
 // @Tags content
 // @Success 200 {object} CreateContentResponse
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents [post]
 func (s *Server) createContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -81,8 +82,8 @@ func (s *Server) createContent(c *gin.Context) {
 // @Param contentIds body contentBulkOperateRequest true "content bulk id list"
 // @Tags content
 // @Success 200 {object} string
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents_bulk/publish [put]
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -117,8 +118,8 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 // @Param data body PublishContentRequest true "content publish data"
 // @Tags content
 // @Success 200 {object} string
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/{content_id}/publish [put]
 func (s *Server) publishContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -151,8 +152,8 @@ func (s *Server) publishContent(c *gin.Context) {
 // @Param content_id path string true "get content id"
 // @Tags content
 // @Success 200 {object} entity.ContentInfoWithDetails
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/{content_id} [get]
 func (s *Server) getContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -185,8 +186,8 @@ func (s *Server) getContent(c *gin.Context) {
 // @Param contentData body entity.CreateContentRequest true "content data to update"
 // @Tags content
 // @Success 200 {object} string
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/{content_id} [put]
 func (s *Server) updateContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -239,8 +240,8 @@ func (s *Server) updateContent(c *gin.Context) {
 // @Param content_id path string true "content id to lock"
 // @Tags content
 // @Success 200 {object} CreateContentResponse
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/{content_id}/lock [put]
 func (s *Server) lockContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -281,8 +282,8 @@ func (s *Server) lockContent(c *gin.Context) {
 // @Param contentIds body contentBulkOperateRequest true "content bulk id list"
 // @Tags content
 // @Success 200 {object} string
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents_bulk [delete]
 func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -319,8 +320,8 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 // @Param content_id path string true "content id to delete"
 // @Tags content
 // @Success 200 {object} string ok
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/{content_id} [delete]
 func (s *Server) deleteContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -354,8 +355,8 @@ func (s *Server) deleteContent(c *gin.Context) {
 // @Param content_id path string true "content id to get count"
 // @Tags content
 // @Success 200 {object} entity.ContentStatisticsInfo
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/{content_id}/statistics [get]
 func (s *Server) contentDataCount(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -383,8 +384,8 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param page query int false "content list page index"
 // @Tags content
 // @Success 200 {array} entity.ContentInfoWithDetails
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents [get]
 func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -416,8 +417,8 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param page query int false "content list page index"
 // @Tags content
 // @Success 200 {array} entity.ContentInfoWithDetails
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -450,8 +451,8 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param page query int false "content list page index"
 // @Tags content
 // @Success 200 {array} entity.ContentInfoWithDetails
-// @Failure 500 {object} ErrorResponse
-// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
 // @Router /contents/pending [get]
 func (s *Server) queryPendingContent(c *gin.Context) {
 
