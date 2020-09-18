@@ -312,7 +312,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Param scope body PublishReq false "publish scope"
+// @Param PublishOutcomeRequest body PublishOutcomeReq false "publish scope"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -328,7 +328,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	var req PublishReq
+	var req PublishOutcomeReq
 	err := c.ShouldBindJSON(&req)
 	if err.Error() != "EOF" {
 		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
