@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"time"
 
@@ -57,7 +58,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Outcomes: 		strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
 		AuthorName:    authorName,
-		LockedBy:      "-",
+		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
@@ -143,7 +144,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	content.SourceID = content.ID
 	content.Version = content.Version + 1
 	content.ID = ""
-	content.LockedBy = "-"
+	content.LockedBy = constant.LockedByNoBody
 	//content.Author = user.UserID
 	//content.Org = user.OrgID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)

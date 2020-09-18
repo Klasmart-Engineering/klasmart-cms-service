@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 
@@ -595,7 +596,7 @@ func (ocm OutcomeModel) lockOutcome(ctx context.Context, tx *dbo.DBContext, outc
 			log.String("op", operator.UserID))
 		return
 	}
-	if outcome.LockedBy != "" && outcome.LockedBy != "-" {
+	if outcome.LockedBy != "" && outcome.LockedBy != constant.LockedByNoBody {
 		err = ErrContentAlreadyLocked
 		log.Warn(ctx, "lockOutcome: invalid lock status",
 			log.Err(err),
@@ -620,8 +621,8 @@ func (ocm OutcomeModel) unlockOutcome(ctx context.Context, tx *dbo.DBContext, ot
 			log.String("outcome_id", otcid))
 		return
 	}
-	if outcome.LockedBy != "" && outcome.LockedBy != "-" {
-		outcome.LockedBy = "-"
+	if outcome.LockedBy != "" && outcome.LockedBy != constant.LockedByNoBody {
+		outcome.LockedBy = constant.LockedByNoBody
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
 		if err != nil {
 			log.Error(ctx, "unlockOutcome: UpdateOutcome failed",
@@ -634,7 +635,7 @@ func (ocm OutcomeModel) unlockOutcome(ctx context.Context, tx *dbo.DBContext, ot
 
 func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	// must in a transaction
-	if outcome.LockedBy != "" && outcome.LockedBy != "-" {
+	if outcome.LockedBy != "" && outcome.LockedBy != constant.LockedByNoBody {
 		err = ErrContentAlreadyLocked
 		log.Error(ctx, "deleteOutcome: invalid lock status",
 			log.Err(err),
@@ -682,7 +683,7 @@ func (ocm OutcomeModel) hideParent(ctx context.Context, tx *dbo.DBContext, outco
 			log.Any("outcome", outcome))
 		return
 	}
-	parent.LockedBy = "-"
+	parent.LockedBy = constant.LockedByNoBody
 	err = parent.SetStatus(ctx, entity.OutcomeStatusHidden)
 	if err != nil {
 		log.Error(ctx, "hideParent: SetStatus failed",
