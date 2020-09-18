@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 
@@ -89,7 +90,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	sourceContent.PublishStatus = entity.ContentStatusHidden
 	sourceContent.LatestID = contentId
 	//解锁source content
-	sourceContent.LockedBy = "-"
+	sourceContent.LockedBy = constant.LockedByNoBody
 	err = da.GetContentDA().UpdateContent(ctx, tx, sourceId, *sourceContent)
 	if err != nil {
 		log.Error(ctx, "update source content failed", log.Err(err))
@@ -105,7 +106,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		return ErrUpdateContentFailed
 	}
 	for i := range oldContents {
-		oldContents[i].LockedBy = "-"
+		oldContents[i].LockedBy = constant.LockedByNoBody
 		oldContents[i].PublishStatus = entity.ContentStatusHidden
 		oldContents[i].LatestID = contentId
 		err = da.GetContentDA().UpdateContent(ctx, tx, oldContents[i].ID, *oldContents[i])
@@ -406,7 +407,7 @@ func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, ci
 	//if content.LockedBy != user.UserID {
 	//	return ErrNoAuth
 	//}
-	content.LockedBy = "-"
+	content.LockedBy = constant.LockedByNoBody
 	return da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 }
 func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error) {
@@ -459,7 +460,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	}
 
 	//更新锁定状态
-	if content.LockedBy != "" && content.LockedBy != "-" {
+	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody {
 		return "", ErrContentAlreadyLocked
 	}
 	content.LockedBy = user.UserID
@@ -579,9 +580,13 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	if content.Author != user.UserID {
 		return ErrNoAuth
 	}
-	if content.LockedBy != "-" && content.LockedBy != user.UserID {
+	if content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		return ErrContentAlreadyLocked
 	}
+	if content.PublishStatus == entity.ContentStatusPublished && content.LockedBy != constant.LockedByNoBody {
+		return ErrContentAlreadyLocked
+	}
+
 	err := cm.checkDeleteContent(ctx, content)
 	if err != nil {
 		log.Error(ctx, "check delete content failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
