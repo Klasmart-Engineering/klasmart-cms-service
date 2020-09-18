@@ -267,7 +267,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @ID lockLearningOutcomes
 // @Summary lock learning outcome
 // @Tags learning_outcomes
-// @Description edit published learning outcomes
+// @Description edit lock learning outcomes
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
@@ -411,6 +411,7 @@ func (s *Server) approveOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
+// @Param OutcomeRejectReq body OutcomeRejectReq true "reject reason"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -421,9 +422,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
-	var reason struct {
-		RejectReason string `json:"reject_reason"`
-	}
+	var reason OutcomeRejectReq
 	err := c.ShouldBindJSON(&reason)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: ShouldBind failed", log.Err(err))

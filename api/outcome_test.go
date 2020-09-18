@@ -108,9 +108,7 @@ func TestApproveOutcome(t *testing.T) {
 
 func TestRejectOutcome(t *testing.T) {
 	outcomeID := "5f56def450275d71418a1d4b"
-	body := struct {
-		RejectReason string `json:"reject_reason"`
-	}{RejectReason: "refuse"}
+	body := OutcomeRejectReq{RejectReason: "refuse"}
 	data, err := json.Marshal(&body)
 	if err != nil {
 		t.Fatal(err)
