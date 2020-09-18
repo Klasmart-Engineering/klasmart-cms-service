@@ -88,7 +88,15 @@ func TestLockOutcome(t *testing.T) {
 
 func TestPublishOutcome(t *testing.T) {
 	outcomeID := "5f63016bacc44d2ec014a4e9"
-	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/publish", "")
+	data := ""
+	//req := PublishReq{
+	//	Scope: "1",
+	//}
+	//data, err := json.Marshal(&req)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/publish", string(data))
 	fmt.Println(res)
 }
 

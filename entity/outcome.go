@@ -76,6 +76,7 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.Keywords = data.Keywords
 	oc.Description = data.Description
 	oc.PublishStatus = OutcomeStatusDraft
+	oc.UpdateAt = time.Now().Unix()
 }
 
 func (oc *Outcome) Clone() Outcome {
