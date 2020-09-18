@@ -171,7 +171,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 		return nil, err
 	}
 	materials := make([]*entity.LiveMaterial, 0, len(contentList))
-	for i, item := range contentList {
+	for _, item := range contentList {
 		if item == nil {
 			continue
 		}
@@ -186,7 +186,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			continue
 		}
 		materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
-		materials[i] = materialItem
+		materials = append(materials, materialItem)
 	}
 	return materials, nil
 }
