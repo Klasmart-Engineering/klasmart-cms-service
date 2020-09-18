@@ -161,7 +161,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "assessment id"
-// @Param id body entity.UpdateAssessmentCommand true "update assessment assessment command"
+// @Param update_assessment_command body entity.UpdateAssessmentCommand true "update assessment assessment command"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
