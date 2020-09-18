@@ -353,7 +353,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentStatisticsInfo
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /contents/{content_id} [delete]
+// @Router /contents/{content_id}/statistics [get]
 func (s *Server) contentDataCount(c *gin.Context) {
 	ctx := c.Request.Context()
 	cid := c.Param("content_id")
