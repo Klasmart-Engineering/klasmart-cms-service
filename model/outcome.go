@@ -516,7 +516,8 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 
 func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error) {
 	condition := da.OutcomeCondition{
-		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		IDs:            dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		IncludeDeleted: true,
 	}
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &condition)
 	if err != nil {
