@@ -219,7 +219,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -267,7 +267,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @ID lockLearningOutcomes
 // @Summary lock learning outcome
 // @Tags learning_outcomes
-// @Description edit lock learning outcomes
+// @Description edit published learning outcomes
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
@@ -569,7 +569,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -625,7 +625,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
