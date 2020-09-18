@@ -456,7 +456,7 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				return "", err
 			}
 		}
-		if schedule.ClassType == string(entity.ScheduleClassTypeHomework) || schedule.ClassType == string(entity.ScheduleClassTypeTask) {
+		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
 			log.Error(ctx, "add assessment: invalid class type",
 				log.Err(err),
 				log.Any("cmd", cmd),

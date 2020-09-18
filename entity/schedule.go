@@ -260,7 +260,7 @@ type ScheduleAddView struct {
 	EndAt          int64             `json:"end_at" binding:"required"`
 	SubjectID      string            `json:"subject_id" binding:"required"`
 	ProgramID      string            `json:"program_id" binding:"required"`
-	ClassType      ScheduleClassType `json:"class_type"`
+	ClassType      ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt          int64             `json:"due_at"`
 	Description    string            `json:"description"`
 	Attachment     ScheduleShortInfo `json:"attachment"`
@@ -337,7 +337,7 @@ type ScheduleDetailsView struct {
 	OrgID       string            `json:"org_id"`
 	StartAt     int64             `json:"start_at"`
 	EndAt       int64             `json:"end_at"`
-	ClassType   ScheduleClassType `json:"class_type"`
+	ClassType   ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt       int64             `json:"due_at"`
 	Description string            `json:"description"`
 	Version     int64             `json:"version"`
