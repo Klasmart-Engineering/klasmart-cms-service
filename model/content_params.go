@@ -112,6 +112,12 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusDraft
 	}
+	//若已发布，不能修改publishScope
+	if content.PublishStatus == entity.ContentStatusDraft ||
+		content.PublishStatus == entity.ContentStatusRejected{
+		content.PublishScope = data.PublishScope
+	}
+
 	//Asset修改后直接发布
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)

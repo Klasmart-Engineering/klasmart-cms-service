@@ -582,6 +582,10 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	if content.LockedBy != "-" && content.LockedBy != user.UserID {
 		return ErrContentAlreadyLocked
 	}
+	if content.PublishStatus == entity.ContentStatusPublished && content.LockedBy != "-" {
+		return ErrContentAlreadyLocked
+	}
+
 	err := cm.checkDeleteContent(ctx, content)
 	if err != nil {
 		log.Error(ctx, "check delete content failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
@@ -724,7 +728,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		subContentMap[subContents[i].ID] = subContents[i]
 	}
 
-	ret := make([]*entity.SubContentsWithName, len(ids))
+	ret := make([]*entity.SubContentsWithName, 0)
 	for i := range ids {
 		subContent, ok := subContentMap[ids[i]]
 		if !ok {
@@ -735,11 +739,11 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", subContentMap[ids[i]]))
 			return nil, err
 		}
-		ret[i] = &entity.SubContentsWithName{
+		ret = append(ret, &entity.SubContentsWithName{
 			ID:   ids[i],
 			Name: subContent.Name,
 			Data: cd,
-		}
+		})
 	}
 
 	return ret, nil
