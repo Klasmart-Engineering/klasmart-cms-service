@@ -312,6 +312,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
+// @Param scope body PublishReq false "publish scope"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -327,7 +328,14 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	err := model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, "", op)
+	var req PublishReq
+	err := c.ShouldBindJSON(&req)
+	if err.Error() != "EOF" {
+		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))

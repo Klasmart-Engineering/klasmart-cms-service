@@ -161,6 +161,11 @@ type OutcomeLockResponse struct {
 type OutcomeIDList struct {
 	OutcomeIDs []string `json:"outcome_ids"`
 }
+
+type PublishReq struct {
+	Scope string `json:"scope" form:"scope"`
+}
+
 type Program struct {
 	ProgramID   string `json:"program_id"`
 	ProgramName string `json:"program_name"`
