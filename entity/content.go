@@ -402,7 +402,7 @@ type ContentInfo struct {
 	PublishStatus ContentPublishStatus `json:"publish_status"`
 
 	CreatedAt int64 `json:"created_at"`
-	UpdatedAt int64 `json:"created_at"`
+	UpdatedAt int64 `json:"updated_at"`
 }
 
 type ContentData interface {
