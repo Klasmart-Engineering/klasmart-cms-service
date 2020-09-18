@@ -22,6 +22,9 @@ import (
 // @Param page_size query integer false "page size" format(int) default(10)
 // @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
 // @Success 200 {object} entity.ListAssessmentsResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments [get]
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -89,6 +92,9 @@ func (s *Server) listAssessments(c *gin.Context) {
 // @Produce json
 // @Param assessment body entity.AddAssessmentCommand true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments [post]
 func (s *Server) addAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -120,8 +126,11 @@ func (s *Server) addAssessment(c *gin.Context) {
 // @ID getAssessment
 // @Accept json
 // @Produce json
-// @Param id path int true "assessment id"
+// @Param id path string true "assessment id"
 // @Success 200 {object} entity.AssessmentDetailView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments/{id} [get]
 func (s *Server) getAssessmentDetail(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -151,8 +160,12 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 // @ID updateAssessment
 // @Accept json
 // @Produce json
-// @Param id body entity.UpdateAssessmentCommand true "update assessment assessment command"
+// @Param id path string true "assessment id"
+// @Param update_assessment_command body entity.UpdateAssessmentCommand true "update assessment assessment command"
 // @Success 200 {string} string "OK"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments/{id} [put]
 func (s *Server) updateAssessment(c *gin.Context) {
 	ctx := c.Request.Context()

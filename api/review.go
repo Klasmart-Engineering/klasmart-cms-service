@@ -9,6 +9,19 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
+// @ID approveContentReview
+// @Summary approve content
+// @Tags content
+// @Description approve content by id
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /contents/{content_id}/review/approve [put]
 func (s *Server) approve(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -34,6 +47,24 @@ func (s *Server) approve(c *gin.Context) {
 	}
 }
 
+type RejectReasonRequest struct {
+	Reasons []string `json:"reject_reason"`
+}
+
+// @ID rejectContentReview
+// @Summary reject content
+// @Tags content
+// @Description reject content by id
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id"
+// @Param RejectReasonRequest body RejectReasonRequest true "reject_reason"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /contents/{content_id}/review/reject [put]
 func (s *Server) reject(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -42,9 +73,7 @@ func (s *Server) reject(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
 		return
 	}
-	var req struct {
-		Reasons []string `json:"reject_reason"`
-	}
+	var req RejectReasonRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, "can't bind data")

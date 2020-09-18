@@ -223,9 +223,9 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 	return co.ID, nil
 }
 func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
-	now := time.Now()
+	//now := time.Now()
 	co.ID = cid
-	co.UpdateAt = now.Unix()
+	//co.UpdateAt = now.Unix()
 	log.Info(ctx, "Update contentdata da", log.String("id", co.ID))
 	_, err := cd.s.UpdateTx(ctx, tx, &co)
 	if err != nil {

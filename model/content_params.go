@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}
 
 	//get publishScope&authorName
-	publishScope := operator.OrgID
+	publishScope := c.PublishScope
 	//TODO: To get real name
 	authorName := "Bada"
 
@@ -57,7 +58,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Outcomes: 		strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
 		AuthorName:    authorName,
-		LockedBy:      "-",
+		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
@@ -112,6 +113,12 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusDraft
 	}
+	//若已发布，不能修改publishScope
+	if content.PublishStatus == entity.ContentStatusDraft ||
+		content.PublishStatus == entity.ContentStatusRejected{
+		content.PublishScope = data.PublishScope
+	}
+
 	//Asset修改后直接发布
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
@@ -129,6 +136,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		}
 		content.Data = data.Data
 	}
+	content.UpdateAt = time.Now().Unix()
 
 	return content, nil
 }
@@ -137,7 +145,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	content.SourceID = content.ID
 	content.Version = content.Version + 1
 	content.ID = ""
-	content.LockedBy = "-"
+	content.LockedBy = constant.LockedByNoBody
 	//content.Author = user.UserID
 	//content.Org = user.OrgID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)

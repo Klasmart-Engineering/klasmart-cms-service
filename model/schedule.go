@@ -26,7 +26,7 @@ type IScheduleModel interface {
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	DeleteTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error)
-	Page(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error)
+	Page(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
 	GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error)
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
 	GetTeacherByName(ctx context.Context, name string) ([]*external.Teacher, error)
@@ -382,7 +382,7 @@ func (s *scheduleModel) DeleteTx(ctx context.Context, tx *dbo.DBContext, op *ent
 	return nil
 }
 
-func (s *scheduleModel) Page(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSeachView, error) {
+func (s *scheduleModel) Page(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error) {
 	var scheduleList []*entity.Schedule
 	total, err := da.GetScheduleDA().Page(ctx, condition, &scheduleList)
 	if err != nil {
@@ -390,7 +390,7 @@ func (s *scheduleModel) Page(ctx context.Context, condition *da.ScheduleConditio
 		return 0, nil, err
 	}
 
-	result := make([]*entity.ScheduleSeachView, len(scheduleList))
+	result := make([]*entity.ScheduleSearchView, len(scheduleList))
 	basicInfo, err := s.getBasicInfo(ctx, scheduleList)
 	if err != nil {
 		log.Error(ctx, "Page: get basic info error",
@@ -400,7 +400,7 @@ func (s *scheduleModel) Page(ctx context.Context, condition *da.ScheduleConditio
 		return 0, nil, err
 	}
 	for i, item := range scheduleList {
-		viewData := &entity.ScheduleSeachView{
+		viewData := &entity.ScheduleSearchView{
 			ID:      item.ID,
 			StartAt: item.StartAt,
 			Title:   item.Title,

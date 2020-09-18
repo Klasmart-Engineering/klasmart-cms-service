@@ -153,7 +153,7 @@ func (s RepeatWeekSeq) Offset() int {
 }
 
 type RepeatOptions struct {
-	Type    RepeatType    `json:"type,omitempty"`
+	Type    RepeatType    `json:"type,omitempty" enums:"daily,weekly,monthly,yearly"`
 	Daily   RepeatDaily   `json:"daily,omitempty"`
 	Weekly  RepeatWeekly  `json:"weekly,omitempty"`
 	Monthly RepeatMonthly `json:"monthly,omitempty"`
@@ -167,32 +167,32 @@ type RepeatDaily struct {
 
 type RepeatWeekly struct {
 	Interval int             `json:"interval,omitempty"`
-	On       []RepeatWeekday `json:"on,omitempty"`
+	On       []RepeatWeekday `json:"on,omitempty" enums:"Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"`
 	End      RepeatEnd       `json:"end,omitempty"`
 }
 
 type RepeatMonthly struct {
 	Interval  int                 `json:"interval,omitempty"`
-	OnType    RepeatMonthlyOnType `json:"on_type,omitempty"`
+	OnType    RepeatMonthlyOnType `json:"on_type,omitempty" enums:"date,week"`
 	OnDateDay int                 `json:"on_date_day,omitempty"`
-	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq,omitempty"`
-	OnWeek    RepeatWeekday       `json:"on_week,omitempty"`
+	OnWeekSeq RepeatWeekSeq       `json:"on_week_seq,omitempty" enums:"first,second,third,fourth,last"`
+	OnWeek    RepeatWeekday       `json:"on_week,omitempty" enums:"Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"`
 	End       RepeatEnd           `json:"end,omitempty"`
 }
 
 type RepeatYearly struct {
 	Interval    int                `json:"interval,omitempty"`
-	OnType      RepeatYearlyOnType `json:"on_type,omitempty"`
+	OnType      RepeatYearlyOnType `json:"on_type,omitempty" enums:"date,week"`
 	OnDateMonth int                `json:"on_date_month,omitempty"`
 	OnDateDay   int                `json:"on_date_day,omitempty"`
 	OnWeekMonth int                `json:"on_week_month,omitempty"`
-	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq,omitempty"`
-	OnWeek      RepeatWeekday      `json:"on_week,omitempty"`
+	OnWeekSeq   RepeatWeekSeq      `json:"on_week_seq,omitempty" enums:"first,second,third,fourth,last"`
+	OnWeek      RepeatWeekday      `json:"on_week,omitempty" enums:"Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"`
 	End         RepeatEnd          `json:"end,omitempty"`
 }
 
 type RepeatEnd struct {
-	Type       RepeatEndType `json:"type,omitempty"`
+	Type       RepeatEndType `json:"type,omitempty"  enums:"never,after_count,after_time"`
 	AfterCount int           `json:"after_count,omitempty"`
 	AfterTime  int64         `json:"after_time,omitempty"`
 }
@@ -207,30 +207,30 @@ const (
 )
 
 type Schedule struct {
-	ID              string `gorm:"column:id;PRIMARY_KEY"`
-	Title           string `gorm:"column:title;type:varchar(100)"`
-	ClassID         string `gorm:"column:class_id;type:varchar(100)"`
-	LessonPlanID    string `gorm:"column:lesson_plan_id;type:varchar(100)"`
-	OrgID           string `gorm:"column:org_id;type:varchar(100)"`
-	StartAt         int64  `gorm:"column:start_at;type:bigint"`
-	EndAt           int64  `gorm:"column:end_at;type:bigint"`
-	Status          string `gorm:"column:status;type:varchar(100)"`
-	IsAllDay        bool   `gorm:"column:is_all_day;default:false"`
-	SubjectID       string `gorm:"column:subject_id;type:varchar(100)"`
-	ProgramID       string `gorm:"column:program_id;type:varchar(100)"`
-	ClassType       string `gorm:"column:class_type;type:varchar(100)"`
-	DueAt           int64  `gorm:"column:due_at;type:bigint"`
-	Description     string `gorm:"column:description;type:varchar(500)"`
-	Attachment      string `gorm:"column:attachment;type:text;"`
-	ScheduleVersion int64  `gorm:"column:version;type:bigint"`
-	RepeatID        string `gorm:"column:repeat_id;type:varchar(100)"`
-	RepeatJson      string `gorm:"column:repeat;type:json;"`
-	CreatedID       string `gorm:"column:created_id;type:varchar(100)"`
-	UpdatedID       string `gorm:"column:updated_id;type:varchar(100)"`
-	DeletedID       string `gorm:"column:deleted_id;type:varchar(100)"`
-	CreatedAt       int64  `gorm:"column:created_at;type:bigint"`
-	UpdatedAt       int64  `gorm:"column:updated_at;type:bigint"`
-	DeleteAt        int64  `gorm:"column:delete_at;type:bigint"`
+	ID              string            `gorm:"column:id;PRIMARY_KEY"`
+	Title           string            `gorm:"column:title;type:varchar(100)"`
+	ClassID         string            `gorm:"column:class_id;type:varchar(100)"`
+	LessonPlanID    string            `gorm:"column:lesson_plan_id;type:varchar(100)"`
+	OrgID           string            `gorm:"column:org_id;type:varchar(100)"`
+	StartAt         int64             `gorm:"column:start_at;type:bigint"`
+	EndAt           int64             `gorm:"column:end_at;type:bigint"`
+	Status          ScheduleStatus    `gorm:"column:status;type:varchar(100)"`
+	IsAllDay        bool              `gorm:"column:is_all_day;default:false"`
+	SubjectID       string            `gorm:"column:subject_id;type:varchar(100)"`
+	ProgramID       string            `gorm:"column:program_id;type:varchar(100)"`
+	ClassType       ScheduleClassType `gorm:"column:class_type;type:varchar(100)"`
+	DueAt           int64             `gorm:"column:due_at;type:bigint"`
+	Description     string            `gorm:"column:description;type:varchar(500)"`
+	Attachment      string            `gorm:"column:attachment;type:text;"`
+	ScheduleVersion int64             `gorm:"column:version;type:bigint"`
+	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)"`
+	RepeatJson      string            `gorm:"column:repeat;type:json;"`
+	CreatedID       string            `gorm:"column:created_id;type:varchar(100)"`
+	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)"`
+	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)"`
+	CreatedAt       int64             `gorm:"column:created_at;type:bigint"`
+	UpdatedAt       int64             `gorm:"column:updated_at;type:bigint"`
+	DeleteAt        int64             `gorm:"column:delete_at;type:bigint"`
 }
 
 type ScheduleStatus string
@@ -260,7 +260,7 @@ type ScheduleAddView struct {
 	EndAt          int64             `json:"end_at" binding:"required"`
 	SubjectID      string            `json:"subject_id" binding:"required"`
 	ProgramID      string            `json:"program_id" binding:"required"`
-	ClassType      string            `json:"class_type"`
+	ClassType      ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt          int64             `json:"due_at"`
 	Description    string            `json:"description"`
 	Attachment     ScheduleShortInfo `json:"attachment"`
@@ -271,7 +271,7 @@ type ScheduleAddView struct {
 	IsRepeat       bool              `json:"is_repeat"`
 	IsForce        bool              `json:"is_force"`
 	TimeZoneOffset int               `json:"time_zone_offset"`
-	Location       *time.Location
+	Location       *time.Location    `json:"-"`
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -287,7 +287,7 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		ProgramID:       s.ProgramID,
 		ClassType:       s.ClassType,
 		DueAt:           s.DueAt,
-		Status:          string(ScheduleStatusNotStart),
+		Status:          ScheduleStatusNotStart,
 		Description:     s.Description,
 		ScheduleVersion: 0,
 		CreatedAt:       time.Now().Unix(),
@@ -316,7 +316,7 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 
 type ScheduleUpdateView struct {
 	ID       string           `json:"id"`
-	EditType ScheduleEditType `json:"repeat_edit_options"`
+	EditType ScheduleEditType `json:"repeat_edit_options"  enums:"only_current,with_following"`
 
 	ScheduleAddView
 }
@@ -337,7 +337,7 @@ type ScheduleDetailsView struct {
 	OrgID       string            `json:"org_id"`
 	StartAt     int64             `json:"start_at"`
 	EndAt       int64             `json:"end_at"`
-	ClassType   string            `json:"class_type"`
+	ClassType   ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt       int64             `json:"due_at"`
 	Description string            `json:"description"`
 	Version     int64             `json:"version"`
@@ -347,7 +347,7 @@ type ScheduleDetailsView struct {
 	ScheduleBasic
 }
 
-type ScheduleSeachView struct {
+type ScheduleSearchView struct {
 	ID      string `json:"id"`
 	StartAt int64  `json:"start_at"`
 	EndAt   int64  `json:"end_at"`
@@ -393,4 +393,9 @@ func (t ScheduleEditType) Valid() bool {
 	default:
 		return false
 	}
+}
+
+type SchedulePageView struct {
+	Total int                   `json:"total"`
+	Data  []*ScheduleSearchView `json:"data"`
 }
