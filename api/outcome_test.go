@@ -38,7 +38,7 @@ func TestCreateOutcome(t *testing.T) {
 }
 
 func TestGetOutcome(t *testing.T) {
-	outcomeID := "5f59f5cace0c92ac4478237e"
+	outcomeID := "5f63016bacc44d2ec014a4e9"
 	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes/"+outcomeID, "")
 	fmt.Println(res)
 }
@@ -49,7 +49,7 @@ func TestUpdateOutcome(t *testing.T) {
 		Assumed:       false,
 		Program:       []string{"Modify_prg001", "pr002"},
 		Subject:       []string{"Modify_sbj001", "sbj002"},
-		Developmental: []string{"Modify_dvt001", "dvt002"},
+		Developmental: []string{"Modify_dvt001"},
 		Skills:        []string{"Modify_skl001", "skl002"},
 		Age:           []string{"Modify_age001", "age002"},
 		Grade:         []string{"Modify_grd001", "grd002"},
@@ -62,7 +62,7 @@ func TestUpdateOutcome(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(string(data))
-	outcomeID := "5f55d43f3695b7ca67729069"
+	outcomeID := "5f63336202bf949d92fa955b"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID, string(data))
 	fmt.Println(res)
 }
@@ -87,7 +87,7 @@ func TestLockOutcome(t *testing.T) {
 }
 
 func TestPublishOutcome(t *testing.T) {
-	outcomeID := "5f603a90029dfdc992fee14a"
+	outcomeID := "5f63016bacc44d2ec014a4e9"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/publish", "")
 	fmt.Println(res)
 }

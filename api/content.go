@@ -33,7 +33,7 @@ type CreateContentResponse struct {
 // @Success 200 {object} CreateContentResponse
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents [post]
+// @Router /contents [post]
 func (s *Server) createContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -80,7 +80,7 @@ func (s *Server) createContent(c *gin.Context) {
 // @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents_bulk/publish [put]
+// @Router /contents_bulk/publish [put]
 func (s *Server) publishContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -115,7 +115,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 // @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/{content_id}/publish [put]
+// @Router /contents/{content_id}/publish [put]
 func (s *Server) publishContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -150,7 +150,7 @@ func (s *Server) publishContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentInfoWithDetails
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/{content_id} [get]
+// @Router /contents/{content_id} [get]
 func (s *Server) getContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -184,7 +184,7 @@ func (s *Server) getContent(c *gin.Context) {
 // @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/{content_id} [put]
+// @Router /contents/{content_id} [put]
 func (s *Server) updateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -238,7 +238,7 @@ func (s *Server) updateContent(c *gin.Context) {
 // @Success 200 {object} CreateContentResponse
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/{content_id}/lock [put]
+// @Router /contents/{content_id}/lock [put]
 func (s *Server) lockContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -280,7 +280,7 @@ func (s *Server) lockContent(c *gin.Context) {
 // @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents_bulk [delete]
+// @Router /contents_bulk [delete]
 func (s *Server) deleteContentBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -318,7 +318,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 // @Success 200 {object} string ok
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/{content_id} [delete]
+// @Router /contents/{content_id} [delete]
 func (s *Server) deleteContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -353,7 +353,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentStatisticsInfo
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/{content_id} [delete]
+// @Router /contents/{content_id} [delete]
 func (s *Server) contentDataCount(c *gin.Context) {
 	ctx := c.Request.Context()
 	cid := c.Param("content_id")
@@ -382,7 +382,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Success 200 {array} entity.ContentInfoWithDetails
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents [get]
+// @Router /contents [get]
 func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -415,7 +415,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Success 200 {array} entity.ContentInfoWithDetails
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/private [get]
+// @Router /contents/private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -449,7 +449,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Success 200 {array} entity.ContentInfoWithDetails
 // @Failure 500 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
-// @Router /v1/contents/pending [get]
+// @Router /contents/pending [get]
 func (s *Server) queryPendingContent(c *gin.Context) {
 
 	ctx := c.Request.Context()
