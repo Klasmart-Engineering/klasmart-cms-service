@@ -136,6 +136,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		}
 		content.Data = data.Data
 	}
+	content.UpdateAt = time.Now().Unix()
 
 	return content, nil
 }
