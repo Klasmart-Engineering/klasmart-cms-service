@@ -30,10 +30,9 @@ type OutcomeCondition struct {
 	SourceID       sql.NullString
 	FuzzyKey       sql.NullString
 
-	IgnoreDeleteAt sql.NullInt64
-
-	OrderBy OutcomeOrderBy `json:"order_by"`
-	Pager   dbo.Pager
+	IncludeDeleteAt bool
+	OrderBy         OutcomeOrderBy `json:"order_by"`
+	Pager           dbo.Pager
 }
 
 func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
@@ -80,9 +79,8 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Assumed.Bool)
 	}
 
-	if !c.IgnoreDeleteAt.Valid {
-		wheres = append(wheres, " delete_at=?")
-		params = append(params, c.IgnoreDeleteAt.Int64)
+	if !c.IncludeDeleteAt {
+		wheres = append(wheres, "delete_at=0")
 	}
 	return wheres, params
 }
