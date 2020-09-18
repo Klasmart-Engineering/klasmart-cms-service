@@ -377,7 +377,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Produce json
 // @Param name query string false "search content name"
 // @Param author query string false "search content author"
-// @Param content_type query string false "search content type" Enums("1", "2", "3", "1,2", "1,3", "2,3", "1,2,3")
+// @Param content_type query string false "search content type" Enums('1', '2', '3', '1,2', '1,3', '2,3', '1,2,3')
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
@@ -411,7 +411,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Produce json
 // @Param name query string false "search content name"
 // @Param author query string false "search content author"
-// @Param content_type query string false "search content type" Enums("1", "2", "3", "1,2", "1,3", "2,3", "1,2,3")
+// @Param content_type query string false "search content type" Enums('1', '2', '3', '1,2', '1,3', '2,3', '1,2,3')
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
 // @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
@@ -446,7 +446,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Produce json
 // @Param name query string false "search content name"
 // @Param author query string false "search content author"
-// @Param content_type query string false "search content type" Enums("1", "2", "3", "1,2", "1,3", "2,3", "1,2,3")
+// @Param content_type query string false "search content type" Enums('1', '2', '3', '1,2', '1,3', '2,3', '1,2,3')
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
 // @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
