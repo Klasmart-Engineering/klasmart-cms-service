@@ -384,7 +384,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {array} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents [get]
@@ -418,7 +418,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {array} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents/private [get]
@@ -453,7 +453,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {array} entity.ContentInfoWithDetailsResponse
+// @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents/pending [get]
