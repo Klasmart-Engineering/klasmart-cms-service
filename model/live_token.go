@@ -170,7 +170,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			log.String("contentID", contentID))
 		return nil, err
 	}
-	materials := make([]*entity.LiveMaterial, len(contentList))
+	materials := make([]*entity.LiveMaterial, 0, len(contentList))
 	for i, item := range contentList {
 		if item == nil {
 			continue
