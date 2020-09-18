@@ -267,7 +267,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @ID lockLearningOutcomes
 // @Summary lock learning outcome
 // @Tags learning_outcomes
-// @Description edit published learning outcomes
+// @Description edit lock learning outcomes
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
