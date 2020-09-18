@@ -384,7 +384,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {array} entity.ContentInfoWithDetails
+// @Success 200 {array} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents [get]
@@ -392,12 +392,12 @@ func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	condition := queryCondition(c, op)
-	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": key,
-			"list":  results,
+		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+			Total:       total,
+			ContentList: results,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
@@ -418,7 +418,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {array} entity.ContentInfoWithDetails
+// @Success 200 {array} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents/private [get]
@@ -427,12 +427,12 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	op := GetOperator(c)
 
 	condition := queryCondition(c, op)
-	key, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": key,
-			"list":  results,
+		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+			Total:       total,
+			ContentList: results,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
@@ -453,7 +453,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
-// @Success 200 {array} entity.ContentInfoWithDetails
+// @Success 200 {array} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents/pending [get]
@@ -463,12 +463,12 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	op := GetOperator(c)
 
 	condition := queryCondition(c, op)
-	key, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"total": key,
-			"list":  results,
+		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+			Total:       total,
+			ContentList: results,
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
