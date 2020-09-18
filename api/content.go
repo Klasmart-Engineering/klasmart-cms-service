@@ -22,6 +22,9 @@ type contentBulkOperateRequest struct {
 type CreateContentResponse struct {
 	ID string `json:"id"`
 }
+type PublishContentRequest struct {
+	Scope string `json:"scope"`
+}
 
 // @Summary createContent
 // @ID createContent
@@ -111,6 +114,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param content_id path string true "content id to publish"
+// @Param data body PublishContentRequest true "content publish data"
 // @Tags content
 // @Success 200 {object} string
 // @Failure 500 {object} ErrorResponse
@@ -120,9 +124,8 @@ func (s *Server) publishContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	cid := c.Param("content_id")
-	var data struct {
-		Scope string `json:"scope"`
-	}
+
+	data := new(PublishContentRequest)
 	err := c.ShouldBind(&data)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, L(Unknown))
