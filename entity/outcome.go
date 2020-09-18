@@ -68,7 +68,7 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.Assumed = data.Assumed
 	oc.Program = data.Program
 	oc.Subject = data.Subject
-	oc.Developmental = data.Subject
+	oc.Developmental = data.Developmental
 	oc.Skills = data.Skills
 	oc.Age = data.Age
 	oc.Grade = data.Grade
@@ -76,6 +76,7 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.Keywords = data.Keywords
 	oc.Description = data.Description
 	oc.PublishStatus = OutcomeStatusDraft
+	oc.UpdateAt = time.Now().Unix()
 }
 
 func (oc *Outcome) Clone() Outcome {

@@ -456,6 +456,14 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				return "", err
 			}
 		}
+		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
+			log.Error(ctx, "add assessment: invalid class type",
+				log.Err(err),
+				log.Any("cmd", cmd),
+				log.Any("schedule", schedule),
+			)
+			return "", errors.New("add assessment: invalid class type")
+		}
 		outcomeIDs, err = GetContentModel().GetContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "add assessment: get outcome failed by id",
