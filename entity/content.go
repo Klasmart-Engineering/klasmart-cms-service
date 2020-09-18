@@ -342,6 +342,11 @@ func (c CreateContentRequest) Validate() error {
 	return nil
 }
 
+type ContentInfoWithDetailsResponse struct {
+	Total int `json:"total"`
+	ContentList []*ContentInfoWithDetails `json:"list"`
+}
+
 type ContentInfoWithDetails struct {
 	ContentInfo
 	ContentTypeName   string   `json:"content_type_name"`
