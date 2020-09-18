@@ -172,6 +172,9 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 	}
 	materials := make([]*entity.LiveMaterial, len(contentList))
 	for i, item := range contentList {
+		if item == nil {
+			continue
+		}
 		materialItem := &entity.LiveMaterial{
 			Name:     item.Name,
 			TypeName: entity.MaterialTypeH5P,
