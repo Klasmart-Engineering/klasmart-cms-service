@@ -126,7 +126,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 // @ID getAssessment
 // @Accept json
 // @Produce json
-// @Param id path int true "assessment id"
+// @Param id path string true "assessment id"
 // @Success 200 {object} entity.AssessmentDetailView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
