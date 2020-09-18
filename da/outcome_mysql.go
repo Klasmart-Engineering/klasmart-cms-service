@@ -30,8 +30,9 @@ type OutcomeCondition struct {
 	SourceID       sql.NullString
 	FuzzyKey       sql.NullString
 
-	OrderBy OutcomeOrderBy `json:"order_by"`
-	Pager   dbo.Pager
+	IncludeDeleted bool
+	OrderBy        OutcomeOrderBy `json:"order_by"`
+	Pager          dbo.Pager
 }
 
 func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
@@ -78,7 +79,9 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Assumed.Bool)
 	}
 
-	wheres = append(wheres, " delete_at = 0")
+	if !c.IncludeDeleted {
+		wheres = append(wheres, "delete_at=0")
+	}
 	return wheres, params
 }
 
@@ -109,6 +112,8 @@ const (
 	OrderByNameDesc
 	OrderByCreatedAt
 	OrderByCreatedAtDesc
+	OrderByUpdateAt
+	OrderByUpdateAtDesc
 )
 
 const defaultPageIndex = 1
@@ -141,11 +146,19 @@ func NewOrderBy(name string) OutcomeOrderBy {
 	case "-name":
 		return OrderByNameDesc
 	case "created_at":
-		return OrderByCreatedAt
+		// require by pm
+		//return OrderByCreatedAt
+		return OrderByUpdateAt
 	case "-created_at":
-		return OrderByCreatedAtDesc
+		// require by pm
+		//return OrderByCreatedAtDesc
+		return OrderByUpdateAtDesc
+	case "updated_at":
+		return OrderByUpdateAt
+	case "-updated_at":
+		return OrderByUpdateAtDesc
 	default:
-		return OrderByCreatedAtDesc
+		return OrderByUpdateAtDesc
 	}
 }
 
@@ -159,8 +172,12 @@ func (c *OutcomeCondition) GetOrderBy() string {
 		return "create_at"
 	case OrderByCreatedAtDesc:
 		return "create_at desc"
+	case OrderByUpdateAt:
+		return "update_at"
+	case OrderByUpdateAtDesc:
+		return "update_at desc"
 	default:
-		return "create_at desc"
+		return "update_at desc"
 	}
 }
 
