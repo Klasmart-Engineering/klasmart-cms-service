@@ -196,7 +196,7 @@ type UpdateAssessmentAction string
 
 const (
 	UpdateAssessmentActionSave     UpdateAssessmentAction = "save"
-	UpdateAssessmentActionComplete UpdateAssessmentAction = "complete"
+	UpdateAssessmentActionComplete UpdateAssessmentAction = "completed"
 )
 
 func (a UpdateAssessmentAction) Valid() bool {
