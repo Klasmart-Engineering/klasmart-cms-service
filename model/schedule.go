@@ -853,6 +853,7 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, id string, sta
 		)
 		return err
 	}
+	da.GetScheduleRedisDA().Clean(ctx, []string{id})
 	return nil
 }
 
