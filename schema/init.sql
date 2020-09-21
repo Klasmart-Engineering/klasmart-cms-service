@@ -36,7 +36,7 @@ CREATE TABLE `cms_contents` (
     KEY `content_source_id` (`source_id`),
     KEY `content_latest_id` (`latest_id`),
     FULLTEXT INDEX `name_description_keywords_author_index` (`content_name`, `keywords`, `description`, `author_name`) WITH PARSER ngram
-) COMMENT '内容表' DEFAULT CHARSET=utf8mb4_unicode_ci ;
+) COMMENT '内容表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 
 CREATE TABLE IF NOT EXISTS `schedules` (
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   KEY `schedules_start_at` (`start_at`),
   KEY `schedules_end_at` (`end_at`),
   KEY `schedules_deleted_at` (`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4_unicode_ci  COMMENT='schedules';
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='schedules';
 
 CREATE TABLE IF NOT EXISTS `schedules_teachers` (
   `id` varchar(50) NOT NULL COMMENT 'id',
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS `schedules_teachers` (
   KEY `schedules_teacher_id` (`teacher_id`),
   KEY `schedules_schedule_id` (`schedule_id`),
   KEY `schedules_deleted_at` (`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4_unicode_ci COMMENT='schedules_teachers';
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='schedules_teachers';
 
 CREATE TABLE `learning_outcomes` (
    `id` VARCHAR(50) NOT  NULL  COMMENT  'outcome_id',
@@ -116,4 +116,58 @@ CREATE TABLE `learning_outcomes` (
     KEY `index_publish_status` (`publish_status`),
     KEY `index_source_id` (`source_id`),
     FULLTEXT INDEX `fullindex_name_description_keywords_author_shortcode` (`name`, `keywords`, `description`, `author_name`, `shortcode`) WITH PARSER ngram
-) COMMENT 'outcomes table' DEFAULT CHARSET=utf8mb4_unicode_ci;
+) COMMENT 'outcomes table' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+create table `assessments`
+(
+    `id`             varchar(64)   not null comment 'id',
+    `schedule_id`    varchar(64)   not null comment 'schedule id',
+    `title`          varchar(1024) not null comment 'title',
+    `program_id`     varchar(64)   not null comment 'program id',
+    `subject_id`     varchar(64)   not null comment 'subject id',
+    `teacher_ids`    json          not null comment 'teacher id',
+    `class_length`   int           not null comment 'class length (util: minute)',
+    `class_end_time` bigint        not null comment 'class end time (unix seconds)',
+    `complete_time`  bigint        not null comment 'complete time (unix seconds)',
+    `status`         varchar(128)  not null comment 'status (enum: in_progress, complete)',
+    `create_at`      bigint        not null comment 'create time (unix seconds)',
+    `update_at`      bigint        not null comment 'update time (unix seconds)',
+    `delete_at`      bigint        not null comment 'delete time (unix seconds)',
+    primary key (`id`),
+    key `assessments_status` (status),
+    key `assessments_schedule_id` (schedule_id),
+    key `assessments_complete_time` (complete_time)
+) comment 'assessment' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+create table assessments_attendances
+(
+    `id`            varchar(64) not null comment 'id',
+    `assessment_id` varchar(64) not null comment 'assessment id',
+    `attendance_id` varchar(64) not null comment 'attendance id',
+    primary key (`id`),
+    key `assessments_attendances_assessment_id` (`assessment_id`),
+    key `assessments_attendances_attendance_id` (`attendance_id`)
+) comment 'assessment and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+create table assessments_outcomes
+(
+    `id`            varchar(64) not null comment 'id',
+    `assessment_id` varchar(64) not null comment 'assessment id',
+    `outcome_id`    varchar(64) not null comment 'outcome id',
+    `skip`          boolean     not null comment 'skip',
+    primary key (`id`),
+    key `assessments_outcomes_assessment_id` (`assessment_id`),
+    key `assessments_outcomes_outcome_id` (`outcome_id`)
+) comment 'assessment and outcome map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+create table outcomes_attendances
+(
+    `id`            varchar(64) not null comment 'id',
+    `assessment_id` varchar(64) not null comment 'assessment id',
+    `outcome_id`    varchar(64) not null comment 'outcome id',
+    `attendance_id` varchar(64) not null comment 'attendance id',
+    primary key (`id`),
+    key `outcomes_attendances_assessment_id` (`outcome_id`),
+    key `outcomes_attendances_outcome_id` (`outcome_id`),
+    key `outcomes_attendances_attendance_id` (`attendance_id`)
+) comment 'outcome and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
