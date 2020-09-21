@@ -416,13 +416,3 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 //		"attachment_url": url,
 //	})
 //}
-
-func (s *Server) updateStatus(c *gin.Context) {
-	id := c.Param("id")
-	err := model.GetScheduleModel().UpdateScheduleStatus(c.Request.Context(), id, entity.ScheduleStatusClosed)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err)
-		return
-	}
-	c.JSON(http.StatusOK, id)
-}
