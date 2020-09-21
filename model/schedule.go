@@ -440,6 +440,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			EndAt:        item.EndAt,
 			IsRepeat:     item.RepeatID != "",
 			LessonPlanID: item.LessonPlanID,
+			Status:       item.Status,
 		}
 	}
 	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)
@@ -669,6 +670,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, id string) (*entity.Schedul
 		Description: schedule.Description,
 		Version:     schedule.ScheduleVersion,
 		IsRepeat:    schedule.RepeatID != "",
+		Status:      schedule.Status,
 	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo

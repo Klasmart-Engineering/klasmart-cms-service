@@ -30,7 +30,3 @@ func TestScheduleModel_GetByID(t *testing.T) {
 	tt2 := time.Now().Add(2 * time.Hour).Unix()
 	t.Log(tt2)
 }
-
-func TestLiveTokenJson(t *testing.T) {
-
-}
