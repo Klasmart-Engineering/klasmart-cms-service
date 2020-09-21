@@ -584,6 +584,16 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				}
 			}
 		}
+		{
+			if err := GetScheduleModel().UpdateScheduleStatus(ctx, tx, schedule.ID, entity.ScheduleStatusClosed); err != nil {
+				log.Error(ctx, "add assessment: update schedule status to closed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+					log.Any("id", schedule.ID),
+				)
+				return err
+			}
+		}
 		return nil
 	}); err != nil {
 		return "", err
