@@ -34,6 +34,7 @@ type IScheduleModel interface {
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
+	UpdateScheduleStatus(ctx context.Context, id string, status entity.ScheduleStatus) error
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -439,6 +440,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			EndAt:        item.EndAt,
 			IsRepeat:     item.RepeatID != "",
 			LessonPlanID: item.LessonPlanID,
+			Status:       item.Status,
 		}
 	}
 	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)
@@ -668,6 +670,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, id string) (*entity.Schedul
 		Description: schedule.Description,
 		Version:     schedule.ScheduleVersion,
 		IsRepeat:    schedule.RepeatID != "",
+		Status:      schedule.Status,
 	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
@@ -822,6 +825,38 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
 		return constant.ErrInvalidArgs
 	}
+	return nil
+}
+
+func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, id string, status entity.ScheduleStatus) error {
+	var schedule = new(entity.Schedule)
+	err := da.GetScheduleDA().Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "UpdateScheduleStatus: get schedule by id failed, schedule not found", log.Err(err), log.String("id", id))
+		return constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "UpdateScheduleStatus: get schedule by id failed",
+			log.Err(err),
+			log.String("id", id),
+		)
+		return err
+	}
+	if schedule.DeleteAt != 0 {
+		log.Error(ctx, "UpdateScheduleStatus: get schedule by id failed, schedule not found", log.String("id", id))
+		return constant.ErrRecordNotFound
+	}
+	schedule.Status = status
+	_, err = da.GetScheduleDA().Update(ctx, schedule)
+	if err != nil {
+		log.Error(ctx, "UpdateScheduleStatus: update schedule status error",
+			log.String("id", id),
+			log.Any("schedule", schedule),
+			log.Err(err),
+		)
+		return err
+	}
+	da.GetScheduleRedisDA().Clean(ctx, []string{id})
 	return nil
 }
 

@@ -22,7 +22,7 @@ type LiveTokenInfo struct {
 	Type       LiveTokenType   `json:"type"`
 	Teacher    bool            `json:"teacher"`
 	RoomID     string          `json:"roomid"`
-	Materials  []*LiveMaterial `json:"materials,omitempty"`
+	Materials  []*LiveMaterial `json:"materials"`
 }
 
 type LiveMaterial struct {

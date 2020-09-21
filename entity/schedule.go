@@ -322,12 +322,13 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID           string `json:"id"`
-	Title        string `json:"title"`
-	StartAt      int64  `json:"start_at"`
-	EndAt        int64  `json:"end_at"`
-	IsRepeat     bool   `json:"is_repeat"`
-	LessonPlanID string `json:"lesson_plan_id"`
+	ID           string         `json:"id"`
+	Title        string         `json:"title"`
+	StartAt      int64          `json:"start_at"`
+	EndAt        int64          `json:"end_at"`
+	IsRepeat     bool           `json:"is_repeat"`
+	LessonPlanID string         `json:"lesson_plan_id"`
+	Status       ScheduleStatus `json:"status" enums:"NotStart,Started,Closed"`
 }
 
 type ScheduleDetailsView struct {
@@ -344,6 +345,7 @@ type ScheduleDetailsView struct {
 	IsAllDay    bool              `json:"is_all_day"`
 	IsRepeat    bool              `json:"is_repeat"`
 	Repeat      RepeatOptions     `json:"repeat"`
+	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ScheduleBasic
 }
 
