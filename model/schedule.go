@@ -34,7 +34,7 @@ type IScheduleModel interface {
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
-	UpdateScheduleStatus(ctx context.Context, id string, status entity.ScheduleStatus) error
+	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -181,24 +181,15 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
-	// verify data
-	err := s.verifyData(ctx, &entity.ScheduleVerify{
-		ClassID:      viewData.ClassID,
-		SubjectID:    viewData.SubjectID,
-		ProgramID:    viewData.ProgramID,
-		TeacherIDs:   viewData.TeacherIDs,
-		LessonPlanID: viewData.LessonPlanID,
-	})
-	if err != nil {
-		log.Error(ctx, "update schedule: verify data error",
-			log.Err(err),
-			log.Any("viewData", viewData))
-		return "", constant.ErrInvalidArgs
-	}
 	// get old schedule by id
 	var schedule = new(entity.Schedule)
-	if err := da.GetScheduleDA().Get(ctx, viewData.ID, schedule); err != nil {
-		log.Error(ctx, "update schedule: get schedule by id failed",
+	err := da.GetScheduleDA().Get(ctx, viewData.ID, schedule)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "Update: get schedule by id failed, schedule not found", log.Err(err), log.String("id", viewData.ID))
+		return "", constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "Update: get schedule by id failed",
 			log.Err(err),
 			log.String("id", viewData.ID),
 			log.String("edit_type", string(viewData.EditType)),
@@ -211,6 +202,27 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			log.String("edit_type", string(viewData.EditType)),
 		)
 		return "", constant.ErrRecordNotFound
+	}
+	if schedule.Status != entity.ScheduleStatusNotStart {
+		log.Warn(ctx, "update schedule: schedule status error",
+			log.String("id", viewData.ID),
+			log.Any("schedule", schedule),
+		)
+		return "", constant.ErrOperateNotAllowed
+	}
+	// verify data
+	err = s.verifyData(ctx, &entity.ScheduleVerify{
+		ClassID:      viewData.ClassID,
+		SubjectID:    viewData.SubjectID,
+		ProgramID:    viewData.ProgramID,
+		TeacherIDs:   viewData.TeacherIDs,
+		LessonPlanID: viewData.LessonPlanID,
+	})
+	if err != nil {
+		log.Error(ctx, "update schedule: verify data error",
+			log.Err(err),
+			log.Any("viewData", viewData))
+		return "", constant.ErrInvalidArgs
 	}
 
 	// not force add need conflict detection
@@ -828,9 +840,9 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 	return nil
 }
 
-func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, id string, status entity.ScheduleStatus) error {
+func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error {
 	var schedule = new(entity.Schedule)
-	err := da.GetScheduleDA().Get(ctx, id, schedule)
+	err := da.GetScheduleDA().GetTx(ctx, tx, id, schedule)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "UpdateScheduleStatus: get schedule by id failed, schedule not found", log.Err(err), log.String("id", id))
 		return constant.ErrRecordNotFound
@@ -846,8 +858,9 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, id string, sta
 		log.Error(ctx, "UpdateScheduleStatus: get schedule by id failed, schedule not found", log.String("id", id))
 		return constant.ErrRecordNotFound
 	}
+
 	schedule.Status = status
-	_, err = da.GetScheduleDA().Update(ctx, schedule)
+	_, err = da.GetScheduleDA().UpdateTx(ctx, tx, schedule)
 	if err != nil {
 		log.Error(ctx, "UpdateScheduleStatus: update schedule status error",
 			log.String("id", id),
