@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 	"time"
@@ -193,7 +194,7 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	if err != nil {
 		log.Error(ctx, "CreateOutcome: InsertTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
-	if outcome.SourceID != "" && outcome.SourceID != "-" && outcome.SourceID != outcome.ID {
+	if outcome.SourceID != "" && outcome.SourceID != constant.LockedByNoBody && outcome.SourceID != outcome.ID {
 		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID, outcome.SourceID})
 	} else {
 		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
@@ -202,8 +203,8 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 }
 
 func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
-	now := time.Now().Unix()
-	outcome.UpdateAt = now
+	//now := time.Now().Unix()
+	//outcome.UpdateAt = now
 	_, err = o.UpdateTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "UpdateOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))

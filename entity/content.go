@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"reflect"
 	"strings"
 )
@@ -280,7 +281,7 @@ func getDynamoTags(s interface{}) []TagValues {
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
 		updateTag := f.Tag.Get("dynamoupdate")
-		if updateTag == "-" {
+		if updateTag == constant.LockedByNoBody {
 			continue
 		}
 		tagValues = append(tagValues, TagValues{
@@ -339,6 +340,11 @@ func (c CreateContentRequest) Validate() error {
 		// }
 	}
 	return nil
+}
+
+type ContentInfoWithDetailsResponse struct {
+	Total int `json:"total"`
+	ContentList []*ContentInfoWithDetails `json:"list"`
 }
 
 type ContentInfoWithDetails struct {
@@ -401,6 +407,7 @@ type ContentInfo struct {
 	PublishStatus ContentPublishStatus `json:"publish_status"`
 
 	CreatedAt int64 `json:"created_at"`
+	UpdatedAt int64 `json:"updated_at"`
 }
 
 type ContentData interface {

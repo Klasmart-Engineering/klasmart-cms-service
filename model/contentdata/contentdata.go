@@ -102,6 +102,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		PublishStatus: obj.PublishStatus,
 		Version:       obj.Version,
 		CreatedAt:     obj.CreateAt,
+		UpdatedAt:		obj.UpdateAt,
 	}
 
 	return cm, nil
