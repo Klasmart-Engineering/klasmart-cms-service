@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @ID createLearningOutcomes
@@ -328,14 +329,8 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	var req PublishOutcomeReq
-	err := c.ShouldBindJSON(&req)
-	if err.Error() != "EOF" {
-		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
-		c.JSON(http.StatusBadRequest, L(Unknown))
-		return
-	}
-	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
+
+	err := model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, "", op)
 	switch err {
 	//case model.ErrInvalidResourceId:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
