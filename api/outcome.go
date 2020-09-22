@@ -1,10 +1,6 @@
 package api
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -335,23 +331,11 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	}
 
 	var req PublishOutcomeReq
-	b := &bytes.Buffer{}
-	_, err := io.Copy(b, c.Request.Body)
-	defer c.Request.Body.Close()
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		log.Warn(ctx, "publishOutcome: io.Copy failed", log.String("outcome_id", outcomeID))
+		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
-	}
-	if b.Len() != 0 {
-		c.Request.Body = ioutil.NopCloser(b)
-		err = c.ShouldBindJSON(&req)
-		fmt.Println("b:", b.Len())
-		if err != nil {
-			log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
-			c.JSON(http.StatusBadRequest, L(Unknown))
-			return
-		}
 	}
 	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
 
