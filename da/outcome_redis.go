@@ -121,7 +121,7 @@ func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, IDs []string
 	}
 	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
 	if err != nil {
-		log.Error(ctx, "Can't get outcome list from cache", log.Err(err), log.Strings("keys", keys), log.Strings("ids", IDs))
+		log.Info(ctx, "Can't get outcome list from cache", log.Err(err), log.Strings("keys", keys), log.Strings("ids", IDs))
 		return IDs, nil
 	}
 
@@ -175,7 +175,7 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, con
 	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition)).Result()
 
 	if err != nil {
-		log.Error(ctx, "Can't get outcome condition from cache", log.Err(err), log.String("key", key), log.Any("condition", condition))
+		log.Info(ctx, "Can't get outcome condition from cache", log.Err(err), log.String("key", key), log.Any("condition", condition))
 		return nil
 	}
 	outcomeLists := new(OutcomeListWithKey)
