@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -265,6 +266,7 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID st
 			return ErrInvalidContentStatusToPublish
 		}
 		outcome.PublishScope = scope
+		outcome.UpdateAt = time.Now().Unix()
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
 		if err != nil {
 			log.Error(ctx, "PublishLearningOutcome: UpdateOutcome failed",
