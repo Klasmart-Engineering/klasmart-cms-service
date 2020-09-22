@@ -208,7 +208,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 }
 
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
-	log.Error(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
+	log.Debug(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
 
 	count, objs, err := da.GetContentDA().SearchContent(ctx, tx, *condition)
 	if err != nil {
