@@ -74,30 +74,31 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	if contentType != entity.ContentTypeLesson {
 		return ErrInvalidContentType
 	}
+	//暂时不做检查
 	//检查material合法性
-	materialList := make([]string, 0)
-	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
-		materialList = append(materialList, l.MaterialId)
-	})
-	_, data, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
-		IDS: materialList,
-	})
-	if err != nil {
-		return err
-	}
-	//检查是否有不存在的material
-	for i := range materialList {
-		flag := false
-		for j := range data {
-			if data[j].ID == materialList[i] {
-				flag = true
-				break
-			}
-		}
-		if !flag {
-			return ErrInvalidMaterialInLesson
-		}
-	}
+	//materialList := make([]string, 0)
+	//l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+	//	materialList = append(materialList, l.MaterialId)
+	//})
+	//_, data, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
+	//	IDS: materialList,
+	//})
+	//if err != nil {
+	//	return err
+	//}
+	////检查是否有不存在的material
+	//for i := range materialList {
+	//	flag := false
+	//	for j := range data {
+	//		if data[j].ID == materialList[i] {
+	//			flag = true
+	//			break
+	//		}
+	//	}
+	//	if !flag {
+	//		return ErrInvalidMaterialInLesson
+	//	}
+	//}
 
 	//暂不检查Condition
 	return nil
