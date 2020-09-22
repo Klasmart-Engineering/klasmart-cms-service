@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"time"
@@ -169,4 +170,31 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 		content.DeleteAt = now.Unix()
 	}
 	return content
+}
+
+
+func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+	err := cm.checkPublishContent(ctx, tx, content, user)
+	if err != nil {
+		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
+		return err
+	}
+	//if user.OrgID == content.Org && user.Role != "teacher" {
+	//	content.PublishStatus = entity.ContentStatusPublished
+	//	//直接发布，则顶替旧
+	//	if content.SourceID != "" {
+	//		//存在前序content，则隐藏前序
+	//		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
+	//
+	//} else {
+	//	//TODO:更新发布状态
+	//	content.PublishStatus = entity.ContentStatusPending
+	//}
+	content.PublishStatus = entity.ContentStatusPending
+	content.UpdateAt = time.Now().Unix()
+	return nil
 }

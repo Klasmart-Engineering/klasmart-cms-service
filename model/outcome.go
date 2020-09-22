@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -204,8 +205,15 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 					log.String("outcome_id", outcomeID))
 				return err
 			}
-			newVersion = *copyValue
-			return nil
+			if copyValue.PublishStatus == entity.OutcomeStatusDraft {
+				newVersion = *copyValue
+				return nil
+			} else {
+				log.Error(ctx, "LockLearningOutcome: copyValue status not draft",
+					log.String("op", operator.UserID),
+					log.Any("copy", copyValue))
+				return ErrContentAlreadyLocked
+			}
 		}
 
 		err = ocm.lockOutcome(ctx, tx, outcome, operator)
@@ -265,6 +273,7 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID st
 			return ErrInvalidContentStatusToPublish
 		}
 		outcome.PublishScope = scope
+		outcome.UpdateAt = time.Now().Unix()
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
 		if err != nil {
 			log.Error(ctx, "PublishLearningOutcome: UpdateOutcome failed",

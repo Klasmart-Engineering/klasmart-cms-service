@@ -14,10 +14,16 @@ stages:
 DEPLOY_SWAGGER_JOB:
   extends:
   - .DEPLOY_SWAGGER_API
+  only:
+    - /^test.*$/
+  except:
+    - triggers
 
 Build_Go_Push:
   extends:
   - .TIGGER_RULES_CHECK
+  except:
+    - triggers
 
 Deploy_To_Lambda_Push:
   extends:

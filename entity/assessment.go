@@ -187,7 +187,7 @@ type AddAssessmentResult struct {
 
 type UpdateAssessmentCommand struct {
 	ID                    string                  `json:"id"`
-	Action                UpdateAssessmentAction  `json:"action" enums:"save,completed"`
+	Action                UpdateAssessmentAction  `json:"action" enums:"save,complete"`
 	AttendanceIDs         *[]string               `json:"attendance_ids"`
 	OutcomeAttendanceMaps *[]OutcomeAttendanceMap `json:"outcome_attendance_maps"`
 }

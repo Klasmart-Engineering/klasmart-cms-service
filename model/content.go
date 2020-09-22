@@ -119,31 +119,6 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	return nil
 }
 
-func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
-	err := cm.checkPublishContent(ctx, tx, content, user)
-	if err != nil {
-		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
-		return err
-	}
-	//if user.OrgID == content.Org && user.Role != "teacher" {
-	//	content.PublishStatus = entity.ContentStatusPublished
-	//	//直接发布，则顶替旧
-	//	if content.SourceID != "" {
-	//		//存在前序content，则隐藏前序
-	//		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//
-	//} else {
-	//	//TODO:更新发布状态
-	//	content.PublishStatus = entity.ContentStatusPending
-	//}
-	content.PublishStatus = entity.ContentStatusPending
-	return nil
-}
-
 func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//TODO:Maybe wrong
 	err := cm.preparePublishContent(ctx, tx, content, user)
@@ -173,9 +148,8 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		return err
 	}
 	if created {
-		if len(c.Subject) == 0 || len(c.Developmental) == 0 ||
-			len(c.Program) == 0 || len(c.Skills) == 0 ||
-			len(c.Age) == 0 || len(c.Grade) == 0 {
+		if len(c.Developmental) == 0 ||
+			len(c.Program) == 0 {
 			log.Error(ctx, "select form invalid", log.Any("data", c), log.Bool("created", created), log.Err(err))
 			return ErrInvalidSelectForm
 		}
@@ -234,7 +208,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 }
 
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
-	log.Error(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
+	log.Debug(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
 
 	count, objs, err := da.GetContentDA().SearchContent(ctx, tx, *condition)
 	if err != nil {

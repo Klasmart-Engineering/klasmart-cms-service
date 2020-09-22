@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @ID createLearningOutcomes
@@ -219,7 +220,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
@@ -328,14 +329,16 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
+
 	var req PublishOutcomeReq
 	err := c.ShouldBindJSON(&req)
-	if err.Error() != "EOF" {
+	if err != nil {
 		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
+
 	switch err {
 	//case model.ErrInvalidResourceId:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
@@ -569,7 +572,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
@@ -625,7 +628,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse

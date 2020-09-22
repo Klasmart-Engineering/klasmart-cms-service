@@ -65,6 +65,8 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrInvalidSelectForm:
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
@@ -414,7 +416,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
-// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
@@ -449,7 +451,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
-// @Param order_by query string false "search content order by column name" Enums(name, -name, create_at， -create_at)
+// @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
 // @Tags content
