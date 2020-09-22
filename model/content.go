@@ -148,9 +148,8 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		return err
 	}
 	if created {
-		if len(c.Subject) == 0 || len(c.Developmental) == 0 ||
-			len(c.Program) == 0 || len(c.Skills) == 0 ||
-			len(c.Age) == 0 || len(c.Grade) == 0 {
+		if len(c.Developmental) == 0 ||
+			len(c.Program) == 0 {
 			log.Error(ctx, "select form invalid", log.Any("data", c), log.Bool("created", created), log.Err(err))
 			return ErrInvalidSelectForm
 		}
