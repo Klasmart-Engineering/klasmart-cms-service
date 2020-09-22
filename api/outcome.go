@@ -343,14 +343,15 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	bodyIsEmpty := b.Len() == 0
-	c.Request.Body = ioutil.NopCloser(b)
-	err = c.ShouldBindJSON(&req)
-	fmt.Println("b:", b.Len())
-	if err != nil && !bodyIsEmpty {
-		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
-		c.JSON(http.StatusBadRequest, L(Unknown))
-		return
+	if b.Len() != 0 {
+		c.Request.Body = ioutil.NopCloser(b)
+		err = c.ShouldBindJSON(&req)
+		fmt.Println("b:", b.Len())
+		if err != nil {
+			log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
+			c.JSON(http.StatusBadRequest, L(Unknown))
+			return
+		}
 	}
 	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
 
