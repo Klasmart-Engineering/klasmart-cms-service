@@ -348,6 +348,38 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 	return nil
 }
 func (s *scheduleModel) DeleteTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
+	var schedule = new(entity.Schedule)
+	err := da.GetScheduleDA().Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		log.Info(ctx, "DeleteTx: get schedule by id failed, schedule not found",
+			log.Err(err),
+			log.String("id", id),
+			log.String("edit_type", string(editType)),
+		)
+		return nil
+	}
+	if err != nil {
+		log.Error(ctx, "DeleteTx: get schedule by id failed",
+			log.Err(err),
+			log.String("id", id),
+			log.String("edit_type", string(editType)),
+		)
+		return err
+	}
+	if schedule.DeleteAt != 0 {
+		log.Info(ctx, "DeleteTx: get schedule by id failed, schedule not found",
+			log.String("id", id),
+			log.String("edit_type", string(editType)),
+		)
+		return nil
+	}
+	if schedule.Status != entity.ScheduleStatusNotStart {
+		log.Warn(ctx, "update schedule: schedule status error",
+			log.String("id", id),
+			log.Any("schedule", schedule),
+		)
+		return constant.ErrOperateNotAllowed
+	}
 	switch editType {
 	case entity.ScheduleEditOnlyCurrent:
 		if err := da.GetScheduleDA().SoftDelete(ctx, tx, id, op); err != nil {

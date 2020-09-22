@@ -122,6 +122,8 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case dbo.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
