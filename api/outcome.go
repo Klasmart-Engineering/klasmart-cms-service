@@ -220,7 +220,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
@@ -572,7 +572,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
@@ -628,7 +628,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
