@@ -65,6 +65,8 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(Unknown))
+	case model.ErrInvalidSelectForm:
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
