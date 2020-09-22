@@ -166,7 +166,7 @@ type OutcomeIDList struct {
 }
 
 type PublishOutcomeReq struct {
-	Scope string `json:"scope" form:"scope"`
+	Scope string `json:"scope,omitempty" form:"scope,omitempty"`
 }
 
 type OutcomeRejectReq struct {

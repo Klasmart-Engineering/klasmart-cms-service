@@ -330,7 +330,15 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		return
 	}
 
-	err := model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, "", op)
+	var req PublishOutcomeReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
+
 	switch err {
 	//case model.ErrInvalidResourceId:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
