@@ -88,6 +88,7 @@ func TestLockOutcome(t *testing.T) {
 
 func TestPublishOutcome(t *testing.T) {
 	outcomeID := "5f63016bacc44d2ec014a4e9"
+	//data := "{\"a:1}"
 	//data := ""
 	req := PublishOutcomeReq{
 		Scope: "1",
