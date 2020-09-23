@@ -24,7 +24,7 @@ type IScheduleModel interface {
 	AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
-	DeleteTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
+	//DeleteTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error)
 	Page(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
 	GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error)
@@ -180,35 +180,44 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 
 	return scheduleList[0].ID, nil
 }
-func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
+func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*entity.Schedule, error) {
 	// get old schedule by id
 	var schedule = new(entity.Schedule)
-	err := da.GetScheduleDA().Get(ctx, viewData.ID, schedule)
+	err := da.GetScheduleDA().Get(ctx, id, schedule)
 	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "Update: get schedule by id failed, schedule not found", log.Err(err), log.String("id", viewData.ID))
-		return "", constant.ErrRecordNotFound
+		log.Error(ctx, "checkScheduleStatus: get schedule by id failed, schedule not found", log.Err(err), log.String("id", id))
+		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
-		log.Error(ctx, "Update: get schedule by id failed",
+		log.Error(ctx, "checkScheduleStatus: get schedule by id failed",
 			log.Err(err),
-			log.String("id", viewData.ID),
-			log.String("edit_type", string(viewData.EditType)),
+			log.String("id", id),
 		)
-		return "", err
+		return nil, err
 	}
 	if schedule.DeleteAt != 0 {
-		log.Error(ctx, "update schedule: get schedule by id failed, schedule not found",
-			log.String("id", viewData.ID),
-			log.String("edit_type", string(viewData.EditType)),
+		log.Error(ctx, "checkScheduleStatus: get schedule by id failed, schedule not found",
+			log.String("id", id),
 		)
-		return "", constant.ErrRecordNotFound
+		return nil, constant.ErrRecordNotFound
 	}
 	if schedule.Status != entity.ScheduleStatusNotStart {
-		log.Warn(ctx, "update schedule: schedule status error",
-			log.String("id", viewData.ID),
+		log.Warn(ctx, "checkScheduleStatus: schedule status error",
+			log.String("id", id),
 			log.Any("schedule", schedule),
 		)
-		return "", constant.ErrOperateNotAllowed
+		return schedule, constant.ErrOperateNotAllowed
+	}
+	return schedule, nil
+}
+func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
+	schedule, err := s.checkScheduleStatus(ctx, viewData.ID)
+	if err != nil {
+		log.Error(ctx, "update schedule: get schedule by id error",
+			log.Any("viewData", viewData),
+			log.Err(err),
+		)
+		return "", err
 	}
 	// verify data
 	err = s.verifyData(ctx, &entity.ScheduleVerify{
@@ -251,7 +260,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		// delete schedule
 		var err error
-		if err = s.DeleteTx(ctx, tx, operator, viewData.ID, viewData.EditType); err != nil {
+		if err = s.deleteScheduleTx(ctx, tx, operator, schedule, viewData.EditType); err != nil {
 			log.Error(ctx, "update schedule: delete failed",
 				log.Err(err),
 				log.String("id", viewData.ID),
@@ -333,8 +342,25 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	return id, nil
 }
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		return s.DeleteTx(ctx, tx, op, id, editType)
+	schedule, err := s.checkScheduleStatus(ctx, id)
+	if err == constant.ErrRecordNotFound {
+		log.Warn(ctx, "DeleteTx:schedule not found",
+			log.Err(err),
+			log.String("id", id),
+			log.String("edit_type", string(editType)),
+		)
+		return nil
+	}
+	if err != nil {
+		log.Error(ctx, "DeleteTx:delete schedule by id error",
+			log.Err(err),
+			log.String("id", id),
+			log.String("edit_type", string(editType)),
+		)
+		return err
+	}
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return s.deleteScheduleTx(ctx, tx, op, schedule, editType)
 	})
 	if err != nil {
 		log.Error(ctx, "delete schedule error",
@@ -347,34 +373,18 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 	da.GetScheduleRedisDA().Clean(ctx, []string{id})
 	return nil
 }
-func (s *scheduleModel) DeleteTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
+
+func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, schedule *entity.Schedule, editType entity.ScheduleEditType) error {
 	switch editType {
 	case entity.ScheduleEditOnlyCurrent:
-		if err := da.GetScheduleDA().SoftDelete(ctx, tx, id, op); err != nil {
+		if err := da.GetScheduleDA().SoftDelete(ctx, tx, schedule.ID, op); err != nil {
 			log.Error(ctx, "delete schedule: soft delete failed",
-				log.String("id", id),
+				log.Any("schedule", schedule),
 				log.String("edit_type", string(editType)),
 			)
 			return err
 		}
 	case entity.ScheduleEditWithFollowing:
-		var schedule entity.Schedule
-		if err := da.GetScheduleDA().Get(ctx, id, &schedule); err != nil {
-			if err == dbo.ErrRecordNotFound {
-				log.Info(ctx, "delete schedule: get schedule by id failed",
-					log.Err(err),
-					log.String("id", id),
-					log.String("edit_type", string(editType)),
-				)
-				return nil
-			}
-			log.Error(ctx, "delete schedule: get schedule by id failed",
-				log.Err(err),
-				log.String("id", id),
-				log.String("edit_type", string(editType)),
-			)
-			return err
-		}
 		if err := da.GetScheduleDA().DeleteWithFollowing(ctx, tx, schedule.RepeatID, schedule.StartAt); err != nil {
 			log.Error(ctx, "delete schedule: delete with following failed",
 				log.Err(err),
@@ -385,10 +395,34 @@ func (s *scheduleModel) DeleteTx(ctx context.Context, tx *dbo.DBContext, op *ent
 			return err
 		}
 	}
-	if err := da.GetScheduleTeacherDA().DeleteByScheduleID(ctx, tx, id); err != nil {
-		log.Error(ctx, "delete schedule: delete by schedule id failed",
+	// delete schedules_teachers data
+	var scheduleList []*entity.Schedule
+	err := da.GetScheduleDA().Query(ctx, &da.ScheduleCondition{
+		RepeatID: sql.NullString{
+			String: schedule.RepeatID,
+			Valid:  true,
+		},
+		Status: sql.NullString{
+			String: string(entity.ScheduleStatusNotStart),
+			Valid:  true,
+		},
+	}, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "delete schedule: delete with following failed",
 			log.Err(err),
-			log.String("id", id),
+			log.String("repeat_id", schedule.RepeatID),
+			log.String("edit_type", string(editType)),
+		)
+		return err
+	}
+	scheduleIDs := make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		scheduleIDs[i] = item.ID
+	}
+	if err := da.GetScheduleTeacherDA().BatchDelByScheduleIDs(ctx, tx, scheduleIDs); err != nil {
+		log.Error(ctx, "delete schedule: batch delete  by schedule ids failed",
+			log.Err(err),
+			log.Strings("scheduleIDs", scheduleIDs),
 		)
 		return err
 	}

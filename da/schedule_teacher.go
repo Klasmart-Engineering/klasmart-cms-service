@@ -16,6 +16,7 @@ type IScheduleTeacherDA interface {
 	dbo.DataAccesser
 	BatchInsert(context.Context, *dbo.DBContext, []*entity.ScheduleTeacher) (int, error)
 	DeleteByScheduleID(ctx context.Context, tx *dbo.DBContext, scheduleID string) error
+	BatchDelByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleID []string) error
 }
 
 type scheduleTeacherDA struct {
@@ -49,6 +50,19 @@ func (s *scheduleTeacherDA) DeleteByScheduleID(ctx context.Context, tx *dbo.DBCo
 		log.Error(ctx, "delete teacher_schedule by schedule id: delete failed",
 			log.Err(err),
 			log.String("schedule_id", scheduleID),
+		)
+		return err
+	}
+	return nil
+}
+
+func (s *scheduleTeacherDA) BatchDelByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) error {
+	if err := tx.Unscoped().
+		Where("schedule_id in (?)", scheduleIDs).
+		Delete(&entity.ScheduleTeacher{}).Error; err != nil {
+		log.Error(ctx, "delete teacher_schedule by schedule id: delete failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
 		)
 		return err
 	}

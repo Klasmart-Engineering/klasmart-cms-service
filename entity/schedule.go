@@ -235,6 +235,15 @@ type Schedule struct {
 
 type ScheduleStatus string
 
+func (s ScheduleStatus) Valid() bool {
+	switch s {
+	case ScheduleStatusNotStart, ScheduleStatusStarted, ScheduleStatusClosed:
+		return true
+	default:
+		return false
+	}
+}
+
 const (
 	ScheduleStatusNotStart ScheduleStatus = "NotStart"
 	ScheduleStatusStarted  ScheduleStatus = "Started"

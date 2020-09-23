@@ -122,6 +122,8 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case dbo.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
@@ -402,6 +404,42 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	}
 	log.Info(ctx, "record not found", log.Err(err), log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 	c.JSON(http.StatusInternalServerError, err.Error())
+}
+
+// @Summary updateStatus
+// @ID updateStatus
+// @Description update schedule status
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Param status query string true "schedule status" enums(NotStart, Started, Closed)
+// @Tags schedule
+// @Success 200 {object} entity.IDResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/:schedule_id/status [put]
+func (s *Server) updateScheduleStatus(c *gin.Context) {
+	id := c.Param("id")
+	status := c.Query("status")
+	ctx := c.Request.Context()
+	scheduleStatus := entity.ScheduleStatus(status)
+	if !scheduleStatus.Valid() {
+		log.Warn(ctx, "schedule status error", log.String("id", id), log.String("status", status))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+
+	err := model.GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), id, scheduleStatus)
+	log.Info(ctx, "schedule status error", log.String("id", id), log.String("status", status))
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, err.Error())
+	}
 }
 
 //func (s *Server) getAttachmentUploadPath(c *gin.Context) {
