@@ -35,10 +35,7 @@ CREATE TABLE `cms_contents` (
     KEY `content_publish_status` (`publish_status`),
     KEY `content_source_id` (`source_id`),
     KEY `content_latest_id` (`latest_id`),
-   FULLTEXT INDEX `content_name_index` (`content_name`) WITH PARSER ngram,
-    FULLTEXT INDEX `content_description_index` (`keywords`) WITH PARSER ngram,
-    FULLTEXT INDEX `content_keywords_index` (`description`) WITH PARSER ngram,
-    FULLTEXT INDEX `content_author_index` (`author_name`) WITH PARSER ngram
+   FULLTEXT INDEX `content_name_description_keywords_author_index` (`content_name`, `keywords`, `description`, `author_name`) 
 ) COMMENT '内容表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 
