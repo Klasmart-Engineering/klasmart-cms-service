@@ -418,7 +418,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules_time_view [put]
+// @Router /schedules/:id/status [put]
 func (s *Server) updateScheduleStatus(c *gin.Context) {
 	id := c.Param("id")
 	status := c.Query("status")
