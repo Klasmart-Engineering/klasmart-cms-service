@@ -93,7 +93,7 @@ func (s *scheduleDA) DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext,
 	if err := tx.Unscoped().
 		Where("repeat_id = ?", repeatID).
 		Where("start_at >= ?", startAt).
-		Where("status == ?", entity.ScheduleStatusNotStart).
+		Where("status = ?", entity.ScheduleStatusNotStart).
 		Delete(&entity.Schedule{}).Error; err != nil {
 		log.Error(ctx, "delete schedules with following: delete failed",
 			log.String("repeat_id", repeatID),
