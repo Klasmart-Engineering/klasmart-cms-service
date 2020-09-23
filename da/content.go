@@ -92,8 +92,18 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.IDS)
 	}
 	if s.Name != "" {
-		conditions = append(conditions, "match(content_name, description, author_name, keywords) against(? in boolean mode)")
-		params = append(params, s.Name + "*")
+		orCondition := make([]string, 4)
+		orCondition[0] = "match(content_name) against(? in boolean mode)"
+		orCondition[1] = "match(description) against(? in boolean mode)"
+		orCondition[2] = "match(author_name) against(? in boolean mode)"
+		orCondition[3] = "match(keywords) against(? in boolean mode)"
+		orConditionParts := strings.Join(orCondition, " or ")
+
+		conditions = append(conditions, "(" + orConditionParts + ")")
+		params = append(params, s.Name)
+		params = append(params, s.Name)
+		params = append(params, s.Name)
+		params = append(params, s.Name)
 	}
 	if len(s.ContentType) > 0 {
 		var subConditions []string
