@@ -144,6 +144,7 @@ type ScheduleCondition struct {
 	StartAndEndTimeViewRange []sql.NullInt64
 	LessonPlanID             sql.NullString
 	RepeatID                 sql.NullString
+	Status                   sql.NullString
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -205,6 +206,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.RepeatID.Valid {
 		wheres = append(wheres, "repeat_id = ?")
 		params = append(params, c.RepeatID.String)
+	}
+	if c.Status.Valid {
+		wheres = append(wheres, "status = ?")
+		params = append(params, c.Status.String)
 	}
 
 	if c.DeleteAt.Valid {

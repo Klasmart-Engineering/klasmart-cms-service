@@ -402,6 +402,10 @@ func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext,
 			String: schedule.RepeatID,
 			Valid:  true,
 		},
+		Status: sql.NullString{
+			String: string(entity.ScheduleStatusNotStart),
+			Valid:  true,
+		},
 	}, &scheduleList)
 	if err != nil {
 		log.Error(ctx, "delete schedule: delete with following failed",
