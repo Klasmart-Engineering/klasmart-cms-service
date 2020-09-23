@@ -407,10 +407,21 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 }
 func (s *Server) updateStatus(c *gin.Context) {
 	id := c.Param("id")
+	status := c.Query("status")
 	ctx := c.Request.Context()
-	err := model.GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), id, entity.ScheduleStatusClosed)
+	scheduleStatus := entity.ScheduleStatus(status)
+	if !scheduleStatus.Valid() {
+		log.Warn(ctx, "schedule status error", log.String("id", id), log.String("status", status))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+	err := model.GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), id, scheduleStatus)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, err)
+		log.Error(ctx, "schedule status error",
+			log.String("id", id),
+			log.String("status", status),
+			log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
 	}
 	c.JSON(http.StatusOK, id)
