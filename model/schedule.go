@@ -180,29 +180,29 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 
 	return scheduleList[0].ID, nil
 }
-func (s *scheduleModel) getSchedule(ctx context.Context, id string) (*entity.Schedule, error) {
+func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*entity.Schedule, error) {
 	// get old schedule by id
 	var schedule = new(entity.Schedule)
 	err := da.GetScheduleDA().Get(ctx, id, schedule)
 	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "getSchedule: get schedule by id failed, schedule not found", log.Err(err), log.String("id", id))
+		log.Error(ctx, "checkScheduleStatus: get schedule by id failed, schedule not found", log.Err(err), log.String("id", id))
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
-		log.Error(ctx, "getSchedule: get schedule by id failed",
+		log.Error(ctx, "checkScheduleStatus: get schedule by id failed",
 			log.Err(err),
 			log.String("id", id),
 		)
 		return nil, err
 	}
 	if schedule.DeleteAt != 0 {
-		log.Error(ctx, "getSchedule: get schedule by id failed, schedule not found",
+		log.Error(ctx, "checkScheduleStatus: get schedule by id failed, schedule not found",
 			log.String("id", id),
 		)
 		return nil, constant.ErrRecordNotFound
 	}
 	if schedule.Status != entity.ScheduleStatusNotStart {
-		log.Warn(ctx, "getSchedule: schedule status error",
+		log.Warn(ctx, "checkScheduleStatus: schedule status error",
 			log.String("id", id),
 			log.Any("schedule", schedule),
 		)
@@ -211,7 +211,7 @@ func (s *scheduleModel) getSchedule(ctx context.Context, id string) (*entity.Sch
 	return schedule, nil
 }
 func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
-	schedule, err := s.getSchedule(ctx, viewData.ID)
+	schedule, err := s.checkScheduleStatus(ctx, viewData.ID)
 	if err != nil {
 		log.Error(ctx, "update schedule: get schedule by id error",
 			log.Any("viewData", viewData),
@@ -342,7 +342,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	return id, nil
 }
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
-	schedule, err := s.getSchedule(ctx, id)
+	schedule, err := s.checkScheduleStatus(ctx, id)
 	if err == constant.ErrRecordNotFound {
 		log.Warn(ctx, "DeleteTx:schedule not found",
 			log.Err(err),
