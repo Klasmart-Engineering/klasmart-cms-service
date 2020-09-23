@@ -93,6 +93,7 @@ func (s *scheduleDA) DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext,
 	if err := tx.Unscoped().
 		Where("repeat_id = ?", repeatID).
 		Where("start_at >= ?", startAt).
+		Where("status == ?", entity.ScheduleStatusNotStart).
 		Delete(&entity.Schedule{}).Error; err != nil {
 		log.Error(ctx, "delete schedules with following: delete failed",
 			log.String("repeat_id", repeatID),
@@ -142,6 +143,7 @@ type ScheduleCondition struct {
 	StartAndEndRange         []sql.NullInt64
 	StartAndEndTimeViewRange []sql.NullInt64
 	LessonPlanID             sql.NullString
+	RepeatID                 sql.NullString
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -199,6 +201,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.LessonPlanID.Valid {
 		wheres = append(wheres, "lesson_plan_id = ?")
 		params = append(params, c.LessonPlanID.String)
+	}
+	if c.RepeatID.Valid {
+		wheres = append(wheres, "repeat_id = ?")
+		params = append(params, c.RepeatID.String)
 	}
 
 	if c.DeleteAt.Valid {
