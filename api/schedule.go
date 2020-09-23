@@ -405,6 +405,16 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	log.Info(ctx, "record not found", log.Err(err), log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 	c.JSON(http.StatusInternalServerError, err.Error())
 }
+func (s *Server) updateStatus(c *gin.Context) {
+	id := c.Param("id")
+	ctx := c.Request.Context()
+	err := model.GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), id, entity.ScheduleStatusClosed)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, id)
+}
 
 //func (s *Server) getAttachmentUploadPath(c *gin.Context) {
 //	ctx := c.Request.Context()
