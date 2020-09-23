@@ -82,6 +82,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusConflict, L(Unknown))
 	case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
 		c.JSON(http.StatusOK, entity.IDResponse{ID: newID})
 	default:

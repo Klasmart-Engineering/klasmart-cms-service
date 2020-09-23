@@ -80,6 +80,7 @@ type OutcomeCreateResponse struct {
 	RejectReason     string   `json:"reject_reason"`
 	Description      string   `json:"description"`
 	CreatedAt        int64    `json:"created_at"`
+	UpdatedAt        int64    `json:"updated_at"`
 }
 
 func newOutcomeCreateResponse(ctx context.Context, createView *OutcomeCreateView, outcome *entity.Outcome) OutcomeCreateResponse {
@@ -108,6 +109,7 @@ func newOutcomeCreateResponse(ctx context.Context, createView *OutcomeCreateView
 		RejectReason:     outcome.RejectReason,
 		Description:      outcome.Description,
 		CreatedAt:        outcome.CreateAt,
+		UpdatedAt:        outcome.UpdateAt,
 	}
 }
 
@@ -137,6 +139,7 @@ type OutcomeView struct {
 	RejectReason     string          `json:"reject_reason"`
 	Description      string          `json:"description"`
 	CreatedAt        int64           `json:"created_at"`
+	UpdatedAt        int64           `json:"update_at"`
 }
 
 type OutcomeSearchResponse struct {
@@ -163,9 +166,12 @@ type OutcomeIDList struct {
 }
 
 type PublishOutcomeReq struct {
-	Scope string `json:"scope" form:"scope"`
+	Scope string `json:"scope,omitempty" form:"scope,omitempty"`
 }
 
+type OutcomeRejectReq struct {
+	RejectReason string `json:"reject_reason"`
+}
 type Program struct {
 	ProgramID   string `json:"program_id"`
 	ProgramName string `json:"program_name"`
@@ -211,6 +217,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 		EstimatedTime:  outcome.EstimatedTime,
 		Description:    outcome.Description,
 		CreatedAt:      outcome.CreateAt,
+		UpdatedAt:      outcome.UpdateAt,
 	}
 	pIDs := strings.Split(outcome.Program, ",")
 	pNames := getProgramsName(ctx, pIDs)

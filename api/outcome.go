@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @ID createLearningOutcomes
@@ -17,8 +18,8 @@ import (
 // @Produce json
 // @Param outcome body OutcomeCreateView true "create outcome"
 // @Success 200 {object} OutcomeCreateResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes [post]
 func (s *Server) createOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -69,9 +70,9 @@ func (s *Server) createOutcome(c *gin.Context) {
 // @Produce json
 // @Param outcome_id path string true "outcome id"
 // @Success 200 {object} OutcomeView
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [get]
 func (s *Server) getOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -109,9 +110,9 @@ func (s *Server) getOutcome(c *gin.Context) {
 // @Param outcome_id path string true "outcome id"
 // @Param outcome body OutcomeCreateView true "learning outcome"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [put]
 func (s *Server) updateOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -164,9 +165,9 @@ func (s *Server) updateOutcome(c *gin.Context) {
 // @Produce json
 // @Param outcome_id path string true "outcome id"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [delete]
 func (s *Server) deleteOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -219,11 +220,11 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes [get]
 func (s *Server) queryOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -272,10 +273,10 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @Produce json
 // @Param outcome_id path string true "outcome id"
 // @Success 200 {string} OutcomeLockResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id}/lock [put]
 func (s *Server) lockOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -314,10 +315,10 @@ func (s *Server) lockOutcome(c *gin.Context) {
 // @Param outcome_id path string true "outcome id"
 // @Param PublishOutcomeRequest body PublishOutcomeReq false "publish scope"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id}/publish [put]
 func (s *Server) publishOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -328,14 +329,16 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
+
 	var req PublishOutcomeReq
 	err := c.ShouldBindJSON(&req)
-	if err.Error() != "EOF" {
+	if err != nil {
 		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
+
 	switch err {
 	//case model.ErrInvalidResourceId:
 	//	c.JSON(http.StatusBadRequest, L(Unknown))
@@ -368,10 +371,10 @@ func (s *Server) publishOutcome(c *gin.Context) {
 // @Produce json
 // @Param outcome_id path string true "outcome id"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id}/approve [put]
 func (s *Server) approveOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -411,19 +414,18 @@ func (s *Server) approveOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
+// @Param OutcomeRejectReq body OutcomeRejectReq true "reject reason"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id}/reject [put]
 func (s *Server) rejectOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
-	var reason struct {
-		RejectReason string `json:"reject_reason"`
-	}
+	var reason OutcomeRejectReq
 	err := c.ShouldBindJSON(&reason)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: ShouldBind failed", log.Err(err))
@@ -465,10 +467,10 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 // @Produce json
 // @Param id_list body OutcomeIDList true "outcome id list"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /bulk_publish/learning_outcomes [put]
 func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -514,10 +516,10 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 // @Produce json
 // @Param id_list body OutcomeIDList true "outcome id list"
 // @Success 200 {string} string "ok"
-// @Failure 400 {object} ErrorResponse
-// @Failure 403 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /bulk/learning_outcomes [delete]
 func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -570,11 +572,11 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /private_learning_outcomes [get]
 func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -626,11 +628,11 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
-// @Param order_by query string false "order by" Enums(name, -name, create_at, -created_at)
+// @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /pending_learning_outcomes [get]
 func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()

@@ -164,6 +164,12 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {
 	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "getMaterials:get content sub by id not found",
+			log.Err(err),
+			log.String("contentID", contentID))
+		return nil, constant.ErrRecordNotFound
+	}
 	if err != nil {
 		log.Error(ctx, "getMaterials:get content sub by id error",
 			log.Err(err),
