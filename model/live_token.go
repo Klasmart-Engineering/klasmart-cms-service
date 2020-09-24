@@ -29,7 +29,12 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	if err != nil {
 		return "", err
 	}
-
+	if schedule.Status == entity.ScheduleStatusNotStart {
+		err := GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), schedule.ID, entity.ScheduleStatusStarted)
+		if err != nil {
+			return "", err
+		}
+	}
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   entity.LiveTokenTypeLive,
