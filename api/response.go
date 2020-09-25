@@ -6,6 +6,10 @@ const (
 	Unknown ResponseLabel = "unknown"
 )
 
+const (
+	AssessMsgOneStudent ResponseLabel = "assess_msg_one_student"
+)
+
 // L create response object with label
 func L(label ResponseLabel) interface{} {
 	return ErrorResponse{Label: string(label)}
