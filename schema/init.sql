@@ -115,7 +115,7 @@ CREATE TABLE `learning_outcomes` (
     KEY `index_latest_id` (`latest_id`),
     KEY `index_publish_status` (`publish_status`),
     KEY `index_source_id` (`source_id`),
-    FULLTEXT INDEX `fullindex_name_description_keywords_author_shortcode` (`name`, `keywords`, `description`, `author_name`, `shortcode`) WITH PARSER ngram
+    FULLTEXT INDEX `fullindex_name_description_keywords_author_shortcode` (`name`, `keywords`, `description`, `author_name`, `shortcode`)
 ) COMMENT 'outcomes table' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 create table `assessments`
@@ -171,3 +171,6 @@ create table outcomes_attendances
     key `outcomes_attendances_outcome_id` (`outcome_id`),
     key `outcomes_attendances_attendance_id` (`attendance_id`)
 ) comment 'outcome and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
+create fulltext index fullindex_name_description_keywords_author_shortcode on learning_outcomes(`name`, `keywords`, `description`, `author_name`, `shortcode`);
