@@ -6,6 +6,10 @@ const (
 	Unknown ResponseLabel = "unknown"
 )
 
+const (
+	AssessMsgOneStudent ResponseLabel = "assess_msg_one_student"
+)
+
 // schedule msg
 const (
 	ScheduleMsgEditOverlap   ResponseLabel = "schedule_schedule_msg_edit_all"
