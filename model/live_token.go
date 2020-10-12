@@ -202,6 +202,11 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			materialItem.TypeName = entity.MaterialTypeAudio
 		case entity.FileTypeVideo:
 			materialItem.TypeName = entity.MaterialTypeVideo
+		case entity.FileTypeH5p:
+			materialItem.TypeName = entity.MaterialTypeH5P
+		default:
+			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
+			continue
 		}
 		// material url
 		if materialItem.TypeName == entity.MaterialTypeH5P {
