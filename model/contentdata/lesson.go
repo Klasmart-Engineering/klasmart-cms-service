@@ -61,7 +61,9 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 		}
 	}
 }
-
+func (h *LessonData) PrepareSave(ctx context.Context) error {
+	return nil
+}
 func (l *LessonData) SubContentIds(ctx context.Context) []string {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {

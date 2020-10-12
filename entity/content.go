@@ -26,6 +26,17 @@ const (
 	ContentTypeAssetVideo    = 11
 	ContentTypeAssetAudio    = 12
 	ContentTypeAssetDocument = 13
+
+	MaterialInputSourceH5p    = 1
+	MaterialInputSourceDisk   = 2
+	MaterialInputSourceAssets = 3
+
+	FileTypeImage = 1
+	FileTypeVideo = 2
+	FileTypeAudio = 3
+	FileTypeDocument = 4
+
+	FileTypeAssetsTypeOffset = 9
 )
 
 var (
@@ -416,6 +427,7 @@ type ContentData interface {
 
 	Validate(ctx context.Context, contentType ContentType) error
 	PrepareResult(ctx context.Context) error
+	PrepareSave(ctx context.Context) error
 	SubContentIds(ctx context.Context) []string
 }
 
