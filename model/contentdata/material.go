@@ -62,8 +62,8 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 		fallthrough
 	case entity.MaterialInputSourceDisk:
 		ext := this.Source.Ext()
-		if isArray(ext, constant.MaterialsExtension) {
-			return errors.New("invalid source extension")
+		if !isArray(ext, constant.MaterialsExtension) {
+			return ErrInvalidSourceExt
 		}
 	default:
 		return ErrInvalidMaterialType
