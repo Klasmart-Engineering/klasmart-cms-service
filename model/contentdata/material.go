@@ -22,9 +22,9 @@ func NewMaterialData() *MaterialData {
 }
 
 type MaterialData struct {
-	InputSource int `json:"input_source"`
-	FileType int `json:"file_type"`
-	Source      SourceId `json:"source"`
+	InputSource int      `json:"input_source"`
+	FileType    int      `json:"file_type"`
+	Source      SourceID `json:"source"`
 }
 func (this *MaterialData) Unmarshal(ctx context.Context, data string) error {
 	ins := MaterialData{}

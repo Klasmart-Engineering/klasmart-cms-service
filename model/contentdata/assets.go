@@ -14,13 +14,13 @@ func NewAssetsData() *AssetsData {
 }
 
 type AssetsData struct {
-	Size 	 int 	`json:"size"`
-	FileType int `json:"file_type"`
-	Source   SourceId `json:"source"`
+	Size     int      `json:"size"`
+	FileType int      `json:"file_type"`
+	Source   SourceID `json:"source"`
 }
 
-type SourceId string
-func (s SourceId) Ext() string {
+type SourceID string
+func (s SourceID) Ext() string {
 	parts := strings.Split(string(s), ".")
 	if len(parts) < 2 {
 		return ""
@@ -29,7 +29,7 @@ func (s SourceId) Ext() string {
 	ext = strings.ToLower(ext)
 	return ext
 }
-func (s SourceId) IsNil() bool {
+func (s SourceID) IsNil() bool {
 	if strings.TrimSpace(string(s)) == "" {
 		return true
 	}
@@ -108,7 +108,7 @@ func isArray(ext string, extensions []string) bool{
 }
 
 
-func ExtensionToFileType(ctx context.Context, sourceId SourceId) (int, error) {
+func ExtensionToFileType(ctx context.Context, sourceId SourceID) (int, error) {
 	if sourceId.IsNil() {
 		log.Error(ctx, "marshal material failed", log.String("source", string(sourceId)))
 		return -1, ErrContentDataRequestSource
