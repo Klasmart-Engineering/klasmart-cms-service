@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 
@@ -14,6 +15,8 @@ var(
 	ErrInvalidContentType = errors.New("invalid content type")
 	ErrContentDataRequestSource = errors.New("material require source")
 	ErrInvalidMaterialInLesson = errors.New("invalid material in lesson")
+	ErrInvalidMaterialType = errors.New("invalid material type")
+	ErrInvalidSourceExt = errors.New("invalid source extension")
 )
 
 func NewMaterialData() *MaterialData {
@@ -21,7 +24,9 @@ func NewMaterialData() *MaterialData {
 }
 
 type MaterialData struct {
-	Source   string `json:"source"`
+	InputSource int `json:"input_source"`
+	FileType int `json:"file_type"`
+	Source      string `json:"source"`
 }
 func (this *MaterialData) Unmarshal(ctx context.Context, data string) error {
 	ins := MaterialData{}
@@ -52,6 +57,33 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 		return ErrContentDataRequestSource
 	}
 
+	switch this.InputSource {
+	case entity.MaterialInputSourceH5p:
+	case entity.MaterialInputSourceAssets:
+		//查看assets?
+		fallthrough
+	case entity.MaterialInputSourceDisk:
+		parts := strings.Split(this.Source, ".")
+		if len(parts) < 2 {
+			return errors.New("invalid source")
+		}
+		ext := parts[len(parts) - 1]
+		ext = strings.ToLower(ext)
+		if isArray(ext, constant.MaterialsExtension) {
+			return errors.New("invalid source extension")
+		}
+	default:
+		return ErrInvalidMaterialType
+	}
+	return nil
+}
+
+func (h *MaterialData) PrepareSave(ctx context.Context) error {
+	fileType, err := ExtensionToFileType(ctx, h.Source)
+	if err != nil{
+		return err
+	}
+	h.FileType = fileType
 	return nil
 }
 func (h *MaterialData) SubContentIds(ctx context.Context) []string{

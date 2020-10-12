@@ -146,6 +146,42 @@ func (s *Server) publishContent(c *gin.Context) {
 	}
 }
 
+// @Summary publishContentWithAssets
+// @ID publishContentWithAssets
+// @Description publish a content with assets
+// @Accept json
+// @Produce json
+// @Param content_id path string true "content id to publish"
+// @Param data body PublishContentRequest true "content publish data"
+// @Tags content
+// @Success 200 {object} string
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents/{content_id}/publish/assets [put]
+func (s *Server) publishContentWithAssets(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	cid := c.Param("content_id")
+
+	data := new(PublishContentRequest)
+	err := c.ShouldBind(&data)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+
+	err = model.GetContentModel().PublishContentWithAssets(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
+	switch err {
+	case model.ErrNoContent:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, "")
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+
 // @Summary getContent
 // @ID getContentById
 // @Description get a content by id

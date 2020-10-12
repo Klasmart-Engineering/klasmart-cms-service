@@ -30,6 +30,18 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		return nil, ErrInvalidContentData
 	}
 
+	err = cd.PrepareSave(ctx)
+	if err != nil {
+		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		return nil, ErrInvalidContentData
+	}
+	data, err := cd.Marshal(ctx)
+	if err != nil {
+		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		return nil, ErrMarshalContentDataFailed
+	}
+	c.Data = data
+
 	//get publishScope&authorName
 	publishScope := c.PublishScope
 	//TODO: To get real name
@@ -135,7 +147,18 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}
-		content.Data = data.Data
+
+		err = cd.PrepareResult(ctx)
+		if err != nil {
+			return nil, ErrInvalidContentData
+		}
+
+		data, err := cd.Marshal(ctx)
+		if err != nil {
+			return nil, ErrMarshalContentDataFailed
+		}
+
+		content.Data = data
 	}
 	content.UpdateAt = time.Now().Unix()
 
