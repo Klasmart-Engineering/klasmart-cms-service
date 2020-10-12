@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
-
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
 
 var(
@@ -26,7 +24,7 @@ func NewMaterialData() *MaterialData {
 type MaterialData struct {
 	InputSource int `json:"input_source"`
 	FileType int `json:"file_type"`
-	Source      string `json:"source"`
+	Source      SourceId `json:"source"`
 }
 func (this *MaterialData) Unmarshal(ctx context.Context, data string) error {
 	ins := MaterialData{}
@@ -52,8 +50,8 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 	if contentType != entity.ContentTypeMaterial {
 		return ErrInvalidContentType
 	}
-	if strings.TrimSpace(this.Source) == "" {
-		log.Error(ctx, "marshal material failed", log.String("source", this.Source))
+	if this.Source.IsNil() {
+		log.Error(ctx, "marshal material failed", log.String("source", string(this.Source)))
 		return ErrContentDataRequestSource
 	}
 
@@ -63,12 +61,7 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 		//查看assets?
 		fallthrough
 	case entity.MaterialInputSourceDisk:
-		parts := strings.Split(this.Source, ".")
-		if len(parts) < 2 {
-			return errors.New("invalid source")
-		}
-		ext := parts[len(parts) - 1]
-		ext = strings.ToLower(ext)
+		ext := this.Source.Ext()
 		if isArray(ext, constant.MaterialsExtension) {
 			return errors.New("invalid source extension")
 		}

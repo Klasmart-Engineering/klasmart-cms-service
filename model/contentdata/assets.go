@@ -16,7 +16,24 @@ func NewAssetsData() *AssetsData {
 type AssetsData struct {
 	Size 	 int 	`json:"size"`
 	FileType int `json:"file_type"`
-	Source   string `json:"source"`
+	Source   SourceId `json:"source"`
+}
+
+type SourceId string
+func (s SourceId) Ext() string {
+	parts := strings.Split(string(s), ".")
+	if len(parts) < 2 {
+		return ""
+	}
+	ext := parts[len(parts) - 1]
+	ext = strings.ToLower(ext)
+	return ext
+}
+func (s SourceId) IsNil() bool {
+	if strings.TrimSpace(string(s)) == "" {
+		return true
+	}
+	return false
 }
 
 func (this *AssetsData) Unmarshal(ctx context.Context, data string) error {
@@ -45,17 +62,13 @@ func (a *AssetsData) SubContentIds(ctx context.Context) []string{
 }
 
 func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentType) error {
-	if strings.TrimSpace(a.Source) == "" {
-		log.Error(ctx, "marshal material failed", log.String("source", a.Source))
+	if a.Source.IsNil() {
+		log.Error(ctx, "marshal material failed", log.String("source", string(a.Source)))
 		return ErrContentDataRequestSource
 	}
-	parts := strings.Split(a.Source, ".")
-	if len(parts) < 2 {
-		return ErrInvalidSourceExt
-	}
-	ext := parts[len(parts) - 1]
+
+	ext := a.Source.Ext()
 	flag := false
-	ext = strings.ToLower(ext)
 	switch contentType {
 	case entity.ContentTypeAssetImage:
 		flag = isArray(ext, constant.AssetsImageExtension)
@@ -95,18 +108,12 @@ func isArray(ext string, extensions []string) bool{
 }
 
 
-func ExtensionToFileType(ctx context.Context, resourceId string) (int, error) {
-	if strings.TrimSpace(resourceId) == "" {
-		log.Error(ctx, "marshal material failed", log.String("source", resourceId))
+func ExtensionToFileType(ctx context.Context, sourceId SourceId) (int, error) {
+	if sourceId.IsNil() {
+		log.Error(ctx, "marshal material failed", log.String("source", string(sourceId)))
 		return -1, ErrContentDataRequestSource
 	}
-	parts := strings.Split(resourceId, ".")
-	if len(parts) < 2 {
-		return -1, ErrInvalidSourceExt
-	}
-	ext := parts[len(parts) - 1]
-	ext = strings.ToLower(ext)
-
+	ext := sourceId.Ext()
 	if isArray(ext, constant.AssetsImageExtension) {
 		return entity.FileTypeImage, nil
 	}
