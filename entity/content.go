@@ -35,6 +35,7 @@ const (
 	FileTypeVideo = 2
 	FileTypeAudio = 3
 	FileTypeDocument = 4
+	FileTypeH5p = 5
 
 	FileTypeAssetsTypeOffset = 9
 )
