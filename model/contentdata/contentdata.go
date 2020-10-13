@@ -16,13 +16,7 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 		contentData = new(LessonData)
 	case entity.ContentTypeMaterial:
 		contentData = new(MaterialData)
-	case entity.ContentTypeAssetVideo:
-		fallthrough
-	case entity.ContentTypeAssetImage:
-		fallthrough
-	case entity.ContentTypeAssetAudio:
-		fallthrough
-	case entity.ContentTypeAssetDocument:
+	case entity.ContentTypeAssets:
 		contentData = new(AssetsData)
 	default:
 		return nil, errors.New("unknown content type")
