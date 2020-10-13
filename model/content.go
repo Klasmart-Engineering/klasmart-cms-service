@@ -294,8 +294,8 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
 	if data.ContentType.IsAsset() {
-		provider := external.GetPublishScopeProvider()
-		data.PublishScope = provider.DefaultPublishScope(ctx)
+		//Assets can't be updated
+		return ErrInvalidContentType
 	}
 
 	err := cm.checkContentInfo(ctx, data, false)
@@ -310,9 +310,6 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
 		return err
-	}
-	if content.ContentType.IsAsset() {
-		return ErrInvalidContentType
 	}
 
 	content, err = cm.checkUpdateContent(ctx, tx, content, user)

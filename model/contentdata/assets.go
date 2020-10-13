@@ -68,18 +68,7 @@ func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentTyp
 	}
 
 	ext := a.Source.Ext()
-	flag := false
-	switch contentType {
-	case entity.ContentTypeAssetImage:
-		flag = isArray(ext, constant.AssetsImageExtension)
-	case entity.ContentTypeAssetDocument:
-		flag = isArray(ext, constant.AssetsDocExtension)
-	case entity.ContentTypeAssetAudio:
-		flag = isArray(ext, constant.AssetsAudioExtension)
-	case entity.ContentTypeAssetVideo:
-		flag = isArray(ext, constant.AssetsVideoExtension)
-	}
-	if !flag {
+	if !isArray(ext, constant.MaterialsExtension) {
 		return ErrInvalidSourceExt
 	}
 
