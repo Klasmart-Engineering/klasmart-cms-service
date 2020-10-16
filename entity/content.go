@@ -33,6 +33,13 @@ const (
 	FileTypeH5p = 5
 
 	FileTypeAssetsTypeOffset = 9
+
+	SelfStudyTrue     = 1
+	SelfStudyFalse    = 2
+	DrawActivityTrue  = 1
+	DrawActivityFalse = 2
+	LessonTypeTest    = 1
+	LessonTypeNotTest = 2
 )
 
 var (
@@ -40,6 +47,7 @@ var (
 	ErrRequirePublishScope = errors.New("publish scope required")
 	ErrInvalidResourceId   = errors.New("invalid resource id")
 	ErrInvalidContentType  = errors.New("invalid content type")
+	ErrInvalidLessonType   = errors.New("invalid lesson type")
 )
 
 type ContentPublishStatus string
@@ -145,40 +153,44 @@ type ContentStatisticsInfo struct {
 }
 
 type Content struct {
-	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
-	ContentType   ContentType `gorm:"type:int;NOTNULL; column:content_type" dynamodbav:"content_type" json:"content_type" dynamoupdate:":ct"`
-	Name          string      `gorm:"type:varchar(255);NOT NULL;column:content_name" dynamodbav:"content_name" json:"content_name" dynamoupdate:":n"`
-	Program       string      `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
-	Subject       string      `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
-	Developmental string      `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
-	Skills        string      `gorm:"type:varchar(1024);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
-	Age           string      `gorm:"type:varchar(1024);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
-	Grade         string      `gorm:"type:varchar(1024);NOT NULL;column:grade" dynamodbav:"grade" json:"grade" dynamoupdate:":grd"`
-	Keywords      string      `gorm:"type:text;NOT NULL;column:keywords" dynamodbav:"keywords" json:"keywords" dynamoupdate:":ky"`
-	Description   string      `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
-	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail" dynamodbav:"thumbnail" json:"thumbnail" dynamoupdate:":th"`
+	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
+	ContentType   ContentType `gorm:"type:int;NOTNULL; column:content_type"`
+	Name          string      `gorm:"type:varchar(255);NOT NULL;column:content_name"`
+	Program       string      `gorm:"type:varchar(1024);NOT NULL;column:program"`
+	Subject       string      `gorm:"type:varchar(1024);NOT NULL;column:subject"`
+	Developmental string      `gorm:"type:varchar(1024);NOT NULL;column:developmental"`
+	Skills        string      `gorm:"type:varchar(1024);NOT NULL;column:skills"`
+	Age           string      `gorm:"type:varchar(1024);NOT NULL;column:age"`
+	Grade         string      `gorm:"type:varchar(1024);NOT NULL;column:grade"`
+	Keywords      string      `gorm:"type:text;NOT NULL;column:keywords"`
+	Description   string      `gorm:"type:text;NOT NULL;column:description"`
+	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail"`
 
 	Outcomes string `gorm:"type:text;NOT NULL;column:outcomes"`
-	Data     string `gorm:"type:json;NOT NULL;column:data" dynamodbav:"content_data" json:"content_data" dynamoupdate:":d"`
-	Extra    string `gorm:"type:text;NOT NULL;column:extra" dynamodbav:"extra" json:"extra" dynamoupdate:":ex"`
+	Data     string `gorm:"type:json;NOT NULL;column:data"`
+	Extra    string `gorm:"type:text;NOT NULL;column:extra"`
 
-	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time" dynamodbav:"suggest_time" json:"suggest_time" dynamoupdate:":sut"`
-	Author      string `gorm:"type:varchar(50);NOT NULL;column:author" dynamodbav:"author" json:"author" dynamoupdate:":au"`
-	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name" dynamodbav:"author_name" json:"author_name" dynamoupdate:":aun"`
-	Org         string `gorm:"type:varchar(50);NOT NULL;column:org" dynamodbav:"org" json:"org" dynamoupdate:":og"`
+	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time"`
+	Author      string `gorm:"type:varchar(50);NOT NULL;column:author"`
+	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name"`
+	Org         string `gorm:"type:varchar(50);NOT NULL;column:org"`
 
-	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index" dynamodbav:"publish_scope" json:"publish_scope" dynamoupdate:":ps"`
-	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index" dynamodbav:"publish_status" json:"publish_status" dynamoupdate:":pst"`
+	SelfStudy int    `gorm:"type:tinyint;NOT NULL;column:self_study"`
+	DrawActivity int    `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
+	LessonType int    `gorm:"type:tinyint;NOT NULL;column:lesson_type"`
 
-	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason" dynamodbav:"reject_reason" json:"reject_reason" dynamoupdate:":rr"`
-	Version      int64  `gorm:"type:int;NOT NULL;column:version" dynamodbav:"version" json:"version" dynamoupdate:":ve"`
-	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by" dynamodbav:"locked_by" json:"locked_by" dynamoupdate:":lb"`
-	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id" dynamodbav:"source_id" json:"source_id" dynamoupdate:":si"`
-	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
+	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
+	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
 
-	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeleteAt int64 `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason"`
+	Version      int64  `gorm:"type:int;NOT NULL;column:version"`
+	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by"`
+	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id"`
+	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id"`
+
+	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at"`
+	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at"`
+	DeleteAt int64 `gorm:"type:bigint;column:delete_at"`
 }
 
 func (u Content) UpdateExpress() string {
@@ -189,43 +201,6 @@ func (u Content) UpdateExpress() string {
 	}
 	updateExpress := strings.Join(updateExpressParts, ",")
 	return "set " + updateExpress
-}
-
-type UpdateDyContent struct {
-	ContentType   ContentType ` json:":ct"`
-	Name          string      `json:":n"`
-	Program       string      `json:":p"`
-	Subject       string      `json:":su"`
-	Developmental string      `json:":dv"`
-	Skills        string      `json:":sk"`
-	Age           string      `json:":a"`
-	Keywords      string      `json:":ky"`
-	Description   string      `json:":de"`
-	Thumbnail     string      `json:":th"`
-	LockedBy      string      `json:":lb"`
-
-	Data  string `json:":d"`
-	Extra string `json:":ex"`
-
-	Author      string `json:":au"`
-	AuthorName  string `json:":aun"`
-	Org         string `json:":og"`
-	SuggestTime int    `json:":sut"`
-
-	PublishScope  string               `json:":ps"`
-	PublishStatus ContentPublishStatus `json:":pst"`
-
-	RejectReason string `json:":rr"`
-	SourceID     string `json:":si"`
-	LatestID     string `json:"lsi"`
-	Version      int64  `json:":ve"`
-
-	OrgUserId                     string `json:":ouid"`
-	ContentTypeOrgIdPublishStatus string `json:":cps"`
-
-	CreatedAt int64 `json:":ca"`
-	UpdatedAt int64 `json:":ua"`
-	DeletedAt int64 `json:":da"`
 }
 
 type TagValues struct {
@@ -275,6 +250,10 @@ type CreateContentRequest struct {
 	SuggestTime   int         `json:"suggest_time"`
 	//RejectReason  string      `json:"reject_reason"`
 
+	SelfStudy int `json:"self_study"`
+	DrawActivity int `json:"draw_activity"`
+	LessonType int `json:"lesson_type"`
+
 	Outcomes []string `json:"outcomes"`
 
 	PublishScope string `json:"publish_scope"`
@@ -300,6 +279,22 @@ func (c CreateContentRequest) Validate() error {
 		// 	return ErrResourceNotFound
 		// }
 	}
+	if c.LessonType > 0 {
+		if c.LessonType != LessonTypeTest && c.LessonType != LessonTypeNotTest {
+			return ErrInvalidLessonType
+		}
+	}
+	if c.DrawActivity > 0 {
+		if c.DrawActivity != DrawActivityTrue && c.DrawActivity != DrawActivityFalse {
+			return ErrInvalidLessonType
+		}
+	}
+	if c.SelfStudy > 0 {
+		if c.SelfStudy != SelfStudyTrue && c.SelfStudy != SelfStudyFalse {
+			return ErrInvalidLessonType
+		}
+	}
+
 	return nil
 }
 
@@ -349,6 +344,10 @@ type ContentInfo struct {
 	Thumbnail     string      `json:"thumbnail"`
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
+
+	SelfStudy int `json:"self_study"`
+	DrawActivity int `json:"draw_activity"`
+	LessonType int `json:"lesson_type"`
 
 	Outcomes []string `json:"outcomes"`
 
