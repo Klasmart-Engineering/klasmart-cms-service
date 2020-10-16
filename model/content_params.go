@@ -48,9 +48,16 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	authorName := "Bada"
 
 	//若为asset，直接发布
-	if c.ContentType.IsAsset() {
+	if c.ContentType == entity.ContentTypeAssets {
 		publishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
+		c.SelfStudy = 0
+		c.DrawActivity = 0
+		c.LessonType = 0
 	}
+	if c.ContentType == entity.ContentTypeMaterial {
+		c.LessonType = 0
+	}
+
 
 	return &entity.Content{
 		//ID:            utils.NewID(),
@@ -61,14 +68,17 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Developmental: strings.Join(c.Developmental, ","),
 		Skills:        strings.Join(c.Skills, ","),
 		Age:           strings.Join(c.Age, ","),
-		Grade:			strings.Join(c.Grade, ","),
+		Grade:         strings.Join(c.Grade, ","),
 		Keywords:      strings.Join(c.Keywords, ","),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
 		SuggestTime:   c.SuggestTime,
 		Data:          c.Data,
 		Extra:         c.Extra,
-		Outcomes: 		strings.Join(c.Outcomes, ","),
+		LessonType:    c.LessonType,
+		SelfStudy:     c.SelfStudy,
+		DrawActivity:  c.DrawActivity,
+		Outcomes:      strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
 		AuthorName:    authorName,
 		LockedBy:      constant.LockedByNoBody,
@@ -122,13 +132,25 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.SuggestTime > 0 {
 		content.SuggestTime = data.SuggestTime
 	}
+	if data.ContentType == entity.ContentTypeMaterial || data.ContentType == entity.ContentTypeMaterial {
+		if data.SelfStudy > 0{
+			content.SelfStudy = data.SelfStudy
+		}
+		if data.DrawActivity > 0{
+			content.DrawActivity = data.DrawActivity
+		}
+	}
+
+	if data.ContentType == entity.ContentTypeLesson && data.LessonType > 0 {
+		content.LessonType = data.LessonType
+	}
 
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusDraft
 	}
 	//若已发布，不能修改publishScope
 	if content.PublishStatus == entity.ContentStatusDraft ||
-		content.PublishStatus == entity.ContentStatusRejected{
+		content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishScope = data.PublishScope
 	}
 
@@ -194,7 +216,6 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 	}
 	return content
 }
-
 
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	err := cm.checkPublishContent(ctx, tx, content, user)
