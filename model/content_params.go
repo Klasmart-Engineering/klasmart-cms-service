@@ -50,8 +50,8 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	//若为asset，直接发布
 	if c.ContentType == entity.ContentTypeAssets {
 		publishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
-		c.SelfStudy = 0
-		c.DrawActivity = 0
+		c.SelfStudy = false
+		c.DrawActivity = false
 		c.LessonType = 0
 	}
 	if c.ContentType == entity.ContentTypeMaterial {
@@ -76,8 +76,8 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Data:          c.Data,
 		Extra:         c.Extra,
 		LessonType:    c.LessonType,
-		SelfStudy:     c.SelfStudy,
-		DrawActivity:  c.DrawActivity,
+		SelfStudy:     c.SelfStudy.Int(),
+		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
 		AuthorName:    authorName,
@@ -133,12 +133,8 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.SuggestTime = data.SuggestTime
 	}
 	if data.ContentType == entity.ContentTypeMaterial || data.ContentType == entity.ContentTypeMaterial {
-		if data.SelfStudy > 0{
-			content.SelfStudy = data.SelfStudy
-		}
-		if data.DrawActivity > 0{
-			content.DrawActivity = data.DrawActivity
-		}
+		content.DrawActivity = data.DrawActivity.Int()
+		content.SelfStudy = data.SelfStudy.Int()
 	}
 
 	if data.ContentType == entity.ContentTypeLesson && data.LessonType > 0 {

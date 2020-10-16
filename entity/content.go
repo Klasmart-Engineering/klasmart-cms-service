@@ -175,8 +175,8 @@ type Content struct {
 	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name"`
 	Org         string `gorm:"type:varchar(50);NOT NULL;column:org"`
 
-	SelfStudy int    `gorm:"type:tinyint;NOT NULL;column:self_study"`
-	DrawActivity int    `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
+	SelfStudy BoolTinyInt    `gorm:"type:tinyint;NOT NULL;column:self_study"`
+	DrawActivity BoolTinyInt    `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
 	LessonType int    `gorm:"type:tinyint;NOT NULL;column:lesson_type"`
 
 	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
@@ -235,6 +235,24 @@ func (s Content) GetID() interface{} {
 	return s.ID
 }
 
+type TinyIntBool bool
+
+func (t TinyIntBool) Int()BoolTinyInt{
+	if t{
+		return 1
+	}else{
+		return 2
+	}
+}
+
+type BoolTinyInt int
+func (b BoolTinyInt) Bool() TinyIntBool {
+	if b == 1 {
+		return true
+	}
+	return false
+}
+
 type CreateContentRequest struct {
 	ContentType   ContentType `json:"content_type"`
 	Name          string      `json:"name"`
@@ -248,10 +266,9 @@ type CreateContentRequest struct {
 	Description   string      `json:"description"`
 	Thumbnail     string      `json:"thumbnail"`
 	SuggestTime   int         `json:"suggest_time"`
-	//RejectReason  string      `json:"reject_reason"`
 
-	SelfStudy int `json:"self_study"`
-	DrawActivity int `json:"draw_activity"`
+	SelfStudy TinyIntBool `json:"self_study"`
+	DrawActivity TinyIntBool `json:"draw_activity"`
 	LessonType int `json:"lesson_type"`
 
 	Outcomes []string `json:"outcomes"`
@@ -281,16 +298,6 @@ func (c CreateContentRequest) Validate() error {
 	}
 	if c.LessonType > 0 {
 		if c.LessonType != LessonTypeTest && c.LessonType != LessonTypeNotTest {
-			return ErrInvalidLessonType
-		}
-	}
-	if c.DrawActivity > 0 {
-		if c.DrawActivity != DrawActivityTrue && c.DrawActivity != DrawActivityFalse {
-			return ErrInvalidLessonType
-		}
-	}
-	if c.SelfStudy > 0 {
-		if c.SelfStudy != SelfStudyTrue && c.SelfStudy != SelfStudyFalse {
 			return ErrInvalidLessonType
 		}
 	}
@@ -345,8 +352,8 @@ type ContentInfo struct {
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
 
-	SelfStudy int `json:"self_study"`
-	DrawActivity int `json:"draw_activity"`
+	SelfStudy TinyIntBool `json:"self_study"`
+	DrawActivity TinyIntBool `json:"draw_activity"`
 	LessonType int `json:"lesson_type"`
 
 	Outcomes []string `json:"outcomes"`
