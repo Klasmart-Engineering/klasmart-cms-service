@@ -800,7 +800,7 @@ func GetOutcomeModel() IOutcomeModel {
 }
 
 const BaseCustom = 36
-const ShowLength = 3
+const ShowLength = 5
 
 var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
 
