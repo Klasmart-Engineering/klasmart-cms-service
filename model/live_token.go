@@ -29,7 +29,12 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	if err != nil {
 		return "", err
 	}
-
+	if schedule.Status == entity.ScheduleStatusNotStart {
+		err := GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), schedule.ID, entity.ScheduleStatusStarted)
+		if err != nil {
+			return "", err
+		}
+	}
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   entity.LiveTokenTypeLive,
@@ -182,16 +187,41 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			continue
 		}
 		materialItem := &entity.LiveMaterial{
-			Name:     item.Name,
-			TypeName: entity.MaterialTypeH5P,
+			Name: item.Name,
 		}
 		mData, ok := item.Data.(*contentdata.MaterialData)
 		if !ok {
-			// TODO
 			log.Debug(ctx, "content data convert materialdata error", log.Any("item", item))
 			continue
 		}
-		materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
+		// material type
+		switch mData.FileType {
+		case entity.FileTypeImage:
+			materialItem.TypeName = entity.MaterialTypeImage
+		case entity.FileTypeAudio:
+			materialItem.TypeName = entity.MaterialTypeAudio
+		case entity.FileTypeVideo:
+			materialItem.TypeName = entity.MaterialTypeVideo
+		case entity.FileTypeH5p:
+			materialItem.TypeName = entity.MaterialTypeH5P
+		default:
+			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
+			continue
+		}
+		// material url
+		if materialItem.TypeName == entity.MaterialTypeH5P {
+			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
+		} else {
+			materialItem.URL, err = GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
+			if err != nil {
+				log.Error(ctx, "getMaterials:get resource path error",
+					log.Err(err),
+					log.String("contentID", contentID),
+					log.Any("mData", mData))
+				return nil, err
+			}
+		}
+
 		materials = append(materials, materialItem)
 	}
 	return materials, nil

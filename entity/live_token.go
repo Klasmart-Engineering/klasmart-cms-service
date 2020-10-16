@@ -12,7 +12,10 @@ const (
 type MaterialType string
 
 const (
-	MaterialTypeH5P MaterialType = "Iframe"
+	MaterialTypeH5P   MaterialType = "Iframe"
+	MaterialTypeVideo MaterialType = "Video"
+	MaterialTypeAudio MaterialType = "Audio"
+	MaterialTypeImage MaterialType = "Image"
 )
 
 type LiveTokenInfo struct {

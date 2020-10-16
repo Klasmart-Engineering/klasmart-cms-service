@@ -33,6 +33,7 @@ func (s Server) registeRoute() {
 		content.PUT("/contents/:content_id", MustLogin, s.updateContent)
 		content.PUT("/contents/:content_id/lock", MustLogin, s.lockContent)
 		content.PUT("/contents/:content_id/publish", MustLogin, s.publishContent)
+		content.PUT("/contents/:content_id/publish/assets", MustLogin, s.publishContentWithAssets)
 		content.PUT("/contents/:content_id/review/approve", MustLogin, s.approve)
 		content.PUT("/contents/:content_id/review/reject", MustLogin, s.reject)
 		content.DELETE("/contents/:content_id", MustLogin, s.deleteContent)

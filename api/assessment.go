@@ -189,6 +189,13 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		cmd.ID = id
 	}
 
+	{
+		if cmd.AttendanceIDs != nil && len(*cmd.AttendanceIDs) == 0 {
+			c.JSON(http.StatusBadRequest, L(AssessMsgOneStudent))
+			return
+		}
+	}
+
 	if err := model.GetAssessmentModel().Update(ctx, cmd); err != nil {
 		log.Info(ctx, "update assessment: update failed")
 		c.JSON(http.StatusInternalServerError, L(Unknown))

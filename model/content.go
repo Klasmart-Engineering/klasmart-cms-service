@@ -26,6 +26,7 @@ var (
 	ErrNoContentData                     = errors.New("no content data")
 	ErrInvalidResourceId                 = errors.New("invalid resource id")
 	ErrInvalidContentData                = errors.New("invalid content data")
+	ErrMarshalContentDataFailed                = errors.New("marshal content data failed")
 	ErrInvalidPublishStatus              = errors.New("invalid publish status")
 	ErrInvalidLockedContentPublishStatus = errors.New("invalid locked content publish status")
 	ErrInvalidContentStatusToPublish     = errors.New("content status is invalid to publish")
@@ -41,6 +42,8 @@ var (
 	ErrReadContentFailed                 = errors.New("read content failed")
 	ErrDeleteContentFailed               = errors.New("delete contentdata into data access failed")
 
+	ErrInvalidMaterialType = errors.New("invalid material type")
+
 	ErrBadRequest         = errors.New("bad request")
 	ErrResourceNotFound   = errors.New("resource not found")
 	ErrInvalidContentType = errors.New("invalid content type")
@@ -54,6 +57,7 @@ type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
 	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
+	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
@@ -290,8 +294,8 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
 	if data.ContentType.IsAsset() {
-		provider := external.GetPublishScopeProvider()
-		data.PublishScope = provider.DefaultPublishScope(ctx)
+		//Assets can't be updated
+		return ErrInvalidContentType
 	}
 
 	err := cm.checkContentInfo(ctx, data, false)
@@ -306,9 +310,6 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
 		return err
-	}
-	if content.ContentType.IsAsset() {
-		return ErrInvalidContentType
 	}
 
 	content, err = cm.checkUpdateContent(ctx, tx, content, user)
@@ -501,6 +502,122 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 		content.PublishScope = scope
 	}
 
+	err = cm.doPublishContent(ctx, tx, content, user)
+	if err != nil {
+		return err
+	}
+
+	da.GetContentRedis().CleanContentCache(ctx, []string{cid, content.SourceID})
+	return nil
+}
+
+func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, content *entity.Content, user *entity.Operator) error {
+	if content.ContentType != entity.ContentTypeMaterial {
+		return ErrInvalidContentType
+	}
+	//查看data
+	cd, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
+	if err != nil {
+		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrInvalidContentData
+	}
+	materialData, ok := cd.(*contentdata.MaterialData)
+	if !ok {
+		log.Warn(ctx, "validate content data with content type 2 failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrInvalidContentData
+	}
+	if materialData.InputSource != entity.MaterialInputSourceDisk {
+		log.Warn(ctx, "invalid material type", log.Err(err), log.String("uid", user.UserID), log.Any("materialData", materialData))
+		return ErrInvalidMaterialType
+	}
+	return nil
+}
+
+
+func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+	//创建data对象
+	cd, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
+	if err != nil {
+		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrInvalidContentData
+	}
+	//解析data的fileType
+	cd.PrepareSave(ctx)
+	materialData, ok := cd.(*contentdata.MaterialData)
+	if !ok {
+		log.Warn(ctx, "asset content data type failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrInvalidContentData
+	}
+
+	//创建assets data对象，并解析
+	assetsData := new(contentdata.AssetsData)
+	assetsData.Source = materialData.Source
+	assetsDataJSON, err := assetsData.Marshal(ctx)
+	if !ok {
+		log.Warn(ctx, "marshal assets data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrMarshalContentDataFailed
+	}
+	//创建assets
+	req := entity.CreateContentRequest{
+		ContentType:   entity.NewContentType(materialData.FileType + entity.FileTypeAssetsTypeOffset),
+		Name:          content.Name,
+		Program:       stringToStringArray(ctx, content.Program),
+		Subject:       stringToStringArray(ctx, content.Subject),
+		Developmental: stringToStringArray(ctx, content.Developmental),
+		Skills:        stringToStringArray(ctx, content.Skills),
+		Age:           stringToStringArray(ctx, content.Age),
+		Grade:         stringToStringArray(ctx, content.Grade),
+		Keywords:      stringToStringArray(ctx, content.Keywords),
+		Description:   content.Description,
+		Thumbnail:     content.Thumbnail,
+		SuggestTime:   content.SuggestTime,
+		Data:          assetsDataJSON,
+	}
+	_, err = cm.CreateContent(ctx, tx, req, user)
+	if err != nil {
+		log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
+		return err
+	}
+
+	//更新content状态
+	materialData.InputSource = entity.MaterialInputSourceDisk
+	d, err := materialData.Marshal(ctx)
+	if err != nil {
+		log.Warn(ctx, "marshal content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("content", content))
+		return err
+	}
+
+	content.Data = d
+	return nil
+}
+func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
+		return ErrNoContent
+	}
+	if err != nil {
+		log.Error(ctx, "can't read content data for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
+		return err
+	}
+	err = cm.validatePublishContentWithAssets(ctx, content, user)
+	if err != nil{
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
+		return err
+	}
+
+	//修改发布状态
+	if scope != "" {
+		content.PublishScope = scope
+	}
+
+	//准备发布（1.创建assets，2.修改contentdata）
+	err = cm.prepareForPublishAssets(ctx, tx, content, user)
+	if err != nil {
+		return err
+	}
+
+	//发布
 	err = cm.doPublishContent(ctx, tx, content, user)
 	if err != nil {
 		return err
@@ -1199,6 +1316,13 @@ func (cm *ContentModel) pickOutcomes(ctx context.Context, pickIds []string, outc
 
 func (cm *ContentModel) listVisibleScopes(ctx context.Context, operator *entity.Operator) []string {
 	return []string{operator.OrgID}
+}
+
+func stringToStringArray(ctx context.Context, str string) []string{
+	if str == "" {
+		return nil
+	}
+	return strings.Split(str, ",")
 }
 
 var (

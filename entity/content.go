@@ -22,10 +22,17 @@ const (
 	ContentTypeLesson   = 2
 	ContentTypeAssets   = 3
 
-	ContentTypeAssetImage    = 10
-	ContentTypeAssetVideo    = 11
-	ContentTypeAssetAudio    = 12
-	ContentTypeAssetDocument = 13
+	MaterialInputSourceH5p    = 1
+	MaterialInputSourceDisk   = 2
+	MaterialInputSourceAssets = 3
+
+	FileTypeImage = 1
+	FileTypeVideo = 2
+	FileTypeAudio = 3
+	FileTypeDocument = 4
+	FileTypeH5p = 5
+
+	FileTypeAssetsTypeOffset = 9
 )
 
 var (
@@ -46,16 +53,8 @@ func NewContentType(contentType int) ContentType {
 		return ContentTypeLesson
 	case ContentTypeAssets:
 		return ContentTypeAssets
-	case ContentTypeAssetDocument:
-		return ContentTypeAssetDocument
-	case ContentTypeAssetAudio:
-		return ContentTypeAssetAudio
-	case ContentTypeAssetImage:
-		return ContentTypeAssetImage
-	case ContentTypeAssetVideo:
-		return ContentTypeAssetVideo
 	default:
-		return ContentTypeAssetImage
+		return ContentTypeAssets
 	}
 }
 
@@ -65,13 +64,7 @@ func (c ContentType) Validate() error {
 		return nil
 	case ContentTypeLesson:
 		return nil
-	case ContentTypeAssetDocument:
-		return nil
-	case ContentTypeAssetAudio:
-		return nil
-	case ContentTypeAssetImage:
-		return nil
-	case ContentTypeAssetVideo:
+	case ContentTypeAssets:
 		return nil
 	}
 	return ErrInvalidContentType
@@ -80,14 +73,6 @@ func (c ContentType) Validate() error {
 func (c ContentType) IsAsset() bool {
 	switch c {
 	case ContentTypeAssets:
-		fallthrough
-	case ContentTypeAssetImage:
-		fallthrough
-	case ContentTypeAssetVideo:
-		fallthrough
-	case ContentTypeAssetAudio:
-		fallthrough
-	case ContentTypeAssetDocument:
 		return true
 	}
 	return false
@@ -100,15 +85,7 @@ func (c ContentType) ContentTypeInt() []int {
 	case ContentTypeMaterial:
 		return []int{ContentTypeMaterial}
 	case ContentTypeAssets:
-		return []int{ContentTypeAssetImage, ContentTypeAssetVideo, ContentTypeAssetAudio, ContentTypeAssetDocument}
-	case ContentTypeAssetImage:
-		return []int{ContentTypeAssetImage}
-	case ContentTypeAssetVideo:
-		return []int{ContentTypeAssetVideo}
-	case ContentTypeAssetAudio:
-		return []int{ContentTypeAssetAudio}
-	case ContentTypeAssetDocument:
-		return []int{ContentTypeAssetDocument}
+		return []int{ContentTypeAssets}
 	}
 	return []int{ContentTypeLesson}
 }
@@ -120,15 +97,7 @@ func (c ContentType) ContentType() []ContentType {
 	case ContentTypeMaterial:
 		return []ContentType{ContentTypeMaterial}
 	case ContentTypeAssets:
-		return []ContentType{ContentTypeAssetImage, ContentTypeAssetVideo, ContentTypeAssetAudio, ContentTypeAssetDocument}
-	case ContentTypeAssetImage:
-		return []ContentType{ContentTypeAssetImage}
-	case ContentTypeAssetVideo:
-		return []ContentType{ContentTypeAssetVideo}
-	case ContentTypeAssetAudio:
-		return []ContentType{ContentTypeAssetAudio}
-	case ContentTypeAssetDocument:
-		return []ContentType{ContentTypeAssetDocument}
+		return []ContentType{ContentTypeAssets}
 	}
 	return []ContentType{ContentTypeLesson}
 }
@@ -140,14 +109,6 @@ func (c ContentType) Name() string {
 	case ContentTypeMaterial:
 		return "Material"
 	case ContentTypeAssets:
-		fallthrough
-	case ContentTypeAssetImage:
-		fallthrough
-	case ContentTypeAssetVideo:
-		fallthrough
-	case ContentTypeAssetAudio:
-		fallthrough
-	case ContentTypeAssetDocument:
 		return "Assets"
 	}
 	return "Unknown"
@@ -416,6 +377,7 @@ type ContentData interface {
 
 	Validate(ctx context.Context, contentType ContentType) error
 	PrepareResult(ctx context.Context) error
+	PrepareSave(ctx context.Context) error
 	SubContentIds(ctx context.Context) []string
 }
 

@@ -358,7 +358,7 @@ func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partitio
 		)
 		return "", err
 	}
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-InputSource", "application/json")
 	request.Header.Set("charset", "utf-8")
 	request.Header.Set("Authorization", "Bearer "+cdnConf.CDNServiceToken)
 

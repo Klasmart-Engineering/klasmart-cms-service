@@ -6,6 +6,17 @@ const (
 	Unknown ResponseLabel = "unknown"
 )
 
+const (
+	AssessMsgOneStudent ResponseLabel = "assess_msg_one_student"
+)
+
+// schedule msg
+const (
+	ScheduleMsgEditOverlap   ResponseLabel = "schedule_schedule_msg_edit_all"
+	ScheduleMsgDeleteOverlap ResponseLabel = "schedule_msg_delete_overlap"
+	ScheduleMsgOverlap       ResponseLabel = "schedule_msg_overlap"
+)
+
 // L create response object with label
 func L(label ResponseLabel) interface{} {
 	return ErrorResponse{Label: string(label)}

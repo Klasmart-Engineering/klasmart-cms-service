@@ -79,15 +79,15 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case constant.ErrConflict:
-		c.JSON(http.StatusConflict, L(Unknown))
+		c.JSON(http.StatusConflict, L(ScheduleMsgOverlap))
 	case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
 	case nil:
 		c.JSON(http.StatusOK, entity.IDResponse{ID: newID})
 	default:
-		c.JSON(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, L(Unknown))
 	}
 }
 
@@ -123,11 +123,11 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	case dbo.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
-		c.JSON(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, L(Unknown))
 	}
 }
 
@@ -178,7 +178,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case constant.ErrConflict:
-		c.JSON(http.StatusConflict, L(Unknown))
+		c.JSON(http.StatusConflict, L(ScheduleMsgOverlap))
 	case constant.ErrFileNotFound:
 		c.JSON(http.StatusBadRequest, L(Unknown))
 	case nil:
@@ -210,11 +210,11 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		return
 	}
 	if err == constant.ErrRecordNotFound {
-		c.JSON(http.StatusNotFound, err.Error())
+		c.JSON(http.StatusNotFound, L(ScheduleMsgDeleteOverlap))
 		return
 	}
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
-	c.JSON(http.StatusInternalServerError, err.Error())
+	c.JSON(http.StatusInternalServerError, L(Unknown))
 }
 
 // @Summary querySchedule
@@ -280,7 +280,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 				log.Err(err),
 				log.String("teacherName", teacherName),
 				log.Any("condition", condition))
-			c.JSON(http.StatusInternalServerError, err.Error())
+			c.JSON(http.StatusInternalServerError, L(Unknown))
 			return
 		}
 		if len(teachers) <= 0 {
@@ -303,7 +303,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	total, result, err := model.GetScheduleModel().Page(ctx, condition)
 	if err != nil {
 		log.Error(ctx, "querySchedule:error", log.Any("condition", condition), log.Err(err))
-		c.JSON(http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
 	}
 	c.JSON(http.StatusOK, entity.SchedulePageView{
@@ -399,11 +399,11 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	}
 	if err == constant.ErrRecordNotFound {
 		log.Info(ctx, "record not found", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
-		c.JSON(http.StatusNotFound, err.Error())
+		c.JSON(http.StatusNotFound, L(Unknown))
 		return
 	}
 	log.Info(ctx, "record not found", log.Err(err), log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
-	c.JSON(http.StatusInternalServerError, err.Error())
+	c.JSON(http.StatusInternalServerError, L(Unknown))
 }
 
 // @Summary updateStatus
@@ -441,18 +441,3 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
 }
-
-//func (s *Server) getAttachmentUploadPath(c *gin.Context) {
-//	ctx := c.Request.Context()
-//	ext := c.Param("ext")
-//	name := fmt.Sprintf("%s.%s", utils.NewID(), ext)
-//	url, err := storage.DefaultStorage().GetUploadFileTempPath(ctx, model.ScheduleAttachment_Storage_Partition, name)
-//	if err != nil {
-//		log.Error(ctx, "uploadAttachment:get upload file path error", log.Err(err), log.String("fileName", name), log.String("partition", model.ScheduleAttachment_Storage_Partition))
-//		c.JSON(http.StatusInternalServerError, err.Error())
-//		return
-//	}
-//	c.JSON(http.StatusOK, gin.H{
-//		"attachment_url": url,
-//	})
-//}
