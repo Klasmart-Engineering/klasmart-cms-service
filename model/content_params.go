@@ -54,7 +54,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.DrawActivity = false
 		c.LessonType = 0
 	}
-	if c.ContentType == entity.ContentTypeMaterial {
+	if c.ContentType == entity.ContentTypeLesson {
 		c.LessonType = 0
 	}
 
@@ -137,7 +137,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.SelfStudy = data.SelfStudy.Int()
 	}
 
-	if data.ContentType == entity.ContentTypeLesson && data.LessonType > 0 {
+	if data.ContentType == entity.ContentTypeMaterial && data.LessonType > 0 {
 		content.LessonType = data.LessonType
 	}
 
