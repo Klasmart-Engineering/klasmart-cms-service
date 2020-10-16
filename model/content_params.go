@@ -137,7 +137,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.SelfStudy = data.SelfStudy.Int()
 	}
 
-	if data.ContentType == entity.ContentTypeLesson && data.LessonType > 0 {
+	if data.ContentType == entity.ContentTypeMaterial && data.LessonType > 0 {
 		content.LessonType = data.LessonType
 	}
 
