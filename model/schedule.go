@@ -99,6 +99,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		ProgramID:    viewData.ProgramID,
 		TeacherIDs:   viewData.TeacherIDs,
 		LessonPlanID: viewData.LessonPlanID,
+		ClassType:    viewData.ClassType,
 	})
 	if err != nil {
 		log.Error(ctx, "add schedule: verify data error",
@@ -840,20 +841,6 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-	// subject
-	subjectService := external.GetSubjectServiceProvider()
-	_, err = subjectService.BatchGet(ctx, []string{v.SubjectID})
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
-	// program
-	programService := external.GetProgramServiceProvider()
-	_, err = programService.BatchGet(ctx, []string{v.ProgramID})
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
 	// teacher
 	teacherIDs := utils.SliceDeduplication(v.TeacherIDs)
 	teacherService := external.GetTeacherServiceProvider()
@@ -862,15 +849,33 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-	// lessPlan
-	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
-	if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
-		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
-		return constant.ErrInvalidArgs
+
+	if v.ClassType != entity.ScheduleClassTypeTask {
+		// subject
+		subjectService := external.GetSubjectServiceProvider()
+		_, err = subjectService.BatchGet(ctx, []string{v.SubjectID})
+		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+			return err
+		}
+		// program
+		programService := external.GetProgramServiceProvider()
+		_, err = programService.BatchGet(ctx, []string{v.ProgramID})
+		if err != nil {
+			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+			return err
+		}
+
+		// lessPlan
+		lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
+		if err != nil {
+			log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
+			return err
+		}
+		if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
+			log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
+			return constant.ErrInvalidArgs
+		}
 	}
 	return nil
 }
