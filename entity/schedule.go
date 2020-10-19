@@ -331,13 +331,14 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID           string         `json:"id"`
-	Title        string         `json:"title"`
-	StartAt      int64          `json:"start_at"`
-	EndAt        int64          `json:"end_at"`
-	IsRepeat     bool           `json:"is_repeat"`
-	LessonPlanID string         `json:"lesson_plan_id"`
-	Status       ScheduleStatus `json:"status" enums:"NotStart,Started,Closed"`
+	ID           string            `json:"id"`
+	Title        string            `json:"title"`
+	StartAt      int64             `json:"start_at"`
+	EndAt        int64             `json:"end_at"`
+	IsRepeat     bool              `json:"is_repeat"`
+	LessonPlanID string            `json:"lesson_plan_id"`
+	ClassType    ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status       ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 }
 
 type ScheduleDetailsView struct {
