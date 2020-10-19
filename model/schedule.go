@@ -487,6 +487,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			IsRepeat:     item.RepeatID != "",
 			LessonPlanID: item.LessonPlanID,
 			Status:       item.Status,
+			ClassType:    item.ClassType,
 		}
 	}
 	da.GetScheduleRedisDA().AddScheduleByCondition(ctx, condition, result)
