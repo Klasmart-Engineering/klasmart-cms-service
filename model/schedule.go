@@ -850,32 +850,37 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 		return err
 	}
 
-	if v.ClassType != entity.ScheduleClassTypeTask {
-		// subject
-		subjectService := external.GetSubjectServiceProvider()
-		_, err = subjectService.BatchGet(ctx, []string{v.SubjectID})
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
-			return err
-		}
-		// program
-		programService := external.GetProgramServiceProvider()
-		_, err = programService.BatchGet(ctx, []string{v.ProgramID})
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
-			return err
-		}
-
-		// lessPlan
-		lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
-			return err
-		}
-		if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
-			log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
+	if v.ClassType == entity.ScheduleClassTypeTask {
+		if len(v.LessonPlanID) != 0 || len(v.ProgramID) != 0 || len(v.SubjectID) != 0 {
 			return constant.ErrInvalidArgs
+		} else {
+			return nil
 		}
+	}
+	// subject
+	subjectService := external.GetSubjectServiceProvider()
+	_, err = subjectService.BatchGet(ctx, []string{v.SubjectID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	// program
+	programService := external.GetProgramServiceProvider()
+	_, err = programService.BatchGet(ctx, []string{v.ProgramID})
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+
+	// lessPlan
+	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
+		return err
+	}
+	if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
+		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
+		return constant.ErrInvalidArgs
 	}
 	return nil
 }
