@@ -52,6 +52,6 @@ const (
 )
 
 const (
-	BaseCustom = 36
-	ShowLength = 5
+	ShortcodeBaseCustom = 36
+	ShortcodeShowLength = 5
 )

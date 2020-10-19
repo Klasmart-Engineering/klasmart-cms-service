@@ -181,7 +181,7 @@ func TestRedis(t *testing.T) {
 }
 
 func TestNumToBHex(t *testing.T) {
-	fmt.Println(model.PaddingStr(model.NumToBHex(901, 36), constant.ShowLength))
+	fmt.Println(model.PaddingStr(model.NumToBHex(901, 36), constant.ShortcodeShowLength))
 }
 
 func TestFindRoot(t *testing.T) {
