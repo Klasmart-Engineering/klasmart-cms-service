@@ -50,3 +50,8 @@ const (
 const (
 	LockedByNoBody = "-"
 )
+
+const (
+	BaseCustom = 36
+	ShowLength = 5
+)
