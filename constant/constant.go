@@ -50,3 +50,8 @@ const (
 const (
 	LockedByNoBody = "-"
 )
+
+const (
+	ShortcodeBaseCustom = 36
+	ShortcodeShowLength = 5
+)
