@@ -593,7 +593,7 @@ func (ocm OutcomeModel) getShortCode(ctx context.Context, orgID string) (shortco
 		log.Error(ctx, "getShortCode failed",
 			log.Err(err))
 	}
-	shortcode = PaddingStr(NumToBHex(int(num), BaseCustom), ShowLength)
+	shortcode = PaddingStr(NumToBHex(int(num), constant.ShortcodeBaseCustom), constant.ShortcodeShowLength)
 	return
 }
 
@@ -799,8 +799,6 @@ func GetOutcomeModel() IOutcomeModel {
 	return _outcomeModel
 }
 
-const BaseCustom = 36
-const ShowLength = 3
 
 var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
 

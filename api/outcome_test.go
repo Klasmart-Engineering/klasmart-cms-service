@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -180,7 +181,7 @@ func TestRedis(t *testing.T) {
 }
 
 func TestNumToBHex(t *testing.T) {
-	fmt.Println(model.PaddingStr(model.NumToBHex(900, 36), 3))
+	fmt.Println(model.PaddingStr(model.NumToBHex(901, 36), constant.ShortcodeShowLength))
 }
 
 func TestFindRoot(t *testing.T) {

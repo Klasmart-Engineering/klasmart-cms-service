@@ -91,12 +91,15 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Outcomes:      outcomes,
 		Author:        obj.Author,
 		AuthorName:    obj.AuthorName,
+		SelfStudy:     obj.SelfStudy.Bool(),
+		DrawActivity:  obj.DrawActivity.Bool(),
+		LessonType:    obj.LessonType,
 		Org:           obj.Org,
 		PublishScope:  obj.PublishScope,
 		PublishStatus: obj.PublishStatus,
 		Version:       obj.Version,
 		CreatedAt:     obj.CreateAt,
-		UpdatedAt:		obj.UpdateAt,
+		UpdatedAt:     obj.UpdateAt,
 	}
 
 	return cm, nil
