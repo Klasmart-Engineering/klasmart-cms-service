@@ -262,13 +262,13 @@ func (s Schedule) Clone() Schedule {
 type ScheduleAddView struct {
 	Title          string            `json:"title" binding:"required"`
 	ClassID        string            `json:"class_id" binding:"required"`
-	LessonPlanID   string            `json:"lesson_plan_id" binding:"required"`
+	LessonPlanID   string            `json:"lesson_plan_id"`
 	TeacherIDs     []string          `json:"teacher_ids" binding:"required,min=1"`
 	OrgID          string            `json:"org_id"`
 	StartAt        int64             `json:"start_at" binding:"required"`
 	EndAt          int64             `json:"end_at" binding:"required"`
-	SubjectID      string            `json:"subject_id" binding:"required"`
-	ProgramID      string            `json:"program_id" binding:"required"`
+	SubjectID      string            `json:"subject_id"`
+	ProgramID      string            `json:"program_id"`
 	ClassType      ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt          int64             `json:"due_at"`
 	Description    string            `json:"description"`
@@ -388,6 +388,7 @@ type ScheduleVerify struct {
 	ProgramID    string
 	TeacherIDs   []string
 	LessonPlanID string
+	ClassType    ScheduleClassType
 }
 
 // ScheduleEditType include delete and edit
