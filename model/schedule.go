@@ -851,11 +851,10 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 	}
 
 	if v.ClassType == entity.ScheduleClassTypeTask {
-		if len(v.LessonPlanID) != 0 || len(v.ProgramID) != 0 || len(v.SubjectID) != 0 {
+		if v.LessonPlanID != "" || v.ProgramID != "" || v.SubjectID != "" {
 			return constant.ErrInvalidArgs
-		} else {
-			return nil
 		}
+		return nil
 	}
 	// subject
 	subjectService := external.GetSubjectServiceProvider()
