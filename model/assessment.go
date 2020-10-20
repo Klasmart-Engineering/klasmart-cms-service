@@ -710,6 +710,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 						log.Bool("skip", item.Skip),
 						log.Bool("none_achieved", item.NoneAchieved),
 					)
+					return err
 				}
 			}
 			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
