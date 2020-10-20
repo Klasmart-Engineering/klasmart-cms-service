@@ -75,11 +75,14 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 }
 
 func (d *assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error {
+	changes := map[string]interface{}{
+		"skip":          item.Skip,
+		"none_achieved": item.NoneAchieved,
+	}
 	if err := tx.
 		Model(entity.AssessmentOutcome{}).
 		Where("assessment_id = ? and outcome_id = ?", item.AssessmentID, item.OutcomeID).
-		Update("skip", item.Skip).
-		Update("none_achieved", item.NoneAchieved).
+		Updates(changes).
 		Error; err != nil {
 		return err
 	}
