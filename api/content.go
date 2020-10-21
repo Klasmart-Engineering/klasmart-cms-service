@@ -417,6 +417,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
+// @Param program query string false "search content program"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -450,6 +451,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param name query string false "search content name"
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
+// @Param program query string false "search content program"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
@@ -486,6 +488,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
+// @Param program query string false "search content program"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -535,6 +538,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
 	publish := c.Query("publish_status")
+	program := c.Query("program")
 	condition := da.ContentCondition{
 		Author:  parseAuthor(c, op),
 		Org:     parseOrg(c, op),
@@ -562,6 +566,9 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)
+	}
+	if program != "" {
+		condition.Program = program
 	}
 	return condition
 }

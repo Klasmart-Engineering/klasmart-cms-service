@@ -34,7 +34,6 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	//if err != nil {
 	//	return nil, err
 	//}
-	programs := make([]string, 0)
 	subjects := make([]string, 0)
 	developmentals := make([]string, 0)
 	skills := make([]string, 0)
@@ -43,9 +42,6 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	keywords := make([]string, 0)
 	outcomes := make([]string, 0)
 	rejectReason := make([]string, 0)
-	if obj.Program != "" {
-		programs = strings.Split(obj.Program, ",")
-	}
 	if obj.Subject != "" {
 		subjects = strings.Split(obj.Subject, ",")
 	}
@@ -75,7 +71,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		ID:            obj.ID,
 		ContentType:   obj.ContentType,
 		Name:          obj.Name,
-		Program:       programs,
+		Program:       obj.Program,
 		Subject:       subjects,
 		Developmental: developmentals,
 		Skills:        skills,

@@ -52,7 +52,6 @@ var (
 	ErrInvalidSelectForm = errors.New("invalid select form")
 )
 
-
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
@@ -561,7 +560,7 @@ func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBC
 	req := entity.CreateContentRequest{
 		ContentType:   entity.NewContentType(materialData.FileType + entity.FileTypeAssetsTypeOffset),
 		Name:          content.Name,
-		Program:       stringToStringArray(ctx, content.Program),
+		Program:       content.Program,
 		Subject:       stringToStringArray(ctx, content.Subject),
 		Developmental: stringToStringArray(ctx, content.Developmental),
 		Skills:        stringToStringArray(ctx, content.Skills),
@@ -1170,7 +1169,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	gradeIds := make([]string, 0)
 
 	for i := range contentList {
-		programIds = append(programIds, contentList[i].Program...)
+		programIds = append(programIds, contentList[i].Program)
 		subjectIds = append(subjectIds, contentList[i].Subject...)
 		developmentalIds = append(developmentalIds, contentList[i].Developmental...)
 		skillsIds = append(skillsIds, contentList[i].Skills...)
@@ -1260,16 +1259,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
-		programNames := make([]string, len(contentList[i].Program))
 		subjectNames := make([]string, len(contentList[i].Subject))
 		developmentalNames := make([]string, len(contentList[i].Developmental))
 		skillsNames := make([]string, len(contentList[i].Skills))
 		ageNames := make([]string, len(contentList[i].Age))
 		gradeNames := make([]string, len(contentList[i].Grade))
 
-		for j := range contentList[i].Program {
-			programNames[j] = programNameMap[contentList[i].Program[j]]
-		}
 		for j := range contentList[i].Subject {
 			subjectNames[j] = subjectNameMap[contentList[i].Subject[j]]
 		}
@@ -1289,7 +1284,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:       *contentList[i],
 			ContentTypeName:   contentList[i].ContentType.Name(),
-			ProgramName:       programNames,
+			ProgramName:       programNameMap[contentList[i].Program],
 			SubjectName:       subjectNames,
 			DevelopmentalName: developmentalNames,
 			SkillsName:        skillsNames,

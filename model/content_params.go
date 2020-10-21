@@ -63,7 +63,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
 		Name:          c.Name,
-		Program:       strings.Join(c.Program, ","),
+		Program:       c.Program,
 		Subject:       strings.Join(c.Subject, ","),
 		Developmental: strings.Join(c.Developmental, ","),
 		Skills:        strings.Join(c.Skills, ","),
@@ -96,8 +96,8 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.ContentType > 0 && data.Data != "" {
 		content.ContentType = data.ContentType
 	}
-	if data.Program != nil {
-		content.Program = strings.Join(data.Program, ",")
+	if data.Program != "" {
+		content.Program = data.Program
 	}
 	if data.Subject != nil {
 		content.Subject = strings.Join(data.Subject, ",")
