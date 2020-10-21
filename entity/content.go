@@ -256,7 +256,7 @@ func (b BoolTinyInt) Bool() TinyIntBool {
 type CreateContentRequest struct {
 	ContentType   ContentType `json:"content_type"`
 	Name          string      `json:"name"`
-	Program       []string    `json:"program"`
+	Program       string    `json:"program"`
 	Subject       []string    `json:"subject"`
 	Developmental []string    `json:"developmental"`
 	Skills        []string    `json:"skills"`
@@ -313,7 +313,7 @@ type ContentInfoWithDetailsResponse struct {
 type ContentInfoWithDetails struct {
 	ContentInfo
 	ContentTypeName   string   `json:"content_type_name"`
-	ProgramName       []string `json:"program_name"`
+	ProgramName       string `json:"program_name"`
 	SubjectName       []string `json:"subject_name"`
 	DevelopmentalName []string `json:"developmental_name"`
 	SkillsName        []string `json:"skills_name"`
@@ -340,7 +340,7 @@ type ContentInfo struct {
 	ID            string      `json:"id"`
 	ContentType   ContentType `json:"content_type"`
 	Name          string      `json:"name"`
-	Program       []string    `json:"program"`
+	Program       string    `json:"program"`
 	Subject       []string    `json:"subject"`
 	Developmental []string    `json:"developmental"`
 	Skills        []string    `json:"skills"`

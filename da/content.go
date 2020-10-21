@@ -76,6 +76,7 @@ type ContentCondition struct {
 	PublishStatus []string `json:"publish_status"`
 	Author        string   `json:"author"`
 	Org           string   `json:"org"`
+	Program		string `json:"program"`
 	SourceID	string `json:"source_id"`
 	LatestID	string `json:"latest_id"`
 
@@ -94,6 +95,10 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	if s.Name != "" {
 		conditions = append(conditions, "match(content_name, description, author_name, keywords) against(? in boolean mode)")
 		params = append(params, s.Name)
+	}
+	if s.Program != "" {
+		conditions = append(conditions, "program = ?")
+		params = append(params, s.Program)
 	}
 
 	if len(s.ContentType) > 0 {
