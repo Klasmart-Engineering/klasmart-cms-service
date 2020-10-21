@@ -27,6 +27,13 @@ func (s NullStrings) ToInterfaceSlice() []interface{} {
 
 	return slice
 }
+func SplitStringToNullStrings(str string) NullStrings {
+	if strings.TrimSpace(str) != "" {
+		strArr := strings.Split(str, ",")
+		return NullStrings{Strings: strArr, Valid: len(strArr) > 0}
+	}
+	return NullStrings{}
+}
 
 type NullString struct {
 	String string

@@ -145,6 +145,10 @@ type ScheduleCondition struct {
 	LessonPlanID             sql.NullString
 	RepeatID                 sql.NullString
 	Status                   sql.NullString
+	ClassIDs                 entity.NullStrings
+	SubjectIDs               entity.NullStrings
+	ProgramIDs               entity.NullStrings
+	OrgIDs                   entity.NullStrings
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -210,6 +214,23 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.Status.Valid {
 		wheres = append(wheres, "status = ?")
 		params = append(params, c.Status.String)
+	}
+
+	if c.OrgIDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("org_id in (%s)", c.OrgIDs.SQLPlaceHolder()))
+		params = append(params, c.OrgIDs.ToInterfaceSlice()...)
+	}
+	if c.ClassIDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("class_id in (%s)", c.ClassIDs.SQLPlaceHolder()))
+		params = append(params, c.ClassIDs.ToInterfaceSlice()...)
+	}
+	if c.SubjectIDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("subject_id in (%s)", c.SubjectIDs.SQLPlaceHolder()))
+		params = append(params, c.SubjectIDs.ToInterfaceSlice()...)
+	}
+	if c.ProgramIDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("program_id in (%s)", c.ProgramIDs.SQLPlaceHolder()))
+		params = append(params, c.ProgramIDs.ToInterfaceSlice()...)
 	}
 
 	if c.DeleteAt.Valid {
