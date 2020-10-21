@@ -327,6 +327,11 @@ const (
 // @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month)
 // @Param time_at query integer true "search schedules by time_at"
 // @Param time_zone_offset query integer true "time zone offset"
+// @Param org_ids query string false "org id,separated by comma"
+// @Param teacher_ids query string false "teacher id,separated by comma"
+// @Param class_ids query string false "class id,separated by comma"
+// @Param subject_ids query string false "subject id,separated by comma"
+// @Param program_ids query string false "program id,separated by comma"
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleListView
 // @Failure 400 {object} BadRequestResponse
@@ -390,6 +395,11 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		},
 		StartAndEndTimeViewRange: startAndEndTimeViewRange,
 	}
+	//condition.OrgIDs = entity.SplitStringToNullStrings(c.Query("org_ids"))
+	condition.TeacherIDs = entity.SplitStringToNullStrings(c.Query("teacher_ids"))
+	condition.ClassIDs = entity.SplitStringToNullStrings(c.Query("class_ids"))
+	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
+	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
 
 	log.Debug(ctx, "condition info", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 	result, err := model.GetScheduleModel().Query(ctx, condition)
