@@ -14,7 +14,7 @@ type IAssessmentOutcomeDA interface {
 	BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.AssessmentOutcome, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
-	UpdateSkipField(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeID string, skip bool) error
+	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
 }
 
 var (
@@ -74,11 +74,15 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 	return nil
 }
 
-func (d *assessmentOutcomeDA) UpdateSkipField(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeID string, skip bool) error {
+func (d *assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error {
+	changes := map[string]interface{}{
+		"skip":          item.Skip,
+		"none_achieved": item.NoneAchieved,
+	}
 	if err := tx.
 		Model(entity.AssessmentOutcome{}).
-		Where("assessment_id = ? and outcome_id = ?", assessmentID, outcomeID).
-		Update("skip", skip).
+		Where("assessment_id = ? and outcome_id = ?", item.AssessmentID, item.OutcomeID).
+		Updates(changes).
 		Error; err != nil {
 		return err
 	}

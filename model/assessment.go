@@ -232,6 +232,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 					Assumed:       outcome.Assumed,
 					AttendanceIDs: outcomeAttendanceMap[outcome.ID],
 					Skip:          assessmentOutcomeMap[outcome.ID].Skip,
+					NoneAchieved:  assessmentOutcomeMap[outcome.ID].NoneAchieved,
 				}
 				result.OutcomeAttendanceMaps = append(result.OutcomeAttendanceMaps, newItem)
 			}
@@ -606,6 +607,23 @@ func (a *assessmentModel) title(classEndTime int64, className string, lessonName
 }
 
 func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmentCommand) error {
+	// prepend check
+	if !cmd.Action.Valid() {
+		log.Error(ctx, "update assessment: invalid action", log.Any("cmd", cmd))
+		return constant.ErrInvalidArgs
+	}
+	if cmd.OutcomeAttendanceMaps != nil {
+		for _, item := range *cmd.OutcomeAttendanceMaps {
+			if item.Skip && item.NoneAchieved {
+				log.Error(ctx, "update assessment: check skip and none achieved combination", log.Any("cmd", cmd))
+				return constant.ErrInvalidArgs
+			}
+			if (item.Skip || item.NoneAchieved) && len(item.AttendanceIDs) > 0 {
+				log.Error(ctx, "update assessment: check skip and none achieved combination with attendance ids", log.Any("cmd", cmd))
+				return constant.ErrInvalidArgs
+			}
+		}
+	}
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, cmd.ID)
 		if err != nil {
@@ -678,14 +696,21 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 						AttendanceID: attendanceID,
 					})
 				}
-				if err := da.GetAssessmentOutcomeDA().UpdateSkipField(ctx, tx, cmd.ID, item.OutcomeID, item.Skip); err != nil {
-					log.Error(ctx, "update assessment: batch insert outcome attendance map failed",
+				if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, entity.AssessmentOutcome{
+					AssessmentID: cmd.ID,
+					OutcomeID:    item.OutcomeID,
+					Skip:         item.Skip,
+					NoneAchieved: item.NoneAchieved,
+				}); err != nil {
+					log.Error(ctx, "update assessment: batch update assessment outcome failed",
 						log.Err(err),
 						log.Any("cmd", cmd),
 						log.String("id", cmd.ID),
 						log.String("outcome_id", item.OutcomeID),
 						log.Bool("skip", item.Skip),
+						log.Bool("none_achieved", item.NoneAchieved),
 					)
+					return err
 				}
 			}
 			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, items); err != nil {

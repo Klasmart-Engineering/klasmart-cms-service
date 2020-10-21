@@ -155,6 +155,7 @@ create table assessments_outcomes
     `assessment_id` varchar(64) not null comment 'assessment id',
     `outcome_id`    varchar(64) not null comment 'outcome id',
     `skip`          boolean     not null comment 'skip',
+    `none_achieved` boolean     not null comment 'none achieved',
     primary key (`id`),
     key `assessments_outcomes_assessment_id` (`assessment_id`),
     key `assessments_outcomes_outcome_id` (`outcome_id`)
