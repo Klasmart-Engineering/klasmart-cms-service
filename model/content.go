@@ -352,8 +352,8 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 
 
 	rejectReason := strings.Join(reason, ",")
-	rejectReason = rejectReason + "|" + remark
 	content.RejectReason = rejectReason
+	content.Remark = remark
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 	if err != nil {
 		log.Error(ctx, "update contentdata scope failed", log.Err(err))

@@ -183,6 +183,7 @@ type Content struct {
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
 
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason"`
+	Remark string `gorm:"type:varchar(255);NOT NULL;column:remark"`
 	Version      int64  `gorm:"type:int;NOT NULL;column:version"`
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by"`
 	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id"`
