@@ -452,12 +452,12 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 	}
 }
 
-func (s *Server) getTeacherClass(c *gin.Context) {
+func (s *Server) getParticipateClass(c *gin.Context) {
 	op := GetOperator(c)
 	ctx := c.Request.Context()
-	result, err := model.GetScheduleModel().GetTeacherClass(ctx, op)
+	result, err := model.GetScheduleModel().GetParticipateClass(ctx, op)
 	if err != nil {
-		log.Error(ctx, "get teacher class error", log.Err(err), log.Any("op", op))
+		log.Error(ctx, "get participate  class error", log.Err(err), log.Any("op", op))
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
 	}
