@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
@@ -11,6 +12,17 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 )
+
+func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string{
+	if c.ContentType == entity.ContentTypeLesson {
+		return "lesson-lesson"
+	}
+	if c.ContentType == entity.ContentTypeAssets {
+		return "assets-assets"
+	}
+	materialData := d.(*contentdata.MaterialData)
+	return fmt.Sprintf("material-"+ materialData.FileType.String())
+}
 
 func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
 
@@ -46,6 +58,10 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	publishScope := c.PublishScope 
 	//TODO: To get real name
 	authorName := "Bada"
+
+	if c.SourceType == "" {
+		c.SourceType = cm.getSourceType(ctx, c, cd)
+	}
 
 	//若为asset，直接发布
 	if c.ContentType == entity.ContentTypeAssets {
@@ -155,6 +171,10 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 	}
 
+	if data.SourceType != "" {
+		content.SourceType = data.SourceType
+	}
+
 	//检查data
 	if data.Data != "" {
 		cd, err := contentdata.CreateContentData(ctx, data.ContentType, data.Data)
@@ -171,12 +191,16 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 			return nil, ErrInvalidContentData
 		}
 
-		data, err := cd.Marshal(ctx)
+		d, err := cd.Marshal(ctx)
 		if err != nil {
 			return nil, ErrMarshalContentDataFailed
 		}
 
-		content.Data = data
+		content.Data = d
+
+		if data.SourceType == "" {
+			data.SourceType = cm.getSourceType(ctx, *data, cd)
+		}
 	}
 	content.UpdateAt = time.Now().Unix()
 

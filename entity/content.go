@@ -53,6 +53,42 @@ var (
 type ContentPublishStatus string
 type ContentType int
 
+type FileType int
+
+func NewFileType(fileType int) FileType {
+	switch fileType {
+	case FileTypeVideo:
+		return FileTypeVideo
+	case FileTypeImage:
+		return FileTypeImage
+	case FileTypeAudio:
+		return FileTypeAudio
+	case FileTypeDocument:
+		return FileTypeDocument
+	case FileTypeH5p:
+		return FileTypeH5p
+	default:
+		return FileTypeH5p
+	}
+}
+func (f FileType) String() string {
+	switch f {
+	case FileTypeVideo:
+		return "video"
+	case FileTypeImage:
+		return "image"
+	case FileTypeAudio:
+		return "audio"
+	case FileTypeDocument:
+		return "document"
+	case FileTypeH5p:
+		return "h5p"
+	default:
+		return "h5p"
+	}
+}
+
+
 func NewContentType(contentType int) ContentType {
 	switch contentType {
 	case ContentTypeMaterial:
@@ -154,7 +190,7 @@ type ContentStatisticsInfo struct {
 
 type Content struct {
 	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
-	ContentType   ContentType `gorm:"type:int;NOTNULL; column:content_type"`
+	ContentType   ContentType `gorm:"type:int;NOT NULL; column:content_type"`
 	Name          string      `gorm:"type:varchar(255);NOT NULL;column:content_name"`
 	Program       string      `gorm:"type:varchar(1024);NOT NULL;column:program"`
 	Subject       string      `gorm:"type:varchar(1024);NOT NULL;column:subject"`
@@ -165,6 +201,8 @@ type Content struct {
 	Keywords      string      `gorm:"type:text;NOT NULL;column:keywords"`
 	Description   string      `gorm:"type:text;NOT NULL;column:description"`
 	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail"`
+
+	SourceType   string `gorm:"type:varchar(256);NOT NULL; column:source_type"`
 
 	Outcomes string `gorm:"type:text;NOT NULL;column:outcomes"`
 	Data     string `gorm:"type:json;NOT NULL;column:data"`
@@ -256,6 +294,7 @@ func (b BoolTinyInt) Bool() TinyIntBool {
 
 type CreateContentRequest struct {
 	ContentType   ContentType `json:"content_type"`
+	SourceType 	  string `json:"source_type"`
 	Name          string      `json:"name"`
 	Program       string    `json:"program"`
 	Subject       []string    `json:"subject"`

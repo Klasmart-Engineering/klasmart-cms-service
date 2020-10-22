@@ -350,7 +350,6 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrNoRejectReason
 	}
 
-
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark

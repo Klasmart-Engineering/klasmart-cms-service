@@ -79,6 +79,7 @@ type ContentCondition struct {
 	Program		string `json:"program"`
 	SourceID	string `json:"source_id"`
 	LatestID	string `json:"latest_id"`
+	SourceType	string `json:"source_type"`
 
 	OrderBy ContentOrderBy `json:"order_by"`
 	Pager   utils.Pager
@@ -114,6 +115,11 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := " publish_scope in (?) "
 		conditions = append(conditions, condition)
 		params = append(params, s.Scope)
+	}
+	if s.SourceType != "" {
+		condition := "source_type = ?"
+		conditions = append(conditions, condition)
+		params = append(params, s.SourceType)
 	}
 
 	if len(s.PublishStatus) > 0 {
