@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -127,6 +128,9 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 		constant.TableNameScheduleTeacher, constant.TableNameSchedule, constant.TableNameScheduleTeacher)
 	var classIDs []string
 	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&classIDs).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return nil, constant.ErrRecordNotFound
+	}
 	if err != nil {
 		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.Any("teacherID", teacherID))
 		return nil, err

@@ -459,8 +459,6 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 // @Produce json
 // @Tags schedule
 // @Success 200 {array}  external.Class
-// @Failure 400 {object} BadRequestResponse
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_participate/class [get]
 func (s *Server) getParticipateClass(c *gin.Context) {

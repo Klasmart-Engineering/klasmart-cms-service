@@ -930,6 +930,10 @@ func (s *scheduleModel) GetParticipateClass(ctx context.Context, operator *entit
 	}
 	// user is not admin
 	classIDs, err := da.GetScheduleDA().GetParticipateClass(ctx, dbo.MustGetDB(ctx), operator.UserID)
+	if err == constant.ErrRecordNotFound {
+		log.Error(ctx, "GetParticipateClass:get participate class not found", log.Err(err), log.Any("op", operator))
+		return []*external.Class{}, nil
+	}
 	if err != nil {
 		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.Any("op", operator))
 		return nil, err
