@@ -451,3 +451,15 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
 }
+
+func (s *Server) getTeacherClass(c *gin.Context) {
+	op := GetOperator(c)
+	ctx := c.Request.Context()
+	result, err := model.GetScheduleModel().GetTeacherClass(ctx, op)
+	if err != nil {
+		log.Error(ctx, "get teacher class error", log.Err(err), log.Any("op", op))
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}

@@ -35,6 +35,7 @@ type IScheduleModel interface {
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
+	GetTeacherClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -915,6 +916,34 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBCont
 	}
 	da.GetScheduleRedisDA().Clean(ctx, []string{id})
 	return nil
+}
+
+func (s *scheduleModel) GetTeacherClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error) {
+	// user is admin
+	if operator.Role == string(constant.RoleAdmin) {
+		result, err := external.GetClassServiceProvider().BatchGet(ctx, nil)
+		if err != nil {
+			log.Error(ctx, "GetTeacherClass:batch get class from ClassServiceProvider error", log.Err(err), log.Any("op", operator))
+			return nil, err
+		}
+		return result, nil
+	}
+	// user is not admin
+	classIDs, err := da.GetScheduleDA().GetTeacherClass(ctx, dbo.MustGetDB(ctx), operator.UserID)
+	if err != nil {
+		log.Error(ctx, "GetTeacherClass:get teacher class from db error", log.Err(err), log.Any("op", operator))
+		return nil, err
+	}
+	result, err := external.GetClassServiceProvider().BatchGet(ctx, classIDs)
+	if err != nil {
+		log.Error(ctx, "GetTeacherClass:batch get class from ClassServiceProvider error",
+			log.Err(err),
+			log.Any("op", operator),
+			log.Strings("classIDs", classIDs),
+		)
+		return nil, err
+	}
+	return result, nil
 }
 
 var (
