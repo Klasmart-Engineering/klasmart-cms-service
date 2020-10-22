@@ -55,10 +55,3 @@ const (
 	ShortcodeBaseCustom = 36
 	ShortcodeShowLength = 5
 )
-
-type RoleType string
-
-const (
-	RoleTeacher RoleType = "teacher"
-	RoleAdmin   RoleType = "admin"
-)
