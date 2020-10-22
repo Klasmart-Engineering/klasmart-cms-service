@@ -350,7 +350,6 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrNoRejectReason
 	}
 
-
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -562,7 +561,7 @@ func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBC
 	}
 	//创建assets
 	req := entity.CreateContentRequest{
-		ContentType:   entity.NewContentType(materialData.FileType + entity.FileTypeAssetsTypeOffset),
+		ContentType:   entity.ContentTypeAssets,
 		Name:          content.Name,
 		Program:       content.Program,
 		Subject:       stringToStringArray(ctx, content.Subject),
@@ -1165,6 +1164,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageNameMap := make(map[string]string)
 	gradeNameMap := make(map[string]string)
 	publishScopeNameMap := make(map[string]string)
+	lessonTypeNameMap := make(map[int] string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
@@ -1173,6 +1173,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageIds := make([]string, 0)
 	gradeIds := make([]string, 0)
 	scopeIds := make([]string, 0)
+	lessonTypeIds := make([]int ,0)
 
 	for i := range contentList {
 		programIds = append(programIds, contentList[i].Program)
@@ -1183,6 +1184,18 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		gradeIds = append(gradeIds, contentList[i].Grade...)
 
 		scopeIds = append(scopeIds, contentList[i].PublishScope)
+		lessonTypeIds = append(lessonTypeIds, contentList[i].LessonType)
+	}
+
+	//LessonType
+	lessonTypeProvider := external.GetLessonTypeProvider()
+	lessonTypes, err := lessonTypeProvider.BatchGet(ctx, lessonTypeIds)
+	if err != nil {
+		log.Error(ctx, "can't get lesson type info", log.Err(err))
+	} else {
+		for i := range lessonTypes {
+			lessonTypeNameMap[lessonTypes[i].ID] = lessonTypes[i].Name
+		}
 	}
 
 	//Program
@@ -1309,6 +1322,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			SkillsName:        skillsNames,
 			AgeName:           ageNames,
 			GradeName:         gradeNames,
+			LessonTypeName: 	lessonTypeNameMap[contentList[i].LessonType],
 			PublishScopeName: 	publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
 			OutcomeEntities:   cm.pickOutcomes(ctx, contentList[i].Outcomes, outcomeMaps),
