@@ -418,6 +418,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -452,6 +453,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param program query string false "search content program"
+// @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
@@ -489,6 +491,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -546,6 +549,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
 		Name:    strings.TrimSpace(c.Query("name")),
 	}
+	sourceType := c.Query("source_type")
 	//if len(keywords) > 0 {
 	//	condition.Name = keywords
 	//}
@@ -570,6 +574,9 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	}
 	if program != "" {
 		condition.Program = program
+	}
+	if sourceType != "" {
+		condition.SourceType = sourceType
 	}
 	return condition
 }
