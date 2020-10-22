@@ -11,6 +11,7 @@ CREATE TABLE `cms_contents` (
    `keywords` TEXT  NULL  COMMENT  '关键字',
    `description` TEXT  NULL  COMMENT  '描述',
    `thumbnail` TEXT  NULL  COMMENT  '封面',
+   `source_type` VARCHAR(255) NULL COMMENT '内容细分类型',
    `data` JSON  NULL  COMMENT  '数据',
    `extra` TEXT  NULL  COMMENT  '附加数据',
    `outcomes` TEXT NULL COMMENT 'Learning outcomes',

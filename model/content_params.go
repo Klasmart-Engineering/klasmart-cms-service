@@ -15,13 +15,13 @@ import (
 
 func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string{
 	if c.ContentType == entity.ContentTypeLesson {
-		return "lesson-lesson"
+		return constant.SourceTypeLesson
 	}
 	if c.ContentType == entity.ContentTypeAssets {
-		return "assets-assets"
+		return constant.SourceTypeAssets
 	}
 	materialData := d.(*contentdata.MaterialData)
-	return fmt.Sprintf("material-"+ materialData.FileType.String())
+	return fmt.Sprintf(constant.SourceTypeMaterialPrefix+ materialData.FileType.String())
 }
 
 func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {

@@ -202,7 +202,7 @@ type Content struct {
 	Description   string      `gorm:"type:text;NOT NULL;column:description"`
 	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail"`
 
-	SourceType   string `gorm:"type:varchar(256);NOT NULL; column:source_type"`
+	SourceType   string `gorm:"type:varchar(256); column:source_type"`
 
 	Outcomes string `gorm:"type:text;NOT NULL;column:outcomes"`
 	Data     string `gorm:"type:json;NOT NULL;column:data"`
