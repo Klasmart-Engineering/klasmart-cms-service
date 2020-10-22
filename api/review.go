@@ -49,6 +49,7 @@ func (s *Server) approve(c *gin.Context) {
 
 type RejectReasonRequest struct {
 	Reasons []string `json:"reject_reason"`
+	Remark  string   `json:"remark"`
 }
 
 // @ID rejectContentReview
@@ -80,7 +81,7 @@ func (s *Server) reject(c *gin.Context) {
 		return
 	}
 	// extract reject reason
-	err = model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, req.Reasons, op)
+	err = model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, req.Reasons, req.Remark, op)
 	switch err {
 	case model.ErrNoContent:
 		log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
