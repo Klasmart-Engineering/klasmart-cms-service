@@ -361,6 +361,7 @@ type ContentInfoWithDetails struct {
 	GradeName         []string `json:"grade_name"`
 	OrgName           string   `json:"org_name"`
 	PublishScopeName string `json:"publish_scope_name"`
+	LessonTypeName string `json:"lesson_type_name"`
 
 	OutcomeEntities	 []*Outcome `json:"outcome_entities"`
 }
@@ -392,6 +393,7 @@ type ContentInfo struct {
 	Thumbnail     string      `json:"thumbnail"`
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
+	SourceType	string `json:"source_type"`
 
 	SelfStudy TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
