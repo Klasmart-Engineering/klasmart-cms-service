@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -18,6 +19,7 @@ type IScheduleDA interface {
 	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int, error)
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
+	GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error)
 }
 
 type scheduleDA struct {
@@ -119,6 +121,21 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 		return err
 	}
 	return nil
+}
+
+func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error) {
+	sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",
+		constant.TableNameScheduleTeacher, constant.TableNameSchedule, constant.TableNameScheduleTeacher)
+	var classIDs []string
+	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&classIDs).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.Any("teacherID", teacherID))
+		return nil, err
+	}
+	return classIDs, nil
 }
 
 var (

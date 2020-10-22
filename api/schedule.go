@@ -451,3 +451,24 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
 }
+
+// @Summary getParticipateClass
+// @ID getParticipateClass
+// @Description get participate Class
+// @Accept json
+// @Produce json
+// @Tags schedule
+// @Success 200 {array}  external.Class
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_participate/class [get]
+func (s *Server) getParticipateClass(c *gin.Context) {
+	op := GetOperator(c)
+	ctx := c.Request.Context()
+	result, err := model.GetScheduleModel().GetParticipateClass(ctx, op)
+	if err != nil {
+		log.Error(ctx, "get participate  class error", log.Err(err), log.Any("op", op))
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}

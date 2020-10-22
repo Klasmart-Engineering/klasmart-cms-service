@@ -59,6 +59,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_time_view", MustLogin, s.getScheduleTimeView)
 		schedules.GET("/schedules/:id/live/token", MustLogin, s.getScheduleLiveToken)
 		schedules.PUT("/schedules/:id/status", MustLogin, s.updateScheduleStatus)
+		schedules.GET("/schedules_participate/class", MustLogin, s.getParticipateClass)
 	}
 
 	assessments := s.engine.Group("/v1")
