@@ -320,6 +320,7 @@ type ContentInfoWithDetails struct {
 	AgeName           []string `json:"age_name"`
 	GradeName         []string `json:"grade_name"`
 	OrgName           string   `json:"org_name"`
+	PublishScopeName string `json:"publish_scope_name"`
 
 	OutcomeEntities	 []*Outcome `json:"outcome_entities"`
 }
@@ -361,6 +362,7 @@ type ContentInfo struct {
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`
 	RejectReason []string `json:"reject_reason"`
+	Remark string `json:"remark"`
 	LatestID     string `json:"latest_id"`
 
 	Data  string `json:"data"`

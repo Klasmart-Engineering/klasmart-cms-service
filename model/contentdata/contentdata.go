@@ -42,6 +42,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	keywords := make([]string, 0)
 	outcomes := make([]string, 0)
 	rejectReason := make([]string, 0)
+	remark := ""
 	if obj.Subject != "" {
 		subjects = strings.Split(obj.Subject, ",")
 	}
@@ -64,7 +65,12 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		outcomes = strings.Split(obj.Outcomes, ",")
 	}
 	if obj.RejectReason != "" {
+		remarkParts := strings.Split(obj.RejectReason, "|")
 		rejectReason = strings.Split(obj.RejectReason, ",")
+		if len(remarkParts) > 1 {
+			remark = remarkParts[1]
+		}
+
 	}
 
 	cm := &entity.ContentInfo{
@@ -80,6 +86,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Keywords:      keywords,
 		SuggestTime:   obj.SuggestTime,
 		RejectReason:  rejectReason,
+		Remark: remark,
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
 		Data:          obj.Data,

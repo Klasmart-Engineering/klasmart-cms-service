@@ -70,7 +70,7 @@ type IContentModel interface {
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error)
 
-	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, status string) error
+	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -335,7 +335,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	return nil
 }
 
-func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, status string) error {
+func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata on update contentdata", log.Err(err))
@@ -349,7 +349,11 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	if status == entity.ContentStatusRejected && len(reason) < 1 {
 		return ErrNoRejectReason
 	}
-	content.RejectReason = strings.Join(reason, ",")
+
+
+	rejectReason := strings.Join(reason, ",")
+	rejectReason = rejectReason + "|" + remark
+	content.RejectReason = rejectReason
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 	if err != nil {
 		log.Error(ctx, "update contentdata scope failed", log.Err(err))
@@ -1160,6 +1164,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	skillsNameMap := make(map[string]string)
 	ageNameMap := make(map[string]string)
 	gradeNameMap := make(map[string]string)
+	publishScopeNameMap := make(map[string]string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
@@ -1167,6 +1172,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	skillsIds := make([]string, 0)
 	ageIds := make([]string, 0)
 	gradeIds := make([]string, 0)
+	scopeIds := make([]string, 0)
 
 	for i := range contentList {
 		programIds = append(programIds, contentList[i].Program)
@@ -1175,6 +1181,8 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		skillsIds = append(skillsIds, contentList[i].Skills...)
 		ageIds = append(ageIds, contentList[i].Age...)
 		gradeIds = append(gradeIds, contentList[i].Grade...)
+
+		scopeIds = append(scopeIds, contentList[i].PublishScope)
 	}
 
 	//Program
@@ -1207,6 +1215,17 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	} else {
 		for i := range developmentals {
 			developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
+		}
+	}
+
+	//scope
+	publishScopeProvider := external.GetPublishScopeProvider()
+	publishScopes, err := publishScopeProvider.BatchGet(ctx, scopeIds)
+	if err != nil {
+		log.Error(ctx, "can't get publish scope info", log.Err(err))
+	} else {
+		for i := range publishScopes {
+			publishScopeNameMap[publishScopes[i].ID] = publishScopes[i].Name
 		}
 	}
 
@@ -1290,6 +1309,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			SkillsName:        skillsNames,
 			AgeName:           ageNames,
 			GradeName:         gradeNames,
+			PublishScopeName: 	publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
 			OutcomeEntities:   cm.pickOutcomes(ctx, contentList[i].Outcomes, outcomeMaps),
 		}
