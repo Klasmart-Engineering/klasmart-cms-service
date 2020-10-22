@@ -183,6 +183,7 @@ type Content struct {
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
 
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason"`
+	Remark string `gorm:"type:varchar(255);NOT NULL;column:remark"`
 	Version      int64  `gorm:"type:int;NOT NULL;column:version"`
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by"`
 	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id"`
@@ -320,6 +321,7 @@ type ContentInfoWithDetails struct {
 	AgeName           []string `json:"age_name"`
 	GradeName         []string `json:"grade_name"`
 	OrgName           string   `json:"org_name"`
+	PublishScopeName string `json:"publish_scope_name"`
 
 	OutcomeEntities	 []*Outcome `json:"outcome_entities"`
 }
@@ -361,6 +363,7 @@ type ContentInfo struct {
 	SourceID     string `json:"source_id"`
 	LockedBy     string `json:"locked_by"`
 	RejectReason []string `json:"reject_reason"`
+	Remark string `json:"remark"`
 	LatestID     string `json:"latest_id"`
 
 	Data  string `json:"data"`

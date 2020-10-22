@@ -80,6 +80,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Keywords:      keywords,
 		SuggestTime:   obj.SuggestTime,
 		RejectReason:  rejectReason,
+		Remark: 	   obj.Remark,
 		Description:   obj.Description,
 		Thumbnail:     obj.Thumbnail,
 		Data:          obj.Data,

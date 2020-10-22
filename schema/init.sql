@@ -21,6 +21,7 @@ CREATE TABLE `cms_contents` (
    `publish_scope` VARCHAR( 50) COMMENT  '发布范围',
    `publish_status` VARCHAR( 16) NOT  NULL  COMMENT  '状态',
    `reject_reason` VARCHAR( 255) COMMENT  '拒绝理由',
+   `remark` VARCHAR( 255) COMMENT  '拒绝理由备注',
    `version` INT  NOT  NULL  DEFAULT  0  COMMENT  '版本',
    `locked_by` VARCHAR( 50) COMMENT  '封锁人',
    `source_id` VARCHAR( 50) COMMENT  'source_id',
