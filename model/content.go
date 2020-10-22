@@ -346,7 +346,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	content.PublishStatus = entity.NewContentPublishStatus(status)
-	if status == entity.ContentStatusRejected && len(reason) < 1 {
+	if status == entity.ContentStatusRejected && len(reason) < 1 && remark == "" {
 		return ErrNoRejectReason
 	}
 
