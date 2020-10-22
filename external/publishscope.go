@@ -20,11 +20,11 @@ func (m *mockPublishScopeService) BatchGet(ctx context.Context, ids []string) ([
 	//TODO: to add publish scope
 	return []*PublishScope{
 		{
-			ID:   "visibility settings1",
+			ID:   "visibility_settings1",
 			Name: "School",
 		},
 		{
-			ID:   "visibility settings2",
+			ID:   "visibility_settings2",
 			Name: "Org",
 		},
 		{
