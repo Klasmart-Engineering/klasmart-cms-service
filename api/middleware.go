@@ -44,7 +44,7 @@ func MustLogin(c *gin.Context) {
 	op := &entity.Operator{
 		UserID: "1",
 		OrgID:  "1",
-		Role:   "teacher",
+		Role:   "admin",
 	}
 	c.Set(Operator, op)
 }
