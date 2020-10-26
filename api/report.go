@@ -24,15 +24,16 @@ func (s *Server) listStudentReport(ctx *gin.Context) {
 // @Summary get student report
 // @Description get student report
 // @Tags reports
-// @ID getStudentReport
+// @ID getStudentReportDetail
 // @Accept json
 // @Produce json
 // @Param id path string true "student id"
+// @Param lesson_plan_id query string true "lesson plan id"
 // @Success 200 {object} entity.StudentReportDetail
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students/{id} [get]
-func (s *Server) getStudentReport(ctx *gin.Context) {
+func (s *Server) getStudentReportDetail(ctx *gin.Context) {
 	ctx.JSON(http.StatusNotImplemented, "not implemented")
 }
