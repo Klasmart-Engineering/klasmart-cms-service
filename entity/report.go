@@ -16,10 +16,10 @@ type StudentReportDetail struct {
 }
 
 type StudentReportCategory struct {
-	CategoryName      ReportCategory `json:"category_name"`
-	AllAchievedCount  int            `json:"all_achieved_count"`
-	NotAchievedCount  int            `json:"not_achieved_count"`
-	NotAttemptedCount int            `json:"not_attempted_count"`
+	Name              ReportCategory `json:"name"`
+	AllAchievedItems  []string       `json:"all_achieved_items"`
+	NotAchievedItems  []string       `json:"not_achieved_items"`
+	NotAttemptedItems []string       `json:"not_attempted_items"`
 }
 
 type ReportCategory string
