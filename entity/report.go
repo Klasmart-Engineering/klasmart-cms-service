@@ -55,3 +55,8 @@ var reportCategoryOrderMap = map[ReportCategory]int{
 func ReportCategoryOrder(category ReportCategory) int {
 	return reportCategoryOrderMap[category]
 }
+
+type ReportLessonPlanInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
