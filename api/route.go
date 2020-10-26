@@ -70,6 +70,12 @@ func (s Server) registeRoute() {
 		assessments.PUT("/assessments/:id", MustLogin, s.updateAssessment)
 	}
 
+	reports := s.engine.Group("/v1")
+	{
+		reports.GET("/reports", MustLogin, s.listStudentReport)
+		reports.GET("/reports/student/:id", MustLogin, s.getStudentReport)
+	}
+
 	outcomes := s.engine.Group("/v1")
 	{
 		outcomes.POST("/learning_outcomes", MustLogin, s.createOutcome)
