@@ -16,7 +16,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports [get]
+// @Router /reports/students [get]
 func (s *Server) listStudentReport(ctx *gin.Context) {
 	ctx.JSON(http.StatusNotImplemented, "not implemented")
 }
@@ -32,7 +32,7 @@ func (s *Server) listStudentReport(ctx *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /reports/student/{id} [get]
+// @Router /reports/students/{id} [get]
 func (s *Server) getStudentReport(ctx *gin.Context) {
 	ctx.JSON(http.StatusNotImplemented, "not implemented")
 }
