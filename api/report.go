@@ -2,6 +2,9 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
@@ -18,7 +21,20 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students [get]
 func (s *Server) listStudentReport(ctx *gin.Context) {
-	ctx.JSON(http.StatusNotImplemented, "not implemented")
+	operator := s.getOperator(ctx)
+	requestContext := ctx.Request.Context()
+	lessonPlanID := ctx.Query("lesson_plan_id")
+	result, err := model.GetReportModel().ListStudentReport(requestContext, dbo.MustGetDB(requestContext), lessonPlanID, operator)
+	if err != nil {
+		switch err {
+		case constant.ErrInvalidArgs:
+			ctx.JSON(http.StatusBadRequest, L(Unknown))
+		default:
+			ctx.JSON(http.StatusInternalServerError, L(Unknown))
+		}
+		return
+	}
+	ctx.JSON(http.StatusOK, result)
 }
 
 // @Summary get student report
@@ -35,5 +51,19 @@ func (s *Server) listStudentReport(ctx *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students/{id} [get]
 func (s *Server) getStudentReportDetail(ctx *gin.Context) {
-	ctx.JSON(http.StatusNotImplemented, "not implemented")
+	operator := s.getOperator(ctx)
+	requestContext := ctx.Request.Context()
+	studentID := ctx.Param("id")
+	lessonPlanID := ctx.Query("lesson_plan_id")
+	result, err := model.GetReportModel().GetStudentReportDetail(ctx, dbo.MustGetDB(requestContext), studentID, lessonPlanID, operator)
+	if err != nil {
+		switch err {
+		case constant.ErrInvalidArgs:
+			ctx.JSON(http.StatusBadRequest, L(Unknown))
+		default:
+			ctx.JSON(http.StatusInternalServerError, L(Unknown))
+		}
+		return
+	}
+	ctx.JSON(http.StatusOK, result)
 }
