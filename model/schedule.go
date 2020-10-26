@@ -228,6 +228,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		ProgramID:    viewData.ProgramID,
 		TeacherIDs:   viewData.TeacherIDs,
 		LessonPlanID: viewData.LessonPlanID,
+		ClassType:    viewData.ClassType,
 	})
 	if err != nil {
 		log.Error(ctx, "update schedule: verify data error",
