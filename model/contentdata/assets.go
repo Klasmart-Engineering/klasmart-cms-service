@@ -15,7 +15,7 @@ func NewAssetsData() *AssetsData {
 
 type AssetsData struct {
 	Size     int      `json:"size"`
-	FileType int      `json:"file_type"`
+	FileType entity.FileType      `json:"file_type"`
 	Source   SourceID `json:"source"`
 }
 
@@ -97,7 +97,7 @@ func isArray(ext string, extensions []string) bool{
 }
 
 
-func ExtensionToFileType(ctx context.Context, sourceId SourceID) (int, error) {
+func ExtensionToFileType(ctx context.Context, sourceId SourceID) (entity.FileType, error) {
 	if sourceId.IsNil() {
 		log.Error(ctx, "marshal material failed", log.String("source", string(sourceId)))
 		return -1, ErrContentDataRequestSource

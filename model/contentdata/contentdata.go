@@ -78,6 +78,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Age:           ages,
 		Grade:         grades,
 		Keywords:      keywords,
+		SourceType:		obj.SourceType,
 		SuggestTime:   obj.SuggestTime,
 		RejectReason:  rejectReason,
 		Remark: 	   obj.Remark,

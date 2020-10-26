@@ -23,7 +23,7 @@ func NewMaterialData() *MaterialData {
 
 type MaterialData struct {
 	InputSource int      `json:"input_source"`
-	FileType    int      `json:"file_type"`
+	FileType    entity.FileType      `json:"file_type"`
 	Source      SourceID `json:"source"`
 }
 func (this *MaterialData) Unmarshal(ctx context.Context, data string) error {
