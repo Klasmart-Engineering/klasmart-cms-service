@@ -20,6 +20,7 @@ type IScheduleDA interface {
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
 	GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error)
+	GetLessonPlanIDsByTeacherAndClass(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string) ([]string, error)
 }
 
 type scheduleDA struct {
@@ -132,10 +133,28 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
-		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.Any("teacherID", teacherID))
+		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.String("teacherID", teacherID))
 		return nil, err
 	}
 	return classIDs, nil
+}
+
+func (s *scheduleDA) GetLessonPlanIDsByTeacherAndClass(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string) ([]string, error) {
+	where := fmt.Sprintf("teacher_id = ? and class_id = ? and status = ? and  (delete_at=0)")
+	var lessonPlanIDs []string
+	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(where, teacherID, classID, entity.ScheduleStatusClosed).Find(&lessonPlanIDs).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "GetLessonPlanIDsByTeacherAndClass:get lessonPlan ids from db error",
+			log.Err(err),
+			log.String("teacherID", teacherID),
+			log.String("classID", classID),
+		)
+		return nil, err
+	}
+	return lessonPlanIDs, nil
 }
 
 var (
