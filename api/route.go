@@ -60,6 +60,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules/:id/live/token", MustLogin, s.getScheduleLiveToken)
 		schedules.PUT("/schedules/:id/status", MustLogin, s.updateScheduleStatus)
 		schedules.GET("/schedules_participate/class", MustLogin, s.getParticipateClass)
+		schedules.GET("/schedules_lesson_plans", MustLogin, s.getLessonPlans)
 	}
 
 	assessments := s.engine.Group("/v1")
@@ -72,8 +73,8 @@ func (s Server) registeRoute() {
 
 	reports := s.engine.Group("/v1")
 	{
-		reports.GET("/reports", MustLogin, s.listStudentReport)
-		reports.GET("/reports/student/:id", MustLogin, s.getStudentReport)
+		reports.GET("/reports", MustLogin, s.listStudentsReport)
+		reports.GET("/reports/students/:id", MustLogin, s.getStudentDetailReport)
 	}
 
 	outcomes := s.engine.Group("/v1")
