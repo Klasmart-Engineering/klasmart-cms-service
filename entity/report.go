@@ -65,6 +65,8 @@ type ListStudentsReportCommand struct {
 	TeacherID    string    `json:"teacher_id"`
 	ClassID      string    `json:"class_id"`
 	LessonPlanID string    `json:"lesson_plan_id"`
+	Status       string    `json:"status"`
+	SortBy       string    `json:"sort_by"`
 	Operator     *Operator `json:"-"`
 }
 
@@ -74,4 +76,66 @@ type GetStudentDetailReportCommand struct {
 	ClassID      string    `json:"class_id"`
 	LessonPlanID string    `json:"lesson_plan_id"`
 	Operator     *Operator `json:"-"`
+}
+
+type ReportOutcomeStatusOptions string
+
+const (
+	ReportOutcomeStatusOptionsAll          = "all"
+	ReportOutcomeStatusOptionsAllAchieved  = "all_achieved"
+	ReportOutcomeStatusOptionsNotAchieved  = "not_achieved"
+	ReportOutcomeStatusOptionsNotAttempted = "not_attempted"
+)
+
+func (o ReportOutcomeStatusOptions) Valid() bool {
+	switch o {
+	case ReportOutcomeStatusOptionsAll,
+		ReportOutcomeStatusOptionsAllAchieved,
+		ReportOutcomeStatusOptionsNotAchieved,
+		ReportOutcomeStatusOptionsNotAttempted:
+		return true
+	default:
+		return false
+	}
+	return false
+}
+
+type ReportSortBy string
+
+const (
+	ReportSortByDescending = "descending"
+	ReportSortByAscending  = "ascending"
+)
+
+func (r ReportSortBy) Valid() bool {
+	switch r {
+	case ReportSortByDescending, ReportSortByAscending:
+		return true
+	default:
+		return false
+	}
+	return false
+}
+
+type ReportOutcomeStatus string
+
+const (
+	ReportOutcomeStatusAllAchieved  = "all_achieved"
+	ReportOutcomeStatusNotAchieved  = "not_achieved"
+	ReportOutcomeStatusNotAttempted = "not_attempted"
+)
+
+var reportOutcomeStatusPriorityMap = map[ReportOutcomeStatus]int{
+	ReportOutcomeStatusNotAttempted: 1,
+	ReportOutcomeStatusNotAchieved:  2,
+	ReportOutcomeStatusAllAchieved:  3,
+}
+
+func ReportOutcomeStatusPriority(status ReportOutcomeStatus) int {
+	return reportOutcomeStatusPriorityMap[status]
+}
+
+type AssessmentOutcomeKey struct {
+	AssessmentID string `json:"assessment_id"`
+	OutcomeID    string `json:"outcome_id"`
 }

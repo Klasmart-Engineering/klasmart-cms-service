@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"strings"
 	"sync"
 )
 
@@ -15,7 +16,7 @@ type IAssessmentOutcomeDA interface {
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
-	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error)
+	BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error)
 }
 
 var (
@@ -107,4 +108,33 @@ func (d *assessmentOutcomeDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Co
 		return nil, err
 	}
 	return items, nil
+}
+
+func (d *assessmentOutcomeDA) BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error) {
+	var items []*entity.AssessmentOutcome
+	var (
+		template string
+		values   []interface{}
+	)
+	{
+		var items []string
+		for _, key := range keys {
+			items = append(items, "(assessment_id = ? and outcome_id = ?)")
+			values = append(values, key.AssessmentID, key.OutcomeID)
+		}
+		template = strings.Join(items, " or ")
+	}
+	if err := tx.
+		Where(template, values...).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	result := map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome{}
+	for _, item := range items {
+		result[entity.AssessmentOutcomeKey{
+			AssessmentID: item.AssessmentID,
+			OutcomeID:    item.OutcomeID,
+		}] = item
+	}
+	return result, nil
 }
