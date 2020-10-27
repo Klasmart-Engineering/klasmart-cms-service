@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"strings"
 	"sync"
 	"time"
@@ -36,6 +37,7 @@ type IScheduleModel interface {
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
 	GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
+	GetLessPlanInfo(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string, operator entity.Operator) ([]*entity.ScheduleShortInfo, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -947,6 +949,37 @@ func (s *scheduleModel) GetParticipateClass(ctx context.Context, operator *entit
 			log.Strings("classIDs", classIDs),
 		)
 		return nil, err
+	}
+	return result, nil
+}
+
+func (s *scheduleModel) GetLessPlanInfo(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string, operator entity.Operator) ([]*entity.ScheduleShortInfo, error) {
+	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByTeacherAndClass(ctx, tx, teacherID, classID)
+	if err != nil {
+		logger.Error(ctx, "GetLessPlanInfo:get lessonPlanIDs error",
+			log.Err(err),
+			log.String("teacherID", teacherID),
+			log.String("classID", classID),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		logger.Error(ctx, "GetLessPlanInfo:get lessonPlan info error",
+			log.Err(err),
+			log.String("teacherID", teacherID),
+			log.String("classID", classID),
+			log.Strings("lessonPlanIDs", lessonPlanIDs),
+			log.Any("operator", operator),
+		)
+	}
+	result := make([]*entity.ScheduleShortInfo, len(lessonPlanInfos))
+	for i, item := range lessonPlanInfos {
+		result[i] = &entity.ScheduleShortInfo{
+			ID:   item.ID,
+			Name: item.Name,
+		}
 	}
 	return result, nil
 }
