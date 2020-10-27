@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"database/sql"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -13,7 +12,6 @@ import (
 )
 
 type IReportModel interface {
-	GetReportLessPlanInfo(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string, operator entity.Operator) ([]*entity.ReportLessonPlanInfo, error)
 	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error)
 	GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error)
 }
@@ -31,37 +29,6 @@ func GetReportModel() IReportModel {
 }
 
 type reportModel struct{}
-
-func (r *reportModel) GetReportLessPlanInfo(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string, operator entity.Operator) ([]*entity.ReportLessonPlanInfo, error) {
-	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByTeacherAndClass(ctx, tx, teacherID, classID)
-	if err != nil {
-		logger.Error(ctx, "GetLessPlanInfo:get lessonPlanIDs error",
-			log.Err(err),
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
-	if err != nil {
-		logger.Error(ctx, "GetLessPlanInfo:get lessonPlan info error",
-			log.Err(err),
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
-			log.Strings("lessonPlanIDs", lessonPlanIDs),
-			log.Any("operator", operator),
-		)
-	}
-	result := make([]*entity.ReportLessonPlanInfo, len(lessonPlanInfos))
-	for i, item := range lessonPlanInfos {
-		result[i] = &entity.ReportLessonPlanInfo{
-			ID:   item.ID,
-			Name: item.Name,
-		}
-	}
-	return result, nil
-}
 
 func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error) {
 	var assessmentIDs []string
