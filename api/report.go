@@ -20,7 +20,7 @@ import (
 // @Produce json
 // @Param teacher_id query string true "teacher_id"
 // @Param class_id query string true "class_id"
-// @Param lesson_plain_id query string true "lesson plain id"
+// @Param lesson_plan_id query string true "lesson plan id"
 // @Success 200 {object} entity.StudentsReport
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
