@@ -11,9 +11,9 @@ import (
 )
 
 type IReportModel interface {
-	ListStudentReport(ctx context.Context, tx *dbo.DBContext, lessonPlanID string, operator entity.Operator) (entity.StudentReportList, error)
-	GetStudentReportDetail(ctx context.Context, tx *dbo.DBContext, studentID string, lessonPlanID string, operator entity.Operator) (entity.StudentReportDetail, error)
 	GetReportLessPlanInfo(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string, operator entity.Operator) ([]*entity.ReportLessonPlanInfo, error)
+	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error)
+	GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error)
 }
 
 var (
@@ -61,10 +61,60 @@ func (r *reportModel) GetReportLessPlanInfo(ctx context.Context, tx *dbo.DBConte
 	return result, nil
 }
 
-func (r *reportModel) ListStudentReport(ctx context.Context, tx *dbo.DBContext, lessonPlanID string, operator entity.Operator) (entity.StudentReportList, error) {
+func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error) {
+	// TODO: lessonPlanID -> scheduleIDs
+	var scheduleIDs []string
+	assessments, err := da.GetAssessmentDA().BatchGetAssessmentsByScheduleIDs(ctx, tx, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "list student report: batch get assessment failed by schedule ids",
+			log.Err(err),
+			log.Any("cmd", "cmd"),
+		)
+		return nil, err
+	}
+	var assessmentIDs []string
+	for _, assessment := range assessments {
+		assessmentIDs = append(assessmentIDs, assessment.ID)
+	}
+	assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "list student report: batch get failed by assessment ids",
+			log.Err(err),
+			log.Any("cmd", "cmd"),
+		)
+		return nil, err
+	}
+	var outcomeIDs []string
+	for _, item := range assessmentOutcomes {
+		outcomeIDs = append(outcomeIDs, item.OutcomeID)
+	}
+	outcomeCond := &entity.OutcomeCondition{IDs: outcomeIDs}
+	_, outcomes, err := GetOutcomeModel().SearchLearningOutcome(ctx, tx, outcomeCond, cmd.Operator)
+	if err != nil {
+		log.Error(ctx, "list student report: search learning outcome failed",
+			log.Err(err),
+			log.Any("outcome_cond", outcomeCond),
+			log.Any("cmd", "cmd"),
+		)
+		return nil, err
+	}
+	outcomeNameMap := map[string]string{}
+	for _, outcome := range outcomes {
+		outcomeNameMap[outcome.ID] = outcome.Name
+	}
+	attendanceIDs, err := da.GetAssessmentAttendanceDA().BatchGetAttendanceIDsByAssessmentIDs(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "list student report: batch get attendance ids failed by assessment ids",
+			log.Err(err),
+			log.Any("assessment_ids", assessmentIDs),
+			log.Any("cmd", "cmd"),
+		)
+		return nil, err
+	}
+	_ = attendanceIDs
 	panic("implement me")
 }
 
-func (r *reportModel) GetStudentReportDetail(ctx context.Context, tx *dbo.DBContext, studentID string, lessonPlanID string, operator entity.Operator) (entity.StudentReportDetail, error) {
+func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error) {
 	panic("implement me")
 }

@@ -12,9 +12,10 @@ import (
 )
 
 type IAssessmentDA interface {
+	dbo.DataAccesser
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
-	dbo.DataAccesser
+	BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]entity.Assessment, error)
 }
 
 var (
@@ -161,4 +162,8 @@ func (c *QueryAssessmentsCondition) GetOrderBy() string {
 		return "complete_time desc"
 	}
 	return ""
+}
+
+func (a *assessmentDA) BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]entity.Assessment, error) {
+	panic("implement me")
 }

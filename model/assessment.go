@@ -522,14 +522,35 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				return err
 			}
 		}
+
+		outcomeMap := map[string]*entity.Outcome{}
+		{
+			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
+			if err != nil {
+				log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
+					log.Err(err),
+					log.Strings("outcome_ids", outcomeIDs),
+				)
+				return err
+			}
+			for _, outcome := range outcomes {
+				outcomeMap[outcome.ID] = outcome
+			}
+		}
+
 		{
 			var items []*entity.AssessmentOutcome
 			for _, outcomeID := range outcomeIDs {
+				noneAchieved := false
+				if outcome := outcomeMap[outcomeID]; outcome != nil {
+					noneAchieved = !outcome.Assumed
+				}
 				items = append(items, &entity.AssessmentOutcome{
 					ID:           utils.NewID(),
 					AssessmentID: newID,
 					OutcomeID:    outcomeID,
 					Skip:         false,
+					NoneAchieved: noneAchieved,
 				})
 			}
 			if len(items) > 0 {
@@ -543,20 +564,8 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				}
 			}
 		}
-		{
-			outcomeMap := map[string]*entity.Outcome{}
-			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
-			if err != nil {
-				log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
-					log.Err(err),
-					log.Strings("outcome_ids", outcomeIDs),
-				)
-				return err
-			}
-			for _, outcome := range outcomes {
-				outcomeMap[outcome.ID] = outcome
-			}
 
+		{
 			var items []*entity.OutcomeAttendance
 			for _, outcomeID := range outcomeIDs {
 				if outcomeMap[outcomeID] == nil {

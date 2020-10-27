@@ -1,6 +1,6 @@
 package entity
 
-type StudentReportList struct {
+type StudentsReport struct {
 	Items []StudentReportItem `json:"items"`
 }
 
@@ -11,7 +11,7 @@ type StudentReportItem struct {
 	NotAttemptedCount int    `json:"not_attempted_count"`
 }
 
-type StudentReportDetail struct {
+type StudentDetailReport struct {
 	Categories []StudentReportCategory `json:"categories"`
 }
 
@@ -59,4 +59,19 @@ func ReportCategoryOrder(category ReportCategory) int {
 type ReportLessonPlanInfo struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type ListStudentsReportCommand struct {
+	TeacherID    string    `json:"teacher_id"`
+	ClassID      string    `json:"class_id"`
+	LessonPlanID string    `json:"lesson_plan_id"`
+	Operator     *Operator `json:"-"`
+}
+
+type GetStudentDetailReportCommand struct {
+	StudentID    string    `json:"student_id"`
+	TeacherID    string    `json:"teacher_id"`
+	ClassID      string    `json:"class_id"`
+	LessonPlanID string    `json:"lesson_plan_id"`
+	Operator     *Operator `json:"-"`
 }
