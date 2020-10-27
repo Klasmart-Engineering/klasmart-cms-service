@@ -15,6 +15,7 @@ type IAssessmentOutcomeDA interface {
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
+	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error)
 }
 
 var (
@@ -30,6 +31,14 @@ func GetAssessmentOutcomeDA() IAssessmentOutcomeDA {
 }
 
 type assessmentOutcomeDA struct{}
+
+func (*assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
+	var items []*entity.AssessmentOutcome
+	if err := tx.Where("assessment_id in (?)", assessmentIDs).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 func (*assessmentOutcomeDA) GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
 	var items []entity.AssessmentOutcome

@@ -1,9 +1,11 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
@@ -11,61 +13,72 @@ import (
 // @Summary list student report
 // @Description list student report
 // @Tags reports
-// @ID listStudentReport
+// @ID listStudentsReport
 // @Accept json
 // @Produce json
+// @Param teacher_id query string true "teacher_id"
+// @Param class_id query string true "class_id"
 // @Param lesson_plain_id query string true "lesson plain id"
-// @Success 200 {object} entity.StudentReportList
+// @Success 200 {object} entity.StudentsReport
 // @Failure 400 {object} BadRequestResponse
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students [get]
-func (s *Server) listStudentReport(ctx *gin.Context) {
-	operator := s.getOperator(ctx)
+func (s *Server) listStudentsReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	lessonPlanID := ctx.Query("lesson_plan_id")
-	result, err := model.GetReportModel().ListStudentReport(requestContext, dbo.MustGetDB(requestContext), lessonPlanID, operator)
-	if err != nil {
-		switch err {
-		case constant.ErrInvalidArgs:
-			ctx.JSON(http.StatusBadRequest, L(Unknown))
-		default:
-			ctx.JSON(http.StatusInternalServerError, L(Unknown))
-		}
-		return
+	operator := s.getOperator(ctx)
+	cmd := entity.ListStudentsReportCommand{
+		TeacherID:    ctx.Query("teacher_id"),
+		ClassID:      ctx.Query("class_id"),
+		LessonPlanID: ctx.Query("lesson_plan_id"),
+		Operator:     &operator,
 	}
-	ctx.JSON(http.StatusOK, result)
+	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), cmd)
+	switch err {
+	case nil:
+		ctx.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		ctx.JSON(http.StatusBadRequest, L(Unknown))
+	default:
+		ctx.JSON(http.StatusInternalServerError, L(Unknown))
+	}
 }
 
 // @Summary get student report
 // @Description get student report
 // @Tags reports
-// @ID getStudentReportDetail
+// @ID getStudentDetailReport
 // @Accept json
 // @Produce json
 // @Param id path string true "student id"
-// @Param lesson_plan_id query string true "lesson plan id"
-// @Success 200 {object} entity.StudentReportDetail
+// @Param teacher_id query string true "teacher_id"
+// @Param class_id query string true "class_id"
+// @Param lesson_plain_id query string true "lesson plain id"
+// @Success 200 {object} entity.StudentDetailReport
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students/{id} [get]
-func (s *Server) getStudentReportDetail(ctx *gin.Context) {
-	operator := s.getOperator(ctx)
+func (s *Server) getStudentDetailReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	studentID := ctx.Param("id")
-	lessonPlanID := ctx.Query("lesson_plan_id")
-	result, err := model.GetReportModel().GetStudentReportDetail(ctx, dbo.MustGetDB(requestContext), studentID, lessonPlanID, operator)
-	if err != nil {
-		switch err {
-		case constant.ErrInvalidArgs:
-			ctx.JSON(http.StatusBadRequest, L(Unknown))
-		default:
-			ctx.JSON(http.StatusInternalServerError, L(Unknown))
-		}
-		return
+	operator := s.getOperator(ctx)
+	cmd := entity.GetStudentDetailReportCommand{
+		StudentID:    ctx.Param("id"),
+		TeacherID:    ctx.Query("teacher_id"),
+		ClassID:      ctx.Query("class_id"),
+		LessonPlanID: ctx.Query("lesson_plan_id"),
+		Operator:     &operator,
 	}
-	ctx.JSON(http.StatusOK, result)
+	result, err := model.GetReportModel().GetStudentDetailReport(requestContext, dbo.MustGetDB(requestContext), cmd)
+	switch err {
+	case nil:
+		ctx.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		ctx.JSON(http.StatusBadRequest, L(Unknown))
+	case constant.ErrRecordNotFound, sql.ErrNoRows:
+		ctx.JSON(http.StatusNotFound, L(Unknown))
+	default:
+		ctx.JSON(http.StatusInternalServerError, L(Unknown))
+	}
 }
 
 // @Summary get lessonPlans by teacher and class

@@ -72,8 +72,8 @@ func (s Server) registeRoute() {
 
 	reports := s.engine.Group("/v1")
 	{
-		reports.GET("/reports", MustLogin, s.listStudentReport)
-		reports.GET("/reports/students/:id", MustLogin, s.getStudentReportDetail)
+		reports.GET("/reports", MustLogin, s.listStudentsReport)
+		reports.GET("/reports/students/:id", MustLogin, s.getStudentDetailReport)
 		reports.GET("/reports/lesson_plans", MustLogin, s.getLessonPlans)
 	}
 
