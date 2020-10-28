@@ -2,7 +2,6 @@ package da
 
 import (
 	"database/sql"
-	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 	"testing"
@@ -25,6 +24,6 @@ func Test_GetLessonPlanIDsByCondition_Sql(t *testing.T) {
 	}
 	wheres, parameters := c.GetConditions()
 	whereSql := strings.Join(wheres, " and ")
-	fmt.Println(whereSql)
-	fmt.Println(parameters)
+	t.Log(whereSql)
+	t.Log(parameters)
 }

@@ -128,8 +128,8 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error) {
 	sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",
 		constant.TableNameScheduleTeacher, constant.TableNameSchedule, constant.TableNameScheduleTeacher)
-	var classIDs []string
-	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&classIDs).Error
+	var scheduleList []*entity.Schedule
+	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&scheduleList).Error
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
@@ -137,14 +137,19 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.String("teacherID", teacherID))
 		return nil, err
 	}
-	return classIDs, nil
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.ClassID
+	}
+	log.Debug(ctx, "classIDs", log.Strings("classIDs", result))
+	return result, nil
 }
 
 func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
 	wheres, parameters := condition.GetConditions()
 	whereSql := strings.Join(wheres, " and ")
-	var lessonPlanIDs []string
-	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(whereSql, parameters...).Find(&lessonPlanIDs).Error
+	var scheduleList []*entity.Schedule
+	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(whereSql, parameters...).Find(&scheduleList).Error
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
@@ -155,7 +160,12 @@ func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DB
 		)
 		return nil, err
 	}
-	return lessonPlanIDs, nil
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.LessonPlanID
+	}
+	log.Debug(ctx, "lessonPlanIDs", log.Strings("lessonPlanIDs", result))
+	return result, nil
 }
 
 var (
