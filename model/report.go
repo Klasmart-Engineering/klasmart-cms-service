@@ -6,6 +6,7 @@ import (
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -33,6 +34,29 @@ func GetReportModel() IReportModel {
 type reportModel struct{}
 
 func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error) {
+	{
+		if !cmd.Status.Valid() {
+			log.Error(ctx, "list students report: invalid status", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+		if !cmd.SortBy.Valid() {
+			log.Error(ctx, "list students report: invalid sort by", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+		if cmd.ClassID == "" {
+			log.Error(ctx, "list students report: require class id", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+		if cmd.TeacherID == "" {
+			log.Error(ctx, "list students report: require teacher id", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+		if cmd.LessonPlanID == "" {
+			log.Error(ctx, "list students report: require lesson plan id", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+	}
+
 	var students []*external.Student
 	{
 		var err error
@@ -76,19 +100,39 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		result.Items = append(result.Items, newItem)
 	}
 
+	sortInterface := entity.NewSortingStudentReportItems(result.Items, cmd.Status)
 	switch cmd.SortBy {
 	case entity.ReportSortByDescending:
-		sort.Sort(sort.Reverse(entity.StudentReportItemSortByName(result.Items)))
+		sort.Sort(sort.Reverse(sortInterface))
 	case entity.ReportSortByAscending:
 		fallthrough
 	default:
-		sort.Sort(entity.StudentReportItemSortByName(result.Items))
+		sort.Sort(sortInterface)
 	}
 
 	return &result, nil
 }
 
 func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error) {
+	{
+		if cmd.ClassID == "" {
+			log.Error(ctx, "get student detail report: require class id", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+		if cmd.TeacherID == "" {
+			log.Error(ctx, "get student detail report: require teacher id", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+		if cmd.LessonPlanID == "" {
+			log.Error(ctx, "get student detail report: require lesson plan id", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+		if cmd.StudentID == "" {
+			log.Error(ctx, "get student detail report: require student id", log.Any("cmd", cmd))
+			return nil, constant.ErrInvalidArgs
+		}
+	}
+
 	var student *external.Student
 	{
 		students, err := external.GetClassServiceProvider().GetStudents(ctx, cmd.ClassID)

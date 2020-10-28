@@ -19,8 +19,8 @@ import (
 // @Param teacher_id query string true "teacher_id"
 // @Param class_id query string true "class_id"
 // @Param lesson_plan_id query string true "lesson plan id"
-// @Param status query string true "status" enums(all, all_achieved, not_achieved, not_attempted)
-// @Param status sortBy string true "sort by" enums(descending, ascending)
+// @Param status query string false "status" enums(all, all_achieved, not_achieved, not_attempted) default(all)
+// @Param sortBy query string false "sort by" enums(descending, ascending) default(descending)
 // @Success 200 {object} entity.StudentsReport
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -32,8 +32,8 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 		TeacherID:    ctx.Query("teacher_id"),
 		ClassID:      ctx.Query("class_id"),
 		LessonPlanID: ctx.Query("lesson_plan_id"),
-		Status:       ctx.Query("status"),
-		SortBy:       ctx.Query("sort_by"),
+		Status:       entity.ReportOutcomeStatusOption(ctx.DefaultQuery("status", entity.ReportOutcomeStatusOptionsAll)),
+		SortBy:       entity.ReportSortBy(ctx.DefaultQuery("sort_by", entity.ReportSortByDescending)),
 		Operator:     &operator,
 	}
 	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), cmd)

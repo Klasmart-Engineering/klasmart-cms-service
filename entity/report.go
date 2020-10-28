@@ -64,12 +64,12 @@ type ReportLessonPlanInfo struct {
 }
 
 type ListStudentsReportCommand struct {
-	TeacherID    string    `json:"teacher_id"`
-	ClassID      string    `json:"class_id"`
-	LessonPlanID string    `json:"lesson_plan_id"`
-	Status       string    `json:"status"`
-	SortBy       string    `json:"sort_by"`
-	Operator     *Operator `json:"-"`
+	TeacherID    string                    `json:"teacher_id"`
+	ClassID      string                    `json:"class_id"`
+	LessonPlanID string                    `json:"lesson_plan_id"`
+	Status       ReportOutcomeStatusOption `json:"status"`
+	SortBy       ReportSortBy              `json:"sort_by"`
+	Operator     *Operator                 `json:"-"`
 }
 
 type GetStudentDetailReportCommand struct {
@@ -80,7 +80,7 @@ type GetStudentDetailReportCommand struct {
 	Operator     *Operator `json:"-"`
 }
 
-type ReportOutcomeStatusOptions string
+type ReportOutcomeStatusOption string
 
 const (
 	ReportOutcomeStatusOptionsAll          = "all"
@@ -89,7 +89,7 @@ const (
 	ReportOutcomeStatusOptionsNotAttempted = "not_attempted"
 )
 
-func (o ReportOutcomeStatusOptions) Valid() bool {
+func (o ReportOutcomeStatusOption) Valid() bool {
 	switch o {
 	case ReportOutcomeStatusOptionsAll,
 		ReportOutcomeStatusOptionsAllAchieved,
@@ -140,18 +140,36 @@ type AssessmentOutcomeKey struct {
 	OutcomeID    string `json:"outcome_id"`
 }
 
-type StudentReportItemSortByName []StudentReportItem
-
-func (s StudentReportItemSortByName) Len() int {
-	return len(s)
+type SortingStudentReportItems struct {
+	Items  []StudentReportItem
+	Status ReportOutcomeStatusOption
 }
 
-func (s StudentReportItemSortByName) Less(i, j int) bool {
-	return s[i].StudentName < s[j].StudentName
+func NewSortingStudentReportItems(items []StudentReportItem, status ReportOutcomeStatusOption) *SortingStudentReportItems {
+	return &SortingStudentReportItems{Items: items, Status: status}
 }
 
-func (s StudentReportItemSortByName) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
+func (s SortingStudentReportItems) Len() int {
+	return len(s.Items)
+}
+
+func (s SortingStudentReportItems) Less(i, j int) bool {
+	switch s.Status {
+	case ReportOutcomeStatusOptionsNotAchieved:
+		return s.Items[i].NotAchievedCount < s.Items[j].NotAchievedCount
+	case ReportOutcomeStatusOptionsNotAttempted:
+		return s.Items[i].NotAttemptedCount < s.Items[j].NotAttemptedCount
+	case ReportOutcomeStatusOptionsAll:
+		fallthrough
+	case ReportOutcomeStatusOptionsAllAchieved:
+		fallthrough
+	default:
+		return s.Items[i].AllAchievedCount < s.Items[j].AllAchievedCount
+	}
+}
+
+func (s SortingStudentReportItems) Swap(i, j int) {
+	s.Items[i], s.Items[j] = s.Items[j], s.Items[i]
 }
 
 type ReportAttendanceOutcomeData struct {
