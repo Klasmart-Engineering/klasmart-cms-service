@@ -124,6 +124,12 @@ func (d *assessmentOutcomeDA) BatchGetMapByKeys(ctx context.Context, tx *dbo.DBC
 	if err := tx.
 		Where(template, values...).
 		Find(&items).Error; err != nil {
+		log.Error(ctx, "batch get assessment outcome by keys: find failed",
+			log.Err(err),
+			log.String("template", template),
+			log.Any("values", values),
+			log.Any("keys", keys),
+		)
 		return nil, err
 	}
 	result := map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome{}
@@ -141,6 +147,10 @@ func (d *assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *d
 	if err := tx.
 		Where("assessment_id in (?)", assessmentIDs).
 		Find(&items).Error; err != nil {
+		log.Error(ctx, "batch get assessment outcome by assessment ids: find failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+		)
 		return nil, err
 	}
 	return items, nil
