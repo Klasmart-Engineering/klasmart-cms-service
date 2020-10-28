@@ -128,8 +128,11 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error) {
 	sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",
 		constant.TableNameScheduleTeacher, constant.TableNameSchedule, constant.TableNameScheduleTeacher)
-	var classIDs []string
-	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&classIDs).Error
+	type temp struct {
+		ClassID string `gorm:"column:class_id;type:varchar(100)"`
+	}
+	var temps []*temp
+	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&temps).Error
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
@@ -143,7 +146,7 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
 	wheres, parameters := condition.GetConditions()
 	whereSql := strings.Join(wheres, " and ")
-	var lessonPlanIDs []string
+	var lessonPlanIDs []*string
 	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(whereSql, parameters...).Find(&lessonPlanIDs).Error
 	log.Info(ctx, "lessonPlanIDs", log.Any("lessplan", lessonPlanIDs))
 	if gorm.IsRecordNotFoundError(err) {
@@ -156,7 +159,8 @@ func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DB
 		)
 		return nil, err
 	}
-	return lessonPlanIDs, nil
+
+	return nil, nil
 }
 
 var (
