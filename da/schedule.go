@@ -145,6 +145,7 @@ func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DB
 	whereSql := strings.Join(wheres, " and ")
 	var lessonPlanIDs []string
 	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(whereSql, parameters...).Find(&lessonPlanIDs).Error
+	log.Info(ctx, "lessonPlanIDs", log.Any("lessplan", lessonPlanIDs))
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
