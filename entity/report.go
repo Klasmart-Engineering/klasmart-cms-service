@@ -27,17 +27,17 @@ type StudentReportCategory struct {
 type ReportCategory string
 
 const (
-	ReportCategorySpeechLanguagesSkills     = "Speech & Language Skills"
-	ReportCategoryFineMotorSkills           = "Fine Motor Skills"
-	ReportCategoryGrossMotorSkills          = "Gross Motor Skills"
-	ReportCategoryCognitiveSkills           = "Cognitive Skills"
-	ReportCategoryPersonalDevelopment       = "Personal Development"
-	ReportCategoryLanguageAndNumeracySkills = "Language and Numeracy Skills"
-	ReportCategorySocialAndEmotional        = "Social and Emotional"
-	ReportCategoryOral                      = "Oral"
-	ReportCategoryLiteracy                  = "Literacy"
-	ReportCategoryWholeChild                = "Whole-Child"
-	ReportCategoryKnowledge                 = "Knowledge"
+	ReportCategorySpeechLanguagesSkills     ReportCategory = "Speech & Language Skills"
+	ReportCategoryFineMotorSkills           ReportCategory = "Fine Motor Skills"
+	ReportCategoryGrossMotorSkills          ReportCategory = "Gross Motor Skills"
+	ReportCategoryCognitiveSkills           ReportCategory = "Cognitive Skills"
+	ReportCategoryPersonalDevelopment       ReportCategory = "Personal Development"
+	ReportCategoryLanguageAndNumeracySkills ReportCategory = "Language and Numeracy Skills"
+	ReportCategorySocialAndEmotional        ReportCategory = "Social and Emotional"
+	ReportCategoryOral                      ReportCategory = "Oral"
+	ReportCategoryLiteracy                  ReportCategory = "Literacy"
+	ReportCategoryWholeChild                ReportCategory = "Whole-Child"
+	ReportCategoryKnowledge                 ReportCategory = "Knowledge"
 )
 
 var reportCategoryOrderMap = map[ReportCategory]int{
@@ -83,10 +83,10 @@ type GetStudentDetailReportCommand struct {
 type ReportOutcomeStatusOption string
 
 const (
-	ReportOutcomeStatusOptionAll          = "all"
-	ReportOutcomeStatusOptionAchieved     = "achieved"
-	ReportOutcomeStatusOptionNotAchieved  = "not_achieved"
-	ReportOutcomeStatusOptionNotAttempted = "not_attempted"
+	ReportOutcomeStatusOptionAll          ReportOutcomeStatusOption = "all"
+	ReportOutcomeStatusOptionAchieved     ReportOutcomeStatusOption = "achieved"
+	ReportOutcomeStatusOptionNotAchieved  ReportOutcomeStatusOption = "not_achieved"
+	ReportOutcomeStatusOptionNotAttempted ReportOutcomeStatusOption = "not_attempted"
 )
 
 func (o ReportOutcomeStatusOption) Valid() bool {
@@ -104,8 +104,8 @@ func (o ReportOutcomeStatusOption) Valid() bool {
 type ReportSortBy string
 
 const (
-	ReportSortByDescending = "descending"
-	ReportSortByAscending  = "ascending"
+	ReportSortByDescending ReportSortBy = "descending"
+	ReportSortByAscending  ReportSortBy = "ascending"
 )
 
 func (r ReportSortBy) Valid() bool {
@@ -120,9 +120,9 @@ func (r ReportSortBy) Valid() bool {
 type ReportOutcomeStatus string
 
 const (
-	ReportOutcomeStatusAchieved     = "achieved"
-	ReportOutcomeStatusNotAchieved  = "not_achieved"
-	ReportOutcomeStatusNotAttempted = "not_attempted"
+	ReportOutcomeStatusAchieved     ReportOutcomeStatus = "achieved"
+	ReportOutcomeStatusNotAchieved  ReportOutcomeStatus = "not_achieved"
+	ReportOutcomeStatusNotAttempted ReportOutcomeStatus = "not_attempted"
 )
 
 var reportOutcomeStatusPriorityMap = map[ReportOutcomeStatus]int{

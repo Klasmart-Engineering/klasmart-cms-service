@@ -32,8 +32,8 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 		TeacherID:    ctx.Query("teacher_id"),
 		ClassID:      ctx.Query("class_id"),
 		LessonPlanID: ctx.Query("lesson_plan_id"),
-		Status:       entity.ReportOutcomeStatusOption(ctx.DefaultQuery("status", entity.ReportOutcomeStatusOptionAll)),
-		SortBy:       entity.ReportSortBy(ctx.DefaultQuery("sort_by", entity.ReportSortByDescending)),
+		Status:       entity.ReportOutcomeStatusOption(ctx.DefaultQuery("status", string(entity.ReportOutcomeStatusOptionAll))),
+		SortBy:       entity.ReportSortBy(ctx.DefaultQuery("sort_by", string(entity.ReportSortByDescending))),
 		Operator:     &operator,
 	}
 	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), cmd)
