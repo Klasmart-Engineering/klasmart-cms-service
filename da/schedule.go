@@ -133,6 +133,7 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 	}
 	var temps []*temp
 	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Scan(&temps).Error
+	log.Info(ctx, "lessonPlanIDs", log.Any("lessplan", temps))
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
