@@ -143,7 +143,7 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
 	wheres, parameters := condition.GetConditions()
 	whereSql := strings.Join(wheres, " and ")
-	var lessonPlanIDs []string
+	var lessonPlanIDs []*string
 	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(whereSql, parameters...).Find(&lessonPlanIDs).Error
 	log.Info(ctx, "lessonPlanIDs", log.Any("lessplan", lessonPlanIDs))
 	if gorm.IsRecordNotFoundError(err) {
