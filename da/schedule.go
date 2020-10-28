@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"strings"
 	"sync"
 	"time"
 )
@@ -20,7 +21,7 @@ type IScheduleDA interface {
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
 	GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error)
-	GetLessonPlanIDsByTeacherAndClass(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string) ([]string, error)
+	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 }
 
 type scheduleDA struct {
@@ -127,8 +128,8 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error) {
 	sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",
 		constant.TableNameScheduleTeacher, constant.TableNameSchedule, constant.TableNameScheduleTeacher)
-	var classIDs []string
-	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&classIDs).Error
+	var scheduleList []*entity.Schedule
+	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&scheduleList).Error
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
@@ -136,25 +137,35 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.String("teacherID", teacherID))
 		return nil, err
 	}
-	return classIDs, nil
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.ClassID
+	}
+	log.Debug(ctx, "classIDs", log.Strings("classIDs", result))
+	return result, nil
 }
 
-func (s *scheduleDA) GetLessonPlanIDsByTeacherAndClass(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string) ([]string, error) {
-	where := fmt.Sprintf("teacher_id = ? and class_id = ? and status = ? and  (delete_at=0)")
-	var lessonPlanIDs []string
-	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(where, teacherID, classID, entity.ScheduleStatusClosed).Find(&lessonPlanIDs).Error
+func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
+	wheres, parameters := condition.GetConditions()
+	whereSql := strings.Join(wheres, " and ")
+	var scheduleList []*entity.Schedule
+	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(whereSql, parameters...).Find(&scheduleList).Error
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
-		log.Error(ctx, "GetLessonPlanIDsByTeacherAndClass:get lessonPlan ids from db error",
+		log.Error(ctx, "GetLessonPlanIDsByCondition:get lessonPlan ids from db error",
 			log.Err(err),
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
+			log.Any("condition", condition),
 		)
 		return nil, err
 	}
-	return lessonPlanIDs, nil
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.LessonPlanID
+	}
+	log.Debug(ctx, "lessonPlanIDs", log.Strings("lessonPlanIDs", result))
+	return result, nil
 }
 
 var (
