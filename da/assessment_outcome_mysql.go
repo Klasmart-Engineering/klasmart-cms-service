@@ -37,6 +37,10 @@ type assessmentOutcomeDA struct{}
 func (*assessmentOutcomeDA) GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
 	var items []entity.AssessmentOutcome
 	if err := tx.Where("assessment_id = ?", assessmentID).Find(&items).Error; err != nil {
+		log.Error(ctx, "get outcome ids failed by assessment id",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+		)
 		return nil, err
 	}
 	var ids []string
