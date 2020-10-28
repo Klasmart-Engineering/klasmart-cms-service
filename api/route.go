@@ -101,6 +101,52 @@ func (s Server) registeRoute() {
 	{
 		crypto.GET("/h5p/signature", MustLogin, s.h5pSignature)
 	}
+
+	ages := s.engine.Group("/v1")
+	{
+		ages.GET("/ages", MustLogin, s.getAge)
+		ages.GET("/ages/:id", MustLogin, s.getAgeByID)
+	}
+	classTypes := s.engine.Group("/v1")
+	{
+		classTypes.GET("/class_types", MustLogin, s.getClassType)
+		classTypes.GET("/class_types/:id", MustLogin, s.getClassTypeByID)
+	}
+	developmental := s.engine.Group("/v1")
+	{
+		developmental.GET("/developmentals", MustLogin, s.getDevelopmental)
+		developmental.GET("/developmentals/:id", MustLogin, s.getDevelopmentalByID)
+	}
+	grade := s.engine.Group("/v1")
+	{
+		grade.GET("/grades", MustLogin, s.getGrade)
+		grade.GET("/grades/:id", MustLogin, s.getGradeByID)
+	}
+	lessonTypes := s.engine.Group("/v1")
+	{
+		lessonTypes.GET("/lesson_types", MustLogin, s.getLessonType)
+		lessonTypes.GET("/lesson_types/:id", MustLogin, s.getLessonTypeByID)
+	}
+	programs := s.engine.Group("/v1")
+	{
+		programs.GET("/programs", MustLogin, s.getProgram)
+		programs.GET("/programs/:id", MustLogin, s.getProgramByID)
+	}
+	skills := s.engine.Group("/v1")
+	{
+		skills.GET("/skills", MustLogin, s.getSkill)
+		skills.GET("/skills/:id", MustLogin, s.getSkillByID)
+	}
+	subjects := s.engine.Group("/v1")
+	{
+		subjects.GET("/subjects", MustLogin, s.getSubject)
+		subjects.GET("/subjects/:id", MustLogin, s.getSubjectByID)
+	}
+	visibilitySettings := s.engine.Group("/v1")
+	{
+		visibilitySettings.GET("/visibility_settings", MustLogin, s.getVisibilitySetting)
+		visibilitySettings.GET("/visibility_settings/:id", MustLogin, s.getVisibilitySettingByID)
+	}
 }
 
 // Ping godoc
