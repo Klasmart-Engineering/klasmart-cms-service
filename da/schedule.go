@@ -162,7 +162,7 @@ func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DB
 	}
 	var result = make([]string, len(scheduleList))
 	for i, item := range scheduleList {
-		result[i] = item.ClassID
+		result[i] = item.LessonPlanID
 	}
 	log.Debug(ctx, "lessonPlanIDs", log.Strings("lessonPlanIDs", result))
 	return result, nil

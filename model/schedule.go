@@ -963,9 +963,6 @@ func (s *scheduleModel) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo
 		)
 		return nil, err
 	}
-	log.Info(ctx, "GetLessonPlanIDsByCondition lessonPlanIDs", log.Any("lessplan", lessonPlanIDs))
-	temp, _ := da.GetScheduleDA().GetParticipateClass(ctx, tx, condition.TeacherID.String)
-	log.Info(ctx, "GetParticipateClass", log.Any("temp", temp))
 	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
 	if err != nil {
 		logger.Error(ctx, "GetLessPlanInfo:get lessonPlan info error",
