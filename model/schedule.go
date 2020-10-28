@@ -37,7 +37,7 @@ type IScheduleModel interface {
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
 	GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
-	GetLessPlanInfo(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string, operator entity.Operator) ([]*entity.ScheduleShortInfo, error)
+	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -953,13 +953,12 @@ func (s *scheduleModel) GetParticipateClass(ctx context.Context, operator *entit
 	return result, nil
 }
 
-func (s *scheduleModel) GetLessPlanInfo(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string, operator entity.Operator) ([]*entity.ScheduleShortInfo, error) {
-	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByTeacherAndClass(ctx, tx, teacherID, classID)
+func (s *scheduleModel) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
+	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByCondition(ctx, tx, condition)
 	if err != nil {
-		logger.Error(ctx, "GetLessPlanInfo:get lessonPlanIDs error",
+		logger.Error(ctx, "GetLessonPlanIDsByCondition:get lessonPlanIDs error",
 			log.Err(err),
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
+			log.Any("condition", condition),
 			log.Any("operator", operator),
 		)
 		return nil, err
@@ -968,9 +967,8 @@ func (s *scheduleModel) GetLessPlanInfo(ctx context.Context, tx *dbo.DBContext, 
 	if err != nil {
 		logger.Error(ctx, "GetLessPlanInfo:get lessonPlan info error",
 			log.Err(err),
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
 			log.Strings("lessonPlanIDs", lessonPlanIDs),
+			log.Any("condition", condition),
 			log.Any("operator", operator),
 		)
 	}
