@@ -7,7 +7,7 @@ type StudentsReport struct {
 type StudentReportItem struct {
 	StudentID         string `json:"student_id"`
 	StudentName       string `json:"student_name"`
-	AllAchievedCount  int    `json:"all_achieved_count"`
+	AchievedCount     int    `json:"achieved_count"`
 	NotAchievedCount  int    `json:"not_achieved_count"`
 	NotAttemptedCount int    `json:"not_attempted_count"`
 }
@@ -19,7 +19,7 @@ type StudentDetailReport struct {
 
 type StudentReportCategory struct {
 	Name              ReportCategory `json:"name"`
-	AllAchievedItems  []string       `json:"all_achieved_items"`
+	AchievedItems     []string       `json:"achieved_items"`
 	NotAchievedItems  []string       `json:"not_achieved_items"`
 	NotAttemptedItems []string       `json:"not_attempted_items"`
 }
@@ -83,18 +83,18 @@ type GetStudentDetailReportCommand struct {
 type ReportOutcomeStatusOption string
 
 const (
-	ReportOutcomeStatusOptionsAll          = "all"
-	ReportOutcomeStatusOptionsAllAchieved  = "all_achieved"
-	ReportOutcomeStatusOptionsNotAchieved  = "not_achieved"
-	ReportOutcomeStatusOptionsNotAttempted = "not_attempted"
+	ReportOutcomeStatusOptionAll          = "all"
+	ReportOutcomeStatusOptionAchieved     = "achieved"
+	ReportOutcomeStatusOptionNotAchieved  = "not_achieved"
+	ReportOutcomeStatusOptionNotAttempted = "not_attempted"
 )
 
 func (o ReportOutcomeStatusOption) Valid() bool {
 	switch o {
-	case ReportOutcomeStatusOptionsAll,
-		ReportOutcomeStatusOptionsAllAchieved,
-		ReportOutcomeStatusOptionsNotAchieved,
-		ReportOutcomeStatusOptionsNotAttempted:
+	case ReportOutcomeStatusOptionAll,
+		ReportOutcomeStatusOptionAchieved,
+		ReportOutcomeStatusOptionNotAchieved,
+		ReportOutcomeStatusOptionNotAttempted:
 		return true
 	default:
 		return false
@@ -120,7 +120,7 @@ func (r ReportSortBy) Valid() bool {
 type ReportOutcomeStatus string
 
 const (
-	ReportOutcomeStatusAllAchieved  = "all_achieved"
+	ReportOutcomeStatusAchieved     = "achieved"
 	ReportOutcomeStatusNotAchieved  = "not_achieved"
 	ReportOutcomeStatusNotAttempted = "not_attempted"
 )
@@ -128,7 +128,7 @@ const (
 var reportOutcomeStatusPriorityMap = map[ReportOutcomeStatus]int{
 	ReportOutcomeStatusNotAttempted: 1,
 	ReportOutcomeStatusNotAchieved:  2,
-	ReportOutcomeStatusAllAchieved:  3,
+	ReportOutcomeStatusAchieved:     3,
 }
 
 func ReportOutcomeStatusPriority(status ReportOutcomeStatus) int {
@@ -155,16 +155,16 @@ func (s SortingStudentReportItems) Len() int {
 
 func (s SortingStudentReportItems) Less(i, j int) bool {
 	switch s.Status {
-	case ReportOutcomeStatusOptionsNotAchieved:
+	case ReportOutcomeStatusOptionNotAchieved:
 		return s.Items[i].NotAchievedCount < s.Items[j].NotAchievedCount
-	case ReportOutcomeStatusOptionsNotAttempted:
+	case ReportOutcomeStatusOptionNotAttempted:
 		return s.Items[i].NotAttemptedCount < s.Items[j].NotAttemptedCount
-	case ReportOutcomeStatusOptionsAll:
+	case ReportOutcomeStatusOptionAll:
 		fallthrough
-	case ReportOutcomeStatusOptionsAllAchieved:
+	case ReportOutcomeStatusOptionAchieved:
 		fallthrough
 	default:
-		return s.Items[i].AllAchievedCount < s.Items[j].AllAchievedCount
+		return s.Items[i].AchievedCount < s.Items[j].AchievedCount
 	}
 }
 

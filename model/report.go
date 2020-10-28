@@ -93,7 +93,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 			continue
 		}
 
-		newItem.AllAchievedCount = len(data.AchievedAttendanceID2OutcomeIDsMap[student.ID])
+		newItem.AchievedCount = len(data.AchievedAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAchievedCount = len(data.SkipAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAchievedCount = len(data.NotAchievedAttendanceID2OutcomeIDsMap[student.ID])
 
@@ -215,7 +215,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 						continue
 					}
 					if outcome.Developmental == string(category) {
-						newItem.AllAchievedItems = append(newItem.AllAchievedItems, outcome.Name)
+						newItem.AchievedItems = append(newItem.AchievedItems, outcome.Name)
 					}
 				}
 			}
