@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags program
 // @Success 200 {array} entity.Program
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /programs [get]
 func (s *Server) getProgram(c *gin.Context) {

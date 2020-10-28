@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags classType
 // @Success 200 {array} entity.ClassType
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /class_types [get]
 func (s *Server) getClassType(c *gin.Context) {

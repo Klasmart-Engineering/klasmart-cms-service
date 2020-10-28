@@ -13,7 +13,6 @@ import (
 // @Param developmental_id query string false "developmental id"
 // @Tags skill
 // @Success 200 {array} entity.Skill
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills [get]
 func (s *Server) getSkill(c *gin.Context) {

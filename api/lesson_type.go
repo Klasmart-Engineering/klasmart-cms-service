@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags lessonType
 // @Success 200 {array} entity.LessonType
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /lesson_types [get]
 func (s *Server) getLessonType(c *gin.Context) {

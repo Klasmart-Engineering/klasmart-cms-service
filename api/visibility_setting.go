@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags visibilitySetting
 // @Success 200 {array} entity.VisibilitySetting
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /visibility_settings [get]
 func (s *Server) getVisibilitySetting(c *gin.Context) {

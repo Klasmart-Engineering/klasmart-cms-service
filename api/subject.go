@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags subject
 // @Success 200 {array} entity.Subject
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects [get]
 func (s *Server) getSubject(c *gin.Context) {

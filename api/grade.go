@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags grade
 // @Success 200 {array} entity.Grade
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades [get]
 func (s *Server) getGrade(c *gin.Context) {

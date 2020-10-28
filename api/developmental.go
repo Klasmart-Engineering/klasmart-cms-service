@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags developmental
 // @Success 200 {array} entity.Developmental
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /developmentals [get]
 func (s *Server) getDevelopmental(c *gin.Context) {

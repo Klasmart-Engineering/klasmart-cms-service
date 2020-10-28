@@ -12,7 +12,6 @@ import (
 // @Produce json
 // @Tags age
 // @Success 200 {array} entity.Age
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /ages [get]
 func (s *Server) getAge(c *gin.Context) {
