@@ -17,6 +17,7 @@ type IAssessmentOutcomeDA interface {
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
 	BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error)
+	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error)
 }
 
 var (
@@ -32,14 +33,6 @@ func GetAssessmentOutcomeDA() IAssessmentOutcomeDA {
 }
 
 type assessmentOutcomeDA struct{}
-
-func (*assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
-	var items []*entity.AssessmentOutcome
-	if err := tx.Where("assessment_id in (?)", assessmentIDs).Find(&items).Error; err != nil {
-		return nil, err
-	}
-	return items, nil
-}
 
 func (*assessmentOutcomeDA) GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
 	var items []entity.AssessmentOutcome
@@ -137,4 +130,14 @@ func (d *assessmentOutcomeDA) BatchGetMapByKeys(ctx context.Context, tx *dbo.DBC
 		}] = item
 	}
 	return result, nil
+}
+
+func (d *assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
+	var items []*entity.AssessmentOutcome
+	if err := tx.
+		Where("assessment_id in (?)", assessmentIDs).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
 }

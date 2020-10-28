@@ -5,6 +5,7 @@ type StudentsReport struct {
 }
 
 type StudentReportItem struct {
+	StudentID         string `json:"student_id"`
 	StudentName       string `json:"student_name"`
 	AllAchievedCount  int    `json:"all_achieved_count"`
 	NotAchievedCount  int    `json:"not_achieved_count"`
@@ -12,7 +13,8 @@ type StudentReportItem struct {
 }
 
 type StudentDetailReport struct {
-	Categories []StudentReportCategory `json:"categories"`
+	StudentName string                  `json:"student_name"`
+	Categories  []StudentReportCategory `json:"categories"`
 }
 
 type StudentReportCategory struct {
@@ -97,7 +99,6 @@ func (o ReportOutcomeStatusOptions) Valid() bool {
 	default:
 		return false
 	}
-	return false
 }
 
 type ReportSortBy string
@@ -114,7 +115,6 @@ func (r ReportSortBy) Valid() bool {
 	default:
 		return false
 	}
-	return false
 }
 
 type ReportOutcomeStatus string
@@ -138,4 +138,27 @@ func ReportOutcomeStatusPriority(status ReportOutcomeStatus) int {
 type AssessmentOutcomeKey struct {
 	AssessmentID string `json:"assessment_id"`
 	OutcomeID    string `json:"outcome_id"`
+}
+
+type StudentReportItemSortByName []StudentReportItem
+
+func (s StudentReportItemSortByName) Len() int {
+	return len(s)
+}
+
+func (s StudentReportItemSortByName) Less(i, j int) bool {
+	return s[i].StudentName < s[j].StudentName
+}
+
+func (s StudentReportItemSortByName) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+type ReportAttendanceOutcomeData struct {
+	AllOutcomeIDs                         []string
+	AllAttendanceIDExistsMap              map[string]bool
+	AllAttendanceID2OutcomeIDsMap         map[string][]string
+	SkipAttendanceID2OutcomeIDsMap        map[string][]string
+	AchievedAttendanceID2OutcomeIDsMap    map[string][]string
+	NotAchievedAttendanceID2OutcomeIDsMap map[string][]string
 }
