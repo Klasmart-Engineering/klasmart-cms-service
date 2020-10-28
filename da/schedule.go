@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"strings"
 	"sync"
 	"time"
 )
@@ -20,7 +21,7 @@ type IScheduleDA interface {
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
 	GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error)
-	GetLessonPlanIDsByTeacherAndClass(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string) ([]string, error)
+	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 }
 
 type scheduleDA struct {
@@ -139,18 +140,18 @@ func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext,
 	return classIDs, nil
 }
 
-func (s *scheduleDA) GetLessonPlanIDsByTeacherAndClass(ctx context.Context, tx *dbo.DBContext, teacherID string, classID string) ([]string, error) {
-	where := fmt.Sprintf("teacher_id = ? and class_id = ? and status = ? and  (delete_at=0)")
+func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
+	wheres, parameters := condition.GetConditions()
+	whereSql := strings.Join(wheres, " and ")
 	var lessonPlanIDs []string
-	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(where, teacherID, classID, entity.ScheduleStatusClosed).Find(&lessonPlanIDs).Error
+	err := tx.Table(constant.TableNameSchedule).Select("distinct lesson_plan_id").Where(whereSql, parameters...).Find(&lessonPlanIDs).Error
 	if gorm.IsRecordNotFoundError(err) {
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
-		log.Error(ctx, "GetLessonPlanIDsByTeacherAndClass:get lessonPlan ids from db error",
+		log.Error(ctx, "GetLessonPlanIDsByCondition:get lessonPlan ids from db error",
 			log.Err(err),
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
+			log.Any("condition", condition),
 		)
 		return nil, err
 	}

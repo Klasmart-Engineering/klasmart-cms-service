@@ -493,14 +493,26 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	classID := c.Query("class_id")
 	if len(strings.TrimSpace(teacherID)) == 0 || len(strings.TrimSpace(classID)) == 0 {
 		log.Info(ctx, "teacherID and classID is require",
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
 			log.Any("operator", operator),
 		)
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	result, err := model.GetScheduleModel().GetLessPlanInfo(ctx, dbo.MustGetDB(ctx), teacherID, classID, operator)
+	condition := &da.ScheduleCondition{
+		TeacherID: sql.NullString{
+			String: teacherID,
+			Valid:  true,
+		},
+		Status: sql.NullString{
+			String: string(entity.ScheduleStatusClosed),
+			Valid:  true,
+		},
+		ClassID: sql.NullString{
+			String: classID,
+			Valid:  true,
+		},
+	}
+	result, err := model.GetScheduleModel().GetLessonPlanIDsByCondition(ctx, dbo.MustGetDB(ctx), operator, condition)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
