@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -152,7 +151,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 		}
 		if student == nil {
 			log.Error(ctx, "get student detail report: not found student in class", log.Any("cmd", cmd))
-			return nil, errors.New("get student detail report: not found student in class")
+			return nil, constant.ErrRecordNotFound
 		}
 	}
 
