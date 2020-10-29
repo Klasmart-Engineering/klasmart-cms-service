@@ -13,7 +13,7 @@ type IAssessmentAttendanceDA interface {
 	GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
-	BatchGetAttendanceIDsByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentID []string) ([]string, error)
+	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentID []string) ([]*entity.AssessmentAttendance, error)
 }
 
 var (
@@ -76,26 +76,14 @@ func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo
 	return nil
 }
 
-func (a *assessmentAttendanceDA) BatchGetAttendanceIDsByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]string, error) {
-	var items []entity.AssessmentAttendance
+func (a *assessmentAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentAttendance, error) {
+	var items []*entity.AssessmentAttendance
 	if err := tx.Where("assessment_id in (?)", assessmentIDs).Find(&items).Error; err != nil {
+		log.Error(ctx, "batch get by assessment ids: find failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+		)
 		return nil, err
 	}
-	var ids []string
-	for _, item := range items {
-		ids = append(ids, item.ID)
-	}
-	return a.uniqueStrings(ids), nil
-}
-
-func (*assessmentAttendanceDA) uniqueStrings(input []string) []string {
-	m := map[string]bool{}
-	for _, item := range input {
-		m[item] = true
-	}
-	var result []string
-	for k := range m {
-		result = append(result, k)
-	}
-	return result
+	return items, nil
 }

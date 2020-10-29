@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"strings"
 	"sync"
 )
 
@@ -15,6 +16,7 @@ type IAssessmentOutcomeDA interface {
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
+	BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error)
 	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error)
 }
 
@@ -32,17 +34,13 @@ func GetAssessmentOutcomeDA() IAssessmentOutcomeDA {
 
 type assessmentOutcomeDA struct{}
 
-func (*assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
-	var items []*entity.AssessmentOutcome
-	if err := tx.Where("assessment_id in (?)", assessmentIDs).Find(&items).Error; err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 func (*assessmentOutcomeDA) GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
 	var items []entity.AssessmentOutcome
 	if err := tx.Where("assessment_id = ?", assessmentID).Find(&items).Error; err != nil {
+		log.Error(ctx, "get outcome ids failed by assessment id",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+		)
 		return nil, err
 	}
 	var ids []string
@@ -104,6 +102,55 @@ func (d *assessmentOutcomeDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Co
 		Where("assessment_id = ?", assessmentID).
 		Where("outcome_id in (?)", outcomeIDs).
 		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (d *assessmentOutcomeDA) BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error) {
+	var items []*entity.AssessmentOutcome
+	var (
+		template string
+		values   []interface{}
+	)
+	{
+		var items []string
+		for _, key := range keys {
+			items = append(items, "(assessment_id = ? and outcome_id = ?)")
+			values = append(values, key.AssessmentID, key.OutcomeID)
+		}
+		template = strings.Join(items, " or ")
+	}
+	if err := tx.
+		Where(template, values...).
+		Find(&items).Error; err != nil {
+		log.Error(ctx, "batch get assessment outcome by keys: find failed",
+			log.Err(err),
+			log.String("template", template),
+			log.Any("values", values),
+			log.Any("keys", keys),
+		)
+		return nil, err
+	}
+	result := map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome{}
+	for _, item := range items {
+		result[entity.AssessmentOutcomeKey{
+			AssessmentID: item.AssessmentID,
+			OutcomeID:    item.OutcomeID,
+		}] = item
+	}
+	return result, nil
+}
+
+func (d *assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
+	var items []*entity.AssessmentOutcome
+	if err := tx.
+		Where("assessment_id in (?)", assessmentIDs).
+		Find(&items).Error; err != nil {
+		log.Error(ctx, "batch get assessment outcome by assessment ids: find failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+		)
 		return nil, err
 	}
 	return items, nil
