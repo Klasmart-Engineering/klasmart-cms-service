@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sort"
 	"sync"
 )
@@ -306,93 +307,26 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, cla
 }
 
 func (r *reportModel) getAttendanceOutcomeData(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) (*entity.ReportAttendanceOutcomeData, error) {
-	var (
-		allOutcomeIDs                         []string
-		allAttendanceID2AssessmentOutcomesMap = map[string][]*entity.AssessmentOutcome{}
-		attendanceIDExistsMap                 = map[string]bool{}
-	)
-	{
-		assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
-		if err != nil {
-			log.Error(ctx, "list students report: batch get assessment attendances failed",
-				log.Err(err),
-				log.Any("assessment_ids", assessmentIDs),
-			)
-			return nil, err
-		}
-		var attendanceID2AssessmentIDsMap = map[string][]string{}
-		for _, assessmentAttendance := range assessmentAttendances {
-			attendanceID2AssessmentIDsMap[assessmentAttendance.AttendanceID] = append(attendanceID2AssessmentIDsMap[assessmentAttendance.AttendanceID], assessmentAttendance.AssessmentID)
-			attendanceIDExistsMap[assessmentAttendance.AttendanceID] = true
-		}
-		assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
-		if err != nil {
-			log.Error(ctx, "list students report: batch get assessment outcomes failed",
-				log.Err(err),
-				log.Any("assessment_ids", assessmentIDs),
-			)
-			return nil, err
-		}
-		var assessmentID2AssessmentOutcomesMap = map[string][]*entity.AssessmentOutcome{}
-		for _, assessmentOutcome := range assessmentOutcomes {
-			allOutcomeIDs = append(allOutcomeIDs, assessmentOutcome.OutcomeID)
-			assessmentID2AssessmentOutcomesMap[assessmentOutcome.AssessmentID] = append(assessmentID2AssessmentOutcomesMap[assessmentOutcome.AssessmentID], assessmentOutcome)
-		}
-		allOutcomeIDs = r.uniqueStrings(allOutcomeIDs)
-		for attendanceID, assessmentIDs := range attendanceID2AssessmentIDsMap {
-			for _, assessmentID := range assessmentIDs {
-				allAttendanceID2AssessmentOutcomesMap[attendanceID] = append(allAttendanceID2AssessmentOutcomesMap[attendanceID], assessmentID2AssessmentOutcomesMap[assessmentID]...)
-			}
-		}
+	attendanceIDExistsMap, allOutcomeIDs, allAttendanceID2AssessmentOutcomesMap, err := r.getOutcomeRelatedData(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "get attendance outcome data: get outcome related data failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+		)
+		return nil, err
 	}
 
-	allAttendanceID2OutcomeIDsMap := map[string][]string{}
-	{
-		for attendanceID, assessmentOutcomes := range allAttendanceID2AssessmentOutcomesMap {
-			for _, assessmentOutcome := range assessmentOutcomes {
-				allAttendanceID2OutcomeIDsMap[attendanceID] = append(allAttendanceID2OutcomeIDsMap[attendanceID], assessmentOutcome.OutcomeID)
-			}
-		}
-		for attendanceID, outcomeIDs := range allAttendanceID2OutcomeIDsMap {
-			allAttendanceID2OutcomeIDsMap[attendanceID] = r.uniqueStrings(outcomeIDs)
-		}
-	}
+	allAttendanceID2OutcomeIDsMap := r.getAllAttendanceID2OutcomeIDsMap(allAttendanceID2AssessmentOutcomesMap)
 
-	skipAttendanceID2OutcomeIDsMap := map[string][]string{}
-	{
-		for attendanceID, assessmentOutcomes := range allAttendanceID2AssessmentOutcomesMap {
-			skipOutcomeIDMap := map[string]bool{}
-			for _, assessmentOutcome := range assessmentOutcomes {
-				_, exists := skipOutcomeIDMap[assessmentOutcome.OutcomeID]
-				if !exists && assessmentOutcome.Skip {
-					skipOutcomeIDMap[assessmentOutcome.OutcomeID] = true
-				}
-				if !assessmentOutcome.Skip {
-					skipOutcomeIDMap[assessmentOutcome.OutcomeID] = false
-				}
-			}
-			for skipOutcomeID := range skipOutcomeIDMap {
-				skipAttendanceID2OutcomeIDsMap[attendanceID] = append(skipAttendanceID2OutcomeIDsMap[attendanceID], skipOutcomeID)
-			}
-		}
-	}
+	skipAttendanceID2OutcomeIDsMap := r.getSkipAttendanceID2OutcomeIDsMap(allAttendanceID2AssessmentOutcomesMap)
 
-	achievedAttendanceID2OutcomeIDsMap := map[string][]string{}
-	{
-		outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
-		if err != nil {
-			log.Error(ctx, "list students report: batch get outcome attendance failed",
-				log.Err(err),
-				log.Any("assessment_ids", assessmentIDs),
-			)
-			return nil, err
-		}
-		for _, outcomeAttendance := range outcomeAttendances {
-			achievedAttendanceID2OutcomeIDsMap[outcomeAttendance.AttendanceID] = append(achievedAttendanceID2OutcomeIDsMap[outcomeAttendance.AttendanceID], outcomeAttendance.OutcomeID)
-		}
-		for k, v := range achievedAttendanceID2OutcomeIDsMap {
-			achievedAttendanceID2OutcomeIDsMap[k] = r.uniqueStrings(v)
-		}
+	achievedAttendanceID2OutcomeIDsMap, err := r.getAchievedAttendanceID2OutcomeIDsMap(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "get attendance outcome data: get achieved attendance id to outcome ids map failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+		)
+		return nil, err
 	}
 
 	notAchievedAttendanceID2OutcomeIDsMap := map[string][]string{}
@@ -400,7 +334,7 @@ func (r *reportModel) getAttendanceOutcomeData(ctx context.Context, tx *dbo.DBCo
 		var excludeOutcomeIDs []string
 		excludeOutcomeIDs = append(excludeOutcomeIDs, achievedAttendanceID2OutcomeIDsMap[attendanceID]...)
 		excludeOutcomeIDs = append(excludeOutcomeIDs, skipAttendanceID2OutcomeIDsMap[attendanceID]...)
-		notAchievedAttendanceID2OutcomeIDsMap[attendanceID] = r.excludeStrings(outcomeIDs, excludeOutcomeIDs)
+		notAchievedAttendanceID2OutcomeIDsMap[attendanceID] = utils.ExcludeStrings(outcomeIDs, excludeOutcomeIDs)
 	}
 
 	return &entity.ReportAttendanceOutcomeData{
@@ -413,30 +347,97 @@ func (r *reportModel) getAttendanceOutcomeData(ctx context.Context, tx *dbo.DBCo
 	}, nil
 }
 
-func (r *reportModel) uniqueStrings(input []string) []string {
-	m := map[string]bool{}
-	for _, item := range input {
-		m[item] = true
+func (r *reportModel) getOutcomeRelatedData(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) (map[string]bool, []string, map[string][]*entity.AssessmentOutcome, error) {
+	var (
+		attendanceIDExistsMap                 = map[string]bool{}
+		allOutcomeIDs                         []string
+		allAttendanceID2AssessmentOutcomesMap = map[string][]*entity.AssessmentOutcome{}
+	)
+
+	assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "list students report: batch get assessment attendances failed",
+			log.Err(err),
+			log.Any("assessment_ids", assessmentIDs),
+		)
+		return nil, nil, nil, err
 	}
-	var result []string
-	for k := range m {
-		result = append(result, k)
+	var attendanceID2AssessmentIDsMap = map[string][]string{}
+	for _, assessmentAttendance := range assessmentAttendances {
+		attendanceID2AssessmentIDsMap[assessmentAttendance.AttendanceID] = append(attendanceID2AssessmentIDsMap[assessmentAttendance.AttendanceID], assessmentAttendance.AssessmentID)
+		attendanceIDExistsMap[assessmentAttendance.AttendanceID] = true
 	}
-	return result
+	assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "list students report: batch get assessment outcomes failed",
+			log.Err(err),
+			log.Any("assessment_ids", assessmentIDs),
+		)
+		return nil, nil, nil, err
+	}
+	var assessmentID2AssessmentOutcomesMap = map[string][]*entity.AssessmentOutcome{}
+	for _, assessmentOutcome := range assessmentOutcomes {
+		allOutcomeIDs = append(allOutcomeIDs, assessmentOutcome.OutcomeID)
+		assessmentID2AssessmentOutcomesMap[assessmentOutcome.AssessmentID] = append(assessmentID2AssessmentOutcomesMap[assessmentOutcome.AssessmentID], assessmentOutcome)
+	}
+	allOutcomeIDs = utils.SliceDeduplication(allOutcomeIDs)
+	for attendanceID, assessmentIDs := range attendanceID2AssessmentIDsMap {
+		for _, assessmentID := range assessmentIDs {
+			allAttendanceID2AssessmentOutcomesMap[attendanceID] = append(allAttendanceID2AssessmentOutcomesMap[attendanceID], assessmentID2AssessmentOutcomesMap[assessmentID]...)
+		}
+	}
+
+	return attendanceIDExistsMap, allOutcomeIDs, allAttendanceID2AssessmentOutcomesMap, nil
 }
 
-func (r *reportModel) excludeStrings(source []string, targets []string) []string {
-	var result []string
-	for _, item := range source {
-		find := false
-		for _, target := range targets {
-			if item == target {
-				find = true
-			}
-		}
-		if !find {
-			result = append(result, item)
+func (r *reportModel) getAllAttendanceID2OutcomeIDsMap(allAttendanceID2AssessmentOutcomesMap map[string][]*entity.AssessmentOutcome) map[string][]string {
+	allAttendanceID2OutcomeIDsMap := map[string][]string{}
+	for attendanceID, assessmentOutcomes := range allAttendanceID2AssessmentOutcomesMap {
+		for _, assessmentOutcome := range assessmentOutcomes {
+			allAttendanceID2OutcomeIDsMap[attendanceID] = append(allAttendanceID2OutcomeIDsMap[attendanceID], assessmentOutcome.OutcomeID)
 		}
 	}
-	return result
+	for attendanceID, outcomeIDs := range allAttendanceID2OutcomeIDsMap {
+		allAttendanceID2OutcomeIDsMap[attendanceID] = utils.SliceDeduplication(outcomeIDs)
+	}
+	return allAttendanceID2OutcomeIDsMap
+}
+
+func (r *reportModel) getSkipAttendanceID2OutcomeIDsMap(allAttendanceID2AssessmentOutcomesMap map[string][]*entity.AssessmentOutcome) map[string][]string {
+	skipAttendanceID2OutcomeIDsMap := map[string][]string{}
+	for attendanceID, assessmentOutcomes := range allAttendanceID2AssessmentOutcomesMap {
+		skipOutcomeIDMap := map[string]bool{}
+		for _, assessmentOutcome := range assessmentOutcomes {
+			_, exists := skipOutcomeIDMap[assessmentOutcome.OutcomeID]
+			if !exists && assessmentOutcome.Skip {
+				skipOutcomeIDMap[assessmentOutcome.OutcomeID] = true
+			}
+			if !assessmentOutcome.Skip {
+				skipOutcomeIDMap[assessmentOutcome.OutcomeID] = false
+			}
+		}
+		for skipOutcomeID := range skipOutcomeIDMap {
+			skipAttendanceID2OutcomeIDsMap[attendanceID] = append(skipAttendanceID2OutcomeIDsMap[attendanceID], skipOutcomeID)
+		}
+	}
+	return skipAttendanceID2OutcomeIDsMap
+}
+
+func (r *reportModel) getAchievedAttendanceID2OutcomeIDsMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) (map[string][]string, error) {
+	achievedAttendanceID2OutcomeIDsMap := map[string][]string{}
+	outcomeAttendances, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "list students report: batch get outcome attendance failed",
+			log.Err(err),
+			log.Any("assessment_ids", assessmentIDs),
+		)
+		return nil, err
+	}
+	for _, outcomeAttendance := range outcomeAttendances {
+		achievedAttendanceID2OutcomeIDsMap[outcomeAttendance.AttendanceID] = append(achievedAttendanceID2OutcomeIDsMap[outcomeAttendance.AttendanceID], outcomeAttendance.OutcomeID)
+	}
+	for k, v := range achievedAttendanceID2OutcomeIDsMap {
+		achievedAttendanceID2OutcomeIDsMap[k] = utils.SliceDeduplication(v)
+	}
+	return achievedAttendanceID2OutcomeIDsMap, err
 }
