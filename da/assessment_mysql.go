@@ -15,7 +15,7 @@ type IAssessmentDA interface {
 	dbo.DataAccesser
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
-	BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]entity.Assessment, error)
+	BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]*entity.Assessment, error)
 }
 
 var (
@@ -164,8 +164,8 @@ func (c *QueryAssessmentsCondition) GetOrderBy() string {
 	return ""
 }
 
-func (a *assessmentDA) BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]entity.Assessment, error) {
-	var result []entity.Assessment
+func (a *assessmentDA) BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]*entity.Assessment, error) {
+	var result []*entity.Assessment
 	if err := tx.Where("schedule_id in (?)", scheduleIDs).Find(&result).Error; err != nil {
 		log.Error(ctx, "batch get assessments by schedule ids: find failed",
 			log.Err(err),
