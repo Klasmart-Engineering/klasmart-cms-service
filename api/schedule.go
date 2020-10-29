@@ -493,8 +493,6 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	classID := c.Query("class_id")
 	if len(strings.TrimSpace(teacherID)) == 0 || len(strings.TrimSpace(classID)) == 0 {
 		log.Info(ctx, "teacherID and classID is require",
-			log.String("teacherID", teacherID),
-			log.String("classID", classID),
 			log.Any("operator", operator),
 		)
 		c.JSON(http.StatusBadRequest, L(Unknown))

@@ -13,6 +13,7 @@ type IOutcomeAttendanceDA interface {
 	BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.OutcomeAttendance, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error
 	BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) error
+	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error)
 }
 
 var (
@@ -78,4 +79,21 @@ func (*outcomeAttendanceDA) BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.C
 		return err
 	}
 	return nil
+}
+
+func (d *outcomeAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error) {
+	if len(assessmentIDs) == 0 {
+		return nil, nil
+	}
+	var items []*entity.OutcomeAttendance
+	if err := tx.
+		Where("assessment_id in (?)", assessmentIDs).
+		Find(&items).Error; err != nil {
+		log.Error(ctx, "batch get outcome attendance by assessment ids: find failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+		)
+		return nil, err
+	}
+	return items, nil
 }

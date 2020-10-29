@@ -695,7 +695,10 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 				)
 				return err
 			}
-			var items []*entity.OutcomeAttendance
+			var (
+				items              []*entity.OutcomeAttendance
+				deletingOutcomeIDs []string
+			)
 			for _, item := range *cmd.OutcomeAttendanceMaps {
 				for _, attendanceID := range item.AttendanceIDs {
 					items = append(items, &entity.OutcomeAttendance{
@@ -718,6 +721,19 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 						log.String("outcome_id", item.OutcomeID),
 						log.Bool("skip", item.Skip),
 						log.Bool("none_achieved", item.NoneAchieved),
+					)
+					return err
+				}
+				if item.Skip {
+					deletingOutcomeIDs = append(deletingOutcomeIDs, item.OutcomeID)
+				}
+			}
+			if len(deletingOutcomeIDs) > 0 {
+				if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, cmd.ID, deletingOutcomeIDs); err != nil {
+					log.Error(ctx, "update assessment: batch update assessment outcome failed",
+						log.Err(err),
+						log.Any("cmd", cmd),
+						log.Strings("deleting_outcome_ids", deletingOutcomeIDs),
 					)
 					return err
 				}
