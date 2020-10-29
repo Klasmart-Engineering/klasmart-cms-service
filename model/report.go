@@ -205,6 +205,30 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 			entity.ReportCategoryKnowledge,
 		}
 
+		categoryMap := map[string]string{}
+		{
+			var categoryIDs []string
+			for _, outcomeID := range data.AllOutcomeIDs {
+				outcome := outcomeID2OutcomeMap[outcomeID]
+				if outcome == nil {
+					continue
+				}
+				categoryIDs = append(categoryIDs, outcome.Developmental)
+			}
+			categories, err := external.GetDevelopmentalServiceProvider().BatchGet(ctx, categoryIDs)
+			if err != nil {
+				log.Error(ctx, "get student detail report: batch get developmental failed",
+					log.Err(err),
+					log.Strings("category_ids", categoryIDs),
+					log.Any("cmd", cmd),
+				)
+				return nil, err
+			}
+			for _, item := range categories {
+				categoryMap[item.ID] = item.Name
+			}
+		}
+
 		for _, category := range categories {
 			newItem := entity.StudentReportCategory{Name: category}
 			{
@@ -214,7 +238,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 					if outcome == nil {
 						continue
 					}
-					if outcome.Developmental == string(category) {
+					if categoryMap[outcome.Developmental] == string(category) {
 						newItem.AchievedItems = append(newItem.AchievedItems, outcome.Name)
 					}
 				}
@@ -226,7 +250,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 					if outcome == nil {
 						continue
 					}
-					if outcome.Developmental == string(category) {
+					if categoryMap[outcome.Developmental] == string(category) {
 						newItem.NotAchievedItems = append(newItem.NotAchievedItems, outcome.Name)
 					}
 				}
@@ -238,7 +262,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 					if outcome == nil {
 						continue
 					}
-					if outcome.Developmental == string(category) {
+					if categoryMap[outcome.Developmental] == string(category) {
 						newItem.NotAttemptedItems = append(newItem.NotAttemptedItems, outcome.Name)
 					}
 				}
