@@ -56,7 +56,7 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 // @Param id path string true "student id"
 // @Param teacher_id query string true "teacher_id"
 // @Param class_id query string true "class_id"
-// @Param lesson_plain_id query string true "lesson plain id"
+// @Param lesson_plan_id query string true "lesson plan id"
 // @Success 200 {object} entity.StudentDetailReport
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse

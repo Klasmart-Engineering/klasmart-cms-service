@@ -165,5 +165,13 @@ func (c *QueryAssessmentsCondition) GetOrderBy() string {
 }
 
 func (a *assessmentDA) BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]entity.Assessment, error) {
-	panic("implement me")
+	var result []entity.Assessment
+	if err := tx.Where("schedule_id in (?)", scheduleIDs).Find(&result).Error; err != nil {
+		log.Error(ctx, "batch get assessments by schedule ids: find failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+		)
+		return nil, err
+	}
+	return result, nil
 }
