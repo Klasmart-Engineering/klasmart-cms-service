@@ -1,4 +1,4 @@
-package basicdata
+package model
 
 import (
 	"context"

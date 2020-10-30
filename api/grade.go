@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/basicdata"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ import (
 // @Router /grades [get]
 func (s *Server) getGrade(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := basicdata.GetGradeModel().Query(ctx, &da.GradeCondition{})
+	result, err := model.GetGradeModel().Query(ctx, &da.GradeCondition{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
@@ -41,7 +41,7 @@ func (s *Server) getGrade(c *gin.Context) {
 func (s *Server) getGradeByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := basicdata.GetGradeModel().GetByID(ctx, id)
+	result, err := model.GetGradeModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))

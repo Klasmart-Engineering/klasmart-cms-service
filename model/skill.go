@@ -1,4 +1,4 @@
-package basicdata
+package model
 
 import (
 	"context"
@@ -10,16 +10,17 @@ import (
 	"sync"
 )
 
-type IAgeModel interface {
-	Query(ctx context.Context, condition *da.AgeCondition) ([]*entity.Age, error)
-	GetByID(ctx context.Context, id string) (*entity.Age, error)
+type ISkillModel interface {
+	Query(ctx context.Context, condition *da.SkillCondition) ([]*entity.Skill, error)
+	GetByID(ctx context.Context, id string) (*entity.Skill, error)
 }
 
-type ageModel struct{}
+type skillModel struct {
+}
 
-func (m *ageModel) Query(ctx context.Context, condition *da.AgeCondition) ([]*entity.Age, error) {
-	var result []*entity.Age
-	err := da.GetAgeDA().Query(ctx, condition, &result)
+func (m *skillModel) Query(ctx context.Context, condition *da.SkillCondition) ([]*entity.Skill, error) {
+	var result []*entity.Skill
+	err := da.GetSkillDA().Query(ctx, condition, &result)
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
@@ -27,9 +28,9 @@ func (m *ageModel) Query(ctx context.Context, condition *da.AgeCondition) ([]*en
 	return result, nil
 }
 
-func (m *ageModel) GetByID(ctx context.Context, id string) (*entity.Age, error) {
-	var result = new(entity.Age)
-	err := da.GetAgeDA().Get(ctx, id, result)
+func (m *skillModel) GetByID(ctx context.Context, id string) (*entity.Skill, error) {
+	var result = new(entity.Skill)
+	err := da.GetSkillDA().Get(ctx, id, result)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "GetByID:not found", log.Err(err), log.String("id", id))
 		return nil, constant.ErrRecordNotFound
@@ -42,13 +43,13 @@ func (m *ageModel) GetByID(ctx context.Context, id string) (*entity.Age, error) 
 }
 
 var (
-	_ageOnce  sync.Once
-	_ageModel IAgeModel
+	_skillOnce  sync.Once
+	_skillModel ISkillModel
 )
 
-func GetAgeModel() IAgeModel {
-	_ageOnce.Do(func() {
-		_ageModel = &ageModel{}
+func GetSkillModel() ISkillModel {
+	_skillOnce.Do(func() {
+		_skillModel = &skillModel{}
 	})
-	return _ageModel
+	return _skillModel
 }

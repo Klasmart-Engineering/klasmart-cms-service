@@ -1197,8 +1197,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programProvider := external.GetProgramServiceProvider()
-	programs, err := programProvider.BatchGet(ctx, programIds)
+	programs, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
+		IDs: entity.NullStrings{
+			Strings: programIds,
+			Valid:   len(programIds) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
@@ -1208,8 +1212,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Subjects
-	subjectsProvider := external.GetSubjectServiceProvider()
-	subjects, err := subjectsProvider.BatchGet(ctx, subjectIds)
+	subjects, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
+		IDs: entity.NullStrings{
+			Strings: subjectIds,
+			Valid:   len(subjectIds) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "can't get subjects info", log.Err(err))
 	} else {
@@ -1219,8 +1227,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//developmental
-	developmentalsProvider := external.GetDevelopmentalServiceProvider()
-	developmentals, err := developmentalsProvider.BatchGet(ctx, developmentalIds)
+	developmentals, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
+		IDs: entity.NullStrings{
+			Strings: developmentalIds,
+			Valid:   len(developmentalIds) != 0,
+		},
+	})
+
 	if err != nil {
 		log.Error(ctx, "can't get developmentals info", log.Err(err))
 	} else {
@@ -1241,8 +1254,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//skill
-	skillProvider := external.GetSkillServiceProvider()
-	skills, err := skillProvider.BatchGet(ctx, skillsIds)
+	skills, err := GetSkillModel().Query(ctx, &da.SkillCondition{
+		IDs: entity.NullStrings{
+			Strings: skillsIds,
+			Valid:   len(skillsIds) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "can't get skills info", log.Err(err))
 	} else {
@@ -1252,8 +1269,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//age
-	ageProvider := external.GetAgeServiceProvider()
-	ages, err := ageProvider.BatchGet(ctx, ageIds)
+	ages, err := GetAgeModel().Query(ctx, &da.AgeCondition{
+		IDs: entity.NullStrings{
+			Strings: ageIds,
+			Valid:   len(ageIds) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "can't get age info", log.Err(err))
 	} else {
@@ -1263,8 +1284,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//grade
-	gradeProvider := external.GetGradeServiceProvider()
-	grades, err := gradeProvider.BatchGet(ctx, gradeIds)
+	grades, err := GetGradeModel().Query(ctx, &da.GradeCondition{
+		IDs: entity.NullStrings{
+			Strings: gradeIds,
+			Valid:   len(gradeIds) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "can't get grade info", log.Err(err))
 	} else {

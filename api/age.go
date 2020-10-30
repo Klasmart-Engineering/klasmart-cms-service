@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/basicdata"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ import (
 // @Router /ages [get]
 func (s *Server) getAge(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := basicdata.GetAgeModel().Query(ctx, &da.AgeCondition{})
+	result, err := model.GetAgeModel().Query(ctx, &da.AgeCondition{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
@@ -41,7 +41,7 @@ func (s *Server) getAge(c *gin.Context) {
 func (s *Server) getAgeByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := basicdata.GetAgeModel().GetByID(ctx, id)
+	result, err := model.GetAgeModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))

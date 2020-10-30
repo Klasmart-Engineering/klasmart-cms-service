@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/basicdata"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ import (
 // @Router /developmentals [get]
 func (s *Server) getDevelopmental(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := basicdata.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{})
+	result, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
@@ -41,7 +41,7 @@ func (s *Server) getDevelopmental(c *gin.Context) {
 func (s *Server) getDevelopmentalByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := basicdata.GetDevelopmentalModel().GetByID(ctx, id)
+	result, err := model.GetDevelopmentalModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
