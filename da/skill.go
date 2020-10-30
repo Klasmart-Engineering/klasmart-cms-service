@@ -2,7 +2,9 @@ package da
 
 import (
 	"database/sql"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
 
@@ -27,6 +29,7 @@ func GetSkillDA() ISkillDA {
 }
 
 type SkillCondition struct {
+	IDs             entity.NullStrings
 	DevelopmentalID sql.NullString
 
 	OrderBy SkillOrderBy
@@ -40,6 +43,11 @@ func (c SkillCondition) GetConditions() ([]string, []interface{}) {
 	if c.DevelopmentalID.Valid {
 		wheres = append(wheres, "developmental_id = ?")
 		params = append(params, c.DevelopmentalID.String)
+	}
+
+	if c.IDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
+		params = append(params, c.IDs.ToInterfaceSlice()...)
 	}
 
 	return wheres, params

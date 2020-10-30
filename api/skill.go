@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/basicdata"
 	"net/http"
 )
 
@@ -22,7 +22,7 @@ import (
 func (s *Server) getSkill(c *gin.Context) {
 	ctx := c.Request.Context()
 	developmentalID := c.Query("developmental_id")
-	result, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
+	result, err := basicdata.GetSkillModel().Query(ctx, &da.SkillCondition{
 		DevelopmentalID: sql.NullString{
 			String: developmentalID,
 			Valid:  developmentalID != "",
@@ -49,7 +49,7 @@ func (s *Server) getSkill(c *gin.Context) {
 func (s *Server) getSkillByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := model.GetSkillModel().GetByID(ctx, id)
+	result, err := basicdata.GetSkillModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))

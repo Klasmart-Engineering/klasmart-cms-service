@@ -16,7 +16,6 @@ import (
 	mutex "gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 )
 
-
 var (
 	ErrNoSuchURL           = errors.New("no such url")
 	ErrRequestItemIsNil    = errors.New("request item is nil")
@@ -26,7 +25,7 @@ var (
 	ErrNoContentData                     = errors.New("no content data")
 	ErrInvalidResourceId                 = errors.New("invalid resource id")
 	ErrInvalidContentData                = errors.New("invalid content data")
-	ErrMarshalContentDataFailed                = errors.New("marshal content data failed")
+	ErrMarshalContentDataFailed          = errors.New("marshal content data failed")
 	ErrInvalidPublishStatus              = errors.New("invalid publish status")
 	ErrInvalidLockedContentPublishStatus = errors.New("invalid locked content publish status")
 	ErrInvalidContentStatusToPublish     = errors.New("content status is invalid to publish")
@@ -47,7 +46,7 @@ var (
 	ErrBadRequest         = errors.New("bad request")
 	ErrResourceNotFound   = errors.New("resource not found")
 	ErrInvalidContentType = errors.New("invalid content type")
-	ErrNoRejectReason = errors.New("no reject reason")
+	ErrNoRejectReason     = errors.New("no reject reason")
 
 	ErrInvalidSelectForm = errors.New("invalid select form")
 )
@@ -535,7 +534,6 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 	return nil
 }
 
-
 func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//创建data对象
 	cd, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
@@ -603,7 +601,7 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 		return err
 	}
 	err = cm.validatePublishContentWithAssets(ctx, content, user)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
 		return err
 	}
@@ -1164,7 +1162,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageNameMap := make(map[string]string)
 	gradeNameMap := make(map[string]string)
 	publishScopeNameMap := make(map[string]string)
-	lessonTypeNameMap := make(map[int] string)
+	lessonTypeNameMap := make(map[int]string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
@@ -1173,7 +1171,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageIds := make([]string, 0)
 	gradeIds := make([]string, 0)
 	scopeIds := make([]string, 0)
-	lessonTypeIds := make([]int ,0)
+	lessonTypeIds := make([]int, 0)
 
 	for i := range contentList {
 		programIds = append(programIds, contentList[i].Program)
@@ -1322,8 +1320,8 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			SkillsName:        skillsNames,
 			AgeName:           ageNames,
 			GradeName:         gradeNames,
-			LessonTypeName: 	lessonTypeNameMap[contentList[i].LessonType],
-			PublishScopeName: 	publishScopeNameMap[contentList[i].PublishScope],
+			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
+			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
 			OutcomeEntities:   cm.pickOutcomes(ctx, contentList[i].Outcomes, outcomeMaps),
 		}
@@ -1347,7 +1345,7 @@ func (cm *ContentModel) listVisibleScopes(ctx context.Context, operator *entity.
 	return []string{operator.OrgID}
 }
 
-func stringToStringArray(ctx context.Context, str string) []string{
+func stringToStringArray(ctx context.Context, str string) []string {
 	if str == "" {
 		return nil
 	}

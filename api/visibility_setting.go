@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/basicdata"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ import (
 // @Router /visibility_settings [get]
 func (s *Server) getVisibilitySetting(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := model.GetVisibilitySettingModel().Query(ctx, &da.VisibilitySettingCondition{})
+	result, err := basicdata.GetVisibilitySettingModel().Query(ctx, &da.VisibilitySettingCondition{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
@@ -41,7 +41,7 @@ func (s *Server) getVisibilitySetting(c *gin.Context) {
 func (s *Server) getVisibilitySettingByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := model.GetVisibilitySettingModel().GetByID(ctx, id)
+	result, err := basicdata.GetVisibilitySettingModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))

@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/basicdata"
 	"net/http"
 )
 
@@ -19,7 +19,7 @@ import (
 // @Router /programs [get]
 func (s *Server) getProgram(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{})
+	result, err := basicdata.GetProgramModel().Query(ctx, &da.ProgramCondition{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
@@ -41,7 +41,7 @@ func (s *Server) getProgram(c *gin.Context) {
 func (s *Server) getProgramByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := model.GetProgramModel().GetByID(ctx, id)
+	result, err := basicdata.GetProgramModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))

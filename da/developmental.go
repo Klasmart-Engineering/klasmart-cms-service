@@ -1,7 +1,9 @@
 package da
 
 import (
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
 
@@ -26,6 +28,8 @@ func GetDevelopmentalDA() IDevelopmentalDA {
 }
 
 type DevelopmentalCondition struct {
+	IDs entity.NullStrings
+
 	OrderBy DevelopmentalOrderBy
 	Pager   dbo.Pager
 }
@@ -33,6 +37,11 @@ type DevelopmentalCondition struct {
 func (c DevelopmentalCondition) GetConditions() ([]string, []interface{}) {
 	var wheres []string
 	var params []interface{}
+
+	if c.IDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
+		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
 
 	return wheres, params
 }
