@@ -2,6 +2,9 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
@@ -15,7 +18,13 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /class_types [get]
 func (s *Server) getClassType(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, nil)
+	ctx := c.Request.Context()
+	result, err := model.GetClassTypeModel().Query(ctx, &da.ClassTypeCondition{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary getClassTypeByID
@@ -30,5 +39,15 @@ func (s *Server) getClassType(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /class_types/{id} [get]
 func (s *Server) getClassTypeByID(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, nil)
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	result, err := model.GetClassTypeModel().GetByID(ctx, id)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+	}
 }

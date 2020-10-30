@@ -2,6 +2,9 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
@@ -15,7 +18,13 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /visibility_settings [get]
 func (s *Server) getVisibilitySetting(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, nil)
+	ctx := c.Request.Context()
+	result, err := model.GetVisibilitySettingModel().Query(ctx, &da.VisibilitySettingCondition{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary getVisibilitySettingByID
@@ -30,5 +39,15 @@ func (s *Server) getVisibilitySetting(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /visibility_settings/{id} [get]
 func (s *Server) getVisibilitySettingByID(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, nil)
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	result, err := model.GetVisibilitySettingModel().GetByID(ctx, id)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+	}
 }
