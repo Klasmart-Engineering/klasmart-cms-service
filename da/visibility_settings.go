@@ -1,7 +1,9 @@
 package da
 
 import (
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
 
@@ -26,6 +28,8 @@ func GetVisibilitySettingDA() IVisibilitySettingDA {
 }
 
 type VisibilitySettingCondition struct {
+	IDs entity.NullStrings
+
 	OrderBy VisibilitySettingOrderBy
 	Pager   dbo.Pager
 }
@@ -33,6 +37,11 @@ type VisibilitySettingCondition struct {
 func (c VisibilitySettingCondition) GetConditions() ([]string, []interface{}) {
 	var wheres []string
 	var params []interface{}
+
+	if c.IDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
+		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
 
 	return wheres, params
 }

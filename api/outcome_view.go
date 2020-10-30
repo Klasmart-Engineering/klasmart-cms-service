@@ -3,11 +3,12 @@ package api
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 type OutcomeCreateView struct {
@@ -265,8 +266,13 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 }
 
 func getProgramName(ctx context.Context, id string) (name string) {
-	provider := external.GetProgramServiceProvider()
-	programs, err := provider.BatchGet(ctx, []string{id})
+	ids := []string{id}
+	programs, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "getProgramName: BatchGet failed",
 			log.Err(err),
@@ -283,8 +289,12 @@ func getProgramName(ctx context.Context, id string) (name string) {
 	return
 }
 func getProgramsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider := external.GetProgramServiceProvider()
-	programs, err := provider.BatchGet(ctx, ids)
+	programs, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "getProgramName: BatchGet failed",
 			log.Err(err),
@@ -299,8 +309,12 @@ func getProgramsName(ctx context.Context, ids []string) (names map[string]string
 }
 
 func getSubjectsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider := external.GetSubjectServiceProvider()
-	subjects, err := provider.BatchGet(ctx, ids)
+	subjects, err := model.GetSubjectModel().Query(ctx, &da.SubjectCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "getSubjectsName: BatchGet failed",
 			log.Err(err),
@@ -315,8 +329,13 @@ func getSubjectsName(ctx context.Context, ids []string) (names map[string]string
 }
 
 func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider := external.GetDevelopmentalServiceProvider()
-	developmentals, err := provider.BatchGet(ctx, ids)
+	developmentals, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
+
 	if err != nil {
 		log.Error(ctx, "getDevelopmentalsName: BatchGet failed",
 			log.Err(err),
@@ -331,8 +350,12 @@ func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]
 }
 
 func getSkillsName(ctx context.Context, ids []string) (names map[string]string) {
-	provider := external.GetSkillServiceProvider()
-	skills, err := provider.BatchGet(ctx, ids)
+	skills, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "getSkillsName: BatchGet failed",
 			log.Err(err),
@@ -347,13 +370,15 @@ func getSkillsName(ctx context.Context, ids []string) (names map[string]string) 
 }
 
 func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
-	provider := external.GetAgeServiceProvider()
-	ages, err := provider.BatchGet(ctx, ids)
+	ages, err := model.GetAgeModel().Query(ctx, &da.AgeCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
 	if err != nil {
-		log.Error(ctx, "getAgesName: BatchGet failed",
-			log.Err(err),
-			log.Strings("age_ids", ids))
-		return nil
+		log.Error(ctx, "BatchGet:error", log.Err(err), log.Strings("ids", ids))
+		return
 	}
 	names = make(map[string]string, len(ids))
 	for _, a := range ages {
@@ -363,8 +388,12 @@ func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
 }
 
 func getGradeName(ctx context.Context, ids []string) (names map[string]string) {
-	provider := external.GetGradeServiceProvider()
-	grades, err := provider.BatchGet(ctx, ids)
+	grades, err := model.GetGradeModel().Query(ctx, &da.GradeCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "getGradeName: BatchGet failed",
 			log.Err(err),

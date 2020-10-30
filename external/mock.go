@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"encoding/json"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"io/ioutil"
 	"net/http"
 	"sync"
@@ -16,20 +17,21 @@ type mockData struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	} `json:"visibility_settings"`
-	Classes       []*Class        `json:"classes"`
-	ClassTypes    []*ClassType    `json:"class_types"`
-	Organizations []*Organization `json:"organizations"`
-	Teachers      []*Teacher      `json:"teachers"`
-	Students      []*Student      `json:"students"`
-	Users         []*UserInfo     `json:"users"`
+	Classes       []*Class             `json:"classes"`
+	LessonTypes   []*entity.LessonType `json:"lesson_types"`
+	ClassTypes    []*entity.ClassType  `json:"class_types"`
+	Organizations []*Organization      `json:"organizations"`
+	Teachers      []*Teacher           `json:"teachers"`
+	Students      []*Student           `json:"students"`
+	Users         []*UserInfo          `json:"users"`
 }
 
 type mockOption struct {
-	Program       *Program         `json:"program"`
-	Subject       []*Subject       `json:"subject"`
-	Developmental []*Developmental `json:"developmental"`
-	Age           []*Age           `json:"age"`
-	Grade         []*Grade         `json:"grade"`
+	Program       *entity.Program         `json:"program"`
+	Subject       []*entity.Subject       `json:"subject"`
+	Developmental []*entity.Developmental `json:"developmental"`
+	Age           []*entity.Age           `json:"age"`
+	Grade         []*entity.Grade         `json:"grade"`
 }
 
 var (

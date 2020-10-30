@@ -26,11 +26,11 @@ const (
 	MaterialInputSourceDisk   = 2
 	MaterialInputSourceAssets = 3
 
-	FileTypeImage = 1
-	FileTypeVideo = 2
-	FileTypeAudio = 3
+	FileTypeImage    = 1
+	FileTypeVideo    = 2
+	FileTypeAudio    = 3
 	FileTypeDocument = 4
-	FileTypeH5p = 5
+	FileTypeH5p      = 5
 
 	FileTypeAssetsTypeOffset = 9
 
@@ -87,7 +87,6 @@ func (f FileType) String() string {
 		return "h5p"
 	}
 }
-
 
 func NewContentType(contentType int) ContentType {
 	switch contentType {
@@ -202,7 +201,7 @@ type Content struct {
 	Description   string      `gorm:"type:text;NOT NULL;column:description"`
 	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail"`
 
-	SourceType   string `gorm:"type:varchar(256); column:source_type"`
+	SourceType string `gorm:"type:varchar(256); column:source_type"`
 
 	Outcomes string `gorm:"type:text;NOT NULL;column:outcomes"`
 	Data     string `gorm:"type:json;NOT NULL;column:data"`
@@ -213,15 +212,15 @@ type Content struct {
 	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name"`
 	Org         string `gorm:"type:varchar(50);NOT NULL;column:org"`
 
-	SelfStudy BoolTinyInt    `gorm:"type:tinyint;NOT NULL;column:self_study"`
-	DrawActivity BoolTinyInt    `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
-	LessonType int    `gorm:"type:tinyint;NOT NULL;column:lesson_type"`
+	SelfStudy    BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:self_study"`
+	DrawActivity BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
+	LessonType   int         `gorm:"type:tinyint;NOT NULL;column:lesson_type"`
 
 	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
 
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason"`
-	Remark string `gorm:"type:varchar(255);NOT NULL;column:remark"`
+	Remark       string `gorm:"type:varchar(255);NOT NULL;column:remark"`
 	Version      int64  `gorm:"type:int;NOT NULL;column:version"`
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by"`
 	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id"`
@@ -276,15 +275,16 @@ func (s Content) GetID() interface{} {
 
 type TinyIntBool bool
 
-func (t TinyIntBool) Int()BoolTinyInt{
-	if t{
+func (t TinyIntBool) Int() BoolTinyInt {
+	if t {
 		return 1
-	}else{
+	} else {
 		return 2
 	}
 }
 
 type BoolTinyInt int
+
 func (b BoolTinyInt) Bool() TinyIntBool {
 	if b == 1 {
 		return true
@@ -294,9 +294,9 @@ func (b BoolTinyInt) Bool() TinyIntBool {
 
 type CreateContentRequest struct {
 	ContentType   ContentType `json:"content_type"`
-	SourceType 	  string `json:"source_type"`
+	SourceType    string      `json:"source_type"`
 	Name          string      `json:"name"`
-	Program       string    `json:"program"`
+	Program       string      `json:"program"`
 	Subject       []string    `json:"subject"`
 	Developmental []string    `json:"developmental"`
 	Skills        []string    `json:"skills"`
@@ -307,9 +307,9 @@ type CreateContentRequest struct {
 	Thumbnail     string      `json:"thumbnail"`
 	SuggestTime   int         `json:"suggest_time"`
 
-	SelfStudy TinyIntBool `json:"self_study"`
+	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
-	LessonType int `json:"lesson_type"`
+	LessonType   int         `json:"lesson_type"`
 
 	Outcomes []string `json:"outcomes"`
 
@@ -346,35 +346,35 @@ func (c CreateContentRequest) Validate() error {
 }
 
 type ContentInfoWithDetailsResponse struct {
-	Total int `json:"total"`
+	Total       int                       `json:"total"`
 	ContentList []*ContentInfoWithDetails `json:"list"`
 }
 
 type ContentInfoWithDetails struct {
 	ContentInfo
 	ContentTypeName   string   `json:"content_type_name"`
-	ProgramName       string `json:"program_name"`
+	ProgramName       string   `json:"program_name"`
 	SubjectName       []string `json:"subject_name"`
 	DevelopmentalName []string `json:"developmental_name"`
 	SkillsName        []string `json:"skills_name"`
 	AgeName           []string `json:"age_name"`
 	GradeName         []string `json:"grade_name"`
 	OrgName           string   `json:"org_name"`
-	PublishScopeName string `json:"publish_scope_name"`
-	LessonTypeName string `json:"lesson_type_name"`
+	PublishScopeName  string   `json:"publish_scope_name"`
+	LessonTypeName    string   `json:"lesson_type_name"`
 
-	OutcomeEntities	 []*Outcome `json:"outcome_entities"`
+	OutcomeEntities []*Outcome `json:"outcome_entities"`
 }
 
 type ContentName struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
 	ContentType ContentType `json:"content_type"`
 }
 
 type SubContentsWithName struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
+	ID   string      `json:"id"`
+	Name string      `json:"name"`
 	Data ContentData `json:"data"`
 }
 
@@ -382,7 +382,7 @@ type ContentInfo struct {
 	ID            string      `json:"id"`
 	ContentType   ContentType `json:"content_type"`
 	Name          string      `json:"name"`
-	Program       string    `json:"program"`
+	Program       string      `json:"program"`
 	Subject       []string    `json:"subject"`
 	Developmental []string    `json:"developmental"`
 	Skills        []string    `json:"skills"`
@@ -393,19 +393,19 @@ type ContentInfo struct {
 	Thumbnail     string      `json:"thumbnail"`
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
-	SourceType	string `json:"source_type"`
+	SourceType    string      `json:"source_type"`
 
-	SelfStudy TinyIntBool `json:"self_study"`
+	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
-	LessonType int `json:"lesson_type"`
+	LessonType   int         `json:"lesson_type"`
 
 	Outcomes []string `json:"outcomes"`
 
-	SourceID     string `json:"source_id"`
-	LockedBy     string `json:"locked_by"`
+	SourceID     string   `json:"source_id"`
+	LockedBy     string   `json:"locked_by"`
 	RejectReason []string `json:"reject_reason"`
-	Remark string `json:"remark"`
-	LatestID     string `json:"latest_id"`
+	Remark       string   `json:"remark"`
+	LatestID     string   `json:"latest_id"`
 
 	Data  string `json:"data"`
 	Extra string `json:"extra"`

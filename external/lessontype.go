@@ -1,12 +1,14 @@
 package external
 
-import "context"
+import (
+	"context"
+)
 
 type LessonTypeProvider interface {
 	BatchGet(ctx context.Context, ids []int) ([]*LessonType, error)
 }
 type LessonType struct {
-	ID   int `json:"id"`
+	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 type mockLessonTypeService struct{}
@@ -32,3 +34,20 @@ func (m *mockLessonTypeService) BatchGet(ctx context.Context, ids []int) ([]*Les
 func GetLessonTypeProvider() LessonTypeProvider {
 	return &mockLessonTypeService{}
 }
+
+//
+//type lessonTypeService struct{}
+//
+//func (s lessonTypeService) BatchGet(ctx context.Context, ids []string) ([]*entity.LessonType, error) {
+//	result, err := model.GetLessonTypeModel().Query(ctx, &da.LessonTypeCondition{
+//		IDs: entity.NullStrings{
+//			Strings: ids,
+//			Valid:   len(ids) != 0,
+//		},
+//	})
+//	if err != nil {
+//		log.Error(ctx, "BatchGet:error", log.Err(err), log.Strings("ids", ids))
+//		return nil, err
+//	}
+//	return result, nil
+//}
