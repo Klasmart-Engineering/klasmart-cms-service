@@ -439,8 +439,10 @@ func (r *reportModel) getSkipAttendanceID2OutcomeIDsMap(allAttendanceID2Assessme
 				skipOutcomeIDMap[assessmentOutcome.OutcomeID] = false
 			}
 		}
-		for skipOutcomeID := range skipOutcomeIDMap {
-			skipAttendanceID2OutcomeIDsMap[attendanceID] = append(skipAttendanceID2OutcomeIDsMap[attendanceID], skipOutcomeID)
+		for skipOutcomeID, ok := range skipOutcomeIDMap {
+			if ok {
+				skipAttendanceID2OutcomeIDsMap[attendanceID] = append(skipAttendanceID2OutcomeIDsMap[attendanceID], skipOutcomeID)
+			}
 		}
 	}
 	return skipAttendanceID2OutcomeIDsMap
