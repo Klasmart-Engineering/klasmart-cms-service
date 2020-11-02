@@ -106,13 +106,13 @@ func (o ReportOutcomeStatusOption) Valid() bool {
 type ReportSortBy string
 
 const (
-	ReportSortByDescending ReportSortBy = "descending"
-	ReportSortByAscending  ReportSortBy = "ascending"
+	ReportSortByDesc ReportSortBy = "desc"
+	ReportSortByAsc  ReportSortBy = "asc"
 )
 
 func (r ReportSortBy) Valid() bool {
 	switch r {
-	case ReportSortByDescending, ReportSortByAscending:
+	case ReportSortByDesc, ReportSortByAsc:
 		return true
 	default:
 		return false
