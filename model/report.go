@@ -136,7 +136,9 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 
 	var student *external.Student
 	{
+		log.Debug(ctx, "get student detail report: before call GetClassServiceProvider().getStudents()")
 		students, err := external.GetClassServiceProvider().GetStudents(ctx, cmd.ClassID)
+		log.Debug(ctx, "get student detail report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
 				log.Err(err),
@@ -156,7 +158,9 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 		}
 	}
 
+	log.Debug(ctx, "get student detail report: before call getAssessmentIDs()")
 	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	log.Debug(ctx, "get student detail report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
 			log.Err(err),
@@ -310,6 +314,7 @@ func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, c
 }
 
 func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	items, err := GetScheduleModel().Query(ctx, &da.ScheduleCondition{
 		TeacherID: sql.NullString{
 			String: teacherID,
@@ -328,7 +333,14 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, cla
 			Valid:  true,
 		},
 	})
+	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
 	if err != nil {
+		log.Error(ctx, "get schedule ids: query failed",
+			log.Err(err),
+			log.String("class_id", classID),
+			log.String("teacher_id", teacherID),
+			log.String("lesson_plan_id", lessonPlanID),
+		)
 		return nil, err
 	}
 	var result []string
