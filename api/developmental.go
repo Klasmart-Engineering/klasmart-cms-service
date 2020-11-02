@@ -13,6 +13,7 @@ import (
 // @Description get developmental
 // @Accept json
 // @Produce json
+// @Param program_id query string false "program id"
 // @Tags developmental
 // @Success 200 {array} entity.Developmental
 // @Failure 500 {object} InternalServerErrorResponse

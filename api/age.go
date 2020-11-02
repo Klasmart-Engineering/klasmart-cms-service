@@ -13,6 +13,7 @@ import (
 // @Description get age
 // @Accept json
 // @Produce json
+// @Param program_id query string false "program id"
 // @Tags age
 // @Success 200 {array} entity.Age
 // @Failure 500 {object} InternalServerErrorResponse

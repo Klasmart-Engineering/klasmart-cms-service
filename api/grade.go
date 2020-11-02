@@ -13,6 +13,7 @@ import (
 // @Description get grade
 // @Accept json
 // @Produce json
+// @Param program_id query string false "program id"
 // @Tags grade
 // @Success 200 {array} entity.Grade
 // @Failure 500 {object} InternalServerErrorResponse
