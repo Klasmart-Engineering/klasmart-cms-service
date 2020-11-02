@@ -88,6 +88,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			)
 			return nil, err
 		}
+
 		studentService := external.GetStudentServiceProvider()
 		students, err := studentService.BatchGet(ctx, attendanceIDs)
 		if err != nil {
@@ -98,10 +99,15 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			)
 			return nil, err
 		}
+		studentMap := map[string]string{}
 		for _, student := range students {
+			studentMap[student.ID] = student.Name
+		}
+
+		for _, attendanceID := range attendanceIDs {
 			result.Attendances = append(result.Attendances, &entity.AssessmentAttendanceView{
-				ID:   student.ID,
-				Name: student.Name,
+				ID:   attendanceID,
+				Name: studentMap[attendanceID],
 			})
 		}
 	}
