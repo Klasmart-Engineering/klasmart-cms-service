@@ -38,7 +38,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   entity.LiveTokenTypeLive,
-		RoomID: utils.NewID(),
+		RoomID: scheduleID,
 	}
 	liveTokenInfo.ScheduleID = schedule.ID
 
