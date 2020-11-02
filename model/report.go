@@ -103,9 +103,9 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 
 	sortInterface := entity.NewSortingStudentReportItems(result.Items, cmd.Status)
 	switch cmd.SortBy {
-	case entity.ReportSortByDescending:
+	case entity.ReportSortByDesc:
 		sort.Sort(sort.Reverse(sortInterface))
-	case entity.ReportSortByAscending:
+	case entity.ReportSortByAsc:
 		fallthrough
 	default:
 		sort.Sort(sortInterface)
