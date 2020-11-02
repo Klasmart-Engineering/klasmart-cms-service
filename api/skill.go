@@ -1,7 +1,11 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
@@ -16,7 +20,19 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills [get]
 func (s *Server) getSkill(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, nil)
+	ctx := c.Request.Context()
+	developmentalID := c.Query("developmental_id")
+	result, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
+		DevelopmentalID: sql.NullString{
+			String: developmentalID,
+			Valid:  developmentalID != "",
+		},
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // @Summary getSkillByID
@@ -31,5 +47,15 @@ func (s *Server) getSkill(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills/{id} [get]
 func (s *Server) getSkillByID(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, nil)
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	result, err := model.GetSkillModel().GetByID(ctx, id)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+	}
 }

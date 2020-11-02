@@ -214,7 +214,12 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 				}
 				categoryIDs = append(categoryIDs, outcome.Developmental)
 			}
-			categories, err := external.GetDevelopmentalServiceProvider().BatchGet(ctx, categoryIDs)
+			categories, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
+				IDs: entity.NullStrings{
+					Strings: categoryIDs,
+					Valid:   len(categoryIDs) != 0,
+				},
+			})
 			if err != nil {
 				log.Error(ctx, "get student detail report: batch get developmental failed",
 					log.Err(err),

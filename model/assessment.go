@@ -370,8 +370,12 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 
 func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []string) (map[string]string, error) {
 	programNameMap := map[string]string{}
-	programService := external.GetProgramServiceProvider()
-	items, err := programService.BatchGet(ctx, programIDs)
+	items, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
+		IDs: entity.NullStrings{
+			Strings: programIDs,
+			Valid:   len(programIDs) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get program failed",
 			log.Err(err),
@@ -387,8 +391,12 @@ func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []st
 
 func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []string) (map[string]string, error) {
 	subjectNameMap := map[string]string{}
-	subjectService := external.GetSubjectServiceProvider()
-	items, err := subjectService.BatchGet(ctx, subjectIDs)
+	items, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
+		IDs: entity.NullStrings{
+			Strings: subjectIDs,
+			Valid:   len(subjectIDs) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get subject failed",
 			log.Err(err),
@@ -780,8 +788,14 @@ func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string)
 }
 
 func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (bool, error) {
-	subjectService := external.GetSubjectServiceProvider()
-	if _, err := subjectService.BatchGet(ctx, []string{id}); err != nil {
+	ids := []string{id}
+	_, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
+	if err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 			log.Info(ctx, "check subject exists: not found subjects",
@@ -801,8 +815,14 @@ func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (boo
 }
 
 func (a *assessmentModel) existsProgramByID(ctx context.Context, id string) (bool, error) {
-	programService := external.GetProgramServiceProvider()
-	if _, err := programService.BatchGet(ctx, []string{id}); err != nil {
+	ids := []string{id}
+	_, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
+	if err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 			log.Info(ctx, "check program exists: not found programs",
