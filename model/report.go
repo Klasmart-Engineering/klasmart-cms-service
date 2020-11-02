@@ -60,7 +60,9 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	var students []*external.Student
 	{
 		var err error
+		log.Debug(ctx, "list students report: before call GetClassServiceProvider().getStudents()")
 		students, err = external.GetClassServiceProvider().GetStudents(ctx, cmd.ClassID)
+		log.Debug(ctx, "list students report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
 				log.Err(err),
@@ -70,7 +72,9 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		}
 	}
 
+	log.Debug(ctx, "list students report: before call getAssessmentIDs()")
 	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	log.Debug(ctx, "list students report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
 			log.Err(err),
