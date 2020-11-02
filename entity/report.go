@@ -7,6 +7,7 @@ type StudentsReport struct {
 type StudentReportItem struct {
 	StudentID         string `json:"student_id"`
 	StudentName       string `json:"student_name"`
+	Attend            bool   `json:"attend"`
 	AchievedCount     int    `json:"achieved_count"`
 	NotAchievedCount  int    `json:"not_achieved_count"`
 	NotAttemptedCount int    `json:"not_attempted_count"`
@@ -14,6 +15,7 @@ type StudentReportItem struct {
 
 type StudentDetailReport struct {
 	StudentName string                  `json:"student_name"`
+	Attend      bool                    `json:"attend"`
 	Categories  []StudentReportCategory `json:"categories"`
 }
 
