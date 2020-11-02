@@ -13,6 +13,7 @@ import (
 // @Description get subjects
 // @Accept json
 // @Produce json
+// @Param program_id query string false "program id"
 // @Tags subject
 // @Success 200 {array} entity.Subject
 // @Failure 500 {object} InternalServerErrorResponse
