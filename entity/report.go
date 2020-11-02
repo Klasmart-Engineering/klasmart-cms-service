@@ -157,16 +157,22 @@ func (s SortingStudentReportItems) Len() int {
 
 func (s SortingStudentReportItems) Less(i, j int) bool {
 	switch s.Status {
-	case ReportOutcomeStatusOptionNotAchieved:
-		return s.Items[i].NotAchievedCount < s.Items[j].NotAchievedCount
-	case ReportOutcomeStatusOptionNotAttempted:
-		return s.Items[i].NotAttemptedCount < s.Items[j].NotAttemptedCount
+	default:
+		fallthrough
 	case ReportOutcomeStatusOptionAll:
 		fallthrough
 	case ReportOutcomeStatusOptionAchieved:
+		if s.Items[i].AchievedCount != s.Items[j].AchievedCount {
+			return s.Items[i].AchievedCount < s.Items[j].AchievedCount
+		}
 		fallthrough
-	default:
-		return s.Items[i].AchievedCount < s.Items[j].AchievedCount
+	case ReportOutcomeStatusOptionNotAchieved:
+		if s.Items[i].NotAchievedCount != s.Items[j].NotAchievedCount {
+			return s.Items[i].NotAchievedCount < s.Items[j].NotAchievedCount
+		}
+		fallthrough
+	case ReportOutcomeStatusOptionNotAttempted:
+		return s.Items[i].NotAttemptedCount < s.Items[j].NotAttemptedCount
 	}
 }
 
