@@ -88,10 +88,12 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		newItem := entity.StudentReportItem{StudentID: student.ID, StudentName: student.Name}
 
 		if !data.AllAttendanceIDExistsMap[student.ID] {
+			newItem.Attend = false
 			result.Items = append(result.Items, newItem)
 			continue
 		}
 
+		newItem.Attend = true
 		newItem.AchievedCount = len(data.AchievedAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAttemptedCount = len(data.SkipAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAchievedCount = len(data.NotAchievedAttendanceID2OutcomeIDsMap[student.ID])
@@ -187,8 +189,11 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	var result = entity.StudentDetailReport{StudentName: student.Name}
 	{
 		if !data.AllAttendanceIDExistsMap[cmd.StudentID] {
+			result.Attend = false
 			return &result, nil
 		}
+
+		result.Attend = true
 
 		categories := []entity.ReportCategory{
 			entity.ReportCategorySpeechLanguagesSkills,
