@@ -1,7 +1,8 @@
 package entity
 
 type StudentsReport struct {
-	Items []StudentReportItem `json:"items"`
+	Items         []StudentReportItem `json:"items"`
+	AssessmentIDs []string            `json:"assessment_ids"`
 }
 
 type StudentReportItem struct {
@@ -14,9 +15,10 @@ type StudentReportItem struct {
 }
 
 type StudentDetailReport struct {
-	StudentName string                  `json:"student_name"`
-	Attend      bool                    `json:"attend"`
-	Categories  []StudentReportCategory `json:"categories"`
+	StudentName   string                  `json:"student_name"`
+	Attend        bool                    `json:"attend"`
+	Categories    []StudentReportCategory `json:"categories"`
+	AssessmentIDs []string                `json:"assessment_ids"`
 }
 
 type StudentReportCategory struct {

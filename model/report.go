@@ -87,7 +87,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	if err != nil {
 		return nil, err
 	}
-	var result entity.StudentsReport
+	var result = entity.StudentsReport{AssessmentIDs: assessmentIDs}
 	for _, student := range students {
 		newItem := entity.StudentReportItem{StudentID: student.ID, StudentName: student.Name}
 
@@ -194,7 +194,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 		}
 	}
 
-	var result = entity.StudentDetailReport{StudentName: student.Name}
+	var result = entity.StudentDetailReport{StudentName: student.Name, AssessmentIDs: assessmentIDs}
 	{
 		if !data.AllAttendanceIDExistsMap[cmd.StudentID] {
 			result.Attend = false
