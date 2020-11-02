@@ -1,8 +1,8 @@
 package entity
 
 type StudentsReport struct {
-	Items         []StudentReportItem `json:"items"`
-	AssessmentIDs []string            `json:"assessment_ids"`
+	Items         []*StudentReportItem `json:"items"`
+	AssessmentIDs []string             `json:"assessment_ids"`
 }
 
 type StudentReportItem struct {
@@ -15,10 +15,10 @@ type StudentReportItem struct {
 }
 
 type StudentDetailReport struct {
-	StudentName   string                  `json:"student_name"`
-	Attend        bool                    `json:"attend"`
-	Categories    []StudentReportCategory `json:"categories"`
-	AssessmentIDs []string                `json:"assessment_ids"`
+	StudentName   string                   `json:"student_name"`
+	Attend        bool                     `json:"attend"`
+	Categories    []*StudentReportCategory `json:"categories"`
+	AssessmentIDs []string                 `json:"assessment_ids"`
 }
 
 type StudentReportCategory struct {
@@ -145,11 +145,11 @@ type AssessmentOutcomeKey struct {
 }
 
 type SortingStudentReportItems struct {
-	Items  []StudentReportItem
+	Items  []*StudentReportItem
 	Status ReportOutcomeStatusOption
 }
 
-func NewSortingStudentReportItems(items []StudentReportItem, status ReportOutcomeStatusOption) *SortingStudentReportItems {
+func NewSortingStudentReportItems(items []*StudentReportItem, status ReportOutcomeStatusOption) *SortingStudentReportItems {
 	return &SortingStudentReportItems{Items: items, Status: status}
 }
 

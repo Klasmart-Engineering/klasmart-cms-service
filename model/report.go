@@ -93,7 +93,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 
 		if !data.AllAttendanceIDExistsMap[student.ID] {
 			newItem.Attend = false
-			result.Items = append(result.Items, newItem)
+			result.Items = append(result.Items, &newItem)
 			continue
 		}
 
@@ -102,7 +102,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		newItem.NotAttemptedCount = len(data.SkipAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAchievedCount = len(data.NotAchievedAttendanceID2OutcomeIDsMap[student.ID])
 
-		result.Items = append(result.Items, newItem)
+		result.Items = append(result.Items, &newItem)
 	}
 
 	sortInterface := entity.NewSortingStudentReportItems(result.Items, cmd.Status)
@@ -284,7 +284,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 					}
 				}
 			}
-			result.Categories = append(result.Categories, newItem)
+			result.Categories = append(result.Categories, &newItem)
 		}
 	}
 
