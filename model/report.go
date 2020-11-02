@@ -83,7 +83,6 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	if err != nil {
 		return nil, err
 	}
-
 	var result entity.StudentsReport
 	for _, student := range students {
 		newItem := entity.StudentReportItem{StudentID: student.ID, StudentName: student.Name}
@@ -94,7 +93,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		}
 
 		newItem.AchievedCount = len(data.AchievedAttendanceID2OutcomeIDsMap[student.ID])
-		newItem.NotAchievedCount = len(data.SkipAttendanceID2OutcomeIDsMap[student.ID])
+		newItem.NotAttemptedCount = len(data.SkipAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAchievedCount = len(data.NotAchievedAttendanceID2OutcomeIDsMap[student.ID])
 
 		result.Items = append(result.Items, newItem)
