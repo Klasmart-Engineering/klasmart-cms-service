@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -20,7 +21,13 @@ import (
 // @Router /ages [get]
 func (s *Server) getAge(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := model.GetAgeModel().Query(ctx, &da.AgeCondition{})
+	programID := c.Query("program_id")
+	result, err := model.GetAgeModel().Query(ctx, &da.AgeCondition{
+		ProgramID: sql.NullString{
+			String: programID,
+			Valid:  len(programID) != 0,
+		},
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return

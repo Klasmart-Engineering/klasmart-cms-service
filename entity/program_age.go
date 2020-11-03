@@ -1,5 +1,7 @@
 package entity
 
+import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 type ProgramAge struct {
 	ID        string `gorm:"column:id;PRIMARY_KEY"`
 	ProgramID string `gorm:"column:program_id;type:varchar(256);not null"`
@@ -7,7 +9,7 @@ type ProgramAge struct {
 }
 
 func (e ProgramAge) TableName() string {
-	return "programs_ages"
+	return constant.TableNameProgramAge
 }
 
 func (e ProgramAge) GetID() interface{} {
