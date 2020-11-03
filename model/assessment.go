@@ -538,13 +538,6 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 		}
 
 		if cmd.AttendanceIDs != nil {
-			if err := da.GetAssessmentAttendanceDA().DeleteByAssessmentID(ctx, tx, newID); err != nil {
-				log.Error(ctx, "add assessment: delete assessment attendance failed by assessment id",
-					log.Err(err),
-					log.Any("cmd", cmd),
-				)
-				return err
-			}
 			var items []*entity.AssessmentAttendance
 			for _, attendanceID := range cmd.AttendanceIDs {
 				items = append(items, &entity.AssessmentAttendance{
