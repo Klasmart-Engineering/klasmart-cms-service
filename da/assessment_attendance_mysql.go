@@ -78,7 +78,7 @@ func (c *AssessmentAttendanceCondition) GetConditions() ([]string, []interface{}
 	)
 	if len(c.AssessmentIDs) > 0 {
 		conditions = append(conditions, "(assessment_id in (?))")
-		values = append(values, values...)
+		values = append(values, c.AssessmentIDs)
 	}
 	if c.Checked != nil {
 		conditions = append(conditions, "(checked = ?)")
