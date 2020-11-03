@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -20,7 +21,13 @@ import (
 // @Router /developmentals [get]
 func (s *Server) getDevelopmental(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{})
+	programID := c.Query("program_id")
+	result, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
+		ProgramID: sql.NullString{
+			String: programID,
+			Valid:  len(programID) != 0,
+		},
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
