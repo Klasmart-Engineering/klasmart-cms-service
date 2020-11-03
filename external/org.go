@@ -57,13 +57,16 @@ func (s mockOrganizationService) BatchGet(ctx context.Context, ids []string) ([]
 }
 
 func (s mockOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {
+	// Maybe don't need
 	return GetMockData().Organizations, nil
 }
 
 func (s mockOrganizationService) GetParents(ctx context.Context, orgID string) ([]*Organization, error) {
-	return GetMockData().Organizations, nil
+	return []*Organization{}, nil
+	//return GetMockData().Organizations, nil
 }
 
 func (s mockOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
-	return GetMockData().Organizations, nil
+	return []*Organization{}, nil
+	//return GetMockData().Organizations, nil
 }
