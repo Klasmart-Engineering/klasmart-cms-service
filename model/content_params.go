@@ -13,7 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 )
 
-func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string{
+func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string {
 	if c.ContentType == entity.ContentTypeLesson {
 		return constant.SourceTypeLesson
 	}
@@ -21,7 +21,7 @@ func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContent
 		return constant.SourceTypeAssets
 	}
 	materialData := d.(*contentdata.MaterialData)
-	return fmt.Sprintf(constant.SourceTypeMaterialPrefix+ materialData.FileType.String())
+	return fmt.Sprintf(constant.SourceTypeMaterialPrefix + materialData.FileType.String())
 }
 
 func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
@@ -55,7 +55,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	c.Data = data
 
 	//get publishScope&authorName
-	publishScope := c.PublishScope 
+	publishScope := c.PublishScope
 	//TODO: To get real name
 	authorName := "Bada"
 
@@ -68,12 +68,11 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		publishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 		c.SelfStudy = false
 		c.DrawActivity = false
-		c.LessonType = 0
+		c.LessonType = ""
 	}
 	if c.ContentType == entity.ContentTypeLesson {
-		c.LessonType = 0
+		c.LessonType = ""
 	}
-
 
 	return &entity.Content{
 		//ID:            utils.NewID(),
@@ -153,7 +152,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.SelfStudy = data.SelfStudy.Int()
 	}
 
-	if data.ContentType == entity.ContentTypeMaterial && data.LessonType > 0 {
+	if data.ContentType == entity.ContentTypeMaterial && data.LessonType != "" {
 		content.LessonType = data.LessonType
 	}
 
