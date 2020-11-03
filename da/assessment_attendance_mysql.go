@@ -67,6 +67,7 @@ func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo
 	return nil
 }
 
+// Uncheck all assessment attendances
 func (a *assessmentAttendanceDA) Uncheck(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
 	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ?", assessmentID).
 		Update("checked", false).
@@ -90,6 +91,7 @@ func (a *assessmentAttendanceDA) Check(ctx context.Context, tx *dbo.DBContext, a
 		log.Error(ctx, "uncheck assessment attendance: update failed",
 			log.Err(err),
 			log.String("assessment_id", assessmentID),
+			log.Strings("attendance_ids", attendanceIDs),
 		)
 		return err
 	}
