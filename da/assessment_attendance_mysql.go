@@ -10,10 +10,9 @@ import (
 )
 
 type IAssessmentAttendanceDA interface {
-	GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
-	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentID []string) ([]*entity.AssessmentAttendance, error)
+	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, checked *bool, assessmentID ...string) ([]*entity.AssessmentAttendance, error)
 }
 
 var (
@@ -29,18 +28,6 @@ func GetAssessmentAttendanceDA() IAssessmentAttendanceDA {
 }
 
 type assessmentAttendanceDA struct{}
-
-func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
-	var items []entity.AssessmentAttendance
-	if err := tx.Where("assessment_id = ?", assessmentID).Find(&items).Error; err != nil {
-		return nil, err
-	}
-	var ids []string
-	for _, item := range items {
-		ids = append(ids, item.AttendanceID)
-	}
-	return ids, nil
-}
 
 func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
 	if len(items) == 0 {
@@ -76,9 +63,16 @@ func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo
 	return nil
 }
 
-func (a *assessmentAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentAttendance, error) {
+func (a *assessmentAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, checked *bool, assessmentIDs ...string) ([]*entity.AssessmentAttendance, error) {
 	var items []*entity.AssessmentAttendance
-	if err := tx.Where("assessment_id in (?)", assessmentIDs).Find(&items).Error; err != nil {
+	db := tx.DB
+	if len(assessmentIDs) > 0 {
+		db = db.Where("assessment_id in (?)", assessmentIDs)
+	}
+	if checked != nil {
+		db = db.Where("checked = ?", *checked)
+	}
+	if err := db.Find(&items).Error; err != nil {
 		log.Error(ctx, "batch get by assessment ids: find failed",
 			log.Err(err),
 			log.Strings("assessment_ids", assessmentIDs),

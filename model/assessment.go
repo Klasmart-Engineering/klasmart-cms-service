@@ -80,13 +80,17 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 
 	// fill attendances
 	{
-		attendanceIDs, err := da.GetAssessmentAttendanceDA().GetAttendanceIDsByAssessmentID(ctx, tx, id)
+		assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, nil, id)
 		if err != nil {
-			log.Error(ctx, "get assessment detail: get assessment attendances failed",
+			log.Error(ctx, "get assessment detail: batch get assessment ids",
 				log.Err(err),
 				log.String("id", "id"),
 			)
 			return nil, err
+		}
+		var attendanceIDs []string
+		for _, item := range assessmentAttendances {
+			attendanceIDs = append(attendanceIDs, item.AttendanceID)
 		}
 
 		studentService := external.GetStudentServiceProvider()
@@ -104,10 +108,11 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			studentMap[student.ID] = student.Name
 		}
 
-		for _, attendanceID := range attendanceIDs {
+		for _, item := range assessmentAttendances {
 			result.Attendances = append(result.Attendances, &entity.AssessmentAttendanceView{
-				ID:   attendanceID,
-				Name: studentMap[attendanceID],
+				ID:      item.AttendanceID,
+				Name:    studentMap[item.AttendanceID],
+				Checked: item.Checked,
 			})
 		}
 	}
@@ -552,6 +557,7 @@ func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd enti
 				ID:           utils.NewID(),
 				AssessmentID: newID,
 				AttendanceID: attendanceID,
+				Checked:      true,
 			})
 		}
 		if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
@@ -709,6 +715,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 					ID:           utils.NewID(),
 					AssessmentID: cmd.ID,
 					AttendanceID: attendanceID,
+					Checked:      true,
 				})
 			}
 			if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {

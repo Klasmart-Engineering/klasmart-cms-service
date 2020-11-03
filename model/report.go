@@ -402,7 +402,8 @@ func (r *reportModel) getOutcomeRelatedData(ctx context.Context, tx *dbo.DBConte
 		allAttendanceID2AssessmentOutcomesMap = map[string][]*entity.AssessmentOutcome{}
 	)
 
-	assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+	checked := true
+	assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, &checked, assessmentIDs...)
 	if err != nil {
 		log.Error(ctx, "list students report: batch get assessment attendances failed",
 			log.Err(err),

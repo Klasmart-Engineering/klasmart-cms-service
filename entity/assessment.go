@@ -101,8 +101,9 @@ type OutcomeAttendanceMapView struct {
 }
 
 type AssessmentAttendanceView struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Checked bool   `json:"checked"`
 }
 
 type AssessmentSubject struct {
