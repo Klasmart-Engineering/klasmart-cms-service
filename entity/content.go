@@ -38,8 +38,8 @@ const (
 	SelfStudyFalse    = 2
 	DrawActivityTrue  = 1
 	DrawActivityFalse = 2
-	LessonTypeTest    = "1"
-	LessonTypeNotTest = "2"
+	//LessonTypeTest    = "1"
+	//LessonTypeNotTest = "2"
 )
 
 var (
