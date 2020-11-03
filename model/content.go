@@ -77,6 +77,7 @@ type IContentModel interface {
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
+	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 }
@@ -1039,6 +1040,33 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
+func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error){
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
+		return nil, err
+	}
+	if content.LatestID != "" {
+		content, err = da.GetContentDA().GetContentByID(ctx, tx, content.LatestID)
+		if err != nil {
+			log.Error(ctx, "can't get latest content", log.Err(err), log.String("cid", cid))
+			return nil, err
+		}
+	}
+
+	if content.Outcomes == "" {
+		return nil, nil
+	}
+	outcomes := strings.Split(content.Outcomes, ",")
+	ret := make([]string, 0)
+	for i := range outcomes {
+		if outcomes[i] != "" {
+			ret = append(ret, outcomes[i])
+		}
+	}
+
+	return ret, nil
+}
 func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
