@@ -139,14 +139,12 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
-	if c.LessonType != "" {
-		_, err := GetLessonTypeModel().GetByID(ctx, c.LessonType)
-		if err != nil {
-			log.Error(ctx, "lesson type invalid", log.Any("data", c), log.Err(err))
-			return err
-		}
+	_, err := GetLessonTypeModel().GetByID(ctx, c.LessonType)
+	if err != nil {
+		log.Error(ctx, "lesson type invalid", log.Any("data", c), log.Err(err))
+		return ErrInvalidContentData
 	}
-	err := c.Validate()
+	err = c.Validate()
 	if err != nil {
 		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
 		return err
