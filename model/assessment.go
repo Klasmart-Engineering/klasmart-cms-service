@@ -487,7 +487,7 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 			)
 			return "", errors.New("add assessment: invalid class type")
 		}
-		outcomeIDs, err = GetContentModel().GetContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
+		outcomeIDs, err = GetContentModel().GetVisibleContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "add assessment: get outcome failed by id",
 				log.Err(err),
