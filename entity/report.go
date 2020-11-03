@@ -1,20 +1,24 @@
 package entity
 
 type StudentsReport struct {
-	Items []StudentReportItem `json:"items"`
+	Items         []*StudentReportItem `json:"items"`
+	AssessmentIDs []string             `json:"assessment_ids"`
 }
 
 type StudentReportItem struct {
 	StudentID         string `json:"student_id"`
 	StudentName       string `json:"student_name"`
+	Attend            bool   `json:"attend"`
 	AchievedCount     int    `json:"achieved_count"`
 	NotAchievedCount  int    `json:"not_achieved_count"`
 	NotAttemptedCount int    `json:"not_attempted_count"`
 }
 
 type StudentDetailReport struct {
-	StudentName string                  `json:"student_name"`
-	Categories  []StudentReportCategory `json:"categories"`
+	StudentName   string                   `json:"student_name"`
+	Attend        bool                     `json:"attend"`
+	Categories    []*StudentReportCategory `json:"categories"`
+	AssessmentIDs []string                 `json:"assessment_ids"`
 }
 
 type StudentReportCategory struct {
@@ -104,13 +108,13 @@ func (o ReportOutcomeStatusOption) Valid() bool {
 type ReportSortBy string
 
 const (
-	ReportSortByDescending ReportSortBy = "descending"
-	ReportSortByAscending  ReportSortBy = "ascending"
+	ReportSortByDesc ReportSortBy = "desc"
+	ReportSortByAsc  ReportSortBy = "asc"
 )
 
 func (r ReportSortBy) Valid() bool {
 	switch r {
-	case ReportSortByDescending, ReportSortByAscending:
+	case ReportSortByDesc, ReportSortByAsc:
 		return true
 	default:
 		return false
@@ -141,11 +145,11 @@ type AssessmentOutcomeKey struct {
 }
 
 type SortingStudentReportItems struct {
-	Items  []StudentReportItem
+	Items  []*StudentReportItem
 	Status ReportOutcomeStatusOption
 }
 
-func NewSortingStudentReportItems(items []StudentReportItem, status ReportOutcomeStatusOption) *SortingStudentReportItems {
+func NewSortingStudentReportItems(items []*StudentReportItem, status ReportOutcomeStatusOption) *SortingStudentReportItems {
 	return &SortingStudentReportItems{Items: items, Status: status}
 }
 
@@ -155,16 +159,22 @@ func (s SortingStudentReportItems) Len() int {
 
 func (s SortingStudentReportItems) Less(i, j int) bool {
 	switch s.Status {
-	case ReportOutcomeStatusOptionNotAchieved:
-		return s.Items[i].NotAchievedCount < s.Items[j].NotAchievedCount
-	case ReportOutcomeStatusOptionNotAttempted:
-		return s.Items[i].NotAttemptedCount < s.Items[j].NotAttemptedCount
+	default:
+		fallthrough
 	case ReportOutcomeStatusOptionAll:
 		fallthrough
 	case ReportOutcomeStatusOptionAchieved:
+		if s.Items[i].AchievedCount != s.Items[j].AchievedCount {
+			return s.Items[i].AchievedCount < s.Items[j].AchievedCount
+		}
 		fallthrough
-	default:
-		return s.Items[i].AchievedCount < s.Items[j].AchievedCount
+	case ReportOutcomeStatusOptionNotAchieved:
+		if s.Items[i].NotAchievedCount != s.Items[j].NotAchievedCount {
+			return s.Items[i].NotAchievedCount < s.Items[j].NotAchievedCount
+		}
+		fallthrough
+	case ReportOutcomeStatusOptionNotAttempted:
+		return s.Items[i].NotAttemptedCount < s.Items[j].NotAttemptedCount
 	}
 }
 

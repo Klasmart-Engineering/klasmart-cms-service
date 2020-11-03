@@ -44,7 +44,7 @@ func GetMockData() *mockData {
 		_mockData = &mockData{}
 		response, err := http.DefaultClient.Get("https://launch.kidsloop.cn/static/mock-korea-data/select-options.json")
 		if err != nil {
-			log.Error(context.Background(), "read mock json failed", log.Err(err))
+			log.Fatal(context.Background(), "read mock json failed", log.Err(err))
 			return
 		}
 
@@ -52,13 +52,13 @@ func GetMockData() *mockData {
 
 		buffer, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			log.Error(context.Background(), "read response failed", log.Err(err))
+			log.Fatal(context.Background(), "read response failed", log.Err(err))
 			return
 		}
 
 		err = json.Unmarshal(buffer, &_mockData)
 		if err != nil {
-			log.Error(context.Background(), "unmarshal response failed", log.Err(err), log.ByteString("json", buffer))
+			log.Fatal(context.Background(), "unmarshal response failed", log.Err(err), log.ByteString("json", buffer))
 			return
 		}
 	})

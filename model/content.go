@@ -77,6 +77,7 @@ type IContentModel interface {
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
+	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 }
@@ -139,6 +140,13 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
+	if c.LessonType != "" {
+		_, err := GetLessonTypeModel().GetByID(ctx, c.LessonType)
+		if err != nil {
+			log.Error(ctx, "lesson type invalid", log.Any("data", c), log.Err(err))
+			return ErrInvalidContentData
+		}
+	}
 	err := c.Validate()
 	if err != nil {
 		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
@@ -1032,6 +1040,33 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
+func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error){
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
+		return nil, err
+	}
+	if content.LatestID != "" {
+		content, err = da.GetContentDA().GetContentByID(ctx, tx, content.LatestID)
+		if err != nil {
+			log.Error(ctx, "can't get latest content", log.Err(err), log.String("cid", cid))
+			return nil, err
+		}
+	}
+
+	if content.Outcomes == "" {
+		return nil, nil
+	}
+	outcomes := strings.Split(content.Outcomes, ",")
+	ret := make([]string, 0)
+	for i := range outcomes {
+		if outcomes[i] != "" {
+			ret = append(ret, outcomes[i])
+		}
+	}
+
+	return ret, nil
+}
 func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
@@ -1162,7 +1197,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageNameMap := make(map[string]string)
 	gradeNameMap := make(map[string]string)
 	publishScopeNameMap := make(map[string]string)
-	lessonTypeNameMap := make(map[int]string)
+	lessonTypeNameMap := make(map[string]string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
@@ -1171,7 +1206,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageIds := make([]string, 0)
 	gradeIds := make([]string, 0)
 	scopeIds := make([]string, 0)
-	lessonTypeIds := make([]int, 0)
+	lessonTypeIds := make([]string, 0)
 
 	for i := range contentList {
 		programIds = append(programIds, contentList[i].Program)
@@ -1186,8 +1221,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//LessonType
-	lessonTypeProvider := external.GetLessonTypeProvider()
-	lessonTypes, err := lessonTypeProvider.BatchGet(ctx, lessonTypeIds)
+	lessonTypes, err := GetLessonTypeModel().Query(ctx, &da.LessonTypeCondition{
+		IDs: entity.NullStrings{
+			Strings: lessonTypeIds,
+			Valid:   len(lessonTypeIds) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "can't get lesson type info", log.Err(err))
 	} else {

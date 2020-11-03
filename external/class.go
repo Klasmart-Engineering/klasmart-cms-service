@@ -4,6 +4,8 @@ import (
 	"context"
 	"text/template"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
 	"go.uber.org/zap/buffer"
 
 	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -21,13 +23,13 @@ type Class struct {
 }
 
 func GetClassServiceProvider() ClassServiceProvider {
-	return &mockClassService{}
+	//return &mockClassService{}
+	return &graphqlClassService{}
 }
 
-type mockClassService struct{}
+type graphqlClassService struct{}
 
-func (s mockClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
-	client := cl.NewClient(url)
+func (s graphqlClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
 	raw := `query{
 	{{range $i, $e := .}}
 	index_{{$i}}: class(class_id: "{{$e}}"){
@@ -42,21 +44,28 @@ func (s mockClassService) BatchGet(ctx context.Context, ids []string) ([]*Class,
 }`
 	temp, err := template.New("Classes").Parse(raw)
 	if err != nil {
+		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
 		return nil, err
 	}
 	buf := buffer.Buffer{}
-	temp.Execute(&buf, ids)
-	//fmt.Println(buf.String())
+	err = temp.Execute(&buf, ids)
+	if err != nil {
+		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
 	req := cl.NewRequest(buf.String())
 	payload := make(map[string]*Class, len(ids))
 	res := cl.Response{
 		Data: &payload,
 	}
-	_, err = client.Run(ctx, req, &res)
+
+	_, err = GetChlorine().Run(ctx, req, &res)
 	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
 		return nil, err
 	}
 	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
 	var classes []*Class
@@ -64,11 +73,9 @@ func (s mockClassService) BatchGet(ctx context.Context, ids []string) ([]*Class,
 		classes = append(classes, v)
 	}
 	return classes, nil
-	//return GetMockData().Classes, nil
 }
 
-func (s mockClassService) GetStudents(ctx context.Context, classID string) ([]*Student, error) {
-	client := cl.NewClient(url)
+func (s graphqlClassService) GetStudents(ctx context.Context, classID string) ([]*Student, error) {
 	q := `query ($classID: ID!){
 	class(class_id: $classID){
 		students{
@@ -85,19 +92,30 @@ func (s mockClassService) GetStudents(ctx context.Context, classID string) ([]*S
 			Class struct{ Students *[]*Student }
 		}{Class: struct{ Students *[]*Student }{Students: &payload}},
 	}
-	_, err := client.Run(ctx, req, &res)
+	_, err := GetChlorine().Run(ctx, req, &res)
 	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
 	}
 	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
 	return payload, nil
-	//classes := GetMockData().Classes
-	//for _, class := range classes {
-	//	if class.ID == classID {
-	//		return class.Students, nil
-	//	}
-	//}
-	//return nil, nil
+}
+
+type mockClassService struct{}
+
+func (s mockClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
+	return GetMockData().Classes, nil
+}
+
+func (s mockClassService) GetStudents(ctx context.Context, classID string) ([]*Student, error) {
+	classes := GetMockData().Classes
+	for _, class := range classes {
+		if class.ID == classID {
+			return class.Students, nil
+		}
+	}
+	return nil, nil
 }

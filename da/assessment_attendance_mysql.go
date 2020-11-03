@@ -10,10 +10,11 @@ import (
 )
 
 type IAssessmentAttendanceDA interface {
-	GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error
-	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
-	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentID []string) ([]*entity.AssessmentAttendance, error)
+	Query(ctx context.Context, condition dbo.Conditions, values interface{}) error
+	QueryTx(ctx context.Context, db *dbo.DBContext, condition dbo.Conditions, values interface{}) error
+	Uncheck(ctx context.Context, db *dbo.DBContext, assessmentID string) error
+	Check(ctx context.Context, db *dbo.DBContext, assessmentID string, attendanceIDs []string) error
 }
 
 var (
@@ -28,18 +29,8 @@ func GetAssessmentAttendanceDA() IAssessmentAttendanceDA {
 	return assessmentAttendanceDAInstance
 }
 
-type assessmentAttendanceDA struct{}
-
-func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
-	var items []entity.AssessmentAttendance
-	if err := tx.Where("assessment_id = ?", assessmentID).Find(&items).Error; err != nil {
-		return nil, err
-	}
-	var ids []string
-	for _, item := range items {
-		ids = append(ids, item.ID)
-	}
-	return ids, nil
+type assessmentAttendanceDA struct {
+	dbo.BaseDA
 }
 
 func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
@@ -76,14 +67,58 @@ func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo
 	return nil
 }
 
-func (a *assessmentAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentAttendance, error) {
-	var items []*entity.AssessmentAttendance
-	if err := tx.Where("assessment_id in (?)", assessmentIDs).Find(&items).Error; err != nil {
-		log.Error(ctx, "batch get by assessment ids: find failed",
+// Uncheck all assessment attendances
+func (a *assessmentAttendanceDA) Uncheck(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ?", assessmentID).
+		Update("checked", false).
+		Error; err != nil {
+		log.Error(ctx, "uncheck assessment attendance: update failed",
 			log.Err(err),
-			log.Strings("assessment_ids", assessmentIDs),
+			log.String("assessment_id", assessmentID),
 		)
-		return nil, err
+		return err
 	}
-	return items, nil
+	return nil
 }
+
+func (a *assessmentAttendanceDA) Check(ctx context.Context, tx *dbo.DBContext, assessmentID string, attendanceIDs []string) error {
+	if len(attendanceIDs) == 0 {
+		return nil
+	}
+	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ? and attendance_id in (?)", assessmentID, attendanceIDs).
+		Update("checked", true).
+		Error; err != nil {
+		log.Error(ctx, "uncheck assessment attendance: update failed",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+			log.Strings("attendance_ids", attendanceIDs),
+		)
+		return err
+	}
+	return nil
+}
+
+type AssessmentAttendanceCondition struct {
+	AssessmentIDs []string
+	Checked       *bool
+}
+
+func (c *AssessmentAttendanceCondition) GetConditions() ([]string, []interface{}) {
+	var (
+		conditions []string
+		values     []interface{}
+	)
+	if len(c.AssessmentIDs) > 0 {
+		conditions = append(conditions, "(assessment_id in (?))")
+		values = append(values, c.AssessmentIDs)
+	}
+	if c.Checked != nil {
+		conditions = append(conditions, "(checked = ?)")
+		values = append(values, *c.Checked)
+	}
+	return conditions, values
+}
+
+func (c *AssessmentAttendanceCondition) GetPager() *dbo.Pager { return nil }
+
+func (c *AssessmentAttendanceCondition) GetOrderBy() string { return "" }

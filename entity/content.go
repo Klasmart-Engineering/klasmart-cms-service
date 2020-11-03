@@ -38,8 +38,8 @@ const (
 	SelfStudyFalse    = 2
 	DrawActivityTrue  = 1
 	DrawActivityFalse = 2
-	LessonTypeTest    = 1
-	LessonTypeNotTest = 2
+	//LessonTypeTest    = "1"
+	//LessonTypeNotTest = "2"
 )
 
 var (
@@ -214,7 +214,7 @@ type Content struct {
 
 	SelfStudy    BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:self_study"`
 	DrawActivity BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
-	LessonType   int         `gorm:"type:tinyint;NOT NULL;column:lesson_type"`
+	LessonType   string      `gorm:"type:varchar(100);column:lesson_type"`
 
 	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
@@ -309,7 +309,7 @@ type CreateContentRequest struct {
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
-	LessonType   int         `json:"lesson_type"`
+	LessonType   string      `json:"lesson_type"`
 
 	Outcomes []string `json:"outcomes"`
 
@@ -335,11 +335,6 @@ func (c CreateContentRequest) Validate() error {
 		// if !exist {
 		// 	return ErrResourceNotFound
 		// }
-	}
-	if c.LessonType > 0 {
-		if c.LessonType != LessonTypeTest && c.LessonType != LessonTypeNotTest {
-			return ErrInvalidLessonType
-		}
 	}
 
 	return nil
@@ -397,7 +392,7 @@ type ContentInfo struct {
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
-	LessonType   int         `json:"lesson_type"`
+	LessonType   string      `json:"lesson_type"`
 
 	Outcomes []string `json:"outcomes"`
 

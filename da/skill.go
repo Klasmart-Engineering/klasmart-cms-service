@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -41,10 +42,11 @@ func (c SkillCondition) GetConditions() ([]string, []interface{}) {
 	var params []interface{}
 
 	if c.DevelopmentalID.Valid {
-		wheres = append(wheres, "developmental_id = ?")
+		sql := fmt.Sprintf("exists(select 1 from %s where development_id = ? and %s.id = %s.skill_id)",
+			constant.TableNameDevelopmentalSkill, constant.TableNameSkill, constant.TableNameDevelopmentalSkill)
+		wheres = append(wheres, sql)
 		params = append(params, c.DevelopmentalID.String)
 	}
-
 	if c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)

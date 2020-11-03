@@ -25,7 +25,7 @@ func (s *Server) getSkill(c *gin.Context) {
 	result, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
 		DevelopmentalID: sql.NullString{
 			String: developmentalID,
-			Valid:  developmentalID != "",
+			Valid:  len(developmentalID) != 0,
 		},
 	})
 	if err != nil {

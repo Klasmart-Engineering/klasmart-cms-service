@@ -60,7 +60,9 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	var students []*external.Student
 	{
 		var err error
+		log.Debug(ctx, "list students report: before call GetClassServiceProvider().getStudents()")
 		students, err = external.GetClassServiceProvider().GetStudents(ctx, cmd.ClassID)
+		log.Debug(ctx, "list students report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
 				log.Err(err),
@@ -70,7 +72,9 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		}
 	}
 
+	log.Debug(ctx, "list students report: before call getAssessmentIDs()")
 	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	log.Debug(ctx, "list students report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
 			log.Err(err),
@@ -83,27 +87,29 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	if err != nil {
 		return nil, err
 	}
-	var result entity.StudentsReport
+	var result = entity.StudentsReport{AssessmentIDs: assessmentIDs}
 	for _, student := range students {
 		newItem := entity.StudentReportItem{StudentID: student.ID, StudentName: student.Name}
 
 		if !data.AllAttendanceIDExistsMap[student.ID] {
-			result.Items = append(result.Items, newItem)
+			newItem.Attend = false
+			result.Items = append(result.Items, &newItem)
 			continue
 		}
 
+		newItem.Attend = true
 		newItem.AchievedCount = len(data.AchievedAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAttemptedCount = len(data.SkipAttendanceID2OutcomeIDsMap[student.ID])
 		newItem.NotAchievedCount = len(data.NotAchievedAttendanceID2OutcomeIDsMap[student.ID])
 
-		result.Items = append(result.Items, newItem)
+		result.Items = append(result.Items, &newItem)
 	}
 
 	sortInterface := entity.NewSortingStudentReportItems(result.Items, cmd.Status)
 	switch cmd.SortBy {
-	case entity.ReportSortByDescending:
+	case entity.ReportSortByDesc:
 		sort.Sort(sort.Reverse(sortInterface))
-	case entity.ReportSortByAscending:
+	case entity.ReportSortByAsc:
 		fallthrough
 	default:
 		sort.Sort(sortInterface)
@@ -134,7 +140,9 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 
 	var student *external.Student
 	{
+		log.Debug(ctx, "get student detail report: before call GetClassServiceProvider().getStudents()")
 		students, err := external.GetClassServiceProvider().GetStudents(ctx, cmd.ClassID)
+		log.Debug(ctx, "get student detail report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
 				log.Err(err),
@@ -154,7 +162,9 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 		}
 	}
 
+	log.Debug(ctx, "get student detail report: before call getAssessmentIDs()")
 	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	log.Debug(ctx, "get student detail report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
 			log.Err(err),
@@ -184,11 +194,14 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 		}
 	}
 
-	var result = entity.StudentDetailReport{StudentName: student.Name}
+	var result = entity.StudentDetailReport{StudentName: student.Name, AssessmentIDs: assessmentIDs}
 	{
 		if !data.AllAttendanceIDExistsMap[cmd.StudentID] {
+			result.Attend = false
 			return &result, nil
 		}
+
+		result.Attend = true
 
 		categories := []entity.ReportCategory{
 			entity.ReportCategorySpeechLanguagesSkills,
@@ -271,7 +284,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 					}
 				}
 			}
-			result.Categories = append(result.Categories, newItem)
+			result.Categories = append(result.Categories, &newItem)
 		}
 	}
 
@@ -305,6 +318,7 @@ func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, c
 }
 
 func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	items, err := GetScheduleModel().Query(ctx, &da.ScheduleCondition{
 		TeacherID: sql.NullString{
 			String: teacherID,
@@ -323,7 +337,14 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, cla
 			Valid:  true,
 		},
 	})
+	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
 	if err != nil {
+		log.Error(ctx, "get schedule ids: query failed",
+			log.Err(err),
+			log.String("class_id", classID),
+			log.String("teacher_id", teacherID),
+			log.String("lesson_plan_id", lessonPlanID),
+		)
 		return nil, err
 	}
 	var result []string
@@ -381,9 +402,13 @@ func (r *reportModel) getOutcomeRelatedData(ctx context.Context, tx *dbo.DBConte
 		allAttendanceID2AssessmentOutcomesMap = map[string][]*entity.AssessmentOutcome{}
 	)
 
-	assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
-	if err != nil {
-		log.Error(ctx, "list students report: batch get assessment attendances failed",
+	checked := true
+	var assessmentAttendances []*entity.AssessmentAttendance
+	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.AssessmentAttendanceCondition{
+		AssessmentIDs: assessmentIDs,
+		Checked:       &checked,
+	}, &assessmentAttendances); err != nil {
+		log.Error(ctx, "list students report: query assessment attendances failed",
 			log.Err(err),
 			log.Any("assessment_ids", assessmentIDs),
 		)

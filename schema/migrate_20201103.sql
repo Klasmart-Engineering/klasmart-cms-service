@@ -1,0 +1,1 @@
+alter table `assessments_attendances` add checked boolean not null default true comment 'checked';

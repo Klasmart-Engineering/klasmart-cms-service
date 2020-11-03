@@ -27,6 +27,7 @@ CREATE TABLE `cms_contents` (
    `locked_by` VARCHAR( 50) COMMENT  '封锁人',
    `source_id` VARCHAR( 50) COMMENT  'source_id',
    `latest_id` VARCHAR( 50) COMMENT  'latest_id',
+   `lesson_type` VARCHAR(100) COMMENT  'lesson_type',
    `create_at` BIGINT  NOT  NULL  COMMENT  'created_at',
    `update_at` BIGINT  NOT  NULL  COMMENT  'updated_at',
    `delete_at` BIGINT  NULL  COMMENT  'deleted_at',
@@ -146,6 +147,7 @@ create table assessments_attendances
     `id`            varchar(64) not null comment 'id',
     `assessment_id` varchar(64) not null comment 'assessment id',
     `attendance_id` varchar(64) not null comment 'attendance id',
+    `checked`       boolean     not null comment 'checked',
     primary key (`id`),
     key `assessments_attendances_assessment_id` (`assessment_id`),
     key `assessments_attendances_attendance_id` (`attendance_id`)
