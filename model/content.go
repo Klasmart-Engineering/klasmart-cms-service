@@ -139,6 +139,13 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
+	if c.LessonType != "" {
+		_, err := GetLessonTypeModel().GetByID(ctx, c.LessonType)
+		if err != nil {
+			log.Error(ctx, "lesson type invalid", log.Any("data", c), log.Err(err))
+			return err
+		}
+	}
 	err := c.Validate()
 	if err != nil {
 		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
@@ -1162,7 +1169,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageNameMap := make(map[string]string)
 	gradeNameMap := make(map[string]string)
 	publishScopeNameMap := make(map[string]string)
-	lessonTypeNameMap := make(map[int]string)
+	lessonTypeNameMap := make(map[string]string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
@@ -1171,7 +1178,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	ageIds := make([]string, 0)
 	gradeIds := make([]string, 0)
 	scopeIds := make([]string, 0)
-	lessonTypeIds := make([]int, 0)
+	lessonTypeIds := make([]string, 0)
 
 	for i := range contentList {
 		programIds = append(programIds, contentList[i].Program)
@@ -1186,8 +1193,12 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//LessonType
-	lessonTypeProvider := external.GetLessonTypeProvider()
-	lessonTypes, err := lessonTypeProvider.BatchGet(ctx, lessonTypeIds)
+	lessonTypes, err := GetLessonTypeModel().Query(ctx, &da.LessonTypeCondition{
+		IDs: entity.NullStrings{
+			Strings: lessonTypeIds,
+			Valid:   len(lessonTypeIds) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "can't get lesson type info", log.Err(err))
 	} else {

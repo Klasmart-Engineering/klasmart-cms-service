@@ -27,6 +27,7 @@ CREATE TABLE `cms_contents` (
    `locked_by` VARCHAR( 50) COMMENT  '封锁人',
    `source_id` VARCHAR( 50) COMMENT  'source_id',
    `latest_id` VARCHAR( 50) COMMENT  'latest_id',
+   `lesson_type` VARCHAR(100) COMMENT  'lesson_type',
    `create_at` BIGINT  NOT  NULL  COMMENT  'created_at',
    `update_at` BIGINT  NOT  NULL  COMMENT  'updated_at',
    `delete_at` BIGINT  NULL  COMMENT  'deleted_at',
