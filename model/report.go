@@ -403,9 +403,12 @@ func (r *reportModel) getOutcomeRelatedData(ctx context.Context, tx *dbo.DBConte
 	)
 
 	checked := true
-	assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, &checked, assessmentIDs...)
-	if err != nil {
-		log.Error(ctx, "list students report: batch get assessment attendances failed",
+	var assessmentAttendances []*entity.AssessmentAttendance
+	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.AssessmentAttendanceCondition{
+		AssessmentIDs: assessmentIDs,
+		Checked:       &checked,
+	}, &assessmentAttendances); err != nil {
+		log.Error(ctx, "list students report: query assessment attendances failed",
 			log.Err(err),
 			log.Any("assessment_ids", assessmentIDs),
 		)

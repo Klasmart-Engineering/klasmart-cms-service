@@ -80,9 +80,12 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 
 	// fill attendances
 	{
-		assessmentAttendances, err := da.GetAssessmentAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, nil, id)
-		if err != nil {
-			log.Error(ctx, "get assessment detail: batch get assessment ids",
+		var assessmentAttendances []*entity.AssessmentAttendance
+		if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.AssessmentAttendanceCondition{
+			AssessmentIDs: []string{id},
+			Checked:       nil,
+		}, &assessmentAttendances); err != nil {
+			log.Error(ctx, "get assessment detail: query assessment ids",
 				log.Err(err),
 				log.String("id", "id"),
 			)
@@ -570,7 +573,7 @@ func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd enti
 		}
 	}
 
-	outcomeMap := map[string]*entity.Outcome{}
+	var outcomeMap map[string]*entity.Outcome
 	{
 		outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
 		if err != nil {
@@ -580,6 +583,7 @@ func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd enti
 			)
 			return err
 		}
+		outcomeMap = make(map[string]*entity.Outcome, len(outcomes))
 		for _, outcome := range outcomes {
 			outcomeMap[outcome.ID] = outcome
 		}

@@ -12,7 +12,8 @@ import (
 type IAssessmentAttendanceDA interface {
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
-	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, checked *bool, assessmentID ...string) ([]*entity.AssessmentAttendance, error)
+	Query(ctx context.Context, condition dbo.Conditions, values interface{}) error
+	QueryTx(ctx context.Context, db *dbo.DBContext, condition dbo.Conditions, values interface{}) error
 }
 
 var (
@@ -27,7 +28,9 @@ func GetAssessmentAttendanceDA() IAssessmentAttendanceDA {
 	return assessmentAttendanceDAInstance
 }
 
-type assessmentAttendanceDA struct{}
+type assessmentAttendanceDA struct {
+	dbo.BaseDA
+}
 
 func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
 	if len(items) == 0 {
@@ -63,21 +66,27 @@ func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo
 	return nil
 }
 
-func (a *assessmentAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, checked *bool, assessmentIDs ...string) ([]*entity.AssessmentAttendance, error) {
-	var items []*entity.AssessmentAttendance
-	db := tx.DB
-	if len(assessmentIDs) > 0 {
-		db = db.Where("assessment_id in (?)", assessmentIDs)
-	}
-	if checked != nil {
-		db = db.Where("checked = ?", *checked)
-	}
-	if err := db.Find(&items).Error; err != nil {
-		log.Error(ctx, "batch get by assessment ids: find failed",
-			log.Err(err),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-	return items, nil
+type AssessmentAttendanceCondition struct {
+	AssessmentIDs []string
+	Checked       *bool
 }
+
+func (c *AssessmentAttendanceCondition) GetConditions() ([]string, []interface{}) {
+	var (
+		conditions []string
+		values     []interface{}
+	)
+	if len(c.AssessmentIDs) > 0 {
+		conditions = append(conditions, "(assessment_id in (?))")
+		values = append(values, values...)
+	}
+	if c.Checked != nil {
+		conditions = append(conditions, "(checked = ?)")
+		values = append(values, *c.Checked)
+	}
+	return conditions, values
+}
+
+func (c *AssessmentAttendanceCondition) GetPager() *dbo.Pager { return nil }
+
+func (c *AssessmentAttendanceCondition) GetOrderBy() string { return "" }
