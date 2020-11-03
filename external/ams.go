@@ -6,7 +6,6 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -29,12 +28,12 @@ func GetAMSService() *AMSService {
 	return _amsService
 }
 
-func (s AMSService) HasPermision(ctx context.Context, operator *entity.Operator, permissionName constant.PermissionName) (bool, error) {
+func (s AMSService) HasPermision(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
 	// TODO: add implement
 	return false, nil
 }
 
-func (s AMSService) GetAccessibleOrganizations(ctx context.Context, operator *entity.Operator, permissionName constant.PermissionName) ([]*Organization, error) {
+func (s AMSService) GetAccessibleOrganizations(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error) {
 	// TODO: add implement
 	return nil, nil
 }
