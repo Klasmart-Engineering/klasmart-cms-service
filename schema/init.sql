@@ -146,6 +146,7 @@ create table assessments_attendances
     `id`            varchar(64) not null comment 'id',
     `assessment_id` varchar(64) not null comment 'assessment id',
     `attendance_id` varchar(64) not null comment 'attendance id',
+    `checked`       boolean     not null comment 'checked',
     primary key (`id`),
     key `assessments_attendances_assessment_id` (`assessment_id`),
     key `assessments_attendances_attendance_id` (`attendance_id`)
