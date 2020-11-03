@@ -81,6 +81,9 @@ func (a *assessmentAttendanceDA) Uncheck(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (a *assessmentAttendanceDA) Check(ctx context.Context, tx *dbo.DBContext, assessmentID string, attendanceIDs []string) error {
+	if len(attendanceIDs) == 0 {
+		return nil
+	}
 	if err := tx.Where("assessment_id = ? and attendance_id in (?)", assessmentID, attendanceIDs).
 		Update("checked", true).
 		Error; err != nil {
