@@ -537,6 +537,32 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 			}
 		}
 
+		if cmd.AttendanceIDs != nil {
+			if err := da.GetAssessmentAttendanceDA().DeleteByAssessmentID(ctx, tx, newID); err != nil {
+				log.Error(ctx, "add assessment: delete assessment attendance failed by assessment id",
+					log.Err(err),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+			var items []*entity.AssessmentAttendance
+			for _, attendanceID := range cmd.AttendanceIDs {
+				items = append(items, &entity.AssessmentAttendance{
+					ID:           utils.NewID(),
+					AssessmentID: newID,
+					AttendanceID: attendanceID,
+				})
+			}
+			if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
+				log.Error(ctx, "add assessment: batch insert assessment attendance map failed",
+					log.Err(err),
+					log.Any("items", items),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+		}
+
 		outcomeMap := map[string]*entity.Outcome{}
 		{
 			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
@@ -608,6 +634,7 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 				}
 			}
 		}
+
 		{
 			if err := GetScheduleModel().UpdateScheduleStatus(ctx, tx, schedule.ID, entity.ScheduleStatusClosed); err != nil {
 				log.Error(ctx, "add assessment: update schedule status to closed",
