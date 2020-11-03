@@ -2,28 +2,28 @@ package config
 
 import (
 	"context"
-	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type Config struct {
-	StorageConfig StorageConfig  `yaml:"storage_config"`
-	CDNConfig     CDNConfig      `yaml:"cdn_config"`
-	Schedule      ScheduleConfig `json:"schedule" yaml:"schedule"`
-	DBConfig      DBConfig       `yaml:"db_config"`
-	RedisConfig   RedisConfig    `yaml:"redis_config"`
-
-	CryptoConfig    CryptoConfig    `yaml:"crypto_config"`
-	LiveTokenConfig LiveTokenConfig `yaml:"live_token_config"`
-
-	Assessment AssessmentConfig `yaml:"assessment_config"`
+	StorageConfig   StorageConfig    `yaml:"storage_config"`
+	CDNConfig       CDNConfig        `yaml:"cdn_config"`
+	Schedule        ScheduleConfig   `json:"schedule" yaml:"schedule"`
+	DBConfig        DBConfig         `yaml:"db_config"`
+	RedisConfig     RedisConfig      `yaml:"redis_config"`
+	CryptoConfig    CryptoConfig     `yaml:"crypto_config"`
+	LiveTokenConfig LiveTokenConfig  `yaml:"live_token_config"`
+	Assessment      AssessmentConfig `yaml:"assessment_config"`
+	AMS             AMSConfig        `json:"ams" yaml:"ams"`
 }
 
 var config *Config
@@ -85,6 +85,10 @@ type AssessmentConfig struct {
 	CacheExpiration time.Duration `yaml:"cache_expiration"`
 }
 
+type AMSConfig struct {
+	EndPoint string `json:"endpoint" yaml:"endpoint"`
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -102,6 +106,7 @@ func LoadEnvConfig() {
 	loadScheduleEnvConfig(ctx)
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
+	loadAMSConfig(ctx)
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
@@ -157,7 +162,7 @@ func loadRedisEnvConfig(ctx context.Context) {
 	config.RedisConfig.Host = host
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		log.Error(ctx, "Can't parse redis_port", log.Err(err))
+		log.Error(ctx, "Can't parse redis_port", log.Err(err), log.String("portStr", portStr))
 		port = 3306
 	}
 	config.RedisConfig.Port = port
@@ -241,6 +246,10 @@ func loadAssessmentConfig(ctx context.Context) {
 	} else {
 		config.Assessment.CacheExpiration = cacheExpiration
 	}
+}
+
+func loadAMSConfig(ctx context.Context) {
+	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
 }
 
 func Get() *Config {

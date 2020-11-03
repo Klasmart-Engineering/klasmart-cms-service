@@ -389,11 +389,15 @@ github.com/xdg/stringprep v1.0.0/go.mod h1:Jhud4/sHMO4oL310DaZAKk9ZaJ08SJfe+sJh0
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+gitlab.badanamu.com.cn/calmisland/chlorine v0.1.2 h1:tIyfOMmjzOoHxxqi0wicduMID6LNbiJT//MHSycuvhU=
+gitlab.badanamu.com.cn/calmisland/chlorine v0.1.2/go.mod h1:6rNVLbNtdOIdgImrAJpXKa3ixdHdgruw37GfARLqswA=
 gitlab.badanamu.com.cn/calmisland/common-cn v0.14.0/go.mod h1:1tH7r2tNYKG1dXamFx8VPF7qwoLcStAD5BrHtG2eW7k=
 gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0 h1:hreAAvbjWIL9WlpnI0pnupyQUj6uM4V1X3ZgGHza4n0=
 gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0/go.mod h1:f2lNnpYAKDWxbnS/G0pHVwTs6DwO+fIor9cX5ITsEe8=
 gitlab.badanamu.com.cn/calmisland/common-log v0.1.3 h1:JSz/HEGy5R2ph2l4Zbnm6G1q7SjMGzAJyreRJDch888=
 gitlab.badanamu.com.cn/calmisland/common-log v0.1.3/go.mod h1:X3wMC6OgVJ+ZmO4FH+nSzubBTkYuWlCeVVwVgu3rLP4=
+gitlab.badanamu.com.cn/calmisland/common-log v0.1.4 h1:l4AXVPGx/lFEIGfE+a01JMKjQWuE3AL0BWaBhGpfiAU=
+gitlab.badanamu.com.cn/calmisland/common-log v0.1.4/go.mod h1:X3wMC6OgVJ+ZmO4FH+nSzubBTkYuWlCeVVwVgu3rLP4=
 gitlab.badanamu.com.cn/calmisland/dbo v0.1.7 h1:H1UDaRFIt8EG+/4Kv13LSjfnSdeoK1zuoq9l/lqPHqc=
 gitlab.badanamu.com.cn/calmisland/dbo v0.1.7/go.mod h1:5eB1PIBKN1oQnkPXmDG8C3xhbiM7S+QUuQlw4ivI3YE=
 gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13 h1:HpobiNbKIrm2oPaHPnUzMIP9kcbXTFxnWkJPA3etIDo=
