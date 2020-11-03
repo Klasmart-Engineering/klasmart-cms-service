@@ -428,7 +428,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/:schedule_id/status [put]
+// @Router /schedules/{schedule_id}/status [put]
 func (s *Server) updateScheduleStatus(c *gin.Context) {
 	id := c.Param("id")
 	status := c.Query("status")
@@ -471,4 +471,54 @@ func (s *Server) getParticipateClass(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+// @Summary get lessonPlans by teacher and class
+// @Description get lessonPlans by teacher and class
+// @Tags reports
+// @ID getLessonPlans
+// @Accept json
+// @Produce json
+// @Param teacher_id query string true "teacher id"
+// @Param class_id query string true "class id"
+// @Success 200 {array} entity.ScheduleShortInfo
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_lesson_plans [get]
+func (s *Server) getLessonPlans(c *gin.Context) {
+	operator := s.getOperator(c)
+	ctx := c.Request.Context()
+	teacherID := c.Query("teacher_id")
+	classID := c.Query("class_id")
+	if len(strings.TrimSpace(teacherID)) == 0 || len(strings.TrimSpace(classID)) == 0 {
+		log.Info(ctx, "teacherID and classID is require",
+			log.Any("operator", operator),
+		)
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+	condition := &da.ScheduleCondition{
+		TeacherID: sql.NullString{
+			String: teacherID,
+			Valid:  true,
+		},
+		Status: sql.NullString{
+			String: string(entity.ScheduleStatusClosed),
+			Valid:  true,
+		},
+		ClassID: sql.NullString{
+			String: classID,
+			Valid:  true,
+		},
+	}
+	result, err := model.GetScheduleModel().GetLessonPlanIDsByCondition(ctx, dbo.MustGetDB(ctx), operator, condition)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(Unknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+	}
 }

@@ -60,6 +60,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules/:id/live/token", MustLogin, s.getScheduleLiveToken)
 		schedules.PUT("/schedules/:id/status", MustLogin, s.updateScheduleStatus)
 		schedules.GET("/schedules_participate/class", MustLogin, s.getParticipateClass)
+		schedules.GET("/schedules_lesson_plans", MustLogin, s.getLessonPlans)
 	}
 
 	assessments := s.engine.Group("/v1")
@@ -68,6 +69,12 @@ func (s Server) registeRoute() {
 		assessments.POST("/assessments", MustLogin, s.addAssessment)
 		assessments.GET("/assessments/:id", MustLogin, s.getAssessmentDetail)
 		assessments.PUT("/assessments/:id", MustLogin, s.updateAssessment)
+	}
+
+	reports := s.engine.Group("/v1")
+	{
+		reports.GET("/reports/students", MustLogin, s.listStudentsReport)
+		reports.GET("/reports/students/:id", MustLogin, s.getStudentDetailReport)
 	}
 
 	outcomes := s.engine.Group("/v1")
@@ -93,6 +100,52 @@ func (s Server) registeRoute() {
 	crypto := s.engine.Group("/v1/crypto")
 	{
 		crypto.GET("/h5p/signature", MustLogin, s.h5pSignature)
+	}
+
+	ages := s.engine.Group("/v1/ages")
+	{
+		ages.GET("", MustLogin, s.getAge)
+		ages.GET("/:id", MustLogin, s.getAgeByID)
+	}
+	classTypes := s.engine.Group("/v1/class_types")
+	{
+		classTypes.GET("", MustLogin, s.getClassType)
+		classTypes.GET("/:id", MustLogin, s.getClassTypeByID)
+	}
+	developmental := s.engine.Group("/v1/developmentals")
+	{
+		developmental.GET("", MustLogin, s.getDevelopmental)
+		developmental.GET("/:id", MustLogin, s.getDevelopmentalByID)
+	}
+	grade := s.engine.Group("/v1/grades")
+	{
+		grade.GET("", MustLogin, s.getGrade)
+		grade.GET("/:id", MustLogin, s.getGradeByID)
+	}
+	lessonTypes := s.engine.Group("/v1/lesson_types")
+	{
+		lessonTypes.GET("", MustLogin, s.getLessonType)
+		lessonTypes.GET("/:id", MustLogin, s.getLessonTypeByID)
+	}
+	programs := s.engine.Group("/v1/programs")
+	{
+		programs.GET("", MustLogin, s.getProgram)
+		programs.GET("/:id", MustLogin, s.getProgramByID)
+	}
+	skills := s.engine.Group("/v1/skills")
+	{
+		skills.GET("", MustLogin, s.getSkill)
+		skills.GET("/:id", MustLogin, s.getSkillByID)
+	}
+	subjects := s.engine.Group("/v1/subjects")
+	{
+		subjects.GET("", MustLogin, s.getSubject)
+		subjects.GET("/:id", MustLogin, s.getSubjectByID)
+	}
+	visibilitySettings := s.engine.Group("/v1/visibility_settings")
+	{
+		visibilitySettings.GET("", MustLogin, s.getVisibilitySetting)
+		visibilitySettings.GET("/:id", MustLogin, s.getVisibilitySettingByID)
 	}
 }
 

@@ -10,9 +10,10 @@ import (
 )
 
 type IAssessmentAttendanceDA interface {
-	GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
+	Query(ctx context.Context, condition dbo.Conditions, values interface{}) error
+	QueryTx(ctx context.Context, db *dbo.DBContext, condition dbo.Conditions, values interface{}) error
 }
 
 var (
@@ -27,18 +28,8 @@ func GetAssessmentAttendanceDA() IAssessmentAttendanceDA {
 	return assessmentAttendanceDAInstance
 }
 
-type assessmentAttendanceDA struct{}
-
-func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
-	var items []entity.AssessmentAttendance
-	if err := tx.Where("assessment_id = ?", assessmentID).Find(&items).Error; err != nil {
-		return nil, err
-	}
-	var ids []string
-	for _, item := range items {
-		ids = append(ids, item.ID)
-	}
-	return ids, nil
+type assessmentAttendanceDA struct {
+	dbo.BaseDA
 }
 
 func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error {
@@ -74,3 +65,28 @@ func (*assessmentAttendanceDA) DeleteByAssessmentID(ctx context.Context, tx *dbo
 	}
 	return nil
 }
+
+type AssessmentAttendanceCondition struct {
+	AssessmentIDs []string
+	Checked       *bool
+}
+
+func (c *AssessmentAttendanceCondition) GetConditions() ([]string, []interface{}) {
+	var (
+		conditions []string
+		values     []interface{}
+	)
+	if len(c.AssessmentIDs) > 0 {
+		conditions = append(conditions, "(assessment_id in (?))")
+		values = append(values, c.AssessmentIDs)
+	}
+	if c.Checked != nil {
+		conditions = append(conditions, "(checked = ?)")
+		values = append(values, *c.Checked)
+	}
+	return conditions, values
+}
+
+func (c *AssessmentAttendanceCondition) GetPager() *dbo.Pager { return nil }
+
+func (c *AssessmentAttendanceCondition) GetOrderBy() string { return "" }

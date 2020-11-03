@@ -80,14 +80,22 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 
 	// fill attendances
 	{
-		attendanceIDs, err := da.GetAssessmentAttendanceDA().GetAttendanceIDsByAssessmentID(ctx, tx, id)
-		if err != nil {
-			log.Error(ctx, "get assessment detail: get assessment attendances failed",
+		var assessmentAttendances []*entity.AssessmentAttendance
+		if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.AssessmentAttendanceCondition{
+			AssessmentIDs: []string{id},
+			Checked:       nil,
+		}, &assessmentAttendances); err != nil {
+			log.Error(ctx, "get assessment detail: query assessment ids",
 				log.Err(err),
 				log.String("id", "id"),
 			)
 			return nil, err
 		}
+		var attendanceIDs []string
+		for _, item := range assessmentAttendances {
+			attendanceIDs = append(attendanceIDs, item.AttendanceID)
+		}
+
 		studentService := external.GetStudentServiceProvider()
 		students, err := studentService.BatchGet(ctx, attendanceIDs)
 		if err != nil {
@@ -98,10 +106,16 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, id stri
 			)
 			return nil, err
 		}
+		studentMap := map[string]string{}
 		for _, student := range students {
+			studentMap[student.ID] = student.Name
+		}
+
+		for _, item := range assessmentAttendances {
 			result.Attendances = append(result.Attendances, &entity.AssessmentAttendanceView{
-				ID:   student.ID,
-				Name: student.Name,
+				ID:      item.AttendanceID,
+				Name:    studentMap[item.AttendanceID],
+				Checked: item.Checked,
 			})
 		}
 	}
@@ -370,8 +384,12 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 
 func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []string) (map[string]string, error) {
 	programNameMap := map[string]string{}
-	programService := external.GetProgramServiceProvider()
-	items, err := programService.BatchGet(ctx, programIDs)
+	items, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
+		IDs: entity.NullStrings{
+			Strings: programIDs,
+			Valid:   len(programIDs) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get program failed",
 			log.Err(err),
@@ -387,8 +405,12 @@ func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []st
 
 func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []string) (map[string]string, error) {
 	subjectNameMap := map[string]string{}
-	subjectService := external.GetSubjectServiceProvider()
-	items, err := subjectService.BatchGet(ctx, subjectIDs)
+	items, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
+		IDs: entity.NullStrings{
+			Strings: subjectIDs,
+			Valid:   len(subjectIDs) != 0,
+		},
+	})
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get subject failed",
 			log.Err(err),
@@ -478,128 +500,163 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 
 	var newID = utils.NewID()
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		{
-			nowUnix := time.Now().Unix()
-			newItem := entity.Assessment{
-				ID:           newID,
-				ScheduleID:   cmd.ScheduleID,
-				ProgramID:    schedule.ProgramID,
-				SubjectID:    schedule.SubjectID,
-				ClassLength:  cmd.ClassLength,
-				ClassEndTime: cmd.ClassEndTime,
-				CreateAt:     nowUnix,
-				UpdateAt:     nowUnix,
-			}
-			classNameMap, err := a.getClassNameMap(ctx, []string{schedule.ClassID})
-			if err != nil {
-				log.Error(ctx, "add assessment: get class name map failed",
-					log.Err(err),
-					log.Any("cmd", cmd),
-				)
-				return err
-			}
-			newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
-			if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
-				log.Error(ctx, "add assessment: encode and set teacher ids failed",
-					log.Err(err),
-					log.Strings("teacher_ids", schedule.TeacherIDs),
-					log.Any("cmd", cmd),
-				)
-				return err
-			}
-			if len(outcomeIDs) == 0 {
-				newItem.Status = entity.AssessmentStatusComplete
-				newItem.CompleteTime = time.Now().Unix()
-			} else {
-				newItem.Status = entity.AssessmentStatusInProgress
-			}
-			if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newItem); err != nil {
-				log.Error(ctx, "add assessment: add failed",
-					log.Err(err),
-					log.Any("cmd", cmd),
-					log.Any("new_item", newItem),
-				)
-				return err
-			}
-		}
-		{
-			var items []*entity.AssessmentOutcome
-			for _, outcomeID := range outcomeIDs {
-				items = append(items, &entity.AssessmentOutcome{
-					ID:           utils.NewID(),
-					AssessmentID: newID,
-					OutcomeID:    outcomeID,
-					Skip:         false,
-				})
-			}
-			if len(items) > 0 {
-				if err := da.GetAssessmentOutcomeDA().BatchInsert(ctx, tx, items); err != nil {
-					log.Error(ctx, "add assessment: batch insert assessment outcome map failed",
-						log.Err(err),
-						log.Any("cmd", cmd),
-						log.Any("items", items),
-					)
-					return err
-				}
-			}
-		}
-		{
-			outcomeMap := map[string]*entity.Outcome{}
-			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
-			if err != nil {
-				log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
-					log.Err(err),
-					log.Strings("outcome_ids", outcomeIDs),
-				)
-				return err
-			}
-			for _, outcome := range outcomes {
-				outcomeMap[outcome.ID] = outcome
-			}
-
-			var items []*entity.OutcomeAttendance
-			for _, outcomeID := range outcomeIDs {
-				if outcomeMap[outcomeID] == nil {
-					continue
-				}
-				if !outcomeMap[outcomeID].Assumed {
-					continue
-				}
-				for _, attendanceID := range cmd.AttendanceIDs {
-					items = append(items, &entity.OutcomeAttendance{
-						ID:           utils.NewID(),
-						AssessmentID: newID,
-						OutcomeID:    outcomeID,
-						AttendanceID: attendanceID,
-					})
-				}
-			}
-			if len(items) > 0 {
-				if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
-					log.Error(ctx, "add assessment: batch insert outcome attendance map failed",
-						log.Err(err),
-						log.Any("cmd", cmd),
-						log.Any("items", items),
-					)
-					return err
-				}
-			}
-		}
-		{
-			if err := GetScheduleModel().UpdateScheduleStatus(ctx, tx, schedule.ID, entity.ScheduleStatusClosed); err != nil {
-				log.Error(ctx, "add assessment: update schedule status to closed",
-					log.Err(err),
-					log.Any("cmd", cmd),
-					log.Any("id", schedule.ID),
-				)
-				return err
-			}
-		}
-		return nil
+		return a.addTx(ctx, tx, cmd, newID, outcomeIDs, schedule)
 	}); err != nil {
 		return "", err
 	}
 	return newID, nil
+}
+
+func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd entity.AddAssessmentCommand, newID string, outcomeIDs []string, schedule *entity.SchedulePlain) error {
+	{
+		nowUnix := time.Now().Unix()
+		newItem := entity.Assessment{
+			ID:           newID,
+			ScheduleID:   cmd.ScheduleID,
+			ProgramID:    schedule.ProgramID,
+			SubjectID:    schedule.SubjectID,
+			ClassLength:  cmd.ClassLength,
+			ClassEndTime: cmd.ClassEndTime,
+			CreateAt:     nowUnix,
+			UpdateAt:     nowUnix,
+		}
+		classNameMap, err := a.getClassNameMap(ctx, []string{schedule.ClassID})
+		if err != nil {
+			log.Error(ctx, "add assessment: get class name map failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+			)
+			return err
+		}
+		newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
+		if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
+			log.Error(ctx, "add assessment: encode and set teacher ids failed",
+				log.Err(err),
+				log.Strings("teacher_ids", schedule.TeacherIDs),
+				log.Any("cmd", cmd),
+			)
+			return err
+		}
+		if len(outcomeIDs) == 0 {
+			newItem.Status = entity.AssessmentStatusComplete
+			newItem.CompleteTime = time.Now().Unix()
+		} else {
+			newItem.Status = entity.AssessmentStatusInProgress
+		}
+		if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newItem); err != nil {
+			log.Error(ctx, "add assessment: add failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+				log.Any("new_item", newItem),
+			)
+			return err
+		}
+	}
+
+	if cmd.AttendanceIDs != nil {
+		var items []*entity.AssessmentAttendance
+		for _, attendanceID := range cmd.AttendanceIDs {
+			items = append(items, &entity.AssessmentAttendance{
+				ID:           utils.NewID(),
+				AssessmentID: newID,
+				AttendanceID: attendanceID,
+				Checked:      true,
+			})
+		}
+		if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
+			log.Error(ctx, "add assessment: batch insert assessment attendance map failed",
+				log.Err(err),
+				log.Any("items", items),
+				log.Any("cmd", cmd),
+			)
+			return err
+		}
+	}
+
+	var outcomeMap map[string]*entity.Outcome
+	{
+		outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
+		if err != nil {
+			log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
+				log.Err(err),
+				log.Strings("outcome_ids", outcomeIDs),
+			)
+			return err
+		}
+		outcomeMap = make(map[string]*entity.Outcome, len(outcomes))
+		for _, outcome := range outcomes {
+			outcomeMap[outcome.ID] = outcome
+		}
+	}
+
+	{
+		var items []*entity.AssessmentOutcome
+		for _, outcomeID := range outcomeIDs {
+			noneAchieved := false
+			if outcome := outcomeMap[outcomeID]; outcome != nil {
+				noneAchieved = !outcome.Assumed
+			}
+			items = append(items, &entity.AssessmentOutcome{
+				ID:           utils.NewID(),
+				AssessmentID: newID,
+				OutcomeID:    outcomeID,
+				Skip:         false,
+				NoneAchieved: noneAchieved,
+			})
+		}
+		if len(items) > 0 {
+			if err := da.GetAssessmentOutcomeDA().BatchInsert(ctx, tx, items); err != nil {
+				log.Error(ctx, "add assessment: batch insert assessment outcome map failed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+					log.Any("items", items),
+				)
+				return err
+			}
+		}
+	}
+
+	{
+		var items []*entity.OutcomeAttendance
+		for _, outcomeID := range outcomeIDs {
+			if outcomeMap[outcomeID] == nil {
+				continue
+			}
+			if !outcomeMap[outcomeID].Assumed {
+				continue
+			}
+			for _, attendanceID := range cmd.AttendanceIDs {
+				items = append(items, &entity.OutcomeAttendance{
+					ID:           utils.NewID(),
+					AssessmentID: newID,
+					OutcomeID:    outcomeID,
+					AttendanceID: attendanceID,
+				})
+			}
+		}
+		if len(items) > 0 {
+			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
+				log.Error(ctx, "add assessment: batch insert outcome attendance map failed",
+					log.Err(err),
+					log.Any("cmd", cmd),
+					log.Any("items", items),
+				)
+				return err
+			}
+		}
+	}
+
+	{
+		if err := GetScheduleModel().UpdateScheduleStatus(ctx, tx, schedule.ID, entity.ScheduleStatusClosed); err != nil {
+			log.Error(ctx, "add assessment: update schedule status to closed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+				log.Any("id", schedule.ID),
+			)
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *assessmentModel) title(classEndTime int64, className string, lessonName string) string {
@@ -662,6 +719,7 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 					ID:           utils.NewID(),
 					AssessmentID: cmd.ID,
 					AttendanceID: attendanceID,
+					Checked:      true,
 				})
 			}
 			if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
@@ -686,7 +744,10 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 				)
 				return err
 			}
-			var items []*entity.OutcomeAttendance
+			var (
+				items              []*entity.OutcomeAttendance
+				deletingOutcomeIDs []string
+			)
 			for _, item := range *cmd.OutcomeAttendanceMaps {
 				for _, attendanceID := range item.AttendanceIDs {
 					items = append(items, &entity.OutcomeAttendance{
@@ -709,6 +770,19 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 						log.String("outcome_id", item.OutcomeID),
 						log.Bool("skip", item.Skip),
 						log.Bool("none_achieved", item.NoneAchieved),
+					)
+					return err
+				}
+				if item.Skip {
+					deletingOutcomeIDs = append(deletingOutcomeIDs, item.OutcomeID)
+				}
+			}
+			if len(deletingOutcomeIDs) > 0 {
+				if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, cmd.ID, deletingOutcomeIDs); err != nil {
+					log.Error(ctx, "update assessment: batch update assessment outcome failed",
+						log.Err(err),
+						log.Any("cmd", cmd),
+						log.Strings("deleting_outcome_ids", deletingOutcomeIDs),
 					)
 					return err
 				}
@@ -755,8 +829,14 @@ func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string)
 }
 
 func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (bool, error) {
-	subjectService := external.GetSubjectServiceProvider()
-	if _, err := subjectService.BatchGet(ctx, []string{id}); err != nil {
+	ids := []string{id}
+	_, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
+	if err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 			log.Info(ctx, "check subject exists: not found subjects",
@@ -776,8 +856,14 @@ func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (boo
 }
 
 func (a *assessmentModel) existsProgramByID(ctx context.Context, id string) (bool, error) {
-	programService := external.GetProgramServiceProvider()
-	if _, err := programService.BatchGet(ctx, []string{id}); err != nil {
+	ids := []string{id}
+	_, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   len(ids) != 0,
+		},
+	})
+	if err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 			log.Info(ctx, "check program exists: not found programs",

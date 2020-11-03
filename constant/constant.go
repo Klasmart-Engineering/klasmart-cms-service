@@ -8,6 +8,22 @@ import (
 const (
 	TableNameSchedule        = "schedules"
 	TableNameScheduleTeacher = "schedules_teachers"
+
+	TableNameAge               = "ages"
+	TableNameClassType         = "class_types"
+	TableNameDevelopmental     = "developmentals"
+	TableNameGrade             = "grades"
+	TableNameLessonType        = "lesson_types"
+	TableNameProgram           = "programs"
+	TableNameSkill             = "skills"
+	TableNameSubject           = "subjects"
+	TableNameVisibilitySetting = "visibility_settings"
+
+	TableNameProgramAge         = "programs_ages"
+	TableNameProgramDevelopment = "programs_developments"
+	TableNameProgramGrade       = "programs_grades"
+	TableNameProgramSubject     = "programs_subjects"
+	TableNameDevelopmentalSkill = "developments_skills"
 )
 
 const (

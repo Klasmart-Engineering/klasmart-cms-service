@@ -15,3 +15,19 @@ func SliceDeduplication(s []string) []string {
 
 	return result
 }
+
+func ExcludeStrings(source []string, targets []string) []string {
+	var result []string
+	for _, item := range source {
+		find := false
+		for _, target := range targets {
+			if item == target {
+				find = true
+			}
+		}
+		if !find {
+			result = append(result, item)
+		}
+	}
+	return result
+}
