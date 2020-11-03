@@ -37,7 +37,7 @@ func (*assessmentAttendanceDA) GetAttendanceIDsByAssessmentID(ctx context.Contex
 	}
 	var ids []string
 	for _, item := range items {
-		ids = append(ids, item.ID)
+		ids = append(ids, item.AttendanceID)
 	}
 	return ids, nil
 }
