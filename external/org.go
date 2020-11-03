@@ -33,7 +33,7 @@ func (s mockOrganizationService) BatchGet(ctx context.Context, ids []string) ([]
 	q := `query orgs($orgIDs: [ID!]){
 	organizations(organization_ids: $orgIDs){
     	id: organization_id
-    	Name: organization_name
+    	name: organization_name
   	}
 }`
 	req := cl.NewRequest(q)
