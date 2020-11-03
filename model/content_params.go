@@ -186,7 +186,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 			return nil, ErrInvalidContentData
 		}
 
-		err = cd.PrepareResult(ctx)
+		err = cd.PrepareSave(ctx)
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}

@@ -13,7 +13,7 @@ type PublishScope struct {
 type mockPublishScopeService struct{}
 
 func (m *mockPublishScopeService) DefaultPublishScope(ctx context.Context) string {
-	return "default"
+	return "all"
 }
 
 func (m *mockPublishScopeService) BatchGet(ctx context.Context, ids []string) ([]*PublishScope, error) {
