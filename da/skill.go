@@ -30,8 +30,9 @@ func GetSkillDA() ISkillDA {
 }
 
 type SkillCondition struct {
-	IDs             entity.NullStrings
-	DevelopmentalID sql.NullString
+	IDs                         entity.NullStrings
+	DevelopmentalID             sql.NullString
+	ProgramIDAndDevelopmentalID []sql.NullString
 
 	OrderBy SkillOrderBy
 	Pager   dbo.Pager
@@ -50,6 +51,14 @@ func (c SkillCondition) GetConditions() ([]string, []interface{}) {
 	if c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+	if len(c.ProgramIDAndDevelopmentalID) == 2 {
+		programID := c.ProgramIDAndDevelopmentalID[0]
+		developmentalID := c.ProgramIDAndDevelopmentalID[1]
+		sql := fmt.Sprintf("exists(select 1 from %s where program_id = ? and development_id = ? and %s.id = %s.skill_id)",
+			constant.TableNameDevelopmentalSkill, constant.TableNameSkill, constant.TableNameDevelopmentalSkill)
+		wheres = append(wheres, sql)
+		params = append(params, programID.String, developmentalID.String)
 	}
 
 	return wheres, params
