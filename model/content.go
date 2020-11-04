@@ -66,6 +66,8 @@ type IContentModel interface {
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error)
+	GetPastContentIDByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
+
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error)
@@ -965,6 +967,26 @@ func (cm *ContentModel) GetContentNameByIDList(ctx context.Context, tx *dbo.DBCo
 	return resp, nil
 }
 
+func (cm *ContentModel) GetPastContentIDByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
+	data, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
+		return nil, ErrReadContentFailed
+	}
+
+	_, res, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+		LatestID:      data.LatestID,
+	})
+	if err != nil {
+		log.Error(ctx, "can't search content", log.Err(err), log.String("latest id", data.LatestID))
+		return nil, ErrReadContentFailed
+	}
+	resp := make([]string, len(res))
+	for i := range res {
+		resp[i] = res[i].ID
+	}
+	return resp, nil
+}
 
 func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
 	if len(cids) < 1 {
