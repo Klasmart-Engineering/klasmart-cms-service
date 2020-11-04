@@ -3,10 +3,11 @@ package external
 import (
 	"context"
 	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"io/ioutil"
 	"net/http"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
@@ -23,7 +24,7 @@ type mockData struct {
 	Organizations []*Organization      `json:"organizations"`
 	Teachers      []*Teacher           `json:"teachers"`
 	Students      []*Student           `json:"students"`
-	Users         []*UserInfo          `json:"users"`
+	Users         []*User              `json:"users"`
 }
 
 type mockOption struct {

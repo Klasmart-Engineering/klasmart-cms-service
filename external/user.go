@@ -1,16 +1,17 @@
 package external
 
-import "context"
+import (
+	"context"
+
+	"gitlab.badanamu.com.cn/calmisland/chlorine"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+)
 
 type UserServiceProvider interface {
-	GetUserInfoByID(ctx context.Context, userID string) (*UserInfo, error)
-	//BatchGet(ctx context.Context, ids []string) ([]*Organization, error)
-	//GetMine(ctx context.Context, userID string) ([]*Organization, error)
-	//GetParents(ctx context.Context, orgID string) ([]*Organization, error)
-	//GetChildren(ctx context.Context, orgID string) ([]*Organization, error)
+	GetUserInfoByID(ctx context.Context, userID string) (*User, error)
 }
 
-type UserInfo struct {
+type User struct {
 	UserID    string `json:"user_id"`
 	Name      string `json:"name"`
 	AvatarUrl string `json:"avatar_url"`
@@ -19,11 +20,49 @@ type UserInfo struct {
 }
 
 func GetUserServiceProvider() UserServiceProvider {
-	return &mockUserService{}
+	return &AmsUserService{}
 }
 
-type mockUserService struct{}
+type AmsUserService struct {
+	client *chlorine.Client
+}
 
-func (s mockUserService) GetUserInfoByID(ctx context.Context, userID string) (*UserInfo, error) {
-	return GetMockData().Users[0], nil
+func (s AmsUserService) GetUserInfoByID(ctx context.Context, userID string) (*User, error) {
+	request := chlorine.NewRequest(`
+	query user($userID: ID!){
+		user(user_id:$userID){
+			user_id
+			user_name
+			my_organization {
+		  		organization_id
+			}
+		}
+	}`)
+	request.Var("userID", userID)
+
+	user := &struct {
+		User struct {
+			UserID         string `json:"user_id"`
+			UserName       string `json:"user_name"`
+			MyOrganization struct {
+				OrganizationID string `json:"organization_id"`
+			} `json:"my_organization"`
+		} `json:"user"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: user,
+	}
+
+	_, err := s.client.Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get user by id failed", log.String("userID", userID))
+		return nil, err
+	}
+
+	return &User{
+		UserID: user.User.UserID,
+		Name:   user.User.UserName,
+		OrgID:  user.User.MyOrganization.OrganizationID,
+	}, nil
 }
