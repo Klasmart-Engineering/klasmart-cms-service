@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
@@ -14,6 +15,7 @@ import (
 // @Description get skill
 // @Accept json
 // @Produce json
+// @Param program_id query string false "program id"
 // @Param developmental_id query string false "developmental id"
 // @Tags skill
 // @Success 200 {array} entity.Skill
@@ -21,11 +23,23 @@ import (
 // @Router /skills [get]
 func (s *Server) getSkill(c *gin.Context) {
 	ctx := c.Request.Context()
+	programID := c.Query("program_id")
 	developmentalID := c.Query("developmental_id")
+	if len(programID) == 0 || len(developmentalID) == 0 {
+		log.Info(ctx, "param is invalid", log.String("programID", programID), log.String("developmentalID", developmentalID))
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
 	result, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
-		DevelopmentalID: sql.NullString{
-			String: developmentalID,
-			Valid:  len(developmentalID) != 0,
+		ProgramIDAndDevelopmentalID: []sql.NullString{
+			sql.NullString{
+				String: programID,
+				Valid:  true,
+			},
+			sql.NullString{
+				String: developmentalID,
+				Valid:  true,
+			},
 		},
 	})
 	if err != nil {

@@ -412,3 +412,10 @@ type SchedulePageView struct {
 	Total int                   `json:"total"`
 	Data  []*ScheduleSearchView `json:"data"`
 }
+
+type ScheduleIDsCondition struct {
+	TeacherID    string
+	ClassID      string
+	LessonPlanID string
+	Status       ScheduleStatus
+}
