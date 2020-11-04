@@ -23,7 +23,6 @@ type Class struct {
 }
 
 func GetClassServiceProvider() ClassServiceProvider {
-	//return &mockClassService{}
 	return &AmsClassService{}
 }
 
@@ -106,20 +105,4 @@ func (s AmsClassService) GetStudents(ctx context.Context, classID string) ([]*St
 		return nil, res.Errors
 	}
 	return payload, nil
-}
-
-type mockClassService struct{}
-
-func (s mockClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
-	return GetMockData().Classes, nil
-}
-
-func (s mockClassService) GetStudents(ctx context.Context, classID string) ([]*Student, error) {
-	classes := GetMockData().Classes
-	for _, class := range classes {
-		if class.ID == classID {
-			return class.Students, nil
-		}
-	}
-	return nil, nil
 }
