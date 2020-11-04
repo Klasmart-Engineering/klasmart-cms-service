@@ -190,7 +190,6 @@ type ScheduleCondition struct {
 	StartAndEndRange         []sql.NullInt64
 	StartAndEndTimeViewRange []sql.NullInt64
 	LessonPlanID             sql.NullString
-	LessonPlanLatestID       sql.NullString
 	LessonPlanIDs            entity.NullStrings
 	RepeatID                 sql.NullString
 	Status                   sql.NullString

@@ -38,7 +38,7 @@ type IScheduleModel interface {
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
 	GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
-	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]string, error)
+	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1014,8 +1014,8 @@ func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DB
 	return result, nil
 }
 
-func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]string, error) {
-	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, condition.LessonPlanLatestID.String)
+func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error) {
+	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, condition.LessonPlanID)
 	if err != nil {
 		logger.Error(ctx, "GetScheduleIDsByCondition:get past lessonPlan id error",
 			log.Err(err),
@@ -1024,15 +1024,28 @@ func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.D
 		)
 		return nil, err
 	}
-
-	condition.LessonPlanIDs = entity.NullStrings{
-		Strings: lessonPlanPastIDs,
-		Valid:   len(lessonPlanPastIDs) > 0,
+	daCondition := &da.ScheduleCondition{
+		TeacherID: sql.NullString{
+			String: condition.TeacherID,
+			Valid:  true,
+		},
+		ClassID: sql.NullString{
+			String: condition.ClassID,
+			Valid:  true,
+		},
+		LessonPlanIDs: entity.NullStrings{
+			Strings: lessonPlanPastIDs,
+			Valid:   true,
+		},
+		Status: sql.NullString{
+			String: string(entity.ScheduleStatusClosed),
+			Valid:  true,
+		},
 	}
 	var scheduleList []*entity.Schedule
-	err = da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	err = da.GetScheduleDA().Query(ctx, daCondition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("daCondition", daCondition))
 		return nil, err
 	}
 	var result = make([]string, len(scheduleList))
