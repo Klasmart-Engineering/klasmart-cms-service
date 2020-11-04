@@ -57,14 +57,14 @@ func MustLogin(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	if c.Query(constant.ParamFromUrl) == "" {
+	if c.Query(constant.URLOrganizationIDParameter) == "" {
 		log.Info(c.Request.Context(), "MustLogin", log.String("OrgID", "no org_id"))
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	op := &entity.Operator{
 		UserID: claims.ID,
-		OrgID:  c.Query(constant.ParamFromUrl),
+		OrgID:  c.Query(constant.URLOrganizationIDParameter),
 		Role:   constant.DefaultRole,
 	}
 	c.Set(Operator, op)

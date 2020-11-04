@@ -73,6 +73,6 @@ const (
 )
 
 const (
-	ParamFromUrl = "org_id"
-	DefaultRole  = "admin"
+	URLOrganizationIDParameter = "org_id"
+	DefaultRole                = "admin"
 )
