@@ -65,6 +65,9 @@ type IContentModel interface {
 
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
+	GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error)
+	GetPastContentIDByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
+
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error)
@@ -799,6 +802,15 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
 		return nil, err
 	}
+	//获取最新数据
+	if obj.LatestID != "" {
+		obj, err = da.GetContentDA().GetContentByID(ctx, tx, obj.LatestID)
+		if err != nil {
+			log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
+			return nil, err
+		}
+	}
+
 	cd, err := contentdata.CreateContentData(ctx, obj.ContentType, obj.Data)
 	if err != nil {
 		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
@@ -951,6 +963,47 @@ func (cm *ContentModel) GetContentNameByIDList(ctx context.Context, tx *dbo.DBCo
 			Name:        data[i].Name,
 			ContentType: data[i].ContentType,
 		})
+	}
+	return resp, nil
+}
+
+func (cm *ContentModel) GetPastContentIDByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
+	data, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
+		return nil, ErrReadContentFailed
+	}
+
+	_, res, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
+		LatestID:      data.LatestID,
+	})
+	if err != nil {
+		log.Error(ctx, "can't search content", log.Err(err), log.String("latest id", data.LatestID))
+		return nil, ErrReadContentFailed
+	}
+	resp := make([]string, len(res))
+	for i := range res {
+		resp[i] = res[i].ID
+	}
+	return resp, nil
+}
+
+func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
+	if len(cids) < 1 {
+		return nil, nil
+	}
+	resp := make([]string, len(cids))
+	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
+	if err != nil {
+		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
+		return nil, ErrReadContentFailed
+	}
+	for i := range data {
+		if data[i].LatestID != "" {
+			resp[i] = data[i].LatestID
+		}else{
+			resp[i] = data[i].ID
+		}
 	}
 	return resp, nil
 }
