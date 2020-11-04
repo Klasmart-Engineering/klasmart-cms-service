@@ -1038,7 +1038,7 @@ func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.D
 			Valid:   true,
 		},
 		Status: sql.NullString{
-			String: string(entity.ScheduleStatusClosed),
+			String: string(condition.Status),
 			Valid:  true,
 		},
 	}
