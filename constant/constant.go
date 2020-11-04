@@ -71,3 +71,8 @@ const (
 	ShortcodeBaseCustom = 36
 	ShortcodeShowLength = 5
 )
+
+const (
+	ParamFromUrl = "org_id"
+	DefaultRole  = "admin"
+)

@@ -50,22 +50,22 @@ func MustLogin(c *gin.Context) {
 		*jwt.StandardClaims
 	}{}
 	_, err = jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
-		return jwt.ParseRSAPublicKeyFromPEM([]byte(config.Get().AMS.TokenVerifyKey))
+		return config.Get().AMS.TokenVerifyKey, nil
 	})
 	if err != nil {
 		log.Info(c.Request.Context(), "MustLogin", log.String("token", token), log.Err(err))
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	if c.Query("org_id") == "" {
+	if c.Query(constant.ParamFromUrl) == "" {
 		log.Info(c.Request.Context(), "MustLogin", log.String("OrgID", "no org_id"))
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	op := &entity.Operator{
 		UserID: claims.ID,
-		OrgID:  c.Query("org_id"),
-		Role:   "admin",
+		OrgID:  c.Query(constant.ParamFromUrl),
+		Role:   constant.DefaultRole,
 	}
 	c.Set(Operator, op)
 }

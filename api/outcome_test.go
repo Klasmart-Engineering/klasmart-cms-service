@@ -220,7 +220,7 @@ func TestVerifyToken(t *testing.T) {
 		*jwt.StandardClaims
 	}{}
 	_, err := jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
-		return jwt.ParseRSAPublicKeyFromPEM([]byte(config.Get().AMS.TokenVerifyKey))
+		return config.Get().AMS.TokenVerifyKey, nil
 	})
 	if err != nil {
 		t.Fatal(err)

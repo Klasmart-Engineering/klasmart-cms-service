@@ -86,8 +86,8 @@ type AssessmentConfig struct {
 }
 
 type AMSConfig struct {
-	EndPoint       string `json:"endpoint" yaml:"endpoint"`
-	TokenVerifyKey string `json:"token_verify_key" yaml:"token_verify_key"`
+	EndPoint       string      `json:"endpoint" yaml:"endpoint"`
+	TokenVerifyKey interface{} `json:"token_verify_key" yaml:"token_verify_key"`
 }
 
 func assertGetEnv(key string) string {
@@ -256,7 +256,11 @@ func loadAMSConfig(ctx context.Context) {
 	if err != nil {
 		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
 	}
-	config.AMS.TokenVerifyKey = string(content)
+	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+	if err != nil {
+		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
+	}
+	config.AMS.TokenVerifyKey = key
 }
 
 func Get() *Config {
