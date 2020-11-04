@@ -4,6 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"testing"
+
+	"github.com/dgrijalva/jwt-go"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -11,8 +18,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"net/http"
-	"testing"
 )
 
 func TestCreateOutcome(t *testing.T) {
@@ -203,4 +208,22 @@ func TestFindRoot(t *testing.T) {
 		}
 	}
 	fmt.Printf("%+v", root)
+}
+
+var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI0MjI3NDNlLTllYmMtNWVkNy1iNzI1LTA2Mjk5NGVjNzdmMiIsImVtYWlsIjoiYnJpbGxpYW50LnlhbmdAYmFkYW5hbXUuY29tLmNuIiwiZXhwIjoxNjA1MTc4Nzk2LCJpc3MiOiJraWRzbG9vcCJ9.sDkGFTIWm-NgEDfNJoMS_3KoKcZs0smnR7whqWY0AMnYLFYX3j_Saj6gHjXHpmZMVewbnaNfv9lYfhSokFBZaCcYyeVBXQo6DHL6nppsMUFwmcTjl-NjqSGwYUvjpV7cmkmL33H8KojEuBUDP8kOK-cF5Km28PC6sV2nFRVBNFBXlcNsdB-CIQEeycCzRhw078GAP64Bpugay8W-77keldN-C1Qnrc6spbSCOKnxMpT94pBRzgB8D-vHdcnvB3zlfPj8RYWFlGE_uufHfPTSgS-nTzrz8vRhiJdOAYdPys90w87jGfmopm1AT-qDSqa4Qf8hMW4bj_UDAa4-1bI-yQ"
+
+func TestVerifyToken(t *testing.T) {
+	config.LoadEnvConfig()
+	claims := &struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		*jwt.StandardClaims
+	}{}
+	_, err := jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
+		return jwt.ParseRSAPublicKeyFromPEM([]byte(config.Get().AMS.TokenVerifyKey))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(claims)
 }

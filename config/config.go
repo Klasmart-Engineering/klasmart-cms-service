@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -86,7 +87,8 @@ type AssessmentConfig struct {
 }
 
 type AMSConfig struct {
-	EndPoint string `json:"endpoint" yaml:"endpoint"`
+	EndPoint       string `json:"endpoint" yaml:"endpoint"`
+	TokenVerifyKey string `json:"token_verify_key" yaml:"token_verify_key"`
 }
 
 func assertGetEnv(key string) string {
@@ -250,6 +252,12 @@ func loadAssessmentConfig(ctx context.Context) {
 
 func loadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
+	base64Key := assertGetEnv("token_verify_key")
+	key, err := base64.StdEncoding.DecodeString(base64Key)
+	if err != nil {
+		panic(err)
+	}
+	config.AMS.TokenVerifyKey = string(key)
 }
 
 func Get() *Config {

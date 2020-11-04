@@ -8,6 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -39,11 +43,22 @@ func MustLogin(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	// TODO: get user info from token
-	log.Info(c.Request.Context(), "MustLogin", log.String("token", token))
+
+	claims := &struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		*jwt.StandardClaims
+	}{}
+	_, err = jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
+		return jwt.ParseRSAPublicKeyFromPEM([]byte(config.Get().AMS.TokenVerifyKey))
+	})
+	if err != nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 	op := &entity.Operator{
-		UserID: "1",
-		OrgID:  "1",
+		UserID: claims.ID,
+		OrgID:  c.Query("org_id"),
 		Role:   "admin",
 	}
 	c.Set(Operator, op)
