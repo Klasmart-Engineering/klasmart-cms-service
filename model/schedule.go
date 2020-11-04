@@ -37,7 +37,8 @@ type IScheduleModel interface {
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
 	GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
-	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
+	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
+	GetScheduleIDsByCondition(ctx context.Context, condition *da.ScheduleCondition) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -971,21 +972,34 @@ func (s *scheduleModel) GetParticipateClass(ctx context.Context, operator *entit
 	return result, nil
 }
 
-func (s *scheduleModel) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
 	lessonPlanIDs, err := da.GetScheduleDA().GetLessonPlanIDsByCondition(ctx, tx, condition)
 	if err != nil {
-		logger.Error(ctx, "GetLessonPlanIDsByCondition:get lessonPlanIDs error",
+		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlanIDs error",
 			log.Err(err),
 			log.Any("condition", condition),
 			log.Any("operator", operator),
 		)
 		return nil, err
 	}
-	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
+	latestIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
 	if err != nil {
-		logger.Error(ctx, "GetLessPlanInfo:get lessonPlan info error",
+		logger.Error(ctx, "GetLessonPlanByCondition:get latest lessonPlanIDs error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("operator", operator),
+			log.Strings("lessonPlanIDs", lessonPlanIDs),
+			log.Strings("latestIDs", latestIDs),
+		)
+		return nil, err
+	}
+	latestIDs = utils.SliceDeduplication(latestIDs)
+	lessonPlanInfos, err := GetContentModel().GetContentNameByIDList(ctx, tx, latestIDs)
+	if err != nil {
+		logger.Error(ctx, "GetLessonPlanByCondition:get lessonPlan info error",
 			log.Err(err),
 			log.Strings("lessonPlanIDs", lessonPlanIDs),
+			log.Strings("latestIDs", latestIDs),
 			log.Any("condition", condition),
 			log.Any("operator", operator),
 		)
@@ -998,6 +1012,10 @@ func (s *scheduleModel) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo
 		}
 	}
 	return result, nil
+}
+
+func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, condition *da.ScheduleCondition) ([]string, error) {
+	return nil, nil
 }
 
 var (

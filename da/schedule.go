@@ -190,6 +190,8 @@ type ScheduleCondition struct {
 	StartAndEndRange         []sql.NullInt64
 	StartAndEndTimeViewRange []sql.NullInt64
 	LessonPlanID             sql.NullString
+	LessonPlanLatestID       sql.NullString
+	LessonPlanIDs            entity.NullStrings
 	RepeatID                 sql.NullString
 	Status                   sql.NullString
 	ClassIDs                 entity.NullStrings
@@ -254,6 +256,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.LessonPlanID.Valid {
 		wheres = append(wheres, "lesson_plan_id = ?")
 		params = append(params, c.LessonPlanID.String)
+	}
+	if c.LessonPlanIDs.Valid {
+		wheres = append(wheres, "lesson_plan_id in (?)")
+		params = append(params, c.LessonPlanIDs)
 	}
 	if c.RepeatID.Valid {
 		wheres = append(wheres, "repeat_id = ?")
