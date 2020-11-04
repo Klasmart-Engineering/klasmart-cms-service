@@ -38,7 +38,7 @@ type IScheduleModel interface {
 	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
 	GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
-	GetScheduleIDsByCondition(ctx context.Context, condition *da.ScheduleCondition) ([]string, error)
+	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1014,8 +1014,32 @@ func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DB
 	return result, nil
 }
 
-func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, condition *da.ScheduleCondition) ([]string, error) {
-	return nil, nil
+func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, condition *da.ScheduleCondition) ([]string, error) {
+	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, condition.LessonPlanLatestID.String)
+	if err != nil {
+		logger.Error(ctx, "GetScheduleIDsByCondition:get past lessonPlan id error",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	condition.LessonPlanIDs = entity.NullStrings{
+		Strings: lessonPlanPastIDs,
+		Valid:   len(lessonPlanPastIDs) > 0,
+	}
+	var scheduleList []*entity.Schedule
+	err = da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.ID
+	}
+	return result, nil
 }
 
 var (
