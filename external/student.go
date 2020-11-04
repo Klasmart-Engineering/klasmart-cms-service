@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -19,13 +20,20 @@ type Student struct {
 	Name string `json:"name"`
 }
 
+var (
+	_amsStudentService *AmsStudentService
+	_amsStudentOnce    sync.Once
+)
+
 func GetStudentServiceProvider() StudentServiceProvider {
-	return &AmsStudentService{}
+	_amsStudentOnce.Do(func() {
+		_amsStudentService = &AmsStudentService{}
+	})
+
+	return _amsStudentService
 }
 
-type AmsStudentService struct {
-	client *chlorine.Client
-}
+type AmsStudentService struct{}
 
 func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Student, error) {
 	if len(ids) == 0 {
@@ -50,7 +58,7 @@ func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Stude
 		Data: data,
 	}
 
-	_, err := s.client.Run(ctx, request, response)
+	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get students by ids failed", log.Strings("ids", ids))
 		return nil, err

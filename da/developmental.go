@@ -1,8 +1,10 @@
 package da
 
 import (
+	"database/sql"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -28,7 +30,8 @@ func GetDevelopmentalDA() IDevelopmentalDA {
 }
 
 type DevelopmentalCondition struct {
-	IDs entity.NullStrings
+	IDs       entity.NullStrings
+	ProgramID sql.NullString
 
 	OrderBy DevelopmentalOrderBy
 	Pager   dbo.Pager
@@ -41,6 +44,12 @@ func (c DevelopmentalCondition) GetConditions() ([]string, []interface{}) {
 	if c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+	if c.ProgramID.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where program_id = ? and %s.id = %s.development_id)",
+			constant.TableNameProgramDevelopment, constant.TableNameDevelopmental, constant.TableNameProgramDevelopment)
+		wheres = append(wheres, sql)
+		params = append(params, c.ProgramID.String)
 	}
 
 	return wheres, params

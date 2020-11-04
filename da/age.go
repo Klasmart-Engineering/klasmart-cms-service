@@ -1,8 +1,10 @@
 package da
 
 import (
+	"database/sql"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -28,7 +30,9 @@ func GetAgeDA() IAgeDA {
 }
 
 type AgeCondition struct {
-	IDs     entity.NullStrings
+	IDs       entity.NullStrings
+	ProgramID sql.NullString
+
 	OrderBy AgeOrderBy
 	Pager   dbo.Pager
 }
@@ -40,6 +44,12 @@ func (c AgeCondition) GetConditions() ([]string, []interface{}) {
 	if c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+	if c.ProgramID.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where program_id = ? and %s.id = %s.age_id)",
+			constant.TableNameProgramAge, constant.TableNameAge, constant.TableNameProgramAge)
+		wheres = append(wheres, sql)
+		params = append(params, c.ProgramID.String)
 	}
 
 	return wheres, params

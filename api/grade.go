@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -13,13 +14,20 @@ import (
 // @Description get grade
 // @Accept json
 // @Produce json
+// @Param program_id query string false "program id"
 // @Tags grade
 // @Success 200 {array} entity.Grade
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades [get]
 func (s *Server) getGrade(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := model.GetGradeModel().Query(ctx, &da.GradeCondition{})
+	programID := c.Query("program_id")
+	result, err := model.GetGradeModel().Query(ctx, &da.GradeCondition{
+		ProgramID: sql.NullString{
+			String: programID,
+			Valid:  len(programID) != 0,
+		},
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return

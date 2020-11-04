@@ -15,18 +15,18 @@ type PermisionServiceProvider interface {
 }
 
 var (
-	_permisionService *AmsPermisionService
-	_permisionOnce    sync.Once
+	_amsPermisionService *AmsPermisionService
+	_amsPermisionOnce    sync.Once
 )
 
 func GetPermisionServiceProvider() PermisionServiceProvider {
-	_permisionOnce.Do(func() {
-		_permisionService = &AmsPermisionService{
+	_amsPermisionOnce.Do(func() {
+		_amsPermisionService = &AmsPermisionService{
 			client: chlorine.NewClient(config.Get().AMS.EndPoint),
 		}
 	})
 
-	return _permisionService
+	return _amsPermisionService
 }
 
 type AmsPermisionService struct {

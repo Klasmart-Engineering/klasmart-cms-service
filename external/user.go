@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -12,20 +13,25 @@ type UserServiceProvider interface {
 }
 
 type User struct {
-	UserID    string `json:"user_id"`
-	Name      string `json:"name"`
-	AvatarUrl string `json:"avatar_url"`
-	OrgID     string `json:"org_id"`
-	OrgType   string `json:"org_type"`
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	OrgID  string `json:"org_id"`
 }
+
+var (
+	_amsUserService *AmsUserService
+	_amsUserOnce    sync.Once
+)
 
 func GetUserServiceProvider() UserServiceProvider {
-	return &AmsUserService{}
+	_amsUserOnce.Do(func() {
+		_amsUserService = &AmsUserService{}
+	})
+
+	return _amsUserService
 }
 
-type AmsUserService struct {
-	client *chlorine.Client
-}
+type AmsUserService struct{}
 
 func (s AmsUserService) GetUserInfoByID(ctx context.Context, userID string) (*User, error) {
 	request := chlorine.NewRequest(`
@@ -54,7 +60,7 @@ func (s AmsUserService) GetUserInfoByID(ctx context.Context, userID string) (*Us
 		Data: user,
 	}
 
-	_, err := s.client.Run(ctx, request, response)
+	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get user by id failed", log.String("userID", userID))
 		return nil, err
