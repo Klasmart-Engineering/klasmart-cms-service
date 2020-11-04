@@ -27,6 +27,7 @@ require (
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
 	gitlab.badanamu.com.cn/calmisland/ro v0.0.0-20200819092854-7b96095e0678
 	go.mongodb.org/mongo-driver v1.4.0
+	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899 // indirect
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
 	golang.org/x/sys v0.0.0-20200916084744-dbad9cb7cb7a // indirect

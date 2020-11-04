@@ -14,9 +14,18 @@ type AMSService struct {
 }
 
 var (
-	_amsService *AMSService
-	_amsOnce    sync.Once
+	_amsService     *AMSService
+	_amsOnce        sync.Once
+	_chlorineClient *chlorine.Client
+	_chlorineOnce   sync.Once
 )
+
+func GetChlorine() *chlorine.Client {
+	_chlorineOnce.Do(func() {
+		_chlorineClient = chlorine.NewClient(config.Get().AMS.EndPoint)
+	})
+	return _chlorineClient
+}
 
 func GetAMSService() *AMSService {
 	_amsOnce.Do(func() {
