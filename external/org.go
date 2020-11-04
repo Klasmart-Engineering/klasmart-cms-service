@@ -7,8 +7,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 )
 
-const url = "https://api.beta.kidsloop.net/user/"
-
 type OrganizationServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*Organization, error)
 	GetMine(ctx context.Context, userID string) ([]*Organization, error)
@@ -24,12 +22,12 @@ type Organization struct {
 
 func GetOrganizationServiceProvider() OrganizationServiceProvider {
 	return &mockOrganizationService{}
-	//return &graphqlOrganizationService{}
+	//return &AmsOrganizationService{}
 }
 
-type graphqlOrganizationService struct{}
+type AmsOrganizationService struct{}
 
-func (s graphqlOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*Organization, error) {
+func (s AmsOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*Organization, error) {
 	q := `query orgs($orgIDs: [ID!]){
 	organizations(organization_ids: $orgIDs){
     	id: organization_id
@@ -41,7 +39,7 @@ func (s graphqlOrganizationService) BatchGet(ctx context.Context, ids []string) 
 	payload := make([]*Organization, len(ids))
 	res := cl.Response{
 		Data: &struct {
-			Organizations []*Organization
+			Organizations []*Organization `json:"organizations"`
 		}{Organizations: payload},
 	}
 	_, err := GetChlorine().Run(ctx, req, &res)
@@ -56,16 +54,16 @@ func (s graphqlOrganizationService) BatchGet(ctx context.Context, ids []string) 
 	return payload, nil
 }
 
-func (s graphqlOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {
+func (s AmsOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {
 	// Maybe don't need
 	return GetMockData().Organizations, nil
 }
 
-func (s graphqlOrganizationService) GetParents(ctx context.Context, orgID string) ([]*Organization, error) {
+func (s AmsOrganizationService) GetParents(ctx context.Context, orgID string) ([]*Organization, error) {
 	return []*Organization{}, nil
 }
 
-func (s graphqlOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
+func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
 	return []*Organization{}, nil
 }
 

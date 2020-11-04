@@ -24,12 +24,12 @@ type Class struct {
 
 func GetClassServiceProvider() ClassServiceProvider {
 	//return &mockClassService{}
-	return &graphqlClassService{}
+	return &AmsClassService{}
 }
 
-type graphqlClassService struct{}
+type AmsClassService struct{}
 
-func (s graphqlClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
+func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
 	raw := `query{
 	{{range $i, $e := .}}
 	index_{{$i}}: class(class_id: "{{$e}}"){
@@ -75,7 +75,7 @@ func (s graphqlClassService) BatchGet(ctx context.Context, ids []string) ([]*Cla
 	return classes, nil
 }
 
-func (s graphqlClassService) GetStudents(ctx context.Context, classID string) ([]*Student, error) {
+func (s AmsClassService) GetStudents(ctx context.Context, classID string) ([]*Student, error) {
 	q := `query ($classID: ID!){
 	class(class_id: $classID){
 		students{
@@ -89,8 +89,12 @@ func (s graphqlClassService) GetStudents(ctx context.Context, classID string) ([
 	var payload []*Student
 	res := cl.Response{
 		Data: &struct {
-			Class struct{ Students *[]*Student }
-		}{Class: struct{ Students *[]*Student }{Students: &payload}},
+			Class struct {
+				Students *[]*Student `json:"students"`
+			} `json:"class"`
+		}{Class: struct {
+			Students *[]*Student `json:"students"`
+		}{Students: &payload}},
 	}
 	_, err := GetChlorine().Run(ctx, req, &res)
 	if err != nil {
