@@ -2,7 +2,6 @@ package config
 
 import (
 	"context"
-	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -252,12 +251,12 @@ func loadAssessmentConfig(ctx context.Context) {
 
 func loadAMSConfig(ctx context.Context) {
 	config.AMS.EndPoint = assertGetEnv("ams_endpoint")
-	base64Key := assertGetEnv("token_verify_key")
-	key, err := base64.StdEncoding.DecodeString(base64Key)
+	publicKeyPath := os.Getenv("jwt_public_key_path") //"./jwt_public_key.pem"
+	content, err := ioutil.ReadFile(publicKeyPath)
 	if err != nil {
-		panic(err)
+		log.Panic(ctx, "loadAMSConfig:load public key failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
 	}
-	config.AMS.TokenVerifyKey = string(key)
+	config.AMS.TokenVerifyKey = string(content)
 }
 
 func Get() *Config {

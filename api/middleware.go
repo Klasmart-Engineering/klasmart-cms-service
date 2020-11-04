@@ -53,6 +53,12 @@ func MustLogin(c *gin.Context) {
 		return jwt.ParseRSAPublicKeyFromPEM([]byte(config.Get().AMS.TokenVerifyKey))
 	})
 	if err != nil {
+		log.Info(c.Request.Context(), "MustLogin", log.String("token", token), log.Err(err))
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if c.Query("org_id") == "" {
+		log.Info(c.Request.Context(), "MustLogin", log.String("OrgID", "no org_id"))
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
