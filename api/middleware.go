@@ -19,19 +19,11 @@ import (
 )
 
 func ExtractSession(c *gin.Context) (string, error) {
-	token := c.GetHeader("Authorization")
-	if token == "" {
-		log.Info(c.Request.Context(), "ExtractSession", log.String("session", "no session"))
-		// TODO: for mock
-		//return "", constant.ErrUnAuthorized
-		return "", nil
+	token, err := c.Cookie("access")
+	if token == "" || err != nil {
+		log.Info(c.Request.Context(), "ExtractSession", log.String("session", "no session"), log.Err(err))
+		return "", constant.ErrUnAuthorized
 	}
-
-	prefix := "Bearer "
-	if strings.HasPrefix(token, prefix) {
-		token = token[len(prefix):]
-	}
-
 	return token, nil
 }
 
