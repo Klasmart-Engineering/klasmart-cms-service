@@ -72,7 +72,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	log.Debug(ctx, "list students report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, *operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "list students report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -162,7 +162,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	}
 
 	log.Debug(ctx, "get student detail report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, *operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "get student detail report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -290,7 +290,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	return &result, nil
 }
 
-func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
 	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, teacherID, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids: get schedule ids failed",
@@ -316,7 +316,7 @@ func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 	return result, nil
 }
 
-func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
 		TeacherID:    teacherID,

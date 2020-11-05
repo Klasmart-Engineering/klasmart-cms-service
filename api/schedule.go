@@ -487,13 +487,13 @@ func (s *Server) getParticipateClass(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_lesson_plans [get]
 func (s *Server) getLessonPlans(c *gin.Context) {
-	operator := s.getOperator(c)
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	teacherID := c.Query("teacher_id")
 	classID := c.Query("class_id")
 	if len(strings.TrimSpace(teacherID)) == 0 || len(strings.TrimSpace(classID)) == 0 {
 		log.Info(ctx, "teacherID and classID is require",
-			log.Any("operator", operator),
+			log.Any("operator", op),
 		)
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
@@ -512,7 +512,7 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 			Valid:  true,
 		},
 	}
-	result, err := model.GetScheduleModel().GetLessonPlanByCondition(ctx, dbo.MustGetDB(ctx), operator, condition)
+	result, err := model.GetScheduleModel().GetLessonPlanByCondition(ctx, dbo.MustGetDB(ctx), op, condition)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
