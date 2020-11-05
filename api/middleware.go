@@ -40,7 +40,7 @@ const Operator = "_op_"
 func MustLogin(c *gin.Context) {
 	token, err := ExtractSession(c)
 	if err != nil {
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 
@@ -54,12 +54,12 @@ func MustLogin(c *gin.Context) {
 	})
 	if err != nil {
 		log.Info(c.Request.Context(), "MustLogin", log.String("token", token), log.Err(err))
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	if c.Query(constant.URLOrganizationIDParameter) == "" {
 		log.Info(c.Request.Context(), "MustLogin", log.String("OrgID", "no org_id"))
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	op := &entity.Operator{
