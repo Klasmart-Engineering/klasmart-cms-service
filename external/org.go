@@ -21,8 +21,7 @@ type Organization struct {
 }
 
 func GetOrganizationServiceProvider() OrganizationServiceProvider {
-	return &mockOrganizationService{}
-	//return &AmsOrganizationService{}
+	return &AmsOrganizationService{}
 }
 
 type AmsOrganizationService struct{}
@@ -55,8 +54,8 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*
 }
 
 func (s AmsOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {
-	// Maybe don't need
-	return GetMockData().Organizations, nil
+	// TODO: Maybe don't need
+	return []*Organization{}, nil
 }
 
 func (s AmsOrganizationService) GetParents(ctx context.Context, orgID string) ([]*Organization, error) {
@@ -65,22 +64,4 @@ func (s AmsOrganizationService) GetParents(ctx context.Context, orgID string) ([
 
 func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
 	return []*Organization{}, nil
-}
-
-type mockOrganizationService struct{}
-
-func (s mockOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*Organization, error) {
-	return GetMockData().Organizations, nil
-}
-
-func (s mockOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {
-	return GetMockData().Organizations, nil
-}
-
-func (s mockOrganizationService) GetParents(ctx context.Context, orgID string) ([]*Organization, error) {
-	return GetMockData().Organizations, nil
-}
-
-func (s mockOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
-	return GetMockData().Organizations, nil
 }
