@@ -5,6 +5,7 @@ import (
 	"fmt"
 	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"strings"
 	"time"
 
@@ -56,8 +57,12 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 
 	//get publishScope&authorName
 	publishScope := c.PublishScope
-	//TODO: To get real name
-	authorName := "Bada"
+	userInfo, err := external.GetUserServiceProvider().GetUserInfoByID(ctx, operator.UserID)
+	if err != nil{
+		log.Warn(ctx, "get user info failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		return nil, err
+	}
+	authorName := userInfo.Name
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
@@ -242,21 +247,7 @@ func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBCon
 		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
 		return err
 	}
-	//if user.OrgID == content.Org && user.Role != "teacher" {
-	//	content.PublishStatus = entity.ContentStatusPublished
-	//	//直接发布，则顶替旧
-	//	if content.SourceID != "" {
-	//		//存在前序content，则隐藏前序
-	//		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//
-	//} else {
-	//	//TODO:更新发布状态
-	//	content.PublishStatus = entity.ContentStatusPending
-	//}
+
 	content.PublishStatus = entity.ContentStatusPending
 	content.UpdateAt = time.Now().Unix()
 	return nil
