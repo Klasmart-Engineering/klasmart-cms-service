@@ -487,7 +487,7 @@ func (a *assessmentModel) Add(ctx context.Context, cmd entity.AddAssessmentComma
 			)
 			return "", errors.New("add assessment: invalid class type")
 		}
-		outcomeIDs, err = GetContentModel().GetContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
+		outcomeIDs, err = GetContentModel().GetVisibleContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "add assessment: get outcome failed by id",
 				log.Err(err),
@@ -706,26 +706,16 @@ func (a *assessmentModel) Update(ctx context.Context, cmd entity.UpdateAssessmen
 			}
 		}
 		if cmd.AttendanceIDs != nil {
-			if err := da.GetAssessmentAttendanceDA().DeleteByAssessmentID(ctx, tx, cmd.ID); err != nil {
-				log.Error(ctx, "update assessment: delete assessment attendance failed by assessment id",
+			if err := da.GetAssessmentAttendanceDA().Uncheck(ctx, tx, cmd.ID); err != nil {
+				log.Error(ctx, "update assessment: uncheck assessment attendance failed",
 					log.Err(err),
 					log.Any("cmd", cmd),
 				)
 				return err
 			}
-			var items []*entity.AssessmentAttendance
-			for _, attendanceID := range *cmd.AttendanceIDs {
-				items = append(items, &entity.AssessmentAttendance{
-					ID:           utils.NewID(),
-					AssessmentID: cmd.ID,
-					AttendanceID: attendanceID,
-					Checked:      true,
-				})
-			}
-			if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
-				log.Error(ctx, "update assessment: batch insert assessment attendance map failed",
+			if err := da.GetAssessmentAttendanceDA().Check(ctx, tx, cmd.ID, *cmd.AttendanceIDs); err != nil {
+				log.Error(ctx, "update assessment: check assessment attendance failed",
 					log.Err(err),
-					log.Any("items", items),
 					log.Any("cmd", cmd),
 				)
 				return err

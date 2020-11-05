@@ -8,6 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -39,12 +43,29 @@ func MustLogin(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-	// TODO: get user info from token
-	log.Info(c.Request.Context(), "MustLogin", log.String("token", token))
+
+	claims := &struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		*jwt.StandardClaims
+	}{}
+	_, err = jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
+		return config.Get().AMS.TokenVerifyKey, nil
+	})
+	if err != nil {
+		log.Info(c.Request.Context(), "MustLogin", log.String("token", token), log.Err(err))
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if c.Query(constant.URLOrganizationIDParameter) == "" {
+		log.Info(c.Request.Context(), "MustLogin", log.String("OrgID", "no org_id"))
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 	op := &entity.Operator{
-		UserID: "1",
-		OrgID:  "1",
-		Role:   "admin",
+		UserID: claims.ID,
+		OrgID:  c.Query(constant.URLOrganizationIDParameter),
+		Role:   constant.DefaultRole,
 	}
 	c.Set(Operator, op)
 }
