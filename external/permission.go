@@ -10,31 +10,31 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-type PermisionServiceProvider interface {
-	HasPermision(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
+type PermissionServiceProvider interface {
+	HasPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
 	GetHasPermissionOrganizations(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error)
 }
 
 var (
-	_amsPermisionService *AmsPermisionService
-	_amsPermisionOnce    sync.Once
+	_amsPermissionService *AmsPermissionService
+	_amsPermissionOnce    sync.Once
 )
 
-func GetPermisionServiceProvider() PermisionServiceProvider {
-	_amsPermisionOnce.Do(func() {
-		_amsPermisionService = &AmsPermisionService{
+func GetPermissionServiceProvider() PermissionServiceProvider {
+	_amsPermissionOnce.Do(func() {
+		_amsPermissionService = &AmsPermissionService{
 			client: chlorine.NewClient(config.Get().AMS.EndPoint),
 		}
 	})
 
-	return _amsPermisionService
+	return _amsPermissionService
 }
 
-type AmsPermisionService struct {
+type AmsPermissionService struct {
 	client *chlorine.Client
 }
 
-func (s AmsPermisionService) HasPermision(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
+func (s AmsPermissionService) HasPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID! 
@@ -74,7 +74,7 @@ func (s AmsPermisionService) HasPermision(ctx context.Context, operator *entity.
 	return data.User.Membership.CheckAllowed, nil
 }
 
-func (s AmsPermisionService) GetHasPermissionOrganizations(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error) {
+func (s AmsPermissionService) GetHasPermissionOrganizations(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error) {
 	// TODO: add implement
 	return nil, nil
 }
