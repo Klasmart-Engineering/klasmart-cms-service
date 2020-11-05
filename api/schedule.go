@@ -8,6 +8,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
@@ -31,6 +32,10 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
+	op := GetOperator(c)
+	if !s.hasScheduleRWPermission(c, op, external.EditEvent) {
+		return
+	}
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	data := entity.ScheduleUpdateView{}
@@ -105,6 +110,10 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
+	op := GetOperator(c)
+	if !s.hasScheduleRWPermission(c, op, external.DeleteEvent) {
+		return
+	}
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	editType := entity.ScheduleEditType(c.Query("repeat_edit_options"))
@@ -145,6 +154,9 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Router /schedules [post]
 func (s *Server) addSchedule(c *gin.Context) {
 	op := GetOperator(c)
+	if !s.hasScheduleRWPermission(c, op, external.CreateEvent) {
+		return
+	}
 	ctx := c.Request.Context()
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
@@ -340,6 +352,20 @@ const (
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	op := GetOperator(c)
+	// if has read permission
+	persmission := s.getScheduleReadPermission(c, op)
+	if len(persmission) == 0 {
+		return
+	}
+	// ViewOrgCalendar
+	if persmission[external.ViewOrgCalendar] {
+
+	}
+	// ViewMyCalendar
+	if persmission[external.ViewMyCalendar] {
+
+	}
+
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
 	timeAtStr := c.Query("time_at")
@@ -521,4 +547,58 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	default:
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 	}
+}
+func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) bool {
+	ctx := c.Request.Context()
+	hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, permissionName)
+	if err != nil {
+		log.Error(ctx, "check permission error",
+			log.String("permission", string(permissionName)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return false
+	}
+	if hasPermission {
+		log.Info(ctx, "no permission",
+			log.String("permission", string(permissionName)),
+			log.Any("Operator", op),
+		)
+		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+		return false
+	}
+	return true
+}
+
+func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) map[external.PermissionName]bool {
+	ctx := c.Request.Context()
+	result := make(map[external.PermissionName]bool)
+	viewOrg, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ViewOrgCalendar)
+	if err != nil {
+		log.Error(ctx, "check permission error",
+			log.String("permission", string(external.ViewOrgCalendar)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return result
+	}
+	viewMy, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ViewMyCalendar)
+	if err != nil {
+		log.Error(ctx, "check permission error",
+			log.String("permission", string(external.ViewMyCalendar)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return result
+	}
+	if viewOrg || viewMy {
+		result[external.ViewOrgCalendar] = viewOrg
+		result[external.ViewMyCalendar] = viewMy
+		return result
+	}
+	c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+	return result
 }
