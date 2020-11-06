@@ -4,22 +4,22 @@ import (
 	"context"
 	"text/template"
 
+	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"go.uber.org/zap/buffer"
-
-	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
 )
 
 type ClassServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*Class, error)
-	GetStudents(ctx context.Context, classID string) ([]*Student, error)
+	GetByUserID(ctx context.Context, userID string) ([]*Class, error)
+	GetByOrganizationID(ctx context.Context, orgID string) ([]*Class, error)
+	GetBySchoolIDs(ctx context.Context, schoolIDs []string) ([]*Class, error)
 }
 
 type Class struct {
-	ID       string     `json:"id"`
-	Name     string     `json:"name"`
-	Students []*Student `json:"students"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func GetClassServiceProvider() ClassServiceProvider {
@@ -52,9 +52,9 @@ func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, 
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return nil, err
 	}
-	req := cl.NewRequest(buf.String())
+	req := chlorine.NewRequest(buf.String())
 	payload := make(map[string]*Class, len(ids))
-	res := cl.Response{
+	res := chlorine.Response{
 		Data: &payload,
 	}
 
@@ -74,35 +74,65 @@ func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, 
 	return classes, nil
 }
 
-func (s AmsClassService) GetStudents(ctx context.Context, classID string) ([]*Student, error) {
-	q := `query ($classID: ID!){
-	class(class_id: $classID){
-		students{
-			id: user_id
-			name: user_name
+func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Class, error) {
+	request := chlorine.NewRequest(`
+	query($user_id: ID!){
+		user(user_id: $user_id) {
+			classesTeaching{
+				class_id
+				class_name
+			}
+			classesStudying{
+				class_id
+				class_name
+			}
 		}
-  	}
-}`
-	req := cl.NewRequest(q)
-	req.Var("classID", classID)
-	var payload []*Student
-	res := cl.Response{
-		Data: &struct {
-			Class struct {
-				Students *[]*Student `json:"students"`
-			} `json:"class"`
-		}{Class: struct {
-			Students *[]*Student `json:"students"`
-		}{Students: &payload}},
-	}
-	_, err := GetChlorine().Run(ctx, req, &res)
+	}`)
+	request.Var("user_id", userID)
+
+	data := &struct {
+		User struct {
+			ClassesTeaching []struct {
+				ClassID   string `json:"class_id"`
+				ClassName string `json:"class_name"`
+			} `json:"classesTeaching"`
+			ClassesStudying []struct {
+				ClassID   string `json:"class_id"`
+				ClassName string `json:"class_name"`
+			} `json:"classesStudying"`
+		} `json:"user"`
+	}{}
+
+	_, err := GetChlorine().Run(ctx, request, &chlorine.Response{Data: data})
 	if err != nil {
-		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
+		log.Error(ctx, "query classes by user id failed", log.String("userID", userID))
 		return nil, err
 	}
-	if len(res.Errors) > 0 {
-		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
-		return nil, res.Errors
+
+	classes := make([]*Class, 0, len(data.User.ClassesTeaching)+len(data.User.ClassesStudying))
+	for _, class := range data.User.ClassesTeaching {
+		classes = append(classes, &Class{
+			ID:   class.ClassID,
+			Name: class.ClassName,
+		})
 	}
-	return payload, nil
+
+	for _, class := range data.User.ClassesStudying {
+		classes = append(classes, &Class{
+			ID:   class.ClassID,
+			Name: class.ClassName,
+		})
+	}
+
+	return classes, nil
+}
+
+func (s AmsClassService) GetByOrganizationID(ctx context.Context, userID string) ([]*Class, error) {
+	// TODO
+	return nil, nil
+}
+
+func (s AmsClassService) GetBySchoolIDs(ctx context.Context, userIDs []string) ([]*Class, error) {
+	// TODO
+	return nil, nil
 }

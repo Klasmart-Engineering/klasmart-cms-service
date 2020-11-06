@@ -2,6 +2,9 @@ package model
 
 import (
 	"context"
+	"sort"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -9,8 +12,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sort"
-	"sync"
 )
 
 type IReportModel interface {
@@ -60,7 +61,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	{
 		var err error
 		log.Debug(ctx, "list students report: before call GetClassServiceProvider().getStudents()")
-		students, err = external.GetClassServiceProvider().GetStudents(ctx, cmd.ClassID)
+		students, err = external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
 		log.Debug(ctx, "list students report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
@@ -140,7 +141,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	var student *external.Student
 	{
 		log.Debug(ctx, "get student detail report: before call GetClassServiceProvider().getStudents()")
-		students, err := external.GetClassServiceProvider().GetStudents(ctx, cmd.ClassID)
+		students, err := external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
 		log.Debug(ctx, "get student detail report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
