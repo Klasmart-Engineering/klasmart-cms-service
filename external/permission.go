@@ -12,7 +12,7 @@ import (
 
 type PermissionServiceProvider interface {
 	HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
-	HasSchoolPermission(ctx context.Context, userID, schoolID, permissionName PermissionName) (bool, error)
+	HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error)
 }
 
 var (
@@ -74,7 +74,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 	return data.User.Membership.CheckAllowed, nil
 }
 
-func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, schoolID, permissionName PermissionName) (bool, error) {
+func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error) {
 	// TODO
 	return false, nil
 }
