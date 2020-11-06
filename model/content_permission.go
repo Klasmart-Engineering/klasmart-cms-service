@@ -319,7 +319,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 }
 
 func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]Entity, error){
-	schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permission)
+	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil{
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return nil, err
@@ -352,7 +352,7 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope s
 	if scope == op.OrgID {
 		//检查Permission权限
 		for i := range permissions {
-			hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, permissions[i])
+			hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissions[i])
 			if err != nil{
 				log.Error(ctx, "get permission failed", log.Err(err))
 				return false, err
@@ -368,15 +368,13 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope s
 
 	//检查学校权限
 	for i := range permissions {
-		schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permissions[i])
+		hasPermission, err := external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, scope, permissions[i])
 		if err != nil{
-			log.Error(ctx, "get school permission failed", log.Err(err))
+			log.Warn(ctx, "get school permission failed", log.Err(err))
 			return false, err
 		}
-		for j := range schools {
-			if schools[j].ID == scope {
-				return true, nil
-			}
+		if !hasPermission {
+			return false, nil
 		}
 	}
 	return false, nil
@@ -389,7 +387,7 @@ func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permiss
 	}
 
 	for i := range permissions {
-		hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, permissions[i])
+		hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissions[i])
 		if err != nil{
 			log.Error(ctx, "get permission failed", log.Err(err))
 			return false, err
@@ -402,7 +400,7 @@ func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permiss
 
 	//检查学校权限
 	for i := range permissions {
-		schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permissions[i])
+		schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permissions[i])
 		if err != nil{
 			log.Error(ctx, "get school permission failed", log.Err(err))
 			return false, err
@@ -415,7 +413,7 @@ func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permiss
 }
 
 func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content *entity.Content, permission external.PermissionName, op *entity.Operator) (bool, error) {
-	schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permission)
+	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil{
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return false, err

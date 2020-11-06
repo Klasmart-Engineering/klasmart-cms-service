@@ -1513,7 +1513,7 @@ func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visibl
 	if permission == visiblePermissionPending {
 		p = external.PendingContentPage203
 	}
-	schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, operator, p)
+	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
 	if err !=nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
@@ -1523,7 +1523,7 @@ func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visibl
 		ret = append(ret, schools[i].ID)
 	}
 
-	hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, operator, p)
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, p)
 	if err !=nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
