@@ -62,6 +62,34 @@ func MustLogin(c *gin.Context) {
 	c.Set(Operator, op)
 }
 
+func MustLoginWithoutOrgID(c *gin.Context) {
+	token, err := ExtractSession(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
+	claims := &struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		*jwt.StandardClaims
+	}{}
+	_, err = jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
+		return config.Get().AMS.TokenVerifyKey, nil
+	})
+	if err != nil {
+		log.Info(c.Request.Context(), "MustLogin", log.String("token", token), log.Err(err))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+	op := &entity.Operator{
+		UserID: claims.ID,
+		OrgID:  c.Query(constant.URLOrganizationIDParameter),
+		Role:   constant.DefaultRole,
+	}
+	c.Set(Operator, op)
+}
+
 func GetOperator(c *gin.Context) *entity.Operator {
 	op, exist := c.Get(Operator)
 	if exist {
