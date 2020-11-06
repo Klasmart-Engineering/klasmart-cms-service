@@ -353,17 +353,9 @@ const (
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	op := GetOperator(c)
 	// if has read permission
-	persmission := s.getScheduleReadPermission(c, op)
-	if len(persmission) == 0 {
+	permission := s.getScheduleReadPermission(c, op)
+	if len(permission) == 0 {
 		return
-	}
-	// is ScheduleViewOrgCalendar or ScheduleViewMyCalendar permission
-	if persmission[external.ScheduleViewOrgCalendar] {
-		// 过滤条件中classIDs是否为空
-		// 1.为空，则根据orgID找到org下的所有班级，根据班级过滤schedule
-		// 2.不为空，则以classIDs中的数据进行过滤schedule
-	} else if persmission[external.ScheduleViewMyCalendar] {
-		// 如果是普通用户，则根据userID过滤只显示和他相关的schedule
 	}
 
 	ctx := c.Request.Context()
@@ -414,18 +406,28 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		Valid: end <= 0,
 		Int64: end,
 	}
-	condition := &da.ScheduleCondition{
-		OrgID: sql.NullString{
-			String: op.OrgID,
-			Valid:  op.OrgID != "",
-		},
-		StartAndEndTimeViewRange: startAndEndTimeViewRange,
-	}
-	//condition.OrgIDs = entity.SplitStringToNullStrings(c.Query("org_ids"))
-	condition.TeacherIDs = entity.SplitStringToNullStrings(c.Query("teacher_ids"))
-	condition.ClassIDs = entity.SplitStringToNullStrings(c.Query("class_ids"))
+	condition := new(da.ScheduleCondition)
+	condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
 	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
 	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
+	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
+	// is ScheduleViewOrgCalendar or ScheduleViewMyCalendar permission
+	if permission[external.ScheduleViewOrgCalendar] {
+		// 过滤条件中classIDs是否为空
+		// 1.为空，则根据orgID找到org下的所有班级，根据班级过滤schedule
+		// 2.不为空，则以classIDs中的数据进行过滤schedule
+		if len(classIDs.Strings) == 0 {
+
+		}
+		condition.TeacherIDs = entity.SplitStringToNullStrings(c.Query("teacher_ids"))
+	} else if permission[external.ScheduleViewMyCalendar] {
+		// 如果是普通用户，则根据userID过滤只显示和他相关的schedule
+		condition.TeacherID = sql.NullString{
+			String: op.UserID,
+			Valid:  true,
+		}
+	}
+	condition.ClassIDs = classIDs
 
 	log.Debug(ctx, "condition info", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 	result, err := model.GetScheduleModel().Query(ctx, condition)
