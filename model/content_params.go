@@ -57,12 +57,12 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 
 	//get publishScope&authorName
 	publishScope := c.PublishScope
-	userInfo, err := external.GetUserServiceProvider().GetUserInfoByID(ctx, operator.UserID)
+	userInfo, err := external.GetUserServiceProvider().Get(ctx, operator.UserID)
 	if err != nil{
 		log.Warn(ctx, "get user info failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, err
 	}
-	authorName := userInfo.Name
+	authorName := userInfo.UserName
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
