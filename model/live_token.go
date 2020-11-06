@@ -158,16 +158,28 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 }
 
 func (s *liveTokenModel) isTeacher(ctx context.Context, op *entity.Operator) (bool, error) {
-	hasTeacherPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.LiveClassTeacher)
+	organization, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, external.LiveClassTeacher)
 	if err != nil {
-		log.Error(ctx, "check permission error",
+		log.Error(ctx, "isTeacher:GetOrganizationServiceProvider.GetByPermission error",
 			log.String("permission", string(external.LiveClassTeacher)),
 			log.Any("operator", op),
 			log.Err(err),
 		)
 		return false, err
 	}
-	return hasTeacherPermission, nil
+	school, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.LiveClassTeacher)
+	if err != nil {
+		log.Error(ctx, "isTeacher:GetSchoolServiceProvider.GetByPermission error",
+			log.String("permission", string(external.LiveClassTeacher)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return false, err
+	}
+	if len(organization) != 0 || len(school) != 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {

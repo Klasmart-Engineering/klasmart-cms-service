@@ -553,7 +553,7 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 
 func (s *Server) getClassIDsByPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) ([]string, error) {
 	ctx := c.Request.Context()
-	external.GetOrganizationServiceProvider().GetChildren()
+	external.GetOrganizationServiceProvider().GetByPermission()
 }
 
 func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) bool {
