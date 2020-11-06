@@ -61,7 +61,7 @@ func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Stude
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get students by ids failed", log.Strings("ids", ids))
+		log.Error(ctx, "get students by ids failed", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
 

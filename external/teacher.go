@@ -61,7 +61,7 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, ids []string) ([]*Teach
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get teachers by ids failed", log.Strings("ids", ids))
+		log.Error(ctx, "get teachers by ids failed", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
 

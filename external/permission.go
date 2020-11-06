@@ -66,6 +66,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "check user permission failed",
+			log.Err(err),
 			log.Any("operator", operator),
 			log.String("permissionName", permissionName.String()))
 		return false, err
@@ -106,6 +107,7 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "check user permission failed",
+			log.Err(err),
 			log.String("userID", userID),
 			log.String("schoolID", schoolID),
 			log.String("permissionName", permissionName.String()))

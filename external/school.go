@@ -168,6 +168,7 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get schools by permission failed",
+			log.Err(err),
 			log.Any("operator", operator),
 			log.String("permissionName", permissionName.String()))
 		return nil, err

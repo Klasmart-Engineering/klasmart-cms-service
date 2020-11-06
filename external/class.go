@@ -108,7 +108,7 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 
 	_, err := GetChlorine().Run(ctx, request, &chlorine.Response{Data: data})
 	if err != nil {
-		log.Error(ctx, "query classes by user id failed", log.String("userID", userID))
+		log.Error(ctx, "query classes by user id failed", log.Err(err), log.String("userID", userID))
 		return nil, err
 	}
 
@@ -153,7 +153,7 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get classes by org ids failed", log.Strings("ids", organizationIDs))
+		log.Error(ctx, "get classes by org ids failed", log.Err(err), log.Strings("ids", organizationIDs))
 		return nil, err
 	}
 
@@ -202,7 +202,7 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get classes by org ids failed", log.Strings("ids", schoolIDs))
+		log.Error(ctx, "get classes by org ids failed", log.Err(err), log.Strings("ids", schoolIDs))
 		return nil, err
 	}
 

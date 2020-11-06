@@ -167,6 +167,7 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get has permission organizations failed",
+			log.Err(err),
 			log.Any("operator", operator),
 			log.String("permissionName", permissionName.String()))
 		return nil, err
