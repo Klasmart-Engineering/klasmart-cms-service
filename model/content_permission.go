@@ -248,7 +248,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 		//private模式，若需要查看archive需要权限，查看assets需要权限
 		permissions := make([]external.PermissionName, 0)
 		if containsInt(condition.ContentType, entity.ContentTypeAssets) {
-			permissions = append(permissions, external.CreateContentPage201)
+			permissions = append(permissions, external.CreateAssetPage301)
 		}
 		if containsStr(condition.PublishStatus, entity.ContentStatusArchive) {
 			permissions = append(permissions, external.ArchivedContentPage205)
@@ -262,6 +262,7 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, permiss
 	if len(permissions) < 1 {
 		return true, nil
 	}
+
 	for i := range permissions {
 		hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, permissions[i])
 		if err != nil{

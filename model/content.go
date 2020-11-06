@@ -1064,8 +1064,8 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 
 	condition1.Scope = cm.listAllScopes(ctx, user)
 	//condition2 others
-	//
-	condition2.PublishStatus = []string{entity.ContentStatusPublished}
+
+	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
 
 	//filter visible
 	scopes := cm.listVisibleScopes(ctx, visiblePermissionPublished, user)
@@ -1235,6 +1235,24 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 	return newStatus
 }
 
+
+func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status []string) []string {
+	newStatus := make([]string, 0)
+	for i := range status {
+		if status[i] == entity.ContentStatusPublished ||
+			status[i] == entity.ContentStatusArchive {
+			newStatus = append(newStatus, status[i])
+		}
+	}
+	if len(newStatus) < 1 {
+		return []string{
+			entity.ContentStatusPublished,
+		}
+	}
+	return newStatus
+}
+
+
 func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *entity.Content, children []*entity.Content) error {
 	//TODO: To implement, check publish scope
 	for i := range children {
@@ -1348,6 +1366,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//scope
+	//TODO:change to get org name
 	publishScopeProvider := external.GetPublishScopeProvider()
 	publishScopes, err := publishScopeProvider.BatchGet(ctx, scopeIds)
 	if err != nil {
@@ -1473,11 +1492,25 @@ func (cm *ContentModel) pickOutcomes(ctx context.Context, pickIds []string, outc
 
 func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission ,operator *entity.Operator) []string {
 	//TODO:添加scope
+	//p := external.PublishedContentPage204
+	//if permission == visiblePermissionPending {
+	//	p = external.PendingContentPage203
+	//}
+	//external.GetPermissionServiceProvider().GetHasPermissionOrganizations(ctx, operator, p)
+
 	return []string{operator.OrgID}
 }
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) []string {
-	//TODO:添加scope
-	return []string{operator.OrgID}
+	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator.OrgID)
+	if err != nil{
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+	}
+	ret := []string{operator.OrgID}
+	for i := range schools{
+		ret = append(ret, schools[i].ID)
+	}
+
+	return ret
 }
 
 func stringToStringArray(ctx context.Context, str string) []string {
