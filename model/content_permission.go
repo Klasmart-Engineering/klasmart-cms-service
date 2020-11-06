@@ -26,6 +26,13 @@ type IContentPermissionModel interface{
 	CheckLockContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
 	CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error)
 	CheckQueryContentPermission(ctx context.Context, condition da.ContentCondition, mode QueryMode, user *entity.Operator) (bool, error)
+
+	GetPermissionedOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]Entity, error)
+}
+
+type Entity struct {
+	ID string
+	Name string
 }
 
 type ContentPermissionModel struct{}
@@ -309,6 +316,32 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 		return true, nil
 	}
 	return false, nil
+}
+
+func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]Entity, error){
+	schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permission)
+	if err != nil{
+		log.Error(ctx, "get permission orgs failed", log.Err(err))
+		return nil, err
+	}
+	entities := make([]Entity, 0)
+	for i := range schools {
+		entities = append(entities, Entity{
+			ID:   schools[i].ID,
+			Name: schools[i].Name,
+		})
+	}
+	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, []string{op.OrgID})
+	if err != nil || len(orgs) < 1{
+		log.Error(ctx, "get org info failed", log.Err(err))
+		return nil, err
+	}
+
+	entities = append(entities, Entity{
+		ID:   op.OrgID,
+		Name: orgs[0].Name,
+	})
+	return entities, nil
 }
 
 func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {

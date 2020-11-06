@@ -3,9 +3,9 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
+	"strconv"
 )
 
 // @Summary getVisibilitySetting
@@ -14,12 +14,22 @@ import (
 // @Accept json
 // @Produce json
 // @Tags visibilitySetting
+// @Param contentType path string true "content type"
 // @Success 200 {array} entity.VisibilitySetting
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /visibility_settings [get]
+// @Router /visibility_settings/{content_type} [get]
 func (s *Server) getVisibilitySetting(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := model.GetVisibilitySettingModel().Query(ctx, &da.VisibilitySettingCondition{})
+	op := GetOperator(c)
+	contentType := c.Param("content_type")
+
+	contentTypeInt, err := strconv.Atoi(contentType)
+	if err != nil{
+		c.JSON(http.StatusBadRequest, L(Unknown))
+		return
+	}
+
+	result, err := model.GetVisibilitySettingModel().Query(ctx, contentTypeInt, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
