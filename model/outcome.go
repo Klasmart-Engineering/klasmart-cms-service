@@ -59,13 +59,14 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 			log.Any("outcome", outcome))
 		return
 	}
-	outcome.OrganizationID, _, err = ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
-	if err != nil {
-		log.Error(ctx, "CreateLearningOutcome: getRootOrganizationByAuthorID failed",
-			log.String("op", operator.UserID),
-			log.Any("outcome", outcome))
-		return
-	}
+	outcome.OrganizationID = operator.OrgID
+	//outcome.OrganizationID, _, err = ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
+	//if err != nil {
+	//	log.Error(ctx, "CreateLearningOutcome: getRootOrganizationByAuthorID failed",
+	//		log.String("op", operator.UserID),
+	//		log.Any("outcome", outcome))
+	//	return
+	//}
 	outcome.Shortcode, err = ocm.getShortCode(ctx, outcome.OrganizationID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: getShortCode failed",
@@ -151,14 +152,14 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 
 func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
 	if condition.OrganizationID == "" {
-		orgID, _, err := ocm.getRootOrganizationByAuthorID(ctx, user.UserID)
-		if err != nil {
-			log.Error(ctx, "SearchLearningOutcome: getRootOrganizationByAuthorID failed",
-				log.String("op", user.UserID),
-				log.Any("condition", condition))
-			return 0, nil, err
-		}
-		condition.OrganizationID = orgID
+		//orgID, _, err := ocm.getRootOrganizationByAuthorID(ctx, user.UserID)
+		//if err != nil {
+		//	log.Error(ctx, "SearchLearningOutcome: getRootOrganizationByAuthorID failed",
+		//		log.String("op", user.UserID),
+		//		log.Any("condition", condition))
+		//	return 0, nil, err
+		//}
+		condition.OrganizationID = user.OrgID
 	}
 	if condition.PublishStatus == "" { // Must search published outcomes
 		condition.PublishStatus = entity.OutcomeStatusPublished
@@ -240,13 +241,13 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 
 func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID string, scope string, operator *entity.Operator) error {
 	if scope == "" {
-		scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
-		if err != nil {
-			log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
-				log.String("op", operator.UserID),
-				log.String("outcome_id", outcomeID))
-		}
-		scope = scopeID
+		//scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
+		//if err != nil {
+		//	log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
+		//		log.String("op", operator.UserID),
+		//		log.String("outcome_id", outcomeID))
+		//}
+		scope = operator.OrgID
 	}
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
@@ -289,13 +290,13 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID st
 
 func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, scope string, operator *entity.Operator) error {
 	if scope == "" {
-		scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
-		if err != nil {
-			log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
-				log.String("op", operator.UserID),
-				log.Strings("outcome_ids", outcomeIDs))
-		}
-		scope = scopeID
+		//scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
+		//if err != nil {
+		//	log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
+		//		log.String("op", operator.UserID),
+		//		log.Strings("outcome_ids", outcomeIDs))
+		//}
+		scope = operator.OrgID
 	}
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		condition := da.OutcomeCondition{
