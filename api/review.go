@@ -2,6 +2,7 @@ package api
 
 import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,31 @@ func (s *Server) approve(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
 		return
 	}
-	err := model.GetReviewerModel().Approve(ctx, dbo.MustGetDB(ctx), cid, op)
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingContent271)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	if !hasPermission {
+		content, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
+		if err != nil {
+			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(Unknown))
+			return
+		}
+
+		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, content.PublishScope, external.ApprovePendingContent271)
+		if err != nil{
+			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(Unknown))
+			return
+		}
+		if !hasPermission {
+			c.JSON(http.StatusForbidden, L(Unknown))
+			return
+		}
+	}
+	err = model.GetReviewerModel().Approve(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
 	case model.ErrNoContent:
 		log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
@@ -78,6 +103,38 @@ func (s *Server) reject(c *gin.Context) {
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, "can't bind data")
+		return
+	}
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingContent272)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	if !hasPermission {
+		content, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
+		if err != nil {
+			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(Unknown))
+			return
+		}
+
+		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, content.PublishScope, external.ApprovePendingContent271)
+		if err != nil{
+			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(Unknown))
+			return
+		}
+		if !hasPermission {
+			c.JSON(http.StatusForbidden, L(Unknown))
+			return
+		}
+	}
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(Unknown))
 		return
 	}
 	// extract reject reason
