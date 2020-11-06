@@ -51,7 +51,8 @@ func (s *Server) getVisibilitySetting(c *gin.Context) {
 func (s *Server) getVisibilitySettingByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := model.GetVisibilitySettingModel().GetByID(ctx, id)
+	op := GetOperator(c)
+	result, err := model.GetVisibilitySettingModel().GetByID(ctx, id, op)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(Unknown))
