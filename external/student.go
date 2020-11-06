@@ -13,6 +13,7 @@ import (
 
 type StudentServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*Student, error)
+	GetByClassID(ctx context.Context, classID string) ([]*Student, error)
 }
 
 type Student struct {
@@ -80,4 +81,37 @@ func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Stude
 	}
 
 	return students, nil
+}
+
+func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]*Student, error) {
+	q := `query ($classID: ID!){
+	class(class_id: $classID){
+		students{
+			id: user_id
+			name: user_name
+		}
+  	}
+}`
+	req := chlorine.NewRequest(q)
+	req.Var("classID", classID)
+	var payload []*Student
+	res := chlorine.Response{
+		Data: &struct {
+			Class struct {
+				Students *[]*Student `json:"students"`
+			} `json:"class"`
+		}{Class: struct {
+			Students *[]*Student `json:"students"`
+		}{Students: &payload}},
+	}
+	_, err := GetChlorine().Run(ctx, req, &res)
+	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
+		return nil, err
+	}
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
+	return payload, nil
 }
