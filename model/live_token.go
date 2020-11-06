@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -15,7 +16,6 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
@@ -89,7 +89,14 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	liveTokenInfo.Teacher = true //op.Role == entity.RoleTeacher
+	isTeacher, err := s.isTeacher(ctx, op)
+	if err != nil {
+		log.Error(ctx, "MakeLivePreviewToken:judge is teacher error",
+			log.Err(err),
+			log.Any("op", op))
+		return "", err
+	}
+	liveTokenInfo.Teacher = isTeacher
 
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, contentID)
 	if err != nil {
@@ -114,31 +121,15 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 }
 
 func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (string, error) {
-	switch op.Role {
-	case entity.RoleTeacher:
-		teacherService := external.GetTeacherServiceProvider()
-		teacherInfos, err := teacherService.BatchGet(ctx, []string{op.UserID})
-		if err != nil {
-			log.Error(ctx, "getUserName:GetTeacherServiceProvider BatchGet error",
-				log.Err(err),
-				log.Any("op", op))
-			return "", err
-		}
-		if len(teacherInfos) <= 0 {
-			log.Error(ctx, "getUserName:teacher info not found",
-				log.Err(err),
-				log.Any("op", op))
-			return "", constant.ErrRecordNotFound
-		}
-		return teacherInfos[0].Name, nil
-	case entity.RoleStudent:
-		return entity.RoleStudent, nil
-	case entity.RoleAdmin:
-		return entity.RoleAdmin, nil
-	default:
-		log.Error(ctx, "getUserName:user role invalid", log.Any("op", op))
-		return "", constant.ErrRecordNotFound
+	userInfo, err := external.GetUserServiceProvider().Get(ctx, op.UserID)
+	if err != nil {
+		log.Error(ctx, "getUserName:get user name error",
+			log.Err(err),
+			log.Any("op", op),
+		)
+		return "", err
 	}
+	return userInfo.UserName, nil
 }
 
 func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo) (string, error) {
@@ -164,6 +155,31 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 		return "", err
 	}
 	return token, nil
+}
+
+func (s *liveTokenModel) isTeacher(ctx context.Context, op *entity.Operator) (bool, error) {
+	organization, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, external.LiveClassTeacher)
+	if err != nil {
+		log.Error(ctx, "isTeacher:GetOrganizationServiceProvider.GetByPermission error",
+			log.String("permission", string(external.LiveClassTeacher)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return false, err
+	}
+	school, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.LiveClassTeacher)
+	if err != nil {
+		log.Error(ctx, "isTeacher:GetSchoolServiceProvider.GetByPermission error",
+			log.String("permission", string(external.LiveClassTeacher)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return false, err
+	}
+	if len(organization) != 0 || len(school) != 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {

@@ -16,6 +16,7 @@ const (
 	ScheduleMsgEditOverlap   ResponseLabel = "schedule_schedule_msg_edit_all"
 	ScheduleMsgDeleteOverlap ResponseLabel = "schedule_msg_delete_overlap"
 	ScheduleMsgOverlap       ResponseLabel = "schedule_msg_overlap"
+	ScheduleMsgNoPermission  ResponseLabel = "schedule_msg_no_permission"
 )
 
 // L create response object with label
