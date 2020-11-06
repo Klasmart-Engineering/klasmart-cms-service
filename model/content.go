@@ -1384,9 +1384,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 	//scope
 	//TODO:change to get org name
-	publishScopeNameMap, err = external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, scopeIds)
+	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, scopeIds)
 	if err != nil {
 		log.Error(ctx, "can't get publish scope info", log.Err(err))
+	} else {
+		for i := range scopeIds {
+			publishScopeNameMap[scopeIds[i]] = publishScopeNameList[i]
+		}
 	}
 
 	//skill
