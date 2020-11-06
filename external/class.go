@@ -2,10 +2,13 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"text/template"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"go.uber.org/zap/buffer"
 )
@@ -128,8 +131,52 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 }
 
 func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationIDs []string) (map[string][]*Class, error) {
-	// TODO
-	return nil, nil
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range organizationIDs {
+		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{class_id class_name }}\n", index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String())
+
+	data := map[string]*struct {
+		Classes []struct {
+			ClassID   string `json:"class_id"`
+			ClassName string `json:"class_name"`
+		} `json:"classes"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get users by ids failed", log.Strings("ids", organizationIDs))
+		return nil, err
+	}
+
+	orgs := make(map[string][]*Class, len(organizationIDs))
+	var queryAlias string
+	for index := range organizationIDs {
+		queryAlias = fmt.Sprintf("q%d", index)
+		org, found := data[queryAlias]
+		if !found || org == nil {
+			log.Error(ctx, "user not found", log.String("id", organizationIDs[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		orgs[organizationIDs[index]] = make([]*Class, 0, len(org.Classes))
+		for _, class := range org.Classes {
+			orgs[organizationIDs[index]] = append(orgs[organizationIDs[index]], &Class{
+				ID:   class.ClassID,
+				Name: class.ClassName,
+			})
+		}
+	}
+
+	return orgs, nil
 }
 
 func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error) {
