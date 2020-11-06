@@ -722,7 +722,7 @@ func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContex
 
 func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name string, err error) {
 	provider := external.GetUserServiceProvider()
-	user, err := provider.GetUserInfoByID(ctx, id)
+	user, err := provider.Get(ctx, id)
 	if err != nil {
 		log.Error(ctx, "getAuthorNameByID: GetUserInfoByID failed",
 			log.Err(err),
@@ -778,16 +778,16 @@ func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id strin
 	return root.ID, root.Name, nil
 }
 
-func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id string) (orgID, orgName string, err error) {
-	provider := external.GetUserServiceProvider()
-	user, err := provider.GetUserInfoByID(ctx, id)
-	if err != nil {
-		log.Error(ctx, "getRootOrganizationByAuthorID failed",
-			log.Err(err),
-			log.String("user_id", id))
-	}
-	return ocm.getRootOrganizationByOrgID(ctx, user.OrgID)
-}
+// func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id string) (orgID, orgName string, err error) {
+// 	provider := external.GetUserServiceProvider()
+// 	user, err := provider.GetUserInfoByID(ctx, id)
+// 	if err != nil {
+// 		log.Error(ctx, "getRootOrganizationByAuthorID failed",
+// 			log.Err(err),
+// 			log.String("user_id", id))
+// 	}
+// 	return ocm.getRootOrganizationByOrgID(ctx, user.OrgID)
+// }
 
 var (
 	_outcomeModel     IOutcomeModel
