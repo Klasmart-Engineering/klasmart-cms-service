@@ -94,13 +94,15 @@ func (s AmsPermissionService) GetHasPermissionOrganizations(ctx context.Context,
 	request.Var("permission_name", permissionName.String())
 
 	data := &struct {
-		Memberships []struct {
-			Organization struct {
-				OrganizationID   string `json:"organization_id"`
-				OrganizationName string `json:"organization_name"`
-			} `json:"organization"`
-			CheckAllowed bool `json:"checkAllowed"`
-		} `json:"memberships"`
+		User struct {
+			Memberships []struct {
+				Organization struct {
+					OrganizationID   string `json:"organization_id"`
+					OrganizationName string `json:"organization_name"`
+				} `json:"organization"`
+				CheckAllowed bool `json:"checkAllowed"`
+			} `json:"memberships"`
+		} `json:"user"`
 	}{}
 
 	response := &chlorine.Response{
@@ -109,14 +111,14 @@ func (s AmsPermissionService) GetHasPermissionOrganizations(ctx context.Context,
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "check user permission failed",
+		log.Error(ctx, "get has permission organizations failed",
 			log.Any("operator", operator),
 			log.String("permissionName", permissionName.String()))
 		return nil, err
 	}
 
-	orgs := make([]*Organization, 0, len(data.Memberships))
-	for _, membership := range data.Memberships {
+	orgs := make([]*Organization, 0, len(data.User.Memberships))
+	for _, membership := range data.User.Memberships {
 		if !membership.CheckAllowed {
 			continue
 		}
