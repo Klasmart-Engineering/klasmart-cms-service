@@ -114,8 +114,16 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 }
 
 func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (string, error) {
-	switch op.Role {
-	case entity.RoleTeacher:
+	hasTeacherPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.LiveClassTeacher)
+	if err != nil {
+		log.Error(ctx, "check permission error",
+			log.String("permission", string(external.LiveClassTeacher)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return "", err
+	}
+	if hasTeacherPermission {
 		teacherService := external.GetTeacherServiceProvider()
 		teacherInfos, err := teacherService.BatchGet(ctx, []string{op.UserID})
 		if err != nil {
@@ -131,14 +139,31 @@ func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (
 			return "", constant.ErrRecordNotFound
 		}
 		return teacherInfos[0].Name, nil
-	case entity.RoleStudent:
-		return entity.RoleStudent, nil
-	case entity.RoleAdmin:
-		return entity.RoleAdmin, nil
-	default:
-		log.Error(ctx, "getUserName:user role invalid", log.Any("op", op))
-		return "", constant.ErrRecordNotFound
 	}
+	hasStudentPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.LiveClassStudent)
+	if err != nil {
+		log.Error(ctx, "check permission error",
+			log.String("permission", string(external.LiveClassStudent)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return "", err
+	}
+	if hasStudentPermission {
+
+	}
+	return "", constant.ErrForbidden
+	//switch op.Role {
+	//case entity.RoleTeacher:
+	//
+	//case entity.RoleStudent:
+	//	return entity.RoleStudent, nil
+	//case entity.RoleAdmin:
+	//	return entity.RoleAdmin, nil
+	//default:
+	//	log.Error(ctx, "getUserName:user role invalid", log.Any("op", op))
+	//	return "", constant.ErrRecordNotFound
+	//}
 }
 
 func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo) (string, error) {

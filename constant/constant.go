@@ -46,6 +46,7 @@ var (
 	ErrInvalidArgs       = errors.New("invalid args")
 	ErrConflict          = errors.New("conflict")
 	ErrOperateNotAllowed = errors.New("operation not allowed")
+	ErrForbidden         = errors.New("forbidden")
 )
 
 const (

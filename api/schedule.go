@@ -33,7 +33,7 @@ import (
 // @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
 	op := GetOperator(c)
-	if !s.hasScheduleRWPermission(c, op, external.EditEvent) {
+	if !s.hasScheduleRWPermission(c, op, external.ScheduleEditEvent) {
 		return
 	}
 	ctx := c.Request.Context()
@@ -111,7 +111,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
 	op := GetOperator(c)
-	if !s.hasScheduleRWPermission(c, op, external.DeleteEvent) {
+	if !s.hasScheduleRWPermission(c, op, external.ScheduleDeleteEvent) {
 		return
 	}
 	ctx := c.Request.Context()
@@ -154,7 +154,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Router /schedules [post]
 func (s *Server) addSchedule(c *gin.Context) {
 	op := GetOperator(c)
-	if !s.hasScheduleRWPermission(c, op, external.CreateEvent) {
+	if !s.hasScheduleRWPermission(c, op, external.ScheduleCreateEvent) {
 		return
 	}
 	ctx := c.Request.Context()
@@ -357,13 +357,13 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	if len(persmission) == 0 {
 		return
 	}
-	// ViewOrgCalendar
-	if persmission[external.ViewOrgCalendar] {
-
-	}
-	// ViewMyCalendar
-	if persmission[external.ViewMyCalendar] {
-
+	// is ScheduleViewOrgCalendar or ScheduleViewMyCalendar permission
+	if persmission[external.ScheduleViewOrgCalendar] {
+		// 过滤条件中classIDs是否为空
+		// 1.为空，则根据orgID找到org下的所有班级，根据班级过滤schedule
+		// 2.不为空，则以classIDs中的数据进行过滤schedule
+	} else if persmission[external.ScheduleViewMyCalendar] {
+		// 如果是普通用户，则根据userID过滤只显示和他相关的schedule
 	}
 
 	ctx := c.Request.Context()
@@ -574,20 +574,20 @@ func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, pe
 func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) map[external.PermissionName]bool {
 	ctx := c.Request.Context()
 	result := make(map[external.PermissionName]bool)
-	viewOrg, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ViewOrgCalendar)
+	viewOrg, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewOrgCalendar)
 	if err != nil {
 		log.Error(ctx, "check permission error",
-			log.String("permission", string(external.ViewOrgCalendar)),
+			log.String("permission", string(external.ScheduleViewOrgCalendar)),
 			log.Any("operator", op),
 			log.Err(err),
 		)
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return result
 	}
-	viewMy, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ViewMyCalendar)
+	viewMy, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewMyCalendar)
 	if err != nil {
 		log.Error(ctx, "check permission error",
-			log.String("permission", string(external.ViewMyCalendar)),
+			log.String("permission", string(external.ScheduleViewMyCalendar)),
 			log.Any("operator", op),
 			log.Err(err),
 		)
@@ -595,8 +595,8 @@ func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) m
 		return result
 	}
 	if viewOrg || viewMy {
-		result[external.ViewOrgCalendar] = viewOrg
-		result[external.ViewMyCalendar] = viewMy
+		result[external.ScheduleViewOrgCalendar] = viewOrg
+		result[external.ScheduleViewMyCalendar] = viewMy
 		return result
 	}
 	c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
