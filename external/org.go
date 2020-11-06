@@ -14,7 +14,7 @@ type OrganizationServiceProvider interface {
 	GetMine(ctx context.Context, userID string) ([]*Organization, error)
 	GetParents(ctx context.Context, orgID string) ([]*Organization, error)
 	GetChildren(ctx context.Context, orgID string) ([]*Organization, error)
-	GetOrganizationOrSchoolName(ctx context.Context, id string) (string, error)
+	GetOrganizationOrSchoolName(ctx context.Context, id []string) (map[string]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error)
 }
 
@@ -70,7 +70,7 @@ func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) (
 	return []*Organization{}, nil
 }
 
-func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id string) (string, error) {
+func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) (map[string]string, error){
 	return "", nil
 }
 
