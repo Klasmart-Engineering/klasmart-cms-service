@@ -550,6 +550,12 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 	}
 }
+
+func (s *Server) getClassIDsByPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) ([]string, error) {
+	ctx := c.Request.Context()
+	external.GetOrganizationServiceProvider().GetChildren()
+}
+
 func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) bool {
 	ctx := c.Request.Context()
 	hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, permissionName)
