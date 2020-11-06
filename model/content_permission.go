@@ -19,7 +19,7 @@ var(
 
 type IContentPermissionModel interface{
 	CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error)
-	CheckPublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error)
+	CheckPublishContentsPermission(ctx context.Context, cids []string, scope string, user *entity.Operator) (bool, error)
 	CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
 
 	CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
@@ -32,7 +32,7 @@ type ContentPermissionModel struct{}
 
 func (cpm *ContentPermissionModel) CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error) {
 	//检查是否有添加权限
-	hasPermission, err := cpm.checkCMSPermission(ctx, cpm.createPermissionName(ctx, data.ContentType), user)
+	hasPermission, err := cpm.checkHasPermission(ctx, cpm.createPermissionName(ctx, data.ContentType), user)
 	if err != nil{
 		return false, err
 	}
@@ -43,7 +43,7 @@ func (cpm *ContentPermissionModel) CheckCreateContentPermission(ctx context.Cont
 	return true, nil
 }
 
-func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
+func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Context, cids []string, scope string, user *entity.Operator) (bool, error) {
 	contentList, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
 	if err != nil{
 		log.Warn(ctx, "get content list failed", log.Strings("ids", cids), log.Err(err))
@@ -60,6 +60,15 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 		}
 		if contentList[i].Author != user.UserID{
 			othersContents = append(othersContents, contentList[i])
+		}else if scope != "" {
+			//若作者是自己，且非republish，则查看权限
+			ret, err := cpm.checkCMSPermission(ctx, scope, cpm.createPermissionName(ctx, contentList[i].ContentType), user)
+			if err != nil{
+				return false, err
+			}
+			if !ret {
+				return false, nil
+			}
 		}
 	}
 	//若全是自己的content，则返回有权限
@@ -68,22 +77,26 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 	}
 
 	//检查是否有republished权限及该content是否为archive状态
-	hasPermission, err := cpm.checkCMSPermission(ctx, []external.PermissionName{external.RepublishArchivedContent274}, user)
-	if err != nil{
-		return false, err
-	}
-	if !hasPermission {
-		log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
-		return false, nil
-	}
-
-	//有republish archive权限
 	for i := range othersContents {
+		if scope == "" {
+			scope = othersContents[i].PublishScope
+		}
+		//有republish archive权限
 		if othersContents[i].PublishStatus != entity.ContentStatusArchive {
 			log.Info(ctx, "republish not archive content", log.String("cid", othersContents[i].ID))
 			return false, nil
 		}
+
+		hasPermission, err := cpm.checkCMSPermission(ctx, scope , []external.PermissionName{external.RepublishArchivedContent274}, user)
+		if err != nil{
+			return false, err
+		}
+		if !hasPermission {
+			log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
+			return false, nil
+		}
 	}
+
 	return true, nil
 }
 
@@ -100,7 +113,7 @@ func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context
 		return false, nil
 	}
 	//若是自己的content，则可以获取
-	if content.Author != user.UserID{
+	if content.Author == user.UserID{
 		return true, nil
 	}
 	//若不是自己的，未发布不能看
@@ -140,7 +153,7 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 		return false, nil
 	}
 	//若是自己的content，则可以修改
-	if content.Author != user.UserID{
+	if content.Author == user.UserID{
 		return true, nil
 	}
 	//不是自己的，查看lock_by和修改权限
@@ -149,8 +162,13 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 		return false, nil
 	}
 
+	if content.PublishStatus != entity.ContentStatusPublished {
+		log.Info(ctx, "update other's unpublished content", log.String("cid", cid), log.String("user_id", user.UserID))
+		return false, nil
+	}
+
 	//若被自己锁定，则查看权限
-	return cpm.checkCMSPermission(ctx, cpm.editPermissionName(ctx, content.ContentType), user)
+	return cpm.checkCMSPermission(ctx, content.PublishScope, cpm.editPermissionName(ctx, content.ContentType), user)
 }
 
 func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
@@ -174,12 +192,16 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 		return false, nil
 	}
 	//若是自己的content，则可以修改
-	if content.Author != user.UserID{
+	if content.Author == user.UserID{
 		return true, nil
 	}
 
+	if content.PublishStatus != entity.ContentStatusPublished {
+		log.Info(ctx, "update other's unpublished content", log.String("cid", cid), log.String("user_id", user.UserID))
+		return false, nil
+	}
 	//若未锁定，则查看权限
-	return cpm.checkCMSPermission(ctx, cpm.editPermissionName(ctx, content.ContentType), user)
+	return cpm.checkCMSPermission(ctx, content.PublishScope, cpm.editPermissionName(ctx, content.ContentType), user)
 }
 
 func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
@@ -207,58 +229,128 @@ func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Cont
 	}
 
 	//判断archive和published
-	hasArchive := false
-	hasPublished := false
 	for i := range othersContents {
+		permissions := make([]external.PermissionName, 0)
 		if othersContents[i].PublishStatus == entity.ContentStatusArchive {
-			hasArchive = true
+			permissions = append(permissions, external.DeleteArchivedContent275)
 		}else if othersContents[i].PublishStatus == entity.ContentStatusPublished {
-			hasPublished = true
+			permissions = append(permissions, external.ArchivePublishedContent273)
 		}else{
 			log.Info(ctx, "only archive and published content of other's can be deleted", log.String("user_id", user.UserID), log.String("cid", othersContents[i].ID))
 			return false, nil
 		}
+
+		flag, err := cpm.checkCMSPermission(ctx, othersContents[i].PublishScope, permissions, user)
+		if err != nil{
+			return false, err
+		}
+		if !flag {
+			return false, nil
+		}
 	}
-	permissions := make([]external.PermissionName, 0)
-	if hasArchive {
-		permissions = append(permissions, external.DeleteArchivedContent275)
-	}
-	if hasPublished {
-		permissions = append(permissions, external.ArchivePublishedContent273)
-	}
-	return cpm.checkCMSPermission(ctx, permissions, user)
+
+	return true, nil
 }
 
 func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Context, condition da.ContentCondition, mode QueryMode, user *entity.Operator) (bool, error) {
+	permissions := make([]external.PermissionName, 0)
 	switch mode {
 	case QueryModePending:
-		permissions := []external.PermissionName{external.PendingContentPage203}
-		return cpm.checkCMSPermission(ctx, permissions, user)
+		permissions = []external.PermissionName{external.PendingContentPage203}
+		for i := range condition.Scope {
+			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
+			if err != nil{
+				return false, err
+			}
+			if !ret {
+				return false, nil
+			}
+		}
+		return true, nil
+
 	case QueryModePublished:
 		//published模式，若需要查看archive需要权限，查看assets需要权限
-		permissions := []external.PermissionName{external.PublishedContentPage204}
+		permissions = []external.PermissionName{external.PublishedContentPage204}
 		if containsStr(condition.PublishStatus, entity.ContentStatusArchive) {
 			permissions = append(permissions, external.ArchivedContentPage205)
 		}
 		if containsInt(condition.ContentType, entity.ContentTypeAssets) {
 			permissions = append(permissions, external.CreateContentPage201)
 		}
-		return cpm.checkCMSPermission(ctx, permissions, user)
+		for i := range condition.Scope {
+			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
+			if err != nil{
+				return false, err
+			}
+			if !ret {
+				return false, nil
+			}
+		}
+		return true, nil
 	case QueryModePrivate:
 		//private模式，若需要查看archive需要权限，查看assets需要权限
-		permissions := make([]external.PermissionName, 0)
+		permissions = make([]external.PermissionName, 0)
 		if containsInt(condition.ContentType, entity.ContentTypeAssets) {
 			permissions = append(permissions, external.CreateAssetPage301)
 		}
 		if containsStr(condition.PublishStatus, entity.ContentStatusArchive) {
 			permissions = append(permissions, external.ArchivedContentPage205)
 		}
-		return cpm.checkCMSPermission(ctx, permissions, user)
+
+		for i := range condition.Scope {
+			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
+			if err != nil{
+				return false, err
+			}
+			if !ret {
+				return false, nil
+			}
+		}
+		return true, nil
 	}
 	return false, nil
 }
 
-func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
+func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
+	if len(permissions) < 1 {
+		return true, nil
+	}
+	//查看org权限
+	if scope == op.OrgID {
+		//检查Permission权限
+		for i := range permissions {
+			hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, permissions[i])
+			if err != nil{
+				log.Error(ctx, "get permission failed", log.Err(err))
+				return false, err
+			}
+			//有permission，直接返回
+			if hasPermission {
+				return true, nil
+			}
+		}
+		log.Info(ctx, "No permission", log.String("userID", op.UserID))
+		return false, nil
+	}
+
+	//检查学校权限
+	for i := range permissions {
+		schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permissions[i])
+		if err != nil{
+			log.Error(ctx, "get school permission failed", log.Err(err))
+			return false, err
+		}
+		for j := range schools {
+			if schools[j].ID == scope {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+
+func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
 	if len(permissions) < 1 {
 		return true, nil
 	}
@@ -275,17 +367,32 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, permiss
 		}
 	}
 
-	log.Info(ctx, "No permission", log.String("userID", op.UserID))
+	//检查学校权限
+	for i := range permissions {
+		schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permissions[i])
+		if err != nil{
+			log.Error(ctx, "get school permission failed", log.Err(err))
+			return false, err
+		}
+		if len(schools) > 0 {
+			return true, nil
+		}
+	}
 	return false, nil
 }
+
 func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content *entity.Content, permission external.PermissionName, op *entity.Operator) (bool, error) {
-	orgs, err := external.GetPermissionServiceProvider().GetHasPermissionOrganizations(ctx, op, permission)
+	schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, op, permission)
 	if err != nil{
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return false, err
 	}
+	orgs := []string{op.OrgID}
+	for i := range schools {
+		orgs = append(orgs, schools[i].ID)
+	}
 	for i := range orgs{
-		if orgs[i].ID == content.PublishScope {
+		if orgs[i] == content.PublishScope {
 			return true, nil
 		}
 	}

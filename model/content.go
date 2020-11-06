@@ -40,6 +40,7 @@ var (
 	ErrUpdateContentFailed               = errors.New("update contentdata into data access failed")
 	ErrReadContentFailed                 = errors.New("read content failed")
 	ErrDeleteContentFailed               = errors.New("delete contentdata into data access failed")
+	ErrInvalidVisibleScope               = errors.New("invalid visible scope")
 
 	ErrInvalidMaterialType = errors.New("invalid material type")
 
@@ -1062,15 +1063,23 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	condition1.Author = user.UserID
 	condition1.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition1.PublishStatus)
 
-	condition1.Scope = cm.listAllScopes(ctx, user)
+	scope, err := cm.listAllScopes(ctx, user)
+	if err != nil{
+		return 0, nil, err
+	}
+	condition1.Scope = scope
 	//condition2 others
 
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
 
 	//filter visible
-	scopes := cm.listVisibleScopes(ctx, visiblePermissionPublished, user)
-
+	scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+	if err != nil{
+		return 0, nil, err
+	}
 	condition2.Scope = scopes
+
+	//condition2.Scope = scopes
 
 	combineCondition := &da.CombineConditions{
 		SourceCondition: &condition1,
@@ -1084,14 +1093,22 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.Author = user.UserID
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
-	condition.Scope = cm.listAllScopes(ctx, user)
+	scope, err := cm.listAllScopes(ctx, user)
+	if err != nil{
+		return 0, nil, err
+	}
+	condition.Scope = scope
 
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
 func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = []string{entity.ContentStatusPending}
-	condition.Scope = cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+	scope, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+	if err != nil{
+		return 0, nil, err
+	}
+	condition.Scope = scope
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
@@ -1490,27 +1507,47 @@ func (cm *ContentModel) pickOutcomes(ctx context.Context, pickIds []string, outc
 	return ret
 }
 
-func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission ,operator *entity.Operator) []string {
+func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission ,operator *entity.Operator)  ([]string, error)  {
 	//TODO:添加scope
-	//p := external.PublishedContentPage204
-	//if permission == visiblePermissionPending {
-	//	p = external.PendingContentPage203
-	//}
-	//external.GetPermissionServiceProvider().GetHasPermissionOrganizations(ctx, operator, p)
-
-	return []string{operator.OrgID}
-}
-func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) []string {
-	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator.OrgID)
-	if err != nil{
+	p := external.PublishedContentPage204
+	if permission == visiblePermissionPending {
+		p = external.PendingContentPage203
+	}
+	schools, err := external.GetSchoolServiceProvider().GetByPermissionName(ctx, operator, p)
+	if err !=nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return nil, err
 	}
 	ret := []string{operator.OrgID}
 	for i := range schools{
 		ret = append(ret, schools[i].ID)
 	}
 
-	return ret
+	hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, operator, p)
+	if err !=nil {
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return nil, err
+	}else if hasPermission {
+		ret = append(ret, operator.OrgID)
+	}
+	if len(ret) == 0 {
+		return ret, ErrInvalidVisibleScope
+	}
+
+	return ret, nil
+}
+func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
+	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator.OrgID)
+	if err != nil{
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return nil, err
+	}
+	ret := []string{operator.OrgID}
+	for i := range schools{
+		ret = append(ret, schools[i].ID)
+	}
+
+	return ret, nil
 }
 
 func stringToStringArray(ctx context.Context, str string) []string {

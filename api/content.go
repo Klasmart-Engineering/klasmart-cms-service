@@ -117,7 +117,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	//if !isAuthor {
 	//
 	//}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, "", op)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
@@ -166,7 +166,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		return
 	}
 
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
@@ -210,7 +210,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
