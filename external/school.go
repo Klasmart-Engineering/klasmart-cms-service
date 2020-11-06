@@ -15,7 +15,7 @@ import (
 type SchoolServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*School, error)
 	GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error)
-	GetByPermissionName(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
+	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
 }
 
 type School struct {
@@ -90,7 +90,7 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, organizationI
 	return nil, nil
 }
 
-func (s AmsSchoolService) GetByPermissionName(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error) {
+func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error) {
 	// TODO: add impl
 	return nil, nil
 }

@@ -11,8 +11,8 @@ import (
 )
 
 type PermissionServiceProvider interface {
-	HasPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
-	GetHasPermissionOrganizations(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error)
+	HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
+	HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error)
 }
 
 var (
@@ -34,7 +34,7 @@ type AmsPermissionService struct {
 	client *chlorine.Client
 }
 
-func (s AmsPermissionService) HasPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
+func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error) {
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID! 
@@ -74,60 +74,7 @@ func (s AmsPermissionService) HasPermission(ctx context.Context, operator *entit
 	return data.User.Membership.CheckAllowed, nil
 }
 
-func (s AmsPermissionService) GetHasPermissionOrganizations(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error) {
-	request := chlorine.NewRequest(`
-	query(
-		$user_id: ID!
-		$permission_name: ID!
-	){
-		user(user_id: $user_id) {
-			memberships {
-				organization{
-					organization_id
-					organization_name        
-				}
-				checkAllowed(permission_name: $permission_name)
-			}
-		}
-	}`)
-	request.Var("user_id", operator.UserID)
-	request.Var("permission_name", permissionName.String())
-
-	data := &struct {
-		User struct {
-			Memberships []struct {
-				Organization struct {
-					OrganizationID   string `json:"organization_id"`
-					OrganizationName string `json:"organization_name"`
-				} `json:"organization"`
-				CheckAllowed bool `json:"checkAllowed"`
-			} `json:"memberships"`
-		} `json:"user"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: data,
-	}
-
-	_, err := GetChlorine().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get has permission organizations failed",
-			log.Any("operator", operator),
-			log.String("permissionName", permissionName.String()))
-		return nil, err
-	}
-
-	orgs := make([]*Organization, 0, len(data.User.Memberships))
-	for _, membership := range data.User.Memberships {
-		if !membership.CheckAllowed {
-			continue
-		}
-
-		orgs = append(orgs, &Organization{
-			ID:   membership.Organization.OrganizationID,
-			Name: membership.Organization.OrganizationName,
-		})
-	}
-
-	return orgs, nil
+func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error) {
+	// TODO
+	return false, nil
 }
