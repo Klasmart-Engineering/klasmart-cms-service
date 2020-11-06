@@ -562,16 +562,16 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedules []*entity.Sc
 			scheduleTeacherMap[item.ScheduleID] = append(scheduleTeacherMap[item.ScheduleID], item.TeacherID)
 		}
 		teacherIDs = utils.SliceDeduplication(teacherIDs)
-		teacherService := external.GetTeacherServiceProvider()
-		teacherInfos, err := teacherService.BatchGet(ctx, teacherIDs)
+		userService := external.GetUserServiceProvider()
+		teacherInfos, err := userService.BatchGet(ctx, teacherIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedules", schedules))
 			return nil, err
 		}
 		for _, item := range teacherInfos {
-			teacherMap[item.ID] = &entity.ScheduleShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
+			teacherMap[item.UserID] = &entity.ScheduleShortInfo{
+				ID:   item.UserID,
+				Name: item.UserName,
 			}
 		}
 	}
