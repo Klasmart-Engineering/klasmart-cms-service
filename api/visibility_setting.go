@@ -14,7 +14,7 @@ import (
 // @Accept json
 // @Produce json
 // @Tags visibilitySetting
-// @Param contentType path string true "content type"
+// @Param content_type path string true "content type"
 // @Success 200 {array} entity.VisibilitySetting
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /visibility_settings/{content_type} [get]

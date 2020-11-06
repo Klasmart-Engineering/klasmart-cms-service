@@ -2,6 +2,9 @@ package external
 
 import (
 	"context"
+	"go.uber.org/zap/buffer"
+	"strconv"
+	"text/template"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -71,7 +74,60 @@ func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) (
 }
 
 func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error){
-	return nil, nil
+	raw := `query{
+	org_{{$i}}: organization(organization_id: "{{$e}}"){
+		id: organization_id
+    	name: organization_name
+  	}
+	sch_{{$i}}: school(school_id: "{{$e}}"){
+		id: school
+    	name: school_name
+  	}
+	{{end}}
+}`
+	temp, err := template.New("OrgSch").Parse(raw)
+	if err != nil {
+		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+	buf := buffer.Buffer{}
+	err = temp.Execute(&buf, id)
+	if err != nil {
+		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+	req := chlorine.NewRequest(buf.String())
+	type Payload struct {
+		ID string `json:"id"`
+		Name string `json:"name"`
+	}
+	payload := make(map[string]*Payload, len(id))
+	res := chlorine.Response{
+		Data: &payload,
+	}
+
+	_, err = GetChlorine().Run(ctx, req, &res)
+	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
+		return nil, err
+	}
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
+	nameList := make([]string, len(id))
+	for k, v := range payload {
+		index, err := strconv.Atoi(k[len("org_"):])
+		if err != nil {
+			log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
+			return nil, err
+		}
+		if v != nil && nameList[index] == ""{
+			nameList[index] = v.Name
+		}
+
+	}
+	return nameList, nil
 }
 
 func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error) {
