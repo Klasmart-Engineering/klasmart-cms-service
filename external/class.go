@@ -13,8 +13,8 @@ import (
 type ClassServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*Class, error)
 	GetByUserID(ctx context.Context, userID string) ([]*Class, error)
-	GetByOrganizationID(ctx context.Context, orgID string) ([]*Class, error)
-	GetBySchoolIDs(ctx context.Context, schoolIDs []string) ([]*Class, error)
+	GetByOrganizationIDs(ctx context.Context, orgIDs []string) (map[string][]*Class, error)
+	GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error)
 }
 
 type Class struct {
@@ -127,12 +127,12 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 	return classes, nil
 }
 
-func (s AmsClassService) GetByOrganizationID(ctx context.Context, userID string) ([]*Class, error) {
+func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationIDs []string) (map[string][]*Class, error) {
 	// TODO
 	return nil, nil
 }
 
-func (s AmsClassService) GetBySchoolIDs(ctx context.Context, userIDs []string) ([]*Class, error) {
+func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error) {
 	// TODO
 	return nil, nil
 }

@@ -40,6 +40,7 @@ var (
 	ErrUpdateContentFailed               = errors.New("update contentdata into data access failed")
 	ErrReadContentFailed                 = errors.New("read content failed")
 	ErrDeleteContentFailed               = errors.New("delete contentdata into data access failed")
+	ErrInvalidVisibleScope               = errors.New("invalid visible scope")
 
 	ErrInvalidMaterialType = errors.New("invalid material type")
 
@@ -49,6 +50,13 @@ var (
 	ErrNoRejectReason     = errors.New("no reject reason")
 
 	ErrInvalidSelectForm = errors.New("invalid select form")
+)
+
+type visiblePermission string
+
+var(
+	visiblePermissionPublished visiblePermission = "published"
+	visiblePermissionPending visiblePermission = "pending"
 )
 
 type IContentModel interface {
@@ -83,6 +91,8 @@ type IContentModel interface {
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
+
+	IsContentsOperatorByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error)
 }
 
 type ContentModel struct {
@@ -126,7 +136,6 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 }
 
 func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
-	//TODO:Maybe wrong
 	err := cm.preparePublishContent(ctx, tx, content, user)
 	if err != nil {
 		log.Error(ctx, "prepare publish failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
@@ -167,6 +176,7 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 			return ErrInvalidSelectForm
 		}
 	}
+
 	return nil
 }
 
@@ -178,10 +188,6 @@ func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext
 		return content, nil
 	}
 
-	//TODO:maybe wrong
-	if content.Author != user.UserID {
-		return nil, ErrNoAuth
-	}
 	if content.PublishStatus == entity.ContentStatusPending ||
 		content.PublishStatus == entity.ContentStatusArchive ||
 		content.PublishStatus == entity.ContentStatusHidden ||
@@ -200,7 +206,6 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 		return ErrInvalidContentStatusToPublish
 	}
 
-	//TODO:检查子内容是否合法
 	contentData, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		return err
@@ -390,10 +395,6 @@ func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, ci
 		log.Error(ctx, "can't read contentdata for publishing", log.Err(err))
 		return err
 	}
-	//TODO:检查权限
-	//if content.LockedBy != user.UserID {
-	//	return ErrNoAuth
-	//}
 	content.LockedBy = constant.LockedByNoBody
 	return da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 }
@@ -455,7 +456,6 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	if err != nil {
 		return "", err
 	}
-	//TODO:检查权限
 	//克隆Content
 	ccid, err := cm.CloneContent(ctx, tx, content.ID, user)
 	if err != nil {
@@ -679,9 +679,6 @@ func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.
 }
 
 func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
-	if content.Author != user.UserID {
-		return ErrNoAuth
-	}
 	if content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		return ErrContentAlreadyLocked
 	}
@@ -774,13 +771,9 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 }
 
 func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
-	if user.UserID == content.Author {
-		return nil
-	}
-	//TODO:maybe wrong
-	if user.Role != "teacher" {
-		return nil
-	}
+	//if user.UserID == content.Author {
+	//	return nil
+	//}
 
 	if content.PublishStatus == entity.ContentStatusAttachment ||
 		content.PublishStatus == entity.ContentStatusHidden {
@@ -791,9 +784,7 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 		log.Error(ctx, "read unpublished content, userId: %v, contentId: %v", log.String("userID", user.UserID), log.String("contentID", content.ID))
 		return ErrGetUnpublishedContent
 	}
-	//TODO: Check org scope
-
-	return ErrGetUnauthorizedContent
+	return nil
 }
 
 func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error) {
@@ -1008,6 +999,20 @@ func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.
 	return resp, nil
 }
 
+func (cm *ContentModel) IsContentsOperatorByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error) {
+	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
+	if err != nil {
+		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
+		return false, ErrReadContentFailed
+	}
+	for i := range data {
+		if data[i].Author != user.UserID {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	if len(cids) < 1 {
 		return nil, nil
@@ -1018,7 +1023,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 	if len(nid) < 1 {
 		contentWithDetails, err := cm.buildContentWithDetails(ctx, cachedContent, user)
 		if err != nil {
-			log.Error(ctx, "can't parse contentdata", log.Err(err))
+			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Err(err))
 			return nil, ErrReadContentFailed
 		}
 		return contentWithDetails, nil
@@ -1026,14 +1031,14 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 
 	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, nid)
 	if err != nil {
-		log.Error(ctx, "can't read contentdata", log.Err(err))
+		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
 	res := make([]*entity.ContentInfo, len(data))
 	for i := range data {
 		temp, err := contentdata.ConvertContentObj(ctx, data[i])
 		if err != nil {
-			log.Error(ctx, "can't parse contentdata", log.String("id", data[i].ID), log.Err(err))
+			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.String("id", data[i].ID), log.Err(err))
 			return nil, ErrReadContentFailed
 		}
 		res[i] = temp
@@ -1041,7 +1046,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 	res = append(res, cachedContent...)
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, res, user)
 	if err != nil {
-		log.Error(ctx, "can't parse contentdata", log.Err(err))
+		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
 
@@ -1058,14 +1063,23 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	condition1.Author = user.UserID
 	condition1.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition1.PublishStatus)
 
+	scope, err := cm.listAllScopes(ctx, user)
+	if err != nil{
+		return 0, nil, err
+	}
+	condition1.Scope = scope
 	//condition2 others
-	//
-	condition2.PublishStatus = []string{entity.ContentStatusPublished}
+
+	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
 
 	//filter visible
-	scopes := cm.listVisibleScopes(ctx, user)
-
+	scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+	if err != nil{
+		return 0, nil, err
+	}
 	condition2.Scope = scopes
+
+	//condition2.Scope = scopes
 
 	combineCondition := &da.CombineConditions{
 		SourceCondition: &condition1,
@@ -1079,12 +1093,22 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.Author = user.UserID
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
+	scope, err := cm.listAllScopes(ctx, user)
+	if err != nil{
+		return 0, nil, err
+	}
+	condition.Scope = scope
 
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
 func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = []string{entity.ContentStatusPending}
+	scope, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+	if err != nil{
+		return 0, nil, err
+	}
+	condition.Scope = scope
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
@@ -1228,8 +1252,32 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 	return newStatus
 }
 
+
+func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status []string) []string {
+	newStatus := make([]string, 0)
+	for i := range status {
+		if status[i] == entity.ContentStatusPublished ||
+			status[i] == entity.ContentStatusArchive {
+			newStatus = append(newStatus, status[i])
+		}
+	}
+	if len(newStatus) < 1 {
+		return []string{
+			entity.ContentStatusPublished,
+		}
+	}
+	return newStatus
+}
+
+
 func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *entity.Content, children []*entity.Content) error {
-	//TODO: To implement
+	//TODO: To implement, check publish scope
+	for i := range children {
+		if children[i].PublishStatus != entity.ContentStatusPublished &&
+			children[i].PublishStatus != entity.ContentStatusHidden {
+			return ErrInvalidPublishStatus
+		}
+	}
 	return nil
 }
 
@@ -1335,13 +1383,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//scope
-	publishScopeProvider := external.GetPublishScopeProvider()
-	publishScopes, err := publishScopeProvider.BatchGet(ctx, scopeIds)
+	//TODO:change to get org name
+	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, scopeIds)
 	if err != nil {
-		log.Error(ctx, "can't get publish scope info", log.Err(err))
+		log.Error(ctx, "can't get publish scope info", log.Strings("scope", scopeIds), log.Err(err))
 	} else {
-		for i := range publishScopes {
-			publishScopeNameMap[publishScopes[i].ID] = publishScopes[i].Name
+		for i := range scopeIds {
+			publishScopeNameMap[scopeIds[i]] = publishScopeNameList[i]
 		}
 	}
 
@@ -1353,7 +1401,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "can't get skills info", log.Err(err))
+		log.Error(ctx, "can't get skills info", log.Strings("skillsIds", skillsIds), log.Err(err))
 	} else {
 		for i := range skills {
 			skillsNameMap[skills[i].ID] = skills[i].Name
@@ -1368,7 +1416,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "can't get age info", log.Err(err))
+		log.Error(ctx, "can't get age info", log.Strings("ageIds", ageIds), log.Err(err))
 	} else {
 		for i := range ages {
 			ageNameMap[ages[i].ID] = ages[i].Name
@@ -1383,7 +1431,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "can't get grade info", log.Err(err))
+		log.Error(ctx, "can't get grade info", log.Strings("gradeIds", gradeIds), log.Err(err))
 	} else {
 		for i := range grades {
 			gradeNameMap[grades[i].ID] = grades[i].Name
@@ -1458,8 +1506,47 @@ func (cm *ContentModel) pickOutcomes(ctx context.Context, pickIds []string, outc
 	return ret
 }
 
-func (cm *ContentModel) listVisibleScopes(ctx context.Context, operator *entity.Operator) []string {
-	return []string{operator.OrgID}
+func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission ,operator *entity.Operator)  ([]string, error)  {
+	//TODO:添加scope
+	p := external.PublishedContentPage204
+	if permission == visiblePermissionPending {
+		p = external.PendingContentPage203
+	}
+	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
+	if err !=nil {
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return nil, err
+	}
+	ret := []string{operator.OrgID}
+	for i := range schools{
+		ret = append(ret, schools[i].ID)
+	}
+
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, p)
+	if err !=nil {
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return nil, err
+	}else if hasPermission {
+		ret = append(ret, operator.OrgID)
+	}
+	if len(ret) == 0 {
+		return ret, ErrInvalidVisibleScope
+	}
+
+	return ret, nil
+}
+func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
+	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator.OrgID)
+	if err != nil{
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return nil, err
+	}
+	ret := []string{operator.OrgID}
+	for i := range schools{
+		ret = append(ret, schools[i].ID)
+	}
+
+	return ret, nil
 }
 
 func stringToStringArray(ctx context.Context, str string) []string {
