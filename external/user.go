@@ -12,14 +12,13 @@ import (
 )
 
 type UserServiceProvider interface {
-	GetUserInfoByID(ctx context.Context, userID string) (*User, error)
+	Get(ctx context.Context, userID string) (*User, error)
 	BatchGet(ctx context.Context, ids []string) ([]*User, error)
 }
 
 type User struct {
 	UserID   string `json:"user_id"`
 	UserName string `json:"user_name"`
-	OrgID    string `json:"org_id"`
 }
 
 var (
@@ -37,44 +36,13 @@ func GetUserServiceProvider() UserServiceProvider {
 
 type AmsUserService struct{}
 
-func (s AmsUserService) GetUserInfoByID(ctx context.Context, userID string) (*User, error) {
-	request := chlorine.NewRequest(`
-	query user($userID: ID!){
-		user(user_id:$userID){
-			user_id
-			user_name
-			my_organization {
-		  		organization_id
-			}
-		}
-	}`)
-	request.Var("userID", userID)
-
-	user := &struct {
-		User struct {
-			UserID         string `json:"user_id"`
-			UserName       string `json:"user_name"`
-			MyOrganization struct {
-				OrganizationID string `json:"organization_id"`
-			} `json:"my_organization"`
-		} `json:"user"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: user,
-	}
-
-	_, err := GetChlorine().Run(ctx, request, response)
+func (s AmsUserService) Get(ctx context.Context, userID string) (*User, error) {
+	users, err := s.BatchGet(ctx, []string{userID})
 	if err != nil {
-		log.Error(ctx, "get user by id failed", log.String("userID", userID))
 		return nil, err
 	}
 
-	return &User{
-		UserID:   user.User.UserID,
-		UserName: user.User.UserName,
-		OrgID:    user.User.MyOrganization.OrganizationID,
-	}, nil
+	return users[0], nil
 }
 
 func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*User, error) {
@@ -91,12 +59,9 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*User, er
 
 	request := chlorine.NewRequest(sb.String())
 
-	data := map[string]struct {
-		UserID         string `json:"user_id"`
-		UserName       string `json:"user_name"`
-		MyOrganization struct {
-			OrganizationID string `json:"organization_id"`
-		} `json:"my_organization"`
+	data := map[string]*struct {
+		UserID   string `json:"user_id"`
+		UserName string `json:"user_name"`
 	}{}
 
 	response := &chlorine.Response{
@@ -114,7 +79,8 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*User, er
 	for index := range ids {
 		queryAlias = fmt.Sprintf("u%d", index)
 		user, found := data[queryAlias]
-		if !found {
+		if !found || user == nil {
+			log.Error(ctx, "user not found", log.String("id", ids[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 
