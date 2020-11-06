@@ -3,9 +3,6 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"sync"
@@ -13,7 +10,7 @@ import (
 
 type IVisibilitySettingModel interface {
 	Query(ctx context.Context, contentType int, operator *entity.Operator) ([]*entity.VisibilitySetting, error)
-	GetByID(ctx context.Context, id string) (*entity.VisibilitySetting, error)
+	GetByID(ctx context.Context, id string, operator *entity.Operator) (*entity.VisibilitySetting, error)
 }
 
 type visibilitySettingModel struct {
@@ -27,17 +24,20 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 	//}
 	ret, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateContentPage201, operator)
 	if err != nil{
+		log.Error(ctx, "query error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
 		return nil, err
 	}
 	if contentType == entity.ContentTypeLesson {
 		ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonPlan221, operator)
 		if err != nil{
+			log.Error(ctx, "query lesson error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
 			return nil, err
 		}
 		ret = append(ret, ret2...)
 	}else if contentType == entity.ContentTypeMaterial {
 		ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonMaterial220, operator)
 		if err != nil{
+			log.Error(ctx, "query material error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
 			return nil, err
 		}
 		ret = append(ret, ret2...)
@@ -56,18 +56,35 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 	return result, nil
 }
 
-func (m *visibilitySettingModel) GetByID(ctx context.Context, id string) (*entity.VisibilitySetting, error) {
-	var result = new(entity.VisibilitySetting)
-	err := da.GetVisibilitySettingDA().Get(ctx, id, result)
-	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "GetByID:not found", log.Err(err), log.String("id", id))
-		return nil, constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "GetByID error", log.Err(err), log.String("id", id))
+func (m *visibilitySettingModel) GetByID(ctx context.Context, id string, operator *entity.Operator) (*entity.VisibilitySetting, error) {
+	ret, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateContentPage201, operator)
+	if err != nil{
+		log.Error(ctx, "query error", log.Err(err), log.String("id", id), log.Any("operator", operator))
 		return nil, err
 	}
-	return result, nil
+	ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonPlan221, operator)
+	if err != nil{
+		log.Error(ctx, "query lesson error", log.Err(err), log.String("id", id), log.Any("operator", operator))
+		return nil, err
+	}
+	ret = append(ret, ret2...)
+	ret3, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonMaterial220, operator)
+	if err != nil{
+		log.Error(ctx, "query material error", log.Err(err), log.String("id", id), log.Any("operator", operator))
+		return nil, err
+	}
+	ret = append(ret, ret3...)
+
+	for i := range ret {
+		if id == ret[i].ID {
+			return &entity.VisibilitySetting{
+				ID:   ret[i].ID,
+				Name: ret[i].Name,
+			}, nil
+		}
+	}
+
+	return nil, ErrInvalidVisibleScope
 }
 
 var (

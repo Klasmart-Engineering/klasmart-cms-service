@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
@@ -278,10 +279,10 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 	case QueryModePublished:
 		//published模式，若需要查看archive需要权限，查看assets需要权限
 		permissions = []external.PermissionName{external.PublishedContentPage204}
-		if containsStr(condition.PublishStatus, entity.ContentStatusArchive) {
+		if utils.ContainsStr(condition.PublishStatus, entity.ContentStatusArchive) {
 			permissions = append(permissions, external.ArchivedContentPage205)
 		}
-		if containsInt(condition.ContentType, entity.ContentTypeAssets) {
+		if utils.ContainsInt(condition.ContentType, entity.ContentTypeAssets) {
 			permissions = append(permissions, external.CreateContentPage201)
 		}
 		for i := range condition.Scope {
@@ -297,10 +298,10 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 	case QueryModePrivate:
 		//private模式，若需要查看archive需要权限，查看assets需要权限
 		permissions = make([]external.PermissionName, 0)
-		if containsInt(condition.ContentType, entity.ContentTypeAssets) {
+		if utils.ContainsInt(condition.ContentType, entity.ContentTypeAssets) {
 			permissions = append(permissions, external.CreateAssetPage301)
 		}
-		if containsStr(condition.PublishStatus, entity.ContentStatusArchive) {
+		if utils.ContainsStr(condition.PublishStatus, entity.ContentStatusArchive) {
 			permissions = append(permissions, external.ArchivedContentPage205)
 		}
 
@@ -459,22 +460,6 @@ func (s *ContentPermissionModel) deletePermissionName(ctx context.Context, conte
 		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonPlanContent238, external.EditLessonPlanMetadata237}
 	}
 	return nil
-}
-func containsStr(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-func containsInt(s []int, e int) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
 var (
 	_contentPermissionModel     IContentPermissionModel

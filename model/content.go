@@ -1002,7 +1002,7 @@ func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.
 func (cm *ContentModel) IsContentsOperatorByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error) {
 	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
 	if err != nil {
-		log.Error(ctx, "can't read contentdata", log.Err(err))
+		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
 		return false, ErrReadContentFailed
 	}
 	for i := range data {
@@ -1023,7 +1023,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 	if len(nid) < 1 {
 		contentWithDetails, err := cm.buildContentWithDetails(ctx, cachedContent, user)
 		if err != nil {
-			log.Error(ctx, "can't parse contentdata", log.Err(err))
+			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Err(err))
 			return nil, ErrReadContentFailed
 		}
 		return contentWithDetails, nil
@@ -1031,14 +1031,14 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 
 	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, nid)
 	if err != nil {
-		log.Error(ctx, "can't read contentdata", log.Err(err))
+		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
 	res := make([]*entity.ContentInfo, len(data))
 	for i := range data {
 		temp, err := contentdata.ConvertContentObj(ctx, data[i])
 		if err != nil {
-			log.Error(ctx, "can't parse contentdata", log.String("id", data[i].ID), log.Err(err))
+			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.String("id", data[i].ID), log.Err(err))
 			return nil, ErrReadContentFailed
 		}
 		res[i] = temp
@@ -1046,7 +1046,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 	res = append(res, cachedContent...)
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, res, user)
 	if err != nil {
-		log.Error(ctx, "can't parse contentdata", log.Err(err))
+		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
 
@@ -1386,7 +1386,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	//TODO:change to get org name
 	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, scopeIds)
 	if err != nil {
-		log.Error(ctx, "can't get publish scope info", log.Err(err))
+		log.Error(ctx, "can't get publish scope info", log.Strings("scope", scopeIds), log.Err(err))
 	} else {
 		for i := range scopeIds {
 			publishScopeNameMap[scopeIds[i]] = publishScopeNameList[i]
@@ -1401,7 +1401,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "can't get skills info", log.Err(err))
+		log.Error(ctx, "can't get skills info", log.Strings("skillsIds", skillsIds), log.Err(err))
 	} else {
 		for i := range skills {
 			skillsNameMap[skills[i].ID] = skills[i].Name
@@ -1416,7 +1416,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "can't get age info", log.Err(err))
+		log.Error(ctx, "can't get age info", log.Strings("ageIds", ageIds), log.Err(err))
 	} else {
 		for i := range ages {
 			ageNameMap[ages[i].ID] = ages[i].Name
@@ -1431,7 +1431,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "can't get grade info", log.Err(err))
+		log.Error(ctx, "can't get grade info", log.Strings("gradeIds", gradeIds), log.Err(err))
 	} else {
 		for i := range grades {
 			gradeNameMap[grades[i].ID] = grades[i].Name
