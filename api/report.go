@@ -36,7 +36,7 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 		SortBy:       entity.ReportSortBy(ctx.DefaultQuery("sort_by", string(entity.ReportSortByDesc))),
 		Operator:     &operator,
 	}
-	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), cmd)
+	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), &operator, cmd)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, result)
@@ -72,7 +72,7 @@ func (s *Server) getStudentDetailReport(ctx *gin.Context) {
 		LessonPlanID: ctx.Query("lesson_plan_id"),
 		Operator:     &operator,
 	}
-	result, err := model.GetReportModel().GetStudentDetailReport(requestContext, dbo.MustGetDB(requestContext), cmd)
+	result, err := model.GetReportModel().GetStudentDetailReport(requestContext, dbo.MustGetDB(requestContext), &operator, cmd)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, result)

@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -15,8 +14,8 @@ import (
 )
 
 type IReportModel interface {
-	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error)
-	GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error)
+	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error)
+	GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error)
 }
 
 var (
@@ -33,7 +32,7 @@ func GetReportModel() IReportModel {
 
 type reportModel struct{}
 
-func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error) {
+func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error) {
 	{
 		if !cmd.Status.Valid() {
 			log.Error(ctx, "list students report: invalid status", log.Any("cmd", cmd))
@@ -73,7 +72,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	log.Debug(ctx, "list students report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "list students report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -118,7 +117,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	return &result, nil
 }
 
-func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error) {
+func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error) {
 	{
 		if cmd.ClassID == "" {
 			log.Error(ctx, "get student detail report: require class id", log.Any("cmd", cmd))
@@ -163,7 +162,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	}
 
 	log.Debug(ctx, "get student detail report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "get student detail report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -291,8 +290,8 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	return &result, nil
 }
 
-func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, classID string, teacherID string, lessonPlanID string) ([]string, error) {
-	scheduleIDs, err := r.getScheduleIDs(ctx, tx, teacherID, classID, lessonPlanID)
+func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, teacherID, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids: get schedule ids failed",
 			log.Err(err),
@@ -317,25 +316,13 @@ func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, c
 	return result, nil
 }
 
-func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
-	items, err := GetScheduleModel().Query(ctx, &da.ScheduleCondition{
-		TeacherID: sql.NullString{
-			String: teacherID,
-			Valid:  true,
-		},
-		LessonPlanID: sql.NullString{
-			String: lessonPlanID,
-			Valid:  true,
-		},
-		ClassID: sql.NullString{
-			String: classID,
-			Valid:  true,
-		},
-		Status: sql.NullString{
-			String: string(entity.ScheduleStatusClosed),
-			Valid:  true,
-		},
+	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
+		TeacherID:    teacherID,
+		ClassID:      lessonPlanID,
+		LessonPlanID: classID,
+		Status:       entity.ScheduleStatusClosed,
 	})
 	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
 	if err != nil {
@@ -346,10 +333,6 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, cla
 			log.String("lesson_plan_id", lessonPlanID),
 		)
 		return nil, err
-	}
-	var result []string
-	for _, item := range items {
-		result = append(result, item.ID)
 	}
 	return result, nil
 }
