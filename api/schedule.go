@@ -3,6 +3,11 @@ package api
 import (
 	"context"
 	"database/sql"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -12,10 +17,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // @Summary updateSchedule
@@ -287,7 +288,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 
 	teacherName := c.Query("teacher_name")
 	if strings.TrimSpace(teacherName) != "" {
-		teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, teacherName)
+		teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, op.OrgID, teacherName)
 		if err != nil {
 			log.Info(ctx, "get teacher info by name error",
 				log.Err(err),

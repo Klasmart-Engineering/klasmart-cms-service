@@ -3,9 +3,10 @@ package model
 import (
 	"context"
 	"errors"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -54,9 +55,9 @@ var (
 
 type visiblePermission string
 
-var(
+var (
 	visiblePermissionPublished visiblePermission = "published"
-	visiblePermissionPending visiblePermission = "pending"
+	visiblePermissionPending   visiblePermission = "pending"
 )
 
 type IContentModel interface {
@@ -279,8 +280,8 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	//检查数据信息是否正确
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
-		provider := external.GetPublishScopeProvider()
-		c.PublishScope = provider.DefaultPublishScope(ctx)
+		// use operator's org id as asset publish scope, maybe not right...
+		c.PublishScope = operator.OrgID
 	}
 
 	err := cm.checkContentInfo(ctx, c, true)
@@ -966,7 +967,7 @@ func (cm *ContentModel) GetPastContentIDByID(ctx context.Context, tx *dbo.DBCont
 	}
 
 	_, res, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
-		LatestID:      data.LatestID,
+		LatestID: data.LatestID,
 	})
 	if err != nil {
 		log.Error(ctx, "can't search content", log.Err(err), log.String("latest id", data.LatestID))
@@ -992,7 +993,7 @@ func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.
 	for i := range data {
 		if data[i].LatestID != "" {
 			resp[i] = data[i].LatestID
-		}else{
+		} else {
 			resp[i] = data[i].ID
 		}
 	}
@@ -1064,7 +1065,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	condition1.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition1.PublishStatus)
 
 	scope, err := cm.listAllScopes(ctx, user)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	condition1.Scope = scope
@@ -1074,7 +1075,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 
 	//filter visible
 	scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	condition2.Scope = scopes
@@ -1094,7 +1095,7 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	condition.Author = user.UserID
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	scope, err := cm.listAllScopes(ctx, user)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	condition.Scope = scope
@@ -1105,7 +1106,7 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = []string{entity.ContentStatusPending}
 	scope, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	condition.Scope = scope
@@ -1117,7 +1118,7 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
-func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error){
+func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
@@ -1252,7 +1253,6 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-
 func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status []string) []string {
 	newStatus := make([]string, 0)
 	for i := range status {
@@ -1268,7 +1268,6 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 	}
 	return newStatus
 }
-
 
 func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *entity.Content, children []*entity.Content) error {
 	//TODO: To implement, check publish scope
@@ -1506,27 +1505,27 @@ func (cm *ContentModel) pickOutcomes(ctx context.Context, pickIds []string, outc
 	return ret
 }
 
-func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission ,operator *entity.Operator)  ([]string, error)  {
+func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error) {
 	//TODO:添加scope
 	p := external.PublishedContentPage204
 	if permission == visiblePermissionPending {
 		p = external.PendingContentPage203
 	}
 	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
-	if err !=nil {
+	if err != nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
 	}
 	ret := []string{operator.OrgID}
-	for i := range schools{
+	for i := range schools {
 		ret = append(ret, schools[i].ID)
 	}
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, p)
-	if err !=nil {
+	if err != nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
-	}else if hasPermission {
+	} else if hasPermission {
 		ret = append(ret, operator.OrgID)
 	}
 	if len(ret) == 0 {
@@ -1537,12 +1536,12 @@ func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visibl
 }
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
 	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator.OrgID)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
 	}
 	ret := []string{operator.OrgID}
-	for i := range schools{
+	for i := range schools {
 		ret = append(ret, schools[i].ID)
 	}
 
