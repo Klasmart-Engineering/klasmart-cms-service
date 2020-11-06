@@ -16,7 +16,7 @@ require (
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ugorji/go v1.1.8 // indirect
 	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.2
-	gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0
+	gitlab.badanamu.com.cn/calmisland/common-cn v0.16.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
 	gitlab.badanamu.com.cn/calmisland/dbo v0.1.7
 	gitlab.badanamu.com.cn/calmisland/distributed_lock v0.1.13
