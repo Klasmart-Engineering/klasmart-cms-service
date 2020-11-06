@@ -2,9 +2,10 @@ package external
 
 import (
 	"context"
-	"go.uber.org/zap/buffer"
 	"strconv"
 	"text/template"
+
+	"go.uber.org/zap/buffer"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -73,7 +74,7 @@ func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) (
 	return []*Organization{}, nil
 }
 
-func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error){
+func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error) {
 	raw := `query{
 	org_{{$i}}: organization(organization_id: "{{$e}}"){
 		id: organization_id
@@ -98,7 +99,7 @@ func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context,
 	}
 	req := chlorine.NewRequest(buf.String())
 	type Payload struct {
-		ID string `json:"id"`
+		ID   string `json:"id"`
 		Name string `json:"name"`
 	}
 	payload := make(map[string]*Payload, len(id))
@@ -122,7 +123,7 @@ func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context,
 			log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
 			return nil, err
 		}
-		if v != nil && nameList[index] == ""{
+		if v != nil && nameList[index] == "" {
 			nameList[index] = v.Name
 		}
 
@@ -135,14 +136,13 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	query(
 		$user_id: ID!
 		$permission_name: ID!
-	){
+	) {
 		user(user_id: $user_id) {
-			memberships {
-				organization{
+			organizationsWithPermission(permission_name: $permission_name) {
+				organization {
 					organization_id
-					organization_name        
+					organization_name
 				}
-				checkAllowed(permission_name: $permission_name)
 			}
 		}
 	}`)
@@ -151,13 +151,12 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 
 	data := &struct {
 		User struct {
-			Memberships []struct {
+			OrganizationsWithPermission []struct {
 				Organization struct {
 					OrganizationID   string `json:"organization_id"`
 					OrganizationName string `json:"organization_name"`
 				} `json:"organization"`
-				CheckAllowed bool `json:"checkAllowed"`
-			} `json:"memberships"`
+			} `json:"organizationsWithPermission"`
 		} `json:"user"`
 	}{}
 
@@ -173,12 +172,8 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 		return nil, err
 	}
 
-	orgs := make([]*Organization, 0, len(data.User.Memberships))
-	for _, membership := range data.User.Memberships {
-		if !membership.CheckAllowed {
-			continue
-		}
-
+	orgs := make([]*Organization, 0, len(data.User.OrganizationsWithPermission))
+	for _, membership := range data.User.OrganizationsWithPermission {
 		orgs = append(orgs, &Organization{
 			ID:   membership.Organization.OrganizationID,
 			Name: membership.Organization.OrganizationName,

@@ -52,9 +52,9 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School
 
 	request := chlorine.NewRequest(sb.String())
 
-	data := map[string]struct {
-		UserID   string `json:"user_id"`
-		UserName string `json:"user_name"`
+	data := map[string]*struct {
+		SchoolID   string `json:"school_id"`
+		SchoolName string `json:"school_name"`
 	}{}
 
 	response := &chlorine.Response{
@@ -63,7 +63,9 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get schools by ids failed", log.Strings("ids", ids))
+		log.Error(ctx, "get schools by ids failed",
+			log.Err(err),
+			log.Strings("ids", ids))
 		return nil, err
 	}
 
@@ -71,14 +73,15 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School
 	schools := make([]*School, 0, len(data))
 	for index := range ids {
 		queryAlias = fmt.Sprintf("u%d", index)
-		user, found := data[queryAlias]
-		if !found {
+		school, found := data[queryAlias]
+		if !found || school == nil {
+			log.Error(ctx, "school not found", log.String("id", ids[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 
 		schools = append(schools, &School{
-			ID:   user.UserID,
-			Name: user.UserName,
+			ID:   school.SchoolID,
+			Name: school.SchoolName,
 		})
 	}
 
@@ -86,11 +89,97 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School
 }
 
 func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error) {
-	// TODO: add impl
-	return nil, nil
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			schools{
+				school_id
+				school_name
+			}
+		}
+	}`)
+	request.Var("organization_id", organizationID)
+
+	data := &struct {
+		Organization struct {
+			Schools []struct {
+				SchoolID   string `json:"school_id"`
+				SchoolName string `json:"school_name"`
+			} `json:"schools"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query schools by organization failed",
+			log.Err(err),
+			log.String("organizationID", organizationID))
+		return nil, err
+	}
+
+	schools := make([]*School, 0, len(data.Organization.Schools))
+	for _, school := range data.Organization.Schools {
+		schools = append(schools, &School{
+			ID:   school.SchoolID,
+			Name: school.SchoolName,
+		})
+	}
+
+	return schools, nil
 }
 
 func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error) {
-	// TODO: add impl
-	return nil, nil
+	request := chlorine.NewRequest(`
+	query(
+		$user_id: ID!
+		$permission_name: String!
+	) {
+		user(user_id: $user_id) {
+			schoolsWithPermission(permission_name: $permission_name) {
+				school {
+					school_id
+					school_name
+				}
+			}
+		}
+	}`)
+	request.Var("user_id", operator.UserID)
+	request.Var("permission_name", permissionName.String())
+
+	data := &struct {
+		User struct {
+			SchoolsWithPermission []struct {
+				School struct {
+					SchoolID   string `json:"school_id"`
+					SchoolName string `json:"school_name"`
+				} `json:"school"`
+			} `json:"schoolsWithPermission"`
+		} `json:"user"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get schools by permission failed",
+			log.Any("operator", operator),
+			log.String("permissionName", permissionName.String()))
+		return nil, err
+	}
+
+	schools := make([]*School, 0, len(data.User.SchoolsWithPermission))
+	for _, membership := range data.User.SchoolsWithPermission {
+		schools = append(schools, &School{
+			ID:   membership.School.SchoolID,
+			Name: membership.School.SchoolName,
+		})
+	}
+
+	return schools, nil
 }
