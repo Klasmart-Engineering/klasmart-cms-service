@@ -3,10 +3,11 @@ package model
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -727,7 +728,7 @@ func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name 
 			log.String("user_id", id))
 		return "", err
 	}
-	return user.Name, nil
+	return user.UserName, nil
 }
 
 func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) (orgName string, err error) {
@@ -798,7 +799,6 @@ func GetOutcomeModel() IOutcomeModel {
 	})
 	return _outcomeModel
 }
-
 
 var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
 
