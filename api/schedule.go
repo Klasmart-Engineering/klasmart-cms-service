@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -352,11 +353,6 @@ const (
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	op := GetOperator(c)
-	// if has read permission
-	permission := s.getScheduleReadPermission(c, op)
-	if len(permission) == 0 {
-		return
-	}
 
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
@@ -410,23 +406,32 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
 	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
 	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
-	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
-	// is ScheduleViewOrgCalendar or ScheduleViewMyCalendar permission
-	if permission[external.ScheduleViewOrgCalendar] {
-		// 过滤条件中classIDs是否为空
-		// 1.为空，则根据orgID找到org下的所有班级，根据班级过滤schedule
-		// 2.不为空，则以classIDs中的数据进行过滤schedule
-		if len(classIDs.Strings) == 0 {
 
+	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
+	permissionClassIDs, err := s.getClassIDs(ctx, op)
+	if err != nil {
+		log.Error(ctx, "getScheduleTimeView:getClassIDs error",
+			log.Err(err),
+			log.Any("op", op),
+		)
+		c.JSON(http.StatusInternalServerError, L(Unknown))
+		return
+	}
+	// permissionClassIDs is not empty,this mean user have class information in the appropriate permissions
+	if len(permissionClassIDs) != 0 {
+		// if query class_ids is empty,use permissionClassIDs
+		if len(classIDs.Strings) == 0 {
+			classIDs.Strings = permissionClassIDs
 		}
 		condition.TeacherIDs = entity.SplitStringToNullStrings(c.Query("teacher_ids"))
-	} else if permission[external.ScheduleViewMyCalendar] {
-		// 如果是普通用户，则根据userID过滤只显示和他相关的schedule
+	} else {
+		// other user, filtering by user id
 		condition.TeacherID = sql.NullString{
 			String: op.UserID,
 			Valid:  true,
 		}
 	}
+
 	condition.ClassIDs = classIDs
 
 	log.Debug(ctx, "condition info", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
@@ -551,14 +556,100 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	}
 }
 
-func (s *Server) getClassIDsByPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) ([]string, error) {
-	ctx := c.Request.Context()
-	external.GetOrganizationServiceProvider().GetByPermission()
+func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string, error) {
+	schoolClassIDs, err := s.getClassIDsBySchoolPermission(ctx, op)
+	if err != nil {
+		log.Error(ctx, "getClassIDsByPermission:getClassIDsBySchoolPermission error",
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	orgClassIDs, err := s.getClassIDsByOrgPermission(ctx, op)
+	if err != nil {
+		log.Error(ctx, "getClassIDsByPermission:getClassIDsByOrgPermission error",
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	classIDs := make([]string, 0, len(schoolClassIDs)+len(orgClassIDs))
+	classIDs = append(classIDs, schoolClassIDs...)
+	classIDs = append(classIDs, orgClassIDs...)
+	classIDs = utils.SliceDeduplication(classIDs)
+	return classIDs, nil
+}
+
+func (s *Server) getClassIDsBySchoolPermission(ctx context.Context, op *entity.Operator) ([]string, error) {
+	classIDs := make([]string, 0)
+	schoolInfoList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
+	if err != nil {
+		log.Error(ctx, "check permission error",
+			log.String("permission", string(external.ScheduleViewSchoolCalendar)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	schoolIDs := make([]string, len(schoolInfoList))
+	for i, item := range schoolInfoList {
+		schoolIDs[i] = item.ID
+	}
+	classMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, schoolIDs)
+	if err != nil {
+		log.Error(ctx, "getClassIDsBySchoolPermission:GetClassServiceProvider GetBySchoolIDs error",
+			log.String("permission", string(external.ScheduleViewSchoolCalendar)),
+			log.Strings("schoolIDs", schoolIDs),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	if classList, ok := classMap[op.OrgID]; ok {
+		for _, item := range classList {
+			classIDs = append(classIDs, item.ID)
+		}
+	}
+	return classIDs, nil
+}
+
+func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Operator) ([]string, error) {
+	orgInfoList, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, external.ScheduleViewOrgCalendar)
+	if err != nil {
+		log.Error(ctx, "getClassIDsByOrgPermission：check permission error",
+			log.String("permission", string(external.ScheduleViewOrgCalendar)),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	orgIDs := make([]string, len(orgInfoList))
+	for i, item := range orgInfoList {
+		orgIDs[i] = item.ID
+	}
+	classMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, orgIDs)
+	if err != nil {
+		log.Error(ctx, "getClassIDsByOrgPermission:GetClassServiceProvider GetByOrganizationIDs error",
+			log.String("permission", string(external.ScheduleViewOrgCalendar)),
+			log.Strings("orgIDs", orgIDs),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+		return nil, err
+	}
+	var classIDs []string
+	if classList, ok := classMap[op.OrgID]; ok {
+		classIDs := make([]string, len(classList))
+		for _, item := range classList {
+			classIDs = append(classIDs, item.ID)
+		}
+	}
+	return classIDs, nil
 }
 
 func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) bool {
 	ctx := c.Request.Context()
-	hasPermission, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, permissionName)
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissionName)
 	if err != nil {
 		log.Error(ctx, "check permission error",
 			log.String("permission", string(permissionName)),
@@ -579,34 +670,34 @@ func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, pe
 	return true
 }
 
-func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) map[external.PermissionName]bool {
-	ctx := c.Request.Context()
-	result := make(map[external.PermissionName]bool)
-	viewOrg, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewOrgCalendar)
-	if err != nil {
-		log.Error(ctx, "check permission error",
-			log.String("permission", string(external.ScheduleViewOrgCalendar)),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		c.JSON(http.StatusInternalServerError, L(Unknown))
-		return result
-	}
-	viewMy, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewMyCalendar)
-	if err != nil {
-		log.Error(ctx, "check permission error",
-			log.String("permission", string(external.ScheduleViewMyCalendar)),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		c.JSON(http.StatusInternalServerError, L(Unknown))
-		return result
-	}
-	if viewOrg || viewMy {
-		result[external.ScheduleViewOrgCalendar] = viewOrg
-		result[external.ScheduleViewMyCalendar] = viewMy
-		return result
-	}
-	c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
-	return result
-}
+//func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) map[external.PermissionName]bool {
+//	ctx := c.Request.Context()
+//	result := make(map[external.PermissionName]bool)
+//	viewOrg, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewOrgCalendar)
+//	if err != nil {
+//		log.Error(ctx, "check permission error",
+//			log.String("permission", string(external.ScheduleViewOrgCalendar)),
+//			log.Any("operator", op),
+//			log.Err(err),
+//		)
+//		c.JSON(http.StatusInternalServerError, L(Unknown))
+//		return result
+//	}
+//	viewMy, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewMyCalendar)
+//	if err != nil {
+//		log.Error(ctx, "check permission error",
+//			log.String("permission", string(external.ScheduleViewMyCalendar)),
+//			log.Any("operator", op),
+//			log.Err(err),
+//		)
+//		c.JSON(http.StatusInternalServerError, L(Unknown))
+//		return result
+//	}
+//	if viewOrg || viewMy {
+//		result[external.ScheduleViewOrgCalendar] = viewOrg
+//		result[external.ScheduleViewMyCalendar] = viewMy
+//		return result
+//	}
+//	c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+//	return result
+//}

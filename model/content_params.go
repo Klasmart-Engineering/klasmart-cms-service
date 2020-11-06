@@ -58,7 +58,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	//get publishScope&authorName
 	publishScope := c.PublishScope
 	userInfo, err := external.GetUserServiceProvider().Get(ctx, operator.UserID)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, err
 	}
