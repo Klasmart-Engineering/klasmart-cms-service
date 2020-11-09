@@ -23,7 +23,7 @@ import (
 func (s *Server) getVisibilitySetting(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
-	contentType := c.Param("content_type")
+	contentType := c.Query("content_type")
 
 	contentTypeInt, err := strconv.Atoi(contentType)
 	if err != nil{
