@@ -28,33 +28,33 @@ func (s *Server) createOutcome(c *gin.Context) {
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "createOutcome: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	outcome, err := data.outcome()
 	if err != nil {
 		log.Warn(ctx, "createOutcome: outcome failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
 	data.OutcomeID = outcome.ID
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrResourceNotFound:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, &data, outcome))
 	default:
@@ -81,19 +81,19 @@ func (s *Server) getOutcome(c *gin.Context) {
 	outcome, err := model.GetOutcomeModel().GetLearningOutcomeByID(ctx, dbo.MustGetDB(ctx), outcomeID, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeView(ctx, outcome))
 	default:
@@ -122,34 +122,34 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	outcome, err := data.outcomeWithID(outcomeID)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: outcome failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	err = model.GetOutcomeModel().UpdateLearningOutcome(ctx, outcome, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusNotAcceptable, L(Unknown))
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -175,28 +175,28 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 	outcomeID := c.Param("id")
 	if outcomeID == "" {
 		log.Warn(ctx, "deleteOutcome: outcomeID is null", log.String("outcome_id", outcomeID))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	err := model.GetOutcomeModel().DeleteLearningOutcome(ctx, outcomeID, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrResourceNotFound:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -233,31 +233,31 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	err := c.ShouldBindQuery(&condition)
 	if err != nil {
 		log.Warn(ctx, "queryOutcomes: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	if err != nil {
 		log.Warn(ctx, "queryOutcomes: outcome failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrResourceNotFound:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, total, outcomes))
 	default:
@@ -284,21 +284,21 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	outcomeID := c.Param("id")
 	if outcomeID == "" {
 		log.Warn(ctx, "lockOutcome: outcomeID is null", log.String("outcome_id", outcomeID))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	newID, err := model.GetOutcomeModel().LockLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidPublishStatus:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, L(Unknown))
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, OutcomeLockResponse{newID})
 	default:
@@ -326,7 +326,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	outcomeID := c.Param("id")
 	if outcomeID == "" {
 		log.Warn(ctx, "publishOutcome: outcomeID is null", log.String("outcome_id", outcomeID))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
@@ -334,28 +334,28 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
 
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentStatusToPublish:
-		c.JSON(http.StatusNotAcceptable, L(Unknown))
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -383,23 +383,23 @@ func (s *Server) approveOutcome(c *gin.Context) {
 	err := model.GetOutcomeModel().ApproveLearningOutcome(ctx, outcomeID, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusNotAcceptable, L(Unknown))
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -429,29 +429,29 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	err := c.ShouldBindJSON(&reason)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	err = model.GetOutcomeModel().RejectLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, reason.RejectReason, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusNotAcceptable, L(Unknown))
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -481,26 +481,26 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "bulkPublishOutcomes: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	err = model.GetOutcomeModel().BulkPubLearningOutcome(ctx, dbo.MustGetDB(ctx), data.OutcomeIDs, "", op)
 	switch err {
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -530,25 +530,25 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "bulkPublishOutcomes: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	err = model.GetOutcomeModel().BulkDelLearningOutcome(ctx, dbo.MustGetDB(ctx), data.OutcomeIDs, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(Unknown))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -585,26 +585,26 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	err := c.ShouldBindQuery(&condition)
 	if err != nil {
 		log.Warn(ctx, "queryPrivateOutcomes: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	total, outcomes, err := model.GetOutcomeModel().SearchPrivateOutcomes(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, total, outcomes))
 	default:
@@ -641,28 +641,28 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	err := c.ShouldBindQuery(&condition)
 	if err != nil {
 		log.Warn(ctx, "queryPrivateOutcomes: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	total, outcomes, err := model.GetOutcomeModel().SearchPendingOutcomes(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case model.ErrBadRequest:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, total, outcomes))
 	default:

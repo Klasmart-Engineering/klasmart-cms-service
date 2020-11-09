@@ -33,25 +33,25 @@ func (s *Server) approve(c *gin.Context) {
 	}
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingContent271)
 	if err != nil{
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	if !hasPermission {
 		content, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
 		if err != nil {
 			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(Unknown))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
 
 		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, content.PublishScope, external.ApprovePendingContent271)
 		if err != nil{
 			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(Unknown))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
 		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(Unknown))
+			c.JSON(http.StatusForbidden, L(GeneralUnknown))
 			return
 		}
 	}
@@ -107,34 +107,34 @@ func (s *Server) reject(c *gin.Context) {
 	}
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingContent272)
 	if err != nil{
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	if !hasPermission {
 		content, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
 		if err != nil {
 			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(Unknown))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
 
 		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, content.PublishScope, external.ApprovePendingContent271)
 		if err != nil{
 			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(Unknown))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
 		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(Unknown))
+			c.JSON(http.StatusForbidden, L(GeneralUnknown))
 			return
 		}
 	}
 	if err != nil{
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 	// extract reject reason

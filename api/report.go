@@ -41,9 +41,9 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 	case nil:
 		ctx.JSON(http.StatusOK, result)
 	case constant.ErrInvalidArgs:
-		ctx.JSON(http.StatusBadRequest, L(Unknown))
+		ctx.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		ctx.JSON(http.StatusInternalServerError, L(Unknown))
+		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -77,10 +77,10 @@ func (s *Server) getStudentDetailReport(ctx *gin.Context) {
 	case nil:
 		ctx.JSON(http.StatusOK, result)
 	case constant.ErrInvalidArgs:
-		ctx.JSON(http.StatusBadRequest, L(Unknown))
+		ctx.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
-		ctx.JSON(http.StatusNotFound, L(Unknown))
+		ctx.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
-		ctx.JSON(http.StatusInternalServerError, L(Unknown))
+		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
