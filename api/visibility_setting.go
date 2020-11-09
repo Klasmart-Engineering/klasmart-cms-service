@@ -18,7 +18,7 @@ import (
 // @Param content_type path string true "content type"
 // @Success 200 {array} entity.VisibilitySetting
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /visibility_settings/{content_type} [get]
+// @Router /visibility_settings/{content_type}/list [get]
 func (s *Server) getVisibilitySetting(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
