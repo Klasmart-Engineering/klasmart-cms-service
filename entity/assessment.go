@@ -122,11 +122,12 @@ type AssessmentTeacher struct {
 }
 
 type ListAssessmentsQuery struct {
-	Status      *AssessmentStatus       `json:"status"`
-	TeacherName *string                 `json:"teacher_name"`
-	OrderBy     *ListAssessmentsOrderBy `json:"order_by"`
-	Page        int                     `json:"page"`
-	PageSize    int                     `json:"page_size"`
+	Status         *AssessmentStatus       `json:"status"`
+	OrganizationID string                  `json:"organization_id"`
+	TeacherName    *string                 `json:"teacher_name"`
+	OrderBy        *ListAssessmentsOrderBy `json:"order_by"`
+	Page           int                     `json:"page"`
+	PageSize       int                     `json:"page_size"`
 }
 
 type ListAssessmentsStatus string

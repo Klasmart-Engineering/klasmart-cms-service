@@ -70,7 +70,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*User, er
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get users by ids failed", log.Strings("ids", ids))
+		log.Error(ctx, "get users by ids failed", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
 

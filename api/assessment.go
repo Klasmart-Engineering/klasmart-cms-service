@@ -1,13 +1,14 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 // @Summary list assessments
@@ -28,6 +29,7 @@ import (
 // @Router /assessments [get]
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
+	operator := s.getOperator(c)
 
 	cmd := entity.ListAssessmentsQuery{}
 	{
@@ -49,6 +51,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 
 		teacherName := c.Query("teacher_name")
 		if teacherName != "" {
+			cmd.OrganizationID = operator.OrgID
 			cmd.TeacherName = &teacherName
 		}
 
