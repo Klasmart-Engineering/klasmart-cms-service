@@ -144,8 +144,8 @@ func (s Server) registeRoute() {
 	}
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{
-		visibilitySettings.GET("", MustLogin, s.getVisibilitySetting)
-		visibilitySettings.GET("/:id", MustLogin, s.getVisibilitySettingByID)
+		visibilitySettings.GET("/:content_type", MustLogin, s.getVisibilitySetting)
+		//visibilitySettings.GET("/:id", MustLogin, s.getVisibilitySettingByID)
 	}
 }
 
