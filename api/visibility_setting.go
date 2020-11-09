@@ -15,10 +15,10 @@ import (
 // @Accept json
 // @Produce json
 // @Tags visibilitySetting
-// @Param content_type path string true "content type"
+// @Param content_type query string true "content type"
 // @Success 200 {array} entity.VisibilitySetting
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /visibility_settings/{content_type}/list [get]
+// @Router /visibility_settings [get]
 func (s *Server) getVisibilitySetting(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
