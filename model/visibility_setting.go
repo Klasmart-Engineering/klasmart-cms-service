@@ -17,7 +17,7 @@ type visibilitySettingModel struct {
 }
 
 func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, operator *entity.Operator) ([]*entity.VisibilitySetting, error) {
-	//err := da.GetVisibilitySettingDA().Query(ctx, condition, &result)
+	//err := da.GetVisibilitySettingDA().Query(ctx, condget permission failedition, &result)
 	//if err != nil {
 	//	log.Error(ctx, "query error", log.Err(err), log.Any("condition", condition))
 	//	return nil, err
