@@ -28,14 +28,14 @@ func (s *Server) getVisibilitySetting(c *gin.Context) {
 	contentTypeInt, err := strconv.Atoi(contentType)
 	if err != nil{
 		log.Error(ctx, "request error", log.Err(err), log.String("contentType", contentType))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	result, err := model.GetVisibilitySettingModel().Query(ctx, contentTypeInt, op)
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.String("contentType", contentType), log.Int("contentTypeInt", contentTypeInt))
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -59,10 +59,10 @@ func (s *Server) getVisibilitySettingByID(c *gin.Context) {
 	result, err := model.GetVisibilitySettingModel().GetByID(ctx, id, op)
 	switch err {
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

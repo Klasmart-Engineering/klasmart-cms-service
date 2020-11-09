@@ -3,7 +3,7 @@ package api
 type ResponseLabel string
 
 const (
-	Unknown                    ResponseLabel = "unknown"
+	GeneralUnknown             ResponseLabel = "general_error_unknown"
 	GeneralUnAuthorized        ResponseLabel = "general_error_unauthorized"
 	GeneralUnAuthorizedNoOrgID ResponseLabel = "general_error_no_organization"
 )

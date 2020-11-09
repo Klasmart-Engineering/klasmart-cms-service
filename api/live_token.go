@@ -32,10 +32,10 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 		c.JSON(http.StatusOK, entity.LiveTokenView{Token: token})
 	case constant.ErrRecordNotFound:
 		log.Info(ctx, "schedule not found", log.Err(err), log.String("scheduleID", scheduleID))
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "make schedule live token error", log.Err(err), log.String("scheduleID", scheduleID))
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -61,10 +61,10 @@ func (s *Server) getContentLiveToken(c *gin.Context) {
 		c.JSON(http.StatusOK, entity.LiveTokenView{Token: token})
 	case constant.ErrRecordNotFound:
 		log.Info(ctx, "content not found", log.Err(err), log.String("contentID", contentID))
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 
 	default:
 		log.Error(ctx, "make content live token error", log.Err(err), log.String("contentID", contentID))
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
