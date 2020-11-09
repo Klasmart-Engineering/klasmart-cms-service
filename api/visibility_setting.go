@@ -17,6 +17,7 @@ import (
 // @Tags visibilitySetting
 // @Param content_type query string true "content type"
 // @Success 200 {array} entity.VisibilitySetting
+// @Success 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /visibility_settings [get]
 func (s *Server) getVisibilitySetting(c *gin.Context) {
