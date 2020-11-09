@@ -66,6 +66,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "check user permission failed",
+			log.Err(err),
 			log.Any("operator", operator),
 			log.String("permissionName", permissionName.String()))
 		return false, err
@@ -75,6 +76,43 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 }
 
 func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error) {
-	// TODO
-	return false, nil
+	request := chlorine.NewRequest(`
+	query(
+		$user_id: ID! 
+		$school_id: ID!
+		$permission_name: ID!
+	) {
+		user(user_id: $user_id) {
+			school_membership(school_id: $school_id) {
+				checkAllowed(permission_name: $permission_name)
+			}
+		}
+	}`)
+	request.Var("user_id", userID)
+	request.Var("school_id", schoolID)
+	request.Var("permission_name", permissionName.String())
+
+	data := &struct {
+		User struct {
+			SchoolMembership struct {
+				CheckAllowed bool `json:"checkAllowed"`
+			} `json:"school_membership"`
+		} `json:"user"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "check user permission failed",
+			log.Err(err),
+			log.String("userID", userID),
+			log.String("schoolID", schoolID),
+			log.String("permissionName", permissionName.String()))
+		return false, err
+	}
+
+	return data.User.SchoolMembership.CheckAllowed, nil
 }

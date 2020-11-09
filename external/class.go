@@ -2,10 +2,13 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"text/template"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"go.uber.org/zap/buffer"
 )
@@ -105,7 +108,7 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 
 	_, err := GetChlorine().Run(ctx, request, &chlorine.Response{Data: data})
 	if err != nil {
-		log.Error(ctx, "query classes by user id failed", log.String("userID", userID))
+		log.Error(ctx, "query classes by user id failed", log.Err(err), log.String("userID", userID))
 		return nil, err
 	}
 
@@ -128,11 +131,99 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 }
 
 func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationIDs []string) (map[string][]*Class, error) {
-	// TODO
-	return nil, nil
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range organizationIDs {
+		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{class_id class_name }}\n", index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String())
+
+	data := map[string]*struct {
+		Classes []struct {
+			ClassID   string `json:"class_id"`
+			ClassName string `json:"class_name"`
+		} `json:"classes"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get classes by org ids failed", log.Err(err), log.Strings("ids", organizationIDs))
+		return nil, err
+	}
+
+	classes := make(map[string][]*Class, len(organizationIDs))
+	var queryAlias string
+	for index := range organizationIDs {
+		queryAlias = fmt.Sprintf("q%d", index)
+		org, found := data[queryAlias]
+		if !found || org == nil {
+			log.Error(ctx, "classes not found", log.String("id", organizationIDs[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		classes[organizationIDs[index]] = make([]*Class, 0, len(org.Classes))
+		for _, class := range org.Classes {
+			classes[organizationIDs[index]] = append(classes[organizationIDs[index]], &Class{
+				ID:   class.ClassID,
+				Name: class.ClassName,
+			})
+		}
+	}
+
+	return classes, nil
 }
 
 func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error) {
-	// TODO
-	return nil, nil
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range schoolIDs {
+		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {classes{class_id class_name }}\n", index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String())
+
+	data := map[string]*struct {
+		Classes []struct {
+			ClassID   string `json:"class_id"`
+			ClassName string `json:"class_name"`
+		} `json:"classes"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get classes by org ids failed", log.Err(err), log.Strings("ids", schoolIDs))
+		return nil, err
+	}
+
+	classes := make(map[string][]*Class, len(schoolIDs))
+	var queryAlias string
+	for index := range schoolIDs {
+		queryAlias = fmt.Sprintf("q%d", index)
+		org, found := data[queryAlias]
+		if !found || org == nil {
+			log.Error(ctx, "classes not found", log.String("id", schoolIDs[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		classes[schoolIDs[index]] = make([]*Class, 0, len(org.Classes))
+		for _, class := range org.Classes {
+			classes[schoolIDs[index]] = append(classes[schoolIDs[index]], &Class{
+				ID:   class.ClassID,
+				Name: class.ClassName,
+			})
+		}
+	}
+
+	return classes, nil
 }

@@ -2,6 +2,10 @@ package external
 
 import (
 	"context"
+	"strconv"
+	"text/template"
+
+	"go.uber.org/zap/buffer"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -70,8 +74,62 @@ func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) (
 	return []*Organization{}, nil
 }
 
-func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error){
-	return nil, nil
+func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error) {
+	raw := `query{
+	{{range $i, $e := .}}
+	org_{{$i}}: organization(organization_id: "{{$e}}"){
+		id: organization_id
+    	name: organization_name
+  	}
+	sch_{{$i}}: school(school_id: "{{$e}}"){
+		id: school_id
+    	name: school_name
+  	}
+	{{end}}
+}`
+	temp, err := template.New("OrgSch").Parse(raw)
+	if err != nil {
+		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+	buf := buffer.Buffer{}
+	err = temp.Execute(&buf, id)
+	if err != nil {
+		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+	req := chlorine.NewRequest(buf.String())
+	type Payload struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	payload := make(map[string]*Payload, len(id))
+	res := chlorine.Response{
+		Data: &payload,
+	}
+
+	_, err = GetChlorine().Run(ctx, req, &res)
+	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
+		return nil, err
+	}
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
+	nameList := make([]string, len(id))
+	for k, v := range payload {
+		index, err := strconv.Atoi(k[len("org_"):])
+		if err != nil {
+			log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
+			return nil, err
+		}
+		if v != nil && nameList[index] == "" {
+			nameList[index] = v.Name
+		}
+
+	}
+	return nameList, nil
 }
 
 func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error) {
@@ -79,14 +137,13 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	query(
 		$user_id: ID!
 		$permission_name: ID!
-	){
+	) {
 		user(user_id: $user_id) {
-			memberships {
-				organization{
+			organizationsWithPermission(permission_name: $permission_name) {
+				organization {
 					organization_id
-					organization_name        
+					organization_name
 				}
-				checkAllowed(permission_name: $permission_name)
 			}
 		}
 	}`)
@@ -95,13 +152,12 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 
 	data := &struct {
 		User struct {
-			Memberships []struct {
+			OrganizationsWithPermission []struct {
 				Organization struct {
 					OrganizationID   string `json:"organization_id"`
 					OrganizationName string `json:"organization_name"`
 				} `json:"organization"`
-				CheckAllowed bool `json:"checkAllowed"`
-			} `json:"memberships"`
+			} `json:"organizationsWithPermission"`
 		} `json:"user"`
 	}{}
 
@@ -112,17 +168,14 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get has permission organizations failed",
+			log.Err(err),
 			log.Any("operator", operator),
 			log.String("permissionName", permissionName.String()))
 		return nil, err
 	}
 
-	orgs := make([]*Organization, 0, len(data.User.Memberships))
-	for _, membership := range data.User.Memberships {
-		if !membership.CheckAllowed {
-			continue
-		}
-
+	orgs := make([]*Organization, 0, len(data.User.OrganizationsWithPermission))
+	for _, membership := range data.User.OrganizationsWithPermission {
 		orgs = append(orgs, &Organization{
 			ID:   membership.Organization.OrganizationID,
 			Name: membership.Organization.OrganizationName,

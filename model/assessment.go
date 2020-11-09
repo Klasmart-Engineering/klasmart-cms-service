@@ -265,7 +265,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, cmd entit
 	{
 		if cmd.TeacherName != nil {
 			teacherService := external.GetTeacherServiceProvider()
-			items, err := teacherService.Query(ctx, *cmd.TeacherName)
+			items, err := teacherService.Query(ctx, cmd.OrganizationID, *cmd.TeacherName)
 			if err != nil {
 				log.Error(ctx, "list assessments: query teacher service failed",
 					log.Err(err),
