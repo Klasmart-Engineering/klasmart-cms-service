@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
@@ -25,12 +26,14 @@ func (s *Server) getVisibilitySetting(c *gin.Context) {
 
 	contentTypeInt, err := strconv.Atoi(contentType)
 	if err != nil{
+		log.Error(ctx, "request error", log.Err(err), log.String("contentType", contentType))
 		c.JSON(http.StatusBadRequest, L(Unknown))
 		return
 	}
 
 	result, err := model.GetVisibilitySettingModel().Query(ctx, contentTypeInt, op)
 	if err != nil {
+		log.Error(ctx, "query error", log.Err(err), log.String("contentType", contentType), log.Int("contentTypeInt", contentTypeInt))
 		c.JSON(http.StatusInternalServerError, L(Unknown))
 		return
 	}
