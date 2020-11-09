@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS `developments_skills` (
   KEY `idx_program_id` (`program_id`),
   KEY `idx_development_id` (`development_id`),
   KEY `idx_skill_id` (`skill_id`),
-  Key `idx_program_develop_skill` (`program_id`,`development_id`,`skill_id`),
+  Key `idx_program_develop_skill` (`program_id`,`development_id`,`skill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='developments_skills';
 
 CREATE TABLE IF NOT EXISTS `programs_subjects` (
