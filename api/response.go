@@ -5,6 +5,7 @@ type ResponseLabel string
 const (
 	Unknown             ResponseLabel = "unknown"
 	GeneralUnAuthorized               = "general_error_unauthorized"
+	GeneralUnAuthorizedNoOrgID = "general_error_no_organization"
 )
 
 const (
