@@ -426,6 +426,7 @@ func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content 
 	for i := range schools {
 		orgs = append(orgs, schools[i].ID)
 	}
+	log.Info(ctx, "user orgs with permission", log.Strings("orgs", orgs), log.String("permission", string(permission)), log.Any("user", op), log.Any("content", content))
 	for i := range orgs{
 		if orgs[i] == content.PublishScope {
 			return true, nil
