@@ -545,8 +545,14 @@ func (s *Server) queryContent(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(Unknown))
 		return
 	}
-
-	total, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	author := c.Query("author")
+	total := 0
+	var results []*entity.ContentInfoWithDetails
+	if author == "{self}" {
+		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	}else{
+		total, results, err = model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	}
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
