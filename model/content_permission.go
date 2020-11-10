@@ -264,6 +264,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 	permissions := make([]external.PermissionName, 0)
 	switch mode {
 	case QueryModePending:
+		log.Info(ctx, "check query pending content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
 		permissions = []external.PermissionName{external.PendingContentPage203}
 		for i := range condition.Scope {
 			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
@@ -278,6 +279,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 
 	case QueryModePublished:
 		//published模式，若需要查看archive需要权限，查看assets需要权限
+		log.Info(ctx, "check query published content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
 		permissions = []external.PermissionName{external.PublishedContentPage204}
 		if utils.ContainsStr(condition.PublishStatus, entity.ContentStatusArchive) {
 			permissions = append(permissions, external.ArchivedContentPage205)
@@ -297,6 +299,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 		return true, nil
 	case QueryModePrivate:
 		//private模式，若需要查看archive需要权限，查看assets需要权限
+		log.Info(ctx, "check query private content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
 		permissions = make([]external.PermissionName, 0)
 		if utils.ContainsInt(condition.ContentType, entity.ContentTypeAssets) {
 			permissions = append(permissions, external.CreateAssetPage301)
