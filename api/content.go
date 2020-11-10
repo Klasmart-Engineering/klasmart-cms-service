@@ -583,7 +583,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /contents/private [get]
+// @Router /contents_private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -631,7 +631,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /contents/pending [get]
+// @Router /contents_pending [get]
 func (s *Server) queryPendingContent(c *gin.Context) {
 
 	ctx := c.Request.Context()
