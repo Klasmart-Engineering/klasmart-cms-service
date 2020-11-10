@@ -38,13 +38,3 @@ Deploy_To_Lambda_Push:
   tags:
     - kidsloop2
   resource_group: $CI_JOB_NAME
-
-
-Deploy_To_Lambda_Push_Release:
-  extends:
-    - .TRIGGER_RULES_DEPLOY_RELEASE
-    - .PACKAGEZIP_UPDATECDK
-  stage: deploy_cdk_release
-  tags:
-    - kidsloop2
-  resource_group: $CI_JOB_NAME
