@@ -1,9 +1,20 @@
 package storage
 
 import (
+	"bytes"
 	"context"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
@@ -66,4 +77,155 @@ func TestS3Storage_GetUploadFileTempPath(t *testing.T) {
 		return
 	}
 	t.Log(path)
+}
+
+func TestCDNSignature2(t *testing.T) {
+	cdnConf := config.CDNConfig{
+		CDNOpen:           true,
+		CDNMode:           "key",
+		CDNPath:           "https://res-kl2-dev-cms.kidsloop.net",
+		CDNPrivateKeyPath: "./rsa_private_key.pem",
+		CDNKeyId: "K13M468939XCI0",
+	}
+	ctx := context.Background()
+	partition := "thumbnail"
+	filePath := "H62VVXAECMKFRAH5ZS5S4BZRDVAQRMQDMNGHTG7QHJIXL4AM76RA====.png"
+	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
+	keyID := cdnConf.CDNKeyId
+
+	privateKeyPEM, err := ioutil.ReadFile(cdnConf.CDNPrivateKeyPath)
+	if err != nil {
+		log.Error(ctx, "read cdn path failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
+		return
+	}
+	block, _ := pem.Decode(privateKeyPEM)
+	if block.Type != "RSA PRIVATE KEY" {
+		log.Error(ctx, "parse key pem failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+		)
+		return
+	}
+	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		log.Error(ctx, "parse public key failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+			log.Err(err),
+		)
+		return
+	}
+
+	signer := sign.NewURLSigner(keyID, privKey)
+	signedURL, err := signer.Sign(path, time.Now().Add(constant.PresignDurationMinutes))
+	if err != nil {
+		log.Error(ctx, "Get presigned url failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+			log.Err(err),
+		)
+		return
+	}
+	t.Log(signedURL)
+}
+
+func TestCDNService(t *testing.T) {
+	cdnConf := config.CDNConfig{
+		CDNOpen:           true,
+		CDNMode:           "service",
+		CDNPath:           "res-kl2-test.kidsloop.net",
+		CDNServicePath:    "https://raven.badanamu.net/cloudfront",
+		CDNServiceToken:   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkb25naHVuLmNob2lAY2FsbWlkLmNvbSIsImF1ZCI6IkNhbG1Jc2xhbmQgQ2hpbmEiLCJzdWIiOiJyYXZlbiIsImlhdCI6MTUxNjIzOTAyMn0.bmwSV36lNsgsMiTN56QnJT0IiTPF1UmkmN9OdaFCc5Q",
+	}
+	ctx := context.Background()
+	partition := "thumbnail"
+	filePath := "22BHFQU62WFITAHSEHYXQUQSKKRX5U2JBGFBHXNEKFPRZR4ZN6PA====.png"
+	params := &CDNServiceRequest{
+		URL:       cdnConf.CDNPath,
+		Duration: constant.PresignDurationMinutes,
+		FilePaths: []string{fmt.Sprintf("%s/%s", partition, filePath)},
+	}
+	data, err := json.Marshal(params)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	request, err := http.NewRequest("POST", cdnConf.CDNServicePath, bytes.NewReader(data))
+	if err != nil {
+		log.Error(ctx, "post url failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
+		t.Error(err)
+		return
+	}
+	request.Header.Set("Content-InputSource", "application/json")
+	request.Header.Set("charset", "utf-8")
+	request.Header.Set("Authorization", "Bearer "+cdnConf.CDNServiceToken)
+
+	resp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Error(ctx, "do http request failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
+		t.Error(err)
+		return
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(ctx, "get http resp failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
+		t.Error(err)
+		return
+	}
+	respData := new(CDNServiceResponse)
+	err = json.Unmarshal(respBody, respData)
+	if err != nil {
+		log.Error(ctx, "parse http resp failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("response", string(respBody)),
+			log.Err(err),
+		)
+		t.Log(string(respBody))
+		t.Error(err)
+		return
+	}
+	if len(respData.Result) < 1 {
+		log.Error(ctx, "parse http resp failed",
+			log.String("service_path", cdnConf.CDNServicePath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("response", string(respBody)),
+			log.Any("respData", respData),
+			log.Err(err),
+		)
+		t.Log(string(respBody))
+		t.Error(err)
+		return
+	}
+
+	t.Log(respData.Result[0].SignedURL)
 }

@@ -1074,11 +1074,16 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
 
 	//filter visible
-	scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
-	if err != nil {
-		return 0, nil, err
+	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
+		condition2.Scope = []string{user.OrgID}
+	}else{
+		scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+		if err != nil {
+			return 0, nil, err
+		}
+		condition2.Scope = scopes
 	}
-	condition2.Scope = scopes
+
 
 	//condition2.Scope = scopes
 
