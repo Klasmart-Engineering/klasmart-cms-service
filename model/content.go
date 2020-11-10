@@ -1068,7 +1068,10 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	if err != nil {
 		return 0, nil, err
 	}
-	condition1.Scope = scope
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+		condition1.Scope = scope
+	}
 	//condition2 others
 
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
@@ -1077,13 +1080,16 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
 		condition2.Scope = []string{user.OrgID}
 	}else{
-		scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+		scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPublished, user)
 		if err != nil {
 			return 0, nil, err
 		}
+		if len(scopes) == 0 {
+			log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
+			scopes = []string{constant.NoSearchItem}
+		}
 		condition2.Scope = scopes
 	}
-
 
 	//condition2.Scope = scopes
 
@@ -1103,6 +1109,10 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	if err != nil {
 		return 0, nil, err
 	}
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
+		scope = []string{constant.NoSearchItem}
+	}
 	condition.Scope = scope
 
 	return cm.searchContent(ctx, tx, &condition, user)
@@ -1114,7 +1124,10 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 	if err != nil {
 		return 0, nil, err
 	}
-	condition.Scope = scope
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+		condition.Scope = scope
+	}
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
