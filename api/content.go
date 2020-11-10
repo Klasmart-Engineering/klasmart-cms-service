@@ -575,7 +575,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param program query string false "search content program"
 // @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
-// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
@@ -623,7 +623,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
 // @Param source_type query string false "search content source type"
-// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
