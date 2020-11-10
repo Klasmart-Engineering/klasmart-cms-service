@@ -551,7 +551,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	if author == "{self}" {
 		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}else{
-		total, results, err = model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+		total, results, err = model.GetContentModel().SearchUserContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}
 	switch err {
 	case nil:
