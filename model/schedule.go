@@ -566,7 +566,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedules []*entity.Sc
 		userService := external.GetUserServiceProvider()
 		teacherInfos, err := userService.BatchGet(ctx, teacherIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider BatchGet error", log.Err(err), log.Any("schedules", schedules))
+			log.Error(ctx, "getBasicInfo:GetUserServiceProvider BatchGet error", log.Err(err), log.Any("schedules", schedules))
 			return nil, err
 		}
 		for _, item := range teacherInfos {
@@ -857,10 +857,11 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 	}
 	// teacher
 	teacherIDs := utils.SliceDeduplication(v.TeacherIDs)
-	teacherService := external.GetTeacherServiceProvider()
-	_, err = teacherService.BatchGet(ctx, teacherIDs)
+
+	userService := external.GetUserServiceProvider()
+	_, err = userService.BatchGet(ctx, teacherIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		log.Error(ctx, "getBasicInfo:GetUserServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
 
