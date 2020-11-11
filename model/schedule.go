@@ -639,9 +639,11 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs 
 			return nil, err
 		}
 		for _, item := range classInfos {
-			classMap[item.ID] = &entity.ScheduleShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
+			if item != nil {
+				classMap[item.ID] = &entity.ScheduleShortInfo{
+					ID:   item.ID,
+					Name: item.Name,
+				}
 			}
 		}
 	}
@@ -850,10 +852,16 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify) error {
 	// class
 	classService := external.GetClassServiceProvider()
-	_, err := classService.BatchGet(ctx, []string{v.ClassID})
+	classInfos, err := classService.BatchGet(ctx, []string{v.ClassID})
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
+	}
+	for _, item := range classInfos {
+		if item == nil {
+			log.Error(ctx, "getBasicInfo:GetClassServiceProvider class info not found", log.Any("ScheduleVerify", v))
+			return constant.ErrRecordNotFound
+		}
 	}
 	// teacher
 	teacherIDs := utils.SliceDeduplication(v.TeacherIDs)
