@@ -194,7 +194,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 		log.Warn(ctx, "asset can't update", log.String("id", cid), log.Err(err))
 		return false, nil
 	}
-	if content.LockedBy != "" {
+	if content.LockedBy != "" && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't lock content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
 		return false, nil
 	}
@@ -205,7 +205,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 		return false, nil
 	}
 	//若是自己的content，则可以修改
-	if content.Author == user.UserID{
+	if content.Author == user.UserID || content.LockedBy == user.UserID{
 		return true, nil
 	}
 
