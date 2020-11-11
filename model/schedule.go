@@ -861,7 +861,10 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 	userService := external.GetUserServiceProvider()
 	_, err = userService.BatchGet(ctx, teacherIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetUserServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		log.Error(ctx, "getBasicInfo:GetUserServiceProvider BatchGet error",
+			log.Err(err),
+			log.Strings("teacherIDs", teacherIDs),
+			log.Any("ScheduleVerify", v))
 		return err
 	}
 
