@@ -4,6 +4,7 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -161,7 +162,7 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 		return false, nil
 	}
 	//不是自己的，查看lock_by和修改权限
-	if content.LockedBy != "" && content.LockedBy != user.UserID {
+	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't update content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
 		return false, nil
 	}
@@ -194,7 +195,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 		log.Warn(ctx, "asset can't update", log.String("id", cid), log.Err(err))
 		return false, nil
 	}
-	if content.LockedBy != "" && content.LockedBy != user.UserID {
+	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't lock content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
 		return false, nil
 	}
