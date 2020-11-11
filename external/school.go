@@ -75,7 +75,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School
 		queryAlias = fmt.Sprintf("u%d", index)
 		school, found := data[queryAlias]
 		if !found || school == nil {
-			log.Error(ctx, "school not found", log.String("id", ids[index]))
+			log.Error(ctx, "schools not found", log.Strings("ids", ids), log.String("id", ids[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 

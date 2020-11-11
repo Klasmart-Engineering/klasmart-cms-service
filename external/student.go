@@ -71,6 +71,7 @@ func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Stude
 		queryAlias = fmt.Sprintf("u%d", index)
 		user, found := data[queryAlias]
 		if !found {
+			log.Error(ctx, "students not found", log.Strings("ids", ids), log.String("id", ids[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 
