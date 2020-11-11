@@ -1126,8 +1126,9 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 	}
 	if len(scope) == 0 {
 		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
-		condition.Scope = scope
+		scope = []string{constant.NoSearchItem}
 	}
+	condition.Scope = scope
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
