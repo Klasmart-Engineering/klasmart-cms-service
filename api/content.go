@@ -136,7 +136,9 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	})
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, "")
+		c.JSON(http.StatusOK, L(GeneralUnknown))
+	case model.ErrInvalidContentStatusToPublish:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -356,7 +358,7 @@ func (s *Server) lockContent(c *gin.Context) {
 	op := GetOperator(c)
 	cid := c.Param("content_id")
 
-	hasPermission, err := model.GetContentPermissionModel().CheckUpdateContentPermission(ctx, cid, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckLockContentPermission(ctx, cid, op)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return

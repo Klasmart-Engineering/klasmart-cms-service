@@ -71,6 +71,7 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, ids []string) ([]*Teach
 		queryAlias = fmt.Sprintf("u%d", index)
 		user, found := data[queryAlias]
 		if !found {
+			log.Error(ctx, "teachers not found", log.Strings("ids", ids), log.String("id", ids[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 

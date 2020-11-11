@@ -80,7 +80,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*User, er
 		queryAlias = fmt.Sprintf("u%d", index)
 		user, found := data[queryAlias]
 		if !found || user == nil {
-			log.Error(ctx, "user not found", log.String("id", ids[index]))
+			log.Error(ctx, "users not found", log.Strings("ids", ids), log.String("id", ids[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 
