@@ -10,6 +10,7 @@ stages:
   - deploy_swagger
   - build_cdk
   - deploy_cdk
+  - deploy_cdk_release
 
 DEPLOY_SWAGGER_JOB:
   extends:
@@ -37,4 +38,3 @@ Deploy_To_Lambda_Push:
   tags:
     - kidsloop2
   resource_group: $CI_JOB_NAME
-
