@@ -660,7 +660,7 @@ func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, pe
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return false
 	}
-	if hasPermission {
+	if !hasPermission {
 		log.Info(ctx, "no permission",
 			log.String("permission", string(permissionName)),
 			log.Any("Operator", op),
