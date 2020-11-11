@@ -136,7 +136,9 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	})
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, "")
+		c.JSON(http.StatusOK, L(GeneralUnknown))
+	case model.ErrInvalidContentStatusToPublish:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
