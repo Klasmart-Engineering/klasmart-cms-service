@@ -160,14 +160,19 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 		log.Info(ctx, "update content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
 		return false, nil
 	}
-	//若是自己的content，则可以修改
-	if content.Author == user.UserID{
-		return true, nil
-	}
 	//不是自己的，查看lock_by和修改权限
-	if content.LockedBy != user.UserID {
+	if content.LockedBy != "" && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't update content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
 		return false, nil
+	}
+	if content.LockedBy == user.UserID {
+		log.Info(ctx, "locked by user", log.String("cid", cid), log.String("user_id", user.UserID))
+		return true, nil
+	}
+	//若是自己的content，则可以修改
+	if content.Author == user.UserID{
+		log.Info(ctx, "author edit", log.String("cid", cid), log.String("user_id", user.UserID))
+		return true, nil
 	}
 
 	if content.PublishStatus != entity.ContentStatusPublished {
