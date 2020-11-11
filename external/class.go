@@ -212,7 +212,7 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 		queryAlias = fmt.Sprintf("q%d", index)
 		org, found := data[queryAlias]
 		if !found || org == nil {
-			log.Error(ctx, "classes not found", log.String("id", schoolIDs[index]))
+			log.Error(ctx, "classes not found", log.Strings("schoolIDs", schoolIDs), log.String("id", schoolIDs[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 
