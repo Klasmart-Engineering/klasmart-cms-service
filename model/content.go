@@ -204,18 +204,26 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	if content.PublishStatus != entity.ContentStatusDraft && content.PublishStatus != entity.ContentStatusRejected &&
 		content.PublishStatus != entity.ContentStatusArchive {
 		//报错
+		log.Warn(ctx, "invalid content status", log.Any("content", content))
 		return ErrInvalidContentStatusToPublish
 	}
 
 	contentData, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
+		log.Warn(ctx, "create content data failed", log.Any("contentData", contentData), log.Err(err))
 		return err
 	}
 	subContentIds := contentData.SubContentIds(ctx)
+	//No sub content, no need to check
+	if len(subContentIds) < 1 {
+		return nil
+	}
+
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		IDS: subContentIds,
 	})
 	if err != nil {
+		log.Warn(ctx, "search content data failed", log.Strings("IDS", subContentIds), log.Err(err))
 		return err
 	}
 	err = cm.checkPublishContentChildren(ctx, content, contentList)
@@ -1293,6 +1301,7 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 	for i := range children {
 		if children[i].PublishStatus != entity.ContentStatusPublished &&
 			children[i].PublishStatus != entity.ContentStatusHidden {
+			log.Warn(ctx, "check children status failed", log.Any("content", children[i]))
 			return ErrInvalidPublishStatus
 		}
 	}

@@ -244,7 +244,7 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	err := cm.checkPublishContent(ctx, tx, content, user)
 	if err != nil {
-		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
+		log.Warn(ctx, "check content scope & sub content scope failed", log.Err(err))
 		return err
 	}
 
