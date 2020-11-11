@@ -83,13 +83,13 @@ func TestCDNSignature2(t *testing.T) {
 	cdnConf := config.CDNConfig{
 		CDNOpen:           true,
 		CDNMode:           "key",
-		CDNPath:           "https://res-kl2-dev-cms.kidsloop.net",
+		CDNPath:           "https://res-kl2-test.kidsloop.net",
 		CDNPrivateKeyPath: "./rsa_private_key.pem",
-		CDNKeyId: "K13M468939XCI0",
+		CDNKeyId: "K3PUGKGK3R1NHM",
 	}
 	ctx := context.Background()
 	partition := "thumbnail"
-	filePath := "H62VVXAECMKFRAH5ZS5S4BZRDVAQRMQDMNGHTG7QHJIXL4AM76RA====.png"
+	filePath := "25JHKL7LL2XMFE5FFUJCIO3NH3YOY7ZKPXWWFWACB62AZ4CPS56A====.png"
 	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
 	keyID := cdnConf.CDNKeyId
 
