@@ -358,7 +358,7 @@ func (s *Server) lockContent(c *gin.Context) {
 	op := GetOperator(c)
 	cid := c.Param("content_id")
 
-	hasPermission, err := model.GetContentPermissionModel().CheckUpdateContentPermission(ctx, cid, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckLockContentPermission(ctx, cid, op)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
