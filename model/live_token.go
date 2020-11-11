@@ -51,7 +51,14 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	liveTokenInfo.Teacher = true //op.Role == entity.RoleTeacher
+	isTeacher, err := s.isTeacher(ctx, op)
+	if err != nil {
+		log.Error(ctx, "MakeLivePreviewToken:judge is teacher error",
+			log.Err(err),
+			log.Any("op", op))
+		return "", err
+	}
+	liveTokenInfo.Teacher = isTeacher
 
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
 	if err != nil {
