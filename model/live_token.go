@@ -176,6 +176,13 @@ func (s *liveTokenModel) isTeacher(ctx context.Context, op *entity.Operator) (bo
 		)
 		return false, err
 	}
+	log.Info(ctx, "isTeacher:GetSchoolServiceProvider.GetByPermission error",
+		log.String("permission", string(external.LiveClassTeacher)),
+		log.Any("operator", op),
+		log.Any("organization", organization),
+		log.Any("school", school),
+		log.Err(err),
+	)
 	if len(organization) != 0 || len(school) != 0 {
 		return true, nil
 	}
