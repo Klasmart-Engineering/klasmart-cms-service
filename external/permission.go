@@ -74,6 +74,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 
 	log.Debug(ctx, "check permission success",
 		log.Any("operator", operator),
+		log.String("permissionName", permissionName.String()),
 		log.Bool("hasPermission", data.User.Membership.CheckAllowed))
 
 	return data.User.Membership.CheckAllowed, nil
@@ -121,6 +122,7 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 	log.Debug(ctx, "check permission success",
 		log.String("userID", userID),
 		log.String("schoolID", schoolID),
+		log.String("permissionName", permissionName.String()),
 		log.Bool("hasPermission", data.User.SchoolMembership.CheckAllowed))
 
 	return data.User.SchoolMembership.CheckAllowed, nil
