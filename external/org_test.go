@@ -42,3 +42,20 @@ func TestClassService_BatchGet(t *testing.T) {
 		}
 	}
 }
+<<<<<<< HEAD
+=======
+
+func TestAmsOrganizationService_GetOrganizationOrSchoolName(t *testing.T) {
+	config.LoadEnvConfig()
+	ids := []string{
+		"f3d3cdf5-9ca8-44cf-a604-482e5d183049",
+		"3b8074d5-893c-41c7-942f-d2115cc8bc32"}
+	names, err := GetOrganizationServiceProvider().GetOrganizationOrSchoolName(context.Background(), ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range names {
+		fmt.Println(n)
+	}
+}
+>>>>>>> test

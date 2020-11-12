@@ -21,7 +21,7 @@ func (s *Server) getLessonType(c *gin.Context) {
 	ctx := c.Request.Context()
 	result, err := model.GetLessonTypeModel().Query(ctx, &da.LessonTypeCondition{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -44,10 +44,10 @@ func (s *Server) getLessonTypeByID(c *gin.Context) {
 	result, err := model.GetLessonTypeModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

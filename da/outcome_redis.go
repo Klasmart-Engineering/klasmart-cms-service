@@ -96,12 +96,12 @@ func (r *OutcomeRedis) SaveOutcomeCacheListBySearchCondition(ctx context.Context
 	}
 	//go func() {
 	key := r.outcomeConditionKey(condition)
-	log.Info(ctx, "save outcome into cache", log.Any("condition", condition), log.String("key", key))
 	outcomeListJSON, err := json.Marshal(c)
 	if err != nil {
 		log.Error(ctx, "Can't parse outcome list into json", log.Err(err), log.String("key", key), log.String("data", string(outcomeListJSON)))
 		return
 	}
+	log.Info(ctx, "save outcome into cache", log.String("cache", string(outcomeListJSON)), log.String("key", key), log.Any("condition", condition))
 	ro.MustGetRedis(ctx).Expire(RedisKeyPrefixOutcomeCondition, r.expiration)
 	err = ro.MustGetRedis(ctx).HSetNX(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition), string(outcomeListJSON)).Err()
 	//err = ro.MustGetRedis(ctx).SetNX(key, string(outcomeListJSON), r.expiration).Err()
@@ -169,7 +169,6 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, con
 	}
 
 	key := r.outcomeConditionKey(condition)
-	log.Info(ctx, "search outcome ", log.Any("condition", condition), log.String("key", key))
 
 	//res, err := ro.MustGetRedis(ctx).Get(key).Result()
 	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition)).Result()
@@ -178,6 +177,8 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, con
 		log.Info(ctx, "Can't get outcome condition from cache", log.Err(err), log.String("key", key), log.Any("condition", condition))
 		return nil
 	}
+	log.Info(ctx, "search outcome from cache", log.String("key", key), log.String("cache", res), log.Any("condition", condition))
+
 	outcomeLists := new(OutcomeListWithKey)
 	err = json.Unmarshal([]byte(res), outcomeLists)
 	if err != nil {

@@ -89,12 +89,13 @@ func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) (
 
 func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error) {
 	raw := `query{
+	{{range $i, $e := .}}
 	org_{{$i}}: organization(organization_id: "{{$e}}"){
 		id: organization_id
     	name: organization_name
   	}
 	sch_{{$i}}: school(school_id: "{{$e}}"){
-		id: school
+		id: school_id
     	name: school_name
   	}
 	{{end}}

@@ -2,8 +2,16 @@ package storage
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
@@ -66,4 +74,64 @@ func TestS3Storage_GetUploadFileTempPath(t *testing.T) {
 		return
 	}
 	t.Log(path)
+}
+
+func TestCDNSignature2(t *testing.T) {
+	cdnConf := config.CDNConfig{
+		CDNRestrictedViewer:           true,
+		CDNPath:           "https://res-kl2-dev-cms.kidsloop.net",
+		CDNPrivateKeyPath: "./rsa_private_key.pem",
+		CDNKeyId: "K3PUGKGK3R1NHM",
+	}
+	ctx := context.Background()
+	partition := "thumbnail"
+	filePath := "5f4f5c380ba7e6e86a53b85f.jpg"
+	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
+	keyID := cdnConf.CDNKeyId
+
+	privateKeyPEM, err := ioutil.ReadFile(cdnConf.CDNPrivateKeyPath)
+	if err != nil {
+		log.Error(ctx, "read cdn path failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.Err(err),
+		)
+		return
+	}
+	block, _ := pem.Decode(privateKeyPEM)
+	if block.Type != "RSA PRIVATE KEY" {
+		log.Error(ctx, "parse key pem failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+		)
+		return
+	}
+	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		log.Error(ctx, "parse public key failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+			log.Err(err),
+		)
+		return
+	}
+
+	signer := sign.NewURLSigner(keyID, privKey)
+	signedURL, err := signer.Sign(path, time.Now().Add(constant.PresignDurationMinutes))
+	if err != nil {
+		log.Error(ctx, "Get presigned url failed",
+			log.String("cdn_key_path", cdnConf.CDNPrivateKeyPath),
+			log.String("partition", string(partition)),
+			log.String("file_path", filePath),
+			log.String("pem", string(privateKeyPEM)),
+			log.Err(err),
+		)
+		return
+	}
+	t.Log(signedURL)
 }

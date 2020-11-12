@@ -204,18 +204,26 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	if content.PublishStatus != entity.ContentStatusDraft && content.PublishStatus != entity.ContentStatusRejected &&
 		content.PublishStatus != entity.ContentStatusArchive {
 		//报错
+		log.Warn(ctx, "invalid content status", log.Any("content", content))
 		return ErrInvalidContentStatusToPublish
 	}
 
 	contentData, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
+		log.Warn(ctx, "create content data failed", log.Any("contentData", contentData), log.Err(err))
 		return err
 	}
 	subContentIds := contentData.SubContentIds(ctx)
+	//No sub content, no need to check
+	if len(subContentIds) < 1 {
+		return nil
+	}
+
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		IDS: subContentIds,
 	})
 	if err != nil {
+		log.Warn(ctx, "search content data failed", log.Strings("IDS", subContentIds), log.Err(err))
 		return err
 	}
 	err = cm.checkPublishContentChildren(ctx, content, contentList)
@@ -1068,17 +1076,28 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	if err != nil {
 		return 0, nil, err
 	}
-	condition1.Scope = scope
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+		condition1.Scope = scope
+	}
 	//condition2 others
 
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
 
 	//filter visible
-	scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
-	if err != nil {
-		return 0, nil, err
+	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
+		condition2.Scope = []string{user.OrgID}
+	}else{
+		scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPublished, user)
+		if err != nil {
+			return 0, nil, err
+		}
+		if len(scopes) == 0 {
+			log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
+			scopes = []string{constant.NoSearchItem}
+		}
+		condition2.Scope = scopes
 	}
-	condition2.Scope = scopes
 
 	//condition2.Scope = scopes
 
@@ -1098,6 +1117,10 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	if err != nil {
 		return 0, nil, err
 	}
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
+		scope = []string{constant.NoSearchItem}
+	}
 	condition.Scope = scope
 
 	return cm.searchContent(ctx, tx, &condition, user)
@@ -1108,6 +1131,10 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 	scope, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
 	if err != nil {
 		return 0, nil, err
+	}
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+		scope = []string{constant.NoSearchItem}
 	}
 	condition.Scope = scope
 	return cm.searchContent(ctx, tx, &condition, user)
@@ -1274,6 +1301,7 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 	for i := range children {
 		if children[i].PublishStatus != entity.ContentStatusPublished &&
 			children[i].PublishStatus != entity.ContentStatusHidden {
+			log.Warn(ctx, "check children status failed", log.Any("content", children[i]))
 			return ErrInvalidPublishStatus
 		}
 	}
@@ -1300,6 +1328,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	gradeNameMap := make(map[string]string)
 	publishScopeNameMap := make(map[string]string)
 	lessonTypeNameMap := make(map[string]string)
+	userNameMap := make(map[string]string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
@@ -1309,6 +1338,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	gradeIds := make([]string, 0)
 	scopeIds := make([]string, 0)
 	lessonTypeIds := make([]string, 0)
+	userIds := make([]string, 0)
 
 	for i := range contentList {
 		programIds = append(programIds, contentList[i].Program)
@@ -1320,6 +1350,20 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		scopeIds = append(scopeIds, contentList[i].PublishScope)
 		lessonTypeIds = append(lessonTypeIds, contentList[i].LessonType)
+		userIds = append(userIds, contentList[i].Author)
+		userIds = append(userIds, contentList[i].Creator)
+	}
+
+	//Users
+	users, err := external.GetUserServiceProvider().BatchGet(ctx, userIds)
+	if err != nil{
+		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIds))
+	}else{
+		for i := range users{
+			if users[i].Valid {
+				userNameMap[users[i].ID] = users[i].Name
+			}
+		}
 	}
 
 	//LessonType
@@ -1444,14 +1488,14 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	for i := range contentList {
 		outcomeIds = append(outcomeIds, contentList[i].Outcomes...)
 	}
-	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIds, user)
-	if err != nil {
-		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIds), log.String("uid", user.UserID))
-	}
-	outcomeMaps := make(map[string]*entity.Outcome, len(outcomeEntities))
-	for i := range outcomeEntities {
-		outcomeMaps[outcomeEntities[i].ID] = outcomeEntities[i]
-	}
+	//outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIds, user)
+	//if err != nil {
+	//	log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIds), log.String("uid", user.UserID))
+	//}
+	//outcomeMaps := make(map[string]*entity.Outcome, len(outcomeEntities))
+	//for i := range outcomeEntities {
+	//	outcomeMaps[outcomeEntities[i].ID] = outcomeEntities[i]
+	//}
 
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
@@ -1489,22 +1533,21 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
 			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
-			OutcomeEntities:   cm.pickOutcomes(ctx, contentList[i].Outcomes, outcomeMaps),
+			AuthorName: userNameMap[contentList[i].Author],
+			CreatorName: userNameMap[contentList[i].Creator],
+			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
 		}
 	}
 
 	return contentDetailsList, nil
 }
 
-func (cm *ContentModel) pickOutcomes(ctx context.Context, pickIds []string, outcomeMaps map[string]*entity.Outcome) []*entity.Outcome {
-	ret := make([]*entity.Outcome, 0)
-	for i := range pickIds {
-		outcome, ok := outcomeMaps[pickIds[i]]
-		if ok {
-			ret = append(ret, outcome)
-		}
+func (cm *ContentModel) getOutcomes(ctx context.Context, pickIds []string, user *entity.Operator) []*entity.Outcome {
+	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), pickIds, user)
+	if err != nil {
+		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", pickIds), log.String("uid", user.UserID))
 	}
-	return ret
+	return outcomeEntities
 }
 
 func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -160,14 +161,19 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 		log.Info(ctx, "update content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
 		return false, nil
 	}
-	//若是自己的content，则可以修改
-	if content.Author == user.UserID{
-		return true, nil
-	}
 	//不是自己的，查看lock_by和修改权限
-	if content.LockedBy != user.UserID {
+	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't update content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
 		return false, nil
+	}
+	if content.LockedBy == user.UserID {
+		log.Info(ctx, "locked by user", log.String("cid", cid), log.String("user_id", user.UserID))
+		return true, nil
+	}
+	//若是自己的content，则可以修改
+	if content.Author == user.UserID{
+		log.Info(ctx, "author edit", log.String("cid", cid), log.String("user_id", user.UserID))
+		return true, nil
 	}
 
 	if content.PublishStatus != entity.ContentStatusPublished {
@@ -189,7 +195,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 		log.Warn(ctx, "asset can't update", log.String("id", cid), log.Err(err))
 		return false, nil
 	}
-	if content.LockedBy != "" {
+	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't lock content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
 		return false, nil
 	}
@@ -200,7 +206,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 		return false, nil
 	}
 	//若是自己的content，则可以修改
-	if content.Author == user.UserID{
+	if content.Author == user.UserID || content.LockedBy == user.UserID{
 		return true, nil
 	}
 
@@ -264,6 +270,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 	permissions := make([]external.PermissionName, 0)
 	switch mode {
 	case QueryModePending:
+		log.Info(ctx, "check query pending content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
 		permissions = []external.PermissionName{external.PendingContentPage203}
 		for i := range condition.Scope {
 			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
@@ -278,6 +285,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 
 	case QueryModePublished:
 		//published模式，若需要查看archive需要权限，查看assets需要权限
+		log.Info(ctx, "check query published content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
 		permissions = []external.PermissionName{external.PublishedContentPage204}
 		if utils.ContainsStr(condition.PublishStatus, entity.ContentStatusArchive) {
 			permissions = append(permissions, external.ArchivedContentPage205)
@@ -297,6 +305,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 		return true, nil
 	case QueryModePrivate:
 		//private模式，若需要查看archive需要权限，查看assets需要权限
+		log.Info(ctx, "check query private content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
 		permissions = make([]external.PermissionName, 0)
 		if utils.ContainsInt(condition.ContentType, entity.ContentTypeAssets) {
 			permissions = append(permissions, external.CreateAssetPage301)
@@ -426,6 +435,7 @@ func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content 
 	for i := range schools {
 		orgs = append(orgs, schools[i].ID)
 	}
+	log.Info(ctx, "user orgs with permission", log.Strings("orgs", orgs), log.String("permission", string(permission)), log.Any("user", op), log.Any("content", content))
 	for i := range orgs{
 		if orgs[i] == content.PublishScope {
 			return true, nil

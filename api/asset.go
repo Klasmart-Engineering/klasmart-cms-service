@@ -17,14 +17,14 @@ func (s *Server) createAsset(c *gin.Context) {
 	err := c.ShouldBind(&data)
 	if err != nil {
 		log.Error(ctx, "create content failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	err = s.checkAssets(c.Request.Context(), data)
 	if err != nil {
 		log.Error(ctx, "Invalid content type", log.Err(err), log.Any("data", data))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	s.fillAssetsRequest(c.Request.Context(), &data)
@@ -32,19 +32,19 @@ func (s *Server) createAsset(c *gin.Context) {
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest,L(Unknown))
+		c.JSON(http.StatusBadRequest,L(GeneralUnknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
@@ -60,14 +60,14 @@ func (s *Server) updateAsset(c *gin.Context){
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	err = s.checkAssets(c.Request.Context(), data)
 	if err != nil {
 		log.Error(ctx, "Invalid content type", log.Err(err), log.Any("data", data))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	s.fillAssetsRequest(c.Request.Context(), &data)
@@ -75,29 +75,29 @@ func (s *Server) updateAsset(c *gin.Context){
 	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -119,9 +119,9 @@ func (s *Server) deleteAsset(c *gin.Context) {
 	})
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
-		c.JSON(http.StatusConflict, L(Unknown))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -138,7 +138,7 @@ func (s *Server) getAssetByID(c *gin.Context) {
 		}
 		err := c.ShouldBind(&data)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, L(Unknown))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return
 		}
 

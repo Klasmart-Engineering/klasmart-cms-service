@@ -144,7 +144,7 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 		log.Error(ctx, "get classes by org ids failed", log.Err(err), log.Strings("ids", organizationIDs))
 		return nil, err
 	}
-
+	log.Info(ctx, "GetByOrganizationIDs", log.Any("data", data))
 	classes := make(map[string][]*Class, len(organizationIDs))
 	var queryAlias string
 	for index := range organizationIDs {
@@ -161,7 +161,7 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 			classes[organizationIDs[index]] = []*Class{}
 		}
 	}
-
+	log.Info(ctx, "GetByOrganizationIDs", log.Any("classes", classes))
 	return classes, nil
 }
 

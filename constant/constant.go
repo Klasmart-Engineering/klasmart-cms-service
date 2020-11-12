@@ -76,3 +76,7 @@ const (
 	URLOrganizationIDParameter = "org_id"
 	DefaultRole                = "admin"
 )
+
+const (
+	NoSearchItem = "{nothing}"
+)
