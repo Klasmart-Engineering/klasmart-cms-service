@@ -59,15 +59,18 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-
-	liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
-	if err != nil {
-		log.Error(ctx, "MakeLiveToken:get material error",
-			log.Err(err),
-			log.Any("op", op),
-			log.Any("liveTokenInfo", liveTokenInfo),
-			log.Any("schedule", schedule))
-		return "", err
+	if schedule.ClassType == entity.ScheduleClassTypeTask {
+		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
+	} else {
+		liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
+		if err != nil {
+			log.Error(ctx, "MakeLiveToken:get material error",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("liveTokenInfo", liveTokenInfo),
+				log.Any("schedule", schedule))
+			return "", err
+		}
 	}
 
 	token, err := s.createJWT(ctx, liveTokenInfo)
