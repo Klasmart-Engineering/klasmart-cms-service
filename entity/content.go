@@ -209,7 +209,7 @@ type Content struct {
 
 	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time"`
 	Author      string `gorm:"type:varchar(50);NOT NULL;column:author"`
-	AuthorName  string `gorm:"type:varchar(128);NOT NULL;column:author_name"`
+	Creator string `gorm:"type:varchar(50);NOT NULL;column:creator"`
 	Org         string `gorm:"type:varchar(50);NOT NULL;column:org"`
 
 	SelfStudy    BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:self_study"`
@@ -358,6 +358,9 @@ type ContentInfoWithDetails struct {
 	PublishScopeName  string   `json:"publish_scope_name"`
 	LessonTypeName    string   `json:"lesson_type_name"`
 
+	AuthorName string `json:"author_name"`
+	CreatorName string `json:"creator_name"`
+
 	OutcomeEntities []*Outcome `json:"outcome_entities"`
 }
 
@@ -406,7 +409,7 @@ type ContentInfo struct {
 	Extra string `json:"extra"`
 
 	Author     string `json:"author"`
-	AuthorName string `json:"author_name"`
+	Creator string `json:"creator"`
 	Org        string `json:"org"`
 
 	PublishScope  string               `json:"publish_scope"`
