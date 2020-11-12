@@ -188,7 +188,7 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, con
 		}
 		return nil
 	}
-	log.Info(ctx, "search outcome from cache", log.String("key", key))
+	log.Info(ctx, "search outcome from cache", log.String("key", key), log.Any("outcomes", outcomeLists))
 
 	return outcomeLists
 }
