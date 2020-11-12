@@ -131,17 +131,14 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range organizationIDs {
-		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{class_id class_name }}\n", index, id)
+		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{id: class_id name: class_name }}\n", index, id)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String())
 
 	data := map[string]*struct {
-		Classes []struct {
-			ClassID   string `json:"class_id"`
-			ClassName string `json:"class_name"`
-		} `json:"classes"`
+		Classes []*Class `json:"classes"`
 	}{}
 
 	response := &chlorine.Response{
@@ -165,12 +162,7 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 		}
 
 		classes[organizationIDs[index]] = make([]*Class, 0, len(org.Classes))
-		for _, class := range org.Classes {
-			classes[organizationIDs[index]] = append(classes[organizationIDs[index]], &Class{
-				ID:   class.ClassID,
-				Name: class.ClassName,
-			})
-		}
+		classes[organizationIDs[index]] = org.Classes
 	}
 
 	return classes, nil
@@ -180,17 +172,14 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range schoolIDs {
-		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {classes{class_id class_name }}\n", index, id)
+		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {classes{id: class_id name: class_name }}\n", index, id)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String())
 
 	data := map[string]*struct {
-		Classes []struct {
-			ClassID   string `json:"class_id"`
-			ClassName string `json:"class_name"`
-		} `json:"classes"`
+		Classes []*Class `json:"classes"`
 	}{}
 
 	response := &chlorine.Response{
@@ -213,13 +202,7 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 			return nil, constant.ErrRecordNotFound
 		}
 
-		classes[schoolIDs[index]] = make([]*Class, 0, len(org.Classes))
-		for _, class := range org.Classes {
-			classes[schoolIDs[index]] = append(classes[schoolIDs[index]], &Class{
-				ID:   class.ClassID,
-				Name: class.ClassName,
-			})
-		}
+		classes[schoolIDs[index]] = org.Classes
 	}
 
 	return classes, nil
