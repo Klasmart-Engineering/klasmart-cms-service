@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"strings"
 
@@ -104,7 +105,7 @@ func newOutcomeCreateResponse(ctx context.Context, createView *OutcomeCreateView
 		AuthorID:         outcome.AuthorID,
 		AuthorName:       outcome.AuthorName,
 		OrganizationID:   outcome.OrganizationID,
-		OrganizationName: getProgramName(ctx, outcome.OrganizationID),
+		OrganizationName: getOrganizationName(ctx, outcome.OrganizationID),
 		PublishScope:     outcome.PublishScope,
 		PublishStatus:    string(outcome.PublishStatus),
 		RejectReason:     outcome.RejectReason,
@@ -265,28 +266,20 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 	return view
 }
 
-func getProgramName(ctx context.Context, id string) (name string) {
+func getOrganizationName(ctx context.Context, id string) (name string) {
 	ids := []string{id}
-	programs, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+	names, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, ids)
 	if err != nil {
-		log.Error(ctx, "getProgramName: BatchGet failed",
+		log.Error(ctx, "getOrganizationName: GetOrganizationOrSchoolName failed",
 			log.Err(err),
-			log.String("program_id", id))
+			log.Strings("org_ids", ids))
 		return ""
 	}
-	if len(programs) == 0 {
-		log.Error(ctx, "getProgramName: program list is empty",
-			log.Err(err),
-			log.String("program_id", id))
-
+	if len(names) == 0 {
+		log.Info(ctx, "getOrganizationName: GetOrganizationOrSchoolName empty",
+			log.Strings("org_ids", ids))
 	}
-	name = programs[0].Name
-	return
+	return names[0]
 }
 func getProgramsName(ctx context.Context, ids []string) (names map[string]string) {
 	programs, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{

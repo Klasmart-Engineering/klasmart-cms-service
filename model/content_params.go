@@ -8,7 +8,6 @@ import (
 
 	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -58,12 +57,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 
 	//get publishScope&authorName
 	publishScope := c.PublishScope
-	userInfo, err := external.GetUserServiceProvider().Get(ctx, operator.UserID)
-	if err != nil {
-		log.Warn(ctx, "get user info failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
-		return nil, err
-	}
-	authorName := userInfo.Name
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
@@ -101,7 +94,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
-		AuthorName:    authorName,
+		Creator:       operator.UserID,
 		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,
@@ -217,6 +210,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	content.Version = content.Version + 1
 	content.ID = ""
 	content.LockedBy = constant.LockedByNoBody
+	content.Author = user.UserID
 	//content.Author = user.UserID
 	//content.Org = user.OrgID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)
@@ -245,7 +239,7 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	err := cm.checkPublishContent(ctx, tx, content, user)
 	if err != nil {
-		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
+		log.Warn(ctx, "check content scope & sub content scope failed", log.Err(err))
 		return err
 	}
 
