@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"github.com/dgrijalva/jwt-go"
@@ -136,7 +137,7 @@ func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (
 		)
 		return "", err
 	}
-	return userInfo.UserName, nil
+	return userInfo.Name, nil
 }
 
 func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.LiveTokenInfo) (string, error) {

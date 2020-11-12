@@ -1087,7 +1087,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	//filter visible
 	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
 		condition2.Scope = []string{user.OrgID}
-	}else{
+	} else {
 		scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPublished, user)
 		if err != nil {
 			return 0, nil, err
@@ -1354,11 +1354,16 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 	//Users
 	users, err := external.GetUserServiceProvider().BatchGet(ctx, userIds)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIds))
-	}else{
-		for i := range users{
-			userNameMap[users[i].UserID] = users[i].UserName
+	} else {
+		for i := range users {
+			if !users[i].Valid {
+				log.Warn(ctx, "user not exists, may be deleted", log.String("id", userIds[i]))
+				continue
+			}
+
+			userNameMap[users[i].ID] = users[i].Name
 		}
 	}
 
@@ -1529,8 +1534,8 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
 			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
-			AuthorName: userNameMap[contentList[i].Author],
-			CreatorName: userNameMap[contentList[i].Creator],
+			AuthorName:        userNameMap[contentList[i].Author],
+			CreatorName:       userNameMap[contentList[i].Creator],
 			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
 		}
 	}
