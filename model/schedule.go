@@ -112,6 +112,11 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 			log.Any("viewData", viewData))
 		return "", constant.ErrInvalidArgs
 	}
+	if viewData.ClassType == entity.ScheduleClassTypeTask {
+		viewData.LessonPlanID = ""
+		viewData.ProgramID = ""
+		viewData.SubjectID = ""
+	}
 
 	// not force add need conflict detection
 	if !viewData.IsForce {
@@ -239,6 +244,12 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			log.Err(err),
 			log.Any("viewData", viewData))
 		return "", constant.ErrInvalidArgs
+	}
+
+	if viewData.ClassType == entity.ScheduleClassTypeTask {
+		viewData.LessonPlanID = ""
+		viewData.ProgramID = ""
+		viewData.SubjectID = ""
 	}
 
 	// not force add need conflict detection
@@ -877,9 +888,6 @@ func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify
 	}
 
 	if v.ClassType == entity.ScheduleClassTypeTask {
-		if v.LessonPlanID != "" || v.ProgramID != "" || v.SubjectID != "" {
-			return constant.ErrInvalidArgs
-		}
 		return nil
 	}
 	// subject
