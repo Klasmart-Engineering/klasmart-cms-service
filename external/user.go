@@ -14,6 +14,7 @@ import (
 type UserServiceProvider interface {
 	Get(ctx context.Context, id string) (*User, error)
 	BatchGet(ctx context.Context, ids []string) ([]*NullableUser, error)
+	Query(ctx context.Context, organizationID, keyword string) ([]*User, error)
 }
 
 type User struct {
@@ -86,6 +87,53 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*Nullable
 			Valid: user != nil,
 			User:  user,
 		})
+	}
+
+	return users, nil
+}
+
+func (s AmsUserService) Query(ctx context.Context, organizationID, keyword string) ([]*User, error) {
+	request := chlorine.NewRequest(`
+	query(
+		$organization_id: ID!
+		$keyword: String!
+	) {
+		organization(organization_id: $organization_id) {
+			findMembers(search_query: $keyword) {
+				user{
+					id: user_id
+					name: user_name
+				}
+			}
+		}
+	}`)
+	request.Var("organization_id", organizationID)
+	request.Var("keyword", keyword)
+
+	data := &struct {
+		Organization struct {
+			FindMembers []struct {
+				User *User `json:"user"`
+			} `json:"findMembers"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get users by keyword failed",
+			log.Err(err),
+			log.String("organizationID", organizationID),
+			log.String("keyword", keyword))
+		return nil, err
+	}
+
+	users := make([]*User, 0, len(data.Organization.FindMembers))
+	for _, member := range data.Organization.FindMembers {
+		users = append(users, member.User)
 	}
 
 	return users, nil
