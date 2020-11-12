@@ -89,7 +89,6 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Outcomes:      outcomes,
 		Author:        obj.Author,
 		Creator:		obj.Creator,
-		AuthorName:    obj.AuthorName,
 		SelfStudy:     obj.SelfStudy.Bool(),
 		DrawActivity:  obj.DrawActivity.Bool(),
 		LessonType:    obj.LessonType,
