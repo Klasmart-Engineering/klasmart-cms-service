@@ -124,7 +124,7 @@ func loadStorageEnvConfig(ctx context.Context) {
 	}
 	config.StorageConfig.Accelerate = accelerate
 
-	cdnRestrictedViewer := assertGetEnv("cdn_enable_restricted_viewer") == "true"
+	cdnRestrictedViewer := os.Getenv("cdn_enable_restricted_viewer") == "true"
 	config.CDNConfig.CDNRestrictedViewer = cdnRestrictedViewer
 	config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
 
