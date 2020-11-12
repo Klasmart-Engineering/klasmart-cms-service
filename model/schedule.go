@@ -989,6 +989,8 @@ func (s *scheduleModel) GetParticipateClass(ctx context.Context, operator *entit
 	for i := range result {
 		if result[i].Valid {
 			classes = append(classes, &result[i].Class)
+		} else {
+			log.Warn(ctx, "invalid value", log.Strings("class_ids", classIDs), log.Int("index", i))
 		}
 	}
 	return classes, nil

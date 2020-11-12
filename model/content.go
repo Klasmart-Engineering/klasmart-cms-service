@@ -1317,6 +1317,8 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	} else {
 		if orgs[0].Valid {
 			orgName = orgs[0].Name
+		} else {
+			log.Warn(ctx, "invalid value", log.String("org_id", user.OrgID))
 		}
 	}
 
