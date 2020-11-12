@@ -643,14 +643,16 @@ func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Oper
 		)
 		return nil, err
 	}
-	log.Info(ctx, "getClassIDsByOrgPermission", log.Any("classMap", classMap))
+	log.Info(ctx, "getClassIDsByOrgPermission", log.Any("op", op), log.Any("classMap", classMap), log.Any("classMap[op.OrgID]", classMap[op.OrgID]))
 	var classIDs []string
 	if classList, ok := classMap[op.OrgID]; ok {
+		log.Info(ctx, "getClassIDsByOrgPermission", log.Any("classList", classList))
 		classIDs := make([]string, len(classList))
-		for _, item := range classList {
-			classIDs = append(classIDs, item.ID)
+		for i, item := range classList {
+			classIDs[i] = item.ID
 		}
 	}
+	log.Info(ctx, "getClassIDsByOrgPermission", log.Strings("classIDs", classIDs))
 	return classIDs, nil
 }
 
