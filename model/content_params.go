@@ -3,11 +3,12 @@ package model
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"strings"
-	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -58,11 +59,11 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	//get publishScope&authorName
 	publishScope := c.PublishScope
 	userInfo, err := external.GetUserServiceProvider().Get(ctx, operator.UserID)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, err
 	}
-	authorName := userInfo.UserName
+	authorName := userInfo.Name
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
