@@ -115,7 +115,7 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 		return nil, err
 	}
 
-	var classes []*Class
+	classes :=make([]*Class,0)
 	classes = append(classes, data.User.ClassesTeaching...)
 	classes = append(classes, data.User.ClassesStudying...)
 	return classes, nil
@@ -155,8 +155,11 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 			return nil, constant.ErrRecordNotFound
 		}
 
-		classes[organizationIDs[index]] = make([]*Class, 0, len(org.Classes))
-		classes[organizationIDs[index]] = org.Classes
+		if org.Classes != nil{
+			classes[organizationIDs[index]] = org.Classes
+		} else {
+			classes[organizationIDs[index]] = []*Class{}
+		}
 	}
 
 	return classes, nil
@@ -196,7 +199,11 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 			return nil, constant.ErrRecordNotFound
 		}
 
-		classes[schoolIDs[index]] = org.Classes
+		if org.Classes != nil {
+			classes[schoolIDs[index]] = org.Classes
+		} else {
+			classes[schoolIDs[index]] = []*Class{}
+		}
 	}
 
 	return classes, nil
