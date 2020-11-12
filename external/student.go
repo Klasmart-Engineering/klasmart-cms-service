@@ -13,6 +13,7 @@ type StudentServiceProvider interface {
 	Get(ctx context.Context, id string) (*Student, error)
 	BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error)
 	GetByClassID(ctx context.Context, classID string) ([]*Student, error)
+	Query(ctx context.Context, organizationID, keyword string) ([]*Student, error)
 }
 
 type Student struct {
@@ -108,4 +109,21 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]
 		return nil, res.Errors
 	}
 	return payload, nil
+}
+
+func (s AmsStudentService) Query(ctx context.Context, organizationID, keyword string) ([]*Student, error) {
+	users, err := GetUserServiceProvider().Query(ctx, organizationID, keyword)
+	if err != nil {
+		return nil, err
+	}
+
+	students := make([]*Student, len(users))
+	for index, user := range users {
+		students[index] = &Student{
+			ID:   user.ID,
+			Name: user.Name,
+		}
+	}
+
+	return students, nil
 }
