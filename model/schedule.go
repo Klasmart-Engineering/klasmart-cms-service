@@ -580,10 +580,15 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, schedules []*entity.Sc
 			log.Error(ctx, "getBasicInfo:GetUserServiceProvider BatchGet error", log.Err(err), log.Any("schedules", schedules))
 			return nil, err
 		}
-		for _, item := range teacherInfos {
-			teacherMap[item.UserID] = &entity.ScheduleShortInfo{
-				ID:   item.UserID,
-				Name: item.UserName,
+		for index, item := range teacherInfos {
+			if !item.Valid {
+				log.Warn(ctx, "teacher not exists, may be deleted", log.String("id", teacherIDs[index]))
+				continue
+			}
+
+			teacherMap[item.ID] = &entity.ScheduleShortInfo{
+				ID:   item.ID,
+				Name: item.Name,
 			}
 		}
 	}
