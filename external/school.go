@@ -8,12 +8,11 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type SchoolServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*School, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error)
 	GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
 }
@@ -21,6 +20,11 @@ type SchoolServiceProvider interface {
 type School struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type NullableSchool struct {
+	School
+	Valid bool `json:"-"`
 }
 
 var (
@@ -38,9 +42,9 @@ func GetSchoolServiceProvider() SchoolServiceProvider {
 
 type AmsSchoolService struct{}
 
-func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School, error) {
+func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error) {
 	if len(ids) == 0 {
-		return []*School{}, nil
+		return []*NullableSchool{}, nil
 	}
 
 	sb := new(strings.Builder)
@@ -70,18 +74,24 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School
 	}
 
 	var queryAlias string
-	schools := make([]*School, 0, len(data))
+	schools := make([]*NullableSchool, 0, len(data))
 	for index := range ids {
 		queryAlias = fmt.Sprintf("u%d", index)
 		school, found := data[queryAlias]
+
 		if !found || school == nil {
-			log.Error(ctx, "schools not found", log.Strings("ids", ids), log.String("id", ids[index]))
-			return nil, constant.ErrRecordNotFound
+			schools = append(schools, &NullableSchool{Valid: false})
+			continue
+			// log.Error(ctx, "schools not found", log.Strings("ids", ids), log.String("id", ids[index]))
+			// return nil, constant.ErrRecordNotFound
 		}
 
-		schools = append(schools, &School{
-			ID:   school.SchoolID,
-			Name: school.SchoolName,
+		schools = append(schools, &NullableSchool{
+			Valid: true,
+			School: School{
+				ID:   school.SchoolID,
+				Name: school.SchoolName,
+			},
 		})
 	}
 
