@@ -729,7 +729,7 @@ func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name 
 			log.String("user_id", id))
 		return "", err
 	}
-	return user.UserName, nil
+	return user.Name, nil
 }
 
 func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) (orgName string, err error) {

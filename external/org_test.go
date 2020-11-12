@@ -43,20 +43,6 @@ func TestClassService_BatchGet(t *testing.T) {
 	}
 }
 
-func TestClassService_GetStudents(t *testing.T) {
-	//students, err := GetClassServiceProvider().GetStudents(context.Background(), "f3d3cdf5-9ca8-44cf-a604-482e5d183049")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//for i := range students {
-	//	if students[i] != nil {
-	//		fmt.Println(*(students[i]))
-	//	} else {
-	//		fmt.Println(i)
-	//	}
-	//}
-}
-
 func TestAmsOrganizationService_GetOrganizationOrSchoolName(t *testing.T) {
 	config.LoadEnvConfig()
 	ids := []string{

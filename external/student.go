@@ -2,8 +2,6 @@ package external
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -12,13 +10,19 @@ import (
 )
 
 type StudentServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*Student, error)
+	Get(ctx context.Context, id string) (*Student, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error)
 	GetByClassID(ctx context.Context, classID string) ([]*Student, error)
 }
 
 type Student struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type NullableStudent struct {
+	Valid bool `json:"-"`
+	*Student
 }
 
 var (
@@ -36,49 +40,38 @@ func GetStudentServiceProvider() StudentServiceProvider {
 
 type AmsStudentService struct{}
 
-func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Student, error) {
-	if len(ids) == 0 {
-		return []*Student{}, nil
-	}
-
-	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range ids {
-		fmt.Fprintf(sb, "u%d: user(user_id: \"%s\") {user_id user_name}\n", index, id)
-	}
-	sb.WriteString("}")
-
-	request := chlorine.NewRequest(sb.String())
-
-	data := map[string]struct {
-		UserID   string `json:"user_id"`
-		UserName string `json:"user_name"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: data,
-	}
-
-	_, err := GetChlorine().Run(ctx, request, response)
+func (s AmsStudentService) Get(ctx context.Context, id string) (*Student, error) {
+	students, err := s.BatchGet(ctx, []string{id})
 	if err != nil {
-		log.Error(ctx, "get students by ids failed", log.Err(err), log.Strings("ids", ids))
 		return nil, err
 	}
 
-	var queryAlias string
-	students := make([]*Student, 0, len(data))
-	for index := range ids {
-		queryAlias = fmt.Sprintf("u%d", index)
-		user, found := data[queryAlias]
-		if !found {
-			log.Error(ctx, "students not found", log.Strings("ids", ids), log.String("id", ids[index]))
-			return nil, constant.ErrRecordNotFound
-		}
+	if !students[0].Valid {
+		return nil, constant.ErrRecordNotFound
+	}
 
-		students = append(students, &Student{
-			ID:   user.UserID,
-			Name: user.UserName,
-		})
+	return students[0].Student, nil
+}
+
+func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error) {
+	if len(ids) == 0 {
+		return []*NullableStudent{}, nil
+	}
+
+	users, err := GetUserServiceProvider().BatchGet(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	students := make([]*NullableStudent, len(users))
+	for index, user := range users {
+		students[index] = &NullableStudent{
+			Valid: user.Valid,
+			Student: &Student{
+				ID:   user.User.ID,
+				Name: user.User.Name,
+			},
+		}
 	}
 
 	return students, nil
