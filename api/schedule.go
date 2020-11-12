@@ -647,7 +647,7 @@ func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Oper
 	var classIDs []string
 	if classList, ok := classMap[op.OrgID]; ok {
 		log.Info(ctx, "getClassIDsByOrgPermission", log.Any("classList", classList))
-		classIDs := make([]string, len(classList))
+		classIDs = make([]string, len(classList))
 		for i, item := range classList {
 			classIDs[i] = item.ID
 		}
