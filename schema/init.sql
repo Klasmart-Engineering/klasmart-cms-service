@@ -17,7 +17,7 @@ CREATE TABLE `cms_contents` (
    `outcomes` TEXT NULL COMMENT 'Learning outcomes',
    `suggest_time` int  NOT  NULL  COMMENT  '建议时间',
    `author` VARCHAR( 50) NOT  NULL  COMMENT  '作者id',
-   `author_name` VARCHAR( 128) NOT  NULL  COMMENT  '作者名',
+   `creator` VARCHAR( 50) NOT  NULL  COMMENT  '创建者id',
    `org` VARCHAR( 50) NOT  NULL  COMMENT  '所属机构',
    `publish_scope` VARCHAR( 50) COMMENT  '发布范围',
    `publish_status` VARCHAR( 16) NOT  NULL  COMMENT  '状态',

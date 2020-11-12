@@ -1326,6 +1326,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	gradeNameMap := make(map[string]string)
 	publishScopeNameMap := make(map[string]string)
 	lessonTypeNameMap := make(map[string]string)
+	userNameMap := make(map[string]string)
 
 	programIds := make([]string, 0)
 	subjectIds := make([]string, 0)
@@ -1335,6 +1336,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	gradeIds := make([]string, 0)
 	scopeIds := make([]string, 0)
 	lessonTypeIds := make([]string, 0)
+	userIds := make([]string, 0)
 
 	for i := range contentList {
 		programIds = append(programIds, contentList[i].Program)
@@ -1346,6 +1348,18 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		scopeIds = append(scopeIds, contentList[i].PublishScope)
 		lessonTypeIds = append(lessonTypeIds, contentList[i].LessonType)
+		userIds = append(userIds, contentList[i].Author)
+		userIds = append(userIds, contentList[i].Creator)
+	}
+
+	//Users
+	users, err := external.GetUserServiceProvider().BatchGet(ctx, userIds)
+	if err != nil{
+		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIds))
+	}else{
+		for i := range users{
+			userNameMap[users[i].UserID] = users[i].UserName
+		}
 	}
 
 	//LessonType
@@ -1515,6 +1529,8 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
 			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
+			AuthorName: userNameMap[contentList[i].Author],
+			CreatorName: userNameMap[contentList[i].Creator],
 			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
 		}
 	}
