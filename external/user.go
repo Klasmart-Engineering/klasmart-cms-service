@@ -47,7 +47,7 @@ func (s AmsUserService) Get(ctx context.Context, id string) (*User, error) {
 		return nil, err
 	}
 
-	if users[0].Valid {
+	if !users[0].Valid {
 		return nil, constant.ErrRecordNotFound
 	}
 

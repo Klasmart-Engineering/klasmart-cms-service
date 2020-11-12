@@ -46,7 +46,7 @@ func (s AmsTeacherService) Get(ctx context.Context, id string) (*Teacher, error)
 		return nil, err
 	}
 
-	if teachers[0].Valid {
+	if !teachers[0].Valid {
 		return nil, constant.ErrRecordNotFound
 	}
 
