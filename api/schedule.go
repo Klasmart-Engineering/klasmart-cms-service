@@ -354,7 +354,6 @@ const (
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	op := GetOperator(c)
-
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
 	timeAtStr := c.Query("time_at")
@@ -372,7 +371,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		return
 	}
 	loc := utils.GetTimeLocationByOffset(offset)
-	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", offset))
+	log.Debug(ctx, "time location", log.Any("op", op), log.Any("location", loc), log.Int("offset", offset))
 	timeUtil := utils.NewTimeUtil(timeAt, loc)
 
 	var (
@@ -566,6 +565,7 @@ func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string
 		)
 		return nil, err
 	}
+
 	orgClassIDs, err := s.getClassIDsByOrgPermission(ctx, op)
 	if err != nil {
 		log.Error(ctx, "getClassIDsByPermission:getClassIDsByOrgPermission error",
@@ -574,6 +574,10 @@ func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string
 		)
 		return nil, err
 	}
+	log.Info(ctx, "getClassIDs", log.Any("Operator", op),
+		log.Strings("schoolClassIDs", schoolClassIDs),
+		log.Strings("orgClassIDs", orgClassIDs),
+	)
 	classIDs := make([]string, 0, len(schoolClassIDs)+len(orgClassIDs))
 	classIDs = append(classIDs, schoolClassIDs...)
 	classIDs = append(classIDs, orgClassIDs...)
@@ -628,6 +632,7 @@ func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Oper
 	for i, item := range orgInfoList {
 		orgIDs[i] = item.ID
 	}
+	log.Info(ctx, "getClassIDsByOrgPermission", log.Any("orgInfoList", orgInfoList))
 	classMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, orgIDs)
 	if err != nil {
 		log.Error(ctx, "getClassIDsByOrgPermission:GetClassServiceProvider GetByOrganizationIDs error",
@@ -638,6 +643,7 @@ func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Oper
 		)
 		return nil, err
 	}
+	log.Info(ctx, "getClassIDsByOrgPermission", log.Any("classMap", classMap))
 	var classIDs []string
 	if classList, ok := classMap[op.OrgID]; ok {
 		classIDs := make([]string, len(classList))
