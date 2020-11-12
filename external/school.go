@@ -26,7 +26,7 @@ type School struct {
 
 type NullableSchool struct {
 	Valid bool `json:"-"`
-	School
+	*School
 }
 
 var (
@@ -54,7 +54,7 @@ func (s AmsSchoolService) Get(ctx context.Context, id string) (*School, error) {
 		return nil, constant.ErrRecordNotFound
 	}
 
-	return &schools[0].School, nil
+	return schools[0].School, nil
 }
 
 func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error) {
@@ -85,19 +85,12 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*Nullab
 		return nil, err
 	}
 
-	var queryAlias string
 	schools := make([]*NullableSchool, 0, len(data))
 	for index := range ids {
-		queryAlias = fmt.Sprintf("q%d", index)
-		school, found := data[queryAlias]
-		if !found || school == nil {
-			schools = append(schools, &NullableSchool{Valid: false})
-			continue
-		}
-
+		school := data[fmt.Sprintf("q%d", index)]
 		schools = append(schools, &NullableSchool{
-			Valid:  true,
-			School: *school,
+			Valid:  school != nil,
+			School: school,
 		})
 	}
 

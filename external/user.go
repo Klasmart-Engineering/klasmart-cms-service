@@ -12,7 +12,7 @@ import (
 )
 
 type UserServiceProvider interface {
-	Get(ctx context.Context, userID string) (*User, error)
+	Get(ctx context.Context, id string) (*User, error)
 	BatchGet(ctx context.Context, ids []string) ([]*NullableUser, error)
 }
 
@@ -41,8 +41,8 @@ func GetUserServiceProvider() UserServiceProvider {
 
 type AmsUserService struct{}
 
-func (s AmsUserService) Get(ctx context.Context, userID string) (*User, error) {
-	users, err := s.BatchGet(ctx, []string{userID})
+func (s AmsUserService) Get(ctx context.Context, id string) (*User, error) {
+	users, err := s.BatchGet(ctx, []string{id})
 	if err != nil {
 		return nil, err
 	}
