@@ -337,10 +337,13 @@ func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permis
 		log.Error(ctx, "get org info failed", log.Err(err))
 		return nil, err
 	}
-
+	orgName := ""
+	if orgs[0].Valid {
+		orgName = orgs[0].Name
+	}
 	entities = append(entities, Entity{
 		ID:   op.OrgID,
-		Name: orgs[0].Name,
+		Name: orgName,
 	})
 	return entities, nil
 }

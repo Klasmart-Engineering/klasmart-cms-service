@@ -14,8 +14,8 @@ import (
 )
 
 type ClassServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*Class, error)
-	GetByUserID(ctx context.Context, userID string) ([]*Class, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableClass, error)
+	GetByUserID(ctx context.Context, userID string) ([]*NullableClass, error)
 	GetByOrganizationIDs(ctx context.Context, orgIDs []string) (map[string][]*Class, error)
 	GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error)
 }
@@ -25,13 +25,18 @@ type Class struct {
 	Name string `json:"name"`
 }
 
+type NullableClass struct {
+	Class
+	Valid bool `json:"-"`
+}
+
 func GetClassServiceProvider() ClassServiceProvider {
 	return &AmsClassService{}
 }
 
 type AmsClassService struct{}
 
-func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
+func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*NullableClass, error) {
 	raw := `query{
 	{{range $i, $e := .}}
 	index_{{$i}}: class(class_id: "{{$e}}"){
@@ -70,24 +75,28 @@ func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, 
 		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	var classes []*Class
+	var classes []*NullableClass
 	for _, v := range payload {
-		classes = append(classes, v)
+		if v == nil {
+			classes = append(classes, &NullableClass{Valid: false})
+		} else {
+			classes = append(classes, &NullableClass{*v, true})
+		}
 	}
 	return classes, nil
 }
 
-func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Class, error) {
+func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*NullableClass, error) {
 	request := chlorine.NewRequest(`
 	query($user_id: ID!){
 		user(user_id: $user_id) {
 			classesTeaching{
-				class_id
-				class_name
+				id: class_id
+				name: class_name
 			}
 			classesStudying{
-				class_id
-				class_name
+				id: class_id
+				name: class_name
 			}
 		}
 	}`)
@@ -95,14 +104,8 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 
 	data := &struct {
 		User struct {
-			ClassesTeaching []struct {
-				ClassID   string `json:"class_id"`
-				ClassName string `json:"class_name"`
-			} `json:"classesTeaching"`
-			ClassesStudying []struct {
-				ClassID   string `json:"class_id"`
-				ClassName string `json:"class_name"`
-			} `json:"classesStudying"`
+			ClassesTeaching []Class `json:"classesTeaching"`
+			ClassesStudying []Class `json:"classesStudying"`
 		} `json:"user"`
 	}{}
 
@@ -112,19 +115,13 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 		return nil, err
 	}
 
-	classes := make([]*Class, 0, len(data.User.ClassesTeaching)+len(data.User.ClassesStudying))
-	for _, class := range data.User.ClassesTeaching {
-		classes = append(classes, &Class{
-			ID:   class.ClassID,
-			Name: class.ClassName,
-		})
+	var classes []*NullableClass
+	for i := range data.User.ClassesTeaching {
+		classes = append(classes, &NullableClass{data.User.ClassesTeaching[i], true})
 	}
 
-	for _, class := range data.User.ClassesStudying {
-		classes = append(classes, &Class{
-			ID:   class.ClassID,
-			Name: class.ClassName,
-		})
+	for i := range data.User.ClassesStudying {
+		classes = append(classes, &NullableClass{data.User.ClassesStudying[i], true})
 	}
 
 	return classes, nil

@@ -2,7 +2,9 @@ package external
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
 	"testing"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -43,16 +45,45 @@ func TestClassService_BatchGet(t *testing.T) {
 	}
 }
 
-func TestClassService_GetStudents(t *testing.T) {
-	students, err := GetClassServiceProvider().GetStudents(context.Background(), "f3d3cdf5-9ca8-44cf-a604-482e5d183049")
-	if err != nil {
-		t.Fatal(err)
+func TestXX(t *testing.T){
+//	q := `{
+//  "data": {
+//    "organizations": null
+//  }
+//}
+//`
+	q1 := `{
+  "data": {
+    "organizations": [
+      {
+        "organization_id": "e236d102-5324-4740-8f36-629451557a2a",
+        "organization_name": "Organization 1"
+      }
+    ]
+  }
+}`
+	payload := make([]*Organization, 2)
+	res := cl.Response{
+		Data: &struct {
+			Organizations []*Organization `json:"organizations"`
+		}{},
 	}
-	for i := range students {
-		if students[i] != nil {
-			fmt.Println(*(students[i]))
-		} else {
-			fmt.Println(i)
-		}
-	}
+
+	json.Unmarshal([]byte(q1), &res)
+	fmt.Printf("%#v\n", res.Data)
+	fmt.Println(payload)
 }
+
+//func TestClassService_GetStudents(t *testing.T) {
+//	students, err := GetClassServiceProvider().GetStudents(context.Background(), "f3d3cdf5-9ca8-44cf-a604-482e5d183049")
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	for i := range students {
+//		if students[i] != nil {
+//			fmt.Println(*(students[i]))
+//		} else {
+//			fmt.Println(i)
+//		}
+//	}
+//}

@@ -638,10 +638,14 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, classIDs 
 			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Strings("classIDs", classIDs))
 			return nil, err
 		}
-		for _, item := range classInfos {
-			classMap[item.ID] = &entity.ScheduleShortInfo{
-				ID:   item.ID,
-				Name: item.Name,
+		for i := range classInfos {
+			if classInfos[i].Valid {
+				classMap[classInfos[i].ID] = &entity.ScheduleShortInfo{
+					ID:   classInfos[i].ID,
+					Name: classInfos[i].Name,
+				}
+			} else {
+				log.Info(ctx, "no match class", log.String("class_id", classIDs[i]), log.Any("nullable_class", classInfos[i]))
 			}
 		}
 	}
@@ -850,8 +854,8 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 func (s *scheduleModel) verifyData(ctx context.Context, v *entity.ScheduleVerify) error {
 	// class
 	classService := external.GetClassServiceProvider()
-	_, err := classService.BatchGet(ctx, []string{v.ClassID})
-	if err != nil {
+	classes, err := classService.BatchGet(ctx, []string{v.ClassID})
+	if err != nil || (len(classes)>0 && !classes[0].Valid) || len(classes)<=0{
 		log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
@@ -942,35 +946,36 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBCont
 }
 
 func (s *scheduleModel) GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error) {
-	// user is admin
-	if operator.Role == string(constant.RoleAdmin) {
-		result, err := external.GetClassServiceProvider().BatchGet(ctx, nil)
-		if err != nil {
-			log.Error(ctx, "GetParticipateClass:batch get class from ClassServiceProvider error", log.Err(err), log.Any("op", operator))
-			return nil, err
-		}
-		return result, nil
-	}
-	// user is not admin
-	classIDs, err := da.GetScheduleDA().GetParticipateClass(ctx, dbo.MustGetDB(ctx), operator.UserID)
-	if err == constant.ErrRecordNotFound {
-		log.Error(ctx, "GetParticipateClass:get participate class not found", log.Err(err), log.Any("op", operator))
-		return []*external.Class{}, nil
-	}
-	if err != nil {
-		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.Any("op", operator))
-		return nil, err
-	}
-	result, err := external.GetClassServiceProvider().BatchGet(ctx, classIDs)
-	if err != nil {
-		log.Error(ctx, "GetParticipateClass:batch get class from ClassServiceProvider error",
-			log.Err(err),
-			log.Any("op", operator),
-			log.Strings("classIDs", classIDs),
-		)
-		return nil, err
-	}
-	return result, nil
+	//// user is admin
+	//if operator.Role == string(constant.RoleAdmin) {
+	//	result, err := external.GetClassServiceProvider().BatchGet(ctx, nil)
+	//	if err != nil {
+	//		log.Error(ctx, "GetParticipateClass:batch get class from ClassServiceProvider error", log.Err(err), log.Any("op", operator))
+	//		return nil, err
+	//	}
+	//	return result, nil
+	//}
+	//// user is not admin
+	//classIDs, err := da.GetScheduleDA().GetParticipateClass(ctx, dbo.MustGetDB(ctx), operator.UserID)
+	//if err == constant.ErrRecordNotFound {
+	//	log.Error(ctx, "GetParticipateClass:get participate class not found", log.Err(err), log.Any("op", operator))
+	//	return []*external.Class{}, nil
+	//}
+	//if err != nil {
+	//	log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.Any("op", operator))
+	//	return nil, err
+	//}
+	//result, err := external.GetClassServiceProvider().BatchGet(ctx, classIDs)
+	//if err != nil {
+	//	log.Error(ctx, "GetParticipateClass:batch get class from ClassServiceProvider error",
+	//		log.Err(err),
+	//		log.Any("op", operator),
+	//		log.Strings("classIDs", classIDs),
+	//	)
+	//	return nil, err
+	//}
+	//return result, nil
+	return nil, nil
 }
 
 func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {

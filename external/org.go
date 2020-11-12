@@ -14,7 +14,7 @@ import (
 )
 
 type OrganizationServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*Organization, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableOrganization, error)
 	GetMine(ctx context.Context, userID string) ([]*Organization, error)
 	GetParents(ctx context.Context, orgID string) ([]*Organization, error)
 	GetChildren(ctx context.Context, orgID string) ([]*Organization, error)
@@ -28,13 +28,18 @@ type Organization struct {
 	ParentID string `json:"parent_id"`
 }
 
+type NullableOrganization struct {
+	Organization
+	Valid bool `json:"-"`
+}
+
 func GetOrganizationServiceProvider() OrganizationServiceProvider {
 	return &AmsOrganizationService{}
 }
 
 type AmsOrganizationService struct{}
 
-func (s AmsOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*Organization, error) {
+func (s AmsOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*NullableOrganization, error) {
 	q := `query orgs($orgIDs: [ID!]){
 	organizations(organization_ids: $orgIDs){
     	id: organization_id
@@ -58,7 +63,15 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*
 		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	return payload, nil
+	nullableOrganizations := make([]*NullableOrganization, len(payload))
+	for i := range payload{
+		if payload[i] == nil {
+			nullableOrganizations[i] = &NullableOrganization{Valid: false}
+		} else {
+			nullableOrganizations[i] = &NullableOrganization{*payload[i], true}
+		}
+	}
+	return nullableOrganizations, nil
 }
 
 func (s AmsOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {

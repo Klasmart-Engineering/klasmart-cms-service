@@ -746,7 +746,10 @@ func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) 
 			log.String("org_id", id))
 		return "", nil
 	}
-	return orgs[0].Name, nil
+	if orgs[0].Valid {
+		orgName = orgs[0].Name
+	}
+	return
 }
 
 func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id string) (orgID, orgName string, err error) {

@@ -1287,7 +1287,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
-		orgName = orgs[0].Name
+		if orgs[0].Valid {
+			orgName = orgs[0].Name
+		}
 	}
 
 	programNameMap := make(map[string]string)
