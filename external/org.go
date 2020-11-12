@@ -136,7 +136,7 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID!
-		$permission_name: ID!
+		$permission_name: String!
 	) {
 		user(user_id: $user_id) {
 			organizationsWithPermission(permission_name: $permission_name) {
