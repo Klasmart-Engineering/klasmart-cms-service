@@ -452,12 +452,12 @@ func (a *assessmentModel) getClassNameMap(ctx context.Context, classIDs []string
 		)
 		return nil, err
 	}
-	for _, item := range items {
-		var name string
+	for i, item := range items {
 		if item.Valid {
-			name = item.Name
+			classNameMap[item.ID] = item.Name
+		} else {
+			log.Warn(ctx, "invalid item", log.Strings("class_ids", classIDs), log.Int("index", i))
 		}
-		classNameMap[item.ID] = name
 	}
 	return classNameMap, nil
 }
