@@ -60,15 +60,11 @@ type StorageConfig struct {
 }
 
 type CDNConfig struct {
-	CDNOpen bool   `yaml:"cdn_open"`
-	CDNMode string `yaml:"cdn_mode"`
+	CDNRestrictedViewer bool   `yaml:"cdn_enable_restricted_viewer"`
 
 	CDNPath           string `yaml:"cdn_path"`
 	CDNKeyId          string `yaml:"cdn_key_id"`
 	CDNPrivateKeyPath string `yaml:"cdn_private_key_path"`
-
-	CDNServicePath  string `yaml:"cdn_service_path"`
-	CDNServiceToken string `yaml:"cdn_service_token"`
 }
 
 type ScheduleConfig struct {
@@ -128,27 +124,13 @@ func loadStorageEnvConfig(ctx context.Context) {
 	}
 	config.StorageConfig.Accelerate = accelerate
 
-	cdnOpenStr := assertGetEnv("cdn_open")
-	cdnOpen, err := strconv.ParseBool(cdnOpenStr)
-	if err != nil {
-		log.Panic(ctx, "Can't parse cdn_open",
-			log.Err(err),
-			log.String("cdnOpenStr", cdnOpenStr))
-	}
-	config.CDNConfig.CDNOpen = cdnOpen
+	cdnRestrictedViewer := assertGetEnv("cdn_enable_restricted_viewer") == "true"
+	config.CDNConfig.CDNRestrictedViewer = cdnRestrictedViewer
+	config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
 
-	if cdnOpen {
-		config.CDNConfig.CDNMode = assertGetEnv("cdn_mode")
-		config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
-		if config.CDNConfig.CDNMode == "service" {
-			config.CDNConfig.CDNServicePath = assertGetEnv("cdn_service_path")
-			config.CDNConfig.CDNServiceToken = assertGetEnv("cdn_service_token")
-		} else if config.CDNConfig.CDNMode == "key" {
-			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
-			config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
-		} else {
-			log.Panic(ctx, "Unsupported cdn_mode", log.String("CDNMode", config.CDNConfig.CDNMode))
-		}
+	if cdnRestrictedViewer {
+		config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
+		config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
 	}
 }
 

@@ -70,7 +70,6 @@ type IStorage interface {
 	GetFileTempPath(ctx context.Context, partition StoragePartition, filePath string) (string, error)
 
 	GetUploadFileTempPath(ctx context.Context, partition StoragePartition, fileName string) (string, error)
-	GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string, error)
 
 	UploadFileBytes(ctx context.Context, partition StoragePartition, filePath string, fileStream *bytes.Buffer) error
 	UploadFileLAN(ctx context.Context, partition StoragePartition, filePath string, contentType string, r io.Reader) error
