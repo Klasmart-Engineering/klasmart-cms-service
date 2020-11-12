@@ -42,9 +42,6 @@ func TestClassService_BatchGet(t *testing.T) {
 		}
 	}
 }
-<<<<<<< HEAD
-=======
-
 func TestAmsOrganizationService_GetOrganizationOrSchoolName(t *testing.T) {
 	config.LoadEnvConfig()
 	ids := []string{
@@ -58,4 +55,3 @@ func TestAmsOrganizationService_GetOrganizationOrSchoolName(t *testing.T) {
 		fmt.Println(n)
 	}
 }
->>>>>>> test
