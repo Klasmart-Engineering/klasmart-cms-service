@@ -15,7 +15,7 @@ import (
 
 type ClassServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*NullableClass, error)
-	GetByUserID(ctx context.Context, userID string) ([]*NullableClass, error)
+	GetByUserID(ctx context.Context, userID string) ([]*Class, error)
 	GetByOrganizationIDs(ctx context.Context, orgIDs []string) (map[string][]*Class, error)
 	GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error)
 }
@@ -86,7 +86,7 @@ func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Nullabl
 	return classes, nil
 }
 
-func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*NullableClass, error) {
+func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Class, error) {
 	request := chlorine.NewRequest(`
 	query($user_id: ID!){
 		user(user_id: $user_id) {
@@ -104,8 +104,8 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Nul
 
 	data := &struct {
 		User struct {
-			ClassesTeaching []Class `json:"classesTeaching"`
-			ClassesStudying []Class `json:"classesStudying"`
+			ClassesTeaching []*Class `json:"classesTeaching"`
+			ClassesStudying []*Class `json:"classesStudying"`
 		} `json:"user"`
 	}{}
 
@@ -115,15 +115,9 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Nul
 		return nil, err
 	}
 
-	var classes []*NullableClass
-	for i := range data.User.ClassesTeaching {
-		classes = append(classes, &NullableClass{data.User.ClassesTeaching[i], true})
-	}
-
-	for i := range data.User.ClassesStudying {
-		classes = append(classes, &NullableClass{data.User.ClassesStudying[i], true})
-	}
-
+	var classes []*Class
+	classes = append(classes, data.User.ClassesTeaching...)
+	classes = append(classes, data.User.ClassesStudying...)
 	return classes, nil
 }
 
