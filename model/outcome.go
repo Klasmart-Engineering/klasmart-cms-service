@@ -732,23 +732,6 @@ func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name 
 	return user.Name, nil
 }
 
-func (ocm OutcomeModel) getOrganizationNameByID(ctx context.Context, id string) (orgName string, err error) {
-	provider := external.GetOrganizationServiceProvider()
-	orgs, err := provider.BatchGet(ctx, []string{id})
-	if err != nil {
-		log.Error(ctx, "getOrganizationNameByID: BatchGet failed",
-			log.Err(err),
-			log.String("org_id", id))
-		return "", err
-	}
-	if len(orgs) == 0 {
-		log.Error(ctx, "getOrganizationNameByID: org list is empty",
-			log.String("org_id", id))
-		return "", nil
-	}
-	return orgs[0].Name, nil
-}
-
 func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id string) (orgID, orgName string, err error) {
 	provider := external.GetOrganizationServiceProvider()
 	orgs, err := provider.GetParents(ctx, orgID)

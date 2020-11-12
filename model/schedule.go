@@ -985,7 +985,15 @@ func (s *scheduleModel) GetParticipateClass(ctx context.Context, operator *entit
 		)
 		return nil, err
 	}
-	return result, nil
+	var classes []*external.Class
+	for i := range result {
+		if result[i].Valid {
+			classes = append(classes, &result[i].Class)
+		} else {
+			log.Warn(ctx, "invalid value", log.Strings("class_ids", classIDs), log.Int("index", i))
+		}
+	}
+	return classes, nil
 }
 
 func (s *scheduleModel) GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error) {
