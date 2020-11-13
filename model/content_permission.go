@@ -95,14 +95,15 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 			log.Info(ctx, "republish not archive content", log.String("cid", othersContents[i].ID))
 			return false, nil
 		}
-	}
-	hasPermission, err := cpm.checkCMSPermission(ctx, scope , []external.PermissionName{external.RepublishArchivedContent274}, user)
-	if err != nil{
-		return false, err
-	}
-	if !hasPermission {
-		log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
-		return false, nil
+
+		hasPermission, err := cpm.checkCMSPermission(ctx, scope , []external.PermissionName{external.RepublishArchivedContent274}, user)
+		if err != nil{
+			return false, err
+		}
+		if !hasPermission {
+			log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
+			return false, nil
+		}
 	}
 
 	return true, nil
