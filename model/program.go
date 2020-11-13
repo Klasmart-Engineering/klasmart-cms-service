@@ -41,7 +41,7 @@ func (m *programModel) SetDeveSkill(ctx context.Context, id string, developmentI
 				DevelopmentID: developmentID,
 				SkillID:       skillID,
 			}
-			_, err := da.GetProgramDeveSkillDA().Insert(ctx, item)
+			_, err := da.GetProgramDeveSkillDA().InsertTx(ctx, tx, item)
 			if err != nil {
 				log.Error(ctx, "add error", log.Err(err), log.Any("item", item))
 				return err
@@ -71,7 +71,7 @@ func (m *programModel) SetDevelopment(ctx context.Context, id string, developmen
 				ProgramID:     id,
 				DevelopmentID: developmentID,
 			}
-			_, err := da.GetProgramDevelopmentDA().Insert(ctx, item)
+			_, err := da.GetProgramDevelopmentDA().InsertTx(ctx, tx, item)
 			if err != nil {
 				log.Error(ctx, "add error", log.Err(err), log.Any("item", item))
 				return err
@@ -101,7 +101,7 @@ func (m *programModel) SetSubject(ctx context.Context, id string, subjectIDs []s
 				ProgramID: id,
 				SubjectID: subjectID,
 			}
-			_, err := da.GetProgramSubjectDA().Insert(ctx, item)
+			_, err := da.GetProgramSubjectDA().InsertTx(ctx, tx, item)
 			if err != nil {
 				log.Error(ctx, "add error", log.Err(err), log.Any("item", item))
 				return err
@@ -130,7 +130,7 @@ func (m *programModel) SetGrade(ctx context.Context, id string, gradeIDs []strin
 				ProgramID: id,
 				GradeID:   gradeID,
 			}
-			_, err := da.GetProgramGradeDA().Insert(ctx, item)
+			_, err := da.GetProgramGradeDA().InsertTx(ctx, tx, item)
 			if err != nil {
 				log.Error(ctx, "add error", log.Err(err), log.Any("item", item))
 				return err
@@ -160,7 +160,7 @@ func (m *programModel) SetAge(ctx context.Context, id string, ageIDs []string) e
 				ProgramID: id,
 				AgeID:     ageID,
 			}
-			_, err := da.GetProgramAgeDA().Insert(ctx, item)
+			_, err := da.GetProgramAgeDA().InsertTx(ctx, tx, item)
 			if err != nil {
 				log.Error(ctx, "add error", log.Err(err), log.Any("item", item))
 				return err
