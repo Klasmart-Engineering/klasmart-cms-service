@@ -237,6 +237,13 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 }
 
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+	//若content为archive，则直接发布
+	if content.PublishStatus == entity.ContentStatusArchive {
+		content.PublishStatus = entity.ContentStatusPublished
+		content.UpdateAt = time.Now().Unix()
+		return nil
+	}
+
 	err := cm.checkPublishContent(ctx, tx, content, user)
 	if err != nil {
 		log.Warn(ctx, "check content scope & sub content scope failed", log.Err(err))
