@@ -104,33 +104,33 @@ func (s Server) registeRoute() {
 
 	ages := s.engine.Group("/v1/ages")
 	{
-		ages.GET("", MustLogin, s.getAge)
-		ages.GET("/:id", MustLogin, s.getAgeByID)
+		ages.GET("", MustLoginWithoutOrgID, s.getAge)
+		ages.GET("/:id", MustLoginWithoutOrgID, s.getAgeByID)
 	}
 	classTypes := s.engine.Group("/v1/class_types")
 	{
-		classTypes.GET("", MustLogin, s.getClassType)
-		classTypes.GET("/:id", MustLogin, s.getClassTypeByID)
+		classTypes.GET("", MustLoginWithoutOrgID, s.getClassType)
+		classTypes.GET("/:id", MustLoginWithoutOrgID, s.getClassTypeByID)
 	}
 	developmental := s.engine.Group("/v1/developmentals")
 	{
-		developmental.GET("", MustLogin, s.getDevelopmental)
-		developmental.GET("/:id", MustLogin, s.getDevelopmentalByID)
+		developmental.GET("", MustLoginWithoutOrgID, s.getDevelopmental)
+		developmental.GET("/:id", MustLoginWithoutOrgID, s.getDevelopmentalByID)
 	}
 	grade := s.engine.Group("/v1/grades")
 	{
-		grade.GET("", MustLogin, s.getGrade)
-		grade.GET("/:id", MustLogin, s.getGradeByID)
+		grade.GET("", MustLoginWithoutOrgID, s.getGrade)
+		grade.GET("/:id", MustLoginWithoutOrgID, s.getGradeByID)
 	}
 	lessonTypes := s.engine.Group("/v1/lesson_types")
 	{
-		lessonTypes.GET("", MustLogin, s.getLessonType)
-		lessonTypes.GET("/:id", MustLogin, s.getLessonTypeByID)
+		lessonTypes.GET("", MustLoginWithoutOrgID, s.getLessonType)
+		lessonTypes.GET("/:id", MustLoginWithoutOrgID, s.getLessonTypeByID)
 	}
 	programs := s.engine.Group("/v1/programs")
 	{
-		programs.GET("", MustLogin, s.getProgram)
-		programs.GET("/:id", MustLogin, s.getProgramByID)
+		programs.GET("", MustLoginWithoutOrgID, s.getProgram)
+		programs.GET("/:id", MustLoginWithoutOrgID, s.getProgramByID)
 	}
 	skills := s.engine.Group("/v1/skills")
 	{
@@ -139,8 +139,8 @@ func (s Server) registeRoute() {
 	}
 	subjects := s.engine.Group("/v1/subjects")
 	{
-		subjects.GET("", MustLogin, s.getSubject)
-		subjects.GET("/:id", MustLogin, s.getSubjectByID)
+		subjects.GET("", MustLoginWithoutOrgID, s.getSubject)
+		subjects.GET("/:id", MustLoginWithoutOrgID, s.getSubjectByID)
 	}
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{
