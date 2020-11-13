@@ -80,12 +80,14 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 			}
 		}
 	}
+
 	//若全是自己的content，则返回有权限
 	if len(othersContents) == 0 {
 		return true, nil
 	}
 
 	//检查是否有republished权限及该content是否为archive状态
+	republishScope := make([]string, 0)
 	for i := range othersContents {
 		if scope == "" {
 			scope = othersContents[i].PublishScope
@@ -95,17 +97,17 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 			log.Info(ctx, "republish not archive content", log.String("cid", othersContents[i].ID))
 			return false, nil
 		}
-
-		hasPermission, err := cpm.checkCMSPermission(ctx, scope , []external.PermissionName{external.RepublishArchivedContent274}, user)
-		if err != nil{
-			return false, err
-		}
-		if !hasPermission {
-			log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
-			return false, nil
-		}
+		republishScope = append(republishScope, scope)
 	}
 
+	hasPermission, err := cpm.checkCMSPermissionBatch(ctx, republishScope,  []external.PermissionName{external.RepublishArchivedContent274}, user)
+	if err != nil{
+		return false, err
+	}
+	if !hasPermission {
+		log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
+		return false, nil
+	}
 	return true, nil
 }
 
@@ -354,6 +356,34 @@ func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permis
 		Name: orgs[0].Name,
 	})
 	return entities, nil
+}
+
+func (s *ContentPermissionModel) checkCMSPermissionBatch(ctx context.Context, scope []string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
+	orgIdList := make([]*external.Organization, 0)
+	for i := range permissions {
+		orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permissions[i])
+		if err != nil{
+			log.Warn(ctx, "get org by permission failed", log.String("permission", string(permissions[i])),
+				log.Err(err), log.Any("user", op))
+			return false, err
+		}
+		orgIdList = append(orgIdList, orgs...)
+	}
+
+	for i := range scope {
+		flag := false
+		for j := range orgIdList {
+			if orgIdList[j].ID == scope[i] {
+				flag = true
+				break
+			}
+		}
+		if !flag {
+			log.Warn(ctx, "scope has no permission", log.String("scope", scope[i]), log.Any("user", op))
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
