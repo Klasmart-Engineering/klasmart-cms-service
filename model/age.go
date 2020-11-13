@@ -7,15 +7,44 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
 type IAgeModel interface {
 	Query(ctx context.Context, condition *da.AgeCondition) ([]*entity.Age, error)
 	GetByID(ctx context.Context, id string) (*entity.Age, error)
+	Add(ctx context.Context, data *entity.Age) (string, error)
+	Update(ctx context.Context, data *entity.Age) (string, error)
 }
 
 type ageModel struct{}
+
+func (m *ageModel) Add(ctx context.Context, data *entity.Age) (string, error) {
+	data.ID = utils.NewID()
+	_, err := da.GetAgeDA().Insert(ctx, data)
+	if err != nil {
+		log.Error(ctx, "add error", log.Err(err), log.Any("data", data))
+		return "", err
+	}
+	return data.ID, nil
+}
+
+func (m *ageModel) Update(ctx context.Context, data *entity.Age) (string, error) {
+	var old = new(entity.Program)
+	err := da.GetAgeDA().Get(ctx, data.ID, old)
+	if err != nil {
+		log.Error(ctx, "get error", log.Err(err), log.Any("data", data))
+		return "", err
+	}
+	old.Name = data.Name
+	_, err = da.GetAgeDA().Update(ctx, old)
+	if err != nil {
+		log.Error(ctx, "update error", log.Err(err), log.Any("data", data))
+		return "", err
+	}
+	return old.ID, nil
+}
 
 func (m *ageModel) Query(ctx context.Context, condition *da.AgeCondition) ([]*entity.Age, error) {
 	var result []*entity.Age

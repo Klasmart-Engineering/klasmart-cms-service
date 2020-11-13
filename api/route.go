@@ -106,6 +106,8 @@ func (s Server) registeRoute() {
 	{
 		ages.GET("", MustLoginWithoutOrgID, s.getAge)
 		ages.GET("/:id", MustLoginWithoutOrgID, s.getAgeByID)
+		ages.POST("", MustLoginWithoutOrgID, s.addAge)
+		ages.PUT("/:id", MustLoginWithoutOrgID, s.updateAge)
 	}
 	classTypes := s.engine.Group("/v1/class_types")
 	{
@@ -116,11 +118,15 @@ func (s Server) registeRoute() {
 	{
 		developmental.GET("", MustLoginWithoutOrgID, s.getDevelopmental)
 		developmental.GET("/:id", MustLoginWithoutOrgID, s.getDevelopmentalByID)
+		developmental.POST("", MustLoginWithoutOrgID, s.addDevelopmental)
+		developmental.PUT("/:id", MustLoginWithoutOrgID, s.updateDevelopmental)
 	}
 	grade := s.engine.Group("/v1/grades")
 	{
 		grade.GET("", MustLoginWithoutOrgID, s.getGrade)
 		grade.GET("/:id", MustLoginWithoutOrgID, s.getGradeByID)
+		grade.POST("", MustLoginWithoutOrgID, s.addGrade)
+		grade.PUT("/:id", MustLoginWithoutOrgID, s.updateGrade)
 	}
 	lessonTypes := s.engine.Group("/v1/lesson_types")
 	{
@@ -131,16 +137,22 @@ func (s Server) registeRoute() {
 	{
 		programs.GET("", MustLoginWithoutOrgID, s.getProgram)
 		programs.GET("/:id", MustLoginWithoutOrgID, s.getProgramByID)
+		programs.POST("", MustLoginWithoutOrgID, s.addProgram)
+		programs.PUT("/:id", MustLoginWithoutOrgID, s.updateProgram)
 	}
 	skills := s.engine.Group("/v1/skills")
 	{
 		skills.GET("", MustLoginWithoutOrgID, s.getSkill)
 		skills.GET("/:id", MustLoginWithoutOrgID, s.getSkillByID)
+		skills.POST("", MustLoginWithoutOrgID, s.addSkill)
+		skills.PUT("/:id", MustLoginWithoutOrgID, s.updateSkill)
 	}
 	subjects := s.engine.Group("/v1/subjects")
 	{
 		subjects.GET("", MustLoginWithoutOrgID, s.getSubject)
 		subjects.GET("/:id", MustLoginWithoutOrgID, s.getSubjectByID)
+		subjects.POST("", MustLoginWithoutOrgID, s.addSubject)
+		subjects.PUT("/:id", MustLoginWithoutOrgID, s.updateSubject)
 	}
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{

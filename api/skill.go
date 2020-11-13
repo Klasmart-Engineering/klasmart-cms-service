@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
@@ -69,6 +70,64 @@ func (s *Server) getSkillByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary addSkill
+// @ID addSkill
+// @Description addSkill
+// @Accept json
+// @Produce json
+// @Param skill body entity.Skill true "skill"
+// @Tags skill
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /skills [post]
+func (s *Server) addSkill(c *gin.Context) {
+	ctx := c.Request.Context()
+	data := new(entity.Skill)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	id, err := model.GetSkillModel().Add(ctx, data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+}
+
+// @Summary updateSkill
+// @ID updateSkill
+// @Description updateSkill
+// @Accept json
+// @Produce json
+// @Param id path string true "skill id"
+// @Param skill body entity.Skill true "skill"
+// @Tags skill
+// @Success 200 {object} entity.IDResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /skills/{id} [put]
+func (s *Server) updateSkill(c *gin.Context) {
+	ctx := c.Request.Context()
+	data := new(entity.Skill)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	data.ID = c.Param("id")
+	id, err := model.GetSkillModel().Update(ctx, data)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

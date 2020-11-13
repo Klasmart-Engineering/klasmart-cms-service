@@ -7,15 +7,44 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
 type IGradeModel interface {
 	Query(ctx context.Context, condition *da.GradeCondition) ([]*entity.Grade, error)
 	GetByID(ctx context.Context, id string) (*entity.Grade, error)
+	Add(ctx context.Context, data *entity.Grade) (string, error)
+	Update(ctx context.Context, data *entity.Grade) (string, error)
 }
 
 type gradeModel struct {
+}
+
+func (m *gradeModel) Add(ctx context.Context, data *entity.Grade) (string, error) {
+	data.ID = utils.NewID()
+	_, err := da.GetGradeDA().Insert(ctx, data)
+	if err != nil {
+		log.Error(ctx, "add error", log.Err(err), log.Any("data", data))
+		return "", err
+	}
+	return data.ID, nil
+}
+
+func (m *gradeModel) Update(ctx context.Context, data *entity.Grade) (string, error) {
+	var old = new(entity.Grade)
+	err := da.GetGradeDA().Get(ctx, data.ID, old)
+	if err != nil {
+		log.Error(ctx, "get error", log.Err(err), log.Any("data", data))
+		return "", err
+	}
+	old.Name = data.Name
+	_, err = da.GetGradeDA().Update(ctx, old)
+	if err != nil {
+		log.Error(ctx, "update error", log.Err(err), log.Any("data", data))
+		return "", err
+	}
+	return old.ID, nil
 }
 
 func (m *gradeModel) Query(ctx context.Context, condition *da.GradeCondition) ([]*entity.Grade, error) {

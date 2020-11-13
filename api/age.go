@@ -3,8 +3,10 @@ package api
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
@@ -55,6 +57,64 @@ func (s *Server) getAgeByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary addAge
+// @ID addAge
+// @Description add age
+// @Accept json
+// @Produce json
+// @Param age body entity.Age true "age"
+// @Tags age
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /ages [post]
+func (s *Server) addAge(c *gin.Context) {
+	ctx := c.Request.Context()
+	data := new(entity.Age)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	id, err := model.GetAgeModel().Add(ctx, data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+}
+
+// @Summary updateAge
+// @ID updateAge
+// @Description updateAge
+// @Accept json
+// @Produce json
+// @Param id path string true "age id"
+// @Param age body entity.Age true "age"
+// @Tags age
+// @Success 200 {object} entity.IDResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /ages/{id} [put]
+func (s *Server) updateAge(c *gin.Context) {
+	ctx := c.Request.Context()
+	data := new(entity.Age)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	data.ID = c.Param("id")
+	id, err := model.GetAgeModel().Update(ctx, data)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
