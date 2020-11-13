@@ -1567,6 +1567,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:       userNameMap[contentList[i].Creator],
 			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
+			IsMine: 			contentList[i].Author == user.UserID,
 		}
 	}
 

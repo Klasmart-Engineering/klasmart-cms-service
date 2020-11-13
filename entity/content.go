@@ -362,6 +362,8 @@ type ContentInfoWithDetails struct {
 	CreatorName string `json:"creator_name"`
 
 	OutcomeEntities []*Outcome `json:"outcome_entities"`
+
+	IsMine bool `json:"is_mine"`
 }
 
 type ContentName struct {
