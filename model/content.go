@@ -1087,7 +1087,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	//filter visible
 	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
 		condition2.Scope = []string{user.OrgID}
-	}else{
+	} else {
 		scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPublished, user)
 		if err != nil {
 			return 0, nil, err
@@ -1101,6 +1101,8 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 
 	//condition2.Scope = scopes
 
+	cm.addUserCondition(ctx, &condition1, user)
+	cm.addUserCondition(ctx, &condition2, user)
 	combineCondition := &da.CombineConditions{
 		SourceCondition: &condition1,
 		TargetCondition: &condition2,
@@ -1123,6 +1125,7 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	}
 	condition.Scope = scope
 
+	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
@@ -1137,11 +1140,34 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 		scope = []string{constant.NoSearchItem}
 	}
 	condition.Scope = scope
+
+	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
+}
+
+func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition , user *entity.Operator){
+	if condition.Name == "" {
+		return
+	}
+	users, err := external.GetUserServiceProvider().Query(ctx, user.OrgID, condition.Name)
+	if err != nil{
+		log.Warn(ctx, "get user info failed", log.Err(err), log.String("keyword", condition.Name), log.Any("user", user))
+		return
+	}
+	if len(users) < 1 {
+		log.Info(ctx, "user info not found in keywords", log.Err(err), log.String("keyword", condition.Name), log.String("userId", user.UserID), log.String("orgId", user.OrgID))
+		return
+	}
+	ids := make([]string, len(users))
+	for i := range users {
+		ids[i] = users[i].ID
+	}
+	condition.JoinUserIdList = ids
 }
 
 func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
+	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
@@ -1315,7 +1341,11 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
-		orgName = orgs[0].Name
+		if orgs[0].Valid {
+			orgName = orgs[0].Name
+		} else {
+			log.Warn(ctx, "invalid value", log.String("org_id", user.OrgID))
+		}
 	}
 
 	programNameMap := make(map[string]string)
@@ -1354,11 +1384,16 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 	//Users
 	users, err := external.GetUserServiceProvider().BatchGet(ctx, userIds)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIds))
-	}else{
-		for i := range users{
-			userNameMap[users[i].UserID] = users[i].UserName
+	} else {
+		for i := range users {
+			if !users[i].Valid {
+				log.Warn(ctx, "user not exists, may be deleted", log.String("id", userIds[i]))
+				continue
+			}
+
+			userNameMap[users[i].ID] = users[i].Name
 		}
 	}
 
@@ -1529,9 +1564,10 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
 			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
-			AuthorName: userNameMap[contentList[i].Author],
-			CreatorName: userNameMap[contentList[i].Creator],
+			AuthorName:        userNameMap[contentList[i].Author],
+			CreatorName:       userNameMap[contentList[i].Creator],
 			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
+			IsMine: 			contentList[i].Author == user.UserID,
 		}
 	}
 

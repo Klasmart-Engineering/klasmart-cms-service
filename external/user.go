@@ -12,13 +12,19 @@ import (
 )
 
 type UserServiceProvider interface {
-	Get(ctx context.Context, userID string) (*User, error)
-	BatchGet(ctx context.Context, ids []string) ([]*User, error)
+	Get(ctx context.Context, id string) (*User, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableUser, error)
+	Query(ctx context.Context, organizationID, keyword string) ([]*User, error)
 }
 
 type User struct {
-	UserID   string `json:"user_id"`
-	UserName string `json:"user_name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type NullableUser struct {
+	Valid bool `json:"-"`
+	*User
 }
 
 var (
@@ -36,34 +42,34 @@ func GetUserServiceProvider() UserServiceProvider {
 
 type AmsUserService struct{}
 
-func (s AmsUserService) Get(ctx context.Context, userID string) (*User, error) {
-	users, err := s.BatchGet(ctx, []string{userID})
+func (s AmsUserService) Get(ctx context.Context, id string) (*User, error) {
+	users, err := s.BatchGet(ctx, []string{id})
 	if err != nil {
 		return nil, err
 	}
 
-	return users[0], nil
+	if !users[0].Valid {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return users[0].User, nil
 }
 
-func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*User, error) {
+func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*NullableUser, error) {
 	if len(ids) == 0 {
-		return []*User{}, nil
+		return []*NullableUser{}, nil
 	}
 
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range ids {
-		fmt.Fprintf(sb, "u%d: user(user_id: \"%s\") {user_id user_name my_organization { organization_id } }\n", index, id)
+		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {id:user_id name:user_name}\n", index, id)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String())
 
-	data := map[string]*struct {
-		UserID   string `json:"user_id"`
-		UserName string `json:"user_name"`
-	}{}
-
+	data := map[string]*User{}
 	response := &chlorine.Response{
 		Data: &data,
 	}
@@ -74,20 +80,60 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*User, er
 		return nil, err
 	}
 
-	var queryAlias string
-	users := make([]*User, 0, len(data))
+	users := make([]*NullableUser, 0, len(data))
 	for index := range ids {
-		queryAlias = fmt.Sprintf("u%d", index)
-		user, found := data[queryAlias]
-		if !found || user == nil {
-			log.Error(ctx, "users not found", log.Strings("ids", ids), log.String("id", ids[index]))
-			return nil, constant.ErrRecordNotFound
-		}
-
-		users = append(users, &User{
-			UserID:   user.UserID,
-			UserName: user.UserName,
+		user := data[fmt.Sprintf("q%d", index)]
+		users = append(users, &NullableUser{
+			Valid: user != nil,
+			User:  user,
 		})
+	}
+
+	return users, nil
+}
+
+func (s AmsUserService) Query(ctx context.Context, organizationID, keyword string) ([]*User, error) {
+	request := chlorine.NewRequest(`
+	query(
+		$organization_id: ID!
+		$keyword: String!
+	) {
+		organization(organization_id: $organization_id) {
+			findMembers(search_query: $keyword) {
+				user{
+					id: user_id
+					name: user_name
+				}
+			}
+		}
+	}`)
+	request.Var("organization_id", organizationID)
+	request.Var("keyword", keyword)
+
+	data := &struct {
+		Organization struct {
+			FindMembers []struct {
+				User *User `json:"user"`
+			} `json:"findMembers"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get users by keyword failed",
+			log.Err(err),
+			log.String("organizationID", organizationID),
+			log.String("keyword", keyword))
+		return nil, err
+	}
+
+	users := make([]*User, 0, len(data.Organization.FindMembers))
+	for _, member := range data.Organization.FindMembers {
+		users = append(users, member.User)
 	}
 
 	return users, nil

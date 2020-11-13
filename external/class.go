@@ -14,7 +14,7 @@ import (
 )
 
 type ClassServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*Class, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableClass, error)
 	GetByUserID(ctx context.Context, userID string) ([]*Class, error)
 	GetByOrganizationIDs(ctx context.Context, orgIDs []string) (map[string][]*Class, error)
 	GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error)
@@ -25,13 +25,18 @@ type Class struct {
 	Name string `json:"name"`
 }
 
+type NullableClass struct {
+	Class
+	Valid bool `json:"-"`
+}
+
 func GetClassServiceProvider() ClassServiceProvider {
 	return &AmsClassService{}
 }
 
 type AmsClassService struct{}
 
-func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, error) {
+func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*NullableClass, error) {
 	raw := `query{
 	{{range $i, $e := .}}
 	index_{{$i}}: class(class_id: "{{$e}}"){
@@ -70,9 +75,13 @@ func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Class, 
 		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	var classes []*Class
+	var classes []*NullableClass
 	for _, v := range payload {
-		classes = append(classes, v)
+		if v == nil {
+			classes = append(classes, &NullableClass{Valid: false})
+		} else {
+			classes = append(classes, &NullableClass{*v, true})
+		}
 	}
 	return classes, nil
 }
@@ -82,12 +91,12 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 	query($user_id: ID!){
 		user(user_id: $user_id) {
 			classesTeaching{
-				class_id
-				class_name
+				id: class_id
+				name: class_name
 			}
 			classesStudying{
-				class_id
-				class_name
+				id: class_id
+				name: class_name
 			}
 		}
 	}`)
@@ -95,14 +104,8 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 
 	data := &struct {
 		User struct {
-			ClassesTeaching []struct {
-				ClassID   string `json:"class_id"`
-				ClassName string `json:"class_name"`
-			} `json:"classesTeaching"`
-			ClassesStudying []struct {
-				ClassID   string `json:"class_id"`
-				ClassName string `json:"class_name"`
-			} `json:"classesStudying"`
+			ClassesTeaching []*Class `json:"classesTeaching"`
+			ClassesStudying []*Class `json:"classesStudying"`
 		} `json:"user"`
 	}{}
 
@@ -112,21 +115,9 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 		return nil, err
 	}
 
-	classes := make([]*Class, 0, len(data.User.ClassesTeaching)+len(data.User.ClassesStudying))
-	for _, class := range data.User.ClassesTeaching {
-		classes = append(classes, &Class{
-			ID:   class.ClassID,
-			Name: class.ClassName,
-		})
-	}
-
-	for _, class := range data.User.ClassesStudying {
-		classes = append(classes, &Class{
-			ID:   class.ClassID,
-			Name: class.ClassName,
-		})
-	}
-
+	classes :=make([]*Class,0)
+	classes = append(classes, data.User.ClassesTeaching...)
+	classes = append(classes, data.User.ClassesStudying...)
 	return classes, nil
 }
 
@@ -134,17 +125,14 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range organizationIDs {
-		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{class_id class_name }}\n", index, id)
+		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{id: class_id name: class_name }}\n", index, id)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String())
 
 	data := map[string]*struct {
-		Classes []struct {
-			ClassID   string `json:"class_id"`
-			ClassName string `json:"class_name"`
-		} `json:"classes"`
+		Classes []*Class `json:"classes"`
 	}{}
 
 	response := &chlorine.Response{
@@ -167,12 +155,10 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 			return nil, constant.ErrRecordNotFound
 		}
 
-		classes[organizationIDs[index]] = make([]*Class, 0, len(org.Classes))
-		for _, class := range org.Classes {
-			classes[organizationIDs[index]] = append(classes[organizationIDs[index]], &Class{
-				ID:   class.ClassID,
-				Name: class.ClassName,
-			})
+		if org.Classes != nil{
+			classes[organizationIDs[index]] = org.Classes
+		} else {
+			classes[organizationIDs[index]] = []*Class{}
 		}
 	}
 	log.Info(ctx, "GetByOrganizationIDs", log.Any("classes", classes))
@@ -183,17 +169,14 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range schoolIDs {
-		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {classes{class_id class_name }}\n", index, id)
+		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {classes{id: class_id name: class_name }}\n", index, id)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String())
 
 	data := map[string]*struct {
-		Classes []struct {
-			ClassID   string `json:"class_id"`
-			ClassName string `json:"class_name"`
-		} `json:"classes"`
+		Classes []*Class `json:"classes"`
 	}{}
 
 	response := &chlorine.Response{
@@ -216,12 +199,10 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 			return nil, constant.ErrRecordNotFound
 		}
 
-		classes[schoolIDs[index]] = make([]*Class, 0, len(org.Classes))
-		for _, class := range org.Classes {
-			classes[schoolIDs[index]] = append(classes[schoolIDs[index]], &Class{
-				ID:   class.ClassID,
-				Name: class.ClassName,
-			})
+		if org.Classes != nil {
+			classes[schoolIDs[index]] = org.Classes
+		} else {
+			classes[schoolIDs[index]] = []*Class{}
 		}
 	}
 
