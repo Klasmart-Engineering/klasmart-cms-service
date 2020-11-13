@@ -19,19 +19,11 @@ import (
 )
 
 func ExtractSession(c *gin.Context) (string, error) {
-	token := c.GetHeader("Authorization")
-	if token == "" {
-		log.Info(c.Request.Context(), "ExtractSession", log.String("session", "no session"))
-		// TODO: for mock
-		//return "", constant.ErrUnAuthorized
-		return "", nil
+	token, err := c.Cookie("access")
+	if token == "" || err != nil {
+		log.Info(c.Request.Context(), "ExtractSession", log.String("session", "no session"), log.Err(err))
+		return "", constant.ErrUnAuthorized
 	}
-
-	prefix := "Bearer "
-	if strings.HasPrefix(token, prefix) {
-		token = token[len(prefix):]
-	}
-
 	return token, nil
 }
 
@@ -40,7 +32,7 @@ const Operator = "_op_"
 func MustLogin(c *gin.Context) {
 	token, err := ExtractSession(c)
 	if err != nil {
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 
@@ -54,12 +46,40 @@ func MustLogin(c *gin.Context) {
 	})
 	if err != nil {
 		log.Info(c.Request.Context(), "MustLogin", log.String("token", token), log.Err(err))
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	if c.Query(constant.URLOrganizationIDParameter) == "" {
 		log.Info(c.Request.Context(), "MustLogin", log.String("OrgID", "no org_id"))
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorizedNoOrgID))
+		return
+	}
+	op := &entity.Operator{
+		UserID: claims.ID,
+		OrgID:  c.Query(constant.URLOrganizationIDParameter),
+		Role:   constant.DefaultRole,
+	}
+	c.Set(Operator, op)
+}
+
+func MustLoginWithoutOrgID(c *gin.Context) {
+	token, err := ExtractSession(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
+	claims := &struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		*jwt.StandardClaims
+	}{}
+	_, err = jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
+		return config.Get().AMS.TokenVerifyKey, nil
+	})
+	if err != nil {
+		log.Info(c.Request.Context(), "MustLogin", log.String("token", token), log.Err(err))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	op := &entity.Operator{

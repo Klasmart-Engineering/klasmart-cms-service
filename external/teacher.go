@@ -2,8 +2,6 @@ package external
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -12,13 +10,20 @@ import (
 )
 
 type TeacherServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*Teacher, error)
-	Query(ctx context.Context, keyword string) ([]*Teacher, error)
+	Get(ctx context.Context, id string) (*Teacher, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableTeacher, error)
+	GetByOrganization(ctx context.Context, organizationID string) ([]*Teacher, error)
+	Query(ctx context.Context, organizationID, keyword string) ([]*Teacher, error)
 }
 
 type Teacher struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type NullableTeacher struct {
+	Valid bool `json:"-"`
+	*Teacher
 }
 
 var (
@@ -36,23 +41,63 @@ func GetTeacherServiceProvider() TeacherServiceProvider {
 
 type AmsTeacherService struct{}
 
-func (s AmsTeacherService) BatchGet(ctx context.Context, ids []string) ([]*Teacher, error) {
+func (s AmsTeacherService) Get(ctx context.Context, id string) (*Teacher, error) {
+	teachers, err := s.BatchGet(ctx, []string{id})
+	if err != nil {
+		return nil, err
+	}
+
+	if !teachers[0].Valid {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return teachers[0].Teacher, nil
+}
+
+func (s AmsTeacherService) BatchGet(ctx context.Context, ids []string) ([]*NullableTeacher, error) {
 	if len(ids) == 0 {
-		return []*Teacher{}, nil
+		return []*NullableTeacher{}, nil
 	}
 
-	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range ids {
-		fmt.Fprintf(sb, "u%d: user(user_id: \"%s\") {user_id user_name}\n", index, id)
+	users, err := GetUserServiceProvider().BatchGet(ctx, ids)
+	if err != nil {
+		return nil, err
 	}
-	sb.WriteString("}")
 
-	request := chlorine.NewRequest(sb.String())
+	teachers := make([]*NullableTeacher, len(users))
+	for index, user := range users {
+		teachers[index] = &NullableTeacher{
+			Valid: user.Valid,
+			Teacher: &Teacher{
+				ID:   user.User.ID,
+				Name: user.User.Name,
+			},
+		}
+	}
 
-	data := map[string]struct {
-		UserID   string `json:"user_id"`
-		UserName string `json:"user_name"`
+	return teachers, nil
+}
+
+func (s AmsTeacherService) GetByOrganization(ctx context.Context, organizationID string) ([]*Teacher, error) {
+	request := chlorine.NewRequest(`
+	query ($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			classes{
+				teachers{
+					id: user_id
+					name: user_name
+				}
+			}    
+		}
+	}`)
+	request.Var("organization_id", organizationID)
+
+	data := &struct {
+		Organization struct {
+			Classes []struct {
+				Teachers []*Teacher `json:"teachers"`
+			} `json:"classes"`
+		} `json:"organization"`
 	}{}
 
 	response := &chlorine.Response{
@@ -61,29 +106,33 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, ids []string) ([]*Teach
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get teachers by ids failed", log.Strings("ids", ids))
+		log.Error(ctx, "get teachers by org failed",
+			log.Err(err),
+			log.String("organizationID", organizationID))
 		return nil, err
 	}
 
-	var queryAlias string
-	teachers := make([]*Teacher, 0, len(data))
-	for index := range ids {
-		queryAlias = fmt.Sprintf("u%d", index)
-		user, found := data[queryAlias]
-		if !found {
-			return nil, constant.ErrRecordNotFound
-		}
-
-		teachers = append(teachers, &Teacher{
-			ID:   user.UserID,
-			Name: user.UserName,
-		})
+	teachers := make([]*Teacher, 0, len(data.Organization.Classes))
+	for _, class := range data.Organization.Classes {
+		teachers = append(teachers, class.Teachers...)
 	}
 
 	return teachers, nil
 }
 
-func (s AmsTeacherService) Query(ctx context.Context, keyword string) ([]*Teacher, error) {
-	// TODO: wait for owen to implement
-	return []*Teacher{}, nil
+func (s AmsTeacherService) Query(ctx context.Context, organizationID, keyword string) ([]*Teacher, error) {
+	users, err := GetUserServiceProvider().Query(ctx, organizationID, keyword)
+	if err != nil {
+		return nil, err
+	}
+
+	teachers := make([]*Teacher, len(users))
+	for index, user := range users {
+		teachers[index] = &Teacher{
+			ID:   user.ID,
+			Name: user.Name,
+		}
+	}
+
+	return teachers, nil
 }

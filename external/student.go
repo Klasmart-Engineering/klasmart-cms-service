@@ -2,8 +2,6 @@ package external
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -12,12 +10,20 @@ import (
 )
 
 type StudentServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*Student, error)
+	Get(ctx context.Context, id string) (*Student, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error)
+	GetByClassID(ctx context.Context, classID string) ([]*Student, error)
+	Query(ctx context.Context, organizationID, keyword string) ([]*Student, error)
 }
 
 type Student struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type NullableStudent struct {
+	Valid bool `json:"-"`
+	*Student
 }
 
 var (
@@ -35,48 +41,88 @@ func GetStudentServiceProvider() StudentServiceProvider {
 
 type AmsStudentService struct{}
 
-func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Student, error) {
-	if len(ids) == 0 {
-		return []*Student{}, nil
-	}
-
-	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range ids {
-		fmt.Fprintf(sb, "u%d: user(user_id: \"%s\") {user_id user_name}\n", index, id)
-	}
-	sb.WriteString("}")
-
-	request := chlorine.NewRequest(sb.String())
-
-	data := map[string]struct {
-		UserID   string `json:"user_id"`
-		UserName string `json:"user_name"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: data,
-	}
-
-	_, err := GetChlorine().Run(ctx, request, response)
+func (s AmsStudentService) Get(ctx context.Context, id string) (*Student, error) {
+	students, err := s.BatchGet(ctx, []string{id})
 	if err != nil {
-		log.Error(ctx, "get students by ids failed", log.Strings("ids", ids))
 		return nil, err
 	}
 
-	var queryAlias string
-	students := make([]*Student, 0, len(data))
-	for index := range ids {
-		queryAlias = fmt.Sprintf("u%d", index)
-		user, found := data[queryAlias]
-		if !found {
-			return nil, constant.ErrRecordNotFound
-		}
+	if !students[0].Valid {
+		return nil, constant.ErrRecordNotFound
+	}
 
-		students = append(students, &Student{
-			ID:   user.UserID,
-			Name: user.UserName,
-		})
+	return students[0].Student, nil
+}
+
+func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error) {
+	if len(ids) == 0 {
+		return []*NullableStudent{}, nil
+	}
+
+	users, err := GetUserServiceProvider().BatchGet(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	students := make([]*NullableStudent, len(users))
+	for index, user := range users {
+		students[index] = &NullableStudent{
+			Valid: user.Valid,
+			Student: &Student{
+				ID:   user.User.ID,
+				Name: user.User.Name,
+			},
+		}
+	}
+
+	return students, nil
+}
+
+func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]*Student, error) {
+	q := `query ($classID: ID!){
+	class(class_id: $classID){
+		students{
+			id: user_id
+			name: user_name
+		}
+  	}
+}`
+	req := chlorine.NewRequest(q)
+	req.Var("classID", classID)
+	var payload []*Student
+	res := chlorine.Response{
+		Data: &struct {
+			Class struct {
+				Students *[]*Student `json:"students"`
+			} `json:"class"`
+		}{Class: struct {
+			Students *[]*Student `json:"students"`
+		}{Students: &payload}},
+	}
+	_, err := GetChlorine().Run(ctx, req, &res)
+	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
+		return nil, err
+	}
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
+	return payload, nil
+}
+
+func (s AmsStudentService) Query(ctx context.Context, organizationID, keyword string) ([]*Student, error) {
+	users, err := GetUserServiceProvider().Query(ctx, organizationID, keyword)
+	if err != nil {
+		return nil, err
+	}
+
+	students := make([]*Student, len(users))
+	for index, user := range users {
+		students[index] = &Student{
+			ID:   user.ID,
+			Name: user.Name,
+		}
 	}
 
 	return students, nil

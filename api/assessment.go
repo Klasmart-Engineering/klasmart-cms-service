@@ -1,13 +1,14 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 // @Summary list assessments
@@ -28,6 +29,7 @@ import (
 // @Router /assessments [get]
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
+	operator := s.getOperator(c)
 
 	cmd := entity.ListAssessmentsQuery{}
 	{
@@ -38,7 +40,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 				log.Info(ctx, "list assessments: invalid list assessments status",
 					log.String("status", string(status)),
 				)
-				c.JSON(http.StatusBadRequest, L(Unknown))
+				c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 				return
 			}
 			if status != entity.ListAssessmentsStatusAll {
@@ -49,6 +51,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 
 		teacherName := c.Query("teacher_name")
 		if teacherName != "" {
+			cmd.OrganizationID = operator.OrgID
 			cmd.TeacherName = &teacherName
 		}
 
@@ -59,7 +62,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 				log.Info(ctx, "list assessments: invalid order by",
 					log.String("status", string(status)),
 				)
-				c.JSON(http.StatusBadRequest, L(Unknown))
+				c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 				return
 			}
 			cmd.OrderBy = &orderBy
@@ -78,7 +81,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 			log.Err(err),
 			log.Any("cmd", cmd),
 		)
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -104,7 +107,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		log.Info(ctx, "add assessment: bind failed",
 			log.Err(err),
 		)
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
@@ -114,7 +117,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 			log.Err(err),
 			log.Any("cmd", cmd),
 		)
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
@@ -138,7 +141,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		log.Info(ctx, "get assessment detail: require id")
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
@@ -148,7 +151,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 			log.Err(err),
 			log.String("id", id),
 		)
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	c.JSON(http.StatusOK, item)
@@ -176,14 +179,14 @@ func (s *Server) updateAssessment(c *gin.Context) {
 			log.Info(ctx, "update assessment: bind failed",
 				log.Err(err),
 			)
-			c.JSON(http.StatusBadRequest, L(Unknown))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return
 		}
 
 		id := c.Param("id")
 		if id == "" {
 			log.Info(ctx, "update assessment: require id")
-			c.JSON(http.StatusBadRequest, L(Unknown))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return
 		}
 		cmd.ID = id
@@ -198,7 +201,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 
 	if err := model.GetAssessmentModel().Update(ctx, cmd); err != nil {
 		log.Info(ctx, "update assessment: update failed")
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -213,25 +212,6 @@ func (s *S3Storage) CopyFile(ctx context.Context, source, target string) error {
 	return nil
 }
 
-func (s *S3Storage) GetUploadFileTempRawPath(ctx context.Context, tempPath string, fileName string) (string, error) {
-	path := fmt.Sprintf("%s/%s", tempPath, fileName)
-	svc := s3.New(s.session)
-
-	req, _ := svc.PutObjectRequest(&s3.PutObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
-	})
-
-	urlStr, err := req.Presign(constant.PresignUploadDurationMinutes)
-
-	if err != nil {
-		log.Error(ctx, "Get presigned url failed", log.Err(err))
-		return "", err
-	}
-
-	return urlStr, nil
-}
-
 func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition StoragePartition, fileName string) (string, error) {
 	path := fmt.Sprintf("%s/%s", partition, fileName)
 	svc := s3.New(s.session)
@@ -253,38 +233,37 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition Storage
 
 func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
 	log.Info(ctx, "Must Get CDN config", log.Any("config", config.Get().CDNConfig))
-	if config.Get().CDNConfig.CDNOpen {
-		switch config.Get().CDNConfig.CDNMode {
-		case "service":
-			return s.GetFileTempPathForCDNByService(ctx, partition, filePath)
-		case "key":
-			fallthrough
-		default:
-			return s.GetFileTempPathForCDN(ctx, partition, filePath)
-		}
+	if config.Get().CDNConfig.CDNRestrictedViewer {
+		return s.GetFileTempPathForCDN(ctx, partition, filePath)
+	}else{
+		return s.GetFileCDNPath(ctx, partition, filePath), nil
 	}
-	path := fmt.Sprintf("%s/%s", partition, filePath)
-	svc := s3.New(s.session)
-
-	req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
-	})
-
-	urlStr, err := req.Presign(constant.PresignDurationMinutes)
-
-	if err != nil {
-		log.Error(ctx, "Get presigned url failed", log.Err(err))
-		return "", err
-	}
-
-	return urlStr, nil
+	//直接访问桶
+	//path := fmt.Sprintf("%s/%s", partition, filePath)
+	//svc := s3.New(s.session)
+	//
+	//req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
+	//	Bucket: aws.String(s.bucket),
+	//	Key:    aws.String(path),
+	//})
+	//
+	//urlStr, err := req.Presign(constant.PresignDurationMinutes)
+	//
+	//if err != nil {
+	//	log.Error(ctx, "Get presigned url failed", log.Err(err))
+	//	return "", err
+	//}
+	//
+	//return urlStr, nil
 }
-
+func (s *S3Storage) GetFileCDNPath(ctx context.Context, partition StoragePartition, filePath string) string {
+	cdnConf := config.Get().CDNConfig
+	return fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
+}
 func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
 	cdnConf := config.Get().CDNConfig
 
-	path := fmt.Sprintf("%s/%s/%s", cdnConf.CDNPath, partition, filePath)
+	path := s.GetFileCDNPath(ctx, partition, filePath)
 	keyID := cdnConf.CDNKeyId
 
 	privateKeyPEM, err := ioutil.ReadFile(cdnConf.CDNPrivateKeyPath)
@@ -334,80 +313,80 @@ func (s *S3Storage) GetFileTempPathForCDN(ctx context.Context, partition Storage
 
 	return signedURL, nil
 }
-
-func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
-	cdnConf := config.Get().CDNConfig
-
-	params := &CDNServiceRequest{
-		URL:       cdnConf.CDNPath,
-		Duration: constant.PresignDurationMinutes,
-		FilePaths: []string{fmt.Sprintf("%s/%s", partition, filePath)},
-	}
-	data, err := json.Marshal(params)
-	if err != nil {
-		return "", err
-	}
-
-	request, err := http.NewRequest("POST", cdnConf.CDNServicePath, bytes.NewReader(data))
-	if err != nil {
-		log.Error(ctx, "post url failed",
-			log.String("service_path", cdnConf.CDNServicePath),
-			log.String("partition", string(partition)),
-			log.String("file_path", filePath),
-			log.Err(err),
-		)
-		return "", err
-	}
-	request.Header.Set("Content-InputSource", "application/json")
-	request.Header.Set("charset", "utf-8")
-	request.Header.Set("Authorization", "Bearer "+cdnConf.CDNServiceToken)
-
-	resp, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Error(ctx, "do http request failed",
-			log.String("service_path", cdnConf.CDNServicePath),
-			log.String("partition", string(partition)),
-			log.String("file_path", filePath),
-			log.Err(err),
-		)
-		return "", err
-	}
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Error(ctx, "get http resp failed",
-			log.String("service_path", cdnConf.CDNServicePath),
-			log.String("partition", string(partition)),
-			log.String("file_path", filePath),
-			log.Err(err),
-		)
-		return "", err
-	}
-	respData := new(CDNServiceResponse)
-	err = json.Unmarshal(respBody, respData)
-	if err != nil {
-		log.Error(ctx, "parse http resp failed",
-			log.String("service_path", cdnConf.CDNServicePath),
-			log.String("partition", string(partition)),
-			log.String("file_path", filePath),
-			log.String("response", string(respBody)),
-			log.Err(err),
-		)
-		return "", err
-	}
-	if len(respData.Result) < 1 {
-		log.Error(ctx, "parse http resp failed",
-			log.String("service_path", cdnConf.CDNServicePath),
-			log.String("partition", string(partition)),
-			log.String("file_path", filePath),
-			log.String("response", string(respBody)),
-			log.Any("respData", respData),
-			log.Err(err),
-		)
-		return "", ErrInvalidCDNSignatureServiceResponse
-	}
-
-	return respData.Result[0].SignedURL, nil
-}
+//
+//func (s *S3Storage) GetFileTempPathForCDNByService(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
+//	cdnConf := config.Get().CDNConfig
+//
+//	params := &CDNServiceRequest{
+//		URL:       cdnConf.CDNPath,
+//		Duration: constant.PresignDurationMinutes,
+//		FilePaths: []string{fmt.Sprintf("%s/%s", partition, filePath)},
+//	}
+//	data, err := json.Marshal(params)
+//	if err != nil {
+//		return "", err
+//	}
+//
+//	request, err := http.NewRequest("POST", cdnConf.CDNServicePath, bytes.NewReader(data))
+//	if err != nil {
+//		log.Error(ctx, "post url failed",
+//			log.String("service_path", cdnConf.CDNServicePath),
+//			log.String("partition", string(partition)),
+//			log.String("file_path", filePath),
+//			log.Err(err),
+//		)
+//		return "", err
+//	}
+//	request.Header.Set("Content-InputSource", "application/json")
+//	request.Header.Set("charset", "utf-8")
+//	request.Header.Set("Authorization", "Bearer "+cdnConf.CDNServiceToken)
+//
+//	resp, err := http.DefaultClient.Do(request)
+//	if err != nil {
+//		log.Error(ctx, "do http request failed",
+//			log.String("service_path", cdnConf.CDNServicePath),
+//			log.String("partition", string(partition)),
+//			log.String("file_path", filePath),
+//			log.Err(err),
+//		)
+//		return "", err
+//	}
+//	respBody, err := ioutil.ReadAll(resp.Body)
+//	if err != nil {
+//		log.Error(ctx, "get http resp failed",
+//			log.String("service_path", cdnConf.CDNServicePath),
+//			log.String("partition", string(partition)),
+//			log.String("file_path", filePath),
+//			log.Err(err),
+//		)
+//		return "", err
+//	}
+//	respData := new(CDNServiceResponse)
+//	err = json.Unmarshal(respBody, respData)
+//	if err != nil {
+//		log.Error(ctx, "parse http resp failed",
+//			log.String("service_path", cdnConf.CDNServicePath),
+//			log.String("partition", string(partition)),
+//			log.String("file_path", filePath),
+//			log.String("response", string(respBody)),
+//			log.Err(err),
+//		)
+//		return "", err
+//	}
+//	if len(respData.Result) < 1 {
+//		log.Error(ctx, "parse http resp failed",
+//			log.String("service_path", cdnConf.CDNServicePath),
+//			log.String("partition", string(partition)),
+//			log.String("file_path", filePath),
+//			log.String("response", string(respBody)),
+//			log.Any("respData", respData),
+//			log.Err(err),
+//		)
+//		return "", ErrInvalidCDNSignatureServiceResponse
+//	}
+//
+//	return respData.Result[0].SignedURL, nil
+//}
 
 func newS3Storage(c S3StorageConfig) IStorage {
 	return &S3Storage{

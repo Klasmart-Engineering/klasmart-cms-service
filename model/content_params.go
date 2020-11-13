@@ -3,10 +3,11 @@ package model
 import (
 	"context"
 	"fmt"
-	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"time"
+
+	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -56,8 +57,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 
 	//get publishScope&authorName
 	publishScope := c.PublishScope
-	//TODO: To get real name
-	authorName := "Bada"
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
@@ -95,7 +94,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
-		AuthorName:    authorName,
+		Creator:       operator.UserID,
 		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,
@@ -147,7 +146,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.SuggestTime > 0 {
 		content.SuggestTime = data.SuggestTime
 	}
-	if data.ContentType == entity.ContentTypeMaterial || data.ContentType == entity.ContentTypeMaterial {
+	if data.ContentType == entity.ContentTypeMaterial {
 		content.DrawActivity = data.DrawActivity.Int()
 		content.SelfStudy = data.SelfStudy.Int()
 	}
@@ -211,6 +210,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	content.Version = content.Version + 1
 	content.ID = ""
 	content.LockedBy = constant.LockedByNoBody
+	content.Author = user.UserID
 	//content.Author = user.UserID
 	//content.Org = user.OrgID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)
@@ -237,26 +237,19 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 }
 
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+	//若content为archive，则直接发布
+	if content.PublishStatus == entity.ContentStatusArchive {
+		content.PublishStatus = entity.ContentStatusPublished
+		content.UpdateAt = time.Now().Unix()
+		return nil
+	}
+
 	err := cm.checkPublishContent(ctx, tx, content, user)
 	if err != nil {
-		log.Error(ctx, "check content scope & sub content scope failed", log.Err(err))
+		log.Warn(ctx, "check content scope & sub content scope failed", log.Err(err))
 		return err
 	}
-	//if user.OrgID == content.Org && user.Role != "teacher" {
-	//	content.PublishStatus = entity.ContentStatusPublished
-	//	//直接发布，则顶替旧
-	//	if content.SourceID != "" {
-	//		//存在前序content，则隐藏前序
-	//		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//
-	//} else {
-	//	//TODO:更新发布状态
-	//	content.PublishStatus = entity.ContentStatusPending
-	//}
+
 	content.PublishStatus = entity.ContentStatusPending
 	content.UpdateAt = time.Now().Unix()
 	return nil

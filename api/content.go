@@ -45,28 +45,38 @@ func (s *Server) createContent(c *gin.Context) {
 	err := c.ShouldBind(&data)
 	if err != nil {
 		log.Error(ctx, "create content failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	hasPermission, err := model.GetContentPermissionModel().CheckCreateContentPermission(ctx, data, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidSelectForm:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
@@ -93,9 +103,30 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+
+	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIdList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
+	//if err != nil {
+	//	log.Error(ctx, "check author failed", log.Err(err))
+	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	//	return
+	//}
+	////不是作者，则检查权限
+	//if !isAuthor {
+	//
+	//}
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, "", op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err := model.GetContentModel().PublishContentBulk(ctx, tx, ids.ID, op)
 		if err != nil {
@@ -105,7 +136,9 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	})
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, "")
+		c.JSON(http.StatusOK, L(GeneralUnknown))
+	case model.ErrInvalidContentStatusToPublish:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -131,14 +164,24 @@ func (s *Server) publishContent(c *gin.Context) {
 	data := new(PublishContentRequest)
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 
 	err = model.GetContentModel().PublishContent(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -166,14 +209,23 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 	data := new(PublishContentRequest)
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 
 	err = model.GetContentModel().PublishContentWithAssets(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -202,7 +254,16 @@ func (s *Server) getContent(c *gin.Context) {
 	}
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	hasPermission, err := model.GetContentPermissionModel().CheckGetContentPermission(ctx, cid, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 
@@ -234,35 +295,46 @@ func (s *Server) updateContent(c *gin.Context) {
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+
+	hasPermission, err := model.GetContentPermissionModel().CheckUpdateContentPermission(ctx, cid, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(Unknown))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -285,6 +357,18 @@ func (s *Server) lockContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	cid := c.Param("content_id")
+
+	hasPermission, err := model.GetContentPermissionModel().CheckLockContentPermission(ctx, cid, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
+
 	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
 		ncid, err := model.GetContentModel().LockContent(ctx, tx, cid, op)
 		if err != nil {
@@ -294,15 +378,15 @@ func (s *Server) lockContent(c *gin.Context) {
 	})
 	switch err {
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, L(Unknown))
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	case model.ErrInvalidLockedContentPublishStatus:
-		c.JSON(http.StatusConflict, L(Unknown))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": ncid,
@@ -330,9 +414,20 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	ids := new(contentBulkOperateRequest)
 	err := c.ShouldBind(&ids)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+
+	hasPermission, err := model.GetContentPermissionModel().CheckDeleteContentPermission(ctx, ids.ID, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err = model.GetContentModel().DeleteContentBulk(ctx, tx, ids.ID, op)
 		if err != nil {
@@ -342,7 +437,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	})
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
-		c.JSON(http.StatusConflict, L(Unknown))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -366,7 +461,17 @@ func (s *Server) deleteContent(c *gin.Context) {
 	op := GetOperator(c)
 	cid := c.Param("content_id")
 
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	hasPermission, err := model.GetContentPermissionModel().CheckDeleteContentPermission(ctx, []string{cid}, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
 		if err != nil {
 			return err
@@ -375,9 +480,9 @@ func (s *Server) deleteContent(c *gin.Context) {
 	})
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
-		c.JSON(http.StatusConflict, L(Unknown))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case model.ErrNoContent:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -432,7 +537,24 @@ func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	condition := queryCondition(c, op)
-	total, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+
+	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+	author := c.Query("author")
+	total := 0
+	var results []*entity.ContentInfoWithDetails
+	if author == "{self}" {
+		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	}else{
+		total, results, err = model.GetContentModel().SearchUserContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	}
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
@@ -455,7 +577,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param program query string false "search content program"
 // @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
-// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
@@ -463,12 +585,23 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /contents/private [get]
+// @Router /contents_private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
 	condition := queryCondition(c, op)
+
+	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePrivate, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	switch err {
 	case nil:
@@ -492,7 +625,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
 // @Param source_type query string false "search content source type"
-// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected)
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
 // @Param page query int false "content list page index"
@@ -500,13 +633,24 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /contents/pending [get]
+// @Router /contents_pending [get]
 func (s *Server) queryPendingContent(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 
 	condition := queryCondition(c, op)
+
+	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePending, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	switch err {
 	case nil:
@@ -518,6 +662,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
+
 
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("author")

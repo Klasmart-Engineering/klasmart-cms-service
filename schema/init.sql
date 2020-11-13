@@ -17,7 +17,7 @@ CREATE TABLE `cms_contents` (
    `outcomes` TEXT NULL COMMENT 'Learning outcomes',
    `suggest_time` int  NOT  NULL  COMMENT  '建议时间',
    `author` VARCHAR( 50) NOT  NULL  COMMENT  '作者id',
-   `author_name` VARCHAR( 128) NOT  NULL  COMMENT  '作者名',
+   `creator` VARCHAR( 50) NOT  NULL  COMMENT  '创建者id',
    `org` VARCHAR( 50) NOT  NULL  COMMENT  '所属机构',
    `publish_scope` VARCHAR( 50) COMMENT  '发布范围',
    `publish_status` VARCHAR( 16) NOT  NULL  COMMENT  '状态',
@@ -38,7 +38,7 @@ CREATE TABLE `cms_contents` (
     KEY `content_publish_status` (`publish_status`),
     KEY `content_source_id` (`source_id`),
     KEY `content_latest_id` (`latest_id`),
-   FULLTEXT INDEX `content_name_description_keywords_author_index` (`content_name`, `keywords`, `description`, `author_name`)
+   FULLTEXT INDEX `content_name_description_keywords_author_index` (`content_name`, `keywords`, `description`)
 ) COMMENT '内容表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 

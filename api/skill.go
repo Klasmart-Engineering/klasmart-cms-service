@@ -27,7 +27,7 @@ func (s *Server) getSkill(c *gin.Context) {
 	developmentalID := c.Query("developmental_id")
 	if len(programID) == 0 || len(developmentalID) == 0 {
 		log.Info(ctx, "param is invalid", log.String("programID", programID), log.String("developmentalID", developmentalID))
-		c.JSON(http.StatusBadRequest, L(Unknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	result, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
@@ -43,7 +43,7 @@ func (s *Server) getSkill(c *gin.Context) {
 		},
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -66,10 +66,10 @@ func (s *Server) getSkillByID(c *gin.Context) {
 	result, err := model.GetSkillModel().GetByID(ctx, id)
 	switch err {
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(Unknown))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, L(Unknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
