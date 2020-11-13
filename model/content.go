@@ -1101,6 +1101,8 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 
 	//condition2.Scope = scopes
 
+	cm.addUserCondition(ctx, &condition1, user)
+	cm.addUserCondition(ctx, &condition2, user)
 	combineCondition := &da.CombineConditions{
 		SourceCondition: &condition1,
 		TargetCondition: &condition2,
@@ -1123,6 +1125,7 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	}
 	condition.Scope = scope
 
+	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
@@ -1137,11 +1140,34 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 		scope = []string{constant.NoSearchItem}
 	}
 	condition.Scope = scope
+
+	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
+}
+
+func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition , user *entity.Operator){
+	if condition.Name == "" {
+		return
+	}
+	users, err := external.GetUserServiceProvider().Query(ctx, user.OrgID, condition.Name)
+	if err != nil{
+		log.Warn(ctx, "get user info failed", log.Err(err), log.String("keyword", condition.Name), log.Any("user", user))
+		return
+	}
+	if len(users) < 1 {
+		log.Info(ctx, "user info not found in keywords", log.Err(err), log.String("keyword", condition.Name), log.String("userId", user.UserID), log.String("orgId", user.OrgID))
+		return
+	}
+	ids := make([]string, len(users))
+	for i := range users {
+		ids[i] = users[i].ID
+	}
+	condition.JoinUserIdList = ids
 }
 
 func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
+	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
@@ -1541,6 +1567,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:       userNameMap[contentList[i].Creator],
 			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
+			IsMine: 			contentList[i].Author == user.UserID,
 		}
 	}
 

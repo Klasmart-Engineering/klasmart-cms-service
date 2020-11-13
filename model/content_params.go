@@ -146,7 +146,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.SuggestTime > 0 {
 		content.SuggestTime = data.SuggestTime
 	}
-	if data.ContentType == entity.ContentTypeMaterial || data.ContentType == entity.ContentTypeMaterial {
+	if data.ContentType == entity.ContentTypeMaterial {
 		content.DrawActivity = data.DrawActivity.Int()
 		content.SelfStudy = data.SelfStudy.Int()
 	}
