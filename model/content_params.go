@@ -3,10 +3,11 @@ package model
 import (
 	"context"
 	"fmt"
-	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"time"
+
+	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -93,7 +94,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, ","),
 		Author:        operator.UserID,
-		Creator:		operator.UserID,
+		Creator:       operator.UserID,
 		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
 		PublishScope:  publishScope,

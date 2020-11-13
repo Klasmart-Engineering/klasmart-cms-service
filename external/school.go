@@ -3,17 +3,18 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type SchoolServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*School, error)
+	Get(ctx context.Context, id string) (*School, error)
+	BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error)
 	GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
 }
@@ -21,6 +22,11 @@ type SchoolServiceProvider interface {
 type School struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type NullableSchool struct {
+	Valid bool `json:"-"`
+	*School
 }
 
 var (
@@ -38,24 +44,34 @@ func GetSchoolServiceProvider() SchoolServiceProvider {
 
 type AmsSchoolService struct{}
 
-func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School, error) {
+func (s AmsSchoolService) Get(ctx context.Context, id string) (*School, error) {
+	schools, err := s.BatchGet(ctx, []string{id})
+	if err != nil {
+		return nil, err
+	}
+
+	if !schools[0].Valid {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return schools[0].School, nil
+}
+
+func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error) {
 	if len(ids) == 0 {
-		return []*School{}, nil
+		return []*NullableSchool{}, nil
 	}
 
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range ids {
-		fmt.Fprintf(sb, "u%d: user(user_id: \"%s\") {user_id user_name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {id:school_id name:school_name}\n", index, id)
 	}
 	sb.WriteString("}")
 
 	request := chlorine.NewRequest(sb.String())
 
-	data := map[string]*struct {
-		SchoolID   string `json:"school_id"`
-		SchoolName string `json:"school_name"`
-	}{}
+	data := map[string]*School{}
 
 	response := &chlorine.Response{
 		Data: data,
@@ -69,19 +85,12 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*School
 		return nil, err
 	}
 
-	var queryAlias string
-	schools := make([]*School, 0, len(data))
+	schools := make([]*NullableSchool, 0, len(data))
 	for index := range ids {
-		queryAlias = fmt.Sprintf("u%d", index)
-		school, found := data[queryAlias]
-		if !found || school == nil {
-			log.Error(ctx, "schools not found", log.Strings("ids", ids), log.String("id", ids[index]))
-			return nil, constant.ErrRecordNotFound
-		}
-
-		schools = append(schools, &School{
-			ID:   school.SchoolID,
-			Name: school.SchoolName,
+		school := data[fmt.Sprintf("q%d", index)]
+		schools = append(schools, &NullableSchool{
+			Valid:  school != nil,
+			School: school,
 		})
 	}
 
