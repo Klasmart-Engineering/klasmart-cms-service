@@ -3,9 +3,11 @@ package api
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
@@ -27,16 +29,29 @@ import (
 // @Router /reports/students [get]
 func (s *Server) listStudentsReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	operator := s.getOperator(ctx)
+	operator := GetOperator(ctx)
+	hasP603, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportTeacherReports603)
+	if err != nil {
+		log.Error(ctx, "list students report: check permission 603 failed",
+			log.Err(err),
+			log.Any("operator", operator),
+		)
+		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if hasP603 {
+		ctx.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
 	cmd := entity.ListStudentsReportCommand{
 		TeacherID:    ctx.Query("teacher_id"),
 		ClassID:      ctx.Query("class_id"),
 		LessonPlanID: ctx.Query("lesson_plan_id"),
 		Status:       entity.ReportOutcomeStatusOption(ctx.DefaultQuery("status", string(entity.ReportOutcomeStatusOptionAll))),
 		SortBy:       entity.ReportSortBy(ctx.DefaultQuery("sort_by", string(entity.ReportSortByDesc))),
-		Operator:     &operator,
+		Operator:     operator,
 	}
-	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), &operator, cmd)
+	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), operator, cmd)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, result)
@@ -64,15 +79,15 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 // @Router /reports/students/{id} [get]
 func (s *Server) getStudentDetailReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	operator := s.getOperator(ctx)
+	operator := GetOperator(ctx)
 	cmd := entity.GetStudentDetailReportCommand{
 		StudentID:    ctx.Param("id"),
 		TeacherID:    ctx.Query("teacher_id"),
 		ClassID:      ctx.Query("class_id"),
 		LessonPlanID: ctx.Query("lesson_plan_id"),
-		Operator:     &operator,
+		Operator:     operator,
 	}
-	result, err := model.GetReportModel().GetStudentDetailReport(requestContext, dbo.MustGetDB(requestContext), &operator, cmd)
+	result, err := model.GetReportModel().GetStudentDetailReport(requestContext, dbo.MustGetDB(requestContext), operator, cmd)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, result)

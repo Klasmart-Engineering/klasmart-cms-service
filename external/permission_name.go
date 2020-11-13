@@ -38,4 +38,8 @@ const (
 	ScheduleDeleteEvent        PermissionName = "delete_event_540"
 	LiveClassTeacher           PermissionName = "attend_live_class_as_a_teacher_186"
 	LiveClassStudent           PermissionName = "attend_live_class_as_a_student_187"
+
+	ReportTeacherReports603 PermissionName = "teacher_reports_603"
+	ReportViewReports610    PermissionName = "view_reports_610"
+	ReportViewMyReports614  PermissionName = "view_my_reports_614"
 )
