@@ -4,12 +4,15 @@ import (
 	"context"
 	"sync"
 
+	"gitlab.badanamu.com.cn/calmisland/chlorine"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 type TeacherServiceProvider interface {
 	Get(ctx context.Context, id string) (*Teacher, error)
 	BatchGet(ctx context.Context, ids []string) ([]*NullableTeacher, error)
+	GetByOrganization(ctx context.Context, organizationID string) ([]*Teacher, error)
 	Query(ctx context.Context, organizationID, keyword string) ([]*Teacher, error)
 }
 
@@ -70,6 +73,48 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, ids []string) ([]*Nulla
 				Name: user.User.Name,
 			},
 		}
+	}
+
+	return teachers, nil
+}
+
+func (s AmsTeacherService) GetByOrganization(ctx context.Context, organizationID string) ([]*Teacher, error) {
+	request := chlorine.NewRequest(`
+	query ($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			classes{
+				teachers{
+					id: user_id
+					name: user_name
+				}
+			}    
+		}
+	}`)
+	request.Var("organization_id", organizationID)
+
+	data := &struct {
+		Organization struct {
+			Classes []struct {
+				Teachers []*Teacher `json:"teachers"`
+			} `json:"classes"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get teachers by org failed",
+			log.Err(err),
+			log.String("organizationID", organizationID))
+		return nil, err
+	}
+
+	teachers := make([]*Teacher, 0, len(data.Organization.Classes))
+	for _, class := range data.Organization.Classes {
+		teachers = append(teachers, class.Teachers...)
 	}
 
 	return teachers, nil
