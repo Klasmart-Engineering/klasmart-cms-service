@@ -42,4 +42,16 @@ const (
 	ReportTeacherReports603 PermissionName = "teacher_reports_603"
 	ReportViewReports610    PermissionName = "view_reports_610"
 	ReportViewMyReports614  PermissionName = "view_my_reports_614"
+
+	Assessments400     PermissionName = "assessments_400"
+	AssessmentsPage406 PermissionName = "assessments_page_406"
+	// TODO: need confirm again
+	ViewCompletedAssessments414              PermissionName = "view_completed_assessments__414"
+	ViewInProgressAssessments415             PermissionName = "view_in_progress_assessments_415"
+	EditAttendanceForInProgressAssessment438 PermissionName = "edit_attendance_for_in_progress_assessment_438"
+	EditInProgressAssessment439              PermissionName = "edit_in_progress_assessment_439"
+	ViewOrgCompletedAssessments424           PermissionName = "view_org_completed_assessments_424"
+	ViewOrgInProgressAssessments425          PermissionName = "view_org_in_progress_assessments_425"
+	ViewSchoolCompletedAssessments426        PermissionName = "view_school_completed_assessments_426"
+	ViewSchoolInProgressAssessments427       PermissionName = "view_school_in_progress_assessments_427"
 )
