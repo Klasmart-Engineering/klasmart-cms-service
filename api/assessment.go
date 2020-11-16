@@ -29,7 +29,6 @@ import (
 // @Router /assessments [get]
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
-	operator := s.getOperator(c)
 
 	cmd := entity.ListAssessmentsQuery{}
 	{
@@ -51,7 +50,6 @@ func (s *Server) listAssessments(c *gin.Context) {
 
 		teacherName := c.Query("teacher_name")
 		if teacherName != "" {
-			cmd.OrganizationID = operator.OrgID
 			cmd.TeacherName = &teacherName
 		}
 
@@ -75,7 +73,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), cmd)
+	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), GetOperator(c), cmd)
 	if err != nil {
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),
@@ -111,7 +109,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	newID, err := model.GetAssessmentModel().Add(ctx, cmd)
+	newID, err := model.GetAssessmentModel().Add(ctx, GetOperator(c), cmd)
 	if err != nil {
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
@@ -145,7 +143,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), id)
+	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), GetOperator(c), id)
 	if err != nil {
 		log.Info(ctx, "get assessment detail: get detail failed",
 			log.Err(err),
@@ -199,7 +197,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		}
 	}
 
-	if err := model.GetAssessmentModel().Update(ctx, cmd); err != nil {
+	if err := model.GetAssessmentModel().Update(ctx, GetOperator(c), cmd); err != nil {
 		log.Info(ctx, "update assessment: update failed")
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
