@@ -73,6 +73,7 @@ func (s *Server) getDevelopmentalByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /developmentals [post]
 func (s *Server) addDevelopmental(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Developmental)
 	if err := c.ShouldBind(data); err != nil {
@@ -80,7 +81,7 @@ func (s *Server) addDevelopmental(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	id, err := model.GetDevelopmentalModel().Add(ctx, data)
+	id, err := model.GetDevelopmentalModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -101,6 +102,7 @@ func (s *Server) addDevelopmental(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /developmentals/{id} [put]
 func (s *Server) updateDevelopmental(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Developmental)
 	if err := c.ShouldBind(data); err != nil {
@@ -109,7 +111,7 @@ func (s *Server) updateDevelopmental(c *gin.Context) {
 		return
 	}
 	data.ID = c.Param("id")
-	id, err := model.GetDevelopmentalModel().Update(ctx, data)
+	id, err := model.GetDevelopmentalModel().Update(ctx, op, data)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))

@@ -66,6 +66,7 @@ func (s *Server) getProgramByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /programs [post]
 func (s *Server) addProgram(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Program)
 	if err := c.ShouldBind(data); err != nil {
@@ -73,7 +74,7 @@ func (s *Server) addProgram(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	id, err := model.GetProgramModel().Add(ctx, data)
+	id, err := model.GetProgramModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -94,6 +95,7 @@ func (s *Server) addProgram(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /programs/{id} [put]
 func (s *Server) updateProgram(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Program)
 	if err := c.ShouldBind(data); err != nil {
@@ -102,7 +104,7 @@ func (s *Server) updateProgram(c *gin.Context) {
 		return
 	}
 	data.ID = c.Param("id")
-	id, err := model.GetProgramModel().Update(ctx, data)
+	id, err := model.GetProgramModel().Update(ctx, op, data)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))

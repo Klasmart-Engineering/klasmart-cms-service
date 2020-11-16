@@ -9,13 +9,15 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
+	"time"
 )
 
 type IProgramModel interface {
 	Query(ctx context.Context, condition *da.ProgramCondition) ([]*entity.Program, error)
 	GetByID(ctx context.Context, id string) (*entity.Program, error)
-	Add(ctx context.Context, data *entity.Program) (string, error)
-	Update(ctx context.Context, data *entity.Program) (string, error)
+	Add(ctx context.Context, op *entity.Operator, data *entity.Program) (string, error)
+	Update(ctx context.Context, op *entity.Operator, data *entity.Program) (string, error)
+	Delete(ctx context.Context, op *entity.Operator, id string) error
 	SetAge(ctx context.Context, id string, ageIDs []string) error
 	SetGrade(ctx context.Context, id string, gradeIDs []string) error
 	SetSubject(ctx context.Context, id string, subjectIDs []string) error
@@ -24,6 +26,31 @@ type IProgramModel interface {
 }
 
 type programModel struct {
+}
+
+func (m *programModel) Delete(ctx context.Context, op *entity.Operator, id string) error {
+	var old = new(entity.Program)
+	err := da.GetProgramDA().Get(ctx, id, old)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("id", id))
+		return nil
+	}
+	if err != nil {
+		log.Error(ctx, "get error", log.Err(err), log.String("id", id))
+		return err
+	}
+	if old.DeleteAt != 0 {
+		log.Error(ctx, "record is deleted", log.Err(err), log.String("id", id), log.Any("old", old))
+		return nil
+	}
+	old.DeleteAt = time.Now().Unix()
+	old.DeleteID = op.UserID
+	_, err = da.GetProgramDA().Update(ctx, old)
+	if err != nil {
+		log.Error(ctx, "update error", log.Err(err), log.String("id", id), log.Any("old", old))
+		return err
+	}
+	return nil
 }
 
 func (m *programModel) SetDeveSkill(ctx context.Context, id string, developmentID string, skillIDs []string) error {
@@ -175,8 +202,10 @@ func (m *programModel) SetAge(ctx context.Context, id string, ageIDs []string) e
 	return nil
 }
 
-func (m *programModel) Add(ctx context.Context, data *entity.Program) (string, error) {
+func (m *programModel) Add(ctx context.Context, op *entity.Operator, data *entity.Program) (string, error) {
 	data.ID = utils.NewID()
+	data.CreateAt = time.Now().Unix()
+	data.CreateID = op.UserID
 	_, err := da.GetProgramDA().Insert(ctx, data)
 	if err != nil {
 		log.Error(ctx, "add error", log.Err(err), log.Any("data", data))
@@ -185,7 +214,7 @@ func (m *programModel) Add(ctx context.Context, data *entity.Program) (string, e
 	return data.ID, nil
 }
 
-func (m *programModel) Update(ctx context.Context, data *entity.Program) (string, error) {
+func (m *programModel) Update(ctx context.Context, op *entity.Operator, data *entity.Program) (string, error) {
 	var old = new(entity.Program)
 	err := da.GetProgramDA().Get(ctx, data.ID, old)
 	if err != nil {
@@ -193,6 +222,8 @@ func (m *programModel) Update(ctx context.Context, data *entity.Program) (string
 		return "", err
 	}
 	old.Name = data.Name
+	old.UpdateID = op.UserID
+	old.UpdateAt = time.Now().Unix()
 	_, err = da.GetProgramDA().Update(ctx, old)
 	if err != nil {
 		log.Error(ctx, "update error", log.Err(err), log.Any("data", data))

@@ -73,6 +73,7 @@ func (s *Server) getGradeByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades [post]
 func (s *Server) addGrade(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Grade)
 	if err := c.ShouldBind(data); err != nil {
@@ -80,7 +81,7 @@ func (s *Server) addGrade(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	id, err := model.GetGradeModel().Add(ctx, data)
+	id, err := model.GetGradeModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -101,6 +102,7 @@ func (s *Server) addGrade(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades/{id} [put]
 func (s *Server) updateGrade(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Grade)
 	if err := c.ShouldBind(data); err != nil {
@@ -109,7 +111,7 @@ func (s *Server) updateGrade(c *gin.Context) {
 		return
 	}
 	data.ID = c.Param("id")
-	id, err := model.GetGradeModel().Update(ctx, data)
+	id, err := model.GetGradeModel().Update(ctx, op, data)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))

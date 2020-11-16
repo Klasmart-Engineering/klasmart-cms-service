@@ -73,6 +73,7 @@ func (s *Server) getSubjectByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects [post]
 func (s *Server) addSubject(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Subject)
 	if err := c.ShouldBind(data); err != nil {
@@ -80,7 +81,7 @@ func (s *Server) addSubject(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	id, err := model.GetSubjectModel().Add(ctx, data)
+	id, err := model.GetSubjectModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -101,6 +102,7 @@ func (s *Server) addSubject(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects/{id} [put]
 func (s *Server) updateSubject(c *gin.Context) {
+	op := GetOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Subject)
 	if err := c.ShouldBind(data); err != nil {
@@ -109,7 +111,7 @@ func (s *Server) updateSubject(c *gin.Context) {
 		return
 	}
 	data.ID = c.Param("id")
-	id, err := model.GetSubjectModel().Update(ctx, data)
+	id, err := model.GetSubjectModel().Update(ctx, op, data)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))

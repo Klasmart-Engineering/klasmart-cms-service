@@ -74,13 +74,14 @@ func (s *Server) getAgeByID(c *gin.Context) {
 // @Router /ages [post]
 func (s *Server) addAge(c *gin.Context) {
 	ctx := c.Request.Context()
+	op := GetOperator(c)
 	data := new(entity.Age)
 	if err := c.ShouldBind(data); err != nil {
 		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	id, err := model.GetAgeModel().Add(ctx, data)
+	id, err := model.GetAgeModel().Add(ctx, op, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -102,6 +103,7 @@ func (s *Server) addAge(c *gin.Context) {
 // @Router /ages/{id} [put]
 func (s *Server) updateAge(c *gin.Context) {
 	ctx := c.Request.Context()
+	op := GetOperator(c)
 	data := new(entity.Age)
 	if err := c.ShouldBind(data); err != nil {
 		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
@@ -109,7 +111,7 @@ func (s *Server) updateAge(c *gin.Context) {
 		return
 	}
 	data.ID = c.Param("id")
-	id, err := model.GetAgeModel().Update(ctx, data)
+	id, err := model.GetAgeModel().Update(ctx, op, data)
 	switch err {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
