@@ -121,3 +121,26 @@ func (s *Server) updateDevelopmental(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary deleteDevelopmental
+// @ID deleteDevelopmental
+// @Description deleteDevelopmental
+// @Accept json
+// @Produce json
+// @Param id path string true "developmental id"
+// @Tags developmental
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /developmentals/{id} [delete]
+func (s *Server) deleteDevelopmental(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetDevelopmentalModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

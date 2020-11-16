@@ -256,3 +256,26 @@ func (s *Server) SetSkill(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary deleteProgram
+// @ID deleteProgram
+// @Description deleteProgram
+// @Accept json
+// @Produce json
+// @Param id path string true "program id"
+// @Tags program
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /programs/{id} [delete]
+func (s *Server) deleteProgram(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetProgramModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

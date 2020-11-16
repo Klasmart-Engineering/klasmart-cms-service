@@ -121,3 +121,26 @@ func (s *Server) updateGrade(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary deleteGrade
+// @ID deleteGrade
+// @Description deleteGrade
+// @Accept json
+// @Produce json
+// @Param id path string true "grade id"
+// @Tags grade
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /grades/{id} [delete]
+func (s *Server) deleteGrade(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetGradeModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

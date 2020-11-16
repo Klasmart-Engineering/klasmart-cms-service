@@ -121,3 +121,26 @@ func (s *Server) updateSubject(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary deleteSubject
+// @ID deleteSubject
+// @Description deleteSubject
+// @Accept json
+// @Produce json
+// @Param id path string true "subject id"
+// @Tags subject
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /subjects/{id} [delete]
+func (s *Server) deleteSubject(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetSubjectModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

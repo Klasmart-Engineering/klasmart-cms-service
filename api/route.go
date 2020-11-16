@@ -108,6 +108,7 @@ func (s Server) registeRoute() {
 		ages.GET("/:id", MustLoginWithoutOrgID, s.getAgeByID)
 		ages.POST("", MustLoginWithoutOrgID, s.addAge)
 		ages.PUT("/:id", MustLoginWithoutOrgID, s.updateAge)
+		ages.DELETE("/:id", MustLoginWithoutOrgID, s.deleteAge)
 	}
 	classTypes := s.engine.Group("/v1/class_types")
 	{
@@ -120,6 +121,7 @@ func (s Server) registeRoute() {
 		developmental.GET("/:id", MustLoginWithoutOrgID, s.getDevelopmentalByID)
 		developmental.POST("", MustLoginWithoutOrgID, s.addDevelopmental)
 		developmental.PUT("/:id", MustLoginWithoutOrgID, s.updateDevelopmental)
+		developmental.DELETE("/:id", MustLoginWithoutOrgID, s.deleteDevelopmental)
 	}
 	grade := s.engine.Group("/v1/grades")
 	{
@@ -127,6 +129,7 @@ func (s Server) registeRoute() {
 		grade.GET("/:id", MustLoginWithoutOrgID, s.getGradeByID)
 		grade.POST("", MustLoginWithoutOrgID, s.addGrade)
 		grade.PUT("/:id", MustLoginWithoutOrgID, s.updateGrade)
+		grade.DELETE("/:id", MustLoginWithoutOrgID, s.deleteGrade)
 	}
 	lessonTypes := s.engine.Group("/v1/lesson_types")
 	{
@@ -139,6 +142,7 @@ func (s Server) registeRoute() {
 		programs.GET("/:id", MustLoginWithoutOrgID, s.getProgramByID)
 		programs.POST("", MustLoginWithoutOrgID, s.addProgram)
 		programs.PUT("/:id", MustLoginWithoutOrgID, s.updateProgram)
+		programs.DELETE("/:id", MustLoginWithoutOrgID, s.deleteProgram)
 
 		programs.PUT("/:id/ages", MustLoginWithoutOrgID, s.SetAge)
 		programs.PUT("/:id/grades", MustLoginWithoutOrgID, s.SetGrade)
@@ -152,6 +156,7 @@ func (s Server) registeRoute() {
 		skills.GET("/:id", MustLoginWithoutOrgID, s.getSkillByID)
 		skills.POST("", MustLoginWithoutOrgID, s.addSkill)
 		skills.PUT("/:id", MustLoginWithoutOrgID, s.updateSkill)
+		skills.DELETE("/:id", MustLoginWithoutOrgID, s.deleteSkill)
 	}
 	subjects := s.engine.Group("/v1/subjects")
 	{
@@ -159,6 +164,7 @@ func (s Server) registeRoute() {
 		subjects.GET("/:id", MustLoginWithoutOrgID, s.getSubjectByID)
 		subjects.POST("", MustLoginWithoutOrgID, s.addSubject)
 		subjects.PUT("/:id", MustLoginWithoutOrgID, s.updateSubject)
+		subjects.DELETE("/:id", MustLoginWithoutOrgID, s.deleteSubject)
 	}
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{

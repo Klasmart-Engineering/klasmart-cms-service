@@ -121,3 +121,26 @@ func (s *Server) updateAge(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary deleteAge
+// @ID deleteAge
+// @Description deleteAge
+// @Accept json
+// @Produce json
+// @Param id path string true "age id"
+// @Tags age
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /ages/{id} [delete]
+func (s *Server) deleteAge(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetAgeModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

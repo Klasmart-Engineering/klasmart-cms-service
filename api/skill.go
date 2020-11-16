@@ -133,3 +133,26 @@ func (s *Server) updateSkill(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary deleteSkill
+// @ID deleteSkill
+// @Description deleteSkill
+// @Accept json
+// @Produce json
+// @Param id path string true "skill id"
+// @Tags skill
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /skills/{id} [delete]
+func (s *Server) deleteSkill(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetSkillModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
