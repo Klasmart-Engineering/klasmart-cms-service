@@ -20,6 +20,7 @@ type OrganizationServiceProvider interface {
 	GetChildren(ctx context.Context, orgID string) ([]*Organization, error)
 	GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error)
+	GetOrganizationsAssociatedWithUserID(ctx context.Context, id string)([]*Organization, error)
 }
 
 type Organization struct {
@@ -192,6 +193,51 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 		orgs = append(orgs, &Organization{
 			ID:   membership.Organization.OrganizationID,
 			Name: membership.Organization.OrganizationName,
+		})
+	}
+
+	return orgs, nil
+}
+
+func (s AmsOrganizationService) GetOrganizationsAssociatedWithUserID(ctx context.Context, id string)([]*Organization, error) {
+	request := chlorine.NewRequest(`
+	query($user_id: ID!) {
+		user(user_id: $user_id) {
+			memberships{
+				organization{
+					id:organization_id
+					name:organization_name
+				}
+			}
+		}
+	}`)
+	request.Var("user_id", id)
+
+	data := &struct {
+		User struct {
+			Memberships []struct {
+				Organization Organization `json:"organization"`
+			} `json:"memberships"`
+		} `json:"user"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "GetOrganizationsAssociatedWithUserID failed",
+			log.Err(err),
+			log.String("user_id", id))
+		return nil, err
+	}
+
+	orgs := make([]*Organization, 0)
+	for _, membership := range data.User.Memberships {
+		orgs = append(orgs, &Organization{
+			ID: membership.Organization.ID,
+			Name: membership.Organization.Name,
 		})
 	}
 
