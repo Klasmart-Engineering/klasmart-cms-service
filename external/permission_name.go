@@ -43,10 +43,9 @@ const (
 	ReportViewReports610    PermissionName = "view_reports_610"
 	ReportViewMyReports614  PermissionName = "view_my_reports_614"
 
-	Assessments400     PermissionName = "assessments_400"
-	AssessmentsPage406 PermissionName = "assessments_page_406"
-	// TODO: need confirm again
-	ViewCompletedAssessments414              PermissionName = "view_completed_assessments__414"
+	Assessments400                           PermissionName = "assessments_400"
+	AssessmentsPage406                       PermissionName = "assessments_page_406"
+	ViewCompletedAssessments414              PermissionName = "view_completed_assessments_414"
 	ViewInProgressAssessments415             PermissionName = "view_in_progress_assessments_415"
 	EditAttendanceForInProgressAssessment438 PermissionName = "edit_attendance_for_in_progress_assessment_438"
 	EditInProgressAssessment439              PermissionName = "edit_in_progress_assessment_439"
