@@ -560,8 +560,11 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 		for _, teacher := range teachers {
 			validTeacherIDs = append(validTeacherIDs, teacher.ID)
 		}
-		// TODO: call external api fill schoolIDs by current session user id
 		var schoolIDs []string
+		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator.UserID)
+		for _, school := range schools {
+			schoolIDs = append(schoolIDs, school.ID)
+		}
 		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, schoolIDs)
 		if err != nil {
 			log.Error(ctx, "has report permission: call external \"GetBySchools()\" failed",
