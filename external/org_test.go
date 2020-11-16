@@ -55,3 +55,27 @@ func TestAmsOrganizationService_GetOrganizationOrSchoolName(t *testing.T) {
 		fmt.Println(n)
 	}
 }
+
+func TestAmsOrganizationService_GetOrganizationsAssociatedWithUserID(t *testing.T) {
+	config.LoadEnvConfig()
+	id := "a161e13f-f620-5284-8ab5-93445d8064bf"
+	orgs, err := GetOrganizationServiceProvider().GetOrganizationsAssociatedWithUserID(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range orgs {
+		fmt.Println(n)
+	}
+}
+
+func TestAmsOrganizationService_GetSchoolsAssociatedWithUserID(t *testing.T) {
+	config.LoadEnvConfig()
+	id := "a161e13f-f620-5284-8ab5-93445d8064bf"
+	orgs, err := GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range orgs {
+		fmt.Println(n)
+	}
+}
