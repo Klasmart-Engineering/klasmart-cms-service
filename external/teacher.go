@@ -13,6 +13,7 @@ type TeacherServiceProvider interface {
 	Get(ctx context.Context, id string) (*Teacher, error)
 	BatchGet(ctx context.Context, ids []string) ([]*NullableTeacher, error)
 	GetByOrganization(ctx context.Context, organizationID string) ([]*Teacher, error)
+	GetByOrganizations(ctx context.Context, organizationIDs []string) (map[string][]*Teacher, error)
 	Query(ctx context.Context, organizationID, keyword string) ([]*Teacher, error)
 }
 
@@ -118,6 +119,10 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, organizationID
 	}
 
 	return teachers, nil
+}
+
+func (s AmsTeacherService) GetByOrganizations(ctx context.Context, organizationIDs []string) (map[string][]*Teacher, error) {
+	return nil, nil
 }
 
 func (s AmsTeacherService) Query(ctx context.Context, organizationID, keyword string) ([]*Teacher, error) {
