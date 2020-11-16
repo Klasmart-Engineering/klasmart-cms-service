@@ -14,6 +14,8 @@ type TeacherServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*NullableTeacher, error)
 	GetByOrganization(ctx context.Context, organizationID string) ([]*Teacher, error)
 	GetByOrganizations(ctx context.Context, organizationIDs []string) (map[string][]*Teacher, error)
+	GetBySchool(ctx context.Context, schoolID string) ([]*Teacher, error)
+	GetBySchools(ctx context.Context, schoolIDs []string) (map[string][]*Teacher, error)
 	Query(ctx context.Context, organizationID, keyword string) ([]*Teacher, error)
 }
 
@@ -122,6 +124,52 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, organizationID
 }
 
 func (s AmsTeacherService) GetByOrganizations(ctx context.Context, organizationIDs []string) (map[string][]*Teacher, error) {
+	return nil, nil
+}
+
+func (s AmsTeacherService) GetBySchool(ctx context.Context, schoolID string) ([]*Teacher, error) {
+	request := chlorine.NewRequest(`
+	query ($school_id: ID!) {
+		school(school_id: $school_id) {
+			classes{
+				teachers{
+					id: user_id
+					name: user_name
+				}
+			}    
+		}
+	}`)
+	request.Var("school_id", schoolID)
+
+	data := &struct {
+		School struct {
+			Classes []struct {
+				Teachers []*Teacher `json:"teachers"`
+			} `json:"classes"`
+		} `json:"school"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get teachers by school failed",
+			log.Err(err),
+			log.String("schoolID", schoolID))
+		return nil, err
+	}
+
+	teachers := make([]*Teacher, 0, len(data.School.Classes))
+	for _, class := range data.School.Classes {
+		teachers = append(teachers, class.Teachers...)
+	}
+
+	return teachers, nil
+}
+
+func (s AmsTeacherService) GetBySchools(ctx context.Context, schoolIDs []string) (map[string][]*Teacher, error) {
 	return nil, nil
 }
 
