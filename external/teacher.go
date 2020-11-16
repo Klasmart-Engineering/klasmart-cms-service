@@ -2,6 +2,8 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -124,7 +126,43 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, organizationID
 }
 
 func (s AmsTeacherService) GetByOrganizations(ctx context.Context, organizationIDs []string) (map[string][]*Teacher, error) {
-	return nil, nil
+	if len(organizationIDs) == 0 {
+		return map[string][]*Teacher{}, nil
+	}
+
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range organizationIDs {
+		fmt.Fprintf(sb, "q%d: organization(organization_id: \"%s\") {classes{teachers{id:user_id name:user_name}}}\n", index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String())
+
+	data := map[string]*struct {
+		Classes []struct {
+			Teachers []*Teacher `json:"teachers"`
+		} `json:"classes"`
+	}{}
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get users by organization ids failed", log.Err(err), log.Strings("ids", organizationIDs))
+		return nil, err
+	}
+
+	teachers := make(map[string][]*Teacher, len(organizationIDs))
+	for index, organizationID := range organizationIDs {
+		classes := data[fmt.Sprintf("q%d", index)]
+		for _, class := range classes.Classes {
+			teachers[organizationID] = append(teachers[organizationID], class.Teachers...)
+		}
+	}
+
+	return teachers, nil
 }
 
 func (s AmsTeacherService) GetBySchool(ctx context.Context, schoolID string) ([]*Teacher, error) {
