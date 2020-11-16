@@ -17,6 +17,7 @@ type SchoolServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error)
 	GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
+	GetSchoolsAssociatedWithUserID(ctx context.Context, id string)([]*School, error)
 }
 
 type School struct {
@@ -188,6 +189,51 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 		schools = append(schools, &School{
 			ID:   membership.School.SchoolID,
 			Name: membership.School.SchoolName,
+		})
+	}
+
+	return schools, nil
+}
+
+func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id string)([]*School, error) {
+	request := chlorine.NewRequest(`
+	query($user_id: ID!) {
+		user(user_id: $user_id) {
+			school_memberships{
+				school{
+					id:school_id
+					name:school_name
+				}
+			}
+		}
+	}`)
+	request.Var("user_id", id)
+
+	data := &struct {
+		User struct {
+			SchoolMemberships []struct {
+				School School `json:"school"`
+			} `json:"school_memberships"`
+		} `json:"user"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "GetSchoolsAssociatedWithUserID failed",
+			log.Err(err),
+			log.String("user_id", id))
+		return nil, err
+	}
+
+	schools := make([]*School, 0)
+	for _, membership := range data.User.SchoolMemberships {
+		schools = append(schools, &School{
+			ID:   membership.School.ID,
+			Name: membership.School.Name,
 		})
 	}
 
