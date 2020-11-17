@@ -351,8 +351,8 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, ope
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
 		TeacherID:    teacherID,
-		ClassID:      lessonPlanID,
-		LessonPlanID: classID,
+		ClassID:      classID,
+		LessonPlanID: lessonPlanID,
 		Status:       entity.ScheduleStatusClosed,
 	})
 	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
