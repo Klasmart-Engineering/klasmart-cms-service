@@ -23,25 +23,28 @@ import (
 // @Param sort_by query string false "sort by" enums(desc, asc) default(desc)
 // @Success 200 {object} entity.StudentsReport
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students [get]
 func (s *Server) listStudentsReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	operator := s.getOperator(ctx)
+	operator := GetOperator(ctx)
 	cmd := entity.ListStudentsReportCommand{
 		TeacherID:    ctx.Query("teacher_id"),
 		ClassID:      ctx.Query("class_id"),
 		LessonPlanID: ctx.Query("lesson_plan_id"),
 		Status:       entity.ReportOutcomeStatusOption(ctx.DefaultQuery("status", string(entity.ReportOutcomeStatusOptionAll))),
 		SortBy:       entity.ReportSortBy(ctx.DefaultQuery("sort_by", string(entity.ReportSortByDesc))),
-		Operator:     &operator,
+		Operator:     operator,
 	}
-	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), &operator, cmd)
+	result, err := model.GetReportModel().ListStudentsReport(requestContext, dbo.MustGetDB(requestContext), operator, cmd)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, result)
 	case constant.ErrInvalidArgs:
 		ctx.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		ctx.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
 		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -59,20 +62,21 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 // @Param lesson_plan_id query string true "lesson plan id"
 // @Success 200 {object} entity.StudentDetailReport
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students/{id} [get]
 func (s *Server) getStudentDetailReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	operator := s.getOperator(ctx)
+	operator := GetOperator(ctx)
 	cmd := entity.GetStudentDetailReportCommand{
 		StudentID:    ctx.Param("id"),
 		TeacherID:    ctx.Query("teacher_id"),
 		ClassID:      ctx.Query("class_id"),
 		LessonPlanID: ctx.Query("lesson_plan_id"),
-		Operator:     &operator,
+		Operator:     operator,
 	}
-	result, err := model.GetReportModel().GetStudentDetailReport(requestContext, dbo.MustGetDB(requestContext), &operator, cmd)
+	result, err := model.GetReportModel().GetStudentDetailReport(requestContext, dbo.MustGetDB(requestContext), operator, cmd)
 	switch err {
 	case nil:
 		ctx.JSON(http.StatusOK, result)
@@ -80,6 +84,8 @@ func (s *Server) getStudentDetailReport(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
 		ctx.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		ctx.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
 		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

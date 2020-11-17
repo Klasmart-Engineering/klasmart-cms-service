@@ -55,6 +55,21 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 			log.Error(ctx, "list students report: require lesson plan id", log.Any("cmd", cmd))
 			return nil, constant.ErrInvalidArgs
 		}
+		allowed, err := r.hasReportPermission(ctx, operator, cmd.TeacherID)
+		if err != nil {
+			log.Error(ctx, "list students report: check report report permission failed",
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		if !allowed {
+			log.Error(ctx, "list students report: no permission",
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+			)
+			return nil, constant.ErrUnAuthorized
+		}
 	}
 
 	var students []*external.Student
@@ -135,6 +150,21 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 		if cmd.StudentID == "" {
 			log.Error(ctx, "get student detail report: require student id", log.Any("cmd", cmd))
 			return nil, constant.ErrInvalidArgs
+		}
+		allowed, err := r.hasReportPermission(ctx, operator, cmd.TeacherID)
+		if err != nil {
+			log.Error(ctx, "get student detail report: check report report permission failed",
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		if !allowed {
+			log.Error(ctx, "get student detail report: no permission",
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+			)
+			return nil, constant.ErrUnAuthorized
 		}
 	}
 
@@ -478,4 +508,83 @@ func (r *reportModel) getAchievedAttendanceID2OutcomeIDsMap(ctx context.Context,
 		achievedAttendanceID2OutcomeIDsMap[k] = utils.SliceDeduplication(v)
 	}
 	return achievedAttendanceID2OutcomeIDsMap, err
+}
+
+func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+	hasP603, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportTeacherReports603)
+	if err != nil {
+		log.Error(ctx, "has report permission: check permission 603 failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("teacher_id", teacherID),
+		)
+		return false, err
+	}
+	if !hasP603 {
+		return false, nil
+	}
+
+	hasP614, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewMyReports614)
+	if err != nil {
+		log.Error(ctx, "has report permission: check permission 614 failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("teacher_id", teacherID),
+		)
+		return false, err
+	}
+	if hasP614 && operator.UserID == teacherID {
+		return true, nil
+	}
+
+	hasP610, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewReports610)
+	if err != nil {
+		log.Error(ctx, "has report permission: check permission 610 failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("teacher_id", teacherID),
+		)
+		return false, err
+	}
+	if hasP610 {
+		var validTeacherIDs []string
+		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
+		if err != nil {
+			log.Error(ctx, "has report permission: call external \"GetByOrganization()\" failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("teacher_id", teacherID),
+			)
+			return false, err
+		}
+		for _, teacher := range teachers {
+			validTeacherIDs = append(validTeacherIDs, teacher.ID)
+		}
+		var schoolIDs []string
+		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator.UserID)
+		for _, school := range schools {
+			schoolIDs = append(schoolIDs, school.ID)
+		}
+		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, schoolIDs)
+		if err != nil {
+			log.Error(ctx, "has report permission: call external \"GetBySchools()\" failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("teacher_id", teacherID),
+			)
+			return false, err
+		}
+		for _, teachers := range schoolID2TeachersMap {
+			for _, teacher := range teachers {
+				validTeacherIDs = append(validTeacherIDs, teacher.ID)
+			}
+		}
+		for _, item := range validTeacherIDs {
+			if item == teacherID {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

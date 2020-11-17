@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,12 +26,11 @@ import (
 // @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
 // @Success 200 {object} entity.ListAssessmentsResult
 // @Failure 400 {object} BadRequestResponse
-// @Failure 404 {object} NotFoundResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments [get]
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
-	operator := s.getOperator(c)
 
 	cmd := entity.ListAssessmentsQuery{}
 	{
@@ -51,7 +52,6 @@ func (s *Server) listAssessments(c *gin.Context) {
 
 		teacherName := c.Query("teacher_name")
 		if teacherName != "" {
-			cmd.OrganizationID = operator.OrgID
 			cmd.TeacherName = &teacherName
 		}
 
@@ -75,8 +75,13 @@ func (s *Server) listAssessments(c *gin.Context) {
 		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), cmd)
-	if err != nil {
+	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), GetOperator(c), cmd)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
@@ -84,7 +89,6 @@ func (s *Server) listAssessments(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	c.JSON(http.StatusOK, result)
 }
 
 // @Summary add assessments
@@ -96,7 +100,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 // @Param assessment body entity.AddAssessmentCommand true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
 // @Failure 400 {object} BadRequestResponse
-// @Failure 404 {object} NotFoundResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments [post]
 func (s *Server) addAssessment(c *gin.Context) {
@@ -111,16 +115,19 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	newID, err := model.GetAssessmentModel().Add(ctx, cmd)
-	if err != nil {
+	newID, err := model.GetAssessmentModel().Add(ctx, GetOperator(c), cmd)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
 		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
 	}
-	c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 }
 
 // @Summary get assessment detail
@@ -132,6 +139,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 // @Param id path string true "assessment id"
 // @Success 200 {object} entity.AssessmentDetailView
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments/{id} [get]
@@ -145,16 +153,21 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), id)
-	if err != nil {
+	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), GetOperator(c), id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, item)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrRecordNotFound, sql.ErrNoRows:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	default:
 		log.Info(ctx, "get assessment detail: get detail failed",
 			log.Err(err),
 			log.String("id", id),
 		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
 	}
-	c.JSON(http.StatusOK, item)
 }
 
 // @Summary update assessment
@@ -167,7 +180,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 // @Param update_assessment_command body entity.UpdateAssessmentCommand true "update assessment assessment command"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
-// @Failure 404 {object} NotFoundResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments/{id} [put]
 func (s *Server) updateAssessment(c *gin.Context) {
@@ -199,10 +212,14 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		}
 	}
 
-	if err := model.GetAssessmentModel().Update(ctx, cmd); err != nil {
+	err := model.GetAssessmentModel().Update(ctx, GetOperator(c), cmd)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
 		log.Info(ctx, "update assessment: update failed")
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
 	}
-	c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 }
