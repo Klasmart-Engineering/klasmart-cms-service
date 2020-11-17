@@ -23,6 +23,7 @@ import (
 // @Param sort_by query string false "sort by" enums(desc, asc) default(desc)
 // @Success 200 {object} entity.StudentsReport
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students [get]
 func (s *Server) listStudentsReport(ctx *gin.Context) {
@@ -42,8 +43,8 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, result)
 	case constant.ErrInvalidArgs:
 		ctx.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case constant.ErrUnAuthorized:
-		ctx.JSON(http.StatusBadRequest, L(GeneralUnAuthorized))
+	case constant.ErrForbidden:
+		ctx.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
 		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -61,6 +62,7 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 // @Param lesson_plan_id query string true "lesson plan id"
 // @Success 200 {object} entity.StudentDetailReport
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /reports/students/{id} [get]
@@ -82,8 +84,8 @@ func (s *Server) getStudentDetailReport(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
 		ctx.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case constant.ErrUnAuthorized:
-		ctx.JSON(http.StatusBadRequest, L(GeneralUnAuthorized))
+	case constant.ErrForbidden:
+		ctx.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
 		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
