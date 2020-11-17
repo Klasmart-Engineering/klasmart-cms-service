@@ -35,6 +35,8 @@ type DevelopmentalCondition struct {
 
 	OrderBy DevelopmentalOrderBy
 	Pager   dbo.Pager
+
+	DeleteAt sql.NullInt64
 }
 
 func (c DevelopmentalCondition) GetConditions() ([]string, []interface{}) {
@@ -50,6 +52,12 @@ func (c DevelopmentalCondition) GetConditions() ([]string, []interface{}) {
 			constant.TableNameProgramDevelopment, constant.TableNameDevelopmental, constant.TableNameProgramDevelopment)
 		wheres = append(wheres, sql)
 		params = append(params, c.ProgramID.String)
+	}
+
+	if c.DeleteAt.Valid {
+		wheres = append(wheres, "delete_at>0")
+	} else {
+		wheres = append(wheres, "(delete_at=0)")
 	}
 
 	return wheres, params

@@ -3,8 +3,10 @@ package api
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
@@ -55,6 +57,89 @@ func (s *Server) getGradeByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary addGrade
+// @ID addGrade
+// @Description addGrade
+// @Accept json
+// @Produce json
+// @Param grade body entity.Grade true "Grade"
+// @Tags grade
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /grades [post]
+func (s *Server) addGrade(c *gin.Context) {
+	op := GetOperator(c)
+	ctx := c.Request.Context()
+	data := new(entity.Grade)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	id, err := model.GetGradeModel().Add(ctx, op, data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+}
+
+// @Summary updateGrade
+// @ID updateGrade
+// @Description updateGrade
+// @Accept json
+// @Produce json
+// @Param id path string true "grade id"
+// @Param grade body entity.Grade true "grade"
+// @Tags grade
+// @Success 200 {object} entity.IDResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /grades/{id} [put]
+func (s *Server) updateGrade(c *gin.Context) {
+	op := GetOperator(c)
+	ctx := c.Request.Context()
+	data := new(entity.Grade)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	data.ID = c.Param("id")
+	id, err := model.GetGradeModel().Update(ctx, op, data)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary deleteGrade
+// @ID deleteGrade
+// @Description deleteGrade
+// @Accept json
+// @Produce json
+// @Param id path string true "grade id"
+// @Tags grade
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /grades/{id} [delete]
+func (s *Server) deleteGrade(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetGradeModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
