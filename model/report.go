@@ -322,7 +322,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 }
 
 func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
-	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, teacherID, classID, lessonPlanID)
+	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, classID, teacherID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids: get schedule ids failed",
 			log.Err(err),
