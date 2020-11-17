@@ -734,6 +734,7 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 			for _, item := range teacherIDs {
 				if item == operator.UserID {
 					find = true
+					break
 				}
 			}
 			if !find {
