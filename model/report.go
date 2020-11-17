@@ -322,7 +322,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 }
 
 func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
-	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, teacherID, classID, lessonPlanID)
+	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, classID, teacherID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids: get schedule ids failed",
 			log.Err(err),
@@ -351,8 +351,8 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, ope
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
 		TeacherID:    teacherID,
-		ClassID:      lessonPlanID,
-		LessonPlanID: classID,
+		ClassID:      classID,
+		LessonPlanID: lessonPlanID,
 		Status:       entity.ScheduleStatusClosed,
 	})
 	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
