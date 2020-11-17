@@ -705,9 +705,49 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 			)
 			return err
 		}
+		// permission check
+		{
+			hasP439, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentEditInProgressAssessment439)
+			if err != nil {
+				log.Error(ctx, "update assessment: check permission 439 failed",
+					log.Any("cmd", cmd),
+					log.Any("operator", operator),
+				)
+				return err
+			}
+			if !hasP439 {
+				log.Error(ctx, "update assessment: not have permission 439",
+					log.Any("cmd", cmd),
+					log.Any("operator", operator),
+				)
+				return constant.ErrUnAuthorized
+			}
+			teacherIDs, err := assessment.DecodeTeacherIDs()
+			if err != nil {
+				log.Error(ctx, "update assessment: decode teacher ids failed",
+					log.Any("cmd", cmd),
+					log.Any("operator", operator),
+				)
+				return err
+			}
+			find := false
+			for _, item := range teacherIDs {
+				if item == operator.UserID {
+					find = true
+				}
+			}
+			if !find {
+				log.Error(ctx, "update assessment: not find my assessment",
+					log.Any("cmd", cmd),
+					log.Any("operator", operator),
+				)
+				return constant.ErrUnAuthorized
+			}
+		}
 		if assessment.Status == entity.AssessmentStatusComplete {
 			log.Info(ctx, "update assessment: assessment has completed, not allow update",
 				log.Any("cmd", cmd),
+				log.Any("operator", operator),
 			)
 			return errors.New("update assessment: assessment has completed, not allow update")
 		}
@@ -716,6 +756,7 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 				log.Error(ctx, "update assessment: update status to complete failed",
 					log.Err(err),
 					log.Any("cmd", cmd),
+					log.Any("operator", operator),
 				)
 				return err
 			}
