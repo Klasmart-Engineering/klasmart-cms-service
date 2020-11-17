@@ -258,7 +258,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if c.LessonPlanIDs.Valid {
 		wheres = append(wheres, "lesson_plan_id in (?)")
-		params = append(params, c.LessonPlanIDs)
+		params = append(params, c.LessonPlanIDs.Strings)
 	}
 	if c.RepeatID.Valid {
 		wheres = append(wheres, "repeat_id = ?")
