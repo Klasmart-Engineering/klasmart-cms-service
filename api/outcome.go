@@ -32,6 +32,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 		return
 	}
 
+	// TODO: check permission: create_learning_outcome__421
 	outcome, err := data.outcome()
 	if err != nil {
 		log.Warn(ctx, "createOutcome: outcome failed", log.Err(err))
