@@ -1,6 +1,7 @@
 package da
 
 import (
+	"database/sql"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -32,6 +33,8 @@ type ClassTypeCondition struct {
 
 	OrderBy ClassTypeOrderBy
 	Pager   dbo.Pager
+
+	DeleteAt sql.NullInt64
 }
 
 func (c ClassTypeCondition) GetConditions() ([]string, []interface{}) {
@@ -41,6 +44,12 @@ func (c ClassTypeCondition) GetConditions() ([]string, []interface{}) {
 	if c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+
+	if c.DeleteAt.Valid {
+		wheres = append(wheres, "delete_at>0")
+	} else {
+		wheres = append(wheres, "(delete_at=0)")
 	}
 
 	return wheres, params

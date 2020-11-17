@@ -35,6 +35,8 @@ type GradeCondition struct {
 
 	OrderBy GradeOrderBy
 	Pager   dbo.Pager
+
+	DeleteAt sql.NullInt64
 }
 
 func (c GradeCondition) GetConditions() ([]string, []interface{}) {
@@ -52,6 +54,11 @@ func (c GradeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.ProgramID.String)
 	}
 
+	if c.DeleteAt.Valid {
+		wheres = append(wheres, "delete_at>0")
+	} else {
+		wheres = append(wheres, "(delete_at=0)")
+	}
 	return wheres, params
 }
 
