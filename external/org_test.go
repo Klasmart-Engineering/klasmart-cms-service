@@ -88,7 +88,7 @@ func TestAmsPermissionService_HasPermissions(t *testing.T) {
 		OrgID: "49dd6bce-18a9-47cb-8da7-5c425c66a0ff",
 	}
 	permissions := []PermissionName{"archived_content_page_205", "create_lesson_material_220"}
-	perms, err := GetPermissionServiceProvider().HasPermissions(context.Background(), &op, permissions)
+	perms, err := GetPermissionServiceProvider().HasOrganizationPermissions(context.Background(), &op, permissions)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,7 +15,7 @@ import (
 type PermissionServiceProvider interface {
 	HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
 	HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error)
-	HasPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error)
+	HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error)
 }
 
 var (
@@ -131,7 +131,7 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 	return data.User.SchoolMembership.CheckAllowed, nil
 }
 
-func (s AmsPermissionService) HasPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error){
+func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error){
 	raw := `
 query($user_id: ID! $organization_id: ID!) {
 	user(user_id: $user_id) {

@@ -99,12 +99,12 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, tx *dbo.DBCo
 }
 
 func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *entity.Outcome, operator *entity.Operator) error {
-	perms, err := external.GetPermissionServiceProvider().HasPermissions(ctx, operator, []external.PermissionName{
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
 		external.EditMyUnpublishedLearningOutcome,
 		external.EditOrgUnpublishedLearningOutcome,
 	})
 	if err != nil {
-		log.Error(ctx, "UpdateLearningOutcome:HasPermissions failed", log.Any("op", operator), log.Err(err))
+		log.Error(ctx, "UpdateLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
 	err = dbo.GetTrans(ctx, func(cxt context.Context, tx *dbo.DBContext) error {
@@ -146,7 +146,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 }
 
 func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error {
-	perms, err := external.GetPermissionServiceProvider().HasPermissions(ctx, operator, []external.PermissionName{
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
 		external.DeleteMyUnpublishedLearningOutcome,
 		external.DeleteOrgUnpublishedLearningOutcome,
 		external.DeleteMyPendingLearningOutcome,
@@ -154,7 +154,7 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 		external.DeletePublishedLearningOutcome,
 	})
 	if err != nil {
-		log.Error(ctx, "DeleteLearningOutcome:HasPermissions failed", log.Any("op", operator), log.Err(err))
+		log.Error(ctx, "DeleteLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
@@ -441,7 +441,7 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBCo
 }
 
 func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) error {
-	perms, err := external.GetPermissionServiceProvider().HasPermissions(ctx, operator, []external.PermissionName{
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
 		external.DeleteMyUnpublishedLearningOutcome,
 		external.DeleteOrgUnpublishedLearningOutcome,
 		external.DeleteMyPendingLearningOutcome,
@@ -449,7 +449,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 		external.DeletePublishedLearningOutcome,
 	})
 	if err != nil {
-		log.Error(ctx, "BulkDelLearningOutcome:HasPermissions failed", log.Any("op", operator), log.Err(err))
+		log.Error(ctx, "BulkDelLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
@@ -547,13 +547,13 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 }
 
 func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
-	perms, err := external.GetPermissionServiceProvider().HasPermissions(ctx, user, []external.PermissionName{
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, user, []external.PermissionName{
 		external.ViewMyUnpublishedLearningOutcome, // my draft & my rejected
 		external.ViewOrgUnpublishedLearningOutcome, // org draft & org waiting for approved & org rejected
 		external.ViewMyPendingLearningOutcome, // my waiting for approved
 	})
 	if err != nil {
-		log.Error(ctx, "SearchPrivateOutcomes: HasPermissions failed",
+		log.Error(ctx, "SearchPrivateOutcomes: HasOrganizationPermissions failed",
 			log.Any("op", user), log.Err(err))
 		return 0, nil, constant.ErrInternalServer
 	}
