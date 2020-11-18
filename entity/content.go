@@ -178,13 +178,13 @@ func NewContentPublishStatus(status string) ContentPublishStatus {
 	}
 }
 
-type ContentID struct {
-	ID string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
-}
-
 type ContentStatisticsInfo struct {
 	SubContentCount int `json:"subcontent_count"`
 	OutcomesCount   int `json:"outcomes_count"`
+}
+
+func ContentLink(id string) string {
+	return FileTypeContent + "-" + id
 }
 
 type Content struct {

@@ -177,5 +177,24 @@ create table outcomes_attendances
     key `outcomes_attendances_attendance_id` (`attendance_id`)
 ) comment 'outcome and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+
+CREATE TABLE `folder_items` (
+    `id` varchar(50) comment 'id',
+    `owner_type` int NOT NULL comment 'folder item owner type',
+    `owner` varchar(50) NOT NULL comment 'folder item owner',
+    `parent_id` varchar(50) comment 'folder item parent folder id',
+    `link` varchar(50) comment 'folder item link',
+    `item_type` int NOT NULL comment 'folder item type',
+    `path` varchar(1024) NOT NULL comment 'folder item name',
+    `name` varchar(256) NOT NULL comment 'folder item name',
+    `thumbnail` text comment 'folder item thumbnail',
+    `creator` varchar(50) comment 'folder item creator',
+    `create_at` bigint NOT NULL comment 'create time (unix seconds)',
+    `update_at` bigint NOT NULL comment 'update time (unix seconds)',
+    `delete_at` bigint comment 'delete time (unix seconds)',
+    PRIMARY KEY (`id`)
+)comment 'cms folder' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
 drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
 create fulltext index fullindex_name_description_keywords_author_shortcode on learning_outcomes(`name`, `keywords`, `description`, `author_name`, `shortcode`);

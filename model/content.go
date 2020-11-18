@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
 
@@ -18,10 +19,7 @@ import (
 )
 
 var (
-	ErrNoSuchURL           = errors.New("no such url")
-	ErrRequestItemIsNil    = errors.New("request item is nil")
 	ErrNoAuth              = errors.New("no auth to operate")
-	ErrCreateContentFailed = errors.New("create contentdata into data access failed")
 
 	ErrNoContentData                     = errors.New("no content data")
 	ErrInvalidResourceId                 = errors.New("invalid resource id")
@@ -63,8 +61,8 @@ var (
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
-	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
-	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
+	PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error
+	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
@@ -94,6 +92,7 @@ type IContentModel interface {
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 
 	IsContentsOperatorByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error)
+	ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error)
 }
 
 type ContentModel struct {
@@ -112,6 +111,12 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	if err != nil {
 		log.Error(ctx, "update source content failed", log.Err(err))
 		return ErrUpdateContentFailed
+	}
+
+	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, sourceContent.Org, entity.ContentLink(sourceContent.ID))
+	if err != nil {
+		log.Error(ctx, "remove old content folder item failed", log.Err(err), log.Any("content", sourceContent))
+		return err
 	}
 
 	//更新所有latestID为sourceContent的Content
@@ -223,7 +228,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 		IDS: subContentIds,
 	})
 	if err != nil {
-		log.Warn(ctx, "search content data failed", log.Strings("IDS", subContentIds), log.Err(err))
+		log.Warn(ctx, "search content data failed", log.Any("IDS", subContentIds), log.Err(err))
 		return err
 	}
 	err = cm.checkPublishContentChildren(ctx, content, contentList)
@@ -382,6 +387,16 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		log.Error(ctx, "update contentdata scope failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
+	//更新Folder信息
+
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.ContentLink(content.ID), content.PublishScope, &entity.Operator{
+		UserID: content.Author,
+		OrgID:  content.Org,
+	})
+	if err != nil {
+		return err
+	}
+
 	if status == entity.ContentStatusPublished && content.SourceID != "" {
 		//处理source content
 		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
@@ -504,7 +519,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 	return err
 }
 
-func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
+func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
@@ -582,12 +597,12 @@ func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBC
 		ContentType:   entity.ContentTypeAssets,
 		Name:          content.Name,
 		Program:       content.Program,
-		Subject:       stringToStringArray(ctx, content.Subject),
-		Developmental: stringToStringArray(ctx, content.Developmental),
-		Skills:        stringToStringArray(ctx, content.Skills),
-		Age:           stringToStringArray(ctx, content.Age),
-		Grade:         stringToStringArray(ctx, content.Grade),
-		Keywords:      stringToStringArray(ctx, content.Keywords),
+		Subject:       utils.StringToStringArray(ctx, content.Subject),
+		Developmental: utils.StringToStringArray(ctx, content.Developmental),
+		Skills:        utils.StringToStringArray(ctx, content.Skills),
+		Age:           utils.StringToStringArray(ctx, content.Age),
+		Grade:         utils.StringToStringArray(ctx, content.Grade),
+		Keywords:      utils.StringToStringArray(ctx, content.Keywords),
 		Description:   content.Description,
 		Thumbnail:     content.Thumbnail,
 		SuggestTime:   content.SuggestTime,
@@ -610,7 +625,7 @@ func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBC
 	content.Data = d
 	return nil
 }
-func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
+func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
@@ -708,6 +723,14 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 		log.Error(ctx, "delete contentdata failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
 		return err
 	}
+
+	//folder中删除
+	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
+	if err != nil {
+		log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
+		return err
+	}
+
 
 	//解锁source content
 	if content.SourceID != "" {
@@ -1088,7 +1111,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
 		condition2.Scope = []string{user.OrgID}
 	} else {
-		scopes, err := cm.listVisibleScopes(ctx, visiblePermissionPublished, user)
+		scopes, err := cm.ListVisibleScopes(ctx, visiblePermissionPublished, user)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -1131,7 +1154,7 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 
 func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = []string{entity.ContentStatusPending}
-	scope, err := cm.listVisibleScopes(ctx, visiblePermissionPending, user)
+	scope, err := cm.ListVisibleScopes(ctx, visiblePermissionPending, user)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -1582,7 +1605,7 @@ func (cm *ContentModel) getOutcomes(ctx context.Context, pickIds []string, user 
 	return outcomeEntities
 }
 
-func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error) {
+func (cm *ContentModel) ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error) {
 	//TODO:添加scope
 	p := external.PublishedContentPage204
 	if permission == visiblePermissionPending {
@@ -1625,12 +1648,7 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	return ret, nil
 }
 
-func stringToStringArray(ctx context.Context, str string) []string {
-	if str == "" {
-		return nil
-	}
-	return strings.Split(str, ",")
-}
+
 
 var (
 	_contentModel     IContentModel

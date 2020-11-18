@@ -12,7 +12,6 @@ import (
 var(
 	ErrInvalidContentType = errors.New("invalid content type")
 	ErrContentDataRequestSource = errors.New("material require source")
-	ErrInvalidMaterialInLesson = errors.New("invalid material in lesson")
 	ErrInvalidMaterialType = errors.New("invalid material type")
 	ErrInvalidSourceExt = errors.New("invalid source extension")
 )

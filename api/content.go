@@ -19,7 +19,7 @@ type contentBulkOperateRequest struct {
 	ID []string `json:"id"`
 }
 
-type CreateContentResponse struct {
+type CreateResponse struct {
 	ID string `json:"id"`
 }
 type PublishContentRequest struct {
@@ -34,7 +34,7 @@ type PublishContentRequest struct {
 // @Produce json
 // @Param content body entity.CreateContentRequest true "create request"
 // @Tags content
-// @Success 200 {object} CreateContentResponse
+// @Success 200 {object} CreateResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents [post]
@@ -349,7 +349,7 @@ func (s *Server) updateContent(c *gin.Context) {
 // @Produce json
 // @Param content_id path string true "content id to lock"
 // @Tags content
-// @Success 200 {object} CreateContentResponse
+// @Success 200 {object} CreateResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents/{content_id}/lock [put]
