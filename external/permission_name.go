@@ -56,5 +56,4 @@ const (
 	DeletePublishedLearningOutcome PermissionName = "delete_published_learning_outcome_448"
 	ApprovePendingLearningOutcome PermissionName = "approve_pending_learning_outcome_481"
 	RejectPendingLearningOutcome PermissionName = "reject_pending_learning_outcome_482"
-	AddLearningOutcometoContent PermissionName = "add_learning_outcome_to_content_485"
 )

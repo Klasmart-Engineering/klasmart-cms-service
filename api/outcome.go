@@ -1,6 +1,8 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +34,18 @@ func (s *Server) createOutcome(c *gin.Context) {
 		return
 	}
 
-	// TODO: check permission: create_learning_outcome__421
+	// TODO: check permission: create_learning_outcome_421
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
+	if err != nil {
+		log.Warn(ctx, "createOutcome: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "createOutcome: no permission",log.Any("op", op), log.String("perm", string(external.CreateLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
 	outcome, err := data.outcome()
 	if err != nil {
 		log.Warn(ctx, "createOutcome: outcome failed", log.Err(err))
@@ -42,20 +55,6 @@ func (s *Server) createOutcome(c *gin.Context) {
 	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
 	data.OutcomeID = outcome.ID
 	switch err {
-	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrResourceNotFound:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, &data, outcome))
 	default:
@@ -133,6 +132,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	// permission check has to delegated to business lay for recognizing org's permission or author's permission
 	err = model.GetOutcomeModel().UpdateLearningOutcome(ctx, outcome, op)
 	switch err {
 	//case model.ErrInvalidResourceId:
@@ -145,8 +145,8 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case entity.ErrRequirePublishScope:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrOperateNotAllowed:
+		c.JSON(http.StatusForbidden, L(AssessMsgOneStudent))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
@@ -227,6 +227,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes [get]
+// search public outcomes as a general user
 func (s *Server) queryOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -238,9 +239,17 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 		return
 	}
 
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedLearningOutcome)
 	if err != nil {
-		log.Warn(ctx, "queryOutcomes: outcome failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		log.Error(ctx, "queryOutcomes: HasOrganizationPermission failed", log.Any("op", op),
+			log.String("perm" , string(external.ViewPublishedLearningOutcome)), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "queryOutcomes: HasOrganizationPermission failed", log.Any("op", op),
+			log.String("perm" , string(external.ViewPublishedLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
 	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
@@ -286,6 +295,18 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	if outcomeID == "" {
 		log.Warn(ctx, "lockOutcome: outcomeID is null", log.String("outcome_id", outcomeID))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.EditPublishedLearningOutcome)
+	if err != nil {
+		log.Error(ctx, "lockOutcome: HasOrganizationPermission failed", log.String("outcome_id", outcomeID), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "lockOutcome: HasOrganizationPermission failed", log.Any("op", op),
+			log.String("perm" , string(external.EditPublishedLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
 	newID, err := model.GetOutcomeModel().LockLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, op)
@@ -341,16 +362,6 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
 
 	switch err {
-	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
@@ -381,20 +392,21 @@ func (s *Server) approveOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	outcomeID := c.Param("id")
-	err := model.GetOutcomeModel().ApproveLearningOutcome(ctx, outcomeID, op)
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingLearningOutcome)
+	if err != nil {
+		log.Error(ctx, "approveOutcome: HasOrganizationPermission failed", log.String("id", outcomeID), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm{
+		log.Warn(ctx, "approveOutcome: no permission",
+			log.Any("op", op), log.String("id", outcomeID),
+			log.String("perm", string(external.ApprovePendingLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+	err = model.GetOutcomeModel().ApproveLearningOutcome(ctx, outcomeID, op)
 	switch err {
-	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
@@ -429,24 +441,25 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	var reason OutcomeRejectReq
 	err := c.ShouldBindJSON(&reason)
 	if err != nil {
-		log.Warn(ctx, "updateOutcome: ShouldBind failed", log.Err(err))
+		log.Warn(ctx, "rejectOutcome: ShouldBind failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingLearningOutcome)
+	if err != nil {
+		log.Error(ctx, "rejectOutcome: HasOrganizationPermission failed", log.String("id", outcomeID), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm{
+		log.Warn(ctx, "rejectOutcome: no permission",
+			log.Any("op", op), log.String("id", outcomeID),
+			log.String("perm", string(external.RejectPendingLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
 	err = model.GetOutcomeModel().RejectLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, reason.RejectReason, op)
 	switch err {
-	//case model.ErrInvalidResourceId:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrNoContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case model.ErrInvalidContentData:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequireContentName:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrRequirePublishScope:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//case entity.ErrInvalidContentType:
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
@@ -579,6 +592,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /private_learning_outcomes [get]
+// search private outcomes as an author user
 func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -604,6 +618,8 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrUnAuthorized:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
@@ -635,6 +651,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /pending_learning_outcomes [get]
+// search pending outcomes as an admin user
 func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -664,6 +681,8 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrUnAuthorized:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, total, outcomes))
 	default:

@@ -20,6 +20,10 @@ const (
 	ScheduleMsgNoPermission  ResponseLabel = "schedule_msg_no_permission"
 )
 
+const (
+	AssessMsgNoPermission  ResponseLabel = "assess_error_no_permissions"
+)
+
 // L create response object with label
 func L(label ResponseLabel) interface{} {
 	return ErrorResponse{Label: string(label)}

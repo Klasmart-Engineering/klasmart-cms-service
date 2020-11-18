@@ -2,7 +2,9 @@ package external
 
 import (
 	"context"
+	"go.uber.org/zap/buffer"
 	"sync"
+	"text/template"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -13,6 +15,7 @@ import (
 type PermissionServiceProvider interface {
 	HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
 	HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error)
+	HasPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error)
 }
 
 var (
@@ -126,4 +129,50 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 		log.Bool("hasPermission", data.User.SchoolMembership.CheckAllowed))
 
 	return data.User.SchoolMembership.CheckAllowed, nil
+}
+
+func (s AmsPermissionService) HasPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error){
+	raw := `
+query($user_id: ID! $organization_id: ID!) {
+	user(user_id: $user_id) {
+		membership(organization_id: $organization_id) {
+			{{range $i, $e := .}}
+			{{$e}}: checkAllowed(permission_name: "{{$e}}")
+			{{end}}
+		}
+	}
+}
+`
+
+	temp, err := template.New("Permissions").Parse(raw)
+	if err != nil {
+		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+	buf := buffer.Buffer{}
+	err = temp.Execute(&buf, permissions)
+	if err != nil {
+		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
+		return nil, err
+	}
+	req := chlorine.NewRequest(buf.String())
+	req.Var("user_id", operator.UserID)
+	req.Var("organization_id", operator.OrgID)
+	payload := make(map[PermissionName]bool, len(permissions))
+	res := chlorine.Response{
+		Data: &struct{
+			User struct {Membership map[PermissionName]bool `json:"membership"`} `json:"user"`
+		}{struct {Membership map[PermissionName]bool `json:"membership"`}{Membership: payload}},
+	}
+
+	_, err = GetChlorine().Run(ctx, req, &res)
+	if err != nil {
+		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
+		return nil, err
+	}
+	if len(res.Errors) > 0 {
+		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
+		return nil, res.Errors
+	}
+	return payload, nil
 }
