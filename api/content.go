@@ -523,6 +523,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param path query string false "search content path"
 // @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
@@ -687,9 +688,11 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	scope := c.Query("scope")
 	publish := c.Query("publish_status")
 	program := c.Query("program")
+	path := c.Query("path")
 	condition := da.ContentCondition{
 		Author:  parseAuthor(c, op),
 		Org:     parseOrg(c, op),
+		Path: path,
 		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
 		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
 		Name:    strings.TrimSpace(c.Query("name")),

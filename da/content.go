@@ -80,6 +80,7 @@ type ContentCondition struct {
 	SourceID	string `json:"source_id"`
 	LatestID	string `json:"latest_id"`
 	SourceType	string `json:"source_type"`
+	Path		string `json:"path"`
 
 	OrderBy ContentOrderBy `json:"order_by"`
 	Pager   utils.Pager
@@ -124,6 +125,11 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := "source_type = ?"
 		conditions = append(conditions, condition)
 		params = append(params, s.SourceType)
+	}
+	if s.Path != "" {
+		condition := "path = ?"
+		conditions = append(conditions, condition)
+		params = append(params, s.Path)
 	}
 
 	if len(s.PublishStatus) > 0 {

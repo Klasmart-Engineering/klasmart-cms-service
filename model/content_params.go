@@ -73,6 +73,15 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.LessonType = ""
 	}
 
+	path := ""
+	rootFolder, err := GetFolderModel().GetRootFolder(ctx, entity.OwnerTypeOrganization, operator)
+	if err != nil{
+		log.Warn(ctx, "get root folder failed", log.Err(err),
+			log.Any("user", operator))
+	}else{
+		path = string(rootFolder.ChildrenPath())
+	}
+
 	return &entity.Content{
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
@@ -90,6 +99,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Data:          c.Data,
 		Extra:         c.Extra,
 		LessonType:    c.LessonType,
+		Path:			path,
 		SelfStudy:     c.SelfStudy.Int(),
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, ","),
@@ -217,7 +227,17 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	return content
 }
 
-func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) *entity.Content {
+func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
+	content.Path = ""
+	//更新content到根目录
+	folder, err := GetFolderModel().GetRootFolder(ctx, entity.OwnerTypeOrganization, user)
+	if err != nil{
+		log.Warn(ctx, "get root folder failed", log.Err(err),
+			log.Any("user", user))
+	}else{
+		content.Path = string(folder.ChildrenPath())
+	}
+
 	//assets则隐藏
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.ContentStatusHidden

@@ -116,7 +116,7 @@ type FolderItem struct {
 	Link string `gorm:"type:varchar(50)" json:"link"`
 
 	ItemType ItemType	`gorm:"type:int;NOT NULL"`
-	Path Path `gorm:"type:varchar(1024);NOT NULL;INDEX" json:"path"`
+	Path Path `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"path"`
 	Name string	`gorm:"type:varchar(256);NOT NULL" json:"name"`
 
 	Thumbnail string	`gorm:"type:text" json:"thumbnail"`

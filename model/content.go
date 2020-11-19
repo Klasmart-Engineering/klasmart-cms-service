@@ -93,6 +93,8 @@ type IContentModel interface {
 
 	IsContentsOperatorByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error)
 	ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error)
+
+	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error
 }
 
 type ContentModel struct {
@@ -376,6 +378,22 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	return nil
 }
 
+func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error{
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx, "can't read content on update path", log.Err(err))
+		return err
+	}
+	content.Path = path
+	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
+	if err != nil {
+		log.Error(ctx, "update content path failed", log.Err(err))
+		return ErrUpdateContentFailed
+	}
+
+	return nil
+}
+
 func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
@@ -390,7 +408,19 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	if status == entity.ContentStatusRejected && len(reason) < 1 && remark == "" {
 		return ErrNoRejectReason
 	}
+	operator := &entity.Operator{
+		UserID: content.Author,
+		OrgID:  content.Org,
+	}
 
+	//更新content的path
+	rootFolder, err := GetFolderModel().GetRootFolder(ctx, entity.OwnerTypeOrganization, operator)
+	if err != nil{
+		log.Warn(ctx, "get root folder failed", log.Err(err),
+			log.Any("user", operator))
+	}else{
+		content.Path = string(rootFolder.ChildrenPath())
+	}
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -400,11 +430,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.ContentLink(content.ID), content.PublishScope, &entity.Operator{
-		UserID: content.Author,
-		OrgID:  content.Org,
-	})
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.ContentLink(content.ID), content.PublishScope, operator)
 	if err != nil {
 		return err
 	}
@@ -728,7 +754,7 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 		return err
 	}
 
-	obj := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus)
+	obj := cm.prepareDeleteContentParams(ctx, content, content.PublishStatus, user)
 
 	err = da.GetContentDA().UpdateContent(ctx, tx, content.ID, *obj)
 	if err != nil {
