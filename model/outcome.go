@@ -108,14 +108,14 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 		if err != nil {
 			log.Error(ctx, "UpdateLearningOutcome: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
-				log.Any("data", outcome))
+				log.Any("data", data))
 			return err
 		}
-		if !allowEditOutcome(ctx, operator, perms, outcome) {
+		if !allowEditOutcome(ctx, operator, perms, data) {
 			log.Warn(ctx, "UpdateLearningOutcome: no permission",
 				log.Any("op", operator.UserID),
 				log.Any("perms", perms),
-				log.Any("outcome", outcome))
+				log.Any("outcome", data))
 			return constant.ErrOperateNotAllowed
 		}
 		if data.PublishStatus != entity.OutcomeStatusDraft && data.PublishStatus != entity.OutcomeStatusRejected {
