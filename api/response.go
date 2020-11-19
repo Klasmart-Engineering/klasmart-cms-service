@@ -6,10 +6,13 @@ const (
 	GeneralUnknown             ResponseLabel = "general_error_unknown"
 	GeneralUnAuthorized        ResponseLabel = "general_error_unauthorized"
 	GeneralUnAuthorizedNoOrgID ResponseLabel = "general_error_no_organization"
-)
 
-const (
-	AssessMsgOneStudent ResponseLabel = "assess_msg_one_student"
+	// Assessment
+	AssessMsgOneStudent   ResponseLabel = "assess_msg_one_student"
+	AssessMsgNoPermission ResponseLabel = "assess_msg_no_permission"
+
+	// Report
+	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
 )
 
 // schedule msg
@@ -18,10 +21,6 @@ const (
 	ScheduleMsgDeleteOverlap ResponseLabel = "schedule_msg_delete_overlap"
 	ScheduleMsgOverlap       ResponseLabel = "schedule_msg_overlap"
 	ScheduleMsgNoPermission  ResponseLabel = "schedule_msg_no_permission"
-)
-
-const (
-	AssessMsgNoPermission  ResponseLabel = "assess_error_no_permissions"
 )
 
 // L create response object with label

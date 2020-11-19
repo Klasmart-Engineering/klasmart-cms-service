@@ -774,17 +774,23 @@ func allowDeleteOutcome(ctx context.Context, operator *entity.Operator, perms ma
 	if (outcome.PublishStatus == entity.OutcomeStatusDraft ||outcome.PublishStatus == entity.OutcomeStatusRejected) &&
 		perms[external.DeleteOrgUnpublishedLearningOutcome] {
 		return true
-	} else if (outcome.PublishStatus == entity.OutcomeStatusDraft ||outcome.PublishStatus == entity.OutcomeStatusRejected) &&
+	}
+
+	if (outcome.PublishStatus == entity.OutcomeStatusDraft ||outcome.PublishStatus == entity.OutcomeStatusRejected) &&
 		(perms[external.DeleteMyUnpublishedLearningOutcome] && outcome.AuthorID == operator.UserID) {
 		return true
-	} else if outcome.PublishStatus == entity.OutcomeStatusPending && perms[external.DeleteMyPendingLearningOutcome] {
+	}
+
+	if outcome.PublishStatus == entity.OutcomeStatusPending && perms[external.DeleteMyPendingLearningOutcome] {
 		return true
 	}
 
 	if outcome.PublishStatus == entity.OutcomeStatusPending &&
 		(perms[external.DeleteMyPendingLearningOutcome] && outcome.AuthorID == operator.UserID) {
 		return true
-	} else if outcome.PublishStatus == entity.OutcomeStatusPublished && perms[external.DeletePublishedLearningOutcome] {
+	}
+
+	if outcome.PublishStatus == entity.OutcomeStatusPublished && perms[external.DeletePublishedLearningOutcome] {
 		return true
 	}
 
@@ -794,7 +800,9 @@ func allowDeleteOutcome(ctx context.Context, operator *entity.Operator, perms ma
 func allowEditOutcome(ctx context.Context, operator *entity.Operator, perms map[external.PermissionName]bool, outcome *entity.Outcome) bool {
 	if perms[external.EditOrgUnpublishedLearningOutcome] && outcome.PublishStatus != entity.OutcomeStatusPublished{
 		return true
-	} else if (perms[external.EditMyUnpublishedLearningOutcome] && outcome.AuthorID == operator.UserID) &&
+	}
+
+	if (perms[external.EditMyUnpublishedLearningOutcome] && outcome.AuthorID == operator.UserID) &&
 		(outcome.PublishStatus != entity.OutcomeStatusPublished && outcome.PublishStatus != entity.OutcomeStatusPending){
 		return true
 	}
