@@ -93,6 +93,6 @@ func NewSkillOrderBy(orderBy string) SkillOrderBy {
 func (c SkillOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "number asc, name asc"
+		return "number desc, name asc"
 	}
 }

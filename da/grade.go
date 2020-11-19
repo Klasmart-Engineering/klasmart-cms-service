@@ -83,6 +83,6 @@ func NewGradeOrderBy(orderBy string) GradeOrderBy {
 func (c GradeOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "number asc, name asc"
+		return "number desc, name asc"
 	}
 }

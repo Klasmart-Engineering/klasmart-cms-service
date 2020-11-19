@@ -75,6 +75,6 @@ func NewLessonTypeOrderBy(orderBy string) LessonTypeOrderBy {
 func (c LessonTypeOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "number asc, name asc"
+		return "number desc, name asc"
 	}
 }
