@@ -84,6 +84,6 @@ func NewDevelopmentalOrderBy(orderBy string) DevelopmentalOrderBy {
 func (c DevelopmentalOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number asc, name asc"
 	}
 }

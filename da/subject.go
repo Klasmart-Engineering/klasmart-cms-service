@@ -84,6 +84,6 @@ func NewSubjectOrderBy(orderBy string) SubjectOrderBy {
 func (c SubjectOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number asc, name asc"
 	}
 }

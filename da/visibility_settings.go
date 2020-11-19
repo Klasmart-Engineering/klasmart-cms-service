@@ -76,6 +76,6 @@ func NewVisibilitySettingOrderBy(orderBy string) VisibilitySettingOrderBy {
 func (c VisibilitySettingOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number asc, name asc"
 	}
 }
