@@ -60,13 +60,6 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 		return
 	}
 	outcome.OrganizationID = operator.OrgID
-	//outcome.OrganizationID, _, err = ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
-	//if err != nil {
-	//	log.Error(ctx, "CreateLearningOutcome: getRootOrganizationByAuthorID failed",
-	//		log.String("op", operator.UserID),
-	//		log.Any("outcome", outcome))
-	//	return
-	//}
 	outcome.Shortcode, err = ocm.getShortCode(ctx, outcome.OrganizationID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: getShortCode failed",
@@ -118,12 +111,11 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 				log.Any("data", outcome))
 			return err
 		}
-		if (!perms[external.EditOrgUnpublishedLearningOutcome] && !perms[external.EditMyUnpublishedLearningOutcome]) ||
-			(perms[external.EditMyUnpublishedLearningOutcome] && outcome.AuthorID != operator.UserID) {
+		if !allowEditOutcome(ctx, operator, perms, outcome) {
 			log.Warn(ctx, "UpdateLearningOutcome: no permission",
 				log.Any("op", operator.UserID),
 				log.Any("perms", perms),
-				log.Any("data", data))
+				log.Any("outcome", outcome))
 			return constant.ErrOperateNotAllowed
 		}
 		if data.PublishStatus != entity.OutcomeStatusDraft && data.PublishStatus != entity.OutcomeStatusRejected {
@@ -165,69 +157,10 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		switch outcome.PublishStatus {
-		case entity.OutcomeStatusDraft, entity.OutcomeStatusRejected:
-			if perms[external.DeleteOrgUnpublishedLearningOutcome] {
-				if outcome.OrganizationID != operator.OrgID{
-					log.Warn(ctx, "DeleteLearningOutcome: no permission",
-						log.Any("perms", perms),
-						log.Any("op", operator),
-						log.Any("outcome", outcome))
-					return constant.ErrUnAuthorized
-				}
-			} else if !perms[external.DeleteOrgUnpublishedLearningOutcome] && perms[external.DeleteMyUnpublishedLearningOutcome] {
-				if outcome.AuthorID != operator.UserID {
-					log.Warn(ctx, "DeleteLearningOutcome: no permission",
-						log.Any("perms", perms),
-						log.Any("op", operator),
-						log.Any("outcome", outcome))
-					return constant.ErrUnAuthorized
-				}
-			} else {
-				log.Warn(ctx, "DeleteLearningOutcome: no permission",
-					log.Any("perms", perms),
-					log.Any("op", operator),
-					log.Any("outcome", outcome))
-				return constant.ErrUnAuthorized
-			}
-		case entity.OutcomeStatusPending:
-			if perms[external.DeleteOrgUnpublishedLearningOutcome] {
-				if outcome.PublishScope != operator.OrgID {
-					log.Warn(ctx, "DeleteLearningOutcome: no permission",
-						log.Any("perms", perms),
-						log.Any("op", operator),
-						log.Any("outcome", outcome))
-					return constant.ErrUnAuthorized
-				}
-			} else if perms[external.DeleteMyPendingLearningOutcome] {
-				if outcome.AuthorID != operator.UserID {
-					log.Warn(ctx, "DeleteLearningOutcome: no permission",
-						log.Any("perms", perms),
-						log.Any("op", operator),
-						log.Any("outcome", outcome))
-					return constant.ErrUnAuthorized
-				}
-			} else {
-				log.Warn(ctx, "DeleteLearningOutcome: no permission",
-					log.Any("perms", perms),
-					log.Any("op", operator),
-					log.Any("outcome", outcome))
-				return constant.ErrUnAuthorized
-			}
-		case entity.OutcomeStatusPublished:
-			if !perms[external.DeletePublishedLearningOutcome] {
-				log.Warn(ctx, "DeleteLearningOutcome: no permission",
-					log.Any("perms", perms),
-					log.Any("op", operator),
-					log.Any("outcome", outcome))
-				return constant.ErrUnAuthorized
-			}
-		default:
-			log.Warn(ctx, "DeleteLearningOutcome: no permission",
-				log.Any("perms", perms),
-				log.Any("op", operator),
-				log.Any("outcome", outcome))
-			return constant.ErrUnAuthorized
+		if !allowDeleteOutcome(ctx, operator, perms, outcome) {
+			log.Warn(ctx, "DeleteLearningOutcome: no permission", log.Any("op", operator),
+				log.Any("perms", perms), log.Any("outcome", outcome))
+			return constant.ErrOperateNotAllowed
 		}
 		err = ocm.deleteOutcome(ctx, tx, outcome)
 		if err != nil {
@@ -243,13 +176,6 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 
 func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
 	if condition.OrganizationID == "" {
-		//orgID, _, err := ocm.getRootOrganizationByAuthorID(ctx, user.UserID)
-		//if err != nil {
-		//	log.Error(ctx, "SearchLearningOutcome: getRootOrganizationByAuthorID failed",
-		//		log.String("op", user.UserID),
-		//		log.Any("condition", condition))
-		//	return 0, nil, err
-		//}
 		condition.OrganizationID = user.OrgID
 	}
 	if condition.AuthorName == constant.Self {
@@ -335,15 +261,6 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 }
 
 func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID string, scope string, operator *entity.Operator) error {
-	if scope == "" {
-		//scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
-		//if err != nil {
-		//	log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
-		//		log.String("op", operator.UserID),
-		//		log.String("outcome_id", outcomeID))
-		//}
-		scope = operator.OrgID
-	}
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err == dbo.ErrRecordNotFound {
@@ -465,72 +382,10 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 			return err
 		}
 
-		if len(outcomes) > 0 {
-			outcome := outcomes[0]
-			switch outcome.PublishStatus {
-			case entity.OutcomeStatusDraft, entity.OutcomeStatusRejected:
-				if perms[external.DeleteOrgUnpublishedLearningOutcome] {
-					if outcome.OrganizationID != operator.OrgID{
-						log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-							log.Any("perms", perms),
-							log.Any("op", operator),
-							log.Any("outcome", outcome))
-						return constant.ErrUnAuthorized
-					}
-				} else if !perms[external.DeleteOrgUnpublishedLearningOutcome] && perms[external.DeleteMyUnpublishedLearningOutcome] {
-					if outcome.AuthorID != operator.UserID {
-						log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-							log.Any("perms", perms),
-							log.Any("op", operator),
-							log.Any("outcome", outcome))
-						return constant.ErrUnAuthorized
-					}
-				} else {
-					log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-						log.Any("perms", perms),
-						log.Any("op", operator),
-						log.Any("outcome", outcome))
-					return constant.ErrUnAuthorized
-				}
-			case entity.OutcomeStatusPending:
-				if perms[external.DeleteOrgUnpublishedLearningOutcome] {
-					if outcome.PublishScope != operator.OrgID {
-						log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-							log.Any("perms", perms),
-							log.Any("op", operator),
-							log.Any("outcome", outcome))
-						return constant.ErrUnAuthorized
-					}
-				} else if perms[external.DeleteMyPendingLearningOutcome] {
-					if outcome.AuthorID != operator.UserID {
-						log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-							log.Any("perms", perms),
-							log.Any("op", operator),
-							log.Any("outcome", outcome))
-						return constant.ErrUnAuthorized
-					}
-				} else {
-					log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-						log.Any("perms", perms),
-						log.Any("op", operator),
-						log.Any("outcome", outcome))
-					return constant.ErrUnAuthorized
-				}
-			case entity.OutcomeStatusPublished:
-				if !perms[external.DeletePublishedLearningOutcome] {
-					log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-						log.Any("perms", perms),
-						log.Any("op", operator),
-						log.Any("outcome", outcome))
-					return constant.ErrUnAuthorized
-				}
-			default:
-				log.Warn(ctx, "BulkDelLearningOutcome: no permission",
-					log.Any("perms", perms),
-					log.Any("op", operator),
-					log.Any("outcome", outcome))
-				return constant.ErrUnAuthorized
-			}
+		if len(outcomes) > 0 && !allowDeleteOutcome(ctx, operator, perms, outcomes[0]){
+			log.Warn(ctx, "BulkDelLearningOutcome: no permission", log.Any("op", operator),
+				log.Any("perms", perms), log.Any("outcome", outcomes[0]))
+			return constant.ErrOperateNotAllowed
 		}
 		for _, o := range outcomes {
 			err = ocm.deleteOutcome(ctx, tx, o)
@@ -558,38 +413,13 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBCon
 		return 0, nil, constant.ErrInternalServer
 	}
 	condition.OrganizationID = user.OrgID
-	switch condition.PublishStatus{
-	case entity.OutcomeStatusDraft, entity.OutcomeStatusRejected:
-		if perms[external.ViewOrgUnpublishedLearningOutcome] {
-			if condition.AuthorName == constant.Self {
-				condition.AuthorID = user.UserID
-				condition.AuthorName = ""
-			}
-		} else if !perms[external.ViewOrgUnpublishedLearningOutcome] && perms[external.ViewMyUnpublishedLearningOutcome]{
-			condition.AuthorID = user.UserID
-			condition.AuthorName = ""
-		} else {
-			return 0, nil, constant.ErrUnAuthorized
-		}
-	case entity.OutcomeStatusPending:
-		if perms[external.ViewOrgUnpublishedLearningOutcome] {
-			if condition.AuthorName == constant.Self {
-				condition.AuthorID = user.UserID
-				condition.AuthorName = ""
-			}
-		} else if !perms[external.ViewOrgUnpublishedLearningOutcome] && perms[external.ViewMyPendingLearningOutcome] {
-			condition.AuthorID = user.UserID
-			condition.AuthorName = ""
-		} else {
-			return 0, nil, constant.ErrUnAuthorized
-		}
-	default:
-		log.Warn(ctx, "SearchPrivateOutcomes: wrong status param",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, ErrBadRequest
+	if !allowSearchPrivate(ctx, user, perms, condition) {
+		log.Warn(ctx, "SearchPrivateOutcomes: no permission",
+			log.Any("op", user),
+			log.Any("perms", perms),
+			log.Any("cond", condition))
+		return 0, nil, constant.ErrOperateNotAllowed
 	}
-
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
 		log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
@@ -603,24 +433,20 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, tx *dbo.DBCon
 
 func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, tx *dbo.DBContext, condition *entity.OutcomeCondition, user *entity.Operator) (int, []*entity.Outcome, error) {
 	if condition.PublishStatus != entity.OutcomeStatusPending {
-		log.Error(ctx, "SearchPendingOutcomes: SearchPendingOutcomes failed",
+		log.Warn(ctx, "SearchPendingOutcomes: SearchPendingOutcomes failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, ErrBadRequest
 	}
-	orgID, _, err := ocm.getRootOrganizationByOrgID(ctx, user.UserID)
-	if err != nil {
-		log.Error(ctx, "SearchPendingOutcomes: SearchPendingOutcomes failed",
+	// as there is no level,orgID is the same as [user.OrgID]
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, user, external.ViewOrgPendingLearningOutcome)
+	if !hasPerm {
+		log.Warn(ctx, "SearchPendingOutcomes: no permission",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
-		return 0, nil, err
+		return 0, nil, constant.ErrOperateNotAllowed
 	}
-	// as there is no level,orgID is the same as [user.OrgID]
-	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, &entity.Operator{UserID: user.UserID, OrgID: orgID}, external.ViewOrgPendingLearningOutcome)
-	if !hasPerm {
-		return 0, nil, constant.ErrUnAuthorized
-	}
-	condition.PublishScope = orgID
+	condition.PublishScope = user.OrgID
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
 		log.Error(ctx, "SearchPendingOutcomes: SearchOutcome failed",
@@ -944,45 +770,56 @@ func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name 
 	return user.Name, nil
 }
 
-func (ocm OutcomeModel) getRootOrganizationByOrgID(ctx context.Context, id string) (orgID, orgName string, err error) {
-	provider := external.GetOrganizationServiceProvider()
-	orgs, err := provider.GetParents(ctx, orgID)
-	if err != nil {
-		log.Error(ctx, "getRootOrganizationByOrgID: GetMyTopOrg failed",
-			log.Err(err),
-			log.String("org_id", id))
-		return "", "", err
+func allowDeleteOutcome(ctx context.Context, operator *entity.Operator, perms map[external.PermissionName]bool, outcome *entity.Outcome) bool {
+	if (outcome.PublishStatus == entity.OutcomeStatusDraft ||outcome.PublishStatus == entity.OutcomeStatusRejected) &&
+		perms[external.DeleteOrgUnpublishedLearningOutcome] {
+		return true
+	} else if (outcome.PublishStatus == entity.OutcomeStatusDraft ||outcome.PublishStatus == entity.OutcomeStatusRejected) &&
+		(perms[external.DeleteMyUnpublishedLearningOutcome] && outcome.AuthorID == operator.UserID) {
+		return true
+	} else if outcome.PublishStatus == entity.OutcomeStatusPending && perms[external.DeleteMyPendingLearningOutcome] {
+		return true
+	} else if outcome.PublishStatus == entity.OutcomeStatusPending &&
+		(perms[external.DeleteMyPendingLearningOutcome] && outcome.AuthorID == operator.UserID) {
+		return true
+	} else if outcome.PublishStatus == entity.OutcomeStatusPublished && perms[external.DeletePublishedLearningOutcome] {
+		return true
 	}
-	if len(orgs) == 0 {
-		log.Error(ctx, "getRootOrganizationByOrgID: parents is empty",
-			log.Err(err),
-			log.String("org_id", id))
-		return "", "", nil
-	}
-	root := orgs[0]
-	for i := 0; i < len(orgs); i++ {
-		if root.ParentID != "" && root.ParentID != root.ID {
-			for _, o := range orgs {
-				if o.ID == root.ParentID {
-					root = o
-					break
-				}
-			}
-		}
-	}
-	return root.ID, root.Name, nil
+	return false
 }
 
-// func (ocm OutcomeModel) getRootOrganizationByAuthorID(ctx context.Context, id string) (orgID, orgName string, err error) {
-// 	provider := external.GetUserServiceProvider()
-// 	user, err := provider.GetUserInfoByID(ctx, id)
-// 	if err != nil {
-// 		log.Error(ctx, "getRootOrganizationByAuthorID failed",
-// 			log.Err(err),
-// 			log.String("user_id", id))
-// 	}
-// 	return ocm.getRootOrganizationByOrgID(ctx, user.OrgID)
-// }
+func allowEditOutcome(ctx context.Context, operator *entity.Operator, perms map[external.PermissionName]bool, outcome *entity.Outcome) bool {
+	if perms[external.EditOrgUnpublishedLearningOutcome] && outcome.PublishStatus != entity.OutcomeStatusPublished{
+		return true
+	} else if (perms[external.EditMyUnpublishedLearningOutcome] && outcome.AuthorID == operator.UserID) &&
+		(outcome.PublishStatus != entity.OutcomeStatusPublished && outcome.PublishStatus != entity.OutcomeStatusPending){
+		return true
+	}
+	return false
+}
+
+func allowSearchPrivate(ctx context.Context, operator *entity.Operator, perms map[external.PermissionName]bool, cond *entity.OutcomeCondition) bool {
+	if (cond.PublishStatus == entity.OutcomeStatusDraft ||
+		cond.PublishStatus == entity.OutcomeStatusRejected ||
+		cond.PublishStatus == entity.OutcomeStatusPending) &&
+		perms[external.ViewOrgUnpublishedLearningOutcome]{
+		if cond.AuthorName == constant.Self {
+			cond.AuthorID = operator.UserID
+			cond.AuthorName = ""
+		}
+		return true
+	}else if (cond.PublishStatus == entity.OutcomeStatusDraft ||
+		cond.PublishStatus == entity.OutcomeStatusRejected) &&
+		perms[external.ViewMyUnpublishedLearningOutcome]{
+		cond.AuthorID = operator.UserID
+		return true
+	} else if cond.PublishStatus == entity.OutcomeStatusPending && perms[external.ViewMyPendingLearningOutcome] {
+		cond.AuthorID = operator.UserID
+		return true
+	}
+
+	return false
+}
 
 var (
 	_outcomeModel     IOutcomeModel
