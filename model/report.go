@@ -68,7 +68,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 				log.Any("cmd", cmd),
 				log.Any("operator", operator),
 			)
-			return nil, constant.ErrUnAuthorized
+			return nil, constant.ErrForbidden
 		}
 	}
 

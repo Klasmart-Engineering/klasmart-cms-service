@@ -265,7 +265,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		return nil, err
 	}
 	if !allowed {
-		return nil, constant.ErrUnAuthorized
+		return nil, constant.ErrForbidden
 	}
 
 	cond := da.QueryAssessmentsCondition{
@@ -720,7 +720,7 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 					log.Any("cmd", cmd),
 					log.Any("operator", operator),
 				)
-				return constant.ErrUnAuthorized
+				return constant.ErrForbidden
 			}
 			teacherIDs, err := assessment.DecodeTeacherIDs()
 			if err != nil {
@@ -742,7 +742,7 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 					log.Any("cmd", cmd),
 					log.Any("operator", operator),
 				)
-				return constant.ErrUnAuthorized
+				return constant.ErrForbidden
 			}
 		}
 		if assessment.Status == entity.AssessmentStatusComplete {

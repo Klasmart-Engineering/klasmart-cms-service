@@ -197,7 +197,7 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		)
 		for _, item := range c.TeacherAssessmentStatusFilters {
 			partFormats = append(partFormats, fmt.Sprintf("(not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?)"))
-			partValues = append(partValues, item.TeacherID, string(item.Status))
+			partValues = append(partValues, item.TeacherID, item.TeacherID, string(item.Status))
 		}
 		formats = append(formats, "("+strings.Join(partFormats, " and ")+")")
 		values = append(values, partValues...)
