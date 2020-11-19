@@ -129,6 +129,10 @@ type FolderItem struct {
 	DeleteAt int64 `gorm:"type:bigint;column:delete_at" json:"-"`
 }
 
+func (f FolderItem) ChildrenPath() Path {
+	return NewPath(f.Path.ParentPath() + "/" + f.ID)
+}
+
 type FolderItemInfo struct {
 	FolderItem
 	Items []*FolderItem `json:"items"`
