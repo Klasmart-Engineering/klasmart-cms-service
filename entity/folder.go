@@ -89,6 +89,11 @@ type UpdateFolderRequest struct {
 	Thumbnail string `json:"thumbnail"`
 }
 
+type MoveFolderIDBulk struct {
+	IDs []string `json:"ids"`
+	Dist string `json:"dist"`
+}
+
 type CreateFolderItemRequest struct {
 	FolderID  string    `json:"folder_id"`
 	//ItemType  ItemType  `json:"item_type"`

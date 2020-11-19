@@ -110,7 +110,7 @@ func (s *Server) removeFolderItem(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/items/{item_id} [put]
+// @Router /folders/items/details/{item_id} [put]
 func (s *Server) updateFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -138,12 +138,11 @@ func (s *Server) updateFolderItem(c *gin.Context){
 // @Description update folder info
 // @Accept json
 // @Produce json
-// @Param content body entity.UpdateFolderRequest true "update request"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/items/{item_id}/move [put]
+// @Router /folders/items/move/{item_id} [put]
 func (s *Server) moveFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -158,6 +157,39 @@ func (s *Server) moveFolderItem(c *gin.Context){
 	}
 
 	err = model.GetFolderModel().MoveItem(ctx, fid, data.Dist, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "")
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+
+
+// @Summary moveFolderItem
+// @ID moveFolderItem
+// @Description update folder info
+// @Accept json
+// @Produce json
+// @Param content body entity.MoveFolderIDBulk true "move folder item buck request"
+// @Tags folder
+// @Success 200 {object} string ok
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /folders/items/bulk/move [put]
+func (s *Server) moveFolderItemBulk(c *gin.Context){
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	var data entity.MoveFolderIDBulk
+	err := c.ShouldBind(&data)
+	if err != nil {
+		log.Error(ctx, "update folder item failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	err = model.GetFolderModel().MoveItemBulk(ctx, data.IDs, data.Dist, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")

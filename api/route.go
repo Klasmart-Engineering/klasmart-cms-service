@@ -102,8 +102,9 @@ func (s Server) registeRoute() {
 		folders.POST("", MustLogin, s.createFolder)
 		folders.POST("/items", MustLogin, s.addFolderItem)
 		folders.DELETE("/items/:item_id", MustLogin, s.removeFolderItem)
-		folders.PUT("/items/:item_id", MustLogin, s.updateFolderItem)
-		folders.PUT("/items/:item_id/move", MustLogin, s.moveFolderItem)
+		folders.PUT("/items/details/:item_id", MustLogin, s.updateFolderItem)
+		folders.PUT("/items/move/:item_id", MustLogin, s.moveFolderItem)
+		folders.PUT("/items/bulk/move", MustLogin, s.moveFolderItemBulk)
 
 		folders.GET("/items/list/:item_id", MustLogin, s.listFolderItems)
 		folders.GET("/items/search/private", MustLogin, s.searchPrivateFolderItems)

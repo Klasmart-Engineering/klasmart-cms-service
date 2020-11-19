@@ -44,6 +44,9 @@ type IFolderModel interface{
 	//移动item
 	MoveItem(ctx context.Context, fid string, distFolder string, operator *entity.Operator) error
 
+	//移动item
+	MoveItemBulk(ctx context.Context, fid []string, distFolder string, operator *entity.Operator) error
+
 	//列出Folder下的所有item
 	ListItems(ctx context.Context, folderID string, itemType entity.ItemType, operator *entity.Operator) ([]*entity.FolderItem, error)
 	//查询Folder
@@ -174,54 +177,27 @@ func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *enti
 	}
 	return nil
 }
+func (f *FolderModel) MoveItemBulk(ctx context.Context, fids []string, distFolder string, operator *entity.Operator) error{
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		for i := range fids {
+			err := f.moveItem(ctx, tx, fids[i], distFolder, operator)
+			if err != nil{
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil{
+		return err
+	}
+	return nil
+
+}
 
 func (f *FolderModel) MoveItem(ctx context.Context, fid string, dfID string, operator *entity.Operator) error {
-	distFolder, err := f.mustGetFolder(ctx,  dbo.MustGetDB(ctx), dfID)
-	if err != nil{
-		return err
-	}
-	folder, err := f.mustGetFolder(ctx,  dbo.MustGetDB(ctx), fid)
-	if err != nil{
-		return err
-	}
-
-	subItems, err := f.getDescendantItems(ctx, folder)
-	if err != nil{
-		return err
-	}
-	ids := make([]string, 0)
-	links := make([]string, 0)
-	for i := range subItems {
-		if subItems[i].ID != folder.ID {
-			ids = append(ids, subItems[i].ID)
-		}
-		if !subItems[i].ItemType.IsFolder() {
-			links = append(links, subItems[i].Link)
-		}
-	}
-
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		path := distFolder.Path.ParentPath() + "/" + distFolder.ID
-		folder.Path = entity.NewPath(path)
-		folder.ParentId = distFolder.ID
-		err := da.GetFolderDA().UpdateFolder(ctx, tx, fid, *folder)
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := f.moveItem(ctx, tx, fid, dfID, operator)
 		if err != nil{
-			log.Warn(ctx, "update folder failed", log.Err(err), log.Any("folder", folder))
-			return err
-		}
-		newPath := path + "/" + folder.ID
-		err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, ids, newPath)
-		if err != nil{
-			log.Warn(ctx, "update folder path failed", log.Err(err), log.Strings("ids", ids), log.String("path", path))
-			return err
-		}
-
-		if !folder.ItemType.IsFolder() {
-			newPath = distFolder.Path.ParentPath() + "/" + distFolder.ID
-		}
-		err = NotifyLinkMoveFolderItems(ctx, tx, links, newPath)
-		if err != nil{
-			log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", ids), log.Strings("links", links), log.String("path", path))
 			return err
 		}
 		return nil
@@ -316,6 +292,56 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		result.Items = folderItems
 	}
 	return result, nil
+}
+
+func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid string, dfID string, operator *entity.Operator) error {
+	distFolder, err := f.mustGetFolder(ctx,  tx, dfID)
+	if err != nil{
+		return err
+	}
+	folder, err := f.mustGetFolder(ctx, tx, fid)
+	if err != nil{
+		return err
+	}
+
+	subItems, err := f.getDescendantItems(ctx, folder)
+	if err != nil{
+		return err
+	}
+	ids := make([]string, 0)
+	links := make([]string, 0)
+	for i := range subItems {
+		if subItems[i].ID != folder.ID {
+			ids = append(ids, subItems[i].ID)
+		}
+		if !subItems[i].ItemType.IsFolder() {
+			links = append(links, subItems[i].Link)
+		}
+	}
+	path := distFolder.Path.ParentPath() + "/" + distFolder.ID
+	folder.Path = entity.NewPath(path)
+	folder.ParentId = distFolder.ID
+	err = da.GetFolderDA().UpdateFolder(ctx, tx, fid, *folder)
+	if err != nil{
+		log.Warn(ctx, "update folder failed", log.Err(err), log.Any("folder", folder))
+		return err
+	}
+	newPath := path + "/" + folder.ID
+	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, ids, newPath)
+	if err != nil{
+		log.Warn(ctx, "update folder path failed", log.Err(err), log.Strings("ids", ids), log.String("path", path))
+		return err
+	}
+
+	if !folder.ItemType.IsFolder() {
+		newPath = distFolder.Path.ParentPath() + "/" + distFolder.ID
+	}
+	err = NotifyLinkMoveFolderItems(ctx, tx, links, newPath)
+	if err != nil{
+		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", ids), log.Strings("links", links), log.String("path", path))
+		return err
+	}
+	return nil
 }
 
 func (f *FolderModel) getRootFolder(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, operator *entity.Operator) (*entity.FolderItem, error){
