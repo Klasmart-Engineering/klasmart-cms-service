@@ -332,13 +332,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	if req.Scope != op.OrgID {
-		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID),
-			log.Any("req", req),
-			log.Any("op", op))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
+	req.Scope = op.OrgID
 	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
 
 	switch err {
