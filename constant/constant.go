@@ -65,7 +65,9 @@ const (
 
 const (
 	LockedByNoBody = "-"
+
 	NoVisibilitySetting = "-"
+	AssetsVisibilitySetting = "[ASSETS]"
 )
 
 const (

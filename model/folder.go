@@ -8,6 +8,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
@@ -349,14 +350,16 @@ func (f *FolderModel) SearchPrivateFolder(ctx context.Context, condition entity.
 func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
 	condition.Owner = operator.OrgID
 	condition.OwnerType = entity.OwnerTypeOrganization
-	//add visibility settings
-	visibilitySettings, err := GetContentModel().ListVisibleScopes(ctx, visiblePermissionPublished, operator)
+
+	err := f.addContentConditionFilter(ctx, &condition, operator)
 	if err != nil{
-		log.Warn(ctx, "get visibility settings failed", log.Err(err),
-			log.String("status", string(visiblePermissionPublished)), log.Any("operator", operator))
+		log.Warn(ctx, "addContentConditionFilter failed", log.Err(err),
+			log.Any("condition", condition), log.Any("operator", operator))
 		return 0, nil, err
 	}
-	condition.VisibilitySetting = visibilitySettings
+	log.Info(ctx, "search org folder after filter visibility settings condition",
+		log.Any("condition", condition), log.Any("operator", operator))
+
 	return f.SearchFolder(ctx, condition, operator)
 }
 
@@ -427,7 +430,26 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 	}
 	return result, nil
 }
+func (f *FolderModel) addContentConditionFilter(ctx context.Context, condition *entity.SearchFolderCondition, operator *entity.Operator) error {
+	//获取所有查看资源的权限
+	visibilitySettings, err := GetContentModel().ListVisibleScopes(ctx, visiblePermissionPublished, operator)
+	if err != nil{
+		log.Warn(ctx, "get visibility settings failed", log.Err(err),
+			log.String("status", string(visiblePermissionPublished)), log.Any("operator", operator))
+		return err
+	}
+	condition.VisibilitySetting = append(visibilitySettings, constant.NoVisibilitySetting)
 
+	//检查是否有查看Assets权限
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.CreateAssetPage301)
+	if err != nil {
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return err
+	} else if hasPermission {
+		condition.VisibilitySetting = append(visibilitySettings, constant.AssetsVisibilitySetting)
+	}
+	return nil
+}
 func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest, item *FolderItem) (*entity.FolderItem,error) {
 	//1.check folder owner
 	//2.check item

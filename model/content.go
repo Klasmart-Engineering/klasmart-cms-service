@@ -319,7 +319,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Asset添加Folder
 	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.ContentLink(pid), constant.NoVisibilitySetting, operator)
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.ContentLink(pid), constant.AssetsVisibilitySetting, operator)
 		if err != nil{
 			log.Error(ctx, "can't create folder item", log.Err(err),
 				log.String("link", entity.ContentLink(pid)),
