@@ -779,12 +779,15 @@ func allowDeleteOutcome(ctx context.Context, operator *entity.Operator, perms ma
 		return true
 	} else if outcome.PublishStatus == entity.OutcomeStatusPending && perms[external.DeleteMyPendingLearningOutcome] {
 		return true
-	} else if outcome.PublishStatus == entity.OutcomeStatusPending &&
+	}
+
+	if outcome.PublishStatus == entity.OutcomeStatusPending &&
 		(perms[external.DeleteMyPendingLearningOutcome] && outcome.AuthorID == operator.UserID) {
 		return true
 	} else if outcome.PublishStatus == entity.OutcomeStatusPublished && perms[external.DeletePublishedLearningOutcome] {
 		return true
 	}
+
 	return false
 }
 
@@ -795,6 +798,7 @@ func allowEditOutcome(ctx context.Context, operator *entity.Operator, perms map[
 		(outcome.PublishStatus != entity.OutcomeStatusPublished && outcome.PublishStatus != entity.OutcomeStatusPending){
 		return true
 	}
+
 	return false
 }
 
@@ -808,12 +812,16 @@ func allowSearchPrivate(ctx context.Context, operator *entity.Operator, perms ma
 			cond.AuthorName = ""
 		}
 		return true
-	}else if (cond.PublishStatus == entity.OutcomeStatusDraft ||
+	}
+
+	if (cond.PublishStatus == entity.OutcomeStatusDraft ||
 		cond.PublishStatus == entity.OutcomeStatusRejected) &&
 		perms[external.ViewMyUnpublishedLearningOutcome]{
 		cond.AuthorID = operator.UserID
 		return true
-	} else if cond.PublishStatus == entity.OutcomeStatusPending && perms[external.ViewMyPendingLearningOutcome] {
+	}
+
+	if cond.PublishStatus == entity.OutcomeStatusPending && perms[external.ViewMyPendingLearningOutcome] {
 		cond.AuthorID = operator.UserID
 		return true
 	}
