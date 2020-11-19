@@ -179,6 +179,10 @@ func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *enti
 }
 func (f *FolderModel) MoveItemBulk(ctx context.Context, fids []string, distFolder string, operator *entity.Operator) error{
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		distFolder, err := f.mustGetFolder(ctx,  tx, distFolder)
+		if err != nil{
+			return err
+		}
 		for i := range fids {
 			err := f.moveItem(ctx, tx, fids[i], distFolder, operator)
 			if err != nil{
@@ -196,7 +200,11 @@ func (f *FolderModel) MoveItemBulk(ctx context.Context, fids []string, distFolde
 
 func (f *FolderModel) MoveItem(ctx context.Context, fid string, dfID string, operator *entity.Operator) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := f.moveItem(ctx, tx, fid, dfID, operator)
+		distFolder, err := f.mustGetFolder(ctx,  tx, dfID)
+		if err != nil{
+			return err
+		}
+		err = f.moveItem(ctx, tx, fid, distFolder, operator)
 		if err != nil{
 			return err
 		}
@@ -294,11 +302,7 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 	return result, nil
 }
 
-func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid string, dfID string, operator *entity.Operator) error {
-	distFolder, err := f.mustGetFolder(ctx,  tx, dfID)
-	if err != nil{
-		return err
-	}
+func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid string, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	folder, err := f.mustGetFolder(ctx, tx, fid)
 	if err != nil{
 		return err
