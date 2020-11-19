@@ -467,3 +467,20 @@ func TestSearchFolder(t *testing.T) {
 	}
 	t.Logf("%#v\n", folderInfo)
 }
+
+func TestFolderModel_GetRootFolder(t *testing.T) {
+	rootId, err := GetFolderModel().GetRootFolder(context.Background(), entity.OwnerTypeOrganization, fakeOperator())
+	if !assert.NoError(t, err) {
+		return
+	}
+	t.Logf("%#v\n", rootId)
+	
+	res, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
+		FolderID: rootId,
+		Link:     "content-5f9633b7c4b4034693211b5e",
+	}, fakeOperator())
+	if !assert.NoError(t, err) {
+		return
+	}
+	t.Logf("%#v\n", res)
+}

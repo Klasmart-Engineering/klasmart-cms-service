@@ -1587,6 +1587,10 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			gradeNames[j] = gradeNameMap[contentList[i].Grade[j]]
 		}
 
+		outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), contentList[i].Outcomes, user)
+		if err != nil {
+			log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
+		}
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:       *contentList[i],
 			ContentTypeName:   contentList[i].ContentType.Name(),
@@ -1599,9 +1603,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
 			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
-			AuthorName:        userNameMap[contentList[i].Author],
+			//AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:       userNameMap[contentList[i].Creator],
-			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
+			OutcomeEntities:   outcomeEntities,
 			IsMine: 			contentList[i].Author == user.UserID,
 		}
 	}

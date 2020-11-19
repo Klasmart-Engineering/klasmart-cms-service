@@ -3,6 +3,7 @@ package contentdata
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -66,6 +67,12 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	if obj.RejectReason != "" {
 		rejectReason = strings.Split(obj.RejectReason, ",")
 	}
+	user, err := external.GetUserServiceProvider().Get(ctx, obj.Author)
+	authorName := ""
+	if err != nil{
+		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("obj", obj))
+	}
+	authorName = user.Name
 
 	cm := &entity.ContentInfo{
 		ID:            obj.ID,
@@ -88,6 +95,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Extra:         obj.Extra,
 		Outcomes:      outcomes,
 		Author:        obj.Author,
+		AuthorName: 	authorName,
 		Creator:		obj.Creator,
 		SelfStudy:     obj.SelfStudy.Bool(),
 		DrawActivity:  obj.DrawActivity.Bool(),

@@ -358,7 +358,7 @@ type ContentInfoWithDetails struct {
 	PublishScopeName  string   `json:"publish_scope_name"`
 	LessonTypeName    string   `json:"lesson_type_name"`
 
-	AuthorName string `json:"author_name"`
+	//AuthorName string `json:"author_name"`
 	CreatorName string `json:"creator_name"`
 
 	OutcomeEntities []*Outcome `json:"outcome_entities"`
@@ -394,6 +394,7 @@ type ContentInfo struct {
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
 	SourceType    string      `json:"source_type"`
+	AuthorName 		string `json:"author_name"`
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
