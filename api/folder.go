@@ -176,7 +176,7 @@ func (s *Server) moveFolderItem(c *gin.Context){
 // @Success 200 {object} FolderItemsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/items/{folder_id}/list [get]
+// @Router /folders/items/list/{folder_id} [get]
 func (s *Server) listFolderItems(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
@@ -264,7 +264,7 @@ func (s *Server) searchOrgFolderItems(c *gin.Context){
 // @Success 200 {object} entity.FolderItemInfo
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/items/:folder_id/info [get]
+// @Router /folders/items/details/:folder_id [get]
 func (s *Server) getFolderItemByID(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)

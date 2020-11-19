@@ -105,10 +105,10 @@ func (s Server) registeRoute() {
 		folders.PUT("/items/:item_id", MustLogin, s.updateFolderItem)
 		folders.PUT("/items/:item_id/move", MustLogin, s.moveFolderItem)
 
-		folders.GET("/items/:item_id/list", MustLogin, s.listFolderItems)
+		folders.GET("/items/list/:item_id", MustLogin, s.listFolderItems)
 		folders.GET("/items/search/private", MustLogin, s.searchPrivateFolderItems)
 		folders.GET("/items/search/org", MustLogin, s.searchOrgFolderItems)
-		folders.GET("/items/:item_id/details", MustLogin, s.getFolderItemByID)
+		folders.GET("/items/details/:item_id", MustLogin, s.getFolderItemByID)
 	}
 
 	crypto := s.engine.Group("/v1/crypto")
