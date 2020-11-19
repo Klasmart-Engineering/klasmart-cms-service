@@ -476,7 +476,7 @@ func TestFolderModel_GetRootFolder(t *testing.T) {
 	t.Logf("%#v\n", rootId)
 	
 	res, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID: rootId,
+		FolderID: rootId.ID,
 		Link:     "content-5f9633b7c4b4034693211b5e",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {

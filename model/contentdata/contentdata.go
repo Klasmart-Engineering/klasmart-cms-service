@@ -71,8 +71,9 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	authorName := ""
 	if err != nil{
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("obj", obj))
+	}else{
+		authorName = user.Name
 	}
-	authorName = user.Name
 
 	cm := &entity.ContentInfo{
 		ID:            obj.ID,
