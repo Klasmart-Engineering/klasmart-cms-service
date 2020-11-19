@@ -39,7 +39,6 @@ type IFolderModel interface{
 	//修改Folder
 	UpdateFolder(ctx context.Context, folderID string, d entity.UpdateFolderRequest, operator *entity.Operator) error
 
-
 	//移动item
 	MoveItem(ctx context.Context, fid string, distFolder string, operator *entity.Operator) error
 
