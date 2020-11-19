@@ -37,7 +37,7 @@ func NewOwnerType(num int) OwnerType{
 	case int(OwnerTypeUser):
 		return OwnerTypeUser
 	}
-	return OwnerTypeUser
+	return OwnerTypeOrganization
 }
 
 type ItemType int

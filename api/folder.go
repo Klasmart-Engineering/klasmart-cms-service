@@ -197,8 +197,8 @@ func (s *Server) listFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query string false "list items type"
-// @Param owner_type query string false "list items owner type"
+// @Param item_type query integer false "list items type"
+// @Param owner_type query integer false "list items owner type"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -229,8 +229,8 @@ func (s *Server) searchPrivateFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query string false "list items type"
-// @Param owner_type query string false "list items owner type"
+// @Param item_type query integer false "list items type"
+// @Param owner_type query integer false "list items owner type"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -273,6 +273,32 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+// @Summary getRootFolder
+// @ID getRootFolder
+// @Description get the root folder of org or user
+// @Accept json
+// @Produce json
+// @Tags folder
+// @Param owner_type query integer false "list items owner type"
+// @Success 200 {object} CreateResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /folders/items/details/:folder_id [get]
+func (s *Server) getRootFolder(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	fid := utils.ParseInt(ctx, c.Query("owner_type"))
+	rootFolderID, err := model.GetFolderModel().GetRootFolder(ctx, entity.NewOwnerType(fid), op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": rootFolderID,
+		})
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}

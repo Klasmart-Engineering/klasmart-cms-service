@@ -27,6 +27,7 @@ var (
 	ErrFolderIsNotEmpty = errors.New("folder is not empty")
 	ErrInvalidItemLink = errors.New("invalid item link")
 	ErrUpdateFolderFailed  = errors.New("update folder into data access failed")
+	ErrFolderItemPathError = errors.New("folder item path error")
 )
 
 type IFolderModel interface{
@@ -52,6 +53,8 @@ type IFolderModel interface{
 
 	//获取Folder
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
+
+	GetRootFolder(ctx context.Context, ownerType entity.OwnerType, operator *entity.Operator) (string, error)
 
 	//内部API，修改Folder的Visibility Settings
 	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, link string, visibilitySettings string, operator *entity.Operator) error
@@ -247,6 +250,10 @@ func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchF
 	return total, folderItems, nil
 }
 
+func (f *FolderModel) GetRootFolder(ctx context.Context, ownerType entity.OwnerType, operator *entity.Operator) (string, error) {
+	return f.getRootFolder(ctx, dbo.MustGetDB(ctx), ownerType, operator)
+}
+
 func (f *FolderModel) SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
 	condition.Owner = operator.UserID
 	condition.OwnerType = entity.OwnerTypeUser
@@ -257,16 +264,18 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 	condition.Owner = operator.OrgID
 	condition.OwnerType = entity.OwnerTypeOrganization
 
-	log.Info(ctx, "search org folder before filter visibility settings condition",
-		log.Any("condition", condition), log.Any("operator", operator))
-	err := f.addContentConditionFilter(ctx, &condition, operator)
-	if err != nil{
-		log.Warn(ctx, "addContentConditionFilter failed", log.Err(err),
+	if condition.ItemType != entity.FolderItemTypeFolder {
+		log.Info(ctx, "search org folder before filter visibility settings condition",
 			log.Any("condition", condition), log.Any("operator", operator))
-		return 0, nil, err
+		err := f.addContentConditionFilter(ctx, &condition, operator)
+		if err != nil{
+			log.Warn(ctx, "addContentConditionFilter failed", log.Err(err),
+				log.Any("condition", condition), log.Any("operator", operator))
+			return 0, nil, err
+		}
+		log.Info(ctx, "search org folder after filter visibility settings condition",
+			log.Any("condition", condition), log.Any("operator", operator))
 	}
-	log.Info(ctx, "search org folder after filter visibility settings condition",
-		log.Any("condition", condition), log.Any("operator", operator))
 
 	return f.SearchFolder(ctx, condition, operator)
 }
@@ -317,7 +326,14 @@ func (f *FolderModel) getRootFolder(ctx context.Context, tx *dbo.DBContext, owne
 		}
 		return id, nil
 	}
-	return folderList[0].ID, nil
+	for i := range folderList {
+		if folderList[i].Path == "/" {
+			return folderList[i].ID, nil
+		}
+	}
+	log.Error(ctx, "folder item path error", log.Any("list", folderList),
+		log.Int("ownerType", int(ownerType)), log.Any("operator", operator))
+	return "", ErrFolderItemPathError
 }
 
 func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) (bool, error){
@@ -444,18 +460,6 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 	}
 }
 func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest, parentFolder *entity.FolderItem, item *FolderItem) error {
-	//1.check folder owner
-	//2.check item
-	//if !req.ItemType.ValidExcludeFolder() {
-	//	log.Warn(ctx, "invalid folder item type", log.Any("req", req))
-	//	return nil, ErrInvalidFolderItemType
-	//}
-	//check owner type
-	//if !req.OwnerType.Valid() {
-	//	log.Warn(ctx, "invalid folder owner type", log.Any("req", req))
-	//	return nil, ErrInvalidFolderOwnerType
-	//}
-
 	if req.FolderID == "" {
 		log.Warn(ctx, "invalid folder id", log.Any("req", req))
 		return ErrEmptyFolderID
