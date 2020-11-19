@@ -351,6 +351,8 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 	condition.Owner = operator.OrgID
 	condition.OwnerType = entity.OwnerTypeOrganization
 
+	log.Info(ctx, "search org folder before filter visibility settings condition",
+		log.Any("condition", condition), log.Any("operator", operator))
 	err := f.addContentConditionFilter(ctx, &condition, operator)
 	if err != nil{
 		log.Warn(ctx, "addContentConditionFilter failed", log.Err(err),
@@ -439,7 +441,8 @@ func (f *FolderModel) addContentConditionFilter(ctx context.Context, condition *
 		return err
 	}
 	condition.VisibilitySetting = append(visibilitySettings, constant.NoVisibilitySetting)
-
+	log.Info(ctx, "all visible scopes",
+		log.Strings("visibility settings", visibilitySettings))
 	//检查是否有查看Assets权限
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.CreateAssetPage301)
 	if err != nil {
@@ -448,6 +451,8 @@ func (f *FolderModel) addContentConditionFilter(ctx context.Context, condition *
 	} else if hasPermission {
 		condition.VisibilitySetting = append(visibilitySettings, constant.AssetsVisibilitySetting)
 	}
+	log.Info(ctx, "has assets Permission",
+		log.Bool("permission", hasPermission))
 	return nil
 }
 func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest, item *FolderItem) (*entity.FolderItem,error) {

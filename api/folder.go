@@ -42,8 +42,8 @@ func (s *Server) createFolder(c *gin.Context) {
 	}
 }
 
-// @Summary createFolderItem
-// @ID createFolderItem
+// @Summary addFolderItem
+// @ID addFolderItem
 // @Description create folder item
 // @Accept json
 // @Produce json
@@ -52,8 +52,8 @@ func (s *Server) createFolder(c *gin.Context) {
 // @Success 200 {object} CreateResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders_item [post]
-func (s *Server) addItem(c *gin.Context){
+// @Router /folders/items [post]
+func (s *Server) addFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	var data entity.CreateFolderItemRequest
@@ -75,9 +75,9 @@ func (s *Server) addItem(c *gin.Context){
 	}
 }
 
-// @Summary removeItems
-// @ID removeItems
-// @Description create folder item
+// @Summary removeFolderItem
+// @ID removeFolderItem
+// @Description remove folder item
 // @Accept json
 // @Produce json
 // @Param content body entity.CreateFolderItemRequest true "create request"
@@ -85,8 +85,8 @@ func (s *Server) addItem(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/{item_id} [delete]
-func (s *Server) removeItem(c *gin.Context){
+// @Router /folders/items/{item_id} [delete]
+func (s *Server) removeFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	fid := c.Param("item_id")
@@ -100,8 +100,8 @@ func (s *Server) removeItem(c *gin.Context){
 	}
 }
 
-// @Summary updateFolder
-// @ID updateFolder
+// @Summary updateFolderItem
+// @ID updateFolderItem
 // @Description update folder info
 // @Accept json
 // @Produce json
@@ -110,8 +110,8 @@ func (s *Server) removeItem(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/{item_id} [put]
-func (s *Server) updateFolder(c *gin.Context){
+// @Router /folders/items/{item_id} [put]
+func (s *Server) updateFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	fid := c.Param("item_id")
@@ -133,8 +133,8 @@ func (s *Server) updateFolder(c *gin.Context){
 	}
 }
 
-// @Summary moveItems
-// @ID moveItems
+// @Summary moveFolderItem
+// @ID moveFolderItem
 // @Description update folder info
 // @Accept json
 // @Produce json
@@ -143,8 +143,8 @@ func (s *Server) updateFolder(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/{item_id}/move [put]
-func (s *Server) moveItem(c *gin.Context){
+// @Router /folders/items/{item_id}/move [put]
+func (s *Server) moveFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	fid := c.Param("item_id")
@@ -166,8 +166,8 @@ func (s *Server) moveItem(c *gin.Context){
 	}
 }
 
-// @Summary listItems
-// @ID listItems
+// @Summary listFolderItems
+// @ID listFolderItems
 // @Description list folder items
 // @Accept json
 // @Produce json
@@ -176,8 +176,8 @@ func (s *Server) moveItem(c *gin.Context){
 // @Success 200 {object} FolderItemsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/{folder_id} [get]
-func (s *Server) listItems(c *gin.Context){
+// @Router /folders/items/{folder_id}/list [get]
+func (s *Server) listFolderItems(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	fid := c.Param("folder_id")
@@ -191,9 +191,8 @@ func (s *Server) listItems(c *gin.Context){
 	}
 }
 
-
-// @Summary searchPrivateFolder
-// @ID searchPrivateFolder
+// @Summary searchPrivateFolderItems
+// @ID searchPrivateFolderItems
 // @Description search user's private folder items
 // @Accept json
 // @Produce json
@@ -209,8 +208,8 @@ func (s *Server) listItems(c *gin.Context){
 // @Success 200 {object} FolderItemsResponseWithTotal
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders_search [get]
-func (s *Server) searchPrivateFolder(c *gin.Context){
+// @Router /folders/items/search/private [get]
+func (s *Server) searchPrivateFolderItems(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	condition := s.buildFolderCondition(c)
@@ -224,8 +223,8 @@ func (s *Server) searchPrivateFolder(c *gin.Context){
 	}
 }
 
-// @Summary searchOrgFolder
-// @ID searchOrgFolder
+// @Summary searchOrgFolderItems
+// @ID searchOrgFolderItems
 // @Description search folder items in org
 // @Accept json
 // @Produce json
@@ -241,8 +240,8 @@ func (s *Server) searchPrivateFolder(c *gin.Context){
 // @Success 200 {object} FolderItemsResponseWithTotal
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders_search [get]
-func (s *Server) searchOrgFolder(c *gin.Context){
+// @Router /folders/items/search/org [get]
+func (s *Server) searchOrgFolderItems(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	condition := s.buildFolderCondition(c)
@@ -256,9 +255,8 @@ func (s *Server) searchOrgFolder(c *gin.Context){
 	}
 }
 
-
-// @Summary getFolderByID
-// @ID getFolderByID
+// @Summary getFolderItemByID
+// @ID getFolderItemByID
 // @Description get a folder item by id
 // @Accept json
 // @Produce json
@@ -266,8 +264,8 @@ func (s *Server) searchOrgFolder(c *gin.Context){
 // @Success 200 {object} entity.FolderItemInfo
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/{folder_id} [get]
-func (s *Server) getFolderByID(c *gin.Context){
+// @Router /folders/items/:folder_id/info [get]
+func (s *Server) getFolderItemByID(c *gin.Context){
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	fid := c.Param("folder_id")

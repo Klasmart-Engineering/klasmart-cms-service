@@ -97,6 +97,20 @@ func (s Server) registeRoute() {
 		outcomes.GET("/pending_learning_outcomes", MustLogin, s.queryPendingOutcomes)
 	}
 
+	folders := s.engine.Group("/folders")
+	{
+		folders.POST("", MustLogin, s.createFolder)
+		folders.POST("/items", MustLogin, s.addFolderItem)
+		folders.DELETE("/items/:item_id", MustLogin, s.removeFolderItem)
+		folders.PUT("/items/:item_id", MustLogin, s.updateFolderItem)
+		folders.PUT("/items/:item_id/move", MustLogin, s.moveFolderItem)
+
+		folders.GET("/items/:item_id/list", MustLogin, s.listFolderItems)
+		folders.GET("/items/search/private", MustLogin, s.searchPrivateFolderItems)
+		folders.GET("/items/search/org", MustLogin, s.searchOrgFolderItems)
+		folders.GET("/items/:item_id/details", MustLogin, s.getFolderItemByID)
+	}
+
 	crypto := s.engine.Group("/v1/crypto")
 	{
 		crypto.GET("/h5p/signature", MustLogin, s.h5pSignature)
