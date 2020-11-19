@@ -212,6 +212,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 		AuthorID:       outcome.AuthorID,
 		AuthorName:     outcome.AuthorName,
 		OrganizationID: outcome.OrganizationID,
+		OrganizationName: getOrganizationName(ctx, outcome.OrganizationID),
 		PublishScope:   outcome.PublishScope,
 		PublishStatus:  string(outcome.PublishStatus),
 		Keywords:       strings.Split(outcome.Keywords, ","),
