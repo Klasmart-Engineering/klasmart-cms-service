@@ -20,6 +20,7 @@ var (
 	ErrEmptyFolderName        = errors.New("empty folder name")
 	ErrEmptyFolderID          = errors.New("empty folder id")
 	ErrEmptyItemID            = errors.New("empty item id")
+	ErrMoveToNotFolder            = errors.New("move to an item not folder")
 	ErrInvalidFolderOwnerType = errors.New("invalid folder owner type")
 	ErrInvalidFolderItemType  = errors.New("invalid folder item type")
 	ErrDuplicateFolderName    = errors.New("duplicate folder name in path")
@@ -300,12 +301,55 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 	return result, nil
 }
 
+func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderItem, distFolder *entity.FolderItem) error {
+	//check if parentFolder is a folder
+	if !distFolder.ItemType.IsFolder() {
+		log.Warn(ctx, "move to an item not folder", log.Any("parentFolder", distFolder))
+		return ErrMoveToNotFolder
+	}
+
+	//check items duplicate
+	items, err := f.getItemsFromFolders(ctx, distFolder.ID)
+	if err != nil {
+		return err
+	}
+	for i := range items {
+		if items[i].ItemType == entity.FolderItemTypeFile &&
+			items[i].Name == folder.Name &&
+			items[i].Link == folder.Link {
+			log.Warn(ctx, "duplicate item in path", log.Any("items", items), log.Any("folder", folder))
+			return ErrDuplicateItem
+		}
+	}
+
+	//组织下,不能有重复file,检查是否重复
+	//if !folder.ItemType.IsFolder() && distFolder.OwnerType == entity.OwnerTypeOrganization {
+	//	hasItem, err := f.hasFolderFileItem(ctx, dbo.MustGetDB(ctx), distFolder.OwnerType, distFolder.Owner, folder.Link)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if hasItem {
+	//		log.Warn(ctx, "duplicate item in org folder", log.Err(err), log.Any("folder", folder), log.Any("distFolder", distFolder))
+	//		return ErrDuplicateItem
+	//	}
+	//}
+
+	return nil
+}
+
 func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid string, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	folder, err := f.mustGetFolder(ctx, tx, fid)
 	if err != nil {
 		return err
 	}
 
+	//检查参数是否有问题
+	err = f.checkMoveItem(ctx, folder, distFolder)
+	if err != nil {
+		return err
+	}
+
+	//获取目录下的所有文件（所有子文件一起移动）
 	subItems, err := f.getDescendantItems(ctx, folder)
 	if err != nil {
 		return err
@@ -584,6 +628,11 @@ func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.Create
 		log.Warn(ctx, "invalid item id", log.Any("req", req))
 		return ErrEmptyFolderID
 	}
+	//check if parentFolder is a folder
+	if !parentFolder.ItemType.IsFolder() {
+		log.Warn(ctx, "move to an item not folder", log.Any("parentFolder", parentFolder))
+		return ErrMoveToNotFolder
+	}
 
 	//check items duplicate
 	items, err := f.getItemsFromFolders(ctx, req.FolderID)
@@ -655,6 +704,10 @@ func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.C
 	if !req.OwnerType.Valid() {
 		log.Warn(ctx, "invalid folder owner type", log.Any("req", req))
 		return ErrInvalidFolderOwnerType
+	}
+	if !parentFolder.ItemType.IsFolder() {
+		log.Warn(ctx, "move to an item not folder", log.Any("req", req))
+		return ErrMoveToNotFolder
 	}
 
 	//check duplicate name
