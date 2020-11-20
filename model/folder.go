@@ -725,24 +725,27 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 		log.Info(ctx, "item is not folder", log.Any("folderItem", folderItem), log.String("path", string(folderItem.Path)))
 		return nil
 	}
-
-	//若是folder，检查是否为空folder
-	total, subItems, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
-		Path: folderItem.Path.ParentPath() + "/" + folderItem.ID,
-	})
-	if err != nil {
-		log.Error(ctx, "search sub folder item failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(folderItem.Path)))
-		return err
-	}
-	//若total > 1,则表示一定有子文件，不能删除
-	if total > 1 {
-		log.Error(ctx, "folder is not empty", log.Err(err),
-			log.Int("total", total),
-			log.String("path", string(folderItem.Path)),
-			log.Any("folderItem", folderItem),
-			log.Any("items", subItems))
+	if folderItem.ItemsCount > 0 {
 		return ErrFolderIsNotEmpty
 	}
+
+	////若是folder，检查是否为空folder
+	//total, subItems, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
+	//	Path: folderItem.Path.ParentPath() + "/" + folderItem.ID,
+	//})
+	//if err != nil {
+	//	log.Error(ctx, "search sub folder item failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(folderItem.Path)))
+	//	return err
+	//}
+	////若total > 1,则表示一定有子文件，不能删除
+	//if total > 1 {
+	//	log.Error(ctx, "folder is not empty", log.Err(err),
+	//		log.Int("total", total),
+	//		log.String("path", string(folderItem.Path)),
+	//		log.Any("folderItem", folderItem),
+	//		log.Any("items", subItems))
+	//	return ErrFolderIsNotEmpty
+	//}
 	return nil
 }
 
