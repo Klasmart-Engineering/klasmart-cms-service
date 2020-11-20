@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"math/rand"
 	"strconv"
@@ -469,7 +470,7 @@ func TestSearchFolder(t *testing.T) {
 }
 
 func TestFolderModel_GetRootFolder(t *testing.T) {
-	rootId, err := GetFolderModel().GetRootFolder(context.Background(), entity.OwnerTypeOrganization, fakeOperator())
+	rootId, err := GetFolderModel().GetRootFolder(context.Background(), constant.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
 	}

@@ -321,7 +321,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Asset添加Folder
 	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.ContentLink(pid), constant.AssetsVisibilitySetting, operator)
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, constant.RootAssetsFolderName,entity.ContentLink(pid), constant.AssetsVisibilitySetting, operator)
 		if err != nil{
 			log.Error(ctx, "can't create folder item", log.Err(err),
 				log.String("link", entity.ContentLink(pid)),
@@ -384,7 +384,7 @@ func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext
 		log.Error(ctx, "can't read content on update path", log.Err(err))
 		return err
 	}
-	content.Path = path
+	content.DirPath = path
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 	if err != nil {
 		log.Error(ctx, "update content path failed", log.Err(err))
@@ -414,12 +414,12 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	rootFolder, err := GetFolderModel().GetRootFolder(ctx, entity.OwnerTypeOrganization, operator)
+	rootFolder, err := GetFolderModel().GetRootFolder(ctx, constant.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, operator)
 	if err != nil{
 		log.Warn(ctx, "get root folder failed", log.Err(err),
 			log.Any("user", operator))
 	}else{
-		content.Path = string(rootFolder.ChildrenPath())
+		content.DirPath = string(rootFolder.ChildrenPath())
 	}
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
@@ -430,7 +430,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.ContentLink(content.ID), content.PublishScope, operator)
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, constant.RootMaterialsAndPlansFolderName, entity.ContentLink(content.ID), content.PublishScope, operator)
 	if err != nil {
 		return err
 	}
@@ -1139,8 +1139,8 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	}
 	if len(scope) == 0 {
 		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
-		condition1.Scope = scope
 	}
+	condition1.Scope = scope
 	//condition2 others
 
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)

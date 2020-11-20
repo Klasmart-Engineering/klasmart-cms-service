@@ -226,7 +226,7 @@ type Content struct {
 	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id"`
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id"`
 
-	Path		string `gorm:"type:varchar(2048);column:path"`
+	DirPath string `gorm:"type:varchar(2048);column:dir_path"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at"`

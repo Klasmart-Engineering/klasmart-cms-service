@@ -325,7 +325,8 @@ func (s *Server) getRootFolder(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := GetOperator(c)
 	fid := utils.ParseInt(ctx, c.Query("owner_type"))
-	rootFolderID, err := model.GetFolderModel().GetRootFolder(ctx, entity.NewOwnerType(fid), op)
+	partition := c.Param("partition")
+	rootFolderID, err := model.GetFolderModel().GetRootFolder(ctx, partition, entity.NewOwnerType(fid), op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, gin.H{

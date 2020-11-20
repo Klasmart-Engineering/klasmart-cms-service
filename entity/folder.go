@@ -137,7 +137,7 @@ type FolderItem struct {
 }
 
 func (f FolderItem) ChildrenPath() Path {
-	return NewPath(f.Path.ParentPath() + "/" + f.ID)
+	return NewPath(f.Path.ParentPath() + "/" + f.Name)
 }
 
 type FolderItemInfo struct {

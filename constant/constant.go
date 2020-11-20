@@ -83,3 +83,8 @@ const (
 const (
 	NoSearchItem = "{nothing}"
 )
+
+const (
+	RootAssetsFolderName = "assets"
+	RootMaterialsAndPlansFolderName = "plans and materials"
+)

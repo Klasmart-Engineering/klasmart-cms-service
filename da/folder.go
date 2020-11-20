@@ -14,7 +14,7 @@ type IFolderDA interface {
 	CreateFolder(ctx context.Context, tx *dbo.DBContext, f entity.FolderItem) (string ,error)
 	UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f entity.FolderItem) error
 
-	BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path string) error
+	BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path entity.Path) error
 	BatchUpdateFolderVisibilitySettings(ctx context.Context, tx *dbo.DBContext, fids []string, path string) error
 
 	DeleteFolder(ctx context.Context, tx *dbo.DBContext, fid string) error
@@ -56,10 +56,10 @@ func (fda *FolderDA) UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid st
 
 	return nil
 }
-func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path string) error{
+func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path entity.Path) error{
 	err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if err != nil {
-		log.Warn(ctx, "update folder da failed", log.Err(err), log.Strings("fids", fids), log.String("path", path))
+		log.Warn(ctx, "update folder da failed", log.Err(err), log.Strings("fids", fids), log.String("path", string(path)))
 		return err
 	}
 
