@@ -68,6 +68,7 @@ func (m *subjectModel) Update(ctx context.Context, op *entity.Operator, data *en
 		return "", err
 	}
 	old.Name = data.Name
+	old.Number = data.Number
 	old.UpdateID = op.UserID
 	old.UpdateAt = time.Now().Unix()
 	_, err = da.GetSubjectDA().Update(ctx, old)

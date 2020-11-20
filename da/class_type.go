@@ -76,6 +76,6 @@ func NewClassTypeOrderBy(orderBy string) ClassTypeOrderBy {
 func (c ClassTypeOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number desc, name asc"
 	}
 }

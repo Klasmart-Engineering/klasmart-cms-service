@@ -83,6 +83,6 @@ func NewAgeOrderBy(orderBy string) AgeOrderBy {
 func (c AgeOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number desc, name asc"
 	}
 }
