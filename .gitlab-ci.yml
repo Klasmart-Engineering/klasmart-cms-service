@@ -38,3 +38,24 @@ Deploy_To_Lambda_Push:
   tags:
     - kidsloop2
   resource_group: $CI_JOB_NAME
+
+#############################################
+############# BELOW FOR ops-dev #############
+#############################################
+# OPS_DEV_BUILD:
+#   before_script:
+#     - 
+#   stage: build_cdk
+#   tags:
+#     - ops-dev
+#   extends:
+#     - .EXECUTEBUILD_JOB
+#   rules:
+#     - if: '$CI_COMMIT_TAG =~ /^(ops-dev\/).*$/ && $CI_PIPELINE_SOURCE != "trigger"'
+
+# OPS_DEV_DEPLOY:
+#   stage: deploy_cdk
+#   tags:
+#     - ops-dev
+#   extends:
+#     - .PACKAGEZIP_UPDATECDK
