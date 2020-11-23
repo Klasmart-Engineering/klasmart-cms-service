@@ -408,11 +408,11 @@ func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext,
 
 	case entity.ScheduleEditWithFollowing:
 		if schedule.RepeatID == "" {
-			log.Warn(ctx, "delete schedule with following,but repeat id is empty",
+			log.Error(ctx, "delete schedule with following,but repeat id is empty",
 				log.Any("schedule", schedule),
 				log.String("edit_type", string(editType)),
 			)
-			return nil
+			return constant.ErrInternalServer
 		}
 		if err := da.GetScheduleDA().DeleteWithFollowing(ctx, tx, schedule.RepeatID, schedule.StartAt); err != nil {
 			log.Error(ctx, "delete schedule: delete with following failed",
