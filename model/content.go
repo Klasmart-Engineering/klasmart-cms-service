@@ -1130,6 +1130,16 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 	if err != nil{
 		return 0, nil, err
 	}
+	dirPath := condition.DirPath
+	if dirPath == "" {
+		if len(condition.ContentType) < 0 {
+			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
+		}else if condition.ContentType[0] == entity.ContentTypeAssets {
+			dirPath = "/" + constant.RootAssetsFolderName
+		}else {
+			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
+		}
+	}
 	folderCondition := da.FolderCondition{
 		OwnerType:    int(entity.OwnerTypeOrganization),
 		ItemType:     int(entity.FolderItemTypeFolder),
