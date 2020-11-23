@@ -62,7 +62,8 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 		}
 	}
 }
-func (h *LessonData) PrepareSave(ctx context.Context) error {
+func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
+	h.TeacherManual = t.TeacherManual
 	return nil
 }
 func (l *LessonData) SubContentIds(ctx context.Context) []string {

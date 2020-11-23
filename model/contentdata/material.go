@@ -72,7 +72,7 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 	return nil
 }
 
-func (h *MaterialData) PrepareSave(ctx context.Context) error {
+func (h *MaterialData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	if h.InputSource == entity.MaterialInputSourceH5p {
 		h.FileType = entity.FileTypeH5p
 		return nil

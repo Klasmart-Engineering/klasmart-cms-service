@@ -623,7 +623,7 @@ func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBC
 		return ErrInvalidContentData
 	}
 	//解析data的fileType
-	cd.PrepareSave(ctx)
+	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{})
 	materialData, ok := cd.(*contentdata.MaterialData)
 	if !ok {
 		log.Warn(ctx, "asset content data type failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))

@@ -43,11 +43,12 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		return nil, ErrInvalidContentData
 	}
 
-	err = cd.PrepareSave(ctx)
+	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: c.TeacherManual})
 	if err != nil {
 		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
 	}
+
 	data, err := cd.Marshal(ctx)
 	if err != nil {
 		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
@@ -204,7 +205,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 			return nil, ErrInvalidContentData
 		}
 
-		err = cd.PrepareSave(ctx)
+		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual})
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}

@@ -31,10 +31,15 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 
 func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.ContentInfo, error) {
 	log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
-	//contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
-	//if err != nil {
-	//	return nil, err
-	//}
+	contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+	if err != nil {
+		return nil, err
+	}
+	teacherManual := ""
+	if obj.ContentType == entity.ContentTypeLesson {
+		teacherManual = contentData.(*LessonData).TeacherManual
+	}
+
 	subjects := make([]string, 0)
 	developmentals := make([]string, 0)
 	skills := make([]string, 0)
@@ -97,6 +102,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Outcomes:      outcomes,
 		Author:        obj.Author,
 		AuthorName: 	authorName,
+		TeacherManual: teacherManual,
 		Creator:		obj.Creator,
 		SelfStudy:     obj.SelfStudy.Bool(),
 		DrawActivity:  obj.DrawActivity.Bool(),

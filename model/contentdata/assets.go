@@ -74,7 +74,7 @@ func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentTyp
 
 	return nil
 }
-func (h *AssetsData) PrepareSave(ctx context.Context) error {
+func (h *AssetsData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	fileType, err := ExtensionToFileType(ctx, h.Source)
 	if err != nil{
 		return err

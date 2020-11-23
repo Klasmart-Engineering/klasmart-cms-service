@@ -319,6 +319,8 @@ type CreateContentRequest struct {
 
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
+
+	TeacherManual string `json:"teacher_manual"`
 }
 
 func (c CreateContentRequest) Validate() error {
@@ -433,6 +435,8 @@ type ContentInfo struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
+	TeacherManual string `json:"teacher_manual"`
+
 	Author     string `json:"author"`
 	Creator string `json:"creator"`
 	Org        string `json:"org"`
@@ -444,13 +448,17 @@ type ContentInfo struct {
 	UpdatedAt int64 `json:"updated_at"`
 }
 
+type ExtraDataInRequest struct {
+	TeacherManual string `json:"teacher_manual"`
+}
+
 type ContentData interface {
 	Unmarshal(ctx context.Context, data string) error
 	Marshal(ctx context.Context) (string, error)
 
 	Validate(ctx context.Context, contentType ContentType) error
 	PrepareResult(ctx context.Context) error
-	PrepareSave(ctx context.Context) error
+	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
 	SubContentIds(ctx context.Context) []string
 }
 
