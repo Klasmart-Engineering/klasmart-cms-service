@@ -988,6 +988,63 @@ func (a *assessmentModel) checkAndFilterListByPermissions(ctx context.Context, o
 }
 
 func checkAndFilterListWithOrg(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
+	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgCompletedAssessments424)
+	if err != nil {
+		log.Error(ctx, "check and filter list with school: check permission 424 failed",
+			log.Any("operator", operator),
+			log.Any("cmd", cmd),
+		)
+		return false, err
+	}
+	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgInProgressAssessments425)
+	if err != nil {
+		log.Error(ctx, "check and filter list with school: check permission 425 failed",
+			log.Any("operator", operator),
+			log.Any("cmd", cmd),
+		)
+		return false, err
+	}
+	if hasP424 || hasP425 {
+		var teacherIDs []string
+		{
+			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
+			if err != nil {
+				log.Error(ctx, "check and filter list with school: get teachers failed",
+					log.Any("operator", operator),
+					log.Any("cmd", cmd),
+				)
+				return false, err
+			}
+			for _, teacher := range teachers {
+				teacherIDs = append(teacherIDs, teacher.ID)
+			}
+		}
+		cmd.TeacherIDs = append(cmd.TeacherIDs, teacherIDs...)
+
+		if hasP424 {
+			*hasStatusComplete = true
+			for _, teacherID := range teacherIDs {
+				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusComplete,
+				})
+			}
+		}
+		if hasP425 {
+			*hasStatusInProgress = true
+			for _, teacherID := range teacherIDs {
+				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusInProgress,
+				})
+			}
+		}
+	}
+
+	return true, nil
+}
+
+func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
 	hasP426, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewSchoolCompletedAssessments426)
 	if err != nil {
 		log.Error(ctx, "heck and filter list with org: check permission 426 failed",
@@ -1054,63 +1111,6 @@ func checkAndFilterListWithOrg(ctx context.Context, operator *entity.Operator, c
 			}
 		}
 	}
-	return true, nil
-}
-
-func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
-	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgCompletedAssessments424)
-	if err != nil {
-		log.Error(ctx, "check and filter list with school: check permission 424 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
-		)
-		return false, err
-	}
-	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgInProgressAssessments425)
-	if err != nil {
-		log.Error(ctx, "check and filter list with school: check permission 425 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
-		)
-		return false, err
-	}
-	if hasP424 || hasP425 {
-		var teacherIDs []string
-		{
-			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
-			if err != nil {
-				log.Error(ctx, "check and filter list with school: get teachers failed",
-					log.Any("operator", operator),
-					log.Any("cmd", cmd),
-				)
-				return false, err
-			}
-			for _, teacher := range teachers {
-				teacherIDs = append(teacherIDs, teacher.ID)
-			}
-		}
-		cmd.TeacherIDs = append(cmd.TeacherIDs, teacherIDs...)
-
-		if hasP424 {
-			*hasStatusComplete = true
-			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
-			}
-		}
-		if hasP425 {
-			*hasStatusInProgress = true
-			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
-			}
-		}
-	}
-
 	return true, nil
 }
 
