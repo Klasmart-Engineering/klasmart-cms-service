@@ -113,10 +113,10 @@ func (s Server) registeRoute() {
 		folders.GET("/items/details/:item_id", MustLogin, s.getFolderItemByID)
 	}
 
-	crypto := s.engine.Group("/v1/crypto")
+	crypto := s.engine.Group("/crypto")
 	{
 		crypto.GET("/h5p/signature", MustLogin, s.h5pSignature)
-		crypto.GET("/htp/jwt", MustLogin, s.generateH5pJWT)
+		crypto.GET("/h5p/jwt", MustLogin, s.generateH5pJWT)
 	}
 
 	ages := s.engine.Group("/v1/ages")
