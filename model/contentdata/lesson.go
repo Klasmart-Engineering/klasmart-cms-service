@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 )
 
 type LessonData struct {
@@ -15,6 +16,7 @@ type LessonData struct {
 	MaterialId string          `json:"materialId"`
 	Material   *entity.ContentInfo `json:"material"`
 	NextNode   []*LessonData   `json:"next"`
+	TeacherManual string 	`json:"teacher_manual"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -75,6 +77,15 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	if contentType != entity.ContentTypeLesson {
 		return ErrInvalidContentType
 	}
+	if l.TeacherManual != "" {
+		_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, l.TeacherManual)
+		if !exist {
+			log.Warn(ctx, "unmarshal material failed", log.String("TeacherManual", l.TeacherManual),
+				log.String("partition", string(storage.TeacherManualStoragePartition)))
+			return ErrTeacherManual
+		}
+	}
+
 	//暂时不做检查
 	//检查material合法性
 	//materialList := make([]string, 0)
