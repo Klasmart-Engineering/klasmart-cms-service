@@ -322,7 +322,8 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	for _, item := range items {
 		subjectIDs = append(subjectIDs, item.SubjectID)
 		programIDs = append(programIDs, item.ProgramID)
-		teacherIDs, err := item.DecodeTeacherIDs()
+		var err error
+		teacherIDs, err = item.DecodeTeacherIDs()
 		if err != nil {
 			log.Error(ctx, "list assessment: decode teacher ids failed")
 			return nil, err
