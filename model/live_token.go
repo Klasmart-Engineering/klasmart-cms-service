@@ -89,7 +89,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   entity.LiveTokenTypePreview,
-		RoomID: utils.NewID(),
+		RoomID: contentID,
 	}
 
 	name, err := s.getUserName(ctx, op)
