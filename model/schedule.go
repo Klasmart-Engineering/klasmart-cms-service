@@ -407,6 +407,13 @@ func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext,
 		scheduleIDs = append(scheduleIDs, schedule.ID)
 
 	case entity.ScheduleEditWithFollowing:
+		if schedule.RepeatID == "" {
+			log.Warn(ctx, "delete schedule with following,but repeat id is empty",
+				log.Any("schedule", schedule),
+				log.String("edit_type", string(editType)),
+			)
+			return nil
+		}
 		if err := da.GetScheduleDA().DeleteWithFollowing(ctx, tx, schedule.RepeatID, schedule.StartAt); err != nil {
 			log.Error(ctx, "delete schedule: delete with following failed",
 				log.Err(err),
@@ -415,13 +422,6 @@ func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext,
 				log.String("edit_type", string(editType)),
 			)
 			return err
-		}
-		if schedule.RepeatID == "" {
-			log.Warn(ctx, "delete schedule with following,but repeat id is empty",
-				log.Any("schedule", schedule),
-				log.String("edit_type", string(editType)),
-			)
-			return nil
 		}
 		// delete schedules_teachers data
 		var scheduleList []*entity.Schedule
