@@ -393,6 +393,8 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 }
 
 func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, schedule *entity.Schedule, editType entity.ScheduleEditType) error {
+	scheduleIDs := make([]string, 0)
+
 	switch editType {
 	case entity.ScheduleEditOnlyCurrent:
 		if err := da.GetScheduleDA().SoftDelete(ctx, tx, schedule.ID, op); err != nil {
@@ -402,6 +404,8 @@ func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext,
 			)
 			return err
 		}
+		scheduleIDs = append(scheduleIDs, schedule.ID)
+
 	case entity.ScheduleEditWithFollowing:
 		if err := da.GetScheduleDA().DeleteWithFollowing(ctx, tx, schedule.RepeatID, schedule.StartAt); err != nil {
 			log.Error(ctx, "delete schedule: delete with following failed",
@@ -412,31 +416,40 @@ func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext,
 			)
 			return err
 		}
+		if schedule.RepeatID == "" {
+			log.Warn(ctx, "delete schedule with following,but repeat id is empty",
+				log.Any("schedule", schedule),
+				log.String("edit_type", string(editType)),
+			)
+			return nil
+		}
+		// delete schedules_teachers data
+		var scheduleList []*entity.Schedule
+		condition := &da.ScheduleCondition{
+			Status: sql.NullString{
+				String: string(entity.ScheduleStatusNotStart),
+				Valid:  true,
+			},
+			RepeatID: sql.NullString{
+				String: schedule.RepeatID,
+				Valid:  true,
+			},
+		}
+		err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+		if err != nil {
+			log.Error(ctx, "delete schedule: delete with following failed",
+				log.Err(err),
+				log.String("repeat_id", schedule.RepeatID),
+				log.String("edit_type", string(editType)),
+			)
+			return err
+		}
+
+		for _, item := range scheduleList {
+			scheduleIDs = append(scheduleIDs, item.ID)
+		}
 	}
-	// delete schedules_teachers data
-	var scheduleList []*entity.Schedule
-	err := da.GetScheduleDA().Query(ctx, &da.ScheduleCondition{
-		RepeatID: sql.NullString{
-			String: schedule.RepeatID,
-			Valid:  true,
-		},
-		Status: sql.NullString{
-			String: string(entity.ScheduleStatusNotStart),
-			Valid:  true,
-		},
-	}, &scheduleList)
-	if err != nil {
-		log.Error(ctx, "delete schedule: delete with following failed",
-			log.Err(err),
-			log.String("repeat_id", schedule.RepeatID),
-			log.String("edit_type", string(editType)),
-		)
-		return err
-	}
-	scheduleIDs := make([]string, len(scheduleList))
-	for i, item := range scheduleList {
-		scheduleIDs[i] = item.ID
-	}
+
 	if err := da.GetScheduleTeacherDA().BatchDelByScheduleIDs(ctx, tx, scheduleIDs); err != nil {
 		log.Error(ctx, "delete schedule: batch delete  by schedule ids failed",
 			log.Err(err),
