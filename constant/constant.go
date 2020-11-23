@@ -69,7 +69,6 @@ const (
 	LockedByNoBody = "-"
 
 	NoVisibilitySetting = "-"
-	AssetsVisibilitySetting = "[ASSETS]"
 )
 
 const (
@@ -85,9 +84,4 @@ const (
 const (
 	NoSearchItem = "{nothing}"
 	Self = "{self}"
-)
-
-const (
-	RootAssetsFolderName = "assets"
-	RootMaterialsAndPlansFolderName = "plans and materials"
 )

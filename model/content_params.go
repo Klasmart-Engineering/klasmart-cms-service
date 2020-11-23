@@ -108,9 +108,9 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 
 func (cm ContentModel) getContentRootFolder(ctx context.Context, contentType entity.ContentType, operator *entity.Operator) string{
 	//获取根目录地址
-	folderPartition := constant.RootMaterialsAndPlansFolderName
+	folderPartition := entity.RootMaterialsAndPlansFolderName
 	if contentType == entity.ContentTypeAssets {
-		folderPartition = constant.RootAssetsFolderName
+		folderPartition = entity.RootAssetsFolderName
 	}
 	path := ""
 	rootFolder, err := GetFolderModel().GetRootFolder(ctx, folderPartition, entity.OwnerTypeOrganization, operator)

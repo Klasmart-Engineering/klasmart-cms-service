@@ -14,7 +14,32 @@ const (
 
 
 	FileTypeContent = "content"
+
+	RootAssetsFolderName FolderPartition = "assets"
+	RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
 )
+
+type FolderPartition string
+
+func NewFolderPartition(partition string) FolderPartition{
+	switch partition {
+	case "assets":
+		return RootAssetsFolderName
+	case "plans and materials":
+		return RootMaterialsAndPlansFolderName
+	}
+	return RootMaterialsAndPlansFolderName
+}
+
+func (f FolderPartition) Valid() bool{
+	if f == RootAssetsFolderName || f == RootMaterialsAndPlansFolderName {
+		return true
+	}
+	return false
+}
+func (f FolderPartition) Path() string{
+	return "/" + string(f)
+}
 
 type OwnerType int
 
@@ -74,8 +99,8 @@ func NewItemType(num int) ItemType{
 
 type CreateFolderRequest struct {
 	OwnerType OwnerType `json:"owner_type"`
-	ParentId string `json:"parent_id"`
-	Name string `json:"name"`
+	ParentID  string    `json:"parent_id"`
+	Name      string    `json:"name"`
 
 	Thumbnail string `json:"thumbnail"`
 }
@@ -114,11 +139,11 @@ func NewPath(p string) Path{
 }
 
 type FolderItem struct {
-	ID string	`gorm:"type:varchar(50);PRIMARY_KEY" json:"id"`
-	OwnerType OwnerType	`gorm:"type:int;NOT NULL" json:"owner_type"`
-	Owner string	`gorm:"type:varchar(50);NOT NULL" json:"owner"`
-	ParentId string	`gorm:"type:varchar(50)" json:"parent_id"`
-	Link string `gorm:"type:varchar(50)" json:"link"`
+	ID        string    `gorm:"type:varchar(50);PRIMARY_KEY" json:"id"`
+	OwnerType OwnerType `gorm:"type:int;NOT NULL" json:"owner_type"`
+	Owner     string    `gorm:"type:varchar(50);NOT NULL" json:"owner"`
+	ParentID  string    `gorm:"type:varchar(50)" json:"parent_id"`
+	Link      string    `gorm:"type:varchar(50)" json:"link"`
 
 	ItemType ItemType `gorm:"type:int;NOT NULL"`
 	DirPath  Path     `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
@@ -146,14 +171,12 @@ type FolderItemInfo struct {
 }
 
 type SearchFolderCondition struct {
-	IDs []string
+	IDs       []string
 	OwnerType OwnerType
-	Owner string
-	ItemType ItemType
-	ParentId string
-	Link string
-
-	VisibilitySetting []string
+	Owner     string
+	ItemType  ItemType
+	ParentID  string
+	Link      string
 
 	Path string
 	Name string

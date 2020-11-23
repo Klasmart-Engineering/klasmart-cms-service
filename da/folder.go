@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -11,64 +12,79 @@ import (
 )
 
 type IFolderDA interface {
-	CreateFolder(ctx context.Context, tx *dbo.DBContext, f entity.FolderItem) (string ,error)
-	UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f entity.FolderItem) error
+	CreateFolder(ctx context.Context, tx *dbo.DBContext, f *entity.FolderItem) (string ,error)
+	UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f *entity.FolderItem) error
+	AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error
 
 	BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path entity.Path) error
-	BatchUpdateFolderVisibilitySettings(ctx context.Context, tx *dbo.DBContext, fids []string, path string) error
+	BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error
 
 	DeleteFolder(ctx context.Context, tx *dbo.DBContext, fid string) error
 	GetFolderByID(ctx context.Context, tx *dbo.DBContext, fid string) (*entity.FolderItem, error)
 
 	GetFolderByIDList(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItem, error)
 
-	SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, []*entity.FolderItem, error)
+	SearchFolderPage(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, []*entity.FolderItem, error)
+	SearchFolderCount(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, error)
+	SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error)
 }
 
 type FolderDA struct{
 	s dbo.BaseDA
 }
 
-func (fda *FolderDA) CreateFolder(ctx context.Context, tx *dbo.DBContext, f entity.FolderItem) (string, error) {
+func (fda *FolderDA) CreateFolder(ctx context.Context, tx *dbo.DBContext, f *entity.FolderItem) (string, error) {
 	now := time.Now()
 	if f.ID == "" {
 		f.ID = utils.NewID()
 	}
 	f.UpdateAt = now.Unix()
 	f.CreateAt = now.Unix()
-	_, err := fda.s.InsertTx(ctx, tx, &f)
+	_, err := fda.s.InsertTx(ctx, tx, f)
 	if err != nil {
-		log.Warn(ctx, "create folder da failed", log.Err(err), log.Any("req", f))
+		log.Error(ctx, "create folder da failed", log.Err(err), log.Any("req", f))
 		return "", err
 	}
 	return f.ID, nil
 }
 
-func (fda *FolderDA) UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f entity.FolderItem) error {
+func (fda *FolderDA) UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f *entity.FolderItem) error {
 	f.ID = fid
 	f.UpdateAt = time.Now().Unix()
 	log.Info(ctx, "Update folder da", log.String("id", f.ID))
-	_, err := fda.s.UpdateTx(ctx, tx, &f)
+	_, err := fda.s.UpdateTx(ctx, tx, f)
 	if err != nil {
-		log.Warn(ctx, "update folder da failed", log.Err(err), log.String("id", fid), log.Any("req", f))
+		log.Error(ctx, "update folder da failed", log.Err(err), log.String("id", fid), log.Any("req", f))
 		return err
 	}
 
 	return nil
 }
+
+func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error {
+	err := tx.Model(&entity.FolderItem{ID: fid}).UpdateColumn("items_count", gorm.Expr("items_count + ?", addon)).Error
+	if err != nil {
+		log.Error(ctx, "update folder items count failed", log.Err(err), log.Int("addon", addon), log.String("fid", fid))
+		return err
+	}
+
+	return nil
+}
+
+
 func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path entity.Path) error{
 	err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if err != nil {
-		log.Warn(ctx, "update folder da failed", log.Err(err), log.Strings("fids", fids), log.String("path", string(path)))
+		log.Error(ctx, "update folder da failed", log.Err(err), log.Strings("fids", fids), log.String("path", string(path)))
 		return err
 	}
 
 	return nil
 }
-func (fda *FolderDA) BatchUpdateFolderVisibilitySettings(ctx context.Context, tx *dbo.DBContext, link []string, path string) error{
+func (fda *FolderDA) BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, link []string, path entity.Path) error{
 	err := tx.Model(entity.FolderItem{}).Where("link IN (?)", link).Updates(map[string]interface{}{"path": path}).Error
 	if err != nil {
-		log.Warn(ctx, "update folder da failed", log.Err(err), log.Strings("link", link), log.String("path", path))
+		log.Error(ctx, "update folder da failed", log.Err(err), log.Strings("link", link), log.String("path", string(path)))
 		return err
 	}
 
@@ -84,7 +100,7 @@ func (fda *FolderDA) DeleteFolder(ctx context.Context, tx *dbo.DBContext, fid st
 	folderItem.DeleteAt = time.Now().Unix()
 	_, err = fda.s.UpdateTx(ctx, tx, folderItem)
 	if err != nil {
-		log.Warn(ctx, "delete folder da failed", log.Err(err), log.String("id", fid))
+		log.Error(ctx, "delete folder da failed", log.Err(err), log.String("id", fid))
 		return err
 	}
 	return nil
@@ -94,7 +110,7 @@ func (fda *FolderDA) GetFolderByID(ctx context.Context, tx *dbo.DBContext, fid s
 	obj := new(entity.FolderItem)
 	err := fda.s.GetTx(ctx, tx, fid, obj)
 	if err != nil {
-		log.Warn(ctx, "get folder da failed", log.Err(err), log.String("id", fid))
+		log.Error(ctx, "get folder da failed", log.Err(err), log.String("id", fid))
 		return nil, err
 	}
 	if obj.DeleteAt > 0 {
@@ -117,7 +133,7 @@ func (fda *FolderDA) GetFolderByIDList(ctx context.Context, tx *dbo.DBContext, f
 	return objs, nil
 }
 
-func (fda *FolderDA) SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, []*entity.FolderItem, error) {
+func (fda *FolderDA) SearchFolderPage(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, []*entity.FolderItem, error) {
 	objs := make([]*entity.FolderItem, 0)
 	count, err := fda.s.PageTx(ctx, tx, &condition, &objs)
 	if err != nil {
@@ -126,6 +142,24 @@ func (fda *FolderDA) SearchFolder(ctx context.Context, tx *dbo.DBContext, condit
 
 	return count, objs, nil
 }
+func (fda *FolderDA) SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error){
+	objs := make([]*entity.FolderItem, 0)
+	err := fda.s.QueryTx(ctx, tx, &condition, &objs)
+	if err != nil {
+		return nil, err
+	}
+
+	return objs, nil
+}
+func (fda *FolderDA) SearchFolderCount(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, error){
+	total, err := fda.s.CountTx(ctx, tx, &condition, entity.FolderItem{})
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
 
 
 type FolderOrderBy int
@@ -179,11 +213,11 @@ func (s FolderOrderBy) ToSQL() string {
 }
 
 type FolderCondition struct {
-	IDs []string
+	IDs       []string
 	OwnerType int
-	ItemType int
-	Owner string
-	ParentId string
+	ItemType  int
+	Owner     string
+	ParentID  string
 	//VisibilitySetting []string
 	Link string
 
@@ -218,9 +252,9 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.ItemType)
 	}
 
-	if s.ParentId != "" {
+	if s.ParentID != "" {
 		conditions = append(conditions, "parent_id = ?")
-		params = append(params, s.ParentId)
+		params = append(params, s.ParentID)
 	}
 	if s.Link != "" {
 		conditions = append(conditions, "link = ?")

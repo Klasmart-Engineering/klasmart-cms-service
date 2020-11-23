@@ -7,7 +7,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"math/rand"
 	"strconv"
@@ -55,7 +54,7 @@ func fakeOperator() *entity.Operator{
 func TestCreateFolder(t *testing.T) {
 	parentFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  "",
+		ParentID:  "",
 		Name:      "TestFolder1",
 		Thumbnail: "thumbnail-001",
 	}, fakeOperator())
@@ -66,7 +65,7 @@ func TestCreateFolder(t *testing.T) {
 
 	subFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      "TestSubFolder1",
 		Thumbnail: "thumbnail-002",
 	}, fakeOperator())
@@ -77,7 +76,7 @@ func TestCreateFolder(t *testing.T) {
 
 	subFolderId2, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      "TestSubFolder2",
 		Thumbnail: "thumbnail-003",
 	}, fakeOperator())
@@ -103,7 +102,7 @@ func RandName(prefix string) string {
 func TestAddAndUpdateItem(t *testing.T) {
 	parentFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  "",
+		ParentID:  "",
 		Name:      RandName("TestFolder"),
 		Thumbnail: "thumbnail-001",
 	}, fakeOperator())
@@ -114,7 +113,7 @@ func TestAddAndUpdateItem(t *testing.T) {
 
 	subFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-002",
 	}, fakeOperator())
@@ -125,7 +124,7 @@ func TestAddAndUpdateItem(t *testing.T) {
 
 	subFolderId2, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-003",
 	}, fakeOperator())
@@ -180,7 +179,7 @@ func TestAddAndUpdateItem(t *testing.T) {
 func TestMoveItem(t *testing.T) {
 	parentFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  "",
+		ParentID:  "",
 		Name:      RandName("TestFolder"),
 		Thumbnail: "thumbnail-001",
 	}, fakeOperator())
@@ -191,7 +190,7 @@ func TestMoveItem(t *testing.T) {
 
 	subFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-002",
 	}, fakeOperator())
@@ -202,7 +201,7 @@ func TestMoveItem(t *testing.T) {
 
 	subFolderId2, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-003",
 	}, fakeOperator())
@@ -245,7 +244,7 @@ func TestMoveItem(t *testing.T) {
 func TestMoveItemAndFolder(t *testing.T) {
 	parentFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  "",
+		ParentID:  "",
 		Name:      RandName("TestFolder"),
 		Thumbnail: "thumbnail-001",
 	}, fakeOperator())
@@ -256,7 +255,7 @@ func TestMoveItemAndFolder(t *testing.T) {
 
 	subFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-002",
 	}, fakeOperator())
@@ -267,7 +266,7 @@ func TestMoveItemAndFolder(t *testing.T) {
 
 	subFolderId2, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-003",
 	}, fakeOperator())
@@ -323,7 +322,7 @@ func TestMoveItemAndFolder(t *testing.T) {
 func TestRemoveItemAndFolder(t *testing.T) {
 	parentFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  "",
+		ParentID:  "",
 		Name:      RandName("TestFolder"),
 		Thumbnail: "thumbnail-001",
 	}, fakeOperator())
@@ -334,7 +333,7 @@ func TestRemoveItemAndFolder(t *testing.T) {
 
 	subFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-002",
 	}, fakeOperator())
@@ -345,7 +344,7 @@ func TestRemoveItemAndFolder(t *testing.T) {
 
 	subFolderId2, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-003",
 	}, fakeOperator())
@@ -402,7 +401,7 @@ func TestRemoveItemAndFolder(t *testing.T) {
 func TestSearchFolder(t *testing.T) {
 	parentFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  "",
+		ParentID:  "",
 		Name:      RandName("TestFolder"),
 		Thumbnail: "thumbnail-001",
 	}, fakeOperator())
@@ -413,7 +412,7 @@ func TestSearchFolder(t *testing.T) {
 
 	subFolderId, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-002",
 	}, fakeOperator())
@@ -424,7 +423,7 @@ func TestSearchFolder(t *testing.T) {
 
 	subFolderId2, err := GetFolderModel().CreateFolder(context.Background(), entity.CreateFolderRequest{
 		OwnerType: entity.OwnerTypeOrganization,
-		ParentId:  parentFolderId,
+		ParentID:  parentFolderId,
 		Name:      RandName("TestSubFolder"),
 		Thumbnail: "thumbnail-003",
 	}, fakeOperator())
@@ -470,13 +469,13 @@ func TestSearchFolder(t *testing.T) {
 }
 
 func TestFolderModel_GetRootFolder(t *testing.T) {
-	rootId, err := GetFolderModel().GetRootFolder(context.Background(), constant.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, fakeOperator())
+	rootId, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
 	}
 	t.Logf("%#v\n", rootId)
 
-	rootId2, err := GetFolderModel().GetRootFolder(context.Background(), constant.RootAssetsFolderName, entity.OwnerTypeOrganization, fakeOperator())
+	rootId2, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootAssetsFolderName, entity.OwnerTypeOrganization, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
@@ -61,7 +62,7 @@ var (
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
-	PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error
+	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
 	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
@@ -316,6 +317,9 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	}
 
 	//添加内容
+	now := time.Now()
+	obj.UpdateAt = now.Unix()
+	obj.CreateAt = now.Unix()
 	pid, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
 	if err != nil {
 		log.Error(ctx, "can't create contentdata", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
@@ -324,7 +328,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Asset添加Folder
 	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, constant.RootAssetsFolderName,entity.ContentLink(pid), constant.AssetsVisibilitySetting, operator)
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootAssetsFolderName,entity.ContentLink(pid), operator)
 		if err != nil{
 			log.Error(ctx, "can't create folder item", log.Err(err),
 				log.String("link", entity.ContentLink(pid)),
@@ -417,10 +421,11 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	rootFolder, err := GetFolderModel().GetRootFolder(ctx, constant.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, operator)
+	rootFolder, err := GetFolderModel().GetRootFolder(ctx, entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, operator)
 	if err != nil{
 		log.Warn(ctx, "get root folder failed", log.Err(err),
 			log.Any("user", operator))
+		return err
 	}else{
 		content.DirPath = string(rootFolder.ChildrenPath())
 	}
@@ -433,7 +438,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, constant.RootMaterialsAndPlansFolderName, entity.ContentLink(content.ID), content.PublishScope, operator)
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootMaterialsAndPlansFolderName, entity.ContentLink(content.ID), operator)
 	if err != nil {
 		return err
 	}
@@ -560,7 +565,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 	return err
 }
 
-func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error {
+func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
@@ -833,6 +838,9 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 
 	obj := cm.prepareCloneContentParams(ctx, content, user)
 
+	now := time.Now()
+	obj.UpdateAt = now.Unix()
+	obj.CreateAt = now.Unix()
 	id, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
 	if err != nil {
 		log.Error(ctx, "clone contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
@@ -1749,11 +1757,11 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 	dirPath := condition.DirPath
 	if dirPath == "" {
 		if len(condition.ContentType) < 0 {
-			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
+			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
 		}else if condition.ContentType[0] == entity.ContentTypeAssets {
-			dirPath = "/" + constant.RootAssetsFolderName
+			dirPath = entity.RootAssetsFolderName.Path()
 		}else {
-			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
+			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
 		}
 	}
 	folderCondition := &da.FolderCondition{

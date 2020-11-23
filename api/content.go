@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"net/http"
 	"strconv"
 	"strings"
@@ -551,7 +552,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	author := c.Query("author")
 	total := 0
 	var results []*entity.ContentInfoWithDetails
-	if author == "{self}" {
+	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}else{
 		total, results, err = model.GetContentModel().SearchUserContent(ctx, dbo.MustGetDB(ctx), condition, op)
@@ -586,6 +587,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Success 200 {object} entity.FolderContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} GeneralUnknown
 // @Router /contents_folders [get]
 func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -605,10 +607,10 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	author := c.Query("author")
 	total := 0
 	var results []*entity.FolderContent
-	if author == "{self}" {
+	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}else{
-	total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
+		total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}
 	switch err {
 	case nil:
@@ -616,6 +618,8 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 			Total:       total,
 			ContentList: results,
 		})
+	case model.ErrInvalidVisibleScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -641,6 +645,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} GeneralUnknown
 // @Router /contents_private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -665,6 +670,8 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 			Total:       total,
 			ContentList: results,
 		})
+	case model.ErrInvalidVisibleScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -722,7 +729,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 
 func parseAuthor(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("author")
-	if author == "{self}" {
+	if author == constant.Self {
 		author = u.UserID
 	}
 	return author
@@ -730,7 +737,7 @@ func parseAuthor(c *gin.Context, u *entity.Operator) string {
 
 func parseOrg(c *gin.Context, u *entity.Operator) string {
 	author := c.Query("org")
-	if author == "{self}" {
+	if author == constant.Self {
 		author = u.OrgID
 	}
 	return author

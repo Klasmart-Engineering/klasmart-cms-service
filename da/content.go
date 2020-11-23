@@ -246,10 +246,7 @@ type DBContentDA struct {
 }
 
 func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co entity.Content) (string, error) {
-	now := time.Now()
 	co.ID = utils.NewID()
-	co.UpdateAt = now.Unix()
-	co.CreateAt = now.Unix()
 	_, err := cd.s.InsertTx(ctx, tx, &co)
 	if err != nil {
 		return "", err
@@ -257,9 +254,7 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 	return co.ID, nil
 }
 func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
-	//now := time.Now()
 	co.ID = cid
-	//co.UpdateAt = now.Unix()
 	log.Info(ctx, "Update contentdata da", log.String("id", co.ID))
 	_, err := cd.s.UpdateTx(ctx, tx, &co)
 	if err != nil {
@@ -322,7 +317,7 @@ func (cd *DBContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContex
 	return count, objs, nil
 }
 
-type TotalResponse struct {
+type TotalContentResponse struct {
 	Total int
 }
 
@@ -338,11 +333,15 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	query2, params2 := condition2.GetConditions()
 
 	params1 = append(params2, params1...)
-	var total TotalResponse
+	var total TotalContentResponse
 	var err error
 	//获取数量
-	err = tx.Raw(cd.countFolderContentSQL(query1, query2), params1...).Scan(&total).Error
+	query := cd.countFolderContentSQL(query1, query2)
+	err = tx.Raw(query, params1...).Scan(&total).Error
 	if err != nil{
+		log.Error(ctx, "count raw sql failed", log.Err(err),
+			log.String("query", query), log.Any("params", params1),
+			log.Any("condition1", condition1), log.Any("condition2", condition2))
 		return 0, nil, err
 	}
 
@@ -362,6 +361,9 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	}
 	err = db.Find(&folderContents).Error
 	if err != nil{
+		log.Error(ctx, "query raw sql failed", log.Err(err),
+			log.String("query", query), log.Any("params", params1),
+			log.Any("condition1", condition1), log.Any("condition2", condition2))
 		return 0, nil, err
 	}
 	return total.Total, folderContents, nil
