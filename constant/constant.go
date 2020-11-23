@@ -46,6 +46,8 @@ var (
 	ErrInvalidArgs       = errors.New("invalid args")
 	ErrConflict          = errors.New("conflict")
 	ErrOperateNotAllowed = errors.New("operation not allowed")
+	ErrInternalServer = errors.New("internal server error")
+	ErrForbidden         = errors.New("forbidden")
 )
 
 const (
@@ -82,6 +84,7 @@ const (
 
 const (
 	NoSearchItem = "{nothing}"
+	Self = "{self}"
 )
 
 const (

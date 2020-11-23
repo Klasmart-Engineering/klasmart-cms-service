@@ -121,43 +121,67 @@ func (s Server) registeRoute() {
 
 	ages := s.engine.Group("/v1/ages")
 	{
-		ages.GET("", MustLogin, s.getAge)
-		ages.GET("/:id", MustLogin, s.getAgeByID)
+		ages.GET("", MustLoginWithoutOrgID, s.getAge)
+		ages.GET("/:id", MustLoginWithoutOrgID, s.getAgeByID)
+		ages.POST("", MustLoginWithoutOrgID, s.addAge)
+		ages.PUT("/:id", MustLoginWithoutOrgID, s.updateAge)
+		ages.DELETE("/:id", MustLoginWithoutOrgID, s.deleteAge)
 	}
 	classTypes := s.engine.Group("/v1/class_types")
 	{
-		classTypes.GET("", MustLogin, s.getClassType)
-		classTypes.GET("/:id", MustLogin, s.getClassTypeByID)
+		classTypes.GET("", MustLoginWithoutOrgID, s.getClassType)
+		classTypes.GET("/:id", MustLoginWithoutOrgID, s.getClassTypeByID)
 	}
 	developmental := s.engine.Group("/v1/developmentals")
 	{
-		developmental.GET("", MustLogin, s.getDevelopmental)
-		developmental.GET("/:id", MustLogin, s.getDevelopmentalByID)
+		developmental.GET("", MustLoginWithoutOrgID, s.getDevelopmental)
+		developmental.GET("/:id", MustLoginWithoutOrgID, s.getDevelopmentalByID)
+		developmental.POST("", MustLoginWithoutOrgID, s.addDevelopmental)
+		developmental.PUT("/:id", MustLoginWithoutOrgID, s.updateDevelopmental)
+		developmental.DELETE("/:id", MustLoginWithoutOrgID, s.deleteDevelopmental)
 	}
 	grade := s.engine.Group("/v1/grades")
 	{
-		grade.GET("", MustLogin, s.getGrade)
-		grade.GET("/:id", MustLogin, s.getGradeByID)
+		grade.GET("", MustLoginWithoutOrgID, s.getGrade)
+		grade.GET("/:id", MustLoginWithoutOrgID, s.getGradeByID)
+		grade.POST("", MustLoginWithoutOrgID, s.addGrade)
+		grade.PUT("/:id", MustLoginWithoutOrgID, s.updateGrade)
+		grade.DELETE("/:id", MustLoginWithoutOrgID, s.deleteGrade)
 	}
 	lessonTypes := s.engine.Group("/v1/lesson_types")
 	{
-		lessonTypes.GET("", MustLogin, s.getLessonType)
-		lessonTypes.GET("/:id", MustLogin, s.getLessonTypeByID)
+		lessonTypes.GET("", MustLoginWithoutOrgID, s.getLessonType)
+		lessonTypes.GET("/:id", MustLoginWithoutOrgID, s.getLessonTypeByID)
 	}
 	programs := s.engine.Group("/v1/programs")
 	{
-		programs.GET("", MustLogin, s.getProgram)
-		programs.GET("/:id", MustLogin, s.getProgramByID)
+		programs.GET("", MustLoginWithoutOrgID, s.getProgram)
+		programs.GET("/:id", MustLoginWithoutOrgID, s.getProgramByID)
+		programs.POST("", MustLoginWithoutOrgID, s.addProgram)
+		programs.PUT("/:id", MustLoginWithoutOrgID, s.updateProgram)
+		programs.DELETE("/:id", MustLoginWithoutOrgID, s.deleteProgram)
+
+		programs.PUT("/:id/ages", MustLoginWithoutOrgID, s.SetAge)
+		programs.PUT("/:id/grades", MustLoginWithoutOrgID, s.SetGrade)
+		programs.PUT("/:id/subjects", MustLoginWithoutOrgID, s.SetSubject)
+		programs.PUT("/:id/developments", MustLoginWithoutOrgID, s.SetDevelopmental)
+		programs.PUT("/:id/skills", MustLoginWithoutOrgID, s.SetSkill)
 	}
 	skills := s.engine.Group("/v1/skills")
 	{
-		skills.GET("", MustLogin, s.getSkill)
-		skills.GET("/:id", MustLogin, s.getSkillByID)
+		skills.GET("", MustLoginWithoutOrgID, s.getSkill)
+		skills.GET("/:id", MustLoginWithoutOrgID, s.getSkillByID)
+		skills.POST("", MustLoginWithoutOrgID, s.addSkill)
+		skills.PUT("/:id", MustLoginWithoutOrgID, s.updateSkill)
+		skills.DELETE("/:id", MustLoginWithoutOrgID, s.deleteSkill)
 	}
 	subjects := s.engine.Group("/v1/subjects")
 	{
-		subjects.GET("", MustLogin, s.getSubject)
-		subjects.GET("/:id", MustLogin, s.getSubjectByID)
+		subjects.GET("", MustLoginWithoutOrgID, s.getSubject)
+		subjects.GET("/:id", MustLoginWithoutOrgID, s.getSubjectByID)
+		subjects.POST("", MustLoginWithoutOrgID, s.addSubject)
+		subjects.PUT("/:id", MustLoginWithoutOrgID, s.updateSubject)
+		subjects.DELETE("/:id", MustLoginWithoutOrgID, s.deleteSubject)
 	}
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{

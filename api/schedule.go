@@ -422,6 +422,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		// if query class_ids is empty,use permissionClassIDs
 		if len(classIDs.Strings) == 0 {
 			classIDs.Strings = permissionClassIDs
+			classIDs.Valid = true
 		}
 		condition.TeacherIDs = entity.SplitStringToNullStrings(c.Query("teacher_ids"))
 	} else {

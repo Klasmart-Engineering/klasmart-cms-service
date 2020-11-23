@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -54,4 +55,42 @@ func TestAmsOrganizationService_GetOrganizationOrSchoolName(t *testing.T) {
 	for _, n := range names {
 		fmt.Println(n)
 	}
+}
+
+func TestAmsOrganizationService_GetOrganizationsAssociatedWithUserID(t *testing.T) {
+	config.LoadEnvConfig()
+	id := "a161e13f-f620-5284-8ab5-93445d8064bf"
+	orgs, err := GetOrganizationServiceProvider().GetOrganizationsAssociatedWithUserID(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range orgs {
+		fmt.Println(n)
+	}
+}
+
+func TestAmsOrganizationService_GetSchoolsAssociatedWithUserID(t *testing.T) {
+	config.LoadEnvConfig()
+	id := "a161e13f-f620-5284-8ab5-93445d8064bf"
+	orgs, err := GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, n := range orgs {
+		fmt.Println(n)
+	}
+}
+
+func TestAmsPermissionService_HasPermissions(t *testing.T) {
+	config.LoadEnvConfig()
+	op := entity.Operator{
+		UserID: "690776ed-502e-5b68-9a03-bd7400a37762",
+		OrgID: "49dd6bce-18a9-47cb-8da7-5c425c66a0ff",
+	}
+	permissions := []PermissionName{"archived_content_page_205", "create_lesson_material_220"}
+	perms, err := GetPermissionServiceProvider().HasOrganizationPermissions(context.Background(), &op, permissions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(perms)
 }

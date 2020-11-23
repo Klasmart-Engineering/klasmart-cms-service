@@ -36,6 +36,8 @@ type SkillCondition struct {
 
 	OrderBy SkillOrderBy
 	Pager   dbo.Pager
+
+	DeleteAt sql.NullInt64
 }
 
 func (c SkillCondition) GetConditions() ([]string, []interface{}) {
@@ -59,6 +61,12 @@ func (c SkillCondition) GetConditions() ([]string, []interface{}) {
 			constant.TableNameDevelopmentalSkill, constant.TableNameSkill, constant.TableNameDevelopmentalSkill)
 		wheres = append(wheres, sql)
 		params = append(params, programID.String, developmentalID.String)
+	}
+
+	if c.DeleteAt.Valid {
+		wheres = append(wheres, "delete_at>0")
+	} else {
+		wheres = append(wheres, "(delete_at=0)")
 	}
 
 	return wheres, params
@@ -85,6 +93,6 @@ func NewSkillOrderBy(orderBy string) SkillOrderBy {
 func (c SkillOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number desc, name asc"
 	}
 }

@@ -1,6 +1,7 @@
 package da
 
 import (
+	"database/sql"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -32,6 +33,8 @@ type LessonTypeCondition struct {
 
 	OrderBy LessonTypeOrderBy
 	Pager   dbo.Pager
+
+	DeleteAt sql.NullInt64
 }
 
 func (c LessonTypeCondition) GetConditions() ([]string, []interface{}) {
@@ -43,6 +46,11 @@ func (c LessonTypeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.IDs.ToInterfaceSlice()...)
 	}
 
+	if c.DeleteAt.Valid {
+		wheres = append(wheres, "delete_at>0")
+	} else {
+		wheres = append(wheres, "(delete_at=0)")
+	}
 	return wheres, params
 }
 
@@ -67,6 +75,6 @@ func NewLessonTypeOrderBy(orderBy string) LessonTypeOrderBy {
 func (c LessonTypeOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number desc, name asc"
 	}
 }

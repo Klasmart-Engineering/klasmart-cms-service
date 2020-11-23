@@ -35,6 +35,8 @@ type SubjectCondition struct {
 
 	OrderBy SubjectOrderBy
 	Pager   dbo.Pager
+
+	DeleteAt sql.NullInt64
 }
 
 func (c SubjectCondition) GetConditions() ([]string, []interface{}) {
@@ -50,6 +52,12 @@ func (c SubjectCondition) GetConditions() ([]string, []interface{}) {
 			constant.TableNameProgramSubject, constant.TableNameSubject, constant.TableNameProgramSubject)
 		wheres = append(wheres, sql)
 		params = append(params, c.ProgramID.String)
+	}
+
+	if c.DeleteAt.Valid {
+		wheres = append(wheres, "delete_at>0")
+	} else {
+		wheres = append(wheres, "(delete_at=0)")
 	}
 
 	return wheres, params
@@ -76,6 +84,6 @@ func NewSubjectOrderBy(orderBy string) SubjectOrderBy {
 func (c SubjectOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number desc, name asc"
 	}
 }

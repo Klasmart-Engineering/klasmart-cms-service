@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
 	"time"
@@ -107,14 +108,63 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 }
 
 type QueryAssessmentsCondition struct {
-	Status     *entity.AssessmentStatus       `json:"status"`
-	TeacherIDs *[]string                      `json:"teacher_ids"`
-	OrderBy    *entity.ListAssessmentsOrderBy `json:"order_by"`
-	Page       int                            `json:"page"`
-	PageSize   int                            `json:"page_size"`
+	Status                         *entity.AssessmentStatus                `json:"status"`
+	TeacherIDs                     []string                                `json:"teacher_ids"`
+	TeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter `json:"teacher_assessment_status_filters"`
+	OrderBy                        *entity.ListAssessmentsOrderBy          `json:"order_by"`
+	Page                           int                                     `json:"page"`
+	PageSize                       int                                     `json:"page_size"`
+}
+
+func (c *QueryAssessmentsCondition) Simple() {
+	c.TeacherIDs = utils.SliceDeduplication(c.TeacherIDs)
+	var newTeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter
+	{
+		statusMap := map[string]*struct {
+			HasStatusInProgress bool
+			HasStatusComplete   bool
+		}{}
+		for _, item := range c.TeacherAssessmentStatusFilters {
+			if statusMap[item.TeacherID] == nil {
+				statusMap[item.TeacherID] = &struct {
+					HasStatusInProgress bool
+					HasStatusComplete   bool
+				}{}
+			}
+			switch item.Status {
+			case entity.AssessmentStatusComplete:
+				statusMap[item.TeacherID].HasStatusComplete = true
+			case entity.AssessmentStatusInProgress:
+				statusMap[item.TeacherID].HasStatusInProgress = true
+			}
+		}
+		for teacherID, status := range statusMap {
+			if status.HasStatusInProgress && status.HasStatusComplete {
+				continue
+			}
+			if !status.HasStatusInProgress && !status.HasStatusComplete {
+				continue
+			}
+			if status.HasStatusComplete {
+				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusComplete,
+				})
+			}
+			if status.HasStatusInProgress {
+				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusInProgress,
+				})
+			}
+		}
+	}
+	c.TeacherAssessmentStatusFilters = newTeacherAssessmentStatusFilters
 }
 
 func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
+	c.Simple()
+
 	var (
 		formats []string
 		values  []interface{}
@@ -127,17 +177,30 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		values = append(values, *c.Status)
 	}
 
-	if c.TeacherIDs != nil && len(*c.TeacherIDs) > 0 {
+	if len(c.TeacherIDs) > 0 {
 		var (
-			teacherFormats = make([]string, len(*c.TeacherIDs))
-			teacherValues  = make([]interface{}, len(*c.TeacherIDs))
+			partFormats = make([]string, 0, len(c.TeacherIDs))
+			partValues  = make([]interface{}, 0, len(c.TeacherIDs))
 		)
-		for i, teacherID := range *c.TeacherIDs {
-			teacherFormats[i] = fmt.Sprintf("json_contains(teacher_ids, json_array(?))")
-			teacherValues[i] = teacherID
+		for _, teacherID := range c.TeacherIDs {
+			partFormats = append(partFormats, fmt.Sprintf("json_contains(teacher_ids, json_array(?))"))
+			partValues = append(partValues, teacherID)
 		}
-		formats = append(formats, "("+strings.Join(teacherFormats, " or ")+")")
-		values = append(values, teacherValues...)
+		formats = append(formats, "("+strings.Join(partFormats, " or ")+")")
+		values = append(values, partValues...)
+	}
+
+	if len(c.TeacherAssessmentStatusFilters) > 0 {
+		var (
+			partFormats = make([]string, 0, len(c.TeacherAssessmentStatusFilters))
+			partValues  = make([]interface{}, 0, len(c.TeacherAssessmentStatusFilters)*2)
+		)
+		for _, item := range c.TeacherAssessmentStatusFilters {
+			partFormats = append(partFormats, fmt.Sprintf("(not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?)"))
+			partValues = append(partValues, item.TeacherID, item.TeacherID, string(item.Status))
+		}
+		formats = append(formats, "("+strings.Join(partFormats, " and ")+")")
+		values = append(values, partValues...)
 	}
 
 	return formats, values

@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
@@ -25,23 +26,22 @@ func (s *Server) getSkill(c *gin.Context) {
 	ctx := c.Request.Context()
 	programID := c.Query("program_id")
 	developmentalID := c.Query("developmental_id")
-	if len(programID) == 0 || len(developmentalID) == 0 {
-		log.Info(ctx, "param is invalid", log.String("programID", programID), log.String("developmentalID", developmentalID))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	result, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
-		ProgramIDAndDevelopmentalID: []sql.NullString{
+
+	condition := &da.SkillCondition{}
+	if len(programID) != 0 && len(developmentalID) != 0 {
+		condition.ProgramIDAndDevelopmentalID = []sql.NullString{
 			sql.NullString{
 				String: programID,
-				Valid:  true,
+				Valid:  len(programID) != 0,
 			},
 			sql.NullString{
 				String: developmentalID,
-				Valid:  true,
+				Valid:  len(developmentalID) != 0,
 			},
-		},
-	})
+		}
+	}
+	result, err := model.GetSkillModel().Query(ctx, condition)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -69,6 +69,89 @@ func (s *Server) getSkillByID(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary addSkill
+// @ID addSkill
+// @Description addSkill
+// @Accept json
+// @Produce json
+// @Param skill body entity.Skill true "skill"
+// @Tags skill
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /skills [post]
+func (s *Server) addSkill(c *gin.Context) {
+	op := GetOperator(c)
+	ctx := c.Request.Context()
+	data := new(entity.Skill)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	id, err := model.GetSkillModel().Add(ctx, op, data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+}
+
+// @Summary updateSkill
+// @ID updateSkill
+// @Description updateSkill
+// @Accept json
+// @Produce json
+// @Param id path string true "skill id"
+// @Param skill body entity.Skill true "skill"
+// @Tags skill
+// @Success 200 {object} entity.IDResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /skills/{id} [put]
+func (s *Server) updateSkill(c *gin.Context) {
+	op := GetOperator(c)
+	ctx := c.Request.Context()
+	data := new(entity.Skill)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	data.ID = c.Param("id")
+	id, err := model.GetSkillModel().Update(ctx, op, data)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary deleteSkill
+// @ID deleteSkill
+// @Description deleteSkill
+// @Accept json
+// @Produce json
+// @Param id path string true "skill id"
+// @Tags skill
+// @Success 200 {object} entity.IDResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /skills/{id} [delete]
+func (s *Server) deleteSkill(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	id := c.Param("id")
+	err := model.GetSkillModel().Delete(ctx, op, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
