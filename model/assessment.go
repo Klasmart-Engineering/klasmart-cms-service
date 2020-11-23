@@ -291,6 +291,8 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 				for _, item := range items {
 					cond.TeacherIDs = append(cond.TeacherIDs, item.ID)
 				}
+			} else {
+				cond.TeacherIDs = []string{}
 			}
 		}
 	}
