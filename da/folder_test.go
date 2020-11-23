@@ -55,7 +55,7 @@ func TestCreateTable(t *testing.T) {
 }
 
 func TestSearchFolderContent(t *testing.T) {
-	total, folderContent, err := GetContentDA().SearchFolderContent(context.Background(), dbo.MustGetDB(context.Background()), CombineConditions{
+	total, folderContent, err := GetContentDA().SearchFolderContentUnsafe(context.Background(), dbo.MustGetDB(context.Background()), CombineConditions{
 		SourceCondition: &ContentCondition{Name: "test",
 			OrderBy: ContentOrderByCreatedAtDesc,
 			Pager: utils.Pager{

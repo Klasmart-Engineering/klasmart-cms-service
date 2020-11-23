@@ -82,6 +82,8 @@ type IContentModel interface {
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
+	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error)
+	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error)
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -1125,30 +1127,43 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 
 	return contentWithDetails, nil
 }
+
+func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
+	//构造个人查询条件
+	condition.Author = user.UserID
+	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
+	scope, err := cm.listAllScopes(ctx, user)
+	if err != nil {
+		return 0, nil, err
+	}
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
+		scope = []string{constant.NoSearchItem}
+	}
+	condition.Scope = scope
+	cm.addUserCondition(ctx, &condition, user)
+
+	//生成folder condition
+	folderCondition := cm.buildFolderCondition(ctx, condition, user)
+
+	log.Info(ctx, "search folder content", log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, condition, *folderCondition)
+	if err != nil {
+		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		return 0, nil, ErrReadContentFailed
+	}
+	cm.fillFolderContent(ctx, objs)
+	return count, objs, nil
+}
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
 	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, user)
 	if err != nil{
 		return 0, nil, err
 	}
-	dirPath := condition.DirPath
-	if dirPath == "" {
-		if len(condition.ContentType) < 0 {
-			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
-		}else if condition.ContentType[0] == entity.ContentTypeAssets {
-			dirPath = "/" + constant.RootAssetsFolderName
-		}else {
-			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
-		}
-	}
-	folderCondition := da.FolderCondition{
-		OwnerType:    int(entity.OwnerTypeOrganization),
-		ItemType:     int(entity.FolderItemTypeFolder),
-		Owner:        user.OrgID,
-		Name:         condition.Name,
-		ExactDirPath: condition.DirPath,
-	}
+	folderCondition := cm.buildFolderCondition(ctx, condition, user)
+
 	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, *combineCondition, folderCondition)
+	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, *combineCondition, *folderCondition)
 	if err != nil {
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
@@ -1728,6 +1743,27 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	}
 
 	return ret, nil
+}
+
+func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, user *entity.Operator) *da.FolderCondition{
+	dirPath := condition.DirPath
+	if dirPath == "" {
+		if len(condition.ContentType) < 0 {
+			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
+		}else if condition.ContentType[0] == entity.ContentTypeAssets {
+			dirPath = "/" + constant.RootAssetsFolderName
+		}else {
+			dirPath = "/" + constant.RootMaterialsAndPlansFolderName
+		}
+	}
+	folderCondition := &da.FolderCondition{
+		OwnerType:    int(entity.OwnerTypeOrganization),
+		ItemType:     int(entity.FolderItemTypeFolder),
+		Owner:        user.OrgID,
+		Name:         condition.Name,
+		ExactDirPath: condition.DirPath,
+	}
+	return folderCondition
 }
 
 func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.FolderContent) {

@@ -38,6 +38,7 @@ func (s Server) registeRoute() {
 		content.PUT("/contents/:content_id/review/reject", MustLogin, s.reject)
 		content.DELETE("/contents/:content_id", MustLogin, s.deleteContent)
 		content.GET("/contents", MustLogin, s.queryContent)
+		content.GET("/contents_folders", MustLogin, s.queryFolderContent)
 		content.GET("/contents/:content_id/statistics", MustLogin, s.contentDataCount)
 		content.GET("/contents_private", MustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", MustLogin, s.queryPendingContent)

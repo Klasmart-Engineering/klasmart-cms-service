@@ -347,6 +347,11 @@ type ContentInfoWithDetailsResponse struct {
 	ContentList []*ContentInfoWithDetails `json:"list"`
 }
 
+type FolderContentInfoWithDetailsResponse struct {
+	Total       int                       `json:"total"`
+	ContentList []*FolderContent `json:"list"`
+}
+
 type ContentInfoWithDetails struct {
 	ContentInfo
 	ContentTypeName   string   `json:"content_type_name"`

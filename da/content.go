@@ -40,7 +40,8 @@ type IContentDA interface {
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	Count(context.Context, dbo.Conditions) (int, error)
 
-	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error)
+	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 FolderCondition) (int, []*entity.FolderContent, error)
+	SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error)
 }
 
 type CombineConditions struct {
@@ -325,7 +326,14 @@ type TotalResponse struct {
 	Total int
 }
 
-func (cd *DBContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error){
+func (cd *DBContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 FolderCondition) (int, []*entity.FolderContent, error) {
+	return cd.doSearchFolderContent(ctx, tx, &condition1, &condition2)
+}
+
+func (cd *DBContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error){
+	return cd.doSearchFolderContent(ctx, tx, &condition1, &condition2)
+}
+func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 dbo.Conditions) (int, []*entity.FolderContent, error) {
 	query1, params1 := condition1.GetConditions()
 	query2, params2 := condition2.GetConditions()
 
@@ -358,7 +366,6 @@ func (cd *DBContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContex
 	}
 	return total.Total, folderContents, nil
 }
-
 
 func (cd *DBContentDA) Count(ctx context.Context, condition dbo.Conditions) (int, error) {
 	return cd.s.Count(ctx, condition, &entity.Content{})

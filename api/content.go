@@ -566,6 +566,61 @@ func (s *Server) queryContent(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
+// @Summary queryFolderContent
+// @ID searchContents
+// @Description query content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param author query string false "search content author"
+// @Param content_type query string false "search content type"
+// @Param scope query string false "search content scope"
+// @Param program query string false "search content program"
+// @Param path query string false "search content path"
+// @Param source_type query string false "search content source type"
+// @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
+// @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {object} entity.FolderContentInfoWithDetailsResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents_folders [get]
+func (s *Server) queryFolderContent(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := GetOperator(c)
+	condition := queryCondition(c, op)
+
+	//TODO: add check folder permission
+	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+	author := c.Query("author")
+	total := 0
+	var results []*entity.FolderContent
+	if author == "{self}" {
+		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	}else{
+	total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	}
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+			Total:       total,
+			ContentList: results,
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
 
 // @Summary queryPrivateContent
 // @ID searchPrivateContents
