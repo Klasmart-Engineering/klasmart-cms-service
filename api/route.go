@@ -116,6 +116,7 @@ func (s Server) registeRoute() {
 	crypto := s.engine.Group("/v1/crypto")
 	{
 		crypto.GET("/h5p/signature", MustLogin, s.h5pSignature)
+		crypto.GET("/htp/jwt", MustLogin, s.generateH5pJWT)
 	}
 
 	ages := s.engine.Group("/v1/ages")

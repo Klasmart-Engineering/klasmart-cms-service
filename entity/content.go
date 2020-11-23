@@ -393,11 +393,11 @@ type FolderContent struct {
 	Description string `json:"description"`
 	Keywords string `json:"keywords"`
 	Author string `json:"author"`
+	ItemsCount int `json:"items_count"`
 	AuthorName string `json:"author_name"`
 	DirPath string `json:"dir_path"`
 	CreateAt int `json:"create_at"`
 	UpdateAt int `json:"update_at"`
-
 }
 
 type ContentInfo struct {

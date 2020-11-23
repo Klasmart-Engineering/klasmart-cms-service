@@ -15,6 +15,7 @@ CREATE TABLE `cms_contents` (
    `data` JSON  NULL  COMMENT  '数据',
    `extra` TEXT  NULL  COMMENT  '附加数据',
    `outcomes` TEXT NULL COMMENT 'Learning outcomes',
+   `dir_path` varchar(2048) COMMENT 'Content路径',
    `suggest_time` int  NOT  NULL  COMMENT  '建议时间',
    `author` VARCHAR( 50) NOT  NULL  COMMENT  '作者id',
    `creator` VARCHAR( 50) NOT  NULL  COMMENT  '创建者id',

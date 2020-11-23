@@ -22,3 +22,16 @@ func (s Server) h5pSignature(c *gin.Context) {
 	})
 }
 
+func (s Server) generateH5pJWT(c *gin.Context) {
+	sub := c.Query("sub")
+	contentId := c.Query("contentId")
+	token, err := utils.GenerateH5pJWT(c.Request.Context(), sub, contentId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+	})
+}

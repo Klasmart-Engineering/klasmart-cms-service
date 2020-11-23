@@ -71,7 +71,7 @@ func TestSearchFolderContent(t *testing.T) {
 			},
 		},
 	}, FolderCondition{
-		Name:              "root",
+		Name:              "plans and materials",
 	})
 	if err != nil{
 		t.Error(err)
