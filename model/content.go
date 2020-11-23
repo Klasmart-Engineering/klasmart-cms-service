@@ -1414,6 +1414,7 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	}
 	if len(scope) == 0 {
 		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+		scope = []string{constant.NoSearchItem}
 	}
 	condition1.Scope = scope
 	//condition2 others
