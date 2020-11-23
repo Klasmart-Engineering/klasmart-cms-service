@@ -692,7 +692,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	condition := da.ContentCondition{
 		Author:  parseAuthor(c, op),
 		Org:     parseOrg(c, op),
-		Path: path,
+		DirPath: path,
 		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
 		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
 		Name:    strings.TrimSpace(c.Query("name")),

@@ -475,10 +475,16 @@ func TestFolderModel_GetRootFolder(t *testing.T) {
 		return
 	}
 	t.Logf("%#v\n", rootId)
+
+	rootId2, err := GetFolderModel().GetRootFolder(context.Background(), constant.RootAssetsFolderName, entity.OwnerTypeOrganization, fakeOperator())
+	if !assert.NoError(t, err) {
+		return
+	}
+	t.Logf("%#v\n", rootId2)
 	
 	res, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
 		FolderID: rootId.ID,
-		Link:     "content-5f9633b7c4b4034693211b5e",
+		Link:     "content-5f695a3bcc3a933a1c16d4db",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return

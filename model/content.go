@@ -86,6 +86,7 @@ type IContentModel interface {
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
@@ -1124,52 +1125,35 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 
 	return contentWithDetails, nil
 }
-
-func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
-	condition1 := condition
-	condition2 := condition
-
-	//condition1 private
-	condition1.Author = user.UserID
-	condition1.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition1.PublishStatus)
-
-	scope, err := cm.listAllScopes(ctx, user)
-	if err != nil {
+func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, user)
+	if err != nil{
 		return 0, nil, err
 	}
-	if len(scope) == 0 {
-		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+	folderCondition := da.FolderCondition{
+		OwnerType:    int(entity.OwnerTypeOrganization),
+		ItemType:     int(entity.FolderItemTypeFolder),
+		Owner:        user.OrgID,
+		Name:         condition.Name,
+		ExactDirPath: condition.DirPath,
 	}
-	condition1.Scope = scope
-	//condition2 others
-
-	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
-
-	//filter visible
-	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
-		condition2.Scope = []string{user.OrgID}
-	} else {
-		scopes, err := cm.ListVisibleScopes(ctx, visiblePermissionPublished, user)
-		if err != nil {
-			return 0, nil, err
-		}
-		if len(scopes) == 0 {
-			log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
-			scopes = []string{constant.NoSearchItem}
-		}
-		condition2.Scope = scopes
+	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, *combineCondition, folderCondition)
+	if err != nil {
+		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		return 0, nil, ErrReadContentFailed
 	}
+	cm.fillFolderContent(ctx, objs)
 
-	//condition2.Scope = scopes
-
-	cm.addUserCondition(ctx, &condition1, user)
-	cm.addUserCondition(ctx, &condition2, user)
-	combineCondition := &da.CombineConditions{
-		SourceCondition: &condition1,
-		TargetCondition: &condition2,
-	}
+	return count, objs, nil
+}
+func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//where, params := combineCondition.GetConditions()
 	//logger.WithContext(ctx).WithField("subject", "content").Infof("Combine condition: %#v, params: %#v", where, params)
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, user)
+	if err != nil{
+		return 0, nil, err
+	}
 	return cm.searchContentUnsafe(ctx, tx, combineCondition, user)
 }
 
@@ -1381,6 +1365,52 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 		}
 	}
 	return newStatus
+}
+
+func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (*da.CombineConditions, error){
+	condition1 := condition
+	condition2 := condition
+
+	//condition1 private
+	condition1.Author = user.UserID
+	condition1.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition1.PublishStatus)
+
+	scope, err := cm.listAllScopes(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	if len(scope) == 0 {
+		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+	}
+	condition1.Scope = scope
+	//condition2 others
+
+	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
+
+	//filter visible
+	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
+		condition2.Scope = []string{user.OrgID}
+	} else {
+		scopes, err := cm.ListVisibleScopes(ctx, visiblePermissionPublished, user)
+		if err != nil {
+			return nil, err
+		}
+		if len(scopes) == 0 {
+			log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
+			scopes = []string{constant.NoSearchItem}
+		}
+		condition2.Scope = scopes
+	}
+
+	//condition2.Scope = scopes
+
+	cm.addUserCondition(ctx, &condition1, user)
+	cm.addUserCondition(ctx, &condition2, user)
+	combineCondition := &da.CombineConditions{
+		SourceCondition: &condition1,
+		TargetCondition: &condition2,
+	}
+	return combineCondition, nil
 }
 
 func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *entity.Content, children []*entity.Content) error {
@@ -1690,6 +1720,25 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	return ret, nil
 }
 
+func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.FolderContent) {
+	authorIds := make([]string, len(objs))
+	for i := range objs {
+		authorIds[i] = objs[i].Author
+	}
+	users, err := external.GetUserServiceProvider().BatchGet(ctx, authorIds)
+	if err != nil{
+		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("objs", objs))
+	}
+	authorMap := make(map[string]string)
+	for i := range users {
+		if users[i].Valid {
+			authorMap[users[i].ID] = users[i].Name
+		}
+	}
+	for i := range objs {
+		objs[i].AuthorName = authorMap[objs[i].Author]
+	}
+}
 
 
 var (

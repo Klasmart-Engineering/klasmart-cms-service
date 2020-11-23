@@ -184,13 +184,13 @@ type FolderCondition struct {
 	ItemType int
 	Owner string
 	ParentId string
-	VisibilitySetting []string
+	//VisibilitySetting []string
 	Link string
 
-	Name string
-	Path string
+	Name          string
+	DirDescendant string
 
-	ExactPath string
+	ExactDirPath string
 
 	OrderBy FolderOrderBy `json:"order_by"`
 	Pager   utils.Pager
@@ -227,22 +227,22 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Link)
 	}
 	if s.Name != "" {
-		conditions = append(conditions, "name = ?")
+		conditions = append(conditions, "name LIKE ?")
 		params = append(params, s.Name)
 	}
-	if s.Path != "" {
-		conditions = append(conditions, "path like ?")
-		params = append(params, s.Path + "%")
+	if s.DirDescendant != "" {
+		conditions = append(conditions, "dir_path like ?")
+		params = append(params, s.DirDescendant+ "%")
 	}
-	if s.ExactPath != "" {
-		conditions = append(conditions, "path like ?")
-		params = append(params, s.ExactPath)
+	if s.ExactDirPath != "" {
+		conditions = append(conditions, "dir_path like ?")
+		params = append(params, s.ExactDirPath)
 	}
 
-	if len(s.VisibilitySetting) != 0 {
-		conditions = append(conditions, "visibility_setting in (?)")
-		params = append(params, s.VisibilitySetting)
-	}
+	//if len(s.VisibilitySetting) != 0 {
+	//	conditions = append(conditions, "visibility_setting in (?)")
+	//	params = append(params, s.VisibilitySetting)
+	//}
 
 	conditions = append(conditions, " delete_at = 0")
 	return conditions, params

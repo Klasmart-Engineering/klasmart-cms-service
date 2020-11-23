@@ -120,16 +120,16 @@ type FolderItem struct {
 	ParentId string	`gorm:"type:varchar(50)" json:"parent_id"`
 	Link string `gorm:"type:varchar(50)" json:"link"`
 
-	ItemType ItemType	`gorm:"type:int;NOT NULL"`
-	Path Path `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"path"`
-	Name string	`gorm:"type:varchar(256);NOT NULL" json:"name"`
+	ItemType ItemType `gorm:"type:int;NOT NULL"`
+	DirPath  Path     `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
+	Name     string   `gorm:"type:varchar(256);NOT NULL" json:"name"`
 
 	Thumbnail string	`gorm:"type:text" json:"thumbnail"`
 	Creator string 	`gorm:"type:varchar(50)" json:"creator"`
 
 	ItemsCount int `gorm:"type:int" json:"items_count"`
 
-	VisibilitySetting string	`gorm:"type:varchar(50)" json:"visibility_setting"`
+	//VisibilitySetting string	`gorm:"type:varchar(50)" json:"visibility_setting"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" json:"create_at"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" json:"update_at"`
@@ -137,7 +137,7 @@ type FolderItem struct {
 }
 
 func (f FolderItem) ChildrenPath() Path {
-	return NewPath(f.Path.ParentPath() + "/" + f.Name)
+	return NewPath(f.DirPath.ParentPath() + "/" + f.Name)
 }
 
 type FolderItemInfo struct {

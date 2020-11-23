@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -231,12 +232,13 @@ func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType e
 func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
 	total, folderItems, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
 		ParentId:          condition.ParentId,
+		Name:              condition.Name,
 		ItemType:          int(condition.ItemType),
 		OwnerType:         int(condition.OwnerType),
 		Owner:             condition.Owner,
 		Link:              condition.Link,
-		VisibilitySetting: condition.VisibilitySetting,
-		ExactPath:         condition.Path,
+		//VisibilitySetting: condition.VisibilitySetting,
+		ExactDirPath:      condition.Path,
 		Pager:             condition.Pager,
 		OrderBy:           da.NewFolderOrderBy(condition.OrderBy),
 	})
@@ -367,7 +369,7 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid strin
 		}
 	}
 	path := distFolder.ChildrenPath()
-	folder.Path = path
+	folder.DirPath = path
 	folder.ParentId = distFolder.ID
 	err = da.GetFolderDA().UpdateFolder(ctx, tx, fid, *folder)
 	if err != nil {
@@ -418,6 +420,7 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid strin
 }
 
 func (f *FolderModel) getRootFolder(ctx context.Context, tx *dbo.DBContext, partition string, ownerType entity.OwnerType, operator *entity.Operator) (*entity.FolderItem, error) {
+	fmt.Println("my partition is :", partition)
 	condition := entity.SearchFolderCondition{
 		Name:      partition,
 		OwnerType: ownerType,
@@ -428,6 +431,7 @@ func (f *FolderModel) getRootFolder(ctx context.Context, tx *dbo.DBContext, part
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Total:", total)
 	if total < 1 {
 		//若没有则创建一个
 		id, err := f.createFolder(ctx, tx, entity.CreateFolderRequest{
@@ -444,7 +448,8 @@ func (f *FolderModel) getRootFolder(ctx context.Context, tx *dbo.DBContext, part
 		return folder, nil
 	}
 	for i := range folderList {
-		if folderList[i].Path == "/" {
+		fmt.Printf("%#v\n", folderList[i])
+		if folderList[i].DirPath == "/" {
 			return folderList[i], nil
 		}
 	}
@@ -610,8 +615,8 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 		Owner:             owner,
 		ParentId:          req.FolderID,
 		Name:              item.Name,
-		Path:              path,
-		VisibilitySetting: item.VisibilitySetting,
+		DirPath:           path,
+		//VisibilitySetting: item.VisibilitySetting,
 		Thumbnail:         item.Thumbnail,
 		Creator:           operator.UserID,
 		CreateAt:          now,
@@ -684,9 +689,9 @@ func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.
 		Owner:             owner,
 		ParentId:          req.ParentId,
 		Name:              req.Name,
-		Path:              path,
+		DirPath:           path,
 		Thumbnail:         req.Thumbnail,
-		VisibilitySetting: constant.NoVisibilitySetting,
+		//VisibilitySetting: constant.NoVisibilitySetting,
 		Creator:           operator.UserID,
 		CreateAt:          now,
 		UpdateAt:          now,
@@ -722,7 +727,7 @@ func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.C
 func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.FolderItem) error {
 	//若不是folder，返回
 	if !folderItem.ItemType.IsFolder() {
-		log.Info(ctx, "item is not folder", log.Any("folderItem", folderItem), log.String("path", string(folderItem.Path)))
+		log.Info(ctx, "item is not folder", log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirPath)))
 		return nil
 	}
 	if folderItem.ItemsCount > 0 {
@@ -731,17 +736,17 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 
 	////若是folder，检查是否为空folder
 	//total, subItems, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
-	//	DirPath: folderItem.DirPath.ParentPath() + "/" + folderItem.ID,
+	//	DirDescendant: folderItem.DirDescendant.ParentPath() + "/" + folderItem.ID,
 	//})
 	//if err != nil {
-	//	log.Error(ctx, "search sub folder item failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirPath)))
+	//	log.Error(ctx, "search sub folder item failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirDescendant)))
 	//	return err
 	//}
 	////若total > 1,则表示一定有子文件，不能删除
 	//if total > 1 {
 	//	log.Error(ctx, "folder is not empty", log.Err(err),
 	//		log.Int("total", total),
-	//		log.String("path", string(folderItem.DirPath)),
+	//		log.String("path", string(folderItem.DirDescendant)),
 	//		log.Any("folderItem", folderItem),
 	//		log.Any("items", subItems))
 	//	return ErrFolderIsNotEmpty
@@ -770,10 +775,10 @@ func (f *FolderModel) getDescendantItems(ctx context.Context, folder *entity.Fol
 		return []*entity.FolderItem{folder}, nil
 	}
 	_, items, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
-		Path: folder.Path.ParentPath() + "/" + folder.ID,
+		DirDescendant: folder.DirPath.ParentPath() + "/" + folder.ID,
 	})
 	if err != nil {
-		log.Warn(ctx, "search folder failed", log.Err(err), log.String("path", string(folder.Path)))
+		log.Warn(ctx, "search folder failed", log.Err(err), log.String("path", string(folder.DirPath)))
 		return nil, err
 	}
 	items = append(items, folder)

@@ -39,6 +39,8 @@ type IContentDA interface {
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	Count(context.Context, dbo.Conditions) (int, error)
+
+	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error)
 }
 
 type CombineConditions struct {
@@ -76,11 +78,11 @@ type ContentCondition struct {
 	PublishStatus []string `json:"publish_status"`
 	Author        string   `json:"author"`
 	Org           string   `json:"org"`
-	Program		string `json:"program"`
-	SourceID	string `json:"source_id"`
-	LatestID	string `json:"latest_id"`
-	SourceType	string `json:"source_type"`
-	Path		string `json:"path"`
+	Program       string   `json:"program"`
+	SourceID      string   `json:"source_id"`
+	LatestID      string   `json:"latest_id"`
+	SourceType    string   `json:"source_type"`
+	DirPath       string   `json:"dir_path"`
 
 	OrderBy ContentOrderBy `json:"order_by"`
 	Pager   utils.Pager
@@ -126,10 +128,10 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.SourceType)
 	}
-	if s.Path != "" {
-		condition := "path = ?"
+	if s.DirPath != "" {
+		condition := "dir_path = ?"
 		conditions = append(conditions, condition)
-		params = append(params, s.Path)
+		params = append(params, s.DirPath)
 	}
 
 	if len(s.PublishStatus) > 0 {
@@ -319,8 +321,71 @@ func (cd *DBContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContex
 	return count, objs, nil
 }
 
+type TotalResponse struct {
+	Total int
+}
+
+func (cd *DBContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error){
+	query1, params1 := condition1.GetConditions()
+	query2, params2 := condition2.GetConditions()
+
+	params1 = append(params2, params1...)
+	var total TotalResponse
+	var err error
+	//获取数量
+	err = tx.Raw(cd.countFolderContentSQL(query1, query2), params1...).Scan(&total).Error
+	if err != nil{
+		return 0, nil, err
+	}
+
+	//查询
+	folderContents := make([]*entity.FolderContent, 0)
+	db := tx.Raw(cd.searchFolderContentSQL(query1, query2), params1...)
+	orderBy := condition1.GetOrderBy()
+	if orderBy != "" {
+		db = db.Order(orderBy)
+	}
+
+	pager := condition1.GetPager()
+	if pager != nil && pager.Enable() {
+		// pagination
+		offset, limit := pager.Offset()
+		db = db.Offset(offset).Limit(limit)
+	}
+	err = db.Find(&folderContents).Error
+	if err != nil{
+		return 0, nil, err
+	}
+	return total.Total, folderContents, nil
+}
+
+
 func (cd *DBContentDA) Count(ctx context.Context, condition dbo.Conditions) (int, error) {
 	return cd.s.Count(ctx, condition, &entity.Content{})
+}
+
+func (cd *DBContentDA) searchFolderContentSQL(query1, query2 []string) string{
+	rawQuery1 := strings.Join(query1, " and ")
+	rawQuery2 := strings.Join(query2, " and ")
+	return `SELECT id, 0 as content_type, name AS content_name, '' AS description, '' as keywords, creator as author, dir_path, create_at, update_at FROM folder_items WHERE ` + rawQuery2 +` UNION ALL SELECT id, content_type, content_name, description, keywords, author, dir_path, create_at, update_at FROM cms_contents WHERE ` + rawQuery1
+}
+
+
+func (cd *DBContentDA) countFolderContentSQL(query1, query2 []string) string{
+	rawQuery1 := strings.Join(query1, " and ")
+	rawQuery2 := strings.Join(query2, " and ")
+	return `SELECT COUNT(*) AS total FROM 
+(SELECT 
+    name
+FROM
+    folder_items 
+WHERE ` + rawQuery2 + `
+UNION ALL (SELECT 
+    content_name
+FROM
+    cms_contents
+WHERE ` + rawQuery1 + `
+)) AS records;`
 }
 
 var (
