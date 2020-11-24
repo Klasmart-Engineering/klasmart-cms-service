@@ -550,13 +550,27 @@ func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd enti
 			return err
 		}
 		newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
-		if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
-			log.Error(ctx, "add assessment: encode and set teacher ids failed",
-				log.Err(err),
-				log.Strings("teacher_ids", schedule.TeacherIDs),
-				log.Any("cmd", cmd),
-			)
-			return err
+		// fill teacher ids
+		if schedule.ClassID != "" {
+			classID2TeachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, []string{schedule.ClassID})
+			if err != nil {
+				return err
+			}
+			teachers := classID2TeachersMap[schedule.ClassID]
+			if len(teachers) > 0 {
+				var teacherIDs []string
+				for _, teacher := range teachers {
+					teacherIDs = append(teacherIDs, teacher.ID)
+				}
+				if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
+					log.Error(ctx, "add assessment: encode and set teacher ids failed",
+						log.Err(err),
+						log.Any("schedule", schedule),
+						log.Any("cmd", cmd),
+					)
+					return err
+				}
+			}
 		}
 		if len(outcomeIDs) == 0 {
 			newItem.Status = entity.AssessmentStatusComplete
