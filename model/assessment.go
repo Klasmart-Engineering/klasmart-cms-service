@@ -281,12 +281,16 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 			teacherService := external.GetTeacherServiceProvider()
 			items, err := teacherService.Query(ctx, operator.OrgID, *cmd.TeacherName)
 			if err != nil {
-				log.Error(ctx, "list assessments: query teacher service failed",
+				log.Error(ctx, "list assessments: query teachers by name failed",
 					log.Err(err),
 					log.Any("cmd", cmd),
 				)
 				return nil, err
 			}
+			log.Debug(ctx, "list assessments: query teachers by name success",
+				log.Any("cmd", cmd),
+				log.Any("items", items),
+			)
 			if len(items) > 0 {
 				for _, item := range items {
 					cond.TeacherIDs = append(cond.TeacherIDs, item.ID)
@@ -322,13 +326,12 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	for _, item := range items {
 		subjectIDs = append(subjectIDs, item.SubjectID)
 		programIDs = append(programIDs, item.ProgramID)
-		var err error
-		teacherIDs, err = item.DecodeTeacherIDs()
+		itemTeacherIDs, err := item.DecodeTeacherIDs()
 		if err != nil {
 			log.Error(ctx, "list assessment: decode teacher ids failed")
 			return nil, err
 		}
-		teacherIDs = append(teacherIDs, teacherIDs...)
+		teacherIDs = append(teacherIDs, itemTeacherIDs...)
 	}
 
 	subjectNameMap, err := a.getSubjectNameMap(ctx, subjectIDs)
