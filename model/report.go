@@ -77,7 +77,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	{
 		var err error
 		log.Debug(ctx, "list students report: before call GetClassServiceProvider().getStudents()")
-		students, err = external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
+		students, err = external.GetStudentServiceProvider().GetByClassID(ctx, operator, cmd.ClassID)
 		log.Debug(ctx, "list students report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
@@ -172,7 +172,7 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 	var student *external.Student
 	{
 		log.Debug(ctx, "get student detail report: before call GetClassServiceProvider().getStudents()")
-		students, err := external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
+		students, err := external.GetStudentServiceProvider().GetByClassID(ctx, operator, cmd.ClassID)
 		log.Debug(ctx, "get student detail report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
@@ -546,7 +546,7 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 	}
 	if hasP610 {
 		var validTeacherIDs []string
-		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
+		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 		if err != nil {
 			log.Error(ctx, "has report permission: call external \"GetByOrganization()\" failed",
 				log.Err(err),
@@ -559,11 +559,11 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 			validTeacherIDs = append(validTeacherIDs, teacher.ID)
 		}
 		var schoolIDs []string
-		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator.UserID)
+		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator, operator.UserID)
 		for _, school := range schools {
 			schoolIDs = append(schoolIDs, school.ID)
 		}
-		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, schoolIDs)
+		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
 		if err != nil {
 			log.Error(ctx, "has report permission: call external \"GetBySchools()\" failed",
 				log.Err(err),

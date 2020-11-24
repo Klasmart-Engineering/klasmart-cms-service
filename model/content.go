@@ -1146,12 +1146,12 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
-func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition , user *entity.Operator){
+func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition, user *entity.Operator) {
 	if condition.Name == "" {
 		return
 	}
-	users, err := external.GetUserServiceProvider().Query(ctx, user.OrgID, condition.Name)
-	if err != nil{
+	users, err := external.GetUserServiceProvider().Query(ctx, user, user.OrgID, condition.Name)
+	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.String("keyword", condition.Name), log.Any("user", user))
 		return
 	}
@@ -1338,7 +1338,7 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
 	orgProvider := external.GetOrganizationServiceProvider()
-	orgs, err := orgProvider.BatchGet(ctx, []string{user.OrgID})
+	orgs, err := orgProvider.BatchGet(ctx, user, []string{user.OrgID})
 	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
@@ -1384,7 +1384,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Users
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, userIds)
+	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, userIds)
 	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIds))
 	} else {
@@ -1461,7 +1461,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 	//scope
 	//TODO:change to get org name
-	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, scopeIds)
+	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, user, scopeIds)
 	if err != nil {
 		log.Error(ctx, "can't get publish scope info", log.Strings("scope", scopeIds), log.Err(err))
 	} else {
@@ -1568,7 +1568,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:       userNameMap[contentList[i].Creator],
 			OutcomeEntities:   cm.getOutcomes(ctx, contentList[i].Outcomes, user),
-			IsMine: 			contentList[i].Author == user.UserID,
+			IsMine:            contentList[i].Author == user.UserID,
 		}
 	}
 
@@ -1613,7 +1613,7 @@ func (cm *ContentModel) listVisibleScopes(ctx context.Context, permission visibl
 	return ret, nil
 }
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
-	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator.OrgID)
+	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator, operator.OrgID)
 	if err != nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
