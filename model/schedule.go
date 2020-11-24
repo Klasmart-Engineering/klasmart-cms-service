@@ -1104,10 +1104,10 @@ func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.D
 		return nil, err
 	}
 	daCondition := &da.ScheduleCondition{
-		TeacherID: sql.NullString{
-			String: condition.TeacherID,
-			Valid:  true,
-		},
+		//TeacherID: sql.NullString{
+		//	String: condition.TeacherID,
+		//	Valid:  true,
+		//},
 		ClassID: sql.NullString{
 			String: condition.ClassID,
 			Valid:  true,

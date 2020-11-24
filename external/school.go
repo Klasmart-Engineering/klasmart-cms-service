@@ -201,7 +201,7 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 		})
 	}
 
-	log.Info(ctx, "get schools by permission failedsuccess",
+	log.Info(ctx, "get schools by permission",
 		log.Any("operator", operator),
 		log.String("permissionName", permissionName.String()),
 		log.Any("schools", schools))
