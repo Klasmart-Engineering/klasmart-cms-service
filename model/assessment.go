@@ -322,13 +322,12 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	for _, item := range items {
 		subjectIDs = append(subjectIDs, item.SubjectID)
 		programIDs = append(programIDs, item.ProgramID)
-		var err error
-		teacherIDs, err = item.DecodeTeacherIDs()
+		itemTeacherIDs, err := item.DecodeTeacherIDs()
 		if err != nil {
 			log.Error(ctx, "list assessment: decode teacher ids failed")
 			return nil, err
 		}
-		teacherIDs = append(teacherIDs, teacherIDs...)
+		teacherIDs = append(teacherIDs, itemTeacherIDs...)
 	}
 
 	subjectNameMap, err := a.getSubjectNameMap(ctx, subjectIDs)
