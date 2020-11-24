@@ -461,6 +461,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		return "", ErrContentAlreadyLocked
 	}
 	content.LockedBy = user.UserID
+	content.Author = user.UserID
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 	if err != nil {
 		return "", err
