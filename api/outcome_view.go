@@ -3,10 +3,11 @@ package api
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -201,27 +202,30 @@ type Grade struct {
 
 func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 	view := OutcomeView{
-		OutcomeID:      outcome.ID,
-		OutcomeName:    outcome.Name,
-		AncestorID:     outcome.AncestorID,
-		Shortcode:      outcome.Shortcode,
-		Assumed:        outcome.Assumed,
-		SourceID:       outcome.SourceID,
-		LatestID:       outcome.LatestID,
-		LockedBy:       outcome.LockedBy,
-		AuthorID:       outcome.AuthorID,
-		AuthorName:     outcome.AuthorName,
-		OrganizationID: outcome.OrganizationID,
+		OutcomeID:        outcome.ID,
+		OutcomeName:      outcome.Name,
+		AncestorID:       outcome.AncestorID,
+		Shortcode:        outcome.Shortcode,
+		Assumed:          outcome.Assumed,
+		SourceID:         outcome.SourceID,
+		LatestID:         outcome.LatestID,
+		LockedBy:         outcome.LockedBy,
+		AuthorID:         outcome.AuthorID,
+		AuthorName:       outcome.AuthorName,
+		OrganizationID:   outcome.OrganizationID,
 		OrganizationName: getOrganizationName(ctx, outcome.OrganizationID),
-		PublishScope:   outcome.PublishScope,
-		PublishStatus:  string(outcome.PublishStatus),
-		Keywords:       strings.Split(outcome.Keywords, ","),
-		RejectReason:   outcome.RejectReason,
-		EstimatedTime:  outcome.EstimatedTime,
-		Description:    outcome.Description,
-		CreatedAt:      outcome.CreateAt,
-		UpdatedAt:      outcome.UpdateAt,
+		PublishScope:     outcome.PublishScope,
+		PublishStatus:    string(outcome.PublishStatus),
+		Keywords:         strings.Split(outcome.Keywords, ","),
+		RejectReason:     outcome.RejectReason,
+		EstimatedTime:    outcome.EstimatedTime,
+		Description:      outcome.Description,
+		CreatedAt:        outcome.CreateAt,
+		UpdatedAt:        outcome.UpdateAt,
 	}
+
+	author, _ := external.GetUserServiceProvider().Get(ctx, outcome.AuthorID)
+	view.AuthorName = author.Name
 	pIDs := strings.Split(outcome.Program, ",")
 	pNames := getProgramsName(ctx, pIDs)
 	view.Program = make([]Program, len(pIDs))
