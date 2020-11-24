@@ -281,9 +281,19 @@ func (s *Server) querySchedule(c *gin.Context) {
 		}
 	}
 
-	condition.OrgID = sql.NullString{
-		String: op.OrgID,
-		Valid:  op.OrgID != "",
+	filterClassIDs, err := s.getClassIDs(ctx, op)
+	if err != nil {
+		log.Error(ctx, "querySchedule:getClassIDs error",
+			log.Err(err),
+			log.Any("op", op),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if len(filterClassIDs) == 0 {
+		log.Info(ctx, "querySchedule:filterClassIDs is empty", log.Any("operator", op))
+		c.JSON(http.StatusOK, nil)
+		return
 	}
 
 	teacherName := c.Query("teacher_name")
@@ -293,6 +303,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 			log.Info(ctx, "get teacher info by name error",
 				log.Err(err),
 				log.String("teacherName", teacherName),
+				log.Any("operator", op),
 				log.Any("condition", condition))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
@@ -300,6 +311,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 		if len(teachers) <= 0 {
 			log.Info(ctx, "querySchedule:teacher info not found",
 				log.String("teacherName", teacherName),
+				log.Any("operator", op),
 				log.Any("condition", condition))
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return
@@ -308,10 +320,26 @@ func (s *Server) querySchedule(c *gin.Context) {
 		for i, item := range teachers {
 			teacherIDs[i] = item.ID
 		}
-		condition.TeacherIDs = entity.NullStrings{
-			Valid:   len(teacherIDs) > 0,
-			Strings: teacherIDs,
+		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, teacherIDs, op.OrgID)
+		if err != nil {
+			log.Error(ctx, "querySchedule:GetScheduleModel.GetOrgClassIDsByUserIDs error",
+				log.Err(err),
+				log.Any("op", op),
+				log.Strings("teacherIDs", teacherIDs),
+			)
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
 		}
+		log.Debug(ctx, "querySchedule:debug",
+			log.Strings("teacherIDs", teacherIDs),
+			log.Any("operator", op),
+			log.Strings("teacherClassIDs", teacherClassIDs),
+		)
+		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, teacherClassIDs)
+	}
+	condition.ClassIDs = entity.NullStrings{
+		Strings: filterClassIDs,
+		Valid:   true,
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 	total, result, err := model.GetScheduleModel().Page(ctx, condition)
@@ -341,7 +369,7 @@ const (
 // @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month)
 // @Param time_at query integer true "search schedules by time_at"
 // @Param time_zone_offset query integer true "time zone offset"
-// @Param org_ids query string false "org id,separated by comma"
+// @Param school_ids query string false "school ids,separated by comma"
 // @Param teacher_ids query string false "teacher id,separated by comma"
 // @Param class_ids query string false "class id,separated by comma"
 // @Param subject_ids query string false "subject id,separated by comma"
@@ -406,9 +434,10 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
 	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
 	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
+	schoolIDs := entity.SplitStringToNullStrings(c.Query("school_ids"))
+	teacherIDs := entity.SplitStringToNullStrings(c.Query("teacher_ids"))
 
-	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
-	permissionClassIDs, err := s.getClassIDs(ctx, op)
+	filterClassIDs, err := s.getClassIDs(ctx, op)
 	if err != nil {
 		log.Error(ctx, "getScheduleTimeView:getClassIDs error",
 			log.Err(err),
@@ -417,25 +446,55 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	// permissionClassIDs is not empty,this mean user have class information in the appropriate permissions
-	if len(permissionClassIDs) != 0 {
-		// if query class_ids is empty,use permissionClassIDs
-		if len(classIDs.Strings) == 0 {
-			classIDs.Strings = permissionClassIDs
-			classIDs.Valid = true
+	if len(filterClassIDs) == 0 {
+		log.Info(ctx, "getScheduleTimeView:filterClassIDs is empty", log.Any("operator", op))
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+	if schoolIDs.Valid {
+		schoolClassIDs, err := s.GetClassIDsBySchoolIDs(ctx, op, schoolIDs.Strings)
+		if err != nil {
+			log.Error(ctx, "getScheduleTimeView:GetClassIDsBySchoolIDs error",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("schoolIDs", schoolIDs),
+			)
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
 		}
-		condition.TeacherIDs = entity.SplitStringToNullStrings(c.Query("teacher_ids"))
-	} else {
-		// other user, filtering by user id
-		condition.TeacherID = sql.NullString{
-			String: op.UserID,
-			Valid:  true,
+		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, schoolClassIDs)
+	}
+	if teacherIDs.Valid {
+		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, teacherIDs.Strings, op.OrgID)
+		if err != nil {
+			log.Error(ctx, "getScheduleTimeView:GetScheduleModel.GetClassIDsBySchoolIDs error",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("teacherIDs", teacherIDs),
+			)
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
 		}
+		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, teacherClassIDs)
+	}
+	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
+	if classIDs.Valid {
+		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, classIDs.Strings)
 	}
 
-	condition.ClassIDs = classIDs
+	condition.ClassIDs = entity.NullStrings{
+		Strings: filterClassIDs,
+		Valid:   true,
+	}
 
-	log.Debug(ctx, "condition info", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
+	log.Debug(ctx, "condition info",
+		log.String("viewType", viewType),
+		log.String("timeAtStr", timeAtStr),
+		log.Any("condition", condition),
+		log.Any("teacherIDs", teacherIDs),
+		log.Any("classIDs", classIDs),
+		log.Any("schoolIDs", schoolIDs),
+	)
 	result, err := model.GetScheduleModel().Query(ctx, condition)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
@@ -448,6 +507,25 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	}
 	log.Info(ctx, "record not found", log.Err(err), log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
 	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+}
+
+func (s *Server) GetClassIDsBySchoolIDs(ctx context.Context, op *entity.Operator, schoolIDs []string) ([]string, error) {
+	schoolClassIDs := make([]string, 0)
+	schoolClassInfos, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, schoolIDs)
+	if err != nil {
+		log.Error(ctx, "getScheduleTimeView:GetClassServiceProvider.GetBySchoolIDs error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("schoolIDs", schoolIDs),
+		)
+		return nil, err
+	}
+	for _, schoolClassInfo := range schoolClassInfos {
+		for _, classInfo := range schoolClassInfo {
+			schoolClassIDs = append(schoolClassIDs, classInfo.ID)
+		}
+	}
+	return schoolClassIDs, nil
 }
 
 // @Summary updateStatus
@@ -558,7 +636,7 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 }
 
 func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string, error) {
-	schoolClassIDs, err := s.getClassIDsBySchoolPermission(ctx, op)
+	schoolClassIDs, err := s.getClassIDsBySchoolPermission(ctx, op, external.ScheduleViewSchoolCalendar)
 	if err != nil {
 		log.Error(ctx, "getClassIDsByPermission:getClassIDsBySchoolPermission error",
 			log.Any("operator", op),
@@ -567,7 +645,7 @@ func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string
 		return nil, err
 	}
 
-	orgClassIDs, err := s.getClassIDsByOrgPermission(ctx, op)
+	orgClassIDs, err := s.getClassIDsByOrgPermission(ctx, op, external.ScheduleViewOrgCalendar)
 	if err != nil {
 		log.Error(ctx, "getClassIDsByPermission:getClassIDsByOrgPermission error",
 			log.Any("operator", op),
@@ -575,23 +653,49 @@ func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string
 		)
 		return nil, err
 	}
+
+	myClassIDs := make([]string, 0)
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ScheduleViewMyCalendar)
+	if err != nil {
+		log.Error(ctx, "getScheduleTimeView:GetPermissionServiceProvider.HasOrganizationPermission error",
+			log.Err(err),
+			log.String("PermissionName", external.ScheduleViewMyCalendar.String()),
+			log.Any("op", op),
+		)
+		return nil, err
+	}
+	if hasPermission {
+		myClassIDs, err = model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, []string{op.UserID}, op.OrgID)
+		if err != nil {
+			log.Error(ctx, "getScheduleTimeView:GetScheduleModel.GetMyOrgClassIDs error",
+				log.Err(err),
+				log.Any("op", op),
+			)
+			return nil, err
+		}
+	}
+
 	log.Info(ctx, "getClassIDs", log.Any("Operator", op),
 		log.Strings("schoolClassIDs", schoolClassIDs),
 		log.Strings("orgClassIDs", orgClassIDs),
+		log.Strings("myClassIDs", myClassIDs),
 	)
-	classIDs := make([]string, 0, len(schoolClassIDs)+len(orgClassIDs))
+	classIDs := make([]string, 0, len(schoolClassIDs)+len(orgClassIDs)+len(myClassIDs))
 	classIDs = append(classIDs, schoolClassIDs...)
 	classIDs = append(classIDs, orgClassIDs...)
+	classIDs = append(classIDs, myClassIDs...)
+
 	classIDs = utils.SliceDeduplication(classIDs)
+
 	return classIDs, nil
 }
 
-func (s *Server) getClassIDsBySchoolPermission(ctx context.Context, op *entity.Operator) ([]string, error) {
+func (s *Server) getClassIDsBySchoolPermission(ctx context.Context, op *entity.Operator, permissionName external.PermissionName) ([]string, error) {
 	classIDs := make([]string, 0)
-	schoolInfoList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
+	schoolInfoList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permissionName)
 	if err != nil {
 		log.Error(ctx, "check permission error",
-			log.String("permission", string(external.ScheduleViewSchoolCalendar)),
+			log.String("permission", permissionName.String()),
 			log.Any("operator", op),
 			log.Err(err),
 		)
@@ -604,7 +708,7 @@ func (s *Server) getClassIDsBySchoolPermission(ctx context.Context, op *entity.O
 	classMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, schoolIDs)
 	if err != nil {
 		log.Error(ctx, "getClassIDsBySchoolPermission:GetClassServiceProvider GetBySchoolIDs error",
-			log.String("permission", string(external.ScheduleViewSchoolCalendar)),
+			log.String("permission", permissionName.String()),
 			log.Strings("schoolIDs", schoolIDs),
 			log.Any("operator", op),
 			log.Err(err),
@@ -619,11 +723,12 @@ func (s *Server) getClassIDsBySchoolPermission(ctx context.Context, op *entity.O
 	return classIDs, nil
 }
 
-func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Operator) ([]string, error) {
-	orgInfoList, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, external.ScheduleViewOrgCalendar)
+func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Operator, permissionName external.PermissionName) ([]string, error) {
+	//external.ScheduleViewOrgCalendar
+	orgInfoList, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permissionName)
 	if err != nil {
 		log.Error(ctx, "getClassIDsByOrgPermission：check permission error",
-			log.String("permission", string(external.ScheduleViewOrgCalendar)),
+			log.String("permission", permissionName.String()),
 			log.Any("operator", op),
 			log.Err(err),
 		)
@@ -637,7 +742,7 @@ func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Oper
 	classMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, orgIDs)
 	if err != nil {
 		log.Error(ctx, "getClassIDsByOrgPermission:GetClassServiceProvider GetByOrganizationIDs error",
-			log.String("permission", string(external.ScheduleViewOrgCalendar)),
+			log.String("permission", permissionName.String()),
 			log.Strings("orgIDs", orgIDs),
 			log.Any("operator", op),
 			log.Err(err),
@@ -653,7 +758,7 @@ func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Oper
 			classIDs[i] = item.ID
 		}
 	}
-	log.Info(ctx, "getClassIDsByOrgPermission", log.Strings("classIDs", classIDs))
+	log.Info(ctx, "getClassIDsByOrgPermission", log.Strings("classIDs", classIDs), log.String("permissionName", permissionName.String()))
 	return classIDs, nil
 }
 

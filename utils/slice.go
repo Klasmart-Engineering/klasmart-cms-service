@@ -48,3 +48,22 @@ func ContainsInt(s []int, e int) bool {
 	}
 	return false
 }
+
+func IntersectAndDeduplicateStrSlice(slice1 []string, slice2 []string) []string {
+	m := make(map[string]int)
+	m2 := make(map[string]int)
+	for _, v := range slice1 {
+		m[v]++
+	}
+	for _, v := range slice2 {
+		times, _ := m[v]
+		if times > 0 {
+			m2[v]++
+		}
+	}
+	result := make([]string, 0, len(m2))
+	for key, _ := range m2 {
+		result = append(result, key)
+	}
+	return result
+}
