@@ -281,16 +281,22 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 			teacherService := external.GetTeacherServiceProvider()
 			items, err := teacherService.Query(ctx, operator.OrgID, *cmd.TeacherName)
 			if err != nil {
-				log.Error(ctx, "list assessments: query teacher service failed",
+				log.Error(ctx, "list assessments: query teachers by name failed",
 					log.Err(err),
 					log.Any("cmd", cmd),
 				)
 				return nil, err
 			}
+			log.Debug(ctx, "list assessments: query teachers by name success",
+				log.Any("cmd", cmd),
+				log.Any("items", items),
+			)
 			if len(items) > 0 {
 				for _, item := range items {
 					cond.TeacherIDs = append(cond.TeacherIDs, item.ID)
 				}
+			} else {
+				cond.TeacherIDs = []string{}
 			}
 		}
 	}
@@ -320,12 +326,12 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	for _, item := range items {
 		subjectIDs = append(subjectIDs, item.SubjectID)
 		programIDs = append(programIDs, item.ProgramID)
-		teacherIDs, err := item.DecodeTeacherIDs()
+		itemTeacherIDs, err := item.DecodeTeacherIDs()
 		if err != nil {
 			log.Error(ctx, "list assessment: decode teacher ids failed")
 			return nil, err
 		}
-		teacherIDs = append(teacherIDs, teacherIDs...)
+		teacherIDs = append(teacherIDs, itemTeacherIDs...)
 	}
 
 	subjectNameMap, err := a.getSubjectNameMap(ctx, subjectIDs)
@@ -988,6 +994,63 @@ func (a *assessmentModel) checkAndFilterListByPermissions(ctx context.Context, o
 }
 
 func checkAndFilterListWithOrg(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
+	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgCompletedAssessments424)
+	if err != nil {
+		log.Error(ctx, "check and filter list with school: check permission 424 failed",
+			log.Any("operator", operator),
+			log.Any("cmd", cmd),
+		)
+		return false, err
+	}
+	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgInProgressAssessments425)
+	if err != nil {
+		log.Error(ctx, "check and filter list with school: check permission 425 failed",
+			log.Any("operator", operator),
+			log.Any("cmd", cmd),
+		)
+		return false, err
+	}
+	if hasP424 || hasP425 {
+		var teacherIDs []string
+		{
+			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
+			if err != nil {
+				log.Error(ctx, "check and filter list with school: get teachers failed",
+					log.Any("operator", operator),
+					log.Any("cmd", cmd),
+				)
+				return false, err
+			}
+			for _, teacher := range teachers {
+				teacherIDs = append(teacherIDs, teacher.ID)
+			}
+		}
+		cmd.TeacherIDs = append(cmd.TeacherIDs, teacherIDs...)
+
+		if hasP424 {
+			*hasStatusComplete = true
+			for _, teacherID := range teacherIDs {
+				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusComplete,
+				})
+			}
+		}
+		if hasP425 {
+			*hasStatusInProgress = true
+			for _, teacherID := range teacherIDs {
+				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusInProgress,
+				})
+			}
+		}
+	}
+
+	return true, nil
+}
+
+func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
 	hasP426, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewSchoolCompletedAssessments426)
 	if err != nil {
 		log.Error(ctx, "heck and filter list with org: check permission 426 failed",
@@ -1054,63 +1117,6 @@ func checkAndFilterListWithOrg(ctx context.Context, operator *entity.Operator, c
 			}
 		}
 	}
-	return true, nil
-}
-
-func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
-	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgCompletedAssessments424)
-	if err != nil {
-		log.Error(ctx, "check and filter list with school: check permission 424 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
-		)
-		return false, err
-	}
-	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgInProgressAssessments425)
-	if err != nil {
-		log.Error(ctx, "check and filter list with school: check permission 425 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
-		)
-		return false, err
-	}
-	if hasP424 || hasP425 {
-		var teacherIDs []string
-		{
-			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
-			if err != nil {
-				log.Error(ctx, "check and filter list with school: get teachers failed",
-					log.Any("operator", operator),
-					log.Any("cmd", cmd),
-				)
-				return false, err
-			}
-			for _, teacher := range teachers {
-				teacherIDs = append(teacherIDs, teacher.ID)
-			}
-		}
-		cmd.TeacherIDs = append(cmd.TeacherIDs, teacherIDs...)
-
-		if hasP424 {
-			*hasStatusComplete = true
-			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
-			}
-		}
-		if hasP425 {
-			*hasStatusInProgress = true
-			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
-			}
-		}
-	}
-
 	return true, nil
 }
 

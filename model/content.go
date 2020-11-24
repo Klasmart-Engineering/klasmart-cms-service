@@ -1078,8 +1078,9 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	}
 	if len(scope) == 0 {
 		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
-		condition1.Scope = scope
+		scope = []string{constant.NoSearchItem}
 	}
+	condition1.Scope = scope
 	//condition2 others
 
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)

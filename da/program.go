@@ -75,6 +75,6 @@ func NewProgramOrderBy(orderBy string) ProgramOrderBy {
 func (c ProgramOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "name"
+		return "number desc, name asc"
 	}
 }
