@@ -3,9 +3,10 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -17,7 +18,7 @@ type SchoolServiceProvider interface {
 	BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error)
 	GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
-	GetSchoolsAssociatedWithUserID(ctx context.Context, id string)([]*School, error)
+	GetSchoolsAssociatedWithUserID(ctx context.Context, id string) ([]*School, error)
 }
 
 type School struct {
@@ -95,6 +96,10 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*Nullab
 		})
 	}
 
+	log.Info(ctx, "get schools by ids success",
+		log.Strings("ids", ids),
+		log.Any("schools", schools))
+
 	return schools, nil
 }
 
@@ -138,6 +143,10 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, organizationI
 			Name: school.SchoolName,
 		})
 	}
+
+	log.Info(ctx, "query schools by organization success",
+		log.String("organizationID", organizationID),
+		log.Any("schools", schools))
 
 	return schools, nil
 }
@@ -192,10 +201,15 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 		})
 	}
 
+	log.Info(ctx, "get schools by permission failedsuccess",
+		log.Any("operator", operator),
+		log.String("permissionName", permissionName.String()),
+		log.Any("schools", schools))
+
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id string)([]*School, error) {
+func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id string) ([]*School, error) {
 	request := chlorine.NewRequest(`
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
@@ -223,9 +237,9 @@ func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "GetSchoolsAssociatedWithUserID failed",
+		log.Error(ctx, "get schools by user failed",
 			log.Err(err),
-			log.String("user_id", id))
+			log.String("userID", id))
 		return nil, err
 	}
 
@@ -236,6 +250,10 @@ func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id
 			Name: membership.School.Name,
 		})
 	}
+
+	log.Info(ctx, "get schools by user success",
+		log.String("userID", id),
+		log.Any("schools", schools))
 
 	return schools, nil
 }

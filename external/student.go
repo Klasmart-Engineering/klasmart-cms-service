@@ -108,6 +108,11 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]
 		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
+
+	log.Info(ctx, "get students by class success",
+		log.String("classID", classID),
+		log.Any("students", payload))
+
 	return payload, nil
 }
 

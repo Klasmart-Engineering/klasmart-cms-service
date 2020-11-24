@@ -122,6 +122,10 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, organizationID
 		teachers = append(teachers, class.Teachers...)
 	}
 
+	log.Info(ctx, "get teachers by org success",
+		log.String("organizationID", organizationID),
+		log.Any("teachers", teachers))
+
 	return teachers, nil
 }
 
@@ -166,6 +170,10 @@ func (s AmsTeacherService) GetByOrganizations(ctx context.Context, organizationI
 		}
 	}
 
+	log.Info(ctx, "get teachers by orgs success",
+		log.Strings("organizationIDs", organizationIDs),
+		log.Any("teachers", teachers))
+
 	return teachers, nil
 }
 
@@ -197,7 +205,7 @@ func (s AmsTeacherService) GetBySchool(ctx context.Context, schoolID string) ([]
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get teachers by org failed",
+		log.Error(ctx, "get teachers by school failed",
 			log.Err(err),
 			log.String("schoolID", schoolID))
 		return nil, err
@@ -207,6 +215,10 @@ func (s AmsTeacherService) GetBySchool(ctx context.Context, schoolID string) ([]
 	for _, class := range data.School.Classes {
 		teachers = append(teachers, class.Teachers...)
 	}
+
+	log.Info(ctx, "get teachers by school success",
+		log.String("schoolID", schoolID),
+		log.Any("teachers", teachers))
 
 	return teachers, nil
 }
@@ -251,6 +263,10 @@ func (s AmsTeacherService) GetBySchools(ctx context.Context, schoolIDs []string)
 			teachers[schoolID] = append(teachers[schoolID], class.Teachers...)
 		}
 	}
+
+	log.Info(ctx, "get teachers by schools success",
+		log.Strings("schoolIDs", schoolIDs),
+		log.Any("teachers", teachers))
 
 	return teachers, nil
 }
