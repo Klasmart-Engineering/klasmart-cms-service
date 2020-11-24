@@ -31,6 +31,7 @@ type IScheduleModel interface {
 	Page(ctx context.Context, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
 	GetByID(ctx context.Context, id string) (*entity.ScheduleDetailsView, error)
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
+	GetMyOrgClassIDs(ctx context.Context, op *entity.Operator) ([]string, error)
 	GetTeacherByName(ctx context.Context, OrgID, name string) ([]*external.Teacher, error)
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
@@ -43,6 +44,31 @@ type IScheduleModel interface {
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
+}
+
+func (s *scheduleModel) GetMyOrgClassIDs(ctx context.Context, op *entity.Operator) ([]string, error) {
+	myClassInfos, err := external.GetClassServiceProvider().GetByUserID(ctx, op.UserID)
+	if err != nil {
+		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByUserID error", log.Err(err), log.Any("operator", op))
+		return nil, err
+	}
+	myClassIDs := make([]string, len(myClassInfos))
+	for i, item := range myClassInfos {
+		myClassIDs[i] = item.ID
+	}
+	orgClassInfoMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, []string{op.OrgID})
+	if err != nil {
+		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByOrganizationIDs error", log.Err(err), log.Any("operator", op))
+		return nil, err
+	}
+	orgClassInfos := orgClassInfoMap[op.OrgID]
+	orgClassIDs := make([]string, len(orgClassInfos))
+	for i, item := range orgClassInfos {
+		orgClassIDs[i] = item.ID
+	}
+	result := utils.IntersectAndDeduplicateStrSlice(myClassIDs, orgClassIDs)
+	log.Debug(ctx, "my org class ids", log.Strings("classIDs", orgClassIDs), log.Any("operator", op))
+	return result, nil
 }
 
 func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error) {
