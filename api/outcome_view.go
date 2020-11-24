@@ -86,7 +86,7 @@ type OutcomeCreateResponse struct {
 	UpdatedAt        int64    `json:"updated_at"`
 }
 
-func newOutcomeCreateResponse(ctx context.Context, createView *OutcomeCreateView, outcome *entity.Outcome) OutcomeCreateResponse {
+func newOutcomeCreateResponse(ctx context.Context, operator *entity.Operator, createView *OutcomeCreateView, outcome *entity.Outcome) OutcomeCreateResponse {
 	return OutcomeCreateResponse{
 		OutcomeID:        outcome.ID,
 		OutcomeName:      createView.OutcomeName,
@@ -106,7 +106,7 @@ func newOutcomeCreateResponse(ctx context.Context, createView *OutcomeCreateView
 		AuthorID:         outcome.AuthorID,
 		AuthorName:       outcome.AuthorName,
 		OrganizationID:   outcome.OrganizationID,
-		OrganizationName: getOrganizationName(ctx, outcome.OrganizationID),
+		OrganizationName: getOrganizationName(ctx, operator, outcome.OrganizationID),
 		PublishScope:     outcome.PublishScope,
 		PublishStatus:    string(outcome.PublishStatus),
 		RejectReason:     outcome.RejectReason,
@@ -150,11 +150,11 @@ type OutcomeSearchResponse struct {
 	List  []*OutcomeView `json:"list"`
 }
 
-func newOutcomeSearchResponse(ctx context.Context, total int, outcomes []*entity.Outcome) (res OutcomeSearchResponse) {
+func newOutcomeSearchResponse(ctx context.Context, operator *entity.Operator, total int, outcomes []*entity.Outcome) (res OutcomeSearchResponse) {
 	res.Total = total
 	res.List = make([]*OutcomeView, len(outcomes))
 	for i := range outcomes {
-		view := newOutcomeView(ctx, outcomes[i])
+		view := newOutcomeView(ctx, operator, outcomes[i])
 		res.List[i] = &view
 	}
 	return
@@ -200,7 +200,7 @@ type Grade struct {
 	GradeName string `json:"grade_name"`
 }
 
-func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
+func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) OutcomeView {
 	view := OutcomeView{
 		OutcomeID:        outcome.ID,
 		OutcomeName:      outcome.Name,
@@ -213,7 +213,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 		AuthorID:         outcome.AuthorID,
 		AuthorName:       outcome.AuthorName,
 		OrganizationID:   outcome.OrganizationID,
-		OrganizationName: getOrganizationName(ctx, outcome.OrganizationID),
+		OrganizationName: getOrganizationName(ctx, operator, outcome.OrganizationID),
 		PublishScope:     outcome.PublishScope,
 		PublishStatus:    string(outcome.PublishStatus),
 		Keywords:         strings.Split(outcome.Keywords, ","),
@@ -224,7 +224,7 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 		UpdatedAt:        outcome.UpdateAt,
 	}
 
-	author, _ := external.GetUserServiceProvider().Get(ctx, outcome.AuthorID)
+	author, _ := external.GetUserServiceProvider().Get(ctx, operator, outcome.AuthorID)
 	view.AuthorName = author.Name
 	pIDs := strings.Split(outcome.Program, ",")
 	pNames := getProgramsName(ctx, pIDs)
@@ -271,9 +271,9 @@ func newOutcomeView(ctx context.Context, outcome *entity.Outcome) OutcomeView {
 	return view
 }
 
-func getOrganizationName(ctx context.Context, id string) (name string) {
+func getOrganizationName(ctx context.Context, operator *entity.Operator, id string) (name string) {
 	ids := []string{id}
-	names, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, ids)
+	names, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "getOrganizationName: GetOrganizationOrSchoolName failed",
 			log.Err(err),

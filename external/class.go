@@ -9,16 +9,17 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 
 	"go.uber.org/zap/buffer"
 )
 
 type ClassServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*NullableClass, error)
-	GetByUserID(ctx context.Context, userID string) ([]*Class, error)
-	GetByUserIDs(ctx context.Context, userIDs []string) (map[string][]*Class, error)
-	GetByOrganizationIDs(ctx context.Context, orgIDs []string) (map[string][]*Class, error)
-	GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error)
+	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableClass, error)
+	GetByUserID(ctx context.Context, operator *entity.Operator, userID string) ([]*Class, error)
+	GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string) (map[string][]*Class, error)
+	GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, orgIDs []string) (map[string][]*Class, error)
+	GetBySchoolIDs(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Class, error)
 }
 
 type Class struct {
@@ -37,7 +38,7 @@ func GetClassServiceProvider() ClassServiceProvider {
 
 type AmsClassService struct{}
 
-func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*NullableClass, error) {
+func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableClass, error) {
 	raw := `query{
 	{{range $i, $e := .}}
 	index_{{$i}}: class(class_id: "{{$e}}"){
@@ -61,7 +62,7 @@ func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Nullabl
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return nil, err
 	}
-	req := chlorine.NewRequest(buf.String())
+	req := chlorine.NewRequest(buf.String(), chlorine.ReqToken(operator.Token))
 	payload := make(map[string]*Class, len(ids))
 	res := chlorine.Response{
 		Data: &payload,
@@ -92,7 +93,7 @@ func (s AmsClassService) BatchGet(ctx context.Context, ids []string) ([]*Nullabl
 	return classes, nil
 }
 
-func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Class, error) {
+func (s AmsClassService) GetByUserID(ctx context.Context, operator *entity.Operator, userID string) ([]*Class, error) {
 	request := chlorine.NewRequest(`
 	query($user_id: ID!){
 		user(user_id: $user_id) {
@@ -105,7 +106,7 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 				name: class_name
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("user_id", userID)
 
 	data := &struct {
@@ -132,7 +133,7 @@ func (s AmsClassService) GetByUserID(ctx context.Context, userID string) ([]*Cla
 	return classes, nil
 }
 
-func (s AmsClassService) GetByUserIDs(ctx context.Context, userIDs []string) (map[string][]*Class, error) {
+func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string) (map[string][]*Class, error) {
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range userIDs {
@@ -142,7 +143,7 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, userIDs []string) (ma
 	}
 	sb.WriteString("}")
 
-	request := chlorine.NewRequest(sb.String())
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
 	data := map[string]*struct {
 		ClassesTeaching []*Class `json:"classesTeaching"`
@@ -186,7 +187,7 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, userIDs []string) (ma
 	return classes, nil
 }
 
-func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationIDs []string) (map[string][]*Class, error) {
+func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, organizationIDs []string) (map[string][]*Class, error) {
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range organizationIDs {
@@ -194,7 +195,7 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 	}
 	sb.WriteString("}")
 
-	request := chlorine.NewRequest(sb.String())
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
 	data := map[string]*struct {
 		Classes []*Class `json:"classes"`
@@ -234,7 +235,7 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, organizationI
 	return classes, nil
 }
 
-func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string) (map[string][]*Class, error) {
+func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Class, error) {
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range schoolIDs {
@@ -242,7 +243,7 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, schoolIDs []string)
 	}
 	sb.WriteString("}")
 
-	request := chlorine.NewRequest(sb.String())
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
 	data := map[string]*struct {
 		Classes []*Class `json:"classes"`

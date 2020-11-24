@@ -15,7 +15,7 @@ import (
 
 type PermissionServiceProvider interface {
 	HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
-	HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error)
+	HasSchoolPermission(ctx context.Context, operator *entity.Operator, schoolID string, permissionName PermissionName) (bool, error)
 	HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName) (map[PermissionName]bool, error)
 }
 
@@ -84,7 +84,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 	return data.User.Membership.CheckAllowed, nil
 }
 
-func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error) {
+func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator *entity.Operator, schoolID string, permissionName PermissionName) (bool, error) {
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID! 
@@ -96,8 +96,8 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 				checkAllowed(permission_name: $permission_name)
 			}
 		}
-	}`)
-	request.Var("user_id", userID)
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("user_id", operator.UserID)
 	request.Var("school_id", schoolID)
 	request.Var("permission_name", permissionName.String())
 
@@ -117,14 +117,14 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 	if err != nil {
 		log.Error(ctx, "check user school permission failed",
 			log.Err(err),
-			log.String("userID", userID),
+			log.Any("operator", operator),
 			log.String("schoolID", schoolID),
 			log.String("permissionName", permissionName.String()))
 		return false, err
 	}
 
 	log.Info(ctx, "check school permissions success",
-		log.String("userID", userID),
+		log.Any("operator", operator),
 		log.String("schoolID", schoolID),
 		log.String("permissionName", permissionName.String()),
 		log.Bool("hasPermission", data.User.SchoolMembership.CheckAllowed))

@@ -9,14 +9,15 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type StudentServiceProvider interface {
-	Get(ctx context.Context, id string) (*Student, error)
-	BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error)
-	GetByClassID(ctx context.Context, classID string) ([]*Student, error)
-	GetByClassIDs(ctx context.Context, classIDs []string) (map[string][]*Student, error)
-	Query(ctx context.Context, organizationID, keyword string) ([]*Student, error)
+	Get(ctx context.Context, operator *entity.Operator, id string) (*Student, error)
+	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error)
+	GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error)
+	GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error)
+	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Student, error)
 }
 
 type Student struct {
@@ -44,8 +45,8 @@ func GetStudentServiceProvider() StudentServiceProvider {
 
 type AmsStudentService struct{}
 
-func (s AmsStudentService) Get(ctx context.Context, id string) (*Student, error) {
-	students, err := s.BatchGet(ctx, []string{id})
+func (s AmsStudentService) Get(ctx context.Context, operator *entity.Operator, id string) (*Student, error) {
+	students, err := s.BatchGet(ctx, operator, []string{id})
 	if err != nil {
 		return nil, err
 	}
@@ -57,12 +58,12 @@ func (s AmsStudentService) Get(ctx context.Context, id string) (*Student, error)
 	return students[0].Student, nil
 }
 
-func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error) {
+func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error) {
 	if len(ids) == 0 {
 		return []*NullableStudent{}, nil
 	}
 
-	users, err := GetUserServiceProvider().BatchGet(ctx, ids)
+	users, err := GetUserServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ func (s AmsStudentService) BatchGet(ctx context.Context, ids []string) ([]*Nulla
 	return students, nil
 }
 
-func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]*Student, error) {
+func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error) {
 	q := `query ($classID: ID!){
 	class(class_id: $classID){
 		students{
@@ -90,7 +91,7 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]
 		}
   	}
 }`
-	req := chlorine.NewRequest(q)
+	req := chlorine.NewRequest(q, chlorine.ReqToken(operator.Token))
 	req.Var("classID", classID)
 	var payload []*Student
 	res := chlorine.Response{
@@ -119,7 +120,7 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]
 	return payload, nil
 }
 
-func (s AmsStudentService) GetByClassIDs(ctx context.Context, classIDs []string) (map[string][]*Student, error) {
+func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error) {
 	if len(classIDs) == 0 {
 		return map[string][]*Student{}, nil
 	}
@@ -131,7 +132,7 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, classIDs []string)
 	}
 	sb.WriteString("}")
 
-	request := chlorine.NewRequest(sb.String())
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
 	data := map[string]*struct {
 		Students []*Student `json:"students"`
@@ -164,8 +165,8 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, classIDs []string)
 	return students, nil
 }
 
-func (s AmsStudentService) Query(ctx context.Context, organizationID, keyword string) ([]*Student, error) {
-	users, err := GetUserServiceProvider().Query(ctx, organizationID, keyword)
+func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Student, error) {
+	users, err := GetUserServiceProvider().Query(ctx, operator, organizationID, keyword)
 	if err != nil {
 		return nil, err
 	}

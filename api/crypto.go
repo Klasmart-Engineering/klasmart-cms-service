@@ -2,13 +2,14 @@ package api
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 func (s Server) h5pSignature(c *gin.Context) {
-	operator := GetOperator(c)
+	operator := s.getOperator(c)
 	urlStr := c.Query("url")
 	res, err := utils.URLSignature(operator.UserID, urlStr)
 	if err != nil {
@@ -21,4 +22,3 @@ func (s Server) h5pSignature(c *gin.Context) {
 		"url": h5pPath,
 	})
 }
-

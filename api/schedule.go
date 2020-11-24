@@ -34,7 +34,7 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	if !s.hasScheduleRWPermission(c, op, external.ScheduleEditEvent) {
 		return
 	}
@@ -62,7 +62,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	//	}
 	//}
 
-	operator := GetOperator(c)
+	operator := s.getOperator(c)
 	data.OrgID = operator.OrgID
 	now := time.Now().Unix()
 	if data.StartAt < now || data.StartAt >= data.EndAt {
@@ -112,7 +112,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	if !s.hasScheduleRWPermission(c, op, external.ScheduleDeleteEvent) {
 		return
 	}
@@ -125,9 +125,8 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errMsg)
 		return
 	}
-	operator := GetOperator(c)
 
-	err := model.GetScheduleModel().Delete(ctx, operator, id, editType)
+	err := model.GetScheduleModel().Delete(ctx, op, id, editType)
 	switch err {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -155,7 +154,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [post]
 func (s *Server) addSchedule(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	if !s.hasScheduleRWPermission(c, op, external.ScheduleCreateEvent) {
 		return
 	}
@@ -217,8 +216,9 @@ func (s *Server) addSchedule(c *gin.Context) {
 func (s *Server) getScheduleByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
+	operator := s.getOperator(c)
 	log.Info(ctx, "getScheduleByID", log.String("scheduleID", id))
-	result, err := model.GetScheduleModel().GetByID(ctx, id)
+	result, err := model.GetScheduleModel().GetByID(ctx, operator, id)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
@@ -249,7 +249,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [get]
 func (s *Server) querySchedule(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	condition := new(da.ScheduleCondition)
 	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
@@ -298,7 +298,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 
 	teacherName := c.Query("teacher_name")
 	if strings.TrimSpace(teacherName) != "" {
-		teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, op.OrgID, teacherName)
+		teachers, err := model.GetScheduleModel().GetTeacherByName(ctx, op, op.OrgID, teacherName)
 		if err != nil {
 			log.Info(ctx, "get teacher info by name error",
 				log.Err(err),
@@ -320,7 +320,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 		for i, item := range teachers {
 			teacherIDs[i] = item.ID
 		}
-		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, teacherIDs, op.OrgID)
+		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, op, teacherIDs, op.OrgID)
 		if err != nil {
 			log.Error(ctx, "querySchedule:GetScheduleModel.GetOrgClassIDsByUserIDs error",
 				log.Err(err),
@@ -342,7 +342,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 		Valid:   true,
 	}
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
-	total, result, err := model.GetScheduleModel().Page(ctx, condition)
+	total, result, err := model.GetScheduleModel().Page(ctx, op, condition)
 	if err != nil {
 		log.Error(ctx, "querySchedule:error", log.Any("condition", condition), log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -381,7 +381,7 @@ const (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
 	timeAtStr := c.Query("time_at")
@@ -465,7 +465,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, schoolClassIDs)
 	}
 	if teacherIDs.Valid {
-		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, teacherIDs.Strings, op.OrgID)
+		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, op, teacherIDs.Strings, op.OrgID)
 		if err != nil {
 			log.Error(ctx, "getScheduleTimeView:GetScheduleModel.GetClassIDsBySchoolIDs error",
 				log.Err(err),
@@ -511,7 +511,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 
 func (s *Server) GetClassIDsBySchoolIDs(ctx context.Context, op *entity.Operator, schoolIDs []string) ([]string, error) {
 	schoolClassIDs := make([]string, 0)
-	schoolClassInfos, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, schoolIDs)
+	schoolClassInfos, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, op, schoolIDs)
 	if err != nil {
 		log.Error(ctx, "getScheduleTimeView:GetClassServiceProvider.GetBySchoolIDs error",
 			log.Err(err),
@@ -574,7 +574,7 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_participate/class [get]
 func (s *Server) getParticipateClass(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	result, err := model.GetScheduleModel().GetParticipateClass(ctx, op)
 	if err != nil {
@@ -599,7 +599,7 @@ func (s *Server) getParticipateClass(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_lesson_plans [get]
 func (s *Server) getLessonPlans(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	//teacherID := c.Query("teacher_id")
 	classID := c.Query("class_id")
@@ -665,7 +665,7 @@ func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string
 		return nil, err
 	}
 	if hasPermission {
-		myClassIDs, err = model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, []string{op.UserID}, op.OrgID)
+		myClassIDs, err = model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, op, []string{op.UserID}, op.OrgID)
 		if err != nil {
 			log.Error(ctx, "getScheduleTimeView:GetScheduleModel.GetMyOrgClassIDs error",
 				log.Err(err),
@@ -705,7 +705,7 @@ func (s *Server) getClassIDsBySchoolPermission(ctx context.Context, op *entity.O
 	for i, item := range schoolInfoList {
 		schoolIDs[i] = item.ID
 	}
-	classMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, schoolIDs)
+	classMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, op, schoolIDs)
 	if err != nil {
 		log.Error(ctx, "getClassIDsBySchoolPermission:GetClassServiceProvider GetBySchoolIDs error",
 			log.String("permission", permissionName.String()),
@@ -739,7 +739,7 @@ func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Oper
 		orgIDs[i] = item.ID
 	}
 	log.Info(ctx, "getClassIDsByOrgPermission", log.Any("orgInfoList", orgInfoList))
-	classMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, orgIDs)
+	classMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, op, orgIDs)
 	if err != nil {
 		log.Error(ctx, "getClassIDsByOrgPermission:GetClassServiceProvider GetByOrganizationIDs error",
 			log.String("permission", permissionName.String()),

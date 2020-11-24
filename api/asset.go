@@ -2,17 +2,18 @@ package api
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 func (s *Server) createAsset(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
@@ -34,7 +35,7 @@ func (s *Server) createAsset(c *gin.Context) {
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
-		c.JSON(http.StatusBadRequest,L(GeneralUnknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
@@ -53,9 +54,9 @@ func (s *Server) createAsset(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
-func (s *Server) updateAsset(c *gin.Context){
+func (s *Server) updateAsset(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	cid := c.Param("content_id")
 	var data entity.CreateContentRequest
 	err := c.ShouldBind(&data)
@@ -107,12 +108,12 @@ func (s *Server) updateAsset(c *gin.Context){
 
 func (s *Server) deleteAsset(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	cid := c.Param("content_id")
 
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		return nil
@@ -130,29 +131,29 @@ func (s *Server) deleteAsset(c *gin.Context) {
 }
 
 func (s *Server) getAssetByID(c *gin.Context) {
-		ctx := c.Request.Context()
-		op := GetOperator(c)
-		cid := c.Param("content_id")
-		var data struct {
-			Scope string `json:"scope"`
-		}
-		err := c.ShouldBind(&data)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return
-		}
-
-		result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
-		switch err {
-		case nil:
-			c.JSON(http.StatusOK, result)
-		default:
-			c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-		}
-}
-func (s *Server) searchAssets(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
+	cid := c.Param("content_id")
+	var data struct {
+		Scope string `json:"scope"`
+	}
+	err := c.ShouldBind(&data)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+func (s *Server) searchAssets(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
 	condition := queryCondition(c, op)
 
 	if condition.ContentType == nil {
@@ -171,18 +172,13 @@ func (s *Server) searchAssets(c *gin.Context){
 	}
 }
 
-func (s *Server) getOperator(c *gin.Context) entity.Operator{
-	return entity.Operator{}
-}
-
-
-func responseMsg(msg string) interface{}{
+func responseMsg(msg string) interface{} {
 	return gin.H{
 		"msg": msg,
 	}
 }
 
-func (s *Server) checkAssets(ctx context.Context, data entity.CreateContentRequest) error{
+func (s *Server) checkAssets(ctx context.Context, data entity.CreateContentRequest) error {
 	if !data.ContentType.IsAsset() {
 		log.Error(ctx, "Invalid content type", log.Err(entity.ErrInvalidContentType), log.Any("data", data))
 		return entity.ErrInvalidContentType
@@ -190,8 +186,7 @@ func (s *Server) checkAssets(ctx context.Context, data entity.CreateContentReque
 	return nil
 }
 
-
-func (s *Server) fillAssetsRequest(ctx context.Context, data *entity.CreateContentRequest){
+func (s *Server) fillAssetsRequest(ctx context.Context, data *entity.CreateContentRequest) {
 	data.Outcomes = nil
 	data.SuggestTime = 0
 }
