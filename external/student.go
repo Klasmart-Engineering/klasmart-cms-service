@@ -2,6 +2,8 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
@@ -13,6 +15,7 @@ type StudentServiceProvider interface {
 	Get(ctx context.Context, id string) (*Student, error)
 	BatchGet(ctx context.Context, ids []string) ([]*NullableStudent, error)
 	GetByClassID(ctx context.Context, classID string) ([]*Student, error)
+	GetByClassIDs(ctx context.Context, classIDs []string) (map[string][]*Student, error)
 	Query(ctx context.Context, organizationID, keyword string) ([]*Student, error)
 }
 
@@ -108,7 +111,57 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, classID string) ([]
 		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
+
+	log.Info(ctx, "get students by class success",
+		log.String("classID", classID),
+		log.Any("students", payload))
+
 	return payload, nil
+}
+
+func (s AmsStudentService) GetByClassIDs(ctx context.Context, classIDs []string) (map[string][]*Student, error) {
+	if len(classIDs) == 0 {
+		return map[string][]*Student{}, nil
+	}
+
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range classIDs {
+		fmt.Fprintf(sb, "q%d: class(class_id: \"%s\") {students{id:user_id name:user_name}}\n", index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String())
+
+	data := map[string]*struct {
+		Students []*Student `json:"students"`
+	}{}
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get users by class ids failed", log.Err(err), log.Strings("ids", classIDs))
+		return nil, err
+	}
+
+	students := make(map[string][]*Student, len(classIDs))
+	for index, classID := range classIDs {
+		query, found := data[fmt.Sprintf("q%d", index)]
+		if !found || query == nil {
+			log.Error(ctx, "classes not found", log.Strings("classIDs", classIDs), log.String("id", classIDs[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		students[classID] = append(students[classID], query.Students...)
+	}
+
+	log.Info(ctx, "get students by classes success",
+		log.Strings("classIDs", classIDs),
+		log.Any("students", students))
+
+	return students, nil
 }
 
 func (s AmsStudentService) Query(ctx context.Context, organizationID, keyword string) ([]*Student, error) {

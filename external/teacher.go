@@ -18,6 +18,7 @@ type TeacherServiceProvider interface {
 	GetByOrganizations(ctx context.Context, organizationIDs []string) (map[string][]*Teacher, error)
 	GetBySchool(ctx context.Context, schoolID string) ([]*Teacher, error)
 	GetBySchools(ctx context.Context, schoolIDs []string) (map[string][]*Teacher, error)
+	GetByClasses(ctx context.Context, classIDs []string) (map[string][]*Teacher, error)
 	Query(ctx context.Context, organizationID, keyword string) ([]*Teacher, error)
 }
 
@@ -122,6 +123,10 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, organizationID
 		teachers = append(teachers, class.Teachers...)
 	}
 
+	log.Info(ctx, "get teachers by org success",
+		log.String("organizationID", organizationID),
+		log.Any("teachers", teachers))
+
 	return teachers, nil
 }
 
@@ -166,6 +171,10 @@ func (s AmsTeacherService) GetByOrganizations(ctx context.Context, organizationI
 		}
 	}
 
+	log.Info(ctx, "get teachers by orgs success",
+		log.Strings("organizationIDs", organizationIDs),
+		log.Any("teachers", teachers))
+
 	return teachers, nil
 }
 
@@ -197,7 +206,7 @@ func (s AmsTeacherService) GetBySchool(ctx context.Context, schoolID string) ([]
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get teachers by org failed",
+		log.Error(ctx, "get teachers by school failed",
 			log.Err(err),
 			log.String("schoolID", schoolID))
 		return nil, err
@@ -207,6 +216,10 @@ func (s AmsTeacherService) GetBySchool(ctx context.Context, schoolID string) ([]
 	for _, class := range data.School.Classes {
 		teachers = append(teachers, class.Teachers...)
 	}
+
+	log.Info(ctx, "get teachers by school success",
+		log.String("schoolID", schoolID),
+		log.Any("teachers", teachers))
 
 	return teachers, nil
 }
@@ -251,6 +264,55 @@ func (s AmsTeacherService) GetBySchools(ctx context.Context, schoolIDs []string)
 			teachers[schoolID] = append(teachers[schoolID], class.Teachers...)
 		}
 	}
+
+	log.Info(ctx, "get teachers by schools success",
+		log.Strings("schoolIDs", schoolIDs),
+		log.Any("teachers", teachers))
+
+	return teachers, nil
+}
+
+func (s AmsTeacherService) GetByClasses(ctx context.Context, classIDs []string) (map[string][]*Teacher, error) {
+	if len(classIDs) == 0 {
+		return map[string][]*Teacher{}, nil
+	}
+
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range classIDs {
+		fmt.Fprintf(sb, "q%d: class(class_id: \"%s\") {teachers{id:user_id name:user_name}}\n", index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String())
+
+	data := map[string]*struct {
+		Teachers []*Teacher `json:"teachers"`
+	}{}
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get users by class ids failed", log.Err(err), log.Strings("ids", classIDs))
+		return nil, err
+	}
+
+	teachers := make(map[string][]*Teacher, len(classIDs))
+	for index, classID := range classIDs {
+		query, found := data[fmt.Sprintf("q%d", index)]
+		if !found || query == nil {
+			log.Error(ctx, "classes not found", log.Strings("classIDs", classIDs), log.String("id", classIDs[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		teachers[classID] = append(teachers[classID], query.Teachers...)
+	}
+
+	log.Info(ctx, "get teachers by classes success",
+		log.Strings("classIDs", classIDs),
+		log.Any("teachers", teachers))
 
 	return teachers, nil
 }

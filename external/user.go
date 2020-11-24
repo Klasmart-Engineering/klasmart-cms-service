@@ -89,6 +89,10 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*Nullable
 		})
 	}
 
+	log.Info(ctx, "get users by ids success",
+		log.Strings("ids", ids),
+		log.Any("users", users))
+
 	return users, nil
 }
 
@@ -124,7 +128,7 @@ func (s AmsUserService) Query(ctx context.Context, organizationID, keyword strin
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get users by keyword failed",
+		log.Error(ctx, "query users by keyword failed",
 			log.Err(err),
 			log.String("organizationID", organizationID),
 			log.String("keyword", keyword))
@@ -135,6 +139,11 @@ func (s AmsUserService) Query(ctx context.Context, organizationID, keyword strin
 	for _, member := range data.Organization.FindMembers {
 		users = append(users, member.User)
 	}
+
+	log.Info(ctx, "query users by keyword success",
+		log.String("organizationID", organizationID),
+		log.String("keyword", keyword),
+		log.Any("users", users))
 
 	return users, nil
 }
