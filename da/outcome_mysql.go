@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
-	"time"
 )
 
 type OutcomeSqlDA struct {
@@ -30,6 +31,7 @@ type OutcomeCondition struct {
 	OrganizationID sql.NullString
 	SourceID       sql.NullString
 	FuzzyKey       sql.NullString
+	FuzzyAuthors   dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        OutcomeOrderBy `json:"order_by"`
@@ -40,9 +42,15 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	if c.FuzzyKey.Valid {
-		wheres = append(wheres, "match(name, keywords, description, author_name, shortcode) against(? in boolean mode)")
+	if c.FuzzyKey.Valid && !c.FuzzyAuthors.Valid {
+		wheres = append(wheres, "match(name, keywords, description, shortcode) against(? in boolean mode)")
 		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
+	}
+
+	if c.FuzzyKey.Valid && c.FuzzyAuthors.Valid {
+		wheres = append(wheres, fmt.Sprintf("((match(name, keywords, description, shortcode) against(? in boolean mode)) or (id in (%s)))", c.FuzzyAuthors.SQLPlaceHolder()))
+		params = append(params, strings.TrimSpace(c.FuzzyKey.String), c.FuzzyAuthors.ToInterfaceSlice())
+
 	}
 
 	if c.IDs.Valid {
@@ -99,6 +107,7 @@ func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 		AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
 		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
+		FuzzyAuthors:   dbo.NullStrings{Strings: condition.FuzzyAuthorIDs, Valid: len(condition.FuzzyAuthorIDs) > 0},
 		Assumed:        sql.NullBool{Bool: condition.Assumed == 1, Valid: condition.Assumed != -1},
 		OrderBy:        NewOrderBy(condition.OrderBy),
 		Pager:          NewPage(condition.Page, condition.PageSize),
