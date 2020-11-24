@@ -47,10 +47,6 @@ type scheduleModel struct {
 }
 
 func (s *scheduleModel) GetOrgClassIDsByUserIDs(ctx context.Context, userIDs []string, orgID string) ([]string, error) {
-	//userIDs := make([]string, len(operators))
-	//for i, opItem := range operators {
-	//	userIDs[i] = opItem.UserID
-	//}
 	userClassInfos, err := external.GetClassServiceProvider().GetByUserIDs(ctx, userIDs)
 	if err != nil {
 		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByUserID error",
@@ -90,31 +86,6 @@ func (s *scheduleModel) GetOrgClassIDsByUserIDs(ctx context.Context, userIDs []s
 	)
 	return result, nil
 }
-
-//func (s *scheduleModel) GetMyOrgClassIDs(ctx context.Context, op *entity.Operator) ([]string, error) {
-//	myClassInfos, err := external.GetClassServiceProvider().GetByUserID(ctx, op.UserID)
-//	if err != nil {
-//		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByUserID error", log.Err(err), log.Any("operator", op))
-//		return nil, err
-//	}
-//	myClassIDs := make([]string, len(myClassInfos))
-//	for i, item := range myClassInfos {
-//		myClassIDs[i] = item.ID
-//	}
-//	orgClassInfoMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, []string{op.OrgID})
-//	if err != nil {
-//		log.Error(ctx, "GetMyOrgClassIDs:GetClassServiceProvider.GetByOrganizationIDs error", log.Err(err), log.Any("operator", op))
-//		return nil, err
-//	}
-//	orgClassInfos := orgClassInfoMap[op.OrgID]
-//	orgClassIDs := make([]string, len(orgClassInfos))
-//	for i, item := range orgClassInfos {
-//		orgClassIDs[i] = item.ID
-//	}
-//	result := utils.IntersectAndDeduplicateStrSlice(myClassIDs, orgClassIDs)
-//	log.Debug(ctx, "my org class ids", log.Strings("classIDs", orgClassIDs), log.Any("operator", op))
-//	return result, nil
-//}
 
 func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error) {
 	var scheduleList []*entity.Schedule
