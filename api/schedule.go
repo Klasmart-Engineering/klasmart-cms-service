@@ -292,7 +292,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 	}
 	if len(filterClassIDs) == 0 {
 		log.Info(ctx, "querySchedule:filterClassIDs is empty", log.Any("operator", op))
-		c.JSON(http.StatusOK, nil)
+		c.JSON(http.StatusNotFound, entity.SchedulePageView{})
 		return
 	}
 
@@ -313,7 +313,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 				log.String("teacherName", teacherName),
 				log.Any("operator", op),
 				log.Any("condition", condition))
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			c.JSON(http.StatusNotFound, L(GeneralUnknown))
 			return
 		}
 		teacherIDs := make([]string, len(teachers))
@@ -448,7 +448,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	}
 	if len(filterClassIDs) == 0 {
 		log.Info(ctx, "getScheduleTimeView:filterClassIDs is empty", log.Any("operator", op))
-		c.JSON(http.StatusOK, nil)
+		c.JSON(http.StatusOK, []*entity.ScheduleListView{})
 		return
 	}
 	if schoolIDs.Valid {
@@ -601,9 +601,9 @@ func (s *Server) getParticipateClass(c *gin.Context) {
 func (s *Server) getLessonPlans(c *gin.Context) {
 	op := GetOperator(c)
 	ctx := c.Request.Context()
-	teacherID := c.Query("teacher_id")
+	//teacherID := c.Query("teacher_id")
 	classID := c.Query("class_id")
-	if len(strings.TrimSpace(teacherID)) == 0 || len(strings.TrimSpace(classID)) == 0 {
+	if len(strings.TrimSpace(classID)) == 0 {
 		log.Info(ctx, "teacherID and classID is require",
 			log.Any("operator", op),
 		)
@@ -611,10 +611,10 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		return
 	}
 	condition := &da.ScheduleCondition{
-		TeacherID: sql.NullString{
-			String: teacherID,
-			Valid:  true,
-		},
+		//TeacherID: sql.NullString{
+		//	String: teacherID,
+		//	Valid:  true,
+		//},
 		Status: sql.NullString{
 			String: string(entity.ScheduleStatusClosed),
 			Valid:  true,
