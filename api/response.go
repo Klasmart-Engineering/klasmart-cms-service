@@ -13,6 +13,9 @@ const (
 
 	// Report
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
+
+	//Library
+	LibraryMsgContentLocked ResponseLabel = "library_error_content_locked"
 )
 
 // schedule msg
