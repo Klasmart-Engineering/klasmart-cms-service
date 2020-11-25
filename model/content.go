@@ -262,7 +262,7 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 		}
 		response[i] = temp
 	}
-	contentWithDetails, err := cm.buildContentWithDetails(ctx, response, user)
+	contentWithDetails, err := cm.buildContentWithDetails(ctx, response, false, user)
 	if err != nil {
 		log.Error(ctx, "build content details failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -286,7 +286,7 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 		}
 		response[i] = temp
 	}
-	contentWithDetails, err := cm.buildContentWithDetails(ctx, response, user)
+	contentWithDetails, err := cm.buildContentWithDetails(ctx, response, false, user)
 	if err != nil {
 		log.Error(ctx, "build content details failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -993,7 +993,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	}
 	content.Data = filledContentData
 
-	contentWithDetails, err := cm.buildContentWithDetails(ctx, []*entity.ContentInfo{content}, user)
+	contentWithDetails, err := cm.buildContentWithDetails(ctx, []*entity.ContentInfo{content}, true, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Err(err))
 		return nil, ErrReadContentFailed
@@ -1103,7 +1103,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 	nid, cachedContent := da.GetContentRedis().GetContentCacheByIdList(ctx, cids)
 	//全在缓存中
 	if len(nid) < 1 {
-		contentWithDetails, err := cm.buildContentWithDetails(ctx, cachedContent, user)
+		contentWithDetails, err := cm.buildContentWithDetails(ctx, cachedContent, true, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Err(err))
 			return nil, ErrReadContentFailed
@@ -1126,7 +1126,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 		res[i] = temp
 	}
 	res = append(res, cachedContent...)
-	contentWithDetails, err := cm.buildContentWithDetails(ctx, res, user)
+	contentWithDetails, err := cm.buildContentWithDetails(ctx, res, true, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
@@ -1468,7 +1468,7 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 	return nil
 }
 
-func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, outComes bool, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
 	orgProvider := external.GetOrganizationServiceProvider()
 	orgs, err := orgProvider.BatchGet(ctx, user, []string{user.OrgID})
@@ -1686,10 +1686,14 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			gradeNames[j] = gradeNameMap[contentList[i].Grade[j]]
 		}
 
-		outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), contentList[i].Outcomes, user)
-		if err != nil {
-			log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
+		outcomeEntities := make([]*entity.Outcome, 0)
+		if outComes{
+			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), contentList[i].Outcomes, user)
+			if err != nil {
+				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
+			}
 		}
+
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:       *contentList[i],
