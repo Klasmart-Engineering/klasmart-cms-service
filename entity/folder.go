@@ -2,6 +2,7 @@ package entity
 
 import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"strings"
 )
 
 const (
@@ -134,6 +135,23 @@ func (p Path) ParentPath()string {
 	return string(p)
 }
 
+func (p Path) Parents() []string {
+	return strings.Split(string(p), "/")
+}
+
+func (p Path) IsChild(f string) bool {
+	parents := p.Parents()
+	for i := range parents {
+		if parents[i] == "" {
+			continue
+		}
+		if parents[i] == f {
+			return true
+		}
+	}
+	return false
+}
+
 func NewPath(p string) Path{
 	return Path(p)
 }
@@ -153,7 +171,7 @@ type FolderItem struct {
 	Creator string 	`gorm:"type:varchar(50)" json:"creator"`
 
 	ItemsCount int `gorm:"type:int" json:"items_count"`
-
+	Editor string 	`gorm:"type:varchar(50);NOT NULL" json:"editor"`
 	//VisibilitySetting string	`gorm:"type:varchar(50)" json:"visibility_setting"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" json:"create_at"`
@@ -162,7 +180,7 @@ type FolderItem struct {
 }
 
 func (f FolderItem) ChildrenPath() Path {
-	return NewPath(f.DirPath.ParentPath() + "/" + f.Name)
+	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
 }
 
 type FolderItemInfo struct {

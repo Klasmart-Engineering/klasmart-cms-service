@@ -187,6 +187,7 @@ CREATE TABLE `folder_items` (
     `link` varchar(50) comment 'folder item link',
     `item_type` int NOT NULL comment 'folder item type',
     `dir_path` varchar(1024) NOT NULL comment 'folder item path',
+    `editor` varchar(50) NOT NULL comment 'folder item editor',
     `name` varchar(256) NOT NULL comment 'folder item name',
     `thumbnail` text comment 'folder item thumbnail',
     `creator` varchar(50) comment 'folder item creator',

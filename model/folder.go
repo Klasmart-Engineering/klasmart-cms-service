@@ -29,6 +29,8 @@ var (
 	ErrUpdateFolderFailed     = errors.New("update folder into data access failed")
 	ErrFolderItemPathError    = errors.New("folder item path error")
 	ErrNoFolder = errors.New("no folder")
+	ErrMoveRootFolder            = errors.New("move root folder")
+	ErrMoveToChild            = errors.New("move to child folder")
 )
 
 type IFolderModel interface {
@@ -83,6 +85,7 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 	}
 	folder.Name = d.Name
 	folder.Thumbnail = d.Thumbnail
+	folder.Editor = operator.UserID
 	err = da.GetFolderDA().UpdateFolder(ctx, dbo.MustGetDB(ctx), folderID, folder)
 	if err != nil {
 		log.Error(ctx, "update folder item failed", log.Err(err), log.Any("folder", folder))
@@ -303,6 +306,15 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 	if !distFolder.ItemType.IsFolder() {
 		log.Error(ctx, "move to an item not folder", log.Any("parentFolder", distFolder))
 		return ErrMoveToNotFolder
+	}
+	if folder.DirPath == "" || folder.DirPath == "/" {
+		return ErrMoveRootFolder
+	}
+
+	//check if dist is folder children
+	if folder.ItemType.IsFolder() && distFolder.DirPath.IsChild(folder.ID) {
+		//distFolder.DirPath
+		return ErrMoveToChild
 	}
 
 	//check items duplicate
@@ -600,6 +612,7 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 		ItemType:  entity.FolderItemTypeFile,
 		OwnerType: ownerType,
 		Owner:     owner,
+		Editor:		operator.UserID,
 		ParentID:  req.FolderID,
 		Name:      item.Name,
 		DirPath:   path,
@@ -675,6 +688,7 @@ func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.
 		OwnerType: ownerType,
 		Owner:     owner,
 		ParentID:  req.ParentID,
+		Editor:		operator.UserID,
 		Name:      req.Name,
 		DirPath:   path,
 		Thumbnail: req.Thumbnail,
@@ -746,7 +760,7 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, parentId str
 	condition := da.FolderCondition{
 		IDs:           nil,
 		ItemType:     	int(entity.FolderItemTypeFolder),
-		ParentID:      parentId,
+		//ParentID:      parentId,
 		Name:          name,
 	}
 	total, err := da.GetFolderDA().SearchFolderCount(ctx, dbo.MustGetDB(ctx), condition)
@@ -769,7 +783,7 @@ func (f *FolderModel) getDescendantItems(ctx context.Context, folder *entity.Fol
 		return []*entity.FolderItem{folder}, nil
 	}
 	items, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
-		DirDescendant: folder.DirPath.ParentPath() + "/" + folder.ID,
+		DirDescendant: string(folder.ChildrenPath()),
 	})
 	if err != nil {
 		log.Warn(ctx, "search folder failed", log.Err(err), log.String("path", string(folder.DirPath)))

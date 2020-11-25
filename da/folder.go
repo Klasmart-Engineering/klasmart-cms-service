@@ -224,6 +224,8 @@ type FolderCondition struct {
 	Name          string
 	DirDescendant string
 
+	Editors []string
+
 	ExactDirPath string
 
 	OrderBy FolderOrderBy `json:"order_by"`
@@ -250,6 +252,10 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 	if s.ItemType != 0 {
 		conditions = append(conditions, "item_type = ?")
 		params = append(params, s.ItemType)
+	}
+	if len(s.Editors) > 0 {
+		conditions = append(conditions, "editor in (?)")
+		params = append(params, s.Editors)
 	}
 
 	if s.ParentID != "" {

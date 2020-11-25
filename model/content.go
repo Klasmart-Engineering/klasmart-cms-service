@@ -1150,11 +1150,12 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 		scope = []string{constant.NoSearchItem}
 	}
 	condition.Scope = scope
-	cm.addUserCondition(ctx, &condition, user)
-
+	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
+	condition.JoinUserIdList = searchUserIds
+	//cm.addUserCondition(ctx, &condition, user)
 
 	//生成folder condition
-	folderCondition := cm.buildFolderCondition(ctx, condition, user)
+	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIds, user)
 
 	log.Info(ctx, "search folder content", log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, condition, *folderCondition)
@@ -1166,11 +1167,12 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	return count, objs, nil
 }
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
-	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, user)
+	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
 	if err != nil{
 		return 0, nil, err
 	}
-	folderCondition := cm.buildFolderCondition(ctx, condition, user)
+	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIds, user)
 
 	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, *combineCondition, *folderCondition)
@@ -1185,7 +1187,8 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//where, params := combineCondition.GetConditions()
 	//logger.WithContext(ctx).WithField("subject", "content").Infof("Combine condition: %#v, params: %#v", where, params)
-	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, user)
+	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
 	if err != nil{
 		return 0, nil, err
 	}
@@ -1226,23 +1229,28 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 }
 
 func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition, user *entity.Operator) {
-	if condition.Name == "" {
-		return
+	condition.JoinUserIdList = cm.getRelatedUserId(ctx, condition.Name, user)
+}
+
+
+func (cm *ContentModel) getRelatedUserId(ctx context.Context, keyword string, user *entity.Operator) []string{
+	if keyword == "" {
+		return nil
 	}
-	users, err := external.GetUserServiceProvider().Query(ctx, user, user.OrgID, condition.Name)
+	users, err := external.GetUserServiceProvider().Query(ctx, user, user.OrgID, keyword)
 	if err != nil {
-		log.Warn(ctx, "get user info failed", log.Err(err), log.String("keyword", condition.Name), log.Any("user", user))
-		return
+		log.Warn(ctx, "get user info failed", log.Err(err), log.String("keyword", keyword), log.Any("user", user))
+		return nil
 	}
 	if len(users) < 1 {
-		log.Info(ctx, "user info not found in keywords", log.Err(err), log.String("keyword", condition.Name), log.String("userId", user.UserID), log.String("orgId", user.OrgID))
-		return
+		log.Info(ctx, "user info not found in keywords", log.Err(err), log.String("keyword", keyword), log.String("userId", user.UserID), log.String("orgId", user.OrgID))
+		return nil
 	}
 	ids := make([]string, len(users))
 	for i := range users {
 		ids[i] = users[i].ID
 	}
-	condition.JoinUserIdList = ids
+	return ids
 }
 
 func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
@@ -1402,7 +1410,7 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (*da.CombineConditions, error){
+func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) (*da.CombineConditions, error){
 	condition1 := condition
 	condition2 := condition
 
@@ -1439,9 +1447,8 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	}
 
 	//condition2.Scope = scopes
-
-	cm.addUserCondition(ctx, &condition1, user)
-	cm.addUserCondition(ctx, &condition2, user)
+	condition1.JoinUserIdList = searchUserIds
+	condition2.JoinUserIdList = searchUserIds
 	combineCondition := &da.CombineConditions{
 		SourceCondition: &condition1,
 		TargetCondition: &condition2,
@@ -1756,7 +1763,7 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	return ret, nil
 }
 
-func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, user *entity.Operator) *da.FolderCondition{
+func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) *da.FolderCondition{
 	dirPath := condition.DirPath
 	if dirPath == "" {
 		if len(condition.ContentType) < 0 {
@@ -1773,6 +1780,7 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		Owner:        user.OrgID,
 		Name:         condition.Name,
 		ExactDirPath: condition.DirPath,
+		Editors: searchUserIds,
 	}
 	return folderCondition
 }

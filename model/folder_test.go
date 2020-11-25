@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"math/rand"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -489,4 +490,8 @@ func TestFolderModel_GetRootFolder(t *testing.T) {
 		return
 	}
 	t.Logf("%#v\n", res)
+}
+
+func TestSplit(t *testing.T) {
+	t.Log(strings.Split("/", "/"))
 }
