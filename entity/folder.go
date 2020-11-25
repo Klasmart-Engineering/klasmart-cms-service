@@ -180,6 +180,9 @@ type FolderItem struct {
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" json:"update_at"`
 	DeleteAt int64 `gorm:"type:bigint;column:delete_at" json:"-"`
 }
+func (f FolderItem) TableName() string{
+	return "cms_folder_items"
+}
 
 func (f FolderItem) ChildrenPath() Path {
 	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
