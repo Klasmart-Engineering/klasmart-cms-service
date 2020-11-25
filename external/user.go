@@ -19,8 +19,12 @@ type UserServiceProvider interface {
 }
 
 type User struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	GivenName  string `json:"given_name"`
+	FamilyName string `json:"family_name"`
+	Email      string `json:"email"`
+	Avatar     string `json:"avatar"`
 }
 
 type NullableUser struct {
@@ -64,7 +68,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range ids {
-		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {id:user_id name:user_name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {id:user_id name:user_name given_name family_name email avatar}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -108,6 +112,10 @@ func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, or
 				user{
 					id: user_id
 					name: user_name
+					given_name
+					family_name
+					email
+					avatar
 				}
 			}
 		}
