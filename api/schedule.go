@@ -292,7 +292,10 @@ func (s *Server) querySchedule(c *gin.Context) {
 	}
 	if len(filterClassIDs) == 0 {
 		log.Info(ctx, "querySchedule:filterClassIDs is empty", log.Any("operator", op))
-		c.JSON(http.StatusNotFound, entity.SchedulePageView{})
+		c.JSON(http.StatusOK, entity.SchedulePageView{
+			Total: 0,
+			Data:  []*entity.ScheduleSearchView{},
+		})
 		return
 	}
 
@@ -313,7 +316,10 @@ func (s *Server) querySchedule(c *gin.Context) {
 				log.String("teacherName", teacherName),
 				log.Any("operator", op),
 				log.Any("condition", condition))
-			c.JSON(http.StatusNotFound, L(GeneralUnknown))
+			c.JSON(http.StatusOK, entity.SchedulePageView{
+				Total: 0,
+				Data:  []*entity.ScheduleSearchView{},
+			})
 			return
 		}
 		teacherIDs := make([]string, len(teachers))
