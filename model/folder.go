@@ -287,6 +287,7 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		FolderItem: *folderItem,
 		Items:      nil,
 	}
+	//if folder item is folder, add children items
 	if folderItem.ItemType.IsFolder() {
 		_, folderItems, err := f.SearchFolder(ctx, entity.SearchFolderCondition{
 			ParentID: folderItem.ID,
