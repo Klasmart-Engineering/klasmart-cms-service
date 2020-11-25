@@ -292,7 +292,10 @@ func (s *Server) querySchedule(c *gin.Context) {
 	}
 	if len(filterClassIDs) == 0 {
 		log.Info(ctx, "querySchedule:filterClassIDs is empty", log.Any("operator", op))
-		c.JSON(http.StatusNotFound, entity.SchedulePageView{})
+		c.JSON(http.StatusOK, entity.SchedulePageView{
+			Total: 0,
+			Data:  []*entity.ScheduleSearchView{},
+		})
 		return
 	}
 
@@ -313,7 +316,10 @@ func (s *Server) querySchedule(c *gin.Context) {
 				log.String("teacherName", teacherName),
 				log.Any("operator", op),
 				log.Any("condition", condition))
-			c.JSON(http.StatusNotFound, L(GeneralUnknown))
+			c.JSON(http.StatusOK, entity.SchedulePageView{
+				Total: 0,
+				Data:  []*entity.ScheduleSearchView{},
+			})
 			return
 		}
 		teacherIDs := make([]string, len(teachers))
@@ -601,7 +607,6 @@ func (s *Server) getParticipateClass(c *gin.Context) {
 func (s *Server) getLessonPlans(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
-	//teacherID := c.Query("teacher_id")
 	classID := c.Query("class_id")
 	if len(strings.TrimSpace(classID)) == 0 {
 		log.Info(ctx, "teacherID and classID is require",
@@ -611,10 +616,6 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		return
 	}
 	condition := &da.ScheduleCondition{
-		//TeacherID: sql.NullString{
-		//	String: teacherID,
-		//	Valid:  true,
-		//},
 		Status: sql.NullString{
 			String: string(entity.ScheduleStatusClosed),
 			Valid:  true,
