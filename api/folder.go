@@ -321,11 +321,12 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Tags folder
-// @Param owner_type query integer false "list items owner type"
+// @Param owner_type query integer false "get item owner type"
+// @Param partition query string false "get item partition"
 // @Success 200 {object} CreateFolderResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /folders/items/details/:folder_id [get]
+// @Router /folders/items/root [get]
 func (s *Server) getRootFolder(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)

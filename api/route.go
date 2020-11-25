@@ -99,7 +99,7 @@ func (s Server) registeRoute() {
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
 	}
 
-	folders := s.engine.Group("/folders")
+	folders := s.engine.Group("/v1/folders")
 	{
 		folders.POST("", s.mustLogin, s.createFolder)
 		folders.POST("/items", s.mustLogin, s.addFolderItem)
@@ -112,9 +112,11 @@ func (s Server) registeRoute() {
 		folders.GET("/items/search/private", s.mustLogin, s.searchPrivateFolderItems)
 		folders.GET("/items/search/org", s.mustLogin, s.searchOrgFolderItems)
 		folders.GET("/items/details/:item_id", s.mustLogin, s.getFolderItemByID)
+		folders.GET("/items/root", s.mustLogin, s.getRootFolder)
+
 	}
 
-	crypto := s.engine.Group("/crypto")
+	crypto := s.engine.Group("/v1/crypto")
 	{
 		crypto.GET("/h5p/signature", s.mustLogin, s.h5pSignature)
 		crypto.GET("/h5p/jwt", s.mustLogin, s.generateH5pJWT)

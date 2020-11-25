@@ -377,11 +377,11 @@ func (cd *DBContentDA) searchFolderContentSQL(query1, query2 []string) string{
 	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
 	return `SELECT 
-id, 0 as content_type, name, items_count, '' AS description, '' as keywords, creator as author, dir_path, create_at, update_at 
+id, 0 as content_type, name, items_count, '' AS description, '' as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
 FROM folder_items 
 WHERE ` + rawQuery2 +` 
 UNION ALL SELECT 
-id, content_type, content_name AS name, 0 AS items_count, description, keywords, author, dir_path, create_at, update_at 
+id, content_type, content_name AS name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
 FROM cms_contents 
 WHERE ` + rawQuery1
 }

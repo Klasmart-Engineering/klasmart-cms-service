@@ -391,13 +391,17 @@ type SubContentsWithName struct {
 type FolderContent struct {
 	ID string `json:"id"`
 	Name string `json:"name"`
-	ContentType int `json:"content_type"`
+	ContentType ContentType `json:"content_type"`
 	Description string `json:"description"`
 	Keywords string `json:"keywords"`
 	Author string `json:"author"`
 	ItemsCount int `json:"items_count"`
+	PublishStatus string `json:"publish_status"`
+	Thumbnail string `json:"thumbnail"`
+	Data string `json:"data"`
 	AuthorName string `json:"author_name"`
 	DirPath string `json:"dir_path"`
+	ContentTypeName string `json:"content_type_name"`
 	CreateAt int `json:"create_at"`
 	UpdateAt int `json:"update_at"`
 }
