@@ -27,9 +27,9 @@ func ExtractSession(c *gin.Context) (string, error) {
 	return token, nil
 }
 
-const Operator = "_op_"
+const operatorKey = "_op_"
 
-func MustLogin(c *gin.Context) {
+func (Server) mustLogin(c *gin.Context) {
 	token, err := ExtractSession(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
@@ -58,11 +58,12 @@ func MustLogin(c *gin.Context) {
 		UserID: claims.ID,
 		OrgID:  c.Query(constant.URLOrganizationIDParameter),
 		Role:   constant.DefaultRole,
+		Token:  token,
 	}
-	c.Set(Operator, op)
+	c.Set(operatorKey, op)
 }
 
-func MustLoginWithoutOrgID(c *gin.Context) {
+func (Server) mustLoginWithoutOrgID(c *gin.Context) {
 	token, err := ExtractSession(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
@@ -86,19 +87,20 @@ func MustLoginWithoutOrgID(c *gin.Context) {
 		UserID: claims.ID,
 		OrgID:  c.Query(constant.URLOrganizationIDParameter),
 		Role:   constant.DefaultRole,
+		Token:  token,
 	}
-	c.Set(Operator, op)
+	c.Set(operatorKey, op)
 }
 
-func GetOperator(c *gin.Context) *entity.Operator {
-	op, exist := c.Get(Operator)
+func (Server) getOperator(c *gin.Context) *entity.Operator {
+	op, exist := c.Get(operatorKey)
 	if exist {
 		return op.(*entity.Operator)
 	}
 	return &entity.Operator{}
 }
 
-func GetTimeLocation(c *gin.Context) *time.Location {
+func (Server) getTimeLocation(c *gin.Context) *time.Location {
 	tz := c.GetHeader("CloudFront-Viewer-Time-Zone")
 	if tz == "" {
 		log.Debug(c.Request.Context(), "GetTimeLocation: get header failed")
@@ -112,7 +114,7 @@ func GetTimeLocation(c *gin.Context) *time.Location {
 	return loc
 }
 
-func logger() gin.HandlerFunc {
+func (s Server) logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		requstURL := c.Request.URL.String()
@@ -136,7 +138,7 @@ func logger() gin.HandlerFunc {
 		// add response fields
 		duration := time.Since(start)
 		fields = append(fields,
-			log.Any("operator", GetOperator(c)),
+			log.Any("operator", s.getOperator(c)),
 			log.String("session", c.GetHeader("Session")),
 			log.Int("size", c.Writer.Size()),
 			log.Int("status", c.Writer.Status()),
@@ -156,7 +158,7 @@ func logger() gin.HandlerFunc {
 }
 
 // recovery returns a middleware for a given writer that recovers from any panics and writes a 500 if there was one.
-func recovery() gin.HandlerFunc {
+func (s Server) recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -173,7 +175,7 @@ func recovery() gin.HandlerFunc {
 
 				log.Error(c.Request.Context(), "[Recovery] panic recovered",
 					log.Stack("stack"),
-					log.Any("operator", GetOperator(c)),
+					log.Any("operator", s.getOperator(c)),
 					log.String("type", "recovery"),
 					log.String("method", c.Request.Method),
 					log.String("url", c.Request.URL.String()),

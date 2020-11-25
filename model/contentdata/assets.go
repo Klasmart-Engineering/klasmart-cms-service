@@ -83,7 +83,7 @@ func (h *AssetsData) PrepareSave(ctx context.Context, t entity.ExtraDataInReques
 	return nil
 }
 
-func (h *AssetsData) PrepareResult(ctx context.Context) error {
+func (h *AssetsData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	return nil
 }
 

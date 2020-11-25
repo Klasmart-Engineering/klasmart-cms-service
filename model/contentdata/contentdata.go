@@ -29,7 +29,7 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 	return contentData, nil
 }
 
-func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.ContentInfo, error) {
+func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
 	log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
 	contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
 	if err != nil {
@@ -72,7 +72,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	if obj.RejectReason != "" {
 		rejectReason = strings.Split(obj.RejectReason, ",")
 	}
-	user, err := external.GetUserServiceProvider().Get(ctx, obj.Author)
+	user, err := external.GetUserServiceProvider().Get(ctx, operator, obj.Author)
 	authorName := ""
 	if err != nil{
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("obj", obj))

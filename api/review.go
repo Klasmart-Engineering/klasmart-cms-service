@@ -1,9 +1,10 @@
 package api
 
 import (
+	"net/http"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -25,14 +26,14 @@ import (
 // @Router /contents/{content_id}/review/approve [put]
 func (s *Server) approve(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	cid := c.Param("content_id")
 	if cid == "" {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
 		return
 	}
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingContent271)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
@@ -44,8 +45,8 @@ func (s *Server) approve(c *gin.Context) {
 			return
 		}
 
-		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, content.PublishScope, external.ApprovePendingContent271)
-		if err != nil{
+		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
+		if err != nil {
 			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
@@ -93,7 +94,7 @@ type RejectReasonRequest struct {
 // @Router /contents/{content_id}/review/reject [put]
 func (s *Server) reject(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	cid := c.Param("content_id")
 	if cid == "" {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
@@ -106,7 +107,7 @@ func (s *Server) reject(c *gin.Context) {
 		return
 	}
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingContent272)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
@@ -118,8 +119,8 @@ func (s *Server) reject(c *gin.Context) {
 			return
 		}
 
-		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, content.PublishScope, external.ApprovePendingContent271)
-		if err != nil{
+		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
+		if err != nil {
 			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
@@ -129,7 +130,7 @@ func (s *Server) reject(c *gin.Context) {
 			return
 		}
 	}
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}

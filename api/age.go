@@ -2,13 +2,14 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary getAge
@@ -74,7 +75,7 @@ func (s *Server) getAgeByID(c *gin.Context) {
 // @Router /ages [post]
 func (s *Server) addAge(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	data := new(entity.Age)
 	if err := c.ShouldBind(data); err != nil {
 		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
@@ -103,7 +104,7 @@ func (s *Server) addAge(c *gin.Context) {
 // @Router /ages/{id} [put]
 func (s *Server) updateAge(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	data := new(entity.Age)
 	if err := c.ShouldBind(data); err != nil {
 		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
@@ -134,7 +135,7 @@ func (s *Server) updateAge(c *gin.Context) {
 // @Router /ages/{id} [delete]
 func (s *Server) deleteAge(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	id := c.Param("id")
 	err := model.GetAgeModel().Delete(ctx, op, id)
 	switch err {

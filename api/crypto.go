@@ -2,9 +2,10 @@ package api
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 type TokenResponse struct {
@@ -25,7 +26,7 @@ type SignatureResponse struct {
 // @Failure 500 {object} StatusInternalServerError
 // @Router /crypto/h5p/signature [get]
 func (s Server) h5pSignature(c *gin.Context) {
-	operator := GetOperator(c)
+	operator := s.getOperator(c)
 	urlStr := c.Query("url")
 	res, err := utils.URLSignature(operator.UserID, urlStr)
 	if err != nil {

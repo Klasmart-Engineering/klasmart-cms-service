@@ -117,7 +117,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	return nil
 }
 
-func (l *LessonData) PrepareResult(ctx context.Context) error {
+func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -136,7 +136,7 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		data, ok:= contentMap[l.MaterialId]
 		if ok {
-			material, _ := ConvertContentObj(ctx, data)
+			material, _ := ConvertContentObj(ctx, data, operator)
 			l.Material = material
 		}
 	})

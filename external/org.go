@@ -14,13 +14,13 @@ import (
 )
 
 type OrganizationServiceProvider interface {
-	BatchGet(ctx context.Context, ids []string) ([]*NullableOrganization, error)
-	GetMine(ctx context.Context, userID string) ([]*Organization, error)
-	GetParents(ctx context.Context, orgID string) ([]*Organization, error)
-	GetChildren(ctx context.Context, orgID string) ([]*Organization, error)
-	GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error)
+	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error)
+	GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error)
+	GetParents(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
+	GetChildren(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
+	GetOrganizationOrSchoolName(ctx context.Context, operator *entity.Operator, id []string) ([]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*Organization, error)
-	GetOrganizationsAssociatedWithUserID(ctx context.Context, id string)([]*Organization, error)
+	GetOrganizationsAssociatedWithUserID(ctx context.Context, operator *entity.Operator, id string) ([]*Organization, error)
 }
 
 type Organization struct {
@@ -40,14 +40,14 @@ func GetOrganizationServiceProvider() OrganizationServiceProvider {
 
 type AmsOrganizationService struct{}
 
-func (s AmsOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*NullableOrganization, error) {
+func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error) {
 	q := `query orgs($orgIDs: [ID!]){
 	organizations(organization_ids: $orgIDs){
     	id: organization_id
     	name: organization_name
   	}
 }`
-	req := cl.NewRequest(q)
+	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
 	req.Var("orgIDs", ids)
 	payload := make([]*Organization, len(ids))
 	res := cl.Response{
@@ -65,30 +65,35 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, ids []string) ([]*
 		return nil, res.Errors
 	}
 	nullableOrganizations := make([]*NullableOrganization, len(payload))
-	for i := range payload{
+	for i := range payload {
 		if payload[i] == nil {
 			nullableOrganizations[i] = &NullableOrganization{Valid: false}
 		} else {
 			nullableOrganizations[i] = &NullableOrganization{*payload[i], true}
 		}
 	}
+
+	log.Info(ctx, "get orgs by ids success",
+		log.Strings("ids", ids),
+		log.Any("orgs", nullableOrganizations))
+
 	return nullableOrganizations, nil
 }
 
-func (s AmsOrganizationService) GetMine(ctx context.Context, userID string) ([]*Organization, error) {
+func (s AmsOrganizationService) GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error) {
 	// TODO: Maybe don't need
 	return []*Organization{}, nil
 }
 
-func (s AmsOrganizationService) GetParents(ctx context.Context, orgID string) ([]*Organization, error) {
+func (s AmsOrganizationService) GetParents(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error) {
 	return []*Organization{}, nil
 }
 
-func (s AmsOrganizationService) GetChildren(ctx context.Context, orgID string) ([]*Organization, error) {
+func (s AmsOrganizationService) GetChildren(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error) {
 	return []*Organization{}, nil
 }
 
-func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, id []string) ([]string, error) {
+func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, operator *entity.Operator, ids []string) ([]string, error) {
 	raw := `query{
 	{{range $i, $e := .}}
 	org_{{$i}}: organization(organization_id: "{{$e}}"){
@@ -107,17 +112,17 @@ func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context,
 		return nil, err
 	}
 	buf := buffer.Buffer{}
-	err = temp.Execute(&buf, id)
+	err = temp.Execute(&buf, ids)
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return nil, err
 	}
-	req := chlorine.NewRequest(buf.String())
+	req := chlorine.NewRequest(buf.String(), chlorine.ReqToken(operator.Token))
 	type Payload struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 	}
-	payload := make(map[string]*Payload, len(id))
+	payload := make(map[string]*Payload, len(ids))
 	res := chlorine.Response{
 		Data: &payload,
 	}
@@ -131,7 +136,7 @@ func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context,
 		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	nameList := make([]string, len(id))
+	nameList := make([]string, len(ids))
 	for k, v := range payload {
 		index, err := strconv.Atoi(k[len("org_"):])
 		if err != nil {
@@ -143,6 +148,11 @@ func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context,
 		}
 
 	}
+
+	log.Info(ctx, "get names by org or school ids success",
+		log.Strings("ids", ids),
+		log.Strings("names", nameList))
+
 	return nameList, nil
 }
 
@@ -160,7 +170,7 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 				}
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("user_id", operator.UserID)
 	request.Var("permission_name", permissionName.String())
 
@@ -196,10 +206,15 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 		})
 	}
 
+	log.Info(ctx, "get orgs by permission success",
+		log.Any("operator", operator),
+		log.String("permissionName", permissionName.String()),
+		log.Any("orgs", orgs))
+
 	return orgs, nil
 }
 
-func (s AmsOrganizationService) GetOrganizationsAssociatedWithUserID(ctx context.Context, id string)([]*Organization, error) {
+func (s AmsOrganizationService) GetOrganizationsAssociatedWithUserID(ctx context.Context, operator *entity.Operator, id string) ([]*Organization, error) {
 	request := chlorine.NewRequest(`
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
@@ -210,7 +225,7 @@ func (s AmsOrganizationService) GetOrganizationsAssociatedWithUserID(ctx context
 				}
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("user_id", id)
 
 	data := &struct {
@@ -227,19 +242,23 @@ func (s AmsOrganizationService) GetOrganizationsAssociatedWithUserID(ctx context
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "GetOrganizationsAssociatedWithUserID failed",
+		log.Error(ctx, "get orgs by user failed",
 			log.Err(err),
-			log.String("user_id", id))
+			log.String("userID", id))
 		return nil, err
 	}
 
 	orgs := make([]*Organization, 0)
 	for _, membership := range data.User.Memberships {
 		orgs = append(orgs, &Organization{
-			ID: membership.Organization.ID,
+			ID:   membership.Organization.ID,
 			Name: membership.Organization.Name,
 		})
 	}
+
+	log.Info(ctx, "get orgs by user success",
+		log.String("userID", id),
+		log.Any("orgs", orgs))
 
 	return orgs, nil
 }

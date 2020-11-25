@@ -3,9 +3,10 @@ package external
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -13,11 +14,11 @@ import (
 )
 
 type SchoolServiceProvider interface {
-	Get(ctx context.Context, id string) (*School, error)
-	BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error)
-	GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error)
+	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
+	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
+	GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
-	GetSchoolsAssociatedWithUserID(ctx context.Context, id string)([]*School, error)
+	GetSchoolsAssociatedWithUserID(ctx context.Context, operator *entity.Operator, id string) ([]*School, error)
 }
 
 type School struct {
@@ -45,8 +46,8 @@ func GetSchoolServiceProvider() SchoolServiceProvider {
 
 type AmsSchoolService struct{}
 
-func (s AmsSchoolService) Get(ctx context.Context, id string) (*School, error) {
-	schools, err := s.BatchGet(ctx, []string{id})
+func (s AmsSchoolService) Get(ctx context.Context, operator *entity.Operator, id string) (*School, error) {
+	schools, err := s.BatchGet(ctx, operator, []string{id})
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func (s AmsSchoolService) Get(ctx context.Context, id string) (*School, error) {
 	return schools[0].School, nil
 }
 
-func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*NullableSchool, error) {
+func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error) {
 	if len(ids) == 0 {
 		return []*NullableSchool{}, nil
 	}
@@ -70,7 +71,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*Nullab
 	}
 	sb.WriteString("}")
 
-	request := chlorine.NewRequest(sb.String())
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
 	data := map[string]*School{}
 
@@ -95,10 +96,14 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, ids []string) ([]*Nullab
 		})
 	}
 
+	log.Info(ctx, "get schools by ids success",
+		log.Strings("ids", ids),
+		log.Any("schools", schools))
+
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, organizationID string) ([]*School, error) {
+func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error) {
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
@@ -107,7 +112,7 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, organizationI
 				school_name
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("organization_id", organizationID)
 
 	data := &struct {
@@ -139,6 +144,10 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, organizationI
 		})
 	}
 
+	log.Info(ctx, "query schools by organization success",
+		log.String("organizationID", organizationID),
+		log.Any("schools", schools))
+
 	return schools, nil
 }
 
@@ -156,7 +165,7 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 				}
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("user_id", operator.UserID)
 	request.Var("permission_name", permissionName.String())
 
@@ -192,10 +201,15 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 		})
 	}
 
+	log.Info(ctx, "get schools by permission",
+		log.Any("operator", operator),
+		log.String("permissionName", permissionName.String()),
+		log.Any("schools", schools))
+
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id string)([]*School, error) {
+func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, operator *entity.Operator, id string) ([]*School, error) {
 	request := chlorine.NewRequest(`
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
@@ -206,7 +220,7 @@ func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id
 				}
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("user_id", id)
 
 	data := &struct {
@@ -223,9 +237,9 @@ func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "GetSchoolsAssociatedWithUserID failed",
+		log.Error(ctx, "get schools by user failed",
 			log.Err(err),
-			log.String("user_id", id))
+			log.String("userID", id))
 		return nil, err
 	}
 
@@ -236,6 +250,10 @@ func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, id
 			Name: membership.School.Name,
 		})
 	}
+
+	log.Info(ctx, "get schools by user success",
+		log.String("userID", id),
+		log.Any("schools", schools))
 
 	return schools, nil
 }

@@ -14,7 +14,7 @@ type StudentReportItem struct {
 	NotAttemptedCount int    `json:"not_attempted_count"`
 }
 
-type StudentDetailReport struct {
+type StudentReport struct {
 	StudentName   string                   `json:"student_name"`
 	Attend        bool                     `json:"attend"`
 	Categories    []*StudentReportCategory `json:"categories"`
@@ -76,7 +76,7 @@ type ListStudentsReportCommand struct {
 	Operator     *Operator                 `json:"-"`
 }
 
-type GetStudentDetailReportCommand struct {
+type GetStudentReportCommand struct {
 	StudentID    string    `json:"student_id"`
 	TeacherID    string    `json:"teacher_id"`
 	ClassID      string    `json:"class_id"`
@@ -189,4 +189,27 @@ type ReportAttendanceOutcomeData struct {
 	SkipAttendanceID2OutcomeIDsMap        map[string][]string
 	AchievedAttendanceID2OutcomeIDsMap    map[string][]string
 	NotAchievedAttendanceID2OutcomeIDsMap map[string][]string
+}
+
+type TeacherReport struct {
+	Categories []*TeacherReportCategory `json:"categories"`
+}
+
+type TeacherReportCategory struct {
+	Name  ReportCategory `json:"name"`
+	Items []string       `json:"items"`
+}
+
+type TeacherReportSortByCount TeacherReport
+
+func (t *TeacherReportSortByCount) Len() int {
+	return len(t.Categories)
+}
+
+func (t *TeacherReportSortByCount) Less(i, j int) bool {
+	return len(t.Categories[i].Items) < len(t.Categories[j].Items)
+}
+
+func (t *TeacherReportSortByCount) Swap(i, j int) {
+	t.Categories[i], t.Categories[j] = t.Categories[j], t.Categories[i]
 }

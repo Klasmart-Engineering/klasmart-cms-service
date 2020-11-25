@@ -12,6 +12,7 @@ type Operator struct {
 	UserID string `json:"user_id"`
 	Role   string `json:"role"`
 	OrgID  string `json:"org_id"`
+	Token  string `json:"token"`
 }
 
 func (op *Operator) ToLivePayload() string {

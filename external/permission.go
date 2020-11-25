@@ -2,9 +2,10 @@ package external
 
 import (
 	"context"
-	"go.uber.org/zap/buffer"
 	"sync"
 	"text/template"
+
+	"go.uber.org/zap/buffer"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -14,8 +15,8 @@ import (
 
 type PermissionServiceProvider interface {
 	HasOrganizationPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) (bool, error)
-	HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error)
-	HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error)
+	HasSchoolPermission(ctx context.Context, operator *entity.Operator, schoolID string, permissionName PermissionName) (bool, error)
+	HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName) (map[PermissionName]bool, error)
 }
 
 var (
@@ -68,14 +69,14 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "check user permission failed",
+		log.Error(ctx, "check user org permission failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("permissionName", permissionName.String()))
 		return false, err
 	}
 
-	log.Debug(ctx, "check permission success",
+	log.Info(ctx, "check org permission success",
 		log.Any("operator", operator),
 		log.String("permissionName", permissionName.String()),
 		log.Bool("hasPermission", data.User.Membership.CheckAllowed))
@@ -83,7 +84,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 	return data.User.Membership.CheckAllowed, nil
 }
 
-func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, schoolID string, permissionName PermissionName) (bool, error) {
+func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator *entity.Operator, schoolID string, permissionName PermissionName) (bool, error) {
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID! 
@@ -95,8 +96,8 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 				checkAllowed(permission_name: $permission_name)
 			}
 		}
-	}`)
-	request.Var("user_id", userID)
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("user_id", operator.UserID)
 	request.Var("school_id", schoolID)
 	request.Var("permission_name", permissionName.String())
 
@@ -114,16 +115,16 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "check user permission failed",
+		log.Error(ctx, "check user school permission failed",
 			log.Err(err),
-			log.String("userID", userID),
+			log.Any("operator", operator),
 			log.String("schoolID", schoolID),
 			log.String("permissionName", permissionName.String()))
 		return false, err
 	}
 
-	log.Debug(ctx, "check permission success",
-		log.String("userID", userID),
+	log.Info(ctx, "check school permissions success",
+		log.Any("operator", operator),
 		log.String("schoolID", schoolID),
 		log.String("permissionName", permissionName.String()),
 		log.Bool("hasPermission", data.User.SchoolMembership.CheckAllowed))
@@ -131,7 +132,7 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, userID, s
 	return data.User.SchoolMembership.CheckAllowed, nil
 }
 
-func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName)(map[PermissionName]bool, error){
+func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName) (map[PermissionName]bool, error) {
 	raw := `
 query($user_id: ID! $organization_id: ID!) {
 	user(user_id: $user_id) {
@@ -160,9 +161,13 @@ query($user_id: ID! $organization_id: ID!) {
 	req.Var("organization_id", operator.OrgID)
 	payload := make(map[PermissionName]bool, len(permissions))
 	res := chlorine.Response{
-		Data: &struct{
-			User struct {Membership map[PermissionName]bool `json:"membership"`} `json:"user"`
-		}{struct {Membership map[PermissionName]bool `json:"membership"`}{Membership: payload}},
+		Data: &struct {
+			User struct {
+				Membership map[PermissionName]bool `json:"membership"`
+			} `json:"user"`
+		}{struct {
+			Membership map[PermissionName]bool `json:"membership"`
+		}{Membership: payload}},
 	}
 
 	_, err = GetChlorine().Run(ctx, req, &res)
@@ -174,5 +179,11 @@ query($user_id: ID! $organization_id: ID!) {
 		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
+
+	log.Info(ctx, "check org permissions success",
+		log.Any("operator", operator),
+		log.Any("permissions", permissions),
+		log.Any("hasPermission", payload))
+
 	return payload, nil
 }

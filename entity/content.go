@@ -457,7 +457,7 @@ type ContentData interface {
 	Marshal(ctx context.Context) (string, error)
 
 	Validate(ctx context.Context, contentType ContentType) error
-	PrepareResult(ctx context.Context) error
+	PrepareResult(ctx context.Context, operator *Operator) error
 	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
 	SubContentIds(ctx context.Context) []string
 }

@@ -89,7 +89,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   entity.LiveTokenTypePreview,
-		RoomID: utils.NewID(),
+		RoomID: contentID,
 	}
 
 	name, err := s.getUserName(ctx, op)
@@ -132,7 +132,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 }
 
 func (s *liveTokenModel) getUserName(ctx context.Context, op *entity.Operator) (string, error) {
-	userInfo, err := external.GetUserServiceProvider().Get(ctx, op.UserID)
+	userInfo, err := external.GetUserServiceProvider().Get(ctx, op, op.UserID)
 	if err != nil {
 		log.Error(ctx, "getUserName:get user name error",
 			log.Err(err),

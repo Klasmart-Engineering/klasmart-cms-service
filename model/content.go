@@ -255,7 +255,7 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 	}
 	response := make([]*entity.ContentInfo, len(objs))
 	for i := range objs {
-		temp, err := contentdata.ConvertContentObj(ctx, objs[i])
+		temp, err := contentdata.ConvertContentObj(ctx, objs[i], user)
 		if err != nil {
 			log.Error(ctx, "Can't parse contentdata, contentId: %v, error: %v", log.String("id", objs[i].ID), log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 			return 0, nil, err
@@ -279,7 +279,7 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 	}
 	response := make([]*entity.ContentInfo, len(objs))
 	for i := range objs {
-		temp, err := contentdata.ConvertContentObj(ctx, objs[i])
+		temp, err := contentdata.ConvertContentObj(ctx, objs[i], user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 			return 0, nil, err
@@ -522,6 +522,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		return "", ErrContentAlreadyLocked
 	}
 	content.LockedBy = user.UserID
+	//content.Author = user.UserID
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 	if err != nil {
 		return "", err
@@ -967,7 +968,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 			log.Error(ctx, "can't read contentdata", log.Err(err))
 			return nil, err
 		}
-		content, err = contentdata.ConvertContentObj(ctx, obj)
+		content, err = contentdata.ConvertContentObj(ctx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -980,7 +981,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	if err != nil {
 		return nil, err
 	}
-	err = contentData.PrepareResult(ctx)
+	err = contentData.PrepareResult(ctx, user)
 	if err != nil {
 		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
@@ -1117,7 +1118,7 @@ func (cm *ContentModel) GetContentByIdList(ctx context.Context, tx *dbo.DBContex
 	}
 	res := make([]*entity.ContentInfo, len(data))
 	for i := range data {
-		temp, err := contentdata.ConvertContentObj(ctx, data[i])
+		temp, err := contentdata.ConvertContentObj(ctx, data[i], user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.String("id", data[i].ID), log.Err(err))
 			return nil, ErrReadContentFailed
@@ -1151,6 +1152,7 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	condition.Scope = scope
 	cm.addUserCondition(ctx, &condition, user)
 
+
 	//生成folder condition
 	folderCondition := cm.buildFolderCondition(ctx, condition, user)
 
@@ -1160,7 +1162,7 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	cm.fillFolderContent(ctx, objs)
+	cm.fillFolderContent(ctx, objs, user)
 	return count, objs, nil
 }
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
@@ -1176,7 +1178,7 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	cm.fillFolderContent(ctx, objs)
+	cm.fillFolderContent(ctx, objs, user)
 
 	return count, objs, nil
 }
@@ -1223,12 +1225,12 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
-func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition , user *entity.Operator){
+func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition, user *entity.Operator) {
 	if condition.Name == "" {
 		return
 	}
-	users, err := external.GetUserServiceProvider().Query(ctx, user.OrgID, condition.Name)
-	if err != nil{
+	users, err := external.GetUserServiceProvider().Query(ctx, user, user.OrgID, condition.Name)
+	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.String("keyword", condition.Name), log.Any("user", user))
 		return
 	}
@@ -1462,7 +1464,7 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
 	orgProvider := external.GetOrganizationServiceProvider()
-	orgs, err := orgProvider.BatchGet(ctx, []string{user.OrgID})
+	orgs, err := orgProvider.BatchGet(ctx, user, []string{user.OrgID})
 	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "can't get org info", log.Err(err))
 	} else {
@@ -1508,7 +1510,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Users
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, userIds)
+	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, userIds)
 	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIds))
 	} else {
@@ -1585,7 +1587,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 	//scope
 	//TODO:change to get org name
-	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, scopeIds)
+	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, user, scopeIds)
 	if err != nil {
 		log.Error(ctx, "can't get publish scope info", log.Strings("scope", scopeIds), log.Err(err))
 	} else {
@@ -1741,7 +1743,7 @@ func (cm *ContentModel) ListVisibleScopes(ctx context.Context, permission visibl
 	return ret, nil
 }
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
-	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator.OrgID)
+	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator, operator.OrgID)
 	if err != nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
@@ -1775,12 +1777,12 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 	return folderCondition
 }
 
-func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.FolderContent) {
+func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.FolderContent, user *entity.Operator) {
 	authorIds := make([]string, len(objs))
 	for i := range objs {
 		authorIds[i] = objs[i].Author
 	}
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, authorIds)
+	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, authorIds)
 	if err != nil{
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("objs", objs))
 	}

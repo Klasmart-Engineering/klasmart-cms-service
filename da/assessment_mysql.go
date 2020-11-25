@@ -3,13 +3,14 @@ package da
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
-	"sync"
-	"time"
 )
 
 type IAssessmentDA interface {
@@ -177,7 +178,10 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		values = append(values, *c.Status)
 	}
 
-	if len(c.TeacherIDs) > 0 {
+	if c.TeacherIDs != nil {
+		if len(c.TeacherIDs) == 0 {
+			return []string{"1 = 2"}, nil
+		}
 		var (
 			partFormats = make([]string, 0, len(c.TeacherIDs))
 			partValues  = make([]interface{}, 0, len(c.TeacherIDs))

@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"time"
 )
 
 const (
@@ -79,7 +80,7 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.UpdateAt = time.Now().Unix()
 }
 
-func (oc *Outcome) Clone() Outcome {
+func (oc *Outcome) Clone(op *Operator) Outcome {
 	now := time.Now().Unix()
 	return Outcome{
 		ID:            utils.NewID(),
@@ -96,7 +97,7 @@ func (oc *Outcome) Clone() Outcome {
 		Description:   oc.Description,
 
 		EstimatedTime:  oc.EstimatedTime,
-		AuthorID:       oc.AuthorID,
+		AuthorID:       op.UserID,
 		AuthorName:     oc.AuthorName,
 		OrganizationID: oc.OrganizationID,
 
@@ -193,6 +194,7 @@ type OutcomeCondition struct {
 	OrderBy        string   `json:"order_by" form:"order_by"`
 	PublishStatus  string   `json:"publish_status" form:"publish_status"`
 	FuzzyKey       string   `json:"search_key" form:"search_key"`
+	FuzzyAuthorIDs []string `json:"fuzzy_authors" form:"fuzzy_authors"`
 	Assumed        int      `json:"assumed" form:"assumed"`
 	PublishScope   string   `json:"publish_scope" form:"publish_scope"`
 	OrganizationID string   `json:"organization_id" form:"organization_id"`

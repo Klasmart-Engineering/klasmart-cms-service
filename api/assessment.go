@@ -2,8 +2,9 @@ package api
 
 import (
 	"database/sql"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"net/http"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -75,7 +76,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), GetOperator(c), cmd)
+	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -115,7 +116,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	newID, err := model.GetAssessmentModel().Add(ctx, GetOperator(c), cmd)
+	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
@@ -153,7 +154,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), GetOperator(c), id)
+	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
@@ -212,7 +213,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		}
 	}
 
-	err := model.GetAssessmentModel().Update(ctx, GetOperator(c), cmd)
+	err := model.GetAssessmentModel().Update(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))

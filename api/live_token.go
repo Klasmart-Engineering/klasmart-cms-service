@@ -1,8 +1,9 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"net/http"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -23,7 +24,7 @@ import (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id}/live/token [get]
 func (s *Server) getScheduleLiveToken(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	scheduleID := c.Param("id")
 	token, err := model.GetLiveTokenModel().MakeLiveToken(ctx, op, scheduleID)
@@ -52,7 +53,7 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /contents/{content_id}/live/token [get]
 func (s *Server) getContentLiveToken(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	contentID := c.Param("content_id")
 	token, err := model.GetLiveTokenModel().MakeLivePreviewToken(ctx, op, contentID)

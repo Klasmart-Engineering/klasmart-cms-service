@@ -9,12 +9,13 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 type UserServiceProvider interface {
-	Get(ctx context.Context, id string) (*User, error)
-	BatchGet(ctx context.Context, ids []string) ([]*NullableUser, error)
-	Query(ctx context.Context, organizationID, keyword string) ([]*User, error)
+	Get(ctx context.Context, operator *entity.Operator, id string) (*User, error)
+	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error)
+	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
 }
 
 type User struct {
@@ -42,8 +43,8 @@ func GetUserServiceProvider() UserServiceProvider {
 
 type AmsUserService struct{}
 
-func (s AmsUserService) Get(ctx context.Context, id string) (*User, error) {
-	users, err := s.BatchGet(ctx, []string{id})
+func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id string) (*User, error) {
+	users, err := s.BatchGet(ctx, operator, []string{id})
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func (s AmsUserService) Get(ctx context.Context, id string) (*User, error) {
 	return users[0].User, nil
 }
 
-func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*NullableUser, error) {
+func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error) {
 	if len(ids) == 0 {
 		return []*NullableUser{}, nil
 	}
@@ -67,7 +68,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*Nullable
 	}
 	sb.WriteString("}")
 
-	request := chlorine.NewRequest(sb.String())
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
 	data := map[string]*User{}
 	response := &chlorine.Response{
@@ -89,10 +90,14 @@ func (s AmsUserService) BatchGet(ctx context.Context, ids []string) ([]*Nullable
 		})
 	}
 
+	log.Info(ctx, "get users by ids success",
+		log.Strings("ids", ids),
+		log.Any("users", users))
+
 	return users, nil
 }
 
-func (s AmsUserService) Query(ctx context.Context, organizationID, keyword string) ([]*User, error) {
+func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error) {
 	request := chlorine.NewRequest(`
 	query(
 		$organization_id: ID!
@@ -106,7 +111,7 @@ func (s AmsUserService) Query(ctx context.Context, organizationID, keyword strin
 				}
 			}
 		}
-	}`)
+	}`, chlorine.ReqToken(operator.Token))
 	request.Var("organization_id", organizationID)
 	request.Var("keyword", keyword)
 
@@ -124,7 +129,7 @@ func (s AmsUserService) Query(ctx context.Context, organizationID, keyword strin
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get users by keyword failed",
+		log.Error(ctx, "query users by keyword failed",
 			log.Err(err),
 			log.String("organizationID", organizationID),
 			log.String("keyword", keyword))
@@ -135,6 +140,11 @@ func (s AmsUserService) Query(ctx context.Context, organizationID, keyword strin
 	for _, member := range data.Organization.FindMembers {
 		users = append(users, member.User)
 	}
+
+	log.Info(ctx, "query users by keyword success",
+		log.String("organizationID", organizationID),
+		log.String("keyword", keyword),
+		log.Any("users", users))
 
 	return users, nil
 }

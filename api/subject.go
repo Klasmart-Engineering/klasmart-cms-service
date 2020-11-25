@@ -2,13 +2,14 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary getSubject
@@ -73,7 +74,7 @@ func (s *Server) getSubjectByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects [post]
 func (s *Server) addSubject(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Subject)
 	if err := c.ShouldBind(data); err != nil {
@@ -102,7 +103,7 @@ func (s *Server) addSubject(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects/{id} [put]
 func (s *Server) updateSubject(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Subject)
 	if err := c.ShouldBind(data); err != nil {
@@ -134,7 +135,7 @@ func (s *Server) updateSubject(c *gin.Context) {
 // @Router /subjects/{id} [delete]
 func (s *Server) deleteSubject(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	id := c.Param("id")
 	err := model.GetSubjectModel().Delete(ctx, op, id)
 	switch err {

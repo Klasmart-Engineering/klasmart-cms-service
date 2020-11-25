@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -9,17 +11,17 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
 )
 
 type QueryMode string
-var(
-	QueryModePending QueryMode   = "pending"
+
+var (
+	QueryModePending   QueryMode = "pending"
 	QueryModePublished QueryMode = "published"
-	QueryModePrivate QueryMode   = "private"
+	QueryModePrivate   QueryMode = "private"
 )
 
-type IContentPermissionModel interface{
+type IContentPermissionModel interface {
 	CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error)
 	CheckPublishContentsPermission(ctx context.Context, cids []string, scope string, user *entity.Operator) (bool, error)
 	CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
@@ -33,7 +35,7 @@ type IContentPermissionModel interface{
 }
 
 type Entity struct {
-	ID string
+	ID   string
 	Name string
 }
 
@@ -42,7 +44,7 @@ type ContentPermissionModel struct{}
 func (cpm *ContentPermissionModel) CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error) {
 	//检查是否有添加权限
 	hasPermission, err := cpm.checkHasPermission(ctx, cpm.createPermissionName(ctx, data.ContentType), user)
-	if err != nil{
+	if err != nil {
 		return false, err
 	}
 	//没有权限，直接返回
@@ -54,7 +56,7 @@ func (cpm *ContentPermissionModel) CheckCreateContentPermission(ctx context.Cont
 
 func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Context, cids []string, scope string, user *entity.Operator) (bool, error) {
 	contentList, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get content list failed", log.Strings("ids", cids), log.Err(err))
 		return false, err
 	}
@@ -67,12 +69,12 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 			log.Info(ctx, "publish content in other org", log.String("org_id", contentList[i].Org), log.String("user_org_id", user.OrgID))
 			return false, nil
 		}
-		if contentList[i].Author != user.UserID{
+		if contentList[i].Author != user.UserID {
 			othersContents = append(othersContents, contentList[i])
-		}else if scope != "" {
+		} else if scope != "" {
 			//若作者是自己，且非republish，则查看权限
 			ret, err := cpm.checkCMSPermission(ctx, scope, cpm.createPermissionName(ctx, contentList[i].ContentType), user)
-			if err != nil{
+			if err != nil {
 				return false, err
 			}
 			if !ret {
@@ -100,8 +102,8 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 		republishScope = append(republishScope, scope)
 	}
 
-	hasPermission, err := cpm.checkCMSPermissionBatch(ctx, republishScope,  []external.PermissionName{external.RepublishArchivedContent274}, user)
-	if err != nil{
+	hasPermission, err := cpm.checkCMSPermissionBatch(ctx, republishScope, []external.PermissionName{external.RepublishArchivedContent274}, user)
+	if err != nil {
 		return false, err
 	}
 	if !hasPermission {
@@ -113,7 +115,7 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 
 func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, dbo.MustGetDB(ctx), cid)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get content failed", log.String("id", cid), log.Err(err))
 		return false, err
 	}
@@ -124,12 +126,12 @@ func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context
 		return false, nil
 	}
 	//若是自己的content，则可以获取
-	if content.Author == user.UserID{
+	if content.Author == user.UserID {
 		return true, nil
 	}
 	//若不是自己的，未发布不能看
 	if content.PublishStatus == entity.ContentStatusDraft ||
-		content.PublishStatus == entity.ContentStatusRejected{
+		content.PublishStatus == entity.ContentStatusRejected {
 		log.Info(ctx, "view draft content", log.String("cid", cid), log.String("user_org_id", user.OrgID))
 		return false, nil
 	}
@@ -149,7 +151,7 @@ func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context
 
 func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, dbo.MustGetDB(ctx), cid)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get content failed", log.String("id", cid), log.Err(err))
 		return false, err
 	}
@@ -173,7 +175,7 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 		return true, nil
 	}
 	//若是自己的content，则可以修改
-	if content.Author == user.UserID{
+	if content.Author == user.UserID {
 		log.Info(ctx, "author edit", log.String("cid", cid), log.String("user_id", user.UserID))
 		return true, nil
 	}
@@ -189,7 +191,7 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 
 func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, dbo.MustGetDB(ctx), cid)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get content failed", log.String("id", cid), log.Err(err))
 		return false, err
 	}
@@ -208,7 +210,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 		return false, nil
 	}
 	//若是自己的content，则可以修改
-	if content.Author == user.UserID || content.LockedBy == user.UserID{
+	if content.Author == user.UserID || content.LockedBy == user.UserID {
 		return true, nil
 	}
 
@@ -222,7 +224,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 
 func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
 	contentList, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get content list failed", log.Strings("ids", cids), log.Err(err))
 		return false, err
 	}
@@ -235,7 +237,7 @@ func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Cont
 			log.Info(ctx, "publish content in other org", log.String("org_id", contentList[i].Org), log.String("user_org_id", user.OrgID))
 			return false, nil
 		}
-		if contentList[i].Author != user.UserID{
+		if contentList[i].Author != user.UserID {
 			othersContents = append(othersContents, contentList[i])
 		}
 	}
@@ -249,15 +251,15 @@ func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Cont
 		permissions := make([]external.PermissionName, 0)
 		if othersContents[i].PublishStatus == entity.ContentStatusArchive {
 			permissions = append(permissions, external.DeleteArchivedContent275)
-		}else if othersContents[i].PublishStatus == entity.ContentStatusPublished {
+		} else if othersContents[i].PublishStatus == entity.ContentStatusPublished {
 			permissions = append(permissions, external.ArchivePublishedContent273)
-		}else{
+		} else {
 			log.Info(ctx, "only archive and published content of other's can be deleted", log.String("user_id", user.UserID), log.String("cid", othersContents[i].ID))
 			return false, nil
 		}
 
 		flag, err := cpm.checkCMSPermission(ctx, othersContents[i].PublishScope, permissions, user)
-		if err != nil{
+		if err != nil {
 			return false, err
 		}
 		if !flag {
@@ -276,7 +278,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 		permissions = []external.PermissionName{external.PendingContentPage203}
 		for i := range condition.Scope {
 			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
-			if err != nil{
+			if err != nil {
 				return false, err
 			}
 			if !ret {
@@ -297,7 +299,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 		}
 		for i := range condition.Scope {
 			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
-			if err != nil{
+			if err != nil {
 				return false, err
 			}
 			if !ret {
@@ -318,7 +320,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 
 		for i := range condition.Scope {
 			ret, err := cpm.checkCMSPermission(ctx, condition.Scope[i], permissions, user)
-			if err != nil{
+			if err != nil {
 				return false, err
 			}
 			if !ret {
@@ -330,9 +332,9 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 	return false, nil
 }
 
-func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]Entity, error){
+func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]Entity, error) {
 	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return nil, err
 	}
@@ -343,8 +345,8 @@ func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permis
 			Name: schools[i].Name,
 		})
 	}
-	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, []string{op.OrgID})
-	if err != nil || len(orgs) < 1{
+	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, op, []string{op.OrgID})
+	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "get org info failed", log.Err(err))
 		return nil, err
 	}
@@ -362,7 +364,7 @@ func (s *ContentPermissionModel) checkCMSPermissionBatch(ctx context.Context, sc
 	orgIdList := make([]*external.Organization, 0)
 	for i := range permissions {
 		orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permissions[i])
-		if err != nil{
+		if err != nil {
 			log.Warn(ctx, "get org by permission failed", log.String("permission", string(permissions[i])),
 				log.Err(err), log.Any("user", op))
 			return false, err
@@ -395,7 +397,7 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope s
 		//检查Permission权限
 		for i := range permissions {
 			hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissions[i])
-			if err != nil{
+			if err != nil {
 				log.Error(ctx, "get permission failed", log.Err(err))
 				return false, err
 			}
@@ -410,8 +412,8 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope s
 
 	//检查学校权限
 	for i := range permissions {
-		hasPermission, err := external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op.UserID, scope, permissions[i])
-		if err != nil{
+		hasPermission, err := external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op, scope, permissions[i])
+		if err != nil {
 			log.Warn(ctx, "get school permission failed", log.Err(err))
 			return false, err
 		}
@@ -422,7 +424,6 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope s
 	return false, nil
 }
 
-
 func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
 	if len(permissions) < 1 {
 		return true, nil
@@ -430,7 +431,7 @@ func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permiss
 
 	for i := range permissions {
 		hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissions[i])
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "get permission failed", log.Err(err))
 			return false, err
 		}
@@ -443,7 +444,7 @@ func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permiss
 	//检查学校权限
 	for i := range permissions {
 		schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permissions[i])
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "get school permission failed", log.Err(err))
 			return false, err
 		}
@@ -456,7 +457,7 @@ func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, permiss
 
 func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content *entity.Content, permission external.PermissionName, op *entity.Operator) (bool, error) {
 	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return false, err
 	}
@@ -465,14 +466,14 @@ func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content 
 		orgs = append(orgs, schools[i].ID)
 	}
 	log.Info(ctx, "user orgs with permission", log.Strings("orgs", orgs), log.String("permission", string(permission)), log.Any("user", op), log.Any("content", content))
-	for i := range orgs{
+	for i := range orgs {
 		if orgs[i] == content.PublishScope {
 			return true, nil
 		}
 	}
 	return false, nil
 }
-func (s *ContentPermissionModel) createPermissionName(ctx context.Context, contentType entity.ContentType) []external.PermissionName{
+func (s *ContentPermissionModel) createPermissionName(ctx context.Context, contentType entity.ContentType) []external.PermissionName {
 	switch contentType {
 	case entity.ContentTypeMaterial:
 		return []external.PermissionName{external.CreateContentPage201, external.CreateLessonMaterial220}
@@ -484,7 +485,7 @@ func (s *ContentPermissionModel) createPermissionName(ctx context.Context, conte
 	return []external.PermissionName{external.CreateContentPage201}
 }
 
-func (s *ContentPermissionModel) editPermissionName(ctx context.Context, contentType entity.ContentType) []external.PermissionName{
+func (s *ContentPermissionModel) editPermissionName(ctx context.Context, contentType entity.ContentType) []external.PermissionName {
 	switch contentType {
 	case entity.ContentTypeMaterial:
 		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonMaterialMetadataAndContent236}
@@ -494,7 +495,7 @@ func (s *ContentPermissionModel) editPermissionName(ctx context.Context, content
 	return []external.PermissionName{external.EditOrgPublishedContent235}
 }
 
-func (s *ContentPermissionModel) deletePermissionName(ctx context.Context, contentStatus entity.ContentPublishStatus) []external.PermissionName{
+func (s *ContentPermissionModel) deletePermissionName(ctx context.Context, contentStatus entity.ContentPublishStatus) []external.PermissionName {
 	switch contentStatus {
 	case entity.ContentStatusArchive:
 		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonMaterialMetadataAndContent236}
@@ -503,6 +504,7 @@ func (s *ContentPermissionModel) deletePermissionName(ctx context.Context, conte
 	}
 	return nil
 }
+
 var (
 	_contentPermissionModel     IContentPermissionModel
 	_contentPermissionModelOnce sync.Once

@@ -22,7 +22,7 @@ func NewServer() *Server {
 
 	log.Debug(context.TODO(), "init gin success")
 
-	server.engine.Use(logger(), recovery())
+	server.engine.Use(server.logger(), server.recovery())
 
 	server.registeRoute()
 

@@ -22,7 +22,7 @@ import (
 // @Router /folders [post]
 func (s *Server) createFolder(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	var data entity.CreateFolderRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *Server) createFolder(c *gin.Context) {
 // @Router /folders/items [post]
 func (s *Server) addFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	var data entity.CreateFolderItemRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *Server) addFolderItem(c *gin.Context){
 // @Router /folders/items/{item_id} [delete]
 func (s *Server) removeFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	fid := c.Param("item_id")
 	err := model.GetFolderModel().RemoveItem(ctx, fid, op)
 
@@ -113,7 +113,7 @@ func (s *Server) removeFolderItem(c *gin.Context){
 // @Router /folders/items/details/{item_id} [put]
 func (s *Server) updateFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	fid := c.Param("item_id")
 
 	var data entity.UpdateFolderRequest
@@ -145,7 +145,7 @@ func (s *Server) updateFolderItem(c *gin.Context){
 // @Router /folders/items/move/{item_id} [put]
 func (s *Server) moveFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	fid := c.Param("item_id")
 
 	var data entity.MoveFolderRequest
@@ -180,7 +180,7 @@ func (s *Server) moveFolderItem(c *gin.Context){
 // @Router /folders/items/bulk/move [put]
 func (s *Server) moveFolderItemBulk(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	var data entity.MoveFolderIDBulk
 	err := c.ShouldBind(&data)
 	if err != nil {
@@ -210,7 +210,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 // @Router /folders/items/list/{folder_id} [get]
 func (s *Server) listFolderItems(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	fid := c.Param("folder_id")
 	itemType := utils.ParseInt(ctx, c.Query("item_type"))
 	items, err := model.GetFolderModel().ListItems(ctx, fid, entity.NewItemType(itemType), op)
@@ -241,7 +241,7 @@ func (s *Server) listFolderItems(c *gin.Context){
 // @Router /folders/items/search/private [get]
 func (s *Server) searchPrivateFolderItems(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	condition := s.buildFolderCondition(c)
 
 	total, items, err := model.GetFolderModel().SearchPrivateFolder(ctx, *condition, op)
@@ -272,7 +272,7 @@ func (s *Server) searchPrivateFolderItems(c *gin.Context){
 // @Router /folders/items/search/org [get]
 func (s *Server) searchOrgFolderItems(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	condition := s.buildFolderCondition(c)
 
 	total, items, err := model.GetFolderModel().SearchOrgFolder(ctx, *condition, op)
@@ -296,7 +296,7 @@ func (s *Server) searchOrgFolderItems(c *gin.Context){
 // @Router /folders/items/details/:folder_id [get]
 func (s *Server) getFolderItemByID(c *gin.Context){
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	fid := c.Param("folder_id")
 	item, err := model.GetFolderModel().GetFolderByID(ctx, fid, op)
 	switch err {
@@ -322,7 +322,7 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 // @Router /folders/items/details/:folder_id [get]
 func (s *Server) getRootFolder(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	fid := utils.ParseInt(ctx, c.Query("owner_type"))
 	partition := c.Param("partition")
 	rootFolderID, err := model.GetFolderModel().GetRootFolder(ctx, entity.NewFolderPartition(partition), entity.NewOwnerType(fid), op)

@@ -87,6 +87,6 @@ func (h *MaterialData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequ
 func (h *MaterialData) SubContentIds(ctx context.Context) []string{
 	return nil
 }
-func (h *MaterialData) PrepareResult(ctx context.Context) error {
+func (h *MaterialData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	return nil
 }

@@ -16,7 +16,8 @@ import (
 
 type IReportModel interface {
 	ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListStudentsReportCommand) (*entity.StudentsReport, error)
-	GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error)
+	GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.GetStudentReportCommand) (*entity.StudentReport, error)
+	GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherID string) (*entity.TeacherReport, error)
 }
 
 var (
@@ -76,7 +77,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	{
 		var err error
 		log.Debug(ctx, "list students report: before call GetClassServiceProvider().getStudents()")
-		students, err = external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
+		students, err = external.GetStudentServiceProvider().GetByClassID(ctx, operator, cmd.ClassID)
 		log.Debug(ctx, "list students report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
@@ -88,7 +89,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	log.Debug(ctx, "list students report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "list students report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -133,7 +134,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	return &result, nil
 }
 
-func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.GetStudentDetailReportCommand) (*entity.StudentDetailReport, error) {
+func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.GetStudentReportCommand) (*entity.StudentReport, error) {
 	{
 		if cmd.ClassID == "" {
 			log.Error(ctx, "get student detail report: require class id", log.Any("cmd", cmd))
@@ -171,7 +172,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	var student *external.Student
 	{
 		log.Debug(ctx, "get student detail report: before call GetClassServiceProvider().getStudents()")
-		students, err := external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
+		students, err := external.GetStudentServiceProvider().GetByClassID(ctx, operator, cmd.ClassID)
 		log.Debug(ctx, "get student detail report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
@@ -193,7 +194,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	}
 
 	log.Debug(ctx, "get student detail report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "get student detail report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -224,7 +225,7 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 		}
 	}
 
-	var result = entity.StudentDetailReport{StudentName: student.Name, AssessmentIDs: assessmentIDs}
+	var result = entity.StudentReport{StudentName: student.Name, AssessmentIDs: assessmentIDs}
 	{
 		if !data.AllAttendanceIDExistsMap[cmd.StudentID] {
 			result.Attend = false
@@ -321,13 +322,12 @@ func (r *reportModel) GetStudentDetailReport(ctx context.Context, tx *dbo.DBCont
 	return &result, nil
 }
 
-func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
-	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, classID, teacherID, lessonPlanID)
+func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
+	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids: get schedule ids failed",
 			log.Err(err),
 			log.String("class_id", classID),
-			log.String("teacher_id", teacherID),
 			log.String("lesson_plan_id", lessonPlanID),
 		)
 		return nil, err
@@ -347,10 +347,9 @@ func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 	return result, nil
 }
 
-func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
-		TeacherID:    teacherID,
 		ClassID:      classID,
 		LessonPlanID: lessonPlanID,
 		Status:       entity.ScheduleStatusClosed,
@@ -360,7 +359,6 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, ope
 		log.Error(ctx, "get schedule ids: query failed",
 			log.Err(err),
 			log.String("class_id", classID),
-			log.String("teacher_id", teacherID),
 			log.String("lesson_plan_id", lessonPlanID),
 		)
 		return nil, err
@@ -548,7 +546,7 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 	}
 	if hasP610 {
 		var validTeacherIDs []string
-		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
+		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 		if err != nil {
 			log.Error(ctx, "has report permission: call external \"GetByOrganization()\" failed",
 				log.Err(err),
@@ -561,11 +559,11 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 			validTeacherIDs = append(validTeacherIDs, teacher.ID)
 		}
 		var schoolIDs []string
-		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator.UserID)
+		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator, operator.UserID)
 		for _, school := range schools {
 			schoolIDs = append(schoolIDs, school.ID)
 		}
-		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, schoolIDs)
+		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
 		if err != nil {
 			log.Error(ctx, "has report permission: call external \"GetBySchools()\" failed",
 				log.Err(err),
@@ -587,4 +585,68 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 	}
 
 	return false, nil
+}
+
+func (r *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherID string) (*entity.TeacherReport, error) {
+	var assessmentIDs []string
+	{
+		var assessments []*entity.Assessment
+		if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentsCondition{
+			TeacherIDs: []string{teacherID},
+		}, &assessments); err != nil {
+			log.Error(ctx, "get teacher report: query failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("teacher_id", teacherID),
+			)
+			return nil, err
+		}
+		for _, item := range assessments {
+			assessmentIDs = append(assessmentIDs, item.ID)
+		}
+	}
+	var outcomes []*entity.Outcome
+	{
+		assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+		if err != nil {
+			log.Error(ctx, "get teacher report: batch get failed by assessment ids",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("teacher_id", teacherID),
+			)
+			return nil, err
+		}
+		var outcomeIDs []string
+		for _, item := range assessmentOutcomes {
+			outcomeIDs = append(outcomeIDs, item.OutcomeID)
+		}
+		utils.SliceDeduplication(outcomeIDs)
+		outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, operator)
+		if err != nil {
+			log.Error(ctx, "get teacher report: get learning outcome failed by ids",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("teacher_id", teacherID),
+			)
+			return nil, err
+		}
+	}
+	result := &entity.TeacherReport{}
+	{
+		categoryName2OutcomeCountMap := map[string][]*entity.Outcome{}
+		for _, outcome := range outcomes {
+			categoryName2OutcomeCountMap[outcome.Developmental] = append(categoryName2OutcomeCountMap[outcome.Developmental], outcome)
+		}
+		for categoryName, outcomes := range categoryName2OutcomeCountMap {
+			newItem := &entity.TeacherReportCategory{
+				Name: entity.ReportCategory(categoryName),
+			}
+			for _, outcome := range outcomes {
+				newItem.Items = append(newItem.Items, outcome.Name)
+			}
+			result.Categories = append(result.Categories, newItem)
+		}
+		sort.Sort((*entity.TeacherReportSortByCount)(result))
+	}
+	return result, nil
 }
