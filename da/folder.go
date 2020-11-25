@@ -267,7 +267,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Link)
 	}
 	if s.Name != "" {
-		conditions = append(conditions, "name LIKE ?")
+		conditions = append(conditions, "name = ?")
 		params = append(params, s.Name)
 	}
 	if s.DirDescendant != "" {

@@ -16,7 +16,7 @@ import (
 // @Produce json
 // @Param content body entity.CreateFolderRequest true "create request"
 // @Tags folder
-// @Success 200 {object} CreateResponse
+// @Success 200 {object} CreateFolderResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /folders [post]
@@ -49,7 +49,7 @@ func (s *Server) createFolder(c *gin.Context) {
 // @Produce json
 // @Param content body entity.CreateFolderItemRequest true "create request"
 // @Tags folder
-// @Success 200 {object} CreateResponse
+// @Success 200 {object} CreateFolderResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /folders/items [post]
@@ -142,6 +142,7 @@ func (s *Server) updateFolderItem(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 406 {object} GeneralUnknown
 // @Router /folders/items/move/{item_id} [put]
 func (s *Server) moveFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
@@ -160,6 +161,8 @@ func (s *Server) moveFolderItem(c *gin.Context){
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrMoveToChild:
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -177,6 +180,7 @@ func (s *Server) moveFolderItem(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 406 {object} GeneralUnknown
 // @Router /folders/items/bulk/move [put]
 func (s *Server) moveFolderItemBulk(c *gin.Context){
 	ctx := c.Request.Context()
@@ -193,6 +197,8 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrMoveToChild:
+		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -316,7 +322,7 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 // @Produce json
 // @Tags folder
 // @Param owner_type query integer false "list items owner type"
-// @Success 200 {object} CreateResponse
+// @Success 200 {object} CreateFolderResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /folders/items/details/:folder_id [get]

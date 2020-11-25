@@ -18,9 +18,9 @@ var (
 	ErrEmptyFolderName        = errors.New("empty folder name")
 	ErrEmptyFolderID          = errors.New("empty folder id")
 	ErrEmptyItemID            = errors.New("empty item id")
-	ErrMoveToNotFolder            = errors.New("move to an item not folder")
+	ErrMoveToNotFolder        = errors.New("move to an item not folder")
 	ErrInvalidFolderOwnerType = errors.New("invalid folder owner type")
-	ErrInvalidPartition = errors.New("invalid partition")
+	ErrInvalidPartition       = errors.New("invalid partition")
 	ErrInvalidFolderItemType  = errors.New("invalid folder item type")
 	ErrDuplicateFolderName    = errors.New("duplicate folder name in path")
 	ErrDuplicateItem          = errors.New("duplicate item in path")
@@ -28,8 +28,8 @@ var (
 	ErrInvalidItemLink        = errors.New("invalid item link")
 	ErrUpdateFolderFailed     = errors.New("update folder into data access failed")
 	ErrFolderItemPathError    = errors.New("folder item path error")
-	ErrNoFolder = errors.New("no folder")
-	ErrMoveRootFolder            = errors.New("move root folder")
+	ErrNoFolder               = errors.New("no folder")
+	ErrMoveRootFolder         = errors.New("move root folder")
 	ErrMoveToChild            = errors.New("move to child folder")
 )
 
@@ -83,6 +83,15 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 	if err != nil {
 		return err
 	}
+	//if name is updated, check duplicate
+	if d.Name != "" && d.Name != folder.Name{
+		err = f.checkDuplicateFolderName(ctx, folder.OwnerType, d.Name, operator)
+		if err != nil {
+			return err
+		}
+	}
+
+
 	folder.Name = d.Name
 	folder.Thumbnail = d.Thumbnail
 	folder.Editor = operator.UserID
@@ -163,17 +172,13 @@ func (f *FolderModel) RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, o
 }
 
 func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *entity.Operator) error {
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		err := f.removeItemInternal(ctx, tx, fid)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 func (f *FolderModel) MoveItemBulk(ctx context.Context, fids []string, distFolder string, operator *entity.Operator) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
@@ -236,9 +241,9 @@ func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchF
 		Owner:     condition.Owner,
 		Link:      condition.Link,
 		//VisibilitySetting: condition.VisibilitySetting,
-		ExactDirPath:      condition.Path,
-		Pager:             condition.Pager,
-		OrderBy:           da.NewFolderOrderBy(condition.OrderBy),
+		ExactDirPath: condition.Path,
+		Pager:        condition.Pager,
+		OrderBy:      da.NewFolderOrderBy(condition.OrderBy),
 	})
 	if err != nil {
 		log.Warn(ctx, "list items failed", log.Err(err), log.Any("condition", condition))
@@ -492,7 +497,7 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 		}
 	}
 	//check create request
-	err = f.checkCreateRequestEntity(ctx, req, parentFolder)
+	err = f.checkCreateRequestEntity(ctx, req, parentFolder, operator)
 	if err != nil {
 		return "", err
 	}
@@ -575,6 +580,7 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 
 	return folderItem.ID, nil
 }
+
 //
 //func (f *FolderModel) addContentConditionFilter(ctx context.Context, condition *entity.SearchFolderCondition, operator *entity.Operator) error {
 //	//获取所有查看资源的权限
@@ -613,16 +619,16 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 		ItemType:  entity.FolderItemTypeFile,
 		OwnerType: ownerType,
 		Owner:     owner,
-		Editor:		operator.UserID,
+		Editor:    operator.UserID,
 		ParentID:  req.FolderID,
 		Name:      item.Name,
 		DirPath:   path,
 		//VisibilitySetting: item.VisibilitySetting,
-		Thumbnail:         item.Thumbnail,
-		Creator:           operator.UserID,
-		CreateAt:          now,
-		UpdateAt:          now,
-		DeleteAt:          0,
+		Thumbnail: item.Thumbnail,
+		Creator:   operator.UserID,
+		CreateAt:  now,
+		UpdateAt:  now,
+		DeleteAt:  0,
 	}
 }
 func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest, parentFolder *entity.FolderItem, item *FolderItem) error {
@@ -689,19 +695,19 @@ func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.
 		OwnerType: ownerType,
 		Owner:     owner,
 		ParentID:  req.ParentID,
-		Editor:		operator.UserID,
+		Editor:    operator.UserID,
 		Name:      req.Name,
 		DirPath:   path,
 		Thumbnail: req.Thumbnail,
 		//VisibilitySetting: constant.NoVisibilitySetting,
-		Creator:           operator.UserID,
-		CreateAt:          now,
-		UpdateAt:          now,
-		DeleteAt:          0,
+		Creator:  operator.UserID,
+		CreateAt: now,
+		UpdateAt: now,
+		DeleteAt: 0,
 	}
 }
 
-func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.CreateFolderRequest, parentFolder *entity.FolderItem) error {
+func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.CreateFolderRequest, parentFolder *entity.FolderItem, operator *entity.Operator) error {
 	//check name
 	if req.Name == "" {
 		log.Warn(ctx, "empty folder name", log.Any("req", req))
@@ -718,7 +724,7 @@ func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.C
 	}
 
 	//check duplicate name
-	err := f.checkDuplicateFolderName(ctx, req.ParentID, req.Name)
+	err := f.checkDuplicateFolderName(ctx, req.OwnerType, req.Name, operator)
 	if err != nil {
 		return err
 	}
@@ -756,13 +762,15 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 	return nil
 }
 
-func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, parentId string, name string) error {
+func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType entity.OwnerType, name string, operator *entity.Operator) error {
 	//check get all sub folders from parent folder
+	//folder下folder名唯一
 	condition := da.FolderCondition{
-		IDs:           nil,
-		ItemType:     	int(entity.FolderItemTypeFolder),
-		//ParentID:      parentId,
-		Name:          name,
+		IDs:       nil,
+		ItemType:  int(entity.FolderItemTypeFolder),
+		OwnerType: int(ownerType),
+		Owner:     ownerType.Owner(operator),
+		Name:      name,
 	}
 	total, err := da.GetFolderDA().SearchFolderCount(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
