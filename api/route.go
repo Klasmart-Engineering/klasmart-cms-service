@@ -18,6 +18,15 @@ func (s Server) registeRoute() {
 
 	s.engine.GET("/v1/ping", s.ping)
 
+	users := s.engine.Group("/v1/users")
+	{
+		users.POST("/temp_code")
+		users.GET("/login", s.login)
+		users.POST("/register", s.register)
+		users.POST("/forgotten_pwd")
+		users.PUT("/reset_password")
+	}
+
 	assets := s.engine.Group("/v1/assets")
 	{
 		assets.GET("/", MustLogin, s.searchAssets)

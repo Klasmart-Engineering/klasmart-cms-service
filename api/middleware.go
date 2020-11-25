@@ -41,7 +41,7 @@ func MustLogin(c *gin.Context) {
 		Email string `json:"email"`
 		*jwt.StandardClaims
 	}{}
-	_, err = jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
+	_, err = jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
 		return config.Get().AMS.TokenVerifyKey, nil
 	})
 	if err != nil {

@@ -4,6 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
@@ -13,12 +20,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
 	"gitlab.badanamu.com.cn/calmisland/ro"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"testing"
-	"time"
 )
 
 var server *Server
