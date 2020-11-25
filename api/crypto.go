@@ -23,7 +23,7 @@ type SignatureResponse struct {
 // @Param url query string false "url to signature"
 // @Tags crypto
 // @Success 200 {object} SignatureResponse
-// @Failure 500 {object} StatusInternalServerError
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /crypto/h5p/signature [get]
 func (s Server) h5pSignature(c *gin.Context) {
 	operator := s.getOperator(c)
@@ -47,7 +47,7 @@ func (s Server) h5pSignature(c *gin.Context) {
 // @Param content_id query string false "content id to operate"
 // @Tags crypto
 // @Success 200 {object} TokenResponse
-// @Failure 500 {object} StatusInternalServerError
+// @Failure 500 {object} InternalServerErrorResponse
 // @Router /crypto/h5p/jwt [get]
 func (s Server) generateH5pJWT(c *gin.Context) {
 	sub := c.Query("sub")
