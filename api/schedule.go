@@ -607,7 +607,6 @@ func (s *Server) getParticipateClass(c *gin.Context) {
 func (s *Server) getLessonPlans(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
-	//teacherID := c.Query("teacher_id")
 	classID := c.Query("class_id")
 	if len(strings.TrimSpace(classID)) == 0 {
 		log.Info(ctx, "teacherID and classID is require",
@@ -617,10 +616,6 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		return
 	}
 	condition := &da.ScheduleCondition{
-		//TeacherID: sql.NullString{
-		//	String: teacherID,
-		//	Valid:  true,
-		//},
 		Status: sql.NullString{
 			String: string(entity.ScheduleStatusClosed),
 			Valid:  true,

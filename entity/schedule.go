@@ -371,16 +371,15 @@ type ScheduleShortInfo struct {
 	Name string `json:"name"`
 }
 type SchedulePlain struct {
-	Schedule
-	TeacherIDs []string
+	*Schedule
 }
 
 type ScheduleBasic struct {
-	Class      ScheduleShortInfo   `json:"class"`
-	Subject    ScheduleShortInfo   `json:"subject"`
-	Program    ScheduleShortInfo   `json:"program"`
-	Teachers   []ScheduleShortInfo `json:"teachers"`
-	LessonPlan ScheduleShortInfo   `json:"lesson_plan"`
+	Class      *ScheduleShortInfo   `json:"class"`
+	Subject    *ScheduleShortInfo   `json:"subject"`
+	Program    *ScheduleShortInfo   `json:"program"`
+	Teachers   []*ScheduleShortInfo `json:"teachers"`
+	LessonPlan *ScheduleShortInfo   `json:"lesson_plan"`
 }
 type ScheduleVerify struct {
 	ClassID      string

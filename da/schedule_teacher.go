@@ -74,12 +74,12 @@ var (
 	_scheduleTeacherDA   IScheduleTeacherDA
 )
 
-func GetScheduleTeacherDA() IScheduleTeacherDA {
-	_scheduleTeacherOnce.Do(func() {
-		_scheduleTeacherDA = &scheduleTeacherDA{}
-	})
-	return _scheduleTeacherDA
-}
+//func GetScheduleTeacherDA() IScheduleTeacherDA {
+//	_scheduleTeacherOnce.Do(func() {
+//		_scheduleTeacherDA = &scheduleTeacherDA{}
+//	})
+//	return _scheduleTeacherDA
+//}
 
 type ScheduleTeacherCondition struct {
 	TeacherID   sql.NullString
