@@ -47,6 +47,8 @@ func NewStoragePartition(partition string) (StoragePartition, error){
 		return ThumbnailStoragePartition, nil
 	case string(ScheduleAttachmentStoragePartition):
 		return ScheduleAttachmentStoragePartition, nil
+	case string(TeacherManualStoragePartition):
+		return TeacherManualStoragePartition, nil
 	}
 	return "", ErrInvalidUploadPartition
 }
