@@ -162,7 +162,7 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 				log.Any("perms", perms), log.Any("outcome", outcome))
 			return constant.ErrOperateNotAllowed
 		}
-		err = ocm.deleteOutcome(ctx, tx, outcome)
+		err = ocm.deleteOutcome(ctx, tx, outcome, operator)
 		if err != nil {
 			log.Error(ctx, "DeleteLearningOutcome: deleteOutcome failed",
 				log.String("op", operator.UserID),
@@ -249,7 +249,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 				log.Error(ctx, "LockLearningOutcome: copyValue status not draft",
 					log.String("op", operator.UserID),
 					log.Any("copy", copyValue))
-				return ErrContentAlreadyLocked
+				return NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 			}
 		}
 
@@ -402,7 +402,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 			return constant.ErrOperateNotAllowed
 		}
 		for _, o := range outcomes {
-			err = ocm.deleteOutcome(ctx, tx, o)
+			err = ocm.deleteOutcome(ctx, tx, o, operator)
 			if err != nil {
 				log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
 					log.String("op", operator.UserID),
@@ -661,7 +661,7 @@ func (ocm OutcomeModel) lockOutcome(ctx context.Context, tx *dbo.DBContext, outc
 		return
 	}
 	if outcome.LockedBy != "" && outcome.LockedBy != constant.LockedByNoBody {
-		err = ErrContentAlreadyLocked
+		err = NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 		log.Warn(ctx, "lockOutcome: invalid lock status",
 			log.Err(err),
 			log.String("op", operator.UserID))
@@ -697,10 +697,10 @@ func (ocm OutcomeModel) unlockOutcome(ctx context.Context, tx *dbo.DBContext, ot
 	return
 }
 
-func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) (err error) {
 	// must in a transaction
 	if outcome.LockedBy != "" && outcome.LockedBy != constant.LockedByNoBody {
-		err = ErrContentAlreadyLocked
+		err = NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 		log.Error(ctx, "deleteOutcome: invalid lock status",
 			log.Err(err),
 			log.Any("outcome", outcome))

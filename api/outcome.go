@@ -286,13 +286,16 @@ func (s *Server) lockOutcome(c *gin.Context) {
 		return
 	}
 	newID, err := model.GetOutcomeModel().LockLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, op)
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, OutcomeLockResponse{newID})
 	default:

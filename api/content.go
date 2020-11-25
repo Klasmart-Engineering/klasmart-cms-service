@@ -313,6 +313,11 @@ func (s *Server) updateContent(c *gin.Context) {
 	}
 
 	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -326,8 +331,6 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, L(LibraryMsgContentLocked))
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
@@ -380,6 +383,12 @@ func (s *Server) lockContent(c *gin.Context) {
 		}
 		return ncid, nil
 	})
+
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -387,8 +396,6 @@ func (s *Server) lockContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, L(LibraryMsgContentLocked))
 	case model.ErrInvalidLockedContentPublishStatus:
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case nil:
@@ -439,11 +446,15 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		}
 		return nil
 	})
+
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
-	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, L(LibraryMsgContentLocked))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -484,11 +495,15 @@ func (s *Server) deleteContent(c *gin.Context) {
 		}
 		return nil
 	})
+
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case model.ErrDeleteLessonInSchedule:
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
-	case model.ErrContentAlreadyLocked:
-		c.JSON(http.StatusNotAcceptable, L(LibraryMsgContentLocked))
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
