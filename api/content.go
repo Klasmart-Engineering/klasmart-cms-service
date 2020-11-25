@@ -575,7 +575,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 }
 // @Summary queryFolderContent
-// @ID searchContents
+// @ID queryFolderContent
 // @Description query content by condition
 // @Accept json
 // @Produce json
@@ -594,7 +594,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Success 200 {object} entity.FolderContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} GeneralUnknown
+// @Failure 403 {object} BadRequestResponse
 // @Router /contents_folders [get]
 func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -652,7 +652,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Success 200 {object} entity.ContentInfoWithDetailsResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} GeneralUnknown
+// @Failure 403 {object} BadRequestResponse
 // @Router /contents_private [get]
 func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()

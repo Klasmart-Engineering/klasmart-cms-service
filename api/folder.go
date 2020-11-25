@@ -142,7 +142,7 @@ func (s *Server) updateFolderItem(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 406 {object} GeneralUnknown
+// @Failure 406 {object} BadRequestResponse
 // @Router /folders/items/move/{item_id} [put]
 func (s *Server) moveFolderItem(c *gin.Context){
 	ctx := c.Request.Context()
@@ -180,7 +180,7 @@ func (s *Server) moveFolderItem(c *gin.Context){
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 406 {object} GeneralUnknown
+// @Failure 406 {object} BadRequestResponse
 // @Router /folders/items/bulk/move [put]
 func (s *Server) moveFolderItemBulk(c *gin.Context){
 	ctx := c.Request.Context()
@@ -298,7 +298,7 @@ func (s *Server) searchOrgFolderItems(c *gin.Context){
 // @Tags folder
 // @Success 200 {object} entity.FolderItemInfo
 // @Failure 500 {object} InternalServerErrorResponse
-// @Failure 404 {object} GeneralUnknown
+// @Failure 404 {object} BadRequestResponse
 // @Router /folders/items/details/:folder_id [get]
 func (s *Server) getFolderItemByID(c *gin.Context){
 	ctx := c.Request.Context()
