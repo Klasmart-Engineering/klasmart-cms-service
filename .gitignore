@@ -10,3 +10,4 @@ dist
 start.ps1
 key
 docs
+*.pem

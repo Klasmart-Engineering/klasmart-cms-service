@@ -21,6 +21,7 @@ var (
 const (
 	AssetStoragePartition        StoragePartition      = "assets"
 	ThumbnailStoragePartition      StoragePartition    = "thumbnail"
+	TeacherManualStoragePartition      StoragePartition    = "teacher_manual"
 	ScheduleAttachmentStoragePartition StoragePartition = "schedule_attachment"
 
 )

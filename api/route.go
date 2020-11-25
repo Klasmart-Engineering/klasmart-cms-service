@@ -41,6 +41,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents/:content_id/statistics", s.mustLogin, s.contentDataCount)
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
+		content.GET("/contents_folders", s.mustLogin, s.queryFolderContent)
 
 		content.PUT("/contents_bulk/publish", s.mustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)
@@ -98,9 +99,25 @@ func (s Server) registeRoute() {
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
 	}
 
-	crypto := s.engine.Group("/v1/crypto")
+	folders := s.engine.Group("/folders")
+	{
+		folders.POST("", s.mustLogin, s.createFolder)
+		folders.POST("/items", s.mustLogin, s.addFolderItem)
+		folders.DELETE("/items/:item_id", s.mustLogin, s.removeFolderItem)
+		folders.PUT("/items/details/:item_id", s.mustLogin, s.updateFolderItem)
+		folders.PUT("/items/move/:item_id", s.mustLogin, s.moveFolderItem)
+		folders.PUT("/items/bulk/move", s.mustLogin, s.moveFolderItemBulk)
+
+		folders.GET("/items/list/:item_id", s.mustLogin, s.listFolderItems)
+		folders.GET("/items/search/private", s.mustLogin, s.searchPrivateFolderItems)
+		folders.GET("/items/search/org", s.mustLogin, s.searchOrgFolderItems)
+		folders.GET("/items/details/:item_id", s.mustLogin, s.getFolderItemByID)
+	}
+
+	crypto := s.engine.Group("/crypto")
 	{
 		crypto.GET("/h5p/signature", s.mustLogin, s.h5pSignature)
+		crypto.GET("/h5p/jwt", s.mustLogin, s.generateH5pJWT)
 	}
 
 	ages := s.engine.Group("/v1/ages")
