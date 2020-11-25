@@ -1811,6 +1811,7 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 	for i := range objs {
 		authorIds[i] = objs[i].Author
 	}
+
 	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, authorIds)
 	if err != nil{
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("objs", objs))
@@ -1823,6 +1824,7 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 	}
 	for i := range objs {
 		objs[i].AuthorName = authorMap[objs[i].Author]
+		objs[i].ContentTypeName = objs[i].ContentType.Name()
 	}
 }
 
