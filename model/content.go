@@ -30,7 +30,7 @@ var (
 	ErrInvalidLockedContentPublishStatus = errors.New("invalid locked content publish status")
 	ErrInvalidContentStatusToPublish     = errors.New("content status is invalid to publish")
 	ErrNoContent                         = errors.New("no content")
-	ErrContentAlreadyLocked              = errors.New("content is already locked")
+	//ErrContentAlreadyLocked              = errors.New("content is already locked")
 	ErrDeleteLessonInSchedule            = errors.New("can't delete lesson in schedule")
 	ErrGetUnpublishedContent             = errors.New("unpublished content")
 	ErrGetUnauthorizedContent            = errors.New("unauthorized content")
@@ -50,7 +50,23 @@ var (
 	ErrNoRejectReason     = errors.New("no reject reason")
 
 	ErrInvalidSelectForm = errors.New("invalid select form")
+	ErrUserNotFound = errors.New("user not found in locked by")
 )
+
+type ErrContentAlreadyLocked struct {
+	LockedBy *external.User
+}
+
+func (e *ErrContentAlreadyLocked) Error() string{
+	return "content is already locked"
+}
+func NewErrContentAlreadyLocked(ctx context.Context, lockedBy string, operator *entity.Operator) error{
+	user, err := external.GetUserServiceProvider().Get(ctx, operator, lockedBy)
+	if err != nil{
+		return ErrUserNotFound
+	}
+	return &ErrContentAlreadyLocked{LockedBy: user}
+}
 
 type visiblePermission string
 
@@ -519,7 +535,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 
 	//更新锁定状态
 	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody {
-		return "", ErrContentAlreadyLocked
+		return "", NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 	content.LockedBy = user.UserID
 	//content.Author = user.UserID
@@ -751,10 +767,10 @@ func (cm *ContentModel) checkDeleteContent(ctx context.Context, content *entity.
 
 func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	if content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
-		return ErrContentAlreadyLocked
+		return NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 	if content.PublishStatus == entity.ContentStatusPublished && content.LockedBy != constant.LockedByNoBody {
-		return ErrContentAlreadyLocked
+		return NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 
 	err := cm.checkDeleteContent(ctx, content)
