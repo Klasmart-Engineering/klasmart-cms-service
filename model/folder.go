@@ -85,7 +85,7 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 	}
 	//if name is updated, check duplicate
 	if d.Name != "" && d.Name != folder.Name{
-		err = f.checkDuplicateFolderName(ctx, folder.OwnerType, d.Name, operator)
+		err = f.checkDuplicateFolderNameForUpdate(ctx, d.Name, folder, operator)
 		if err != nil {
 			return err
 		}
@@ -724,7 +724,7 @@ func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.C
 	}
 
 	//check duplicate name
-	err := f.checkDuplicateFolderName(ctx, req.OwnerType, req.Name, operator)
+	err := f.checkDuplicateFolderName(ctx, req.OwnerType, req.Name, parentFolder, operator)
 	if err != nil {
 		return err
 	}
@@ -762,8 +762,8 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 	return nil
 }
 
-func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType entity.OwnerType, name string, operator *entity.Operator) error {
-	//check get all sub folders from parent folder
+func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType entity.OwnerType, name string, parentFolder *entity.FolderItem, operator *entity.Operator) error {
+	//check get all sub folders from parent parentFolder
 	//folder下folder名唯一
 	condition := da.FolderCondition{
 		IDs:       nil,
@@ -772,16 +772,78 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 		Owner:     ownerType.Owner(operator),
 		Name:      name,
 	}
-	total, err := da.GetFolderDA().SearchFolderCount(ctx, dbo.MustGetDB(ctx), condition)
+	folders, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), condition)
+	if err != nil {
+		log.Error(ctx, "count parentFolder for check duplicate parentFolder failed",
+			log.Err(err), log.Any("condition", condition))
+		return err
+	}
+	//check duplicate parentFolder name
+	if len(folders) > 0 {
+		//if owner type is organization,parentFolder can be the same
+		//in different partition
+		if ownerType == entity.OwnerTypeOrganization {
+			p := parentFolder.DirPath.Parents()
+			if len(p) < 1 {
+				//root path can't be the same
+				return ErrDuplicateFolderName
+			}
+			for i := range folders {
+				parents := folders[i].DirPath.Parents()
+				if len(parents) > 1 && parents[0] == p[0]{
+					return ErrDuplicateFolderName
+				}
+			}
+			return nil
+		}
+
+		return ErrDuplicateFolderName
+	}
+
+
+	return nil
+}
+
+
+
+func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, name string, folder *entity.FolderItem, operator *entity.Operator) error {
+	//check get all sub folders from parent folder
+	//folder下folder名唯一
+	condition := da.FolderCondition{
+		IDs:       nil,
+		ItemType:  int(entity.FolderItemTypeFolder),
+		OwnerType: int(folder.OwnerType),
+		Owner:     folder.Owner,
+		Name:      name,
+	}
+	folders, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		log.Error(ctx, "count folder for check duplicate folder failed",
 			log.Err(err), log.Any("condition", condition))
 		return err
 	}
 	//check duplicate folder name
-	if total > 0 {
+	if len(folders) > 0 {
+		//if owner type is organization,folder can be the same
+		//in different partition
+		if folder.OwnerType == entity.OwnerTypeOrganization {
+			p := folder.DirPath.Parents()
+			if len(p) < 1 {
+				//root path can't be the same
+				return ErrDuplicateFolderName
+			}
+			for i := range folders {
+				parents := folders[i].DirPath.Parents()
+				if len(parents) > 1 && parents[0] == p[0]{
+					return ErrDuplicateFolderName
+				}
+			}
+			return nil
+		}
+
 		return ErrDuplicateFolderName
 	}
+
 
 	return nil
 }

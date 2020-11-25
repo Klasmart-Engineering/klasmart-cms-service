@@ -136,15 +136,17 @@ func (p Path) ParentPath()string {
 }
 
 func (p Path) Parents() []string {
-	return strings.Split(string(p), "/")
+	pairs := strings.Split(string(p), "/")
+	ret := make([]string, len(pairs) - 1)
+	for i := range pairs {
+		ret[i] = pairs[i + 1]
+	}
+	return ret
 }
 
 func (p Path) IsChild(f string) bool {
 	parents := p.Parents()
 	for i := range parents {
-		if parents[i] == "" {
-			continue
-		}
 		if parents[i] == f {
 			return true
 		}
