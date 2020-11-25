@@ -168,7 +168,7 @@ create table outcomes_attendances
 ) comment 'outcome and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 
-CREATE TABLE `folder_items` (
+CREATE TABLE `cms_folder_items` (
     `id` varchar(50) comment 'id',
     `owner_type` int NOT NULL comment 'folder item owner type',
     `owner` varchar(50) NOT NULL comment 'folder item owner',
