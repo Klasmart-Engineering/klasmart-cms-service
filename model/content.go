@@ -1690,6 +1690,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		if err != nil {
 			log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 		}
+		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
 			ContentInfo:       *contentList[i],
 			ContentTypeName:   contentList[i].ContentType.Name(),
