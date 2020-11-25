@@ -144,7 +144,6 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		ClassID:      viewData.ClassID,
 		SubjectID:    viewData.SubjectID,
 		ProgramID:    viewData.ProgramID,
-		TeacherIDs:   viewData.TeacherIDs,
 		LessonPlanID: viewData.LessonPlanID,
 		ClassType:    viewData.ClassType,
 	})
@@ -180,7 +179,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 	}
 	schedule, err := viewData.ToSchedule(ctx)
 	schedule.CreatedID = op.UserID
-	scheduleID, err := s.addSchedule(ctx, tx, schedule, viewData.TeacherIDs, &viewData.Repeat, viewData.Location)
+	scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location)
 	if err != nil {
 		log.Error(ctx, "add schedule: error",
 			log.Err(err),
@@ -192,25 +191,11 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 	return scheduleID, nil
 }
 
-func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, teacherIDs []string, options *entity.RepeatOptions, location *time.Location) (string, error) {
+func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location) (string, error) {
 	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
-	}
-	scheduleTeachers := make([]*entity.ScheduleTeacher, len(scheduleList)*len(teacherIDs))
-	index := 0
-	for _, item := range scheduleList {
-		item.ID = utils.NewID()
-		for _, teacherID := range teacherIDs {
-			tsItem := &entity.ScheduleTeacher{
-				ID:         utils.NewID(),
-				TeacherID:  teacherID,
-				ScheduleID: item.ID,
-			}
-			scheduleTeachers[index] = tsItem
-			index++
-		}
 	}
 
 	// add to schedules
@@ -271,7 +256,6 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		ClassID:      viewData.ClassID,
 		SubjectID:    viewData.SubjectID,
 		ProgramID:    viewData.ProgramID,
-		TeacherIDs:   viewData.TeacherIDs,
 		LessonPlanID: viewData.LessonPlanID,
 		ClassType:    viewData.ClassType,
 	})
@@ -378,7 +362,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			}
 		}
 
-		id, err = s.addSchedule(ctx, tx, schedule, viewData.TeacherIDs, repeatOptions, viewData.Location)
+		id, err = s.addSchedule(ctx, tx, schedule, repeatOptions, viewData.Location)
 		if err != nil {
 			log.Error(ctx, "update schedule: add failed",
 				log.Err(err),
@@ -563,6 +547,11 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider.GetByClasses error", log.Err(err), log.Strings("classIDs", classIDs))
 		return nil, err
 	}
+	classStudents, err := external.GetStudentServiceProvider().GetByClassIDs(ctx, operator, classIDs)
+	if err != nil {
+		log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider.GetByClasses error", log.Err(err), log.Strings("classIDs", classIDs))
+		return nil, err
+	}
 
 	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, subjectIDs)
 	if err != nil {
@@ -596,14 +585,26 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 			scheduleBasic.LessonPlan = v
 		}
 		if v, ok := classTeachers[item.ClassID]; ok {
-			scheduleBasic.Teachers = make([]*entity.ScheduleShortInfo, len(v))
+			scheduleBasic.MemberTeachers = make([]*entity.ScheduleShortInfo, len(v))
 			for i, t := range v {
-				scheduleBasic.Teachers[i] = &entity.ScheduleShortInfo{
+				scheduleBasic.MemberTeachers[i] = &entity.ScheduleShortInfo{
 					ID:   t.ID,
 					Name: t.Name,
 				}
 			}
 		}
+		scheduleBasic.Members = scheduleBasic.MemberTeachers
+
+		if v, ok := classStudents[item.ClassID]; ok {
+			scheduleBasic.StudentCount = len(v)
+			for _, t := range v {
+				scheduleBasic.Members = append(scheduleBasic.Members, &entity.ScheduleShortInfo{
+					ID:   t.ID,
+					Name: t.Name,
+				})
+			}
+		}
+
 		scheduleBasicMap[item.ID] = scheduleBasic
 	}
 	return scheduleBasicMap, nil
@@ -847,18 +848,6 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 			log.Error(ctx, "getBasicInfo:GetClassServiceProvider class info not found", log.Any("ScheduleVerify", v))
 			return constant.ErrRecordNotFound
 		}
-	}
-	// teacher
-	teacherIDs := utils.SliceDeduplication(v.TeacherIDs)
-
-	userService := external.GetUserServiceProvider()
-	_, err = userService.BatchGet(ctx, operator, teacherIDs)
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetUserServiceProvider BatchGet error",
-			log.Err(err),
-			log.Strings("teacherIDs", teacherIDs),
-			log.Any("ScheduleVerify", v))
-		return err
 	}
 
 	if v.ClassType == entity.ScheduleClassTypeTask {

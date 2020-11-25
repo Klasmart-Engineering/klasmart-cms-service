@@ -1,27 +1,13 @@
 package model
 
 import (
-	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"testing"
 	"time"
 )
 
 func TestScheduleModel_Add(t *testing.T) {
-	s := entity.ScheduleDetailsView{
-		ID:     "1",
-		Title:  "是否",
-		OrgID:  "2",
-		Repeat: entity.RepeatOptions{},
-		ScheduleBasic: entity.ScheduleBasic{
-			Class: entity.ScheduleShortInfo{
-				ID:   "1",
-				Name: "班級",
-			},
-		},
-	}
-	b, _ := json.Marshal(s)
-	t.Log(string(b))
+
 }
 
 func TestScheduleModel_GetByID(t *testing.T) {
@@ -32,5 +18,31 @@ func TestScheduleModel_GetByID(t *testing.T) {
 }
 
 func TestTemp(t *testing.T) {
+	var s1 []*external.Class
+	s1 = append(s1, &external.Class{
+		ID:   "1",
+		Name: "aaaa",
+	})
+	s1 = append(s1, &external.Class{
+		ID:   "2",
+		Name: "bbbb",
+	})
+	var s2 []*external.Class
+	s2 = s1
+	s2 = append(s1, &external.Class{
+		ID:   "3",
+		Name: "cccc",
+	})
+	t.Log("s1:", len(s1))
+	t.Log("s2:", len(s2))
+
+	t.Log("s1:", s1[0].ID)
+	t.Log("s2:", s2[0].ID)
+	s1[0].ID = "10"
+	t.Log("s1:", s1[0].ID)
+	t.Log("s2:", s2[0].ID)
+	s2[2].ID = "11"
+	t.Log("s1:", s1[1].ID)
+	t.Log("s2:", s2[2].ID)
 
 }

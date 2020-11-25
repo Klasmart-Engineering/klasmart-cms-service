@@ -260,9 +260,10 @@ func (s Schedule) Clone() Schedule {
 }
 
 type ScheduleAddView struct {
-	Title          string            `json:"title" binding:"required"`
-	ClassID        string            `json:"class_id" binding:"required"`
-	LessonPlanID   string            `json:"lesson_plan_id"`
+	Title        string `json:"title" binding:"required"`
+	ClassID      string `json:"class_id" binding:"required"`
+	LessonPlanID string `json:"lesson_plan_id"`
+	// Abandoned
 	TeacherIDs     []string          `json:"teacher_ids" binding:"required,min=1"`
 	OrgID          string            `json:"org_id"`
 	StartAt        int64             `json:"start_at" binding:"required"`
@@ -375,17 +376,18 @@ type SchedulePlain struct {
 }
 
 type ScheduleBasic struct {
-	Class      *ScheduleShortInfo   `json:"class"`
-	Subject    *ScheduleShortInfo   `json:"subject"`
-	Program    *ScheduleShortInfo   `json:"program"`
-	Teachers   []*ScheduleShortInfo `json:"teachers"`
-	LessonPlan *ScheduleShortInfo   `json:"lesson_plan"`
+	Class          *ScheduleShortInfo   `json:"class"`
+	Subject        *ScheduleShortInfo   `json:"subject"`
+	Program        *ScheduleShortInfo   `json:"program"`
+	Members        []*ScheduleShortInfo `json:"teachers"`
+	MemberTeachers []*ScheduleShortInfo `json:"member_teachers"`
+	StudentCount   int                  `json:"student_count"`
+	LessonPlan     *ScheduleShortInfo   `json:"lesson_plan"`
 }
 type ScheduleVerify struct {
 	ClassID      string
 	SubjectID    string
 	ProgramID    string
-	TeacherIDs   []string
 	LessonPlanID string
 	ClassType    ScheduleClassType
 }
@@ -413,7 +415,6 @@ type SchedulePageView struct {
 }
 
 type ScheduleIDsCondition struct {
-	TeacherID    string
 	ClassID      string
 	LessonPlanID string
 	Status       ScheduleStatus
