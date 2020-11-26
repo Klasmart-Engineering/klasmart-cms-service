@@ -50,7 +50,6 @@ func (s *Server) setUserSetting(c *gin.Context) {
 // @Produce json
 // @Tags userSetting
 // @Success 200 {object} entity.UserSettingJsonContent
-// @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /user_settings [get]
