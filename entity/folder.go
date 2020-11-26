@@ -158,7 +158,7 @@ type FolderItem struct {
 	ParentID  string    `gorm:"type:varchar(50)" json:"parent_id"`
 	Link      string    `gorm:"type:varchar(50)" json:"link"`
 
-	ItemType ItemType `gorm:"type:int;NOT NULL"`
+	ItemType ItemType `gorm:"type:int;NOT NULL" json:"item_type"`
 	DirPath  Path     `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
 	Partition string `gorm:"type:varchar(256);NOT NULL" json:"partition"`
 	Name     string   `gorm:"type:varchar(256);NOT NULL" json:"name"`

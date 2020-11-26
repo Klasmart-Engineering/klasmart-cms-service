@@ -75,7 +75,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}
 
 	path := "/"
-
 	return &entity.Content{
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
