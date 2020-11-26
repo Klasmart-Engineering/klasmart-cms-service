@@ -14,6 +14,21 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
+var(
+	StorageDownloadNativeMode StorageDownloadMode = "native"
+	StorageDownloadCDNMode StorageDownloadMode = "cdn"
+)
+
+type StorageDownloadMode string
+
+func NewStorageDownloadMode(mode string)StorageDownloadMode {
+	if mode == "native" {
+		return StorageDownloadNativeMode
+	}else{
+		return StorageDownloadCDNMode
+	}
+}
+
 type Config struct {
 	StorageConfig   StorageConfig    `yaml:"storage_config"`
 	CDNConfig       CDNConfig        `yaml:"cdn_config"`
@@ -57,6 +72,8 @@ type StorageConfig struct {
 	CloudEnv      string `yaml:"cloud_env"`
 	StorageBucket string `yaml:"storage_bucket"`
 	StorageRegion string `yaml:"storage_region"`
+
+	DownloadMode StorageDownloadMode `yaml:"download_mode"`
 }
 
 type CDNConfig struct {
@@ -114,6 +131,7 @@ func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
+	config.StorageConfig.DownloadMode = NewStorageDownloadMode(os.Getenv("storage_download_mode"))
 
 	accelerateStr := assertGetEnv("storage_accelerate")
 	accelerate, err := strconv.ParseBool(accelerateStr)
