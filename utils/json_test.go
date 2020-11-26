@@ -14,7 +14,8 @@ func TestJsonMerge(t *testing.T) {
 		CMSPageSize: 10,
 		Str:         "2",
 	}
-	var userSetting *JsonContent
+	var userSetting *JsonContent = new(JsonContent)
+	userSetting.CMSPageSize = 2
 
 	err := JsonMerge(userSetting, defaultSetting)
 	if err != nil {

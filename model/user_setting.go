@@ -136,15 +136,8 @@ func (u *userSettingModel) GetByOperator(ctx context.Context, op *entity.Operato
 		)
 		return nil, err
 	}
-	err = utils.JsonMerge(userJsonContent, defaultJsonContent)
-	if err != nil {
-		log.Error(ctx, "GetByOperator:utils.JsonMerge error",
-			log.Err(err),
-			log.Any("op", op),
-			log.Any("userJsonContent", userJsonContent),
-			log.Any("defaultJsonContent", defaultJsonContent),
-		)
-		return nil, err
+	if userJsonContent.CMSPageSize <= 0 {
+		userJsonContent.CMSPageSize = defaultJsonContent.CMSPageSize
 	}
 	return userJsonContent, nil
 }

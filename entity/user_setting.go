@@ -21,5 +21,5 @@ const (
 )
 
 type UserSettingJsonContent struct {
-	CMSPageSize int `json:"cms_page_size"`
+	CMSPageSize int `json:"cms_page_size" binding:"required,min=1"`
 }

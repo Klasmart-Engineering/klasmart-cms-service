@@ -18,7 +18,6 @@ import (
 // @Tags userSetting
 // @Success 200 {object} entity.IDResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /user_settings [post]
 func (s *Server) setUserSetting(c *gin.Context) {
