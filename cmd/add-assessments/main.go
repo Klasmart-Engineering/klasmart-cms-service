@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -30,15 +31,19 @@ func main() {
 }
 
 type args struct {
-	baseURL     string
-	orgID       string
-	scheduleIDs []string
-	cookie      string
+	baseURL         string
+	graphqlEndpoint string
+	orgID           string
+	scheduleIDs     []string
+	cookie          string
 }
 
 func (a args) check() error {
 	if a.baseURL == "" {
 		return errors.New("require base url")
+	}
+	if a.graphqlEndpoint == "" {
+		return errors.New("require graphql endpoint")
 	}
 	if a.orgID == "" {
 		return errors.New("require org id")
@@ -55,6 +60,7 @@ func (a args) check() error {
 func parseArgs() (args, error) {
 	a := args{}
 	flag.StringVar(&a.baseURL, "base-url", "https://kl2-test.kidsloop.net", "base url")
+	flag.StringVar(&a.graphqlEndpoint, "graphql-endpoint", "https://api.kidsloop.net/user/", "graphql endpoint")
 	flag.StringVar(&a.orgID, "org-id", "", "org id, required")
 	flag.StringVar(&a.cookie, "cookie", "", "browser cookie, required")
 	scheduleIDsString := flag.String("schedule-ids", "", "schedule ids, separate by comma, require one of \"schedule-ids\" and \"schedule-ids-file\"")
@@ -88,7 +94,7 @@ func run(a args) error {
 	log.Printf("process args: %+v\n", a)
 	for _, scheduleID := range a.scheduleIDs {
 		log.Printf("processing: schedule_id = %s ...", scheduleID)
-		if err := addAssessment(a.baseURL, a.orgID, scheduleID, a.cookie); err != nil {
+		if err := addAssessment(a.baseURL, a.graphqlEndpoint, a.orgID, scheduleID, a.cookie); err != nil {
 			return err
 		}
 		log.Printf("process ok: schedule_id = %s", scheduleID)
@@ -96,12 +102,12 @@ func run(a args) error {
 	return nil
 }
 
-func addAssessment(baseURL string, orgID string, scheduleID string, cookie string) error {
+func addAssessment(baseURL string, graphqlEndpoint, orgID string, scheduleID string, cookie string) error {
 	schedule, err := getSchedule(baseURL, orgID, scheduleID, cookie)
 	if err != nil {
 		return err
 	}
-	studentIDs, err := getClassStudentIDs(schedule.Class.ID, cookie)
+	studentIDs, err := getClassStudentIDs(graphqlEndpoint, schedule.Class.ID, cookie)
 	if err != nil {
 		return err
 	}
@@ -113,52 +119,63 @@ func addAssessment(baseURL string, orgID string, scheduleID string, cookie strin
 	}
 	b, err := json.Marshal(cmd)
 	if err != nil {
-		panic(err)
 		return err
 	}
 	req, err := http.NewRequest(http.MethodPost, baseURL+"/v1/assessments?org_id="+orgID, bytes.NewBuffer(b))
 	if err != nil {
-		panic(err)
 		return err
 	}
 	req.Header.Add("Cookie", cookie)
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
 		return err
 	}
 	defer resp.Body.Close()
 	b2, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
 		return err
 	}
-	log.Println("process ok:", string(b2))
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("process ok: %s\n", string(b2))
+	} else {
+		log.Printf("process fail: %d: %s\n", resp.StatusCode, string(b2))
+		log.Println("cmd:", cmd)
+		log.Println("x-curr-tid:", resp.Header.Get("x-curr-tid"))
+		log.Println("x-entry-tid:", resp.Header.Get("x-entry-tid"))
+		return errors.New(fmt.Sprintf("process fail: %d: %s\n", resp.StatusCode, string(b2)))
+	}
 	return nil
 }
 
 func getSchedule(baseURL string, orgID string, scheduleID string, cookie string) (*entity.ScheduleDetailsView, error) {
-	req, err := http.NewRequest(http.MethodGet, baseURL+"/v1/schedules/"+scheduleID+"?org_id="+orgID, nil)
+	url := baseURL + "/v1/schedules/" + scheduleID + "?org_id=" + orgID
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 	req.Header.Add("Cookie", cookie)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var result entity.ScheduleDetailsView
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		panic(err)
-		return nil, err
+	if resp.StatusCode == http.StatusOK {
+		var result entity.ScheduleDetailsView
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return nil, err
+		}
+		return &result, nil
+	} else {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(fmt.Sprintf("get schedule fail: %s: %d: %s", url, resp.StatusCode, string(b)))
 	}
-	return &result, nil
 }
 
-func getClassStudentIDs(classID string, cookie string) ([]string, error) {
+func getClassStudentIDs(graphqlEndpoint string, classID string, cookie string) ([]string, error) {
 	q := `query ($classID: ID!){
 	class(class_id: $classID){
 		students{
@@ -180,7 +197,7 @@ func getClassStudentIDs(classID string, cookie string) ([]string, error) {
 			Students *[]*external.Student `json:"students"`
 		}{Students: &students}},
 	}
-	_, err := external.GetChlorine().Run(context.Background(), req, &res)
+	_, err := chlorine.NewClient(graphqlEndpoint).Run(context.Background(), req, &res)
 	if err != nil {
 		return nil, err
 	}
