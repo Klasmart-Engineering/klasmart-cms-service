@@ -435,10 +435,10 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	if status == entity.ContentStatusRejected && len(reason) < 1 && remark == "" {
 		return ErrNoRejectReason
 	}
-	operator := &entity.Operator{
-		UserID: content.Author,
-		OrgID:  content.Org,
-	}
+	//operator := &entity.Operator{
+	//	UserID: content.Author,
+	//	OrgID:  content.Org,
+	//}
 
 	//更新content的path
 	content.DirPath = "/"
