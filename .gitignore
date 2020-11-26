@@ -12,3 +12,4 @@ key
 docs
 *.pem
 cmd/add-assessments/add-assessments
+cmd/add-assessments/add-assessments.exe

@@ -28,6 +28,7 @@ func main() {
 	if err := run(a); err != nil {
 		panic(err)
 	}
+	log.Println("all done!")
 }
 
 type args struct {
@@ -136,14 +137,9 @@ func addAssessment(baseURL string, graphqlEndpoint, orgID string, scheduleID str
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode == http.StatusOK {
-		log.Printf("process ok: %s\n", string(b2))
-	} else {
-		log.Printf("process fail: %d: %s\n", resp.StatusCode, string(b2))
-		log.Println("cmd:", cmd)
-		log.Println("x-curr-tid:", resp.Header.Get("x-curr-tid"))
-		log.Println("x-entry-tid:", resp.Header.Get("x-entry-tid"))
-		return errors.New(fmt.Sprintf("process fail: %d: %s\n", resp.StatusCode, string(b2)))
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(fmt.Sprintf("add assessment failed: %d: %s\n: cmd = %+v, tid = %s",
+			resp.StatusCode, string(b2), cmd, resp.Header.Get("x-curr-tid")))
 	}
 	return nil
 }
