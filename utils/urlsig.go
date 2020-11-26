@@ -84,7 +84,7 @@ func URLSignature(id string, url string)(*SignatureResult, error){
 
 type H5pClaims struct {
 	jwt.StandardClaims
-	ContentId string `json:"content_id"`
+	ContentId string `json:"contentId"`
 }
 
 func GenerateH5pJWT(ctx context.Context, sub, contentID string) (string ,error){
