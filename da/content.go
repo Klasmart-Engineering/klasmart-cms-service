@@ -101,10 +101,20 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.IDS)
 	}
 	if s.Name != "" {
-		conditions = append(conditions, "match(content_name, description, keywords) against(? in boolean mode)")
-		params = append(params, s.Name)
+		condition := "match(content_name, description, keywords) against(? in boolean mode)"
+		if len(s.JoinUserIdList) > 0 {
+			condition1 := "author in (?)"
+			where := "(" +condition + " OR " + condition1+")"
 
+			conditions = append(conditions, where)
+			params = append(params, s.Name)
+			params = append(params, s.JoinUserIdList)
+		}else{
+			conditions = append(conditions, condition)
+			params = append(params, s.Name)
+		}
 	}
+
 	if s.Program != "" {
 		conditions = append(conditions, "program = ?")
 		params = append(params, s.Program)
@@ -160,15 +170,6 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := " org = ? "
 		conditions = append(conditions, condition)
 		params = append(params, s.Org)
-	}
-
-	if len(s.JoinUserIdList) > 0 {
-		condition1 := "(" + strings.Join(conditions, " and ") + ")"
-		condition2 := "author in (?)"
-
-		where := "(" +condition1 + " OR " + condition2+")"
-		conditions = []string{where}
-		params = append(params, s.JoinUserIdList)
 	}
 
 	conditions = append(conditions, " delete_at = 0")

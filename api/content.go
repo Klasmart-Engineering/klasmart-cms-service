@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	"net/http"
 	"strconv"
 	"strings"
@@ -65,6 +66,8 @@ func (s *Server) createContent(c *gin.Context) {
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
+	case contentdata.ErrContentDataRequestSource:
+		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case model.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
@@ -72,7 +75,7 @@ func (s *Server) createContent(c *gin.Context) {
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case entity.ErrRequireContentName:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
@@ -319,6 +322,8 @@ func (s *Server) updateContent(c *gin.Context) {
 		return
 	}
 	switch err {
+	case contentdata.ErrContentDataRequestSource:
+		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
@@ -330,7 +335,7 @@ func (s *Server) updateContent(c *gin.Context) {
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:

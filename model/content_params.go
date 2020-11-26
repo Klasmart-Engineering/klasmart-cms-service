@@ -40,7 +40,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	err = cd.Validate(ctx, c.ContentType)
 	if err != nil {
 		log.Warn(ctx, "validate content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
-		return nil, ErrInvalidContentData
+		return nil, err
 	}
 
 	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: c.TeacherManual, TeacherManualName: c.TeacherManualName})
@@ -201,7 +201,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		}
 		err = cd.Validate(ctx, content.ContentType)
 		if err != nil {
-			return nil, ErrInvalidContentData
+			return nil, err
 		}
 
 		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual, TeacherManualName: data.TeacherManualName})
