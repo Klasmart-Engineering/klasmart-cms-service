@@ -117,6 +117,7 @@ type CreateFolderItemRequest struct {
 	//ItemType  ItemType  `json:"item_type"`
 	Partition FolderPartition `json:"partition"`
 	Link      string          `json:"link"`
+	OwnerType OwnerType `json:"owner_type"`
 }
 
 type Path string

@@ -128,6 +128,7 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 	_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
 		Partition: partition,
 		Link:     link,
+		OwnerType: entity.OwnerTypeOrganization,
 	}, operator)
 	if err != nil {
 		log.Error(ctx, "add folder item failed", log.Err(err),
@@ -474,11 +475,6 @@ func (f *FolderModel) removeItemInternal(ctx context.Context, tx *dbo.DBContext,
 }
 
 func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, req entity.CreateFolderItemRequest, operator *entity.Operator) (string, error) {
-	//get parent folder
-	parentFolder, err := f.getFolder(ctx, tx, req.FolderID)
-	if err != nil {
-		return "", err
-	}
 	//check item
 	item, err := createFolderItemByID(ctx, req.Link, operator)
 	if err != nil {
@@ -487,12 +483,32 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	}
 
 	//check add item request
-	err = f.checkAddItemRequest(ctx, req, parentFolder, item)
+	err = f.checkAddItemRequest(ctx, req)
 	if err != nil {
 		return "", err
 	}
+
+	path := entity.NewPath("/")
+	ownerType := req.OwnerType
+	owner := req.OwnerType.Owner(operator)
+	if req.FolderID != "" && req.FolderID != "/" {
+		//get parent folder
+		parentFolder, err := f.getFolder(ctx, tx, req.FolderID)
+		if err != nil {
+			log.Info(ctx, "check item id failed", log.Err(err), log.Any("req", req))
+			return "", err
+		}
+		err = f.checkAddItemParentRequest(ctx, req, parentFolder, item)
+		if err != nil {
+			return "", err
+		}
+
+		path = parentFolder.ChildrenPath()
+		ownerType = parentFolder.OwnerType
+		owner = parentFolder.Owner
+	}
 	//build add item params
-	folderItem := f.prepareAddItemParams(ctx, req, parentFolder, item, operator)
+	folderItem := f.prepareAddItemParams(ctx, req, path, ownerType, owner, item, operator)
 
 	//do create folder item
 	_, err = da.GetFolderDA().CreateFolder(ctx, tx, folderItem)
@@ -504,11 +520,14 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	//更新parent folder文件数量
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
-	err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, parentFolder.ID, 1)
-	if err != nil {
-		log.Warn(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", parentFolder))
-		return "", err
+	if req.FolderID != "" {
+		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.FolderID,  1)
+		if err != nil {
+			log.Warn(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", req.FolderID))
+			return "", err
+		}
 	}
+
 
 	return folderItem.ID, nil
 }
@@ -538,10 +557,10 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 //	return nil
 //}
 
-func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.CreateFolderItemRequest, parentFolder *entity.FolderItem, item *FolderItem, operator *entity.Operator) *entity.FolderItem {
-	path := parentFolder.ChildrenPath()
-	ownerType := parentFolder.OwnerType
-	owner := parentFolder.Owner
+func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.CreateFolderItemRequest, path entity.Path, ownerType entity.OwnerType, owner string, item *FolderItem, operator *entity.Operator) *entity.FolderItem {
+	//path := parentFolder.ChildrenPath()
+	//ownerType := parentFolder.OwnerType
+	//owner := parentFolder.Owner
 
 	now := time.Now().Unix()
 	id := utils.NewID()
@@ -564,7 +583,8 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 		DeleteAt:  0,
 	}
 }
-func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest, parentFolder *entity.FolderItem, item *FolderItem) error {
+
+func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest) error {
 	if req.FolderID == "" {
 		log.Warn(ctx, "invalid folder id", log.Any("req", req))
 		return ErrEmptyFolderID
@@ -573,6 +593,12 @@ func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.Create
 		log.Warn(ctx, "invalid item id", log.Any("req", req))
 		return ErrEmptyFolderID
 	}
+
+	return nil
+}
+
+
+func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.CreateFolderItemRequest, parentFolder *entity.FolderItem, item *FolderItem) error {
 	//check if parentFolder is a folder
 	if !parentFolder.ItemType.IsFolder() {
 		log.Warn(ctx, "move to an item not folder", log.Any("parentFolder", parentFolder))
