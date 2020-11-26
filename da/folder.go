@@ -246,7 +246,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.OwnerType)
 	}
 	if s.Partition != "" {
-		conditions = append(conditions, "partition = ?")
+		conditions = append(conditions, "`partition` = ?")
 		params = append(params, string(s.Partition))
 	}
 	if s.Owner != "" {
