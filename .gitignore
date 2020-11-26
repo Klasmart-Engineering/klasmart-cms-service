@@ -11,3 +11,4 @@ start.ps1
 key
 docs
 *.pem
+cmd/add-assessments/add-assessments
