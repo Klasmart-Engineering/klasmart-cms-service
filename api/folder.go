@@ -138,6 +138,7 @@ func (s *Server) updateFolderItem(c *gin.Context){
 // @Description move folder item
 // @Accept json
 // @Produce json
+// @Param content body entity.MoveFolderRequest true "move folder request"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
