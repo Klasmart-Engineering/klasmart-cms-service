@@ -130,8 +130,8 @@ func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
-	config.StorageConfig.StorageDownloadMode = NewStorageDownloadMode(os.Getenv("storage_download_mode"))
-	storageSigMode := os.Getenv("storage_sig_mode") == "true"
+	config.StorageConfig.StorageDownloadMode = NewStorageDownloadMode(assertGetEnv("storage_download_mode"))
+	storageSigMode := assertGetEnv("storage_sig_mode") == "true"
 	config.StorageConfig.StorageSigMode = storageSigMode
 
 	accelerateStr := assertGetEnv("storage_accelerate")

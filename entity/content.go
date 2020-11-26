@@ -321,6 +321,7 @@ type CreateContentRequest struct {
 	Extra string `json:"extra"`
 
 	TeacherManual string `json:"teacher_manual"`
+	TeacherManualName string `json:"teacher_manual_name"`
 }
 
 func (c CreateContentRequest) Validate() error {
@@ -440,6 +441,7 @@ type ContentInfo struct {
 	Extra string `json:"extra"`
 
 	TeacherManual string `json:"teacher_manual"`
+	TeacherManualName string `json:"teacher_manual_name"`
 
 	Author     string `json:"author"`
 	Creator string `json:"creator"`
@@ -454,6 +456,7 @@ type ContentInfo struct {
 
 type ExtraDataInRequest struct {
 	TeacherManual string `json:"teacher_manual"`
+	TeacherManualName string `json:"teacher_manual_name"`
 }
 
 type ContentData interface {

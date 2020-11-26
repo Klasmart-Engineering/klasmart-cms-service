@@ -209,7 +209,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 // @Description list folder items
 // @Accept json
 // @Produce json
-// @Param item_type query string false "list items type"
+// @Param item_type query string false "list items type. 1.folder 2.file"
 // @Tags folder
 // @Success 200 {object} FolderItemsResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -234,8 +234,8 @@ func (s *Server) listFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query integer false "list items type"
-// @Param owner_type query integer false "list items owner type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
+// @Param owner_type query integer false "list items owner type. 1.org folder 2.private folder"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -265,8 +265,8 @@ func (s *Server) searchPrivateFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query integer false "list items type"
-// @Param owner_type query integer false "list items owner type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
+// @Param owner_type query integer false "list items owner type. 1.org folder 2.private folder"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -299,7 +299,7 @@ func (s *Server) searchOrgFolderItems(c *gin.Context){
 // @Success 200 {object} entity.FolderItemInfo
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 404 {object} BadRequestResponse
-// @Router /folders/items/details/:folder_id [get]
+// @Router /folders/items/details/{folder_id} [get]
 func (s *Server) getFolderItemByID(c *gin.Context){
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
@@ -321,7 +321,7 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Tags folder
-// @Param owner_type query integer false "get item owner type"
+// @Param owner_type query integer false "get item owner type. 1.org folder 2.private folder"
 // @Param partition query string false "get item partition"
 // @Success 200 {object} CreateFolderResponse
 // @Failure 500 {object} InternalServerErrorResponse
