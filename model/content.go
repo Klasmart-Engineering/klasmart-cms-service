@@ -51,6 +51,8 @@ var (
 
 	ErrInvalidSelectForm = errors.New("invalid select form")
 	ErrUserNotFound = errors.New("user not found in locked by")
+
+	ErrMoveToDifferentPartition = errors.New("move to different parititon")
 )
 
 type ErrContentAlreadyLocked struct {
@@ -344,7 +346,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Asset添加Folder
 	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootAssetsFolderName,entity.ContentLink(pid), operator)
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets,entity.ContentLink(pid), operator)
 		if err != nil{
 			log.Error(ctx, "can't create folder item", log.Err(err),
 				log.String("link", entity.ContentLink(pid)),
@@ -437,14 +439,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	rootFolder, err := GetFolderModel().GetRootFolder(ctx, entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, operator)
-	if err != nil{
-		log.Warn(ctx, "get root folder failed", log.Err(err),
-			log.Any("user", operator))
-		return err
-	}else{
-		content.DirPath = string(rootFolder.ChildrenPath())
-	}
+	content.DirPath = "/"
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -454,7 +449,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootMaterialsAndPlansFolderName, entity.ContentLink(content.ID), operator)
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.ContentLink(content.ID), operator)
 	if err != nil {
 		return err
 	}
@@ -1828,15 +1823,19 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 
 func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) *da.FolderCondition{
 	dirPath := condition.DirPath
-	if dirPath == "" {
-		if len(condition.ContentType) < 0 {
-			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
-		}else if condition.ContentType[0] == entity.ContentTypeAssets {
-			dirPath = entity.RootAssetsFolderName.Path()
-		}else {
-			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
+	isAssets := false
+	for i := range condition.ContentType{
+		if entity.NewContentType(condition.ContentType[i]).IsAsset() {
+			isAssets = true
+			break
 		}
 	}
+	partition := entity.FolderPartitionMaterialAndPlans
+	if isAssets{
+		partition = entity.FolderPartitionAssets
+	}
+
+
 	folderCondition := &da.FolderCondition{
 		OwnerType:    int(entity.OwnerTypeOrganization),
 		ItemType:     int(entity.FolderItemTypeFolder),
@@ -1844,6 +1843,7 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		Name:         condition.Name,
 		ExactDirPath: dirPath,
 		Editors: searchUserIds,
+		Partition: string(partition),
 	}
 	return folderCondition
 }
