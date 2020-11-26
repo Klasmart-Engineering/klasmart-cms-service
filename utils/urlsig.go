@@ -88,7 +88,7 @@ type H5pClaims struct {
 }
 
 func GenerateH5pJWT(ctx context.Context, sub, contentID string) (string ,error){
-	stdClaims := getStdClaims("h5p", time.Hour*2, contentID, sub)
+	stdClaims := getStdClaims("H5P", time.Hour*2, contentID, sub)
 	claims := &H5pClaims{
 		StandardClaims: stdClaims,
 		ContentId: contentID,
