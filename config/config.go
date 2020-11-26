@@ -14,6 +14,21 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
+var(
+	StorageDownloadNativeMode     StorageDownloadMode = "native"
+	StorageDownloadCloudFrontMode StorageDownloadMode = "cloudfront"
+)
+
+type StorageDownloadMode string
+
+func NewStorageDownloadMode(mode string)StorageDownloadMode {
+	if mode == "native" {
+		return StorageDownloadNativeMode
+	}else{
+		return StorageDownloadCloudFrontMode
+	}
+}
+
 type Config struct {
 	StorageConfig   StorageConfig    `yaml:"storage_config"`
 	CDNConfig       CDNConfig        `yaml:"cdn_config"`
@@ -57,11 +72,12 @@ type StorageConfig struct {
 	CloudEnv      string `yaml:"cloud_env"`
 	StorageBucket string `yaml:"storage_bucket"`
 	StorageRegion string `yaml:"storage_region"`
+
+	StorageDownloadMode StorageDownloadMode `yaml:"storage_download_mode"`
+	StorageSigMode bool   `yaml:"storage_sig_mode"`
 }
 
 type CDNConfig struct {
-	CDNRestrictedViewer bool   `yaml:"cdn_enable_restricted_viewer"`
-
 	CDNPath           string `yaml:"cdn_path"`
 	CDNKeyId          string `yaml:"cdn_key_id"`
 	CDNPrivateKeyPath string `yaml:"cdn_private_key_path"`
@@ -114,6 +130,9 @@ func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
+	config.StorageConfig.StorageDownloadMode = NewStorageDownloadMode(assertGetEnv("storage_download_mode"))
+	storageSigMode := assertGetEnv("storage_sig_mode") == "true"
+	config.StorageConfig.StorageSigMode = storageSigMode
 
 	accelerateStr := assertGetEnv("storage_accelerate")
 	accelerate, err := strconv.ParseBool(accelerateStr)
@@ -124,13 +143,12 @@ func loadStorageEnvConfig(ctx context.Context) {
 	}
 	config.StorageConfig.Accelerate = accelerate
 
-	cdnRestrictedViewer := os.Getenv("cdn_enable_restricted_viewer") == "true"
-	config.CDNConfig.CDNRestrictedViewer = cdnRestrictedViewer
-	config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
-
-	if cdnRestrictedViewer {
-		config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
-		config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
+	if config.StorageConfig.StorageDownloadMode == StorageDownloadCloudFrontMode {
+		config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
+		if config.StorageConfig.StorageSigMode {
+			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
+			config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
+		}
 	}
 }
 
@@ -247,4 +265,8 @@ func loadAMSConfig(ctx context.Context) {
 
 func Get() *Config {
 	return config
+}
+
+func Set(c *Config) {
+	config = c
 }

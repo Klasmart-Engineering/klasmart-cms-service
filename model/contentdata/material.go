@@ -12,9 +12,11 @@ import (
 var(
 	ErrInvalidContentType = errors.New("invalid content type")
 	ErrContentDataRequestSource = errors.New("material require source")
-	ErrInvalidMaterialInLesson = errors.New("invalid material in lesson")
 	ErrInvalidMaterialType = errors.New("invalid material type")
 	ErrInvalidSourceExt = errors.New("invalid source extension")
+
+	ErrTeacherManual = errors.New("teacher manual resource is not exist")
+	ErrInvalidTeacherManual = errors.New("invalid teacher manual")
 )
 
 func NewMaterialData() *MaterialData {
@@ -71,7 +73,7 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 	return nil
 }
 
-func (h *MaterialData) PrepareSave(ctx context.Context) error {
+func (h *MaterialData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	if h.InputSource == entity.MaterialInputSourceH5p {
 		h.FileType = entity.FileTypeH5p
 		return nil
@@ -86,6 +88,6 @@ func (h *MaterialData) PrepareSave(ctx context.Context) error {
 func (h *MaterialData) SubContentIds(ctx context.Context) []string{
 	return nil
 }
-func (h *MaterialData) PrepareResult(ctx context.Context) error {
+func (h *MaterialData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	return nil
 }

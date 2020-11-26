@@ -42,20 +42,32 @@ Deploy_To_Lambda_Push:
 #############################################
 ############# BELOW FOR ops-dev #############
 #############################################
-# OPS_DEV_BUILD:
-#   before_script:
-#     - 
-#   stage: build_cdk
-#   tags:
-#     - ops-dev
-#   extends:
-#     - .EXECUTEBUILD_JOB
-#   rules:
-#     - if: '$CI_COMMIT_TAG =~ /^(ops-dev\/).*$/ && $CI_PIPELINE_SOURCE != "trigger"'
+.OPS_DEV_BEFORE_SCRIPT:
+  before_script:
+    # switch to the correct branch in niobium
+    - set -e
+    - niobium_dir="$HOME/devops/niobium"
+    - git clone git@gitlab.badanamu.com.cn:devops/niobium.git "$niobium_dir"
+    - cd "$niobium_dir"
+    - git checkout $CI_COMMIT_TAG
+    - cd -
 
-# OPS_DEV_DEPLOY:
-#   stage: deploy_cdk
-#   tags:
-#     - ops-dev
-#   extends:
-#     - .PACKAGEZIP_UPDATECDK
+OPS_DEV_BUILD:
+  stage: build_cdk
+  tags:
+    - ops-dev
+  extends:
+    - .OPS_DEV_BEFORE_SCRIPT
+    - .EXECUTEBUILD_JOB
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^(ops-dev\/).*$/ && $CI_PIPELINE_SOURCE != "trigger"'
+
+OPS_DEV_DEPLOY:
+  stage: deploy_cdk
+  tags:
+    - ops-dev
+  extends:
+    - .OPS_DEV_BEFORE_SCRIPT
+    - .PACKAGEZIP_UPDATECDK
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^(ops-dev\/).*$/ && $CI_PIPELINE_SOURCE == "trigger"'

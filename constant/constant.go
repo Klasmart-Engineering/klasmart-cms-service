@@ -68,6 +68,8 @@ const (
 
 const (
 	LockedByNoBody = "-"
+
+	NoVisibilitySetting = "-"
 )
 
 const (

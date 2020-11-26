@@ -43,11 +43,12 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		return nil, ErrInvalidContentData
 	}
 
-	err = cd.PrepareSave(ctx)
+	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: c.TeacherManual, TeacherManualName: c.TeacherManualName})
 	if err != nil {
 		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
 	}
+
 	data, err := cd.Marshal(ctx)
 	if err != nil {
 		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
@@ -73,6 +74,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.LessonType = ""
 	}
 
+	path := "/"
 	return &entity.Content{
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
@@ -90,6 +92,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Data:          c.Data,
 		Extra:         c.Extra,
 		LessonType:    c.LessonType,
+		DirPath:       path,
 		SelfStudy:     c.SelfStudy.Int(),
 		DrawActivity:  c.DrawActivity.Int(),
 		Outcomes:      strings.Join(c.Outcomes, ","),
@@ -102,6 +105,23 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Version:       1,
 	}, nil
 }
+
+//func (cm ContentModel) getContentRootFolder(ctx context.Context, contentType entity.ContentType, operator *entity.Operator) string{
+//	//获取根目录地址
+//	folderPartition := entity.RootMaterialsAndPlansFolderName
+//	if contentType == entity.ContentTypeAssets {
+//		folderPartition = entity.RootAssetsFolderName
+//	}
+//	path := ""
+//	rootFolder, err := GetFolderModel().GetRootFolder(ctx, folderPartition, entity.OwnerTypeOrganization, operator)
+//	if err != nil{
+//		log.Warn(ctx, "get root folder failed", log.Err(err),
+//			log.Any("user", operator))
+//	}else{
+//		path = string(rootFolder.ChildrenPath())
+//	}
+//	return path
+//}
 
 func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *entity.Content, data *entity.CreateContentRequest) (*entity.Content, error) {
 	if data.Name != "" {
@@ -184,7 +204,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 			return nil, ErrInvalidContentData
 		}
 
-		err = cd.PrepareSave(ctx)
+		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual, TeacherManualName: data.TeacherManualName})
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}
@@ -217,7 +237,9 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	return content
 }
 
-func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus) *entity.Content {
+func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
+	content.DirPath = "/"
+
 	//assets则隐藏
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.ContentStatusHidden

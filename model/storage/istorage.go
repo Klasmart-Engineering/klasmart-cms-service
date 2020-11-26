@@ -21,6 +21,7 @@ var (
 const (
 	AssetStoragePartition        StoragePartition      = "assets"
 	ThumbnailStoragePartition      StoragePartition    = "thumbnail"
+	TeacherManualStoragePartition      StoragePartition    = "teacher_manual"
 	ScheduleAttachmentStoragePartition StoragePartition = "schedule_attachment"
 
 )
@@ -46,6 +47,8 @@ func NewStoragePartition(partition string) (StoragePartition, error){
 		return ThumbnailStoragePartition, nil
 	case string(ScheduleAttachmentStoragePartition):
 		return ScheduleAttachmentStoragePartition, nil
+	case string(TeacherManualStoragePartition):
+		return TeacherManualStoragePartition, nil
 	}
 	return "", ErrInvalidUploadPartition
 }

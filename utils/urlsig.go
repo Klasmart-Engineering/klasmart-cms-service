@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"crypto"
 	rand2 "crypto/rand"
 	"crypto/rsa"
@@ -10,6 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"io/ioutil"
 	"math/rand"
@@ -78,4 +80,53 @@ func URLSignature(id string, url string)(*SignatureResult, error){
 		RandNum:   randNum,
 		Timestamp: now,
 	}, nil
+}
+
+type H5pClaims struct {
+	jwt.StandardClaims
+	ContentId string `json:"contentId"`
+}
+
+func GenerateH5pJWT(ctx context.Context, sub, contentID string) (string ,error){
+	stdClaims := getStdClaims("H5P", time.Hour*2, contentID, sub)
+	claims := &H5pClaims{
+		StandardClaims: stdClaims,
+		ContentId: contentID,
+	}
+
+	// test not expired token
+	signedToken, err := createJWT(claims)
+	if err != nil {
+		return "", err
+	}
+	return signedToken, nil
+}
+func createJWT(claims jwt.Claims) (signedToken string, err error) {
+	privateKey, err := readPrivateKeyPEM()
+	if err != nil {
+		return
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
+	if err != nil {
+		return
+	}
+
+	return token.SignedString(privateKey)
+}
+
+
+func getStdClaims(aud string, expire time.Duration, id, subject string) jwt.StandardClaims {
+	now := time.Now()
+	expiresAt := now.Add(expire)
+	// TODO: audience should search from database on ourAppID
+
+	return jwt.StandardClaims{
+		Audience:  aud,
+		ExpiresAt: expiresAt.Unix(),
+		Id:        id,
+		IssuedAt:  now.Unix(),
+		Issuer:    "kl2-h5p",
+		NotBefore: 0,
+		Subject:   subject,
+	}
 }

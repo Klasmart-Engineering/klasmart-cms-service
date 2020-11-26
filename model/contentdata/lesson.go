@@ -3,11 +3,12 @@ package contentdata
 import (
 	"context"
 	"encoding/json"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+	"strings"
 )
 
 type LessonData struct {
@@ -16,6 +17,8 @@ type LessonData struct {
 	MaterialId string          `json:"materialId"`
 	Material   *entity.ContentInfo `json:"material"`
 	NextNode   []*LessonData   `json:"next"`
+	TeacherManual string 	`json:"teacher_manual"`
+	TeacherManualName string 	`json:"teacher_manual_name"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -61,7 +64,9 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 		}
 	}
 }
-func (h *LessonData) PrepareSave(ctx context.Context) error {
+func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
+	h.TeacherManual = t.TeacherManual
+	h.TeacherManualName = t.TeacherManualName
 	return nil
 }
 func (l *LessonData) SubContentIds(ctx context.Context) []string {
@@ -76,6 +81,22 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	if contentType != entity.ContentTypeLesson {
 		return ErrInvalidContentType
 	}
+	if l.TeacherManual != "" {
+		teacherManualPairs :=strings.Split(l.TeacherManual, "-")
+		if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
+			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
+				log.String("partition", string(storage.TeacherManualStoragePartition)))
+			return ErrInvalidTeacherManual
+		}
+
+		_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, teacherManualPairs[1])
+		if !exist {
+			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
+				log.String("partition", string(storage.TeacherManualStoragePartition)))
+			return ErrTeacherManual
+		}
+	}
+
 	//暂时不做检查
 	//检查material合法性
 	//materialList := make([]string, 0)
@@ -106,7 +127,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	return nil
 }
 
-func (l *LessonData) PrepareResult(ctx context.Context) error {
+func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -125,7 +146,7 @@ func (l *LessonData) PrepareResult(ctx context.Context) error {
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		data, ok:= contentMap[l.MaterialId]
 		if ok {
-			material, _ := ConvertContentObj(ctx, data)
+			material, _ := ConvertContentObj(ctx, data, operator)
 			l.Material = material
 		}
 	})
