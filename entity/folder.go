@@ -113,7 +113,8 @@ type MoveFolderIDBulk struct {
 }
 
 type CreateFolderItemRequest struct {
-	FolderID  string    `json:"folder_id"`
+	//ID string `json:"id"`
+	ParentFolderID string `json:"parent_folder_id"`
 	//ItemType  ItemType  `json:"item_type"`
 	Partition FolderPartition `json:"partition"`
 	Link      string          `json:"link"`

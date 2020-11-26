@@ -325,6 +325,7 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid strin
 	if err != nil {
 		return err
 	}
+
 	//检查是否同区
 	if distFolder.Partition != folder.Partition {
 		log.Error(ctx, "can't move to different partition", log.Any("from", folder),
@@ -492,9 +493,9 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	path := entity.NewPath("/")
 	ownerType := req.OwnerType
 	owner := req.OwnerType.Owner(operator)
-	if req.FolderID != "" && req.FolderID != "/" {
+	if req.ParentFolderID != "" && req.ParentFolderID != "/" {
 		//get parent folder
-		parentFolder, err := f.getFolder(ctx, tx, req.FolderID)
+		parentFolder, err := f.getFolder(ctx, tx, req.ParentFolderID)
 		if err != nil {
 			log.Info(ctx, "check item id failed", log.Err(err), log.Any("req", req))
 			return "", err
@@ -521,10 +522,10 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	//更新parent folder文件数量
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
-	if req.FolderID != "" {
-		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.FolderID,  1)
+	if req.ParentFolderID != "" {
+		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.ParentFolderID,  1)
 		if err != nil {
-			log.Warn(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", req.FolderID))
+			log.Warn(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", req.ParentFolderID))
 			return "", err
 		}
 	}
@@ -572,7 +573,7 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 		OwnerType: ownerType,
 		Owner:     owner,
 		Editor:    operator.UserID,
-		ParentID:  req.FolderID,
+		ParentID:  req.ParentFolderID,
 		Name:      item.Name,
 		DirPath:   path,
 		Partition: string(req.Partition),
@@ -586,7 +587,7 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 }
 
 func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest) error {
-	//if req.FolderID == "" {
+	//if req.ParentFolderID == "" {
 	//	log.Warn(ctx, "invalid folder id", log.Any("req", req))
 	//	return ErrEmptyFolderID
 	//}
@@ -618,7 +619,7 @@ func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.
 		}
 	}else{
 		//个人下查重名，check items duplicate
-		items, err := f.getItemsFromFolders(ctx, req.FolderID)
+		items, err := f.getItemsFromFolders(ctx, req.ParentFolderID)
 		if err != nil {
 			return err
 		}
