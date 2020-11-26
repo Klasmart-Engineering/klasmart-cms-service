@@ -125,7 +125,7 @@ func getStdClaims(aud string, expire time.Duration, id, subject string) jwt.Stan
 		ExpiresAt: expiresAt.Unix(),
 		Id:        id,
 		IssuedAt:  now.Unix(),
-		Issuer:    "Calmisland",
+		Issuer:    "kl2-h5p",
 		NotBefore: 0,
 		Subject:   subject,
 	}
