@@ -20,7 +20,7 @@ func (s Server) registeRoute() {
 
 	users := s.engine.Group("/v1/users")
 	{
-		users.POST("/temp_code")
+		users.POST("/verification")
 		users.GET("/login", s.login)
 		users.POST("/register", s.register)
 		users.POST("/forgotten_pwd")

@@ -23,7 +23,7 @@ type LoginReq struct {
 // @Accept json
 // @Produce json
 // @Param outcome body LoginReq true "user login"
-// @Success 200 {object} {"data": "ok"}
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/login [get]
@@ -71,7 +71,7 @@ type RegisterReq struct {
 // @Accept json
 // @Produce json
 // @Param outcome body RegisterReq true "user register"
-// @Success 200 {object} {"data": "ok"}
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/register [post]
@@ -79,23 +79,24 @@ func (s *Server) register(c *gin.Context) {
 	// TODO
 }
 
-type SendTemporaryCredentialReq struct {
-	Mobile string `json:"mobile"`
-	Email  string `json:"email"`
+type VerificationReq struct {
+	Mobile string `json:"mobile" form:"mobile"`
+	Email  string `json:"email" form:"email"`
+	State  string `json:"state" form:"state"`
 }
 
-// @ID sendTemporaryCredential
-// @Summary temporary credential
+// @ID verification
+// @Summary send verify code
 // @Tags user
-// @Description send credential
+// @Description send verify code or uri
 // @Accept json
 // @Produce json
-// @Param outcome body SendTemporaryCredentialReq true "user register"
-// @Success 200 {object} {"data": "ok"}
+// @Param outcome body VerificationReq true "send verify code"
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /users/temp_code [post]
-func (s *Server) sendTemporaryCredential(c *gin.Context) {
+// @Router /users/verification [post]
+func (s *Server) verification(c *gin.Context) {
 	// TODO
 }
 
@@ -109,7 +110,7 @@ type ForgottenPwdReq struct {
 // @Accept json
 // @Produce json
 // @Param outcome body ForgottenPwdReq true "login by new password and update password"
-// @Success 200 {object} {"data": "ok"}
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/forgotten_pwd [post]
@@ -127,7 +128,7 @@ type ResetPasswordReq struct {
 // @Accept json
 // @Produce json
 // @Param outcome body ResetPasswordReq true "user reset password"
-// @Success 200 {object} {"data": "ok"}
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/reset_password [post]
