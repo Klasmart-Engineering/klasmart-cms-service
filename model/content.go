@@ -1165,6 +1165,10 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
 		scope = []string{constant.NoSearchItem}
 	}
+	err = cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
+	if err != nil{
+		return 0, nil, err
+	}
 	condition.Scope = scope
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
 	condition.JoinUserIdList = searchUserIds
@@ -1184,6 +1188,10 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 }
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
+	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
+	if err != nil{
+		return 0, nil, err
+	}
 	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
 	if err != nil{
 		return 0, nil, err
@@ -1408,6 +1416,40 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 		}
 	}
 	return newStatus
+}
+
+
+func (cm *ContentModel) filterRootPath(ctx context.Context, condition *da.ContentCondition, ownerType entity.OwnerType, operator *entity.Operator) error {
+	if condition.DirPath != ""{
+		return nil
+	}
+
+	//isAssets := false
+	//for i := range condition.ContentType {
+	//	if entity.NewContentType(condition.ContentType[i]).IsAsset() {
+	//		isAssets = true
+	//		break
+	//	}
+	//}
+	//
+	//if isAssets {
+	//	root, err := GetFolderModel().GetRootFolder(ctx, entity.RootAssetsFolderName, ownerType, operator)
+	//	if err != nil{
+	//		log.Error(ctx, "can't get root folder", log.Err(err), log.Any("ownerType", ownerType), log.Any("operator", operator), log.String("partition", string(entity.RootAssetsFolderName)))
+	//		return err
+	//	}
+	//	condition.DirPath = string(root.ChildrenPath())
+	//	return nil
+	//}
+	//
+	//root, err := GetFolderModel().GetRootFolder(ctx, entity.RootMaterialsAndPlansFolderName, ownerType, operator)
+	//if err != nil{
+	//	log.Error(ctx, "can't get root folder", log.Err(err), log.Any("ownerType", ownerType), log.Any("operator", operator), log.String("partition", string(entity.RootMaterialsAndPlansFolderName)))
+	//	return err
+	//}
+	//condition.DirPath = string(root.ChildrenPath())
+	condition.DirPath = "/"
+	return nil
 }
 
 func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status []string) []string {
@@ -1800,7 +1842,7 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
 		Name:         condition.Name,
-		ExactDirPath: condition.DirPath,
+		ExactDirPath: dirPath,
 		Editors: searchUserIds,
 	}
 	return folderCondition

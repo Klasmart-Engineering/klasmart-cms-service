@@ -323,7 +323,7 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 // @Tags folder
 // @Param owner_type query integer false "get item owner type. 1.org folder 2.private folder"
 // @Param partition query string false "get item partition"
-// @Success 200 {object} CreateFolderResponse
+// @Success 200 {object} entity.FolderItem
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /folders/items/root [get]
@@ -332,12 +332,10 @@ func (s *Server) getRootFolder(c *gin.Context) {
 	op := s.getOperator(c)
 	fid := utils.ParseInt(ctx, c.Query("owner_type"))
 	partition := c.Param("partition")
-	rootFolderID, err := model.GetFolderModel().GetRootFolder(ctx, entity.NewFolderPartition(partition), entity.NewOwnerType(fid), op)
+	rootFolder, err := model.GetFolderModel().GetRootFolder(ctx, entity.NewFolderPartition(partition), entity.NewOwnerType(fid), op)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"id": rootFolderID,
-		})
+		c.JSON(http.StatusOK, rootFolder)
 	case model.ErrInvalidPartition:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
