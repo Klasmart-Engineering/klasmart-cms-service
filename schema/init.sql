@@ -179,6 +179,7 @@ CREATE TABLE `cms_folder_items` (
     `editor` varchar(50) NOT NULL comment 'folder item editor',
     `items_count` int NOT NULL comment 'folder item count',
     `name` varchar(256) NOT NULL comment 'folder item name',
+    `partition` varchar(256) NOT NULL comment 'folder item partition',
     `thumbnail` text comment 'folder item thumbnail',
     `creator` varchar(50) comment 'folder item creator',
     `create_at` bigint NOT NULL comment 'create time (unix seconds)',

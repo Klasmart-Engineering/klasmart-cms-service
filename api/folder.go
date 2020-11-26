@@ -209,7 +209,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 // @Description list folder items
 // @Accept json
 // @Produce json
-// @Param item_type query string false "list items type. 1.folder 2.file"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
 // @Tags folder
 // @Success 200 {object} FolderItemsResponse
 // @Failure 500 {object} InternalServerErrorResponse
