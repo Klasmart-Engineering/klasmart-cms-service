@@ -112,7 +112,6 @@ func (s Server) registeRoute() {
 		folders.GET("/items/search/private", s.mustLogin, s.searchPrivateFolderItems)
 		folders.GET("/items/search/org", s.mustLogin, s.searchOrgFolderItems)
 		folders.GET("/items/details/:item_id", s.mustLogin, s.getFolderItemByID)
-		folders.GET("/items/root", s.mustLogin, s.getRootFolder)
 
 	}
 

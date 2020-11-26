@@ -16,30 +16,21 @@ const (
 
 	FileTypeContent = "content"
 
-	RootAssetsFolderName FolderPartition = "assets"
-	RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
+	//RootAssetsFolderName FolderPartition = "assets"
+	//RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
+	FolderPartitionAssets           FolderPartition = "assets"
+	FolderPartitionMaterialAndPlans FolderPartition = "plans and materials"
 )
 
 type FolderPartition string
-
-func NewFolderPartition(partition string) FolderPartition{
+func NewFolderPartition(partition string) FolderPartition {
 	switch partition {
 	case "assets":
-		return RootAssetsFolderName
+		return FolderPartitionAssets
 	case "plans and materials":
-		return RootMaterialsAndPlansFolderName
+		return FolderPartitionMaterialAndPlans
 	}
-	return RootMaterialsAndPlansFolderName
-}
-
-func (f FolderPartition) Valid() bool{
-	if f == RootAssetsFolderName || f == RootMaterialsAndPlansFolderName {
-		return true
-	}
-	return false
-}
-func (f FolderPartition) Path() string{
-	return "/" + string(f)
+	return FolderPartitionMaterialAndPlans
 }
 
 type OwnerType int
@@ -99,9 +90,10 @@ func NewItemType(num int) ItemType{
 }
 
 type CreateFolderRequest struct {
-	OwnerType OwnerType `json:"owner_type"`
-	ParentID  string    `json:"parent_id"`
-	Name      string    `json:"name"`
+	OwnerType OwnerType       `json:"owner_type"`
+	ParentID  string          `json:"parent_id"`
+	Name      string          `json:"name"`
+	Partition FolderPartition `json:"partition"`
 
 	Thumbnail string `json:"thumbnail"`
 }
@@ -123,7 +115,8 @@ type MoveFolderIDBulk struct {
 type CreateFolderItemRequest struct {
 	FolderID  string    `json:"folder_id"`
 	//ItemType  ItemType  `json:"item_type"`
-	Link      string    `json:"link"`
+	Partition FolderPartition `json:"partition"`
+	Link      string          `json:"link"`
 }
 
 type Path string
@@ -167,6 +160,7 @@ type FolderItem struct {
 
 	ItemType ItemType `gorm:"type:int;NOT NULL"`
 	DirPath  Path     `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
+	Partition string `gorm:"type:varchar(256);NOT NULL" json:"partition"`
 	Name     string   `gorm:"type:varchar(256);NOT NULL" json:"name"`
 
 	Thumbnail string	`gorm:"type:text" json:"thumbnail"`
@@ -200,6 +194,7 @@ type SearchFolderCondition struct {
 	ItemType  ItemType
 	ParentID  string
 	Link      string
+	Partition string
 
 	Path string
 	Name string

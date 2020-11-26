@@ -218,7 +218,7 @@ type FolderCondition struct {
 	ItemType  int
 	Owner     string
 	ParentID  string
-	//VisibilitySetting []string
+	Partition entity.FolderPartition
 	Link string
 
 	Name          string
@@ -244,6 +244,10 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 	if s.OwnerType > 0 {
 		conditions = append(conditions, "owner_type = ?")
 		params = append(params, s.OwnerType)
+	}
+	if s.Partition != "" {
+		conditions = append(conditions, "partition = ?")
+		params = append(params, string(s.Partition))
 	}
 	if s.Owner != "" {
 		conditions = append(conditions, "owner = ?")
@@ -275,7 +279,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.DirDescendant+ "%")
 	}
 	if s.ExactDirPath != "" {
-		conditions = append(conditions, "dir_path like ?")
+		conditions = append(conditions, "dir_path = ?")
 		params = append(params, s.ExactDirPath)
 	}
 
