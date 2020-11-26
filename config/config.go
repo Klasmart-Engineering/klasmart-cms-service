@@ -131,7 +131,7 @@ func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
 	config.StorageConfig.StorageDownloadMode = NewStorageDownloadMode(os.Getenv("storage_download_mode"))
-	storageSigMode := os.Getenv("cdn_enable_restricted_viewer") == "true"
+	storageSigMode := os.Getenv("storage_sig_mode") == "true"
 	config.StorageConfig.StorageSigMode = storageSigMode
 
 	accelerateStr := assertGetEnv("storage_accelerate")
