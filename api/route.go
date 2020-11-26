@@ -190,6 +190,11 @@ func (s Server) registeRoute() {
 		visibilitySettings.GET("", s.mustLogin, s.getVisibilitySetting)
 		visibilitySettings.GET("/:id", s.mustLogin, s.getVisibilitySettingByID)
 	}
+	userSettings := s.engine.Group("/v1/user_settings")
+	{
+		userSettings.POST("", s.mustLoginWithoutOrgID, s.setUserSetting)
+		userSettings.GET("", s.mustLoginWithoutOrgID, s.getUserSettingByOperator)
+	}
 }
 
 // Ping godoc

@@ -83,7 +83,7 @@ func (u *userSettingModel) GetByOperator(ctx context.Context, op *entity.Operato
 	var defaultSettings []*entity.UserSetting
 	err := da.GetUserSettingDA().Query(ctx, da.UserSettingCondition{
 		UserID: sql.NullString{
-			String: entity.DefaultSettingID,
+			String: entity.DefaultUserSettingID,
 			Valid:  true,
 		}}, &defaultSettings)
 	if err != nil {

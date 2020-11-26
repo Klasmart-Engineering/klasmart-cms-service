@@ -17,7 +17,7 @@ func (e UserSetting) GetID() interface{} {
 }
 
 const (
-	DefaultSettingID = "default_setting_0"
+	DefaultUserSettingID = "default_setting_0"
 )
 
 type UserSettingJsonContent struct {
