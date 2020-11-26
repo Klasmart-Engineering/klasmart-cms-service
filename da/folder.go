@@ -218,7 +218,7 @@ type FolderCondition struct {
 	ItemType  int
 	Owner     string
 	ParentID  string
-	Partition string
+	Partition entity.FolderPartition
 	Link string
 
 	Name          string
@@ -247,7 +247,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if s.Partition != "" {
 		conditions = append(conditions, "partition = ?")
-		params = append(params, s.Partition)
+		params = append(params, string(s.Partition))
 	}
 	if s.Owner != "" {
 		conditions = append(conditions, "owner = ?")

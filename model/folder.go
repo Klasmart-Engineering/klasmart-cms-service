@@ -61,7 +61,7 @@ type IFolderModel interface {
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
 
 	//内部API，修改Folder的Visibility Settings
-	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition0, link string, operator *entity.Operator) error
+	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
 
@@ -110,7 +110,7 @@ func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 
-func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition0, link string, operator *entity.Operator) error {
+func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, link string, operator *entity.Operator) error {
 	//Update folder item visibility settings
 	hasLink, err := f.hasFolderFileItem(ctx, tx, entity.OwnerTypeOrganization, partition, operator.OrgID, link)
 	if err != nil {
@@ -233,7 +233,7 @@ func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchF
 		OwnerType: int(condition.OwnerType),
 		Owner:     condition.Owner,
 		Link:      condition.Link,
-		Partition: condition.Partition,
+		Partition: entity.NewFolderPartition(condition.Partition),
 		//VisibilitySetting: condition.VisibilitySetting,
 		ExactDirPath: condition.Path,
 		Pager:        condition.Pager,
@@ -398,7 +398,7 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, fid strin
 	return nil
 }
 
-func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, partition entity.FolderPartition0, owner string, link string) (bool, error) {
+func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, partition entity.FolderPartition, owner string, link string) (bool, error) {
 	if !ownerType.Valid() {
 		log.Warn(ctx, "invalid folder owner type", log.Int("ownerType", int(ownerType)), log.String("partition", string(partition)), log.String("owner", owner), log.String("link", link))
 		return false, ErrInvalidFolderOwnerType
@@ -407,7 +407,7 @@ func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, 
 		ItemType:  int(entity.FolderItemTypeFile),
 		OwnerType: int(ownerType),
 		Owner:     owner,
-		Partition: string(partition),
+		Partition: partition,
 		Link:      link,
 	}
 	total, err := da.GetFolderDA().SearchFolderCount(ctx, tx, condition)
@@ -679,7 +679,7 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 	return nil
 }
 
-func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType entity.OwnerType, partition entity.FolderPartition0, name string, parentFolder *entity.FolderItem, operator *entity.Operator) error {
+func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType entity.OwnerType, partition entity.FolderPartition, name string, parentFolder *entity.FolderItem, operator *entity.Operator) error {
 	//check get all sub folders from parent parentFolder
 	//folder下folder名唯一
 	condition := da.FolderCondition{
@@ -687,7 +687,7 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 		ItemType:  int(entity.FolderItemTypeFolder),
 		OwnerType: int(ownerType),
 		Owner:     ownerType.Owner(operator),
-		Partition: string(partition),
+		Partition: partition,
 		Name:      name,
 	}
 	total, err := da.GetFolderDA().SearchFolderCount(ctx, dbo.MustGetDB(ctx), condition)

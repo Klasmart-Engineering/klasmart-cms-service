@@ -18,40 +18,20 @@ const (
 
 	//RootAssetsFolderName FolderPartition = "assets"
 	//RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
-	FolderPartitionAssets FolderPartition0 = "assets"
-	FolderPartitionMaterialAndPlans FolderPartition0 = "plans and materials"
+	FolderPartitionAssets           FolderPartition = "assets"
+	FolderPartitionMaterialAndPlans FolderPartition = "plans and materials"
 )
 
-type FolderPartition0 string
-func NewFolderPartition0(partition string) FolderPartition0{
+type FolderPartition string
+func NewFolderPartition(partition string) FolderPartition {
 	switch partition {
 	case "assets":
-		return ""
+		return FolderPartitionAssets
+	case "plans and materials":
+		return FolderPartitionMaterialAndPlans
 	}
-	return ""
+	return FolderPartitionMaterialAndPlans
 }
-//
-//type FolderPartition string
-//
-//func NewFolderPartition(partition string) FolderPartition{
-//	switch partition {
-//	case "assets":
-//		return RootAssetsFolderName
-//	case "plans and materials":
-//		return RootMaterialsAndPlansFolderName
-//	}
-//	return RootMaterialsAndPlansFolderName
-//}
-//
-//func (f FolderPartition) Valid() bool{
-//	if f == RootAssetsFolderName || f == RootMaterialsAndPlansFolderName {
-//		return true
-//	}
-//	return false
-//}
-//func (f FolderPartition) Path() string{
-//	return "/" + string(f)
-//}
 
 type OwnerType int
 
@@ -110,10 +90,10 @@ func NewItemType(num int) ItemType{
 }
 
 type CreateFolderRequest struct {
-	OwnerType OwnerType `json:"owner_type"`
-	ParentID  string    `json:"parent_id"`
-	Name      string    `json:"name"`
-	Partition FolderPartition0 `json:"partition"`
+	OwnerType OwnerType       `json:"owner_type"`
+	ParentID  string          `json:"parent_id"`
+	Name      string          `json:"name"`
+	Partition FolderPartition `json:"partition"`
 
 	Thumbnail string `json:"thumbnail"`
 }
@@ -135,8 +115,8 @@ type MoveFolderIDBulk struct {
 type CreateFolderItemRequest struct {
 	FolderID  string    `json:"folder_id"`
 	//ItemType  ItemType  `json:"item_type"`
-	Partition FolderPartition0 `json:"partition"`
-	Link      string    `json:"link"`
+	Partition FolderPartition `json:"partition"`
+	Link      string          `json:"link"`
 }
 
 type Path string

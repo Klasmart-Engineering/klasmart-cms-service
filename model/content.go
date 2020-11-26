@@ -1843,7 +1843,7 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		Name:         condition.Name,
 		ExactDirPath: dirPath,
 		Editors: searchUserIds,
-		Partition: string(partition),
+		Partition: partition,
 	}
 	return folderCondition
 }
