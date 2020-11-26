@@ -16,6 +16,7 @@ var(
 	ErrInvalidSourceExt = errors.New("invalid source extension")
 
 	ErrTeacherManual = errors.New("teacher manual resource is not exist")
+	ErrInvalidTeacherManual = errors.New("invalid teacher manual")
 )
 
 func NewMaterialData() *MaterialData {

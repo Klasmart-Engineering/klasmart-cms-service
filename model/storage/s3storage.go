@@ -232,29 +232,33 @@ func (s *S3Storage) GetUploadFileTempPath(ctx context.Context, partition Storage
 }
 
 func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartition, filePath string) (string, error) {
-	log.Info(ctx, "Must Get CDN config", log.Any("config", config.Get().CDNConfig))
-	if config.Get().CDNConfig.CDNRestrictedViewer {
+	log.Info(ctx, "Must Get CDN config", log.Any("cdn", config.Get().CDNConfig),
+		log.Any("storage", config.Get().StorageConfig))
+	//Native
+	if config.Get().StorageConfig.StorageDownloadMode == config.StorageDownloadNativeMode {
+		//直接访问桶
+		path := fmt.Sprintf("%s/%s", partition, filePath)
+		svc := s3.New(s.session)
+
+		req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
+			Bucket: aws.String(s.bucket),
+			Key:    aws.String(path),
+		})
+		urlStr, err := req.Presign(constant.PresignDurationMinutes)
+
+		if err != nil {
+			log.Error(ctx, "Get presigned url failed", log.Err(err))
+			return "", err
+		}
+
+		return urlStr, nil
+	}
+	//CDN
+	if config.Get().StorageConfig.StorageSigMode {
 		return s.GetFileTempPathForCDN(ctx, partition, filePath)
 	}else{
 		return s.GetFileCDNPath(ctx, partition, filePath), nil
 	}
-	//直接访问桶
-	//path := fmt.Sprintf("%s/%s", partition, filePath)
-	//svc := s3.New(s.session)
-	//
-	//req, _ := svc.GetObjectRequest(&s3.GetObjectInput{
-	//	Bucket: aws.String(s.bucket),
-	//	Key:    aws.String(path),
-	//})
-	//
-	//urlStr, err := req.Presign(constant.PresignDurationMinutes)
-	//
-	//if err != nil {
-	//	log.Error(ctx, "Get presigned url failed", log.Err(err))
-	//	return "", err
-	//}
-	//
-	//return urlStr, nil
 }
 func (s *S3Storage) GetFileCDNPath(ctx context.Context, partition StoragePartition, filePath string) string {
 	cdnConf := config.Get().CDNConfig
