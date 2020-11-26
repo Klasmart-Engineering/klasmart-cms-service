@@ -17,6 +17,7 @@ var (
 	ErrInvalidParentFolderId  = errors.New("invalid parent folder id")
 	ErrEmptyFolderName        = errors.New("empty folder name")
 	ErrEmptyFolderID          = errors.New("empty folder id")
+	ErrEmptyLinkID          = errors.New("empty link id")
 	ErrEmptyItemID            = errors.New("empty item id")
 	ErrMoveToNotFolder        = errors.New("move to an item not folder")
 	ErrInvalidFolderOwnerType = errors.New("invalid folder owner type")
@@ -585,13 +586,13 @@ func (f *FolderModel) prepareAddItemParams(ctx context.Context, req entity.Creat
 }
 
 func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.CreateFolderItemRequest) error {
-	if req.FolderID == "" {
-		log.Warn(ctx, "invalid folder id", log.Any("req", req))
-		return ErrEmptyFolderID
-	}
+	//if req.FolderID == "" {
+	//	log.Warn(ctx, "invalid folder id", log.Any("req", req))
+	//	return ErrEmptyFolderID
+	//}
 	if req.Link == "" {
 		log.Warn(ctx, "invalid item id", log.Any("req", req))
-		return ErrEmptyFolderID
+		return ErrEmptyLinkID
 	}
 
 	return nil
