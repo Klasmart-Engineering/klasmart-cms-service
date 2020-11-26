@@ -28,12 +28,17 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 	return contentData, nil
 }
 
-func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.ContentInfo, error) {
+func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
 	log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
-	//contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
-	//if err != nil {
-	//	return nil, err
-	//}
+	contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+	if err != nil {
+		return nil, err
+	}
+	teacherManual := ""
+	if obj.ContentType == entity.ContentTypeLesson {
+		teacherManual = contentData.(*LessonData).TeacherManual
+	}
+
 	subjects := make([]string, 0)
 	developmentals := make([]string, 0)
 	skills := make([]string, 0)
@@ -66,6 +71,13 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 	if obj.RejectReason != "" {
 		rejectReason = strings.Split(obj.RejectReason, ",")
 	}
+	//user, err := external.GetUserServiceProvider().Get(ctx, operator, obj.Author)
+	//authorName := ""
+	//if err != nil{
+	//	log.Warn(ctx, "get user info failed", log.Err(err), log.Any("obj", obj))
+	//}else{
+	//	authorName = user.Name
+	//}
 
 	cm := &entity.ContentInfo{
 		ID:            obj.ID,
@@ -88,6 +100,8 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content) (*entity.Conten
 		Extra:         obj.Extra,
 		Outcomes:      outcomes,
 		Author:        obj.Author,
+		//AuthorName: 	authorName,
+		TeacherManual: teacherManual,
 		Creator:		obj.Creator,
 		SelfStudy:     obj.SelfStudy.Bool(),
 		DrawActivity:  obj.DrawActivity.Bool(),

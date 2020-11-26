@@ -2,6 +2,10 @@ package api
 
 type ResponseLabel string
 
+func (l ResponseLabel) String() string {
+	return string(l)
+}
+
 const (
 	GeneralUnknown             ResponseLabel = "general_error_unknown"
 	GeneralUnAuthorized        ResponseLabel = "general_error_unauthorized"
@@ -13,10 +17,11 @@ const (
 
 	// Report
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
-)
 
-// schedule msg
-const (
+	//Library
+	LibraryMsgContentLocked ResponseLabel = "library_error_content_locked"
+
+	// schedule
 	ScheduleMsgEditOverlap   ResponseLabel = "schedule_schedule_msg_edit_all"
 	ScheduleMsgDeleteOverlap ResponseLabel = "schedule_msg_delete_overlap"
 	ScheduleMsgOverlap       ResponseLabel = "schedule_msg_overlap"
@@ -25,11 +30,17 @@ const (
 
 // L create response object with label
 func L(label ResponseLabel) interface{} {
-	return ErrorResponse{Label: string(label)}
+	return ErrorResponse{Label: label.String()}
+}
+
+// LD create response object with label and data
+func LD(lable ResponseLabel, data interface{}) interface{} {
+	return ErrorResponse{Label: lable.String(), Data: data}
 }
 
 type ErrorResponse struct {
-	Label string `json:"label,omitempty" example:"unknown" enums:"unknown"`
+	Label string      `json:"label,omitempty" example:"unknown" enums:"unknown"`
+	Data  interface{} `json:"data"`
 }
 
 type BadRequestResponse ErrorResponse

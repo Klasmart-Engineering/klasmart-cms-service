@@ -178,13 +178,13 @@ func NewContentPublishStatus(status string) ContentPublishStatus {
 	}
 }
 
-type ContentID struct {
-	ID string `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT" dynamodbav:"content_id" json:"content_id" dynamoupdate:"-"`
-}
-
 type ContentStatisticsInfo struct {
 	SubContentCount int `json:"subcontent_count"`
 	OutcomesCount   int `json:"outcomes_count"`
+}
+
+func ContentLink(id string) string {
+	return FileTypeContent + "-" + id
 }
 
 type Content struct {
@@ -225,6 +225,8 @@ type Content struct {
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by"`
 	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id"`
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id"`
+
+	DirPath string `gorm:"type:varchar(2048);column:dir_path"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at"`
@@ -317,6 +319,8 @@ type CreateContentRequest struct {
 
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
+
+	TeacherManual string `json:"teacher_manual"`
 }
 
 func (c CreateContentRequest) Validate() error {
@@ -345,6 +349,11 @@ type ContentInfoWithDetailsResponse struct {
 	ContentList []*ContentInfoWithDetails `json:"list"`
 }
 
+type FolderContentInfoWithDetailsResponse struct {
+	Total       int                       `json:"total"`
+	ContentList []*FolderContent `json:"list"`
+}
+
 type ContentInfoWithDetails struct {
 	ContentInfo
 	ContentTypeName   string   `json:"content_type_name"`
@@ -358,7 +367,7 @@ type ContentInfoWithDetails struct {
 	PublishScopeName  string   `json:"publish_scope_name"`
 	LessonTypeName    string   `json:"lesson_type_name"`
 
-	AuthorName string `json:"author_name"`
+	//AuthorName string `json:"author_name"`
 	CreatorName string `json:"creator_name"`
 
 	OutcomeEntities []*Outcome `json:"outcome_entities"`
@@ -378,6 +387,25 @@ type SubContentsWithName struct {
 	Data ContentData `json:"data"`
 }
 
+//Content in folder
+type FolderContent struct {
+	ID string `json:"id"`
+	Name string `json:"name"`
+	ContentType ContentType `json:"content_type"`
+	Description string `json:"description"`
+	Keywords string `json:"keywords"`
+	Author string `json:"author"`
+	ItemsCount int `json:"items_count"`
+	PublishStatus string `json:"publish_status"`
+	Thumbnail string `json:"thumbnail"`
+	Data string `json:"data"`
+	AuthorName string `json:"author_name"`
+	DirPath string `json:"dir_path"`
+	ContentTypeName string `json:"content_type_name"`
+	CreateAt int `json:"create_at"`
+	UpdateAt int `json:"update_at"`
+}
+
 type ContentInfo struct {
 	ID            string      `json:"id"`
 	ContentType   ContentType `json:"content_type"`
@@ -394,6 +422,7 @@ type ContentInfo struct {
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
 	SourceType    string      `json:"source_type"`
+	AuthorName 		string `json:"author_name"`
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
@@ -410,6 +439,8 @@ type ContentInfo struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
+	TeacherManual string `json:"teacher_manual"`
+
 	Author     string `json:"author"`
 	Creator string `json:"creator"`
 	Org        string `json:"org"`
@@ -421,13 +452,17 @@ type ContentInfo struct {
 	UpdatedAt int64 `json:"updated_at"`
 }
 
+type ExtraDataInRequest struct {
+	TeacherManual string `json:"teacher_manual"`
+}
+
 type ContentData interface {
 	Unmarshal(ctx context.Context, data string) error
 	Marshal(ctx context.Context) (string, error)
 
 	Validate(ctx context.Context, contentType ContentType) error
-	PrepareResult(ctx context.Context) error
-	PrepareSave(ctx context.Context) error
+	PrepareResult(ctx context.Context, operator *Operator) error
+	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
 	SubContentIds(ctx context.Context) []string
 }
 

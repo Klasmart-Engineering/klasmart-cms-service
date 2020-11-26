@@ -248,3 +248,7 @@ func loadAMSConfig(ctx context.Context) {
 func Get() *Config {
 	return config
 }
+
+func Set(c *Config) {
+	config = c
+}

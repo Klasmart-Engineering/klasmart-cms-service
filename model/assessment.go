@@ -97,7 +97,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operato
 		}
 
 		studentService := external.GetStudentServiceProvider()
-		students, err := studentService.BatchGet(ctx, attendanceIDs)
+		students, err := studentService.BatchGet(ctx, operator, attendanceIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get student failed",
 				log.Err(err),
@@ -149,7 +149,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operato
 			return nil, err
 		}
 		teacherNameService := external.GetTeacherServiceProvider()
-		items, err := teacherNameService.BatchGet(ctx, teacherIDs)
+		items, err := teacherNameService.BatchGet(ctx, operator, teacherIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get teacher failed",
 				log.Err(err),
@@ -279,7 +279,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	{
 		if cmd.TeacherName != nil {
 			teacherService := external.GetTeacherServiceProvider()
-			items, err := teacherService.Query(ctx, operator.OrgID, *cmd.TeacherName)
+			items, err := teacherService.Query(ctx, operator, operator.OrgID, *cmd.TeacherName)
 			if err != nil {
 				log.Error(ctx, "list assessments: query teachers by name failed",
 					log.Err(err),
@@ -352,7 +352,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		return nil, err
 	}
 
-	teacherNameMap, err := a.getTeacherNameMap(ctx, teacherIDs)
+	teacherNameMap, err := a.getTeacherNameMap(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get teacher name map failed",
 			log.Err(err),
@@ -441,10 +441,10 @@ func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []st
 	return subjectNameMap, nil
 }
 
-func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []string) (map[string]string, error) {
+func (a *assessmentModel) getTeacherNameMap(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]string, error) {
 	teacherNameMap := map[string]string{}
 	teacherNameService := external.GetTeacherServiceProvider()
-	items, err := teacherNameService.BatchGet(ctx, teacherIDs)
+	items, err := teacherNameService.BatchGet(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get teacher failed",
 			log.Err(err),
@@ -458,10 +458,10 @@ func (a *assessmentModel) getTeacherNameMap(ctx context.Context, teacherIDs []st
 	return teacherNameMap, nil
 }
 
-func (a *assessmentModel) getClassNameMap(ctx context.Context, classIDs []string) (map[string]string, error) {
+func (a *assessmentModel) getClassNameMap(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]string, error) {
 	classNameMap := map[string]string{}
 	classService := external.GetClassServiceProvider()
-	items, err := classService.BatchGet(ctx, classIDs)
+	items, err := classService.BatchGet(ctx, operator, classIDs)
 	if err != nil {
 		log.Error(ctx, "get class name map: batch get class failed",
 			log.Err(err),
@@ -521,14 +521,14 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 
 	var newID = utils.NewID()
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		return a.addTx(ctx, tx, cmd, newID, outcomeIDs, schedule)
+		return a.addTx(ctx, operator, tx, cmd, newID, outcomeIDs, schedule)
 	}); err != nil {
 		return "", err
 	}
 	return newID, nil
 }
 
-func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd entity.AddAssessmentCommand, newID string, outcomeIDs []string, schedule *entity.SchedulePlain) error {
+func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, cmd entity.AddAssessmentCommand, newID string, outcomeIDs []string, schedule *entity.SchedulePlain) error {
 	{
 		nowUnix := time.Now().Unix()
 		newItem := entity.Assessment{
@@ -541,7 +541,7 @@ func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd enti
 			CreateAt:     nowUnix,
 			UpdateAt:     nowUnix,
 		}
-		classNameMap, err := a.getClassNameMap(ctx, []string{schedule.ClassID})
+		classNameMap, err := a.getClassNameMap(ctx, operator, []string{schedule.ClassID})
 		if err != nil {
 			log.Error(ctx, "add assessment: get class name map failed",
 				log.Err(err),
@@ -550,13 +550,27 @@ func (a *assessmentModel) addTx(ctx context.Context, tx *dbo.DBContext, cmd enti
 			return err
 		}
 		newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
-		if err := newItem.EncodeAndSetTeacherIDs(schedule.TeacherIDs); err != nil {
-			log.Error(ctx, "add assessment: encode and set teacher ids failed",
-				log.Err(err),
-				log.Strings("teacher_ids", schedule.TeacherIDs),
-				log.Any("cmd", cmd),
-			)
-			return err
+		// fill teacher ids
+		if schedule.ClassID != "" {
+			classID2TeachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, []string{schedule.ClassID})
+			if err != nil {
+				return err
+			}
+			teachers := classID2TeachersMap[schedule.ClassID]
+			if len(teachers) > 0 {
+				var teacherIDs []string
+				for _, teacher := range teachers {
+					teacherIDs = append(teacherIDs, teacher.ID)
+				}
+				if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
+					log.Error(ctx, "add assessment: encode and set teacher ids failed",
+						log.Err(err),
+						log.Any("schedule", schedule),
+						log.Any("cmd", cmd),
+					)
+					return err
+				}
+			}
 		}
 		if len(outcomeIDs) == 0 {
 			newItem.Status = entity.AssessmentStatusComplete
@@ -860,9 +874,9 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 	return nil
 }
 
-func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string) (bool, error) {
+func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string, operator *entity.Operator) (bool, error) {
 	teacherService := external.GetTeacherServiceProvider()
-	if _, err := teacherService.BatchGet(ctx, ids); err != nil {
+	if _, err := teacherService.BatchGet(ctx, operator, ids); err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
 			log.Info(ctx, "check teacher exists: not found teachers",
@@ -1013,7 +1027,7 @@ func checkAndFilterListWithOrg(ctx context.Context, operator *entity.Operator, c
 	if hasP424 || hasP425 {
 		var teacherIDs []string
 		{
-			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
+			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 			if err != nil {
 				log.Error(ctx, "check and filter list with school: get teachers failed",
 					log.Any("operator", operator),
@@ -1071,7 +1085,7 @@ func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator
 		var teacherIDs []string
 		{
 			var schoolIDs []string
-			schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator.UserID)
+			schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator, operator.UserID)
 			if err != nil {
 				log.Error(ctx, "check and filter list with org: get schools failed",
 					log.Any("operator", operator),
@@ -1082,7 +1096,7 @@ func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator
 			for _, school := range schools {
 				schoolIDs = append(schoolIDs, school.ID)
 			}
-			schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, schoolIDs)
+			schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
 			if err != nil {
 				log.Error(ctx, "check and filter list with org: get teachers failed",
 					log.Any("operator", operator),

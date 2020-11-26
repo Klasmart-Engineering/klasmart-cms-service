@@ -2,13 +2,14 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary getSkill
@@ -30,11 +31,11 @@ func (s *Server) getSkill(c *gin.Context) {
 	condition := &da.SkillCondition{}
 	if len(programID) != 0 && len(developmentalID) != 0 {
 		condition.ProgramIDAndDevelopmentalID = []sql.NullString{
-			sql.NullString{
+			{
 				String: programID,
 				Valid:  len(programID) != 0,
 			},
-			sql.NullString{
+			{
 				String: developmentalID,
 				Valid:  len(developmentalID) != 0,
 			},
@@ -85,7 +86,7 @@ func (s *Server) getSkillByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills [post]
 func (s *Server) addSkill(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Skill)
 	if err := c.ShouldBind(data); err != nil {
@@ -114,7 +115,7 @@ func (s *Server) addSkill(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills/{id} [put]
 func (s *Server) updateSkill(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Skill)
 	if err := c.ShouldBind(data); err != nil {
@@ -146,7 +147,7 @@ func (s *Server) updateSkill(c *gin.Context) {
 // @Router /skills/{id} [delete]
 func (s *Server) deleteSkill(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	id := c.Param("id")
 	err := model.GetSkillModel().Delete(ctx, op, id)
 	switch err {

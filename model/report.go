@@ -77,7 +77,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	{
 		var err error
 		log.Debug(ctx, "list students report: before call GetClassServiceProvider().getStudents()")
-		students, err = external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
+		students, err = external.GetStudentServiceProvider().GetByClassID(ctx, operator, cmd.ClassID)
 		log.Debug(ctx, "list students report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
@@ -89,7 +89,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	log.Debug(ctx, "list students report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "list students report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -172,7 +172,7 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 	var student *external.Student
 	{
 		log.Debug(ctx, "get student detail report: before call GetClassServiceProvider().getStudents()")
-		students, err := external.GetStudentServiceProvider().GetByClassID(ctx, cmd.ClassID)
+		students, err := external.GetStudentServiceProvider().GetByClassID(ctx, operator, cmd.ClassID)
 		log.Debug(ctx, "get student detail report: after call GetClassServiceProvider().getStudents()")
 		if err != nil {
 			log.Error(ctx, "list students report: get students",
@@ -194,7 +194,7 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	log.Debug(ctx, "get student detail report: before call getAssessmentIDs()")
-	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.TeacherID, cmd.ClassID, cmd.LessonPlanID)
+	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.ClassID, cmd.LessonPlanID)
 	log.Debug(ctx, "get student detail report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
@@ -322,13 +322,12 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 	return &result, nil
 }
 
-func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
-	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, classID, teacherID, lessonPlanID)
+func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
+	scheduleIDs, err := r.getScheduleIDs(ctx, tx, operator, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids: get schedule ids failed",
 			log.Err(err),
 			log.String("class_id", classID),
-			log.String("teacher_id", teacherID),
 			log.String("lesson_plan_id", lessonPlanID),
 		)
 		return nil, err
@@ -348,10 +347,9 @@ func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 	return result, nil
 }
 
-func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, teacherID string, lessonPlanID string) ([]string, error) {
+func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
-		TeacherID:    teacherID,
 		ClassID:      classID,
 		LessonPlanID: lessonPlanID,
 		Status:       entity.ScheduleStatusClosed,
@@ -361,7 +359,6 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, ope
 		log.Error(ctx, "get schedule ids: query failed",
 			log.Err(err),
 			log.String("class_id", classID),
-			log.String("teacher_id", teacherID),
 			log.String("lesson_plan_id", lessonPlanID),
 		)
 		return nil, err
@@ -549,7 +546,7 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 	}
 	if hasP610 {
 		var validTeacherIDs []string
-		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator.OrgID)
+		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 		if err != nil {
 			log.Error(ctx, "has report permission: call external \"GetByOrganization()\" failed",
 				log.Err(err),
@@ -562,11 +559,11 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 			validTeacherIDs = append(validTeacherIDs, teacher.ID)
 		}
 		var schoolIDs []string
-		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator.UserID)
+		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator, operator.UserID)
 		for _, school := range schools {
 			schoolIDs = append(schoolIDs, school.ID)
 		}
-		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, schoolIDs)
+		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
 		if err != nil {
 			log.Error(ctx, "has report permission: call external \"GetBySchools()\" failed",
 				log.Err(err),

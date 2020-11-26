@@ -52,7 +52,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	outcome.AncestorID = outcome.ID
 	//outcome.SourceID = outcome.ID
 	outcome.AuthorID = operator.UserID
-	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, outcome.AuthorID)
+	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, operator, outcome.AuthorID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: getAuthorNameByID failed",
 			log.String("op", outcome.AuthorID),
@@ -162,7 +162,7 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 				log.Any("perms", perms), log.Any("outcome", outcome))
 			return constant.ErrOperateNotAllowed
 		}
-		err = ocm.deleteOutcome(ctx, tx, outcome)
+		err = ocm.deleteOutcome(ctx, tx, outcome, operator)
 		if err != nil {
 			log.Error(ctx, "DeleteLearningOutcome: deleteOutcome failed",
 				log.String("op", operator.UserID),
@@ -187,7 +187,7 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	}
 
 	if condition.FuzzyKey != "" {
-		users, err := external.GetUserServiceProvider().Query(ctx, user.OrgID, condition.FuzzyKey)
+		users, err := external.GetUserServiceProvider().Query(ctx, user, user.OrgID, condition.FuzzyKey)
 		if err != nil {
 			log.Error(ctx, "SearchLearningOutcome: GetUserServiceProvider failed",
 				log.Any("op", user),
@@ -249,7 +249,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 				log.Error(ctx, "LockLearningOutcome: copyValue status not draft",
 					log.String("op", operator.UserID),
 					log.Any("copy", copyValue))
-				return ErrContentAlreadyLocked
+				return NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 			}
 		}
 
@@ -402,7 +402,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 			return constant.ErrOperateNotAllowed
 		}
 		for _, o := range outcomes {
-			err = ocm.deleteOutcome(ctx, tx, o)
+			err = ocm.deleteOutcome(ctx, tx, o, operator)
 			if err != nil {
 				log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
 					log.String("op", operator.UserID),
@@ -661,7 +661,7 @@ func (ocm OutcomeModel) lockOutcome(ctx context.Context, tx *dbo.DBContext, outc
 		return
 	}
 	if outcome.LockedBy != "" && outcome.LockedBy != constant.LockedByNoBody {
-		err = ErrContentAlreadyLocked
+		err = NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 		log.Warn(ctx, "lockOutcome: invalid lock status",
 			log.Err(err),
 			log.String("op", operator.UserID))
@@ -697,10 +697,10 @@ func (ocm OutcomeModel) unlockOutcome(ctx context.Context, tx *dbo.DBContext, ot
 	return
 }
 
-func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+func (ocm OutcomeModel) deleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) (err error) {
 	// must in a transaction
 	if outcome.LockedBy != "" && outcome.LockedBy != constant.LockedByNoBody {
-		err = ErrContentAlreadyLocked
+		err = NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 		log.Error(ctx, "deleteOutcome: invalid lock status",
 			log.Err(err),
 			log.Any("outcome", outcome))
@@ -772,9 +772,9 @@ func (ocm OutcomeModel) updateLatestToHead(ctx context.Context, tx *dbo.DBContex
 	return
 }
 
-func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, id string) (name string, err error) {
+func (ocm OutcomeModel) getAuthorNameByID(ctx context.Context, operator *entity.Operator, id string) (name string, err error) {
 	provider := external.GetUserServiceProvider()
-	user, err := provider.Get(ctx, id)
+	user, err := provider.Get(ctx, operator, id)
 	if err != nil {
 		log.Error(ctx, "getAuthorNameByID: GetUserInfoByID failed",
 			log.Err(err),

@@ -1,14 +1,15 @@
 package api
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
-	"strings"
 )
 
 // @Summary getProgram
@@ -66,7 +67,7 @@ func (s *Server) getProgramByID(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /programs [post]
 func (s *Server) addProgram(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Program)
 	if err := c.ShouldBind(data); err != nil {
@@ -95,7 +96,7 @@ func (s *Server) addProgram(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /programs/{id} [put]
 func (s *Server) updateProgram(c *gin.Context) {
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	data := new(entity.Program)
 	if err := c.ShouldBind(data); err != nil {
@@ -269,7 +270,7 @@ func (s *Server) SetSkill(c *gin.Context) {
 // @Router /programs/{id} [delete]
 func (s *Server) deleteProgram(c *gin.Context) {
 	ctx := c.Request.Context()
-	op := GetOperator(c)
+	op := s.getOperator(c)
 	id := c.Param("id")
 	err := model.GetProgramModel().Delete(ctx, op, id)
 	switch err {

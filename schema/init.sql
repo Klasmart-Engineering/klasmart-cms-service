@@ -15,6 +15,7 @@ CREATE TABLE `cms_contents` (
    `data` JSON  NULL  COMMENT  '数据',
    `extra` TEXT  NULL  COMMENT  '附加数据',
    `outcomes` TEXT NULL COMMENT 'Learning outcomes',
+   `dir_path` varchar(2048) COMMENT 'Content路径',
    `suggest_time` int  NOT  NULL  COMMENT  '建议时间',
    `author` VARCHAR( 50) NOT  NULL  COMMENT  '作者id',
    `creator` VARCHAR( 50) NOT  NULL  COMMENT  '创建者id',
@@ -73,17 +74,6 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   KEY `schedules_end_at` (`end_at`),
   KEY `schedules_deleted_at` (`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='schedules';
-
-CREATE TABLE IF NOT EXISTS `schedules_teachers` (
-  `id` varchar(50) NOT NULL COMMENT 'id',
-  `teacher_id` varchar(100) NOT NULL COMMENT 'teacher_id',
-  `schedule_id` varchar(100) NOT NULL COMMENT 'schedule_id',
-  `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
-  PRIMARY KEY (`id`),
-  KEY `schedules_teacher_id` (`teacher_id`),
-  KEY `schedules_schedule_id` (`schedule_id`),
-  KEY `schedules_deleted_at` (`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='schedules_teachers';
 
 CREATE TABLE `learning_outcomes` (
    `id` VARCHAR(50) NOT  NULL  COMMENT  'outcome_id',
@@ -176,6 +166,27 @@ create table outcomes_attendances
     key `outcomes_attendances_outcome_id` (`outcome_id`),
     key `outcomes_attendances_attendance_id` (`attendance_id`)
 ) comment 'outcome and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+CREATE TABLE `cms_folder_items` (
+    `id` varchar(50) comment 'id',
+    `owner_type` int NOT NULL comment 'folder item owner type',
+    `owner` varchar(50) NOT NULL comment 'folder item owner',
+    `parent_id` varchar(50) comment 'folder item parent folder id',
+    `link` varchar(50) comment 'folder item link',
+    `item_type` int NOT NULL comment 'folder item type',
+    `dir_path` varchar(2048) NOT NULL comment 'folder item path',
+    `editor` varchar(50) NOT NULL comment 'folder item editor',
+    `items_count` int NOT NULL comment 'folder item count',
+    `name` varchar(256) NOT NULL comment 'folder item name',
+    `thumbnail` text comment 'folder item thumbnail',
+    `creator` varchar(50) comment 'folder item creator',
+    `create_at` bigint NOT NULL comment 'create time (unix seconds)',
+    `update_at` bigint NOT NULL comment 'update time (unix seconds)',
+    `delete_at` bigint comment 'delete time (unix seconds)',
+    PRIMARY KEY (`id`)
+)comment 'cms folder' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 
 drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
 create fulltext index fullindex_name_description_keywords_author_shortcode on learning_outcomes(`name`, `keywords`, `description`, `author_name`, `shortcode`);

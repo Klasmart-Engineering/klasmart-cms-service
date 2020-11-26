@@ -2,12 +2,13 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
-	"net/http"
 )
 
 // @Summary list student report
@@ -28,7 +29,7 @@ import (
 // @Router /reports/students [get]
 func (s *Server) listStudentsReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	operator := GetOperator(ctx)
+	operator := s.getOperator(ctx)
 	cmd := entity.ListStudentsReportCommand{
 		TeacherID:    ctx.Query("teacher_id"),
 		ClassID:      ctx.Query("class_id"),
@@ -68,7 +69,7 @@ func (s *Server) listStudentsReport(ctx *gin.Context) {
 // @Router /reports/students/{id} [get]
 func (s *Server) getStudentReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	operator := GetOperator(ctx)
+	operator := s.getOperator(ctx)
 	cmd := entity.GetStudentReportCommand{
 		StudentID:    ctx.Param("id"),
 		TeacherID:    ctx.Query("teacher_id"),
@@ -106,7 +107,7 @@ func (s *Server) getStudentReport(ctx *gin.Context) {
 // @Router /reports/teachers/{id} [get]
 func (s *Server) getTeacherReport(ctx *gin.Context) {
 	requestContext := ctx.Request.Context()
-	operator := GetOperator(ctx)
+	operator := s.getOperator(ctx)
 	teacherID := ctx.Param("id")
 	result, err := model.GetReportModel().GetTeacherReport(requestContext, dbo.MustGetDB(requestContext), operator, teacherID)
 	switch err {
