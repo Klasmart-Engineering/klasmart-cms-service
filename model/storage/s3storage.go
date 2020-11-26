@@ -235,7 +235,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartit
 	log.Info(ctx, "Must Get CDN config", log.Any("cdn", config.Get().CDNConfig),
 		log.Any("storage", config.Get().StorageConfig))
 	//Native
-	if config.Get().StorageConfig.DownloadMode == config.StorageDownloadNativeMode {
+	if config.Get().StorageConfig.StorageDownloadMode == config.StorageDownloadNativeMode {
 		//直接访问桶
 		path := fmt.Sprintf("%s/%s", partition, filePath)
 		svc := s3.New(s.session)
@@ -244,7 +244,6 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartit
 			Bucket: aws.String(s.bucket),
 			Key:    aws.String(path),
 		})
-
 		urlStr, err := req.Presign(constant.PresignDurationMinutes)
 
 		if err != nil {
@@ -255,7 +254,7 @@ func (s *S3Storage) GetFileTempPath(ctx context.Context, partition StoragePartit
 		return urlStr, nil
 	}
 	//CDN
-	if config.Get().CDNConfig.CDNRestrictedViewer {
+	if config.Get().StorageConfig.StorageSigMode {
 		return s.GetFileTempPathForCDN(ctx, partition, filePath)
 	}else{
 		return s.GetFileCDNPath(ctx, partition, filePath), nil
