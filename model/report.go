@@ -363,6 +363,7 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, ope
 		)
 		return nil, err
 	}
+	log.Debug(ctx, "get schedule ids success", log.Any("result", result))
 	return result, nil
 }
 
