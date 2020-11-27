@@ -73,7 +73,7 @@ func parseArgs() (args, error) {
 		return a, nil
 	}
 	flag.StringVar(&a.BaseURL, "base-url", "https://kl2-test.kidsloop.net", "base url")
-	flag.StringVar(&a.GraphqlEndpoint, "graphql-endpoint", "https://api.kidsloop.net/user/", "graphql endpoint")
+	flag.StringVar(&a.GraphqlEndpoint, "graphql-endpoint", "https://api.beta.kidsloop.net/user/", "graphql endpoint")
 	flag.StringVar(&a.OrgID, "org-id", "", "org id, required")
 	flag.StringVar(&a.Cookie, "cookie", "", "browser cookie, required")
 	scheduleIDsString := flag.String("schedule-ids", "", "schedule ids, separate by comma, require one of \"schedule-ids\" and \"schedule-ids-file\"")
