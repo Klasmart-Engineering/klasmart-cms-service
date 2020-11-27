@@ -1061,22 +1061,24 @@ func (cm *ContentModel) GetPastContentIDByID(ctx context.Context, tx *dbo.DBCont
 		return nil, ErrReadContentFailed
 	}
 
+	latestID := data.LatestID
 	if data.LatestID == "" {
-		return []string{data.ID}, nil
+		latestID = data.ID
 	}
 
 	_, res, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
-		LatestID: data.LatestID,
+		LatestID: latestID,
 	})
 	if err != nil {
 		log.Error(ctx, "can't search content", log.Err(err), log.String("latest id", data.LatestID))
 		return nil, ErrReadContentFailed
 	}
-	resp := make([]string, len(res))
+	resp := make([]string, len(res)+1)
 	for i := range res {
 		resp[i] = res[i].ID
 	}
-	return resp, nil
+	resp[len(res)] = data.ID
+	return utils.SliceDeduplication(resp), nil
 }
 
 func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
