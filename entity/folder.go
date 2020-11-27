@@ -92,19 +92,19 @@ func NewItemType(num int) ItemType{
 }
 
 type CreateFolderRequest struct {
-	OwnerType OwnerType       `json:"owner_type"`
+	OwnerType int       `json:"owner_type"`
 	ParentID  string          `json:"parent_id"`
 	Name      string          `json:"name"`
-	Partition FolderPartition `json:"partition"`
+	Partition string `json:"partition"`
 
 	Thumbnail string `json:"thumbnail"`
 }
 
 type MoveFolderRequest struct {
 	ID             string          `json:"id"`
-	OwnerType      OwnerType       `json:"owner_type"`
+	OwnerType      int       `json:"owner_type"`
 	Dist           string          `json:"dist"`
-	Partition      FolderPartition `json:"partition"`
+	Partition      string `json:"partition"`
 	FolderFileType string          `json:"folder_file_type"`
 }
 
@@ -115,9 +115,9 @@ type UpdateFolderRequest struct {
 
 type MoveFolderIDBulkRequest struct {
 	IDs []string `json:"ids"`
-	OwnerType OwnerType `json:"owner_type"`
+	OwnerType int `json:"owner_type"`
 	Dist string `json:"dist"`
-	Partition FolderPartition `json:"partition"`
+	Partition string `json:"partition"`
 	FolderFileType string `json:"folder_file_type"`
 }
 
@@ -125,9 +125,9 @@ type CreateFolderItemRequest struct {
 	//ID string `json:"id"`
 	ParentFolderID string `json:"parent_folder_id"`
 	//ItemType  ItemType  `json:"item_type"`
-	Partition FolderPartition `json:"partition"`
+	Partition string `json:"partition"`
 	Link      string          `json:"link"`
-	OwnerType OwnerType `json:"owner_type"`
+	OwnerType int `json:"owner_type"`
 }
 
 type Path string

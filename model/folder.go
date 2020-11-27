@@ -134,9 +134,9 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 	//若不存在，则创建
 	//新发布的content
 	_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
-		Partition: partition,
+		Partition: string(partition),
 		Link:     link,
-		OwnerType: entity.OwnerTypeOrganization,
+		OwnerType: int(entity.OwnerTypeOrganization),
 	}, operator)
 	if err != nil {
 		log.Error(ctx, "add folder item failed", log.Err(err),
@@ -189,7 +189,13 @@ func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDB
 			return err
 		}
 		for i := range req.IDs {
-			err := f.moveItem(ctx, tx, req.OwnerType, req.FolderFileType, req.Partition, req.IDs[i], distFolder, operator)
+			err := f.moveItem(ctx, tx,
+				entity.NewOwnerType(req.OwnerType),
+				req.FolderFileType,
+				entity.NewFolderPartition(req.Partition),
+				req.IDs[i],
+				distFolder,
+				operator)
 			if err != nil {
 				return err
 			}
@@ -209,7 +215,13 @@ func (f *FolderModel) MoveItem(ctx context.Context, req entity.MoveFolderRequest
 		if err != nil {
 			return err
 		}
-		err = f.moveItem(ctx, tx, req.OwnerType, req.FolderFileType, req.Partition, req.ID, distFolder, operator)
+		err = f.moveItem(ctx, tx,
+			entity.NewOwnerType(req.OwnerType),
+			req.FolderFileType,
+			entity.NewFolderPartition(req.Partition),
+			req.ID,
+			distFolder,
+			operator)
 		if err != nil {
 			return err
 		}
@@ -339,9 +351,9 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 		log.Warn(ctx, "search folder failed", log.Err(err), log.Any("condition", condition))
 		_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
 			ParentFolderID: distFolder.ID,
-			Partition:      partition,
+			Partition:      string(partition),
 			Link:           link,
-			OwnerType:      ownerType,
+			OwnerType:      int(ownerType),
 		}, operator)
 		if err != nil{
 			return err
@@ -674,8 +686,8 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	}
 
 	path := entity.NewPath("/")
-	ownerType := req.OwnerType
-	owner := req.OwnerType.Owner(operator)
+	ownerType := entity.NewOwnerType(req.OwnerType)
+	owner := ownerType.Owner(operator)
 	if req.ParentFolderID != "" && req.ParentFolderID != "/" {
 		//get parent folder
 		parentFolder, err := f.getFolder(ctx, tx, req.ParentFolderID)
@@ -792,7 +804,7 @@ func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.
 
 	//组织下,不能有重复file,检查是否重复
 	if parentFolder.OwnerType == entity.OwnerTypeOrganization {
-		hasItem, err := f.hasFolderFileItem(ctx, dbo.MustGetDB(ctx), parentFolder.OwnerType, req.Partition, parentFolder.Owner, req.Link)
+		hasItem, err := f.hasFolderFileItem(ctx, dbo.MustGetDB(ctx), parentFolder.OwnerType, entity.NewFolderPartition(req.Partition), parentFolder.Owner, req.Link)
 		if err != nil {
 			return err
 		}
@@ -821,8 +833,8 @@ func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.
 
 func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.CreateFolderRequest, parentFolder *entity.FolderItem, operator *entity.Operator) *entity.FolderItem {
 	path := entity.NewPath("/")
-	ownerType := req.OwnerType
-	owner := req.OwnerType.Owner(operator)
+	ownerType := entity.NewOwnerType(req.OwnerType)
+	owner := ownerType.Owner(operator)
 	if parentFolder != nil {
 		path = parentFolder.ChildrenPath()
 		ownerType = parentFolder.OwnerType
@@ -858,8 +870,10 @@ func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.C
 		log.Warn(ctx, "empty folder name", log.Any("req", req))
 		return ErrEmptyFolderName
 	}
+	ownerType := entity.NewOwnerType(req.OwnerType)
+	partition := entity.NewFolderPartition(req.Partition)
 	//check owner type
-	if !req.OwnerType.Valid() {
+	if !ownerType.Valid() {
 		log.Warn(ctx, "invalid folder owner type", log.Any("req", req))
 		return ErrInvalidFolderOwnerType
 	}
@@ -869,7 +883,7 @@ func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.C
 	}
 
 	//check duplicate name
-	err := f.checkDuplicateFolderName(ctx, req.OwnerType, req.Partition, req.Name, parentFolder, operator)
+	err := f.checkDuplicateFolderName(ctx, ownerType, partition, req.Name, parentFolder, operator)
 	if err != nil {
 		return err
 	}
