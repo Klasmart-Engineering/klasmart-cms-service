@@ -184,7 +184,7 @@ type ContentStatisticsInfo struct {
 }
 
 func ContentLink(id string) string {
-	return FileTypeContent + "-" + id
+	return FolderFileTypeContent + "-" + id
 }
 
 type Content struct {

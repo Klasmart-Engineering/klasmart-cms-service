@@ -468,7 +468,7 @@ func TestSearchFolder(t *testing.T) {
 	}
 	t.Logf("%#v\n", folderInfo)
 }
-//
+
 //func TestFolderModel_GetRootFolder(t *testing.T) {
 //	rootId, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, fakeOperator())
 //	if !assert.NoError(t, err) {

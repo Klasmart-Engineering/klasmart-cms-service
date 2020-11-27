@@ -14,7 +14,9 @@ const (
 	OwnerTypeUser OwnerType = 2
 
 
-	FileTypeContent = "content"
+	FolderFileTypeContent = "content"
+	FolderFileTypeFolder = "folder"
+	FolderFileTypeFolderItem = "item"
 
 	//RootAssetsFolderName FolderPartition = "assets"
 	//RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
@@ -99,7 +101,11 @@ type CreateFolderRequest struct {
 }
 
 type MoveFolderRequest struct {
-	Dist string `json:"dist"`
+	ID             string          `json:"id"`
+	OwnerType      OwnerType       `json:"owner_type"`
+	Dist           string          `json:"dist"`
+	Partition      FolderPartition `json:"partition"`
+	FolderFileType string          `json:"folder_file_type"`
 }
 
 type UpdateFolderRequest struct {
@@ -107,9 +113,12 @@ type UpdateFolderRequest struct {
 	Thumbnail string `json:"thumbnail"`
 }
 
-type MoveFolderIDBulk struct {
+type MoveFolderIDBulkRequest struct {
 	IDs []string `json:"ids"`
+	OwnerType OwnerType `json:"owner_type"`
 	Dist string `json:"dist"`
+	Partition FolderPartition `json:"partition"`
+	FolderFileType string `json:"folder_file_type"`
 }
 
 type CreateFolderItemRequest struct {
@@ -181,7 +190,7 @@ func (f FolderItem) TableName() string{
 }
 
 func (f FolderItem) ChildrenPath() Path {
-	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
+	return NewPath(f.DirPath.ParentPath() + "/" + f.ID + "/")
 }
 
 type FolderItemInfo struct {
