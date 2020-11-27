@@ -22,44 +22,10 @@ type StudentReport struct {
 }
 
 type StudentReportCategory struct {
-	Name              ReportCategory `json:"name"`
-	AchievedItems     []string       `json:"achieved_items"`
-	NotAchievedItems  []string       `json:"not_achieved_items"`
-	NotAttemptedItems []string       `json:"not_attempted_items"`
-}
-
-type ReportCategory string
-
-const (
-	ReportCategorySpeechLanguagesSkills     ReportCategory = "Speech & Language Skills"
-	ReportCategoryFineMotorSkills           ReportCategory = "Fine Motor Skills"
-	ReportCategoryGrossMotorSkills          ReportCategory = "Gross Motor Skills"
-	ReportCategoryCognitiveSkills           ReportCategory = "Cognitive Skills"
-	ReportCategoryPersonalDevelopment       ReportCategory = "Personal Development"
-	ReportCategoryLanguageAndNumeracySkills ReportCategory = "Language and Numeracy Skills"
-	ReportCategorySocialAndEmotional        ReportCategory = "Social and Emotional"
-	ReportCategoryOral                      ReportCategory = "Oral"
-	ReportCategoryLiteracy                  ReportCategory = "Literacy"
-	ReportCategoryWholeChild                ReportCategory = "Whole-Child"
-	ReportCategoryKnowledge                 ReportCategory = "Knowledge"
-)
-
-var reportCategoryOrderMap = map[ReportCategory]int{
-	ReportCategorySpeechLanguagesSkills:     0,
-	ReportCategoryFineMotorSkills:           1,
-	ReportCategoryGrossMotorSkills:          2,
-	ReportCategoryCognitiveSkills:           3,
-	ReportCategoryPersonalDevelopment:       4,
-	ReportCategoryLanguageAndNumeracySkills: 5,
-	ReportCategorySocialAndEmotional:        6,
-	ReportCategoryOral:                      7,
-	ReportCategoryLiteracy:                  8,
-	ReportCategoryWholeChild:                9,
-	ReportCategoryKnowledge:                 10,
-}
-
-func ReportCategoryOrder(category ReportCategory) int {
-	return reportCategoryOrderMap[category]
+	Name              string   `json:"name"`
+	AchievedItems     []string `json:"achieved_items"`
+	NotAchievedItems  []string `json:"not_achieved_items"`
+	NotAttemptedItems []string `json:"not_attempted_items"`
 }
 
 type ReportLessonPlanInfo struct {
@@ -196,8 +162,8 @@ type TeacherReport struct {
 }
 
 type TeacherReportCategory struct {
-	Name  ReportCategory `json:"name"`
-	Items []string       `json:"items"`
+	Name  string   `json:"name"`
+	Items []string `json:"items"`
 }
 
 type TeacherReportSortByCount TeacherReport
