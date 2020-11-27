@@ -105,7 +105,7 @@ type MoveFolderRequest struct {
 	OwnerType      int       `json:"owner_type"`
 	Dist           string          `json:"dist"`
 	Partition      string `json:"partition"`
-	FolderFileType string          `json:"folder_file_type"`
+	FolderFileType string          `json:"folder_file_type" enums:"unknown"`
 }
 
 type UpdateFolderRequest struct {
@@ -113,12 +113,16 @@ type UpdateFolderRequest struct {
 	Thumbnail string `json:"thumbnail"`
 }
 
+type FolderIdWithFileType struct {
+	ID string `json:"id"`
+	FolderFileType string `json:"folder_file_type"`
+}
+
 type MoveFolderIDBulkRequest struct {
-	IDs []string `json:"ids"`
+	FolderInfo []FolderIdWithFileType `json:"folder_info"`
 	OwnerType int `json:"owner_type"`
 	Dist string `json:"dist"`
 	Partition string `json:"partition"`
-	FolderFileType string `json:"folder_file_type"`
 }
 
 type CreateFolderItemRequest struct {

@@ -167,8 +167,6 @@ func (s *Server) moveFolderItem(c *gin.Context){
 	}
 }
 
-
-
 // @Summary moveFolderItemBulk
 // @ID moveFolderItemBulk
 // @Description bulk move folder item
@@ -205,7 +203,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 
 // @Summary listFolderItems
 // @ID listFolderItems
-// @Description list folder items
+// @Description list folder items (deprecated)
 // @Accept json
 // @Produce json
 // @Param item_type query integer false "list items type. 1.folder 2.file"

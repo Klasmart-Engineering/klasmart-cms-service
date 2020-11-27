@@ -40,7 +40,7 @@ func LD(lable ResponseLabel, data interface{}) interface{} {
 }
 
 type ErrorResponse struct {
-	Label string      `json:"label,omitempty" example:"unknown" enums:"unknown"`
+	Label string      `json:"label,omitempty" example:"unknown" enums:"content,folder"`
 	Data  interface{} `json:"data"`
 }
 

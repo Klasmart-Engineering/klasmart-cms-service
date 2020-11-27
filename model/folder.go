@@ -188,12 +188,12 @@ func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDB
 		if err != nil {
 			return err
 		}
-		for i := range req.IDs {
+		for i := range req.FolderInfo {
 			err := f.moveItem(ctx, tx,
 				entity.NewOwnerType(req.OwnerType),
-				req.FolderFileType,
+				req.FolderInfo[i].FolderFileType,
 				entity.NewFolderPartition(req.Partition),
-				req.IDs[i],
+				req.FolderInfo[i].ID,
 				distFolder,
 				operator)
 			if err != nil {
