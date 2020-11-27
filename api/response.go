@@ -19,7 +19,8 @@ const (
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
 
 	//Library
-	LibraryMsgContentLocked ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentLocked      ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
 
 	// schedule
 	ScheduleMsgEditOverlap   ResponseLabel = "schedule_msg_edit_overlap"

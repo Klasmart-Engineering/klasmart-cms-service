@@ -218,6 +218,9 @@ func (c *QueryAssessmentsCondition) GetPager() *dbo.Pager {
 }
 
 func (c *QueryAssessmentsCondition) GetOrderBy() string {
+	if c.OrderBy == nil {
+		return ""
+	}
 	switch *c.OrderBy {
 	case entity.ListAssessmentsOrderByClassEndTime:
 		return "class_end_time"

@@ -113,7 +113,8 @@ type MoveFolderIDBulk struct {
 }
 
 type CreateFolderItemRequest struct {
-	FolderID  string    `json:"folder_id"`
+	//ID string `json:"id"`
+	ParentFolderID string `json:"parent_folder_id"`
 	//ItemType  ItemType  `json:"item_type"`
 	Partition FolderPartition `json:"partition"`
 	Link      string          `json:"link"`
@@ -132,7 +133,7 @@ func (p Path) ParentPath()string {
 func (p Path) Parents() []string {
 	pairs := strings.Split(string(p), "/")
 	ret := make([]string, len(pairs) - 1)
-	for i := range pairs {
+	for i := range ret {
 		ret[i] = pairs[i + 1]
 	}
 	return ret
