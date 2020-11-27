@@ -18,6 +18,7 @@ type LessonData struct {
 	Material   *entity.ContentInfo `json:"material"`
 	NextNode   []*LessonData   `json:"next"`
 	TeacherManual string 	`json:"teacher_manual"`
+	TeacherManualName string 	`json:"teacher_manual_name"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -65,6 +66,7 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 }
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	h.TeacherManual = t.TeacherManual
+	h.TeacherManualName = t.TeacherManualName
 	return nil
 }
 func (l *LessonData) SubContentIds(ctx context.Context) []string {

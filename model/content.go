@@ -51,6 +51,8 @@ var (
 
 	ErrInvalidSelectForm = errors.New("invalid select form")
 	ErrUserNotFound = errors.New("user not found in locked by")
+
+	ErrMoveToDifferentPartition = errors.New("move to different parititon")
 )
 
 type ErrContentAlreadyLocked struct {
@@ -135,11 +137,12 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		return ErrUpdateContentFailed
 	}
 
-	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, sourceContent.Org, entity.ContentLink(sourceContent.ID))
-	if err != nil {
-		log.Error(ctx, "remove old content folder item failed", log.Err(err), log.Any("content", sourceContent))
-		return err
-	}
+	//todo:temp remove folder
+	//err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, sourceContent.Org, entity.ContentLink(sourceContent.ID))
+	//if err != nil {
+	//	log.Error(ctx, "remove old content folder item failed", log.Err(err), log.Any("content", sourceContent))
+	//	return err
+	//}
 
 	//更新所有latestID为sourceContent的Content
 	_, oldContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
@@ -343,16 +346,17 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	}
 
 	//Asset添加Folder
-	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootAssetsFolderName,entity.ContentLink(pid), operator)
-		if err != nil{
-			log.Error(ctx, "can't create folder item", log.Err(err),
-				log.String("link", entity.ContentLink(pid)),
-				log.Any("data", c),
-				log.Any("operator", operator))
-			return "", err
-		}
-	}
+	//TODO: temp remove folder
+	//if c.ContentType.IsAsset() {
+	//	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets,entity.ContentLink(pid), operator)
+	//	if err != nil{
+	//		log.Error(ctx, "can't create folder item", log.Err(err),
+	//			log.String("link", entity.ContentLink(pid)),
+	//			log.Any("data", c),
+	//			log.Any("operator", operator))
+	//		return "", err
+	//	}
+	//}
 
 	return pid, nil
 }
@@ -431,20 +435,13 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	if status == entity.ContentStatusRejected && len(reason) < 1 && remark == "" {
 		return ErrNoRejectReason
 	}
-	operator := &entity.Operator{
-		UserID: content.Author,
-		OrgID:  content.Org,
-	}
+	//operator := &entity.Operator{
+	//	UserID: content.Author,
+	//	OrgID:  content.Org,
+	//}
 
 	//更新content的path
-	rootFolder, err := GetFolderModel().GetRootFolder(ctx, entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, operator)
-	if err != nil{
-		log.Warn(ctx, "get root folder failed", log.Err(err),
-			log.Any("user", operator))
-		return err
-	}else{
-		content.DirPath = string(rootFolder.ChildrenPath())
-	}
+	content.DirPath = "/"
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -454,10 +451,11 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootMaterialsAndPlansFolderName, entity.ContentLink(content.ID), operator)
-	if err != nil {
-		return err
-	}
+	//TODO:temp remove folder
+	//err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.ContentLink(content.ID), operator)
+	//if err != nil {
+	//	return err
+	//}
 
 	if status == entity.ContentStatusPublished && content.SourceID != "" {
 		//处理source content
@@ -788,11 +786,12 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	}
 
 	//folder中删除
-	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
-	if err != nil {
-		log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
-		return err
-	}
+	//temp remove folder
+	//err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
+	//if err != nil {
+	//	log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
+	//	return err
+	//}
 
 
 	//解锁source content
@@ -1165,6 +1164,10 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
 		scope = []string{constant.NoSearchItem}
 	}
+	err = cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
+	if err != nil{
+		return 0, nil, err
+	}
 	condition.Scope = scope
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
 	condition.JoinUserIdList = searchUserIds
@@ -1184,6 +1187,10 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 }
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
+	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
+	if err != nil{
+		return 0, nil, err
+	}
 	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
 	if err != nil{
 		return 0, nil, err
@@ -1408,6 +1415,40 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 		}
 	}
 	return newStatus
+}
+
+
+func (cm *ContentModel) filterRootPath(ctx context.Context, condition *da.ContentCondition, ownerType entity.OwnerType, operator *entity.Operator) error {
+	if condition.DirPath != ""{
+		return nil
+	}
+
+	//isAssets := false
+	//for i := range condition.ContentType {
+	//	if entity.NewContentType(condition.ContentType[i]).IsAsset() {
+	//		isAssets = true
+	//		break
+	//	}
+	//}
+	//
+	//if isAssets {
+	//	root, err := GetFolderModel().GetRootFolder(ctx, entity.RootAssetsFolderName, ownerType, operator)
+	//	if err != nil{
+	//		log.Error(ctx, "can't get root folder", log.Err(err), log.Any("ownerType", ownerType), log.Any("operator", operator), log.String("partition", string(entity.RootAssetsFolderName)))
+	//		return err
+	//	}
+	//	condition.DirPath = string(root.ChildrenPath())
+	//	return nil
+	//}
+	//
+	//root, err := GetFolderModel().GetRootFolder(ctx, entity.RootMaterialsAndPlansFolderName, ownerType, operator)
+	//if err != nil{
+	//	log.Error(ctx, "can't get root folder", log.Err(err), log.Any("ownerType", ownerType), log.Any("operator", operator), log.String("partition", string(entity.RootMaterialsAndPlansFolderName)))
+	//	return err
+	//}
+	//condition.DirPath = string(root.ChildrenPath())
+	condition.DirPath = "/"
+	return nil
 }
 
 func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status []string) []string {
@@ -1786,22 +1827,27 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 
 func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) *da.FolderCondition{
 	dirPath := condition.DirPath
-	if dirPath == "" {
-		if len(condition.ContentType) < 0 {
-			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
-		}else if condition.ContentType[0] == entity.ContentTypeAssets {
-			dirPath = entity.RootAssetsFolderName.Path()
-		}else {
-			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
+	isAssets := false
+	for i := range condition.ContentType{
+		if entity.NewContentType(condition.ContentType[i]).IsAsset() {
+			isAssets = true
+			break
 		}
 	}
+	partition := entity.FolderPartitionMaterialAndPlans
+	if isAssets{
+		partition = entity.FolderPartitionAssets
+	}
+
+
 	folderCondition := &da.FolderCondition{
 		OwnerType:    int(entity.OwnerTypeOrganization),
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
 		Name:         condition.Name,
-		ExactDirPath: condition.DirPath,
+		ExactDirPath: dirPath,
 		Editors: searchUserIds,
+		Partition: partition,
 	}
 	return folderCondition
 }

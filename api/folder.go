@@ -138,6 +138,7 @@ func (s *Server) updateFolderItem(c *gin.Context){
 // @Description move folder item
 // @Accept json
 // @Produce json
+// @Param content body entity.MoveFolderRequest true "move folder request"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
@@ -209,7 +210,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 // @Description list folder items
 // @Accept json
 // @Produce json
-// @Param item_type query string false "list items type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
 // @Tags folder
 // @Success 200 {object} FolderItemsResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -234,8 +235,9 @@ func (s *Server) listFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query integer false "list items type"
-// @Param owner_type query integer false "list items owner type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
+// @Param owner_type query integer false "list items owner type. 1.org folder 2.private folder"
+// @Param partition query string false "list items type. [assets, plans and materials]"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -265,8 +267,9 @@ func (s *Server) searchPrivateFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query integer false "list items type"
-// @Param owner_type query integer false "list items owner type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
+// @Param owner_type query integer false "list items owner type. 1.org folder 2.private folder"
+// @Param partition query string false "list items type. [assets, plans and materials]"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -299,7 +302,7 @@ func (s *Server) searchOrgFolderItems(c *gin.Context){
 // @Success 200 {object} entity.FolderItemInfo
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 404 {object} BadRequestResponse
-// @Router /folders/items/details/:folder_id [get]
+// @Router /folders/items/details/{folder_id} [get]
 func (s *Server) getFolderItemByID(c *gin.Context){
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
@@ -310,36 +313,6 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 		c.JSON(http.StatusOK, item)
 	case model.ErrNoFolder:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-	}
-}
-
-// @Summary getRootFolder
-// @ID getRootFolder
-// @Description get the root folder of org or user
-// @Accept json
-// @Produce json
-// @Tags folder
-// @Param owner_type query integer false "get item owner type"
-// @Param partition query string false "get item partition"
-// @Success 200 {object} CreateFolderResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Failure 400 {object} BadRequestResponse
-// @Router /folders/items/root [get]
-func (s *Server) getRootFolder(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	fid := utils.ParseInt(ctx, c.Query("owner_type"))
-	partition := c.Param("partition")
-	rootFolderID, err := model.GetFolderModel().GetRootFolder(ctx, entity.NewFolderPartition(partition), entity.NewOwnerType(fid), op)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"id": rootFolderID,
-		})
-	case model.ErrInvalidPartition:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
@@ -356,6 +329,7 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 	orderBy := c.Query("order_by")
 	pageSize := utils.ParseInt64(ctx, c.Query("page_size"))
 	pageIndex := utils.ParseInt64(ctx, c.Query("page"))
+	partition := c.Query("partition")
 	//Pager   utils.Pager
 	return &entity.SearchFolderCondition{
 		IDs:       nil,
@@ -364,6 +338,7 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 		ParentID:  parentID,
 		Path:      path,
 		Name:      name,
+		Partition: partition,
 		OrderBy:   orderBy,
 		Pager:     utils.Pager{
 			PageIndex: pageIndex,

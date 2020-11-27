@@ -112,7 +112,6 @@ func (s Server) registeRoute() {
 		folders.GET("/items/search/private", s.mustLogin, s.searchPrivateFolderItems)
 		folders.GET("/items/search/org", s.mustLogin, s.searchOrgFolderItems)
 		folders.GET("/items/details/:item_id", s.mustLogin, s.getFolderItemByID)
-		folders.GET("/items/root", s.mustLogin, s.getRootFolder)
 
 	}
 
@@ -190,6 +189,11 @@ func (s Server) registeRoute() {
 	{
 		visibilitySettings.GET("", s.mustLogin, s.getVisibilitySetting)
 		visibilitySettings.GET("/:id", s.mustLogin, s.getVisibilitySettingByID)
+	}
+	userSettings := s.engine.Group("/v1/user_settings")
+	{
+		userSettings.POST("", s.mustLoginWithoutOrgID, s.setUserSetting)
+		userSettings.GET("", s.mustLoginWithoutOrgID, s.getUserSettingByOperator)
 	}
 }
 

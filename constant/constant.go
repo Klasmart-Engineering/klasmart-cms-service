@@ -18,6 +18,7 @@ const (
 	TableNameSkill             = "skills"
 	TableNameSubject           = "subjects"
 	TableNameVisibilitySetting = "visibility_settings"
+	TableNameUserSetting       = "user_settings"
 
 	TableNameProgramAge         = "programs_ages"
 	TableNameProgramDevelopment = "programs_developments"
@@ -46,7 +47,7 @@ var (
 	ErrInvalidArgs       = errors.New("invalid args")
 	ErrConflict          = errors.New("conflict")
 	ErrOperateNotAllowed = errors.New("operation not allowed")
-	ErrInternalServer = errors.New("internal server error")
+	ErrInternalServer    = errors.New("internal server error")
 	ErrForbidden         = errors.New("forbidden")
 )
 
@@ -83,5 +84,5 @@ const (
 
 const (
 	NoSearchItem = "{nothing}"
-	Self = "{self}"
+	Self         = "{self}"
 )
