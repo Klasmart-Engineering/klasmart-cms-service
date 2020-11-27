@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -32,27 +33,27 @@ func main() {
 }
 
 type args struct {
-	baseURL         string
-	graphqlEndpoint string
-	orgID           string
-	scheduleIDs     []string
-	cookie          string
+	BaseURL         string   `json:"base_url"`
+	GraphqlEndpoint string   `json:"graphql_endpoint"`
+	OrgID           string   `json:"org_id"`
+	ScheduleIDs     []string `json:"schedule_ids"`
+	Cookie          string   `json:"cookie"`
 }
 
 func (a args) check() error {
-	if a.baseURL == "" {
+	if a.BaseURL == "" {
 		return errors.New("require base url")
 	}
-	if a.graphqlEndpoint == "" {
+	if a.GraphqlEndpoint == "" {
 		return errors.New("require graphql endpoint")
 	}
-	if a.orgID == "" {
+	if a.OrgID == "" {
 		return errors.New("require org id")
 	}
-	if len(a.scheduleIDs) == 0 {
+	if len(a.ScheduleIDs) == 0 {
 		return errors.New("require schedule ids")
 	}
-	if a.cookie == "" {
+	if a.Cookie == "" {
 		return errors.New("require cookie")
 	}
 	return nil
@@ -60,10 +61,21 @@ func (a args) check() error {
 
 func parseArgs() (args, error) {
 	a := args{}
-	flag.StringVar(&a.baseURL, "base-url", "https://kl2-test.kidsloop.net", "base url")
-	flag.StringVar(&a.graphqlEndpoint, "graphql-endpoint", "https://api.kidsloop.net/user/", "graphql endpoint")
-	flag.StringVar(&a.orgID, "org-id", "", "org id, required")
-	flag.StringVar(&a.cookie, "cookie", "", "browser cookie, required")
+	if len(os.Args) >= 2 && !strings.HasPrefix(os.Args[1], "-") {
+		filename := os.Args[1]
+		b, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return args{}, err
+		}
+		if err := json.Unmarshal(b, &a); err != nil {
+			return args{}, err
+		}
+		return a, nil
+	}
+	flag.StringVar(&a.BaseURL, "base-url", "https://kl2-test.kidsloop.net", "base url")
+	flag.StringVar(&a.GraphqlEndpoint, "graphql-endpoint", "https://api.kidsloop.net/user/", "graphql endpoint")
+	flag.StringVar(&a.OrgID, "org-id", "", "org id, required")
+	flag.StringVar(&a.Cookie, "cookie", "", "browser cookie, required")
 	scheduleIDsString := flag.String("schedule-ids", "", "schedule ids, separate by comma, require one of \"schedule-ids\" and \"schedule-ids-file\"")
 	scheduleIDsFile := flag.String("schedule-ids-file", "", "schedule ids file, separate by newline, require one of \"schedule-ids\" and \"schedule-ids-file\"")
 	flag.Parse()
@@ -72,7 +84,7 @@ func parseArgs() (args, error) {
 		for _, item := range items {
 			item := strings.TrimSpace(item)
 			if item != "" {
-				a.scheduleIDs = append(a.scheduleIDs, item)
+				a.ScheduleIDs = append(a.ScheduleIDs, item)
 			}
 		}
 	} else if scheduleIDsFile != nil && *scheduleIDsFile != "" {
@@ -84,7 +96,7 @@ func parseArgs() (args, error) {
 		for _, item := range items {
 			item := strings.TrimSpace(item)
 			if item != "" {
-				a.scheduleIDs = append(a.scheduleIDs, item)
+				a.ScheduleIDs = append(a.ScheduleIDs, item)
 			}
 		}
 	}
@@ -93,9 +105,9 @@ func parseArgs() (args, error) {
 
 func run(a args) error {
 	log.Printf("process args: %+v\n", a)
-	for _, scheduleID := range a.scheduleIDs {
+	for _, scheduleID := range a.ScheduleIDs {
 		log.Printf("processing: schedule_id = %s ...", scheduleID)
-		if err := addAssessment(a.baseURL, a.graphqlEndpoint, a.orgID, scheduleID, a.cookie); err != nil {
+		if err := addAssessment(a.BaseURL, a.GraphqlEndpoint, a.OrgID, scheduleID, a.Cookie); err != nil {
 			return err
 		}
 		log.Printf("process ok: schedule_id = %s", scheduleID)
