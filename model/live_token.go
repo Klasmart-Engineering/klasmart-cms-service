@@ -28,6 +28,10 @@ type ILiveTokenModel interface {
 func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error) {
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, scheduleID)
 	if err != nil {
+		log.Error(ctx, "MakeLiveToken:GetScheduleModel.GetPlainByID error",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("scheduleID", scheduleID))
 		return "", err
 	}
 	liveTokenInfo := entity.LiveTokenInfo{
