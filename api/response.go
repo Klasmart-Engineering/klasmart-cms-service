@@ -22,7 +22,7 @@ const (
 	LibraryMsgContentLocked ResponseLabel = "library_error_content_locked"
 
 	// schedule
-	ScheduleMsgEditOverlap   ResponseLabel = "schedule_schedule_msg_edit_all"
+	ScheduleMsgEditOverlap   ResponseLabel = "schedule_msg_edit_overlap"
 	ScheduleMsgDeleteOverlap ResponseLabel = "schedule_msg_delete_overlap"
 	ScheduleMsgOverlap       ResponseLabel = "schedule_msg_overlap"
 	ScheduleMsgNoPermission  ResponseLabel = "schedule_msg_no_permission"
