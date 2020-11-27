@@ -631,15 +631,40 @@ func (r *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 			return nil, err
 		}
 	}
+	categoryMap := map[string]string{}
+	{
+		var categoryIDs []string
+		for _, outcome := range outcomes {
+			categoryIDs = append(categoryIDs, outcome.Developmental)
+		}
+		categories, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
+			IDs: entity.NullStrings{
+				Strings: categoryIDs,
+				Valid:   len(categoryIDs) != 0,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "get teacher report: batch get developmental failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("teacher_id", teacherID),
+				log.Strings("category_ids", categoryIDs),
+			)
+			return nil, err
+		}
+		for _, item := range categories {
+			categoryMap[item.ID] = item.Name
+		}
+	}
 	result := &entity.TeacherReport{}
 	{
-		categoryName2OutcomeCountMap := map[string][]*entity.Outcome{}
+		categoryID2OutcomeCountMap := map[string][]*entity.Outcome{}
 		for _, outcome := range outcomes {
-			categoryName2OutcomeCountMap[outcome.Developmental] = append(categoryName2OutcomeCountMap[outcome.Developmental], outcome)
+			categoryID2OutcomeCountMap[outcome.Developmental] = append(categoryID2OutcomeCountMap[outcome.Developmental], outcome)
 		}
-		for categoryName, outcomes := range categoryName2OutcomeCountMap {
+		for categoryID, outcomes := range categoryID2OutcomeCountMap {
 			newItem := &entity.TeacherReportCategory{
-				Name: entity.ReportCategory(categoryName),
+				Name: entity.ReportCategory(categoryMap[categoryID]),
 			}
 			for _, outcome := range outcomes {
 				newItem.Items = append(newItem.Items, outcome.Name)
