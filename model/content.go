@@ -315,6 +315,8 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
 	//检查数据信息是否正确
+	c.Trim()
+
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
 		// use operator's org id as asset publish scope, maybe not right...
@@ -360,6 +362,8 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 }
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
+	data.Trim()
+
 	if data.ContentType.IsAsset() {
 		//Assets can't be updated
 		return ErrInvalidContentType

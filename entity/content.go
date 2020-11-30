@@ -324,6 +324,12 @@ type CreateContentRequest struct {
 	TeacherManualName string `json:"teacher_manual_name"`
 }
 
+func (c *CreateContentRequest) Trim(){
+	if c.Name != "" {
+		c.Name = strings.TrimSpace(c.Name)
+	}
+}
+
 func (c CreateContentRequest) Validate() error {
 	if c.Name == "" {
 		return ErrRequireContentName
