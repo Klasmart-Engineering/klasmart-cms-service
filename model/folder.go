@@ -620,7 +620,7 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 	var parentFolder *entity.FolderItem
 	var err error
 	//get parent folder if exists
-	if req.ParentID != "" {
+	if req.ParentID != "" && req.ParentID != "/" {
 		parentFolder, err = f.getFolder(ctx, tx, req.ParentID)
 		if err != nil {
 			return "", err
