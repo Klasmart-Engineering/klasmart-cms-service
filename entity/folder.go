@@ -144,6 +144,9 @@ func (p Path) ParentPath()string {
 }
 
 func (p Path) Parents() []string {
+	if p == "/" {
+		return nil
+	}
 	pairs := strings.Split(string(p), "/")
 	ret := make([]string, len(pairs) - 1)
 	for i := range ret {
@@ -194,6 +197,10 @@ func (f FolderItem) TableName() string{
 }
 
 func (f FolderItem) ChildrenPath() Path {
+	//根目录情况
+	if f.ID == "/" {
+		return NewPath("/")
+	}
 	return NewPath(f.DirPath.ParentPath() + "/" + f.ID + "/")
 }
 
