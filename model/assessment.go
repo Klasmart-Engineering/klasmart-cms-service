@@ -186,7 +186,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operato
 			)
 		}
 		result.NumberOfActivities = counts.SubContentCount
-		result.NumberOfOutcomes = counts.OutcomesCount
+		//result.NumberOfOutcomes = counts.OutcomesCount
 	}
 
 	// fill outcome attendance maps
@@ -200,6 +200,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operato
 			)
 			return nil, err
 		}
+		result.NumberOfOutcomes = len(outcomeIDs)
 		if len(outcomeIDs) > 0 {
 			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
 			if err != nil {

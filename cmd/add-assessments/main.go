@@ -127,7 +127,7 @@ func addAssessment(baseURL string, graphqlEndpoint, orgID string, scheduleID str
 	cmd := entity.AddAssessmentCommand{
 		ScheduleID:    scheduleID,
 		AttendanceIDs: studentIDs,
-		ClassLength:   int(time.Unix(schedule.EndAt, 0).Sub(time.Unix(schedule.StartAt, 0)).Minutes()),
+		ClassLength:   int(time.Unix(schedule.EndAt, 0).Sub(time.Unix(schedule.StartAt, 0))),
 		ClassEndTime:  schedule.EndAt,
 	}
 	b, err := json.Marshal(cmd)
