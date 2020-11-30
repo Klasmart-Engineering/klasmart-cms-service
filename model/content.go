@@ -137,12 +137,11 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		return ErrUpdateContentFailed
 	}
 
-	//todo:temp remove folder
-	//err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, sourceContent.Org, entity.ContentLink(sourceContent.ID))
-	//if err != nil {
-	//	log.Error(ctx, "remove old content folder item failed", log.Err(err), log.Any("content", sourceContent))
-	//	return err
-	//}
+	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, sourceContent.Org, entity.ContentLink(sourceContent.ID))
+	if err != nil {
+		log.Error(ctx, "remove old content folder item failed", log.Err(err), log.Any("content", sourceContent))
+		return err
+	}
 
 	//更新所有latestID为sourceContent的Content
 	_, oldContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
@@ -346,17 +345,16 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	}
 
 	//Asset添加Folder
-	//TODO: temp remove folder
-	//if c.ContentType.IsAsset() {
-	//	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets,entity.ContentLink(pid), operator)
-	//	if err != nil{
-	//		log.Error(ctx, "can't create folder item", log.Err(err),
-	//			log.String("link", entity.ContentLink(pid)),
-	//			log.Any("data", c),
-	//			log.Any("operator", operator))
-	//		return "", err
-	//	}
-	//}
+	if c.ContentType.IsAsset() {
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets,entity.ContentLink(pid), operator)
+		if err != nil{
+			log.Error(ctx, "can't create folder item", log.Err(err),
+				log.String("link", entity.ContentLink(pid)),
+				log.Any("data", c),
+				log.Any("operator", operator))
+			return "", err
+		}
+	}
 
 	return pid, nil
 }
@@ -451,11 +449,10 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	//TODO:temp remove folder
-	//err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.ContentLink(content.ID), operator)
-	//if err != nil {
-	//	return err
-	//}
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.ContentLink(content.ID), operator)
+	if err != nil {
+		return err
+	}
 
 	if status == entity.ContentStatusPublished && content.SourceID != "" {
 		//处理source content
@@ -787,11 +784,11 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 
 	//folder中删除
 	//temp remove folder
-	//err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
-	//if err != nil {
-	//	log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
-	//	return err
-	//}
+	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
+	if err != nil {
+		log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
+		return err
+	}
 
 
 	//解锁source content
