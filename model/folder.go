@@ -639,6 +639,16 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 		log.Error(ctx, "create folder failed", log.Err(err), log.Any("content", folder))
 		return "", err
 	}
+	//更新parent folder文件数量
+	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
+	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
+	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
+		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.ParentID, 1)
+		if err != nil {
+			log.Error(ctx, "update parent folder items count failed", log.Err(err), log.Any("req", req))
+			return "", err
+		}
+	}
 	return folder.ID, nil
 }
 
