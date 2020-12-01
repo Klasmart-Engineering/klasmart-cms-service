@@ -96,8 +96,8 @@ type LiveTokenConfig struct {
 }
 
 type AssessmentConfig struct {
-	//CacheExpiration     time.Duration `yaml:"cache_expiration"`
-	AddAssessmentSecret interface{} `json:"add_assessment_secret"`
+	CacheExpiration     time.Duration `yaml:"cache_expiration"`
+	AddAssessmentSecret interface{}   `json:"add_assessment_secret"`
 }
 
 type AMSConfig struct {
@@ -246,12 +246,12 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 }
 
 func loadAssessmentConfig(ctx context.Context) {
-	//cacheExpiration, err := time.ParseDuration(os.Getenv("assessment_cache_expiration"))
-	//if err != nil {
-	//	config.Assessment.CacheExpiration = constant.ScheduleDefaultCacheExpiration
-	//} else {
-	//	config.Assessment.CacheExpiration = cacheExpiration
-	//}
+	cacheExpiration, err := time.ParseDuration(os.Getenv("assessment_cache_expiration"))
+	if err != nil {
+		config.Assessment.CacheExpiration = constant.ScheduleDefaultCacheExpiration
+	} else {
+		config.Assessment.CacheExpiration = cacheExpiration
+	}
 
 	publicKeyPath := os.Getenv("ams_assessment_jwt_public_key_path")
 	content, err := ioutil.ReadFile(publicKeyPath)
