@@ -245,7 +245,7 @@ func (f FolderItem) ChildrenPath() Path {
 	if f.ID == constant.FolderRootPath {
 		return NewPath(constant.FolderRootPath)
 	}
-	return NewPath(f.DirPath.ParentPath() + "/" + f.ID + "/")
+	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
 }
 
 type FolderItemInfo struct {
