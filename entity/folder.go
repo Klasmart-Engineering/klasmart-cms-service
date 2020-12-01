@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 )
@@ -14,13 +15,35 @@ const (
 	OwnerTypeUser OwnerType = 2
 
 
-	FileTypeContent = "content"
+	FolderFileTypeContent FolderFileType = "content"
+	FolderFileTypeFolder FolderFileType = "folder"
+	FolderFileTypeFolderItem FolderFileType = "item"
 
 	//RootAssetsFolderName FolderPartition = "assets"
 	//RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
 	FolderPartitionAssets           FolderPartition = "assets"
 	FolderPartitionMaterialAndPlans FolderPartition = "plans and materials"
 )
+
+type FolderFileType string
+func NewFolderFileType(fileType string) FolderFileType {
+	switch fileType {
+	case "content":
+		return FolderFileTypeContent
+	case "folder":
+		return FolderFileTypeFolder
+	case "item":
+		return FolderFileTypeFolderItem
+	}
+	return FolderFileTypeContent
+}
+func (f FolderFileType) Valid() bool{
+	if f == FolderFileTypeContent || f == FolderFileTypeFolder ||
+		f == FolderFileTypeFolderItem {
+		return true
+	}
+	return false
+}
 
 type FolderPartition string
 func NewFolderPartition(partition string) FolderPartition {
@@ -31,6 +54,13 @@ func NewFolderPartition(partition string) FolderPartition {
 		return FolderPartitionMaterialAndPlans
 	}
 	return FolderPartitionMaterialAndPlans
+}
+
+func (f FolderPartition) Valid() bool{
+	if f == FolderPartitionMaterialAndPlans || f == FolderPartitionAssets {
+		return true
+	}
+	return false
 }
 
 type OwnerType int
@@ -60,6 +90,14 @@ func NewOwnerType(num int) OwnerType{
 type ItemType int
 func (o ItemType) Valid() bool {
 	if o == FolderItemTypeFolder || o == FolderItemTypeFile {
+		return true
+	}
+	return false
+}
+
+func (o ItemType) ValidSearch() bool {
+	if o == FolderItemTypeFolder || o == FolderItemTypeFile ||
+		o == FolderItemTypeAll{
 		return true
 	}
 	return false
@@ -99,7 +137,11 @@ type CreateFolderRequest struct {
 }
 
 type MoveFolderRequest struct {
-	Dist string `json:"dist"`
+	ID             string          `json:"id"`
+	OwnerType      OwnerType       `json:"owner_type"`
+	Dist           string          `json:"dist"`
+	Partition      FolderPartition `json:"partition"`
+	FolderFileType FolderFileType          `json:"folder_file_type" enums:"content,folder"`
 }
 
 type UpdateFolderRequest struct {
@@ -107,9 +149,16 @@ type UpdateFolderRequest struct {
 	Thumbnail string `json:"thumbnail"`
 }
 
-type MoveFolderIDBulk struct {
-	IDs []string `json:"ids"`
+type FolderIdWithFileType struct {
+	ID string `json:"id"`
+	FolderFileType FolderFileType `json:"folder_file_type" enums:"content,folder"`
+}
+
+type MoveFolderIDBulkRequest struct {
+	FolderInfo []FolderIdWithFileType `json:"folder_info"`
+	OwnerType OwnerType `json:"owner_type"`
 	Dist string `json:"dist"`
+	Partition FolderPartition `json:"partition"`
 }
 
 type CreateFolderItemRequest struct {
@@ -124,13 +173,16 @@ type CreateFolderItemRequest struct {
 type Path string
 
 func (p Path) ParentPath()string {
-	if p == "/" {
+	if p == constant.FolderRootPath {
 		return ""
 	}
 	return string(p)
 }
 
 func (p Path) Parents() []string {
+	if p == constant.FolderRootPath {
+		return nil
+	}
 	pairs := strings.Split(string(p), "/")
 	ret := make([]string, len(pairs) - 1)
 	for i := range ret {
@@ -162,7 +214,7 @@ type FolderItem struct {
 
 	ItemType ItemType `gorm:"type:int;NOT NULL" json:"item_type"`
 	DirPath  Path     `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
-	Partition string `gorm:"type:varchar(256);NOT NULL" json:"partition"`
+	Partition FolderPartition `gorm:"type:varchar(256);NOT NULL" json:"partition"`
 	Name     string   `gorm:"type:varchar(256);NOT NULL" json:"name"`
 
 	Thumbnail string	`gorm:"type:text" json:"thumbnail"`
@@ -181,7 +233,11 @@ func (f FolderItem) TableName() string{
 }
 
 func (f FolderItem) ChildrenPath() Path {
-	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
+	//根目录情况
+	if f.ID == constant.FolderRootPath {
+		return NewPath(constant.FolderRootPath)
+	}
+	return NewPath(f.DirPath.ParentPath() + "/" + f.ID + "/")
 }
 
 type FolderItemInfo struct {
