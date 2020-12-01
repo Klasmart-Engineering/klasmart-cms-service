@@ -109,11 +109,12 @@ func (s *Server) listAssessments(c *gin.Context) {
 func (s *Server) addAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	log.Debug(ctx, "add assessment jwt: call")
 	body := struct {
 		Token string `json:"token"`
 	}{}
 	if err := c.ShouldBind(&body); err != nil {
-		log.Info(ctx, "add assessment: bind failed",
+		log.Info(ctx, "add assessment jwt: bind failed",
 			log.Err(err),
 		)
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -124,7 +125,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 	if _, err := jwt.ParseWithClaims(body.Token, &cmd, func(token *jwt.Token) (interface{}, error) {
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	}); err != nil {
-		log.Error(ctx, "add assessment: parse with claims failed",
+		log.Error(ctx, "add assessment jwt: parse with claims failed",
 			log.Err(err),
 			log.Any("token", body.Token),
 		)
@@ -132,6 +133,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
+	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd), log.String("token", body.Token))
 	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
@@ -139,7 +141,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	default:
-		log.Error(ctx, "add assessment: add failed",
+		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
 		)

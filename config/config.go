@@ -68,12 +68,12 @@ type DBConfig struct {
 }
 
 type StorageConfig struct {
-	Accelerate    bool   `yaml:"accelerate"`
-	CloudEnv      string `yaml:"cloud_env"`
-	
+	Accelerate bool   `yaml:"accelerate"`
+	CloudEnv   string `yaml:"cloud_env"`
+
 	StorageEndPoint string `yaml:"storage_end_point"`
-	StorageBucket string `yaml:"storage_bucket"`
-	StorageRegion string `yaml:"storage_region"`
+	StorageBucket   string `yaml:"storage_bucket"`
+	StorageRegion   string `yaml:"storage_region"`
 
 	StorageDownloadMode StorageDownloadMode `yaml:"storage_download_mode"`
 	StorageSigMode      bool                `yaml:"storage_sig_mode"`
@@ -123,6 +123,7 @@ func LoadEnvConfig() {
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
 	loadAMSConfig(ctx)
+	loadAssessmentConfig(ctx)
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
