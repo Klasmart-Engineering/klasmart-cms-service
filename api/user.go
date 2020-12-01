@@ -3,6 +3,12 @@ package api
 import (
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +17,7 @@ import (
 type LoginRequest struct {
 	AuthTo   string `json:"auth_to" form:"auth_to"`
 	AuthCode string `json:"auth_code" form:"auth_code"`
-	AuthType int    `json:"auth_type" from:"auth_type"`
+	AuthType string `json:"auth_type" from:"auth_type"`
 }
 
 // @ID userLogin
@@ -26,24 +32,60 @@ type LoginRequest struct {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/login [get]
 func (s *Server) login(c *gin.Context) {
+	ctx := c.Request.Context()
 	var req LoginRequest
 	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		log.Error(c.Request.Context(), "login:ShouldBindQuery failed", log.Err(err))
+		log.Error(ctx, "login:ShouldBindQuery failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	// TODO
 
-	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	if req.AuthType != constant.LoginByPassword && req.AuthType != constant.LoginByCode {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	user, err := model.GetUserModel().GetUserByAccount(ctx, req.AuthTo)
+	if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	var pass bool
+	if req.AuthType == constant.LoginByCode {
+		pass, err = model.VerifyCode(ctx, req.AuthTo, req.AuthCode)
+	}
+	if req.AuthType == constant.LoginByPassword {
+		pass = model.VerifySecretWithSalt(ctx, req.AuthCode, user.Secret, user.Salt)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !pass {
+		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
+		return
+	}
+
+	token, err := user.Token()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
+	c.SetCookie("access", token, 0, "/", config.Get().KidsloopCNLoginConfig.CookieDomain, true, true)
+	c.Status(http.StatusOK)
 }
 
 type RegisterRequest struct {
-	Mobile string `json:"mobile" form:"mobile"`
-	Email  string `json:"email" form:"email"`
-	Name   string `json:"name" form:"name"`
-	Avatar string `json:"avatar" form:"avatar"`
-	Gender string `json:"gender" form:"gender"`
+	Account  string `json:"account" form:"account"`     // 当前是电话号码
+	AuthCode string `json:"auth_code" form:"auth_code"` // 验证码
+	Password string `json:"password" form:"password"`   // 密码
+	ActType  string `json:"act_type" form:"act_type"`   // 注册类型
 }
 
 // @ID userRegister
@@ -58,40 +100,109 @@ type RegisterRequest struct {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/register [post]
 func (s *Server) register(c *gin.Context) {
-	// TODO
+	ctx := c.Request.Context()
+	var req RegisterRequest
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		log.Error(ctx, "register:ShouldBindQuery failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	pass, err := model.VerifyCode(ctx, req.Account, req.AuthCode)
+	if err != nil {
+		log.Error(ctx, "register:VerifyCode failed", log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !pass {
+		log.Warn(ctx, "register", log.Any("req", req))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
+		return
+	}
+	user, err := model.GetUserModel().RegisterUser(ctx, req.Account, req.Password, req.ActType)
+	if err == constant.ErrDuplicateRecord {
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+
+	token, err := user.Token()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
+	c.SetCookie("access", token, 0, "/", config.Get().KidsloopCNLoginConfig.CookieDomain, true, true)
+	c.Status(http.StatusOK)
 }
 
-type VerificationRequest struct {
+type SendCodeRequest struct {
 	Mobile string `json:"mobile" form:"mobile"`
 	Email  string `json:"email" form:"email"`
-	State  string `json:"state" form:"state"`
+	Reason string `json:"reason" form:"reason"`
 }
 
-// @ID verification
+// @ID sendCode
 // @Summary send verify code
 // @Tags user
 // @Description send verify code or uri
 // @Accept json
 // @Produce json
-// @Param outcome body VerificationRequest true "send verify code"
+// @Param outcome body SendCodeRequest true "send verify code"
 // @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/verification [post]
-func (s *Server) verification(c *gin.Context) {
-	var req VerificationRequest
+func (s *Server) sendCode(c *gin.Context) {
+	var req SendCodeRequest
+	ctx := c.Request.Context()
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		log.Error(c.Request.Context(), "verification:ShouldBindJSON failed", log.Err(err))
+		log.Error(ctx, "verification:ShouldBindJSON failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	if req.Email == "" && req.Mobile == "" {
-		log.Warn(c.Request.Context(), "verification:param wrong", log.Any("req", req))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+
+	if req.Mobile != "" {
+		code, err := model.GetBubbleMachine(req.Mobile + ":" + req.Reason).Launch(ctx)
+		if err != nil {
+			log.Error(ctx, "sendCode: launch failed", log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		err = model.GetSMSSender().SendSms(ctx, []string{req.Mobile}, code)
+		if err != nil {
+			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, "ok")
 		return
 	}
-	// TODO
+
+	if req.Email != "" {
+		code, err := model.GetBubbleMachine(req.Email + ":" + req.Reason).Launch(ctx)
+		if err != nil {
+			log.Error(ctx, "sendCode: launch failed", log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		// TODO: uri
+		err = model.GetEmailModel().SendEmail(ctx, req.Email, "", "", code)
+		if err != nil {
+			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, "ok")
+		return
+	}
+
+	log.Warn(c.Request.Context(), "verification:param wrong", log.Any("req", req))
+	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	return
 }
 
 type ForgottenPasswordRequest struct {

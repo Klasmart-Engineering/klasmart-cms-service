@@ -15,15 +15,17 @@ import (
 )
 
 type Config struct {
-	StorageConfig   StorageConfig    `yaml:"storage_config"`
-	CDNConfig       CDNConfig        `yaml:"cdn_config"`
-	Schedule        ScheduleConfig   `json:"schedule" yaml:"schedule"`
-	DBConfig        DBConfig         `yaml:"db_config"`
-	RedisConfig     RedisConfig      `yaml:"redis_config"`
-	CryptoConfig    CryptoConfig     `yaml:"crypto_config"`
-	LiveTokenConfig LiveTokenConfig  `yaml:"live_token_config"`
-	Assessment      AssessmentConfig `yaml:"assessment_config"`
-	AMS             AMSConfig        `json:"ams" yaml:"ams"`
+	StorageConfig         StorageConfig         `yaml:"storage_config"`
+	CDNConfig             CDNConfig             `yaml:"cdn_config"`
+	Schedule              ScheduleConfig        `json:"schedule" yaml:"schedule"`
+	DBConfig              DBConfig              `yaml:"db_config"`
+	RedisConfig           RedisConfig           `yaml:"redis_config"`
+	CryptoConfig          CryptoConfig          `yaml:"crypto_config"`
+	LiveTokenConfig       LiveTokenConfig       `yaml:"live_token_config"`
+	Assessment            AssessmentConfig      `yaml:"assessment_config"`
+	AMS                   AMSConfig             `json:"ams" yaml:"ams"`
+	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
+	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
 }
 
 var config *Config
@@ -60,7 +62,7 @@ type StorageConfig struct {
 }
 
 type CDNConfig struct {
-	CDNRestrictedViewer bool   `yaml:"cdn_enable_restricted_viewer"`
+	CDNRestrictedViewer bool `yaml:"cdn_enable_restricted_viewer"`
 
 	CDNPath           string `yaml:"cdn_path"`
 	CDNKeyId          string `yaml:"cdn_key_id"`
@@ -86,6 +88,27 @@ type AMSConfig struct {
 	TokenVerifyKey interface{} `json:"token_verify_key" yaml:"token_verify_key"`
 }
 
+type KidsloopCNLoginConfig struct {
+	PrivateKey   interface{} `json:"private_key" yaml:"private_key"`
+	PublicKey    interface{} `json:"public_key" yaml:"public_key"`
+	CookieDomain string      `json:"cookie_domain" yaml:"cookie_domain"`
+}
+
+type TencentConfig struct {
+	Sms TencentSmsConfig `json:"sms" yaml:"sms"`
+}
+
+type TencentSmsConfig struct {
+	SDKAppID         string `json:"sdk_app_id" yaml:"sdk_app_id"`
+	SecretID         string `json:"secret_id" yaml:"secret_id"`
+	SecretKey        string `json:"secret_key" yaml:"secret_key"`
+	EndPoint         string `json:"endpoint" yaml:"endpoint"`
+	Sign             string `json:"sign" yaml:"sign"`
+	TemplateID       string `json:"template_id" yaml:"template_id"`
+	TemplateParamSet string `json:"template_param_set" yaml:"template_param_set"`
+	MobilePrefix     string `json:"mobile_prefix" yaml:"mobile_prefix"`
+}
+
 func assertGetEnv(key string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -104,6 +127,45 @@ func LoadEnvConfig() {
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
 	loadAMSConfig(ctx)
+	loadTencentConfig(ctx)
+	loadKidsloopCNLoginConfig(ctx)
+}
+
+func loadKidsloopCNLoginConfig(ctx context.Context) {
+	privateKeyPath := os.Getenv("kidsloop_cn_login_private_key_path")
+	content, err := ioutil.ReadFile(privateKeyPath)
+	if err != nil {
+		log.Panic(ctx, "loadKidsloopCNLoginConfig:load auth config error", log.Err(err), log.String("privateKeyPath", privateKeyPath))
+	}
+	prv, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(content))
+	if err != nil {
+		log.Panic(ctx, "loadKidsloopCNLoginConfig:ParseRSAPrivateKeyFromPEM failed", log.Err(err))
+	}
+	config.KidsloopCNLoginConfig.PrivateKey = prv
+
+	publicKeyPath := os.Getenv("kidsloop_cn_login_public_key_path")
+	content, err = ioutil.ReadFile(publicKeyPath)
+	if err != nil {
+		log.Panic(ctx, "loadKidsloopCNLoginConfig:ReadFile failed", log.Err(err), log.String("publicKeyPath", publicKeyPath))
+	}
+	pub, err := jwt.ParseRSAPublicKeyFromPEM(content)
+	if err != nil {
+		log.Panic(ctx, "loadKidsloopCNLoginConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
+	}
+	config.KidsloopCNLoginConfig.PublicKey = pub
+
+	config.KidsloopCNLoginConfig.CookieDomain = os.Getenv("kidsloop_cn_login_cookie_domain")
+}
+
+func loadTencentConfig(ctx context.Context) {
+	config.TencentConfig.Sms.SDKAppID = assertGetEnv("tc_sms_sdk_app_id")
+	config.TencentConfig.Sms.SecretID = assertGetEnv("tc_sms_secret_id")
+	config.TencentConfig.Sms.SecretKey = assertGetEnv("tc_sms_secret_key")
+	config.TencentConfig.Sms.EndPoint = assertGetEnv("tc_sms_endpoint")
+	config.TencentConfig.Sms.Sign = assertGetEnv("tc_sms_sign")
+	config.TencentConfig.Sms.TemplateID = assertGetEnv("tc_sms_template_id")
+	config.TencentConfig.Sms.TemplateParamSet = assertGetEnv("tc_sms_template_param_set")
+	config.TencentConfig.Sms.MobilePrefix = assertGetEnv("tc_scm_mobile_prefix")
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {

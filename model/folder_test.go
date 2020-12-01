@@ -2,17 +2,17 @@ package model
 
 import (
 	"context"
-	"fmt"
-	"github.com/stretchr/testify/assert"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
 func initDB() {
@@ -28,7 +28,7 @@ func initDB() {
 		panic(err)
 	}
 	config.Set(&config.Config{
-		RedisConfig:     config.RedisConfig{
+		RedisConfig: config.RedisConfig{
 			OpenCache: false,
 			Host:      "",
 			Port:      0,
@@ -38,13 +38,13 @@ func initDB() {
 	dbo.ReplaceGlobal(dboHandler)
 }
 
-func TestMain(m *testing.M) {
-	fmt.Println("begin test")
-	initDB()
-	m.Run()
-	fmt.Println("end test")
-}
-func fakeOperator() *entity.Operator{
+//func TestMain(m *testing.M) {
+//	fmt.Println("begin test")
+//	initDB()
+//	m.Run()
+//	fmt.Println("end test")
+//}
+func fakeOperator() *entity.Operator {
 	return &entity.Operator{
 		UserID: "1",
 		Role:   "teacher",
@@ -135,8 +135,8 @@ func TestAddAndUpdateItem(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c0389bff85a26a0e86585",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c0389bff85a26a0e86585",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -144,8 +144,8 @@ func TestAddAndUpdateItem(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c04712ac27c637384d9cb",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c04712ac27c637384d9cb",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -212,8 +212,8 @@ func TestMoveItem(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c0389bff85a26a0e86585",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c0389bff85a26a0e86585",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -221,8 +221,8 @@ func TestMoveItem(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c04712ac27c637384d9cb",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c04712ac27c637384d9cb",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -277,8 +277,8 @@ func TestMoveItemAndFolder(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c0389bff85a26a0e86585",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c0389bff85a26a0e86585",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -286,8 +286,8 @@ func TestMoveItemAndFolder(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c04712ac27c637384d9cb",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c04712ac27c637384d9cb",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -355,8 +355,8 @@ func TestRemoveItemAndFolder(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c0389bff85a26a0e86585",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c0389bff85a26a0e86585",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -364,8 +364,8 @@ func TestRemoveItemAndFolder(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c04712ac27c637384d9cb",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c04712ac27c637384d9cb",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -386,7 +386,6 @@ func TestRemoveItemAndFolder(t *testing.T) {
 		return
 	}
 	assert.Equal(t, 1, len(subFolderItems))
-
 
 	err = GetFolderModel().RemoveItem(context.Background(), itemID1, fakeOperator())
 	if !assert.NoError(t, err) {
@@ -434,8 +433,8 @@ func TestSearchFolder(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c0389bff85a26a0e86585",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c0389bff85a26a0e86585",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -443,8 +442,8 @@ func TestSearchFolder(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID:  subFolderId2,
-		Link:      "content-5f6c04712ac27c637384d9cb",
+		FolderID: subFolderId2,
+		Link:     "content-5f6c04712ac27c637384d9cb",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -452,7 +451,7 @@ func TestSearchFolder(t *testing.T) {
 	t.Log(itemID2)
 
 	total, folders, err := GetFolderModel().SearchOrgFolder(context.Background(), entity.SearchFolderCondition{
-		Path:      "/",
+		Path: "/",
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -481,7 +480,7 @@ func TestFolderModel_GetRootFolder(t *testing.T) {
 		return
 	}
 	t.Logf("%#v\n", rootId2)
-	
+
 	res, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
 		FolderID: rootId.ID,
 		Link:     "content-5f695a3bcc3a933a1c16d4db",

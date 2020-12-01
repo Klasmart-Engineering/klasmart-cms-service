@@ -46,7 +46,7 @@ var (
 	ErrInvalidArgs       = errors.New("invalid args")
 	ErrConflict          = errors.New("conflict")
 	ErrOperateNotAllowed = errors.New("operation not allowed")
-	ErrInternalServer = errors.New("internal server error")
+	ErrInternalServer    = errors.New("internal server error")
 	ErrForbidden         = errors.New("forbidden")
 )
 
@@ -83,5 +83,13 @@ const (
 
 const (
 	NoSearchItem = "{nothing}"
-	Self = "{self}"
+	Self         = "{self}"
+)
+
+const (
+	LoginByPassword = ""
+	LoginByCode     = "temp_code"
+
+	AccountPhone = "" // as default
+	AccountEmail = "email"
 )

@@ -193,3 +193,26 @@ create fulltext index fullindex_name_description_keywords_author_shortcode on le
 
 drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
 alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
+
+Create Table: CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` char(64) NOT NULL,
+  `user_name` varchar(30) NOT NULL DEFAULT '',
+  `phone` char(24) NOT NULL,
+  `email` varchar(80) NOT NULL,
+  `secret` char(128) DEFAULT NULL,
+  `salt` char(128) DEFAULT NULL,
+  `gender` char(8) DEFAULT NULL,
+  `birthday` bigint(20) DEFAULT NULL,
+  `avatar` text NOT NULL,
+  `create_at` bigint(20) DEFAULT '0',
+  `update_at` bigint(20) DEFAULT '0',
+  `delete_at` bigint(20) DEFAULT '0',
+  `create_id` int(11) DEFAULT '0',
+  `update_id` int(11) DEFAULT '0',
+  `deleted_id` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uix_user_id` (`user_id`,`delete_at`),
+  UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`),
+  UNIQUE KEY `uix_email_phone` (`email`,`delete_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
