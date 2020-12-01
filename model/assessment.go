@@ -502,13 +502,12 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 			}
 		}
 		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
-			log.Error(ctx, "add assessment: invalid class type",
+			log.Info(ctx, "add assessment: invalid class type",
 				log.Err(err),
 				log.Any("cmd", cmd),
 				log.Any("schedule", schedule),
 			)
-
-			return "", constant.ErrInvalidArgs
+			return "", nil
 		}
 		outcomeIDs, err = GetContentModel().GetVisibleContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
 		if err != nil {
