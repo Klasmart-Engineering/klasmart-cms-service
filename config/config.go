@@ -14,17 +14,17 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
-var(
+var (
 	StorageDownloadNativeMode     StorageDownloadMode = "native"
 	StorageDownloadCloudFrontMode StorageDownloadMode = "cloudfront"
 )
 
 type StorageDownloadMode string
 
-func NewStorageDownloadMode(mode string)StorageDownloadMode {
+func NewStorageDownloadMode(mode string) StorageDownloadMode {
 	if mode == "native" {
 		return StorageDownloadNativeMode
-	}else{
+	} else {
 		return StorageDownloadCloudFrontMode
 	}
 }
@@ -76,7 +76,7 @@ type StorageConfig struct {
 	StorageRegion string `yaml:"storage_region"`
 
 	StorageDownloadMode StorageDownloadMode `yaml:"storage_download_mode"`
-	StorageSigMode bool   `yaml:"storage_sig_mode"`
+	StorageSigMode      bool                `yaml:"storage_sig_mode"`
 }
 
 type CDNConfig struct {
@@ -96,7 +96,8 @@ type LiveTokenConfig struct {
 }
 
 type AssessmentConfig struct {
-	CacheExpiration time.Duration `yaml:"cache_expiration"`
+	CacheExpiration     time.Duration `yaml:"cache_expiration"`
+	AddAssessmentSecret interface{}   `json:"add_assessment_secret"`
 }
 
 type AMSConfig struct {
@@ -250,6 +251,17 @@ func loadAssessmentConfig(ctx context.Context) {
 	} else {
 		config.Assessment.CacheExpiration = cacheExpiration
 	}
+
+	publicKeyPath := os.Getenv("ams_assessment_jwt_public_key_path")
+	content, err := ioutil.ReadFile(publicKeyPath)
+	if err != nil {
+		log.Panic(ctx, "load assessment config: load public key failed", log.Err(err), log.String("public_key_path", publicKeyPath))
+	}
+	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+	if err != nil {
+		log.Panic(ctx, "load assessment config: ParseRSAPublicKeyFromPEM failed", log.Err(err))
+	}
+	config.Assessment.AddAssessmentSecret = key
 }
 
 func loadAMSConfig(ctx context.Context) {
