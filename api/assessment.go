@@ -133,7 +133,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd))
+	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd), log.String("token", body.Token))
 	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
