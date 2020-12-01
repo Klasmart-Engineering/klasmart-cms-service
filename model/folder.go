@@ -3,22 +3,23 @@ package model
 import (
 	"context"
 	"errors"
+	"strings"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (
 	ErrInvalidParentFolderId  = errors.New("invalid parent folder id")
 	ErrEmptyFolderName        = errors.New("empty folder name")
 	ErrEmptyFolderID          = errors.New("empty folder id")
-	ErrEmptyLinkID          = errors.New("empty link id")
+	ErrEmptyLinkID            = errors.New("empty link id")
 	ErrEmptyItemID            = errors.New("empty item id")
 	ErrMoveToNotFolder        = errors.New("move to an item not folder")
 	ErrInvalidFolderOwnerType = errors.New("invalid folder owner type")
@@ -33,11 +34,11 @@ var (
 	ErrNoFolder               = errors.New("no folder")
 	ErrMoveRootFolder         = errors.New("move root folder")
 	ErrMoveToChild            = errors.New("move to child folder")
-	ErrItemNotFound  = errors.New("item not found")
+	ErrItemNotFound           = errors.New("item not found")
 )
 
 type DescendantItemsAndLinkItems struct {
-	Ids []string
+	Ids   []string
 	Links []string
 	Total int
 }
@@ -91,13 +92,12 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 		return err
 	}
 	//if name is updated, check duplicate
-	if d.Name != "" && d.Name != folder.Name{
+	if d.Name != "" && d.Name != folder.Name {
 		err = f.checkDuplicateFolderNameForUpdate(ctx, d.Name, folder, operator)
 		if err != nil {
 			return err
 		}
 	}
-
 
 	folder.Name = d.Name
 	folder.Thumbnail = d.Thumbnail
@@ -136,7 +136,7 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 	//新发布的content
 	_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
 		Partition: partition,
-		Link:     link,
+		Link:      link,
 		OwnerType: entity.OwnerTypeOrganization,
 	}, operator)
 	if err != nil {
@@ -268,7 +268,6 @@ func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchF
 	return total, folderItems, nil
 }
 
-
 func (f *FolderModel) SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
 	condition.Owner = operator.UserID
 	condition.OwnerType = entity.OwnerTypeUser
@@ -314,36 +313,21 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 		return ErrMoveToChild
 	}
 
-	//check items duplicate
-	//No need to check duplicate
-	//items, err := f.getItemsFromFolders(ctx, distFolder.ID)
-	//if err != nil {
-	//	return err
-	//}
-	//for i := range items {
-	//	if items[i].ItemType == entity.FolderItemTypeFile &&
-	//		items[i].Name == folder.Name &&
-	//		items[i].Link == folder.Link {
-	//		log.Error(ctx, "duplicate item in path", log.Any("items", items), log.Any("folder", folder))
-	//		return ErrDuplicateItem
-	//	}
-	//}
-
 	return nil
 }
 
-func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, id string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error{
+func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, id string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	link := entity.ContentLink(id)
 	condition := da.FolderCondition{
-		IDs:           nil,
-		OwnerType:     int(ownerType),
-		ItemType:      int(entity.FolderItemTypeFile),
-		Owner:         ownerType.Owner(operator),
-		Partition:     partition,
-		Link:          link,
+		IDs:       nil,
+		OwnerType: int(ownerType),
+		ItemType:  int(entity.FolderItemTypeFile),
+		Owner:     ownerType.Owner(operator),
+		Partition: partition,
+		Link:      link,
 	}
 	folderItems, err := da.GetFolderDA().SearchFolder(ctx, tx, condition)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "search folder failed", log.Err(err), log.Any("condition", condition))
 		return err
 	}
@@ -356,7 +340,7 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 			Link:           link,
 			OwnerType:      ownerType,
 		}, operator)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		return nil
@@ -394,7 +378,7 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 
-func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, fid string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error{
+func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, fid string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	folder, err := f.getFolder(ctx, tx, fid)
 	if err != nil {
 		return err
@@ -448,8 +432,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	return nil
 }
 
-
-func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, fid string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error{
+func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, fid string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	folder, err := f.getFolder(ctx, tx, fid)
 	if err != nil {
 		return err
@@ -490,7 +473,7 @@ func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContex
 	return nil
 }
 
-func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, folderFileType entity.FolderFileType, partition entity.FolderPartition, fid string, distFolder *entity.FolderItem, operator *entity.Operator) error{
+func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, folderFileType entity.FolderFileType, partition entity.FolderPartition, fid string, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	if partition != distFolder.Partition {
 		log.Error(ctx, "can't move to different partition", log.Any("from", distFolder),
 			log.Any("to", distFolder))
@@ -718,13 +701,12 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
 	if req.ParentFolderID != "" {
-		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.ParentFolderID,  1)
+		err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, req.ParentFolderID, 1)
 		if err != nil {
 			log.Warn(ctx, "update parent folder items count failed", log.Err(err), log.Any("parentFolder", req.ParentFolderID))
 			return "", err
 		}
 	}
-
 
 	return folderItem.ID, nil
 }
@@ -802,7 +784,6 @@ func (f *FolderModel) checkAddItemRequest(ctx context.Context, req entity.Create
 	return nil
 }
 
-
 func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.CreateFolderItemRequest, parentFolder *entity.FolderItem, item *FolderItem) error {
 	//check if parentFolder is a folder
 	if !parentFolder.ItemType.IsFolder() {
@@ -820,7 +801,7 @@ func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.
 			log.Warn(ctx, "duplicate item in org folder", log.Err(err), log.Any("req", req), log.Any("parentFolder", parentFolder))
 			return ErrDuplicateItem
 		}
-	}else{
+	} else {
 		//个人下查重名，check items duplicate
 		items, err := f.getItemsFromFolders(ctx, req.ParentFolderID)
 		if err != nil {
@@ -959,8 +940,6 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 	return nil
 }
 
-
-
 func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, name string, folder *entity.FolderItem, operator *entity.Operator) error {
 	//check get all sub folders from parent folder
 	//folder下folder名唯一
@@ -989,7 +968,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 			}
 			for i := range folders {
 				parents := folders[i].DirPath.Parents()
-				if len(parents) > 1 && parents[0] == p[0]{
+				if len(parents) > 1 && parents[0] == p[0] {
 					return ErrDuplicateFolderName
 				}
 			}
@@ -999,13 +978,12 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 		return ErrDuplicateFolderName
 	}
 
-
 	return nil
 }
 
-func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, fromID, toID string, total int) error{
+func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, fromID, toID string, total int) error {
 	//根目录无需修改ItemCount
-	if fromID != constant.FolderRootPath{
+	if fromID != constant.FolderRootPath {
 		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, fromID, -total)
 		if err != nil {
 			log.Warn(ctx, "update originParentFolder items count failed", log.Err(err),
@@ -1028,19 +1006,19 @@ func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBC
 
 	return nil
 }
-func (f *FolderModel) getDescendantItemsAndLinkItems(ctx context.Context, folder *entity.FolderItem) (*DescendantItemsAndLinkItems, error){
+func (f *FolderModel) getDescendantItemsAndLinkItems(ctx context.Context, folder *entity.FolderItem) (*DescendantItemsAndLinkItems, error) {
 	subItems, err := f.getDescendantItems(ctx, folder)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
-	ids := make([]string, len(subItems) - 1)
+	ids := make([]string, len(subItems)-1)
 	links := make([]string, 0)
 	index := 0
 	for i := range subItems {
 		//更新子文件时排除自己
 		if subItems[i].ID != folder.ID {
 			ids[index] = subItems[i].ID
-			index ++
+			index++
 		}
 		//更新关联文件时，只更新带link的文件
 		if !subItems[i].ItemType.IsFolder() {
@@ -1125,12 +1103,12 @@ func (f *FolderModel) getFolderMaybeRoot(ctx context.Context, tx *dbo.DBContext,
 
 func (f *FolderModel) rootFolder(ctx context.Context, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) *entity.FolderItem {
 	return &entity.FolderItem{
-		ID:         constant.FolderRootPath,
-		OwnerType:  ownerType,
-		Owner:      ownerType.Owner(operator),
-		ItemType:   entity.FolderItemTypeFolder,
-		DirPath:    constant.FolderRootPath,
-		Partition:  partition,
+		ID:        constant.FolderRootPath,
+		OwnerType: ownerType,
+		Owner:     ownerType.Owner(operator),
+		ItemType:  entity.FolderItemTypeFolder,
+		DirPath:   constant.FolderRootPath,
+		Partition: partition,
 	}
 }
 

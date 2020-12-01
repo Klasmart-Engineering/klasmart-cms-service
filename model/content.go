@@ -3,10 +3,11 @@ package model
 import (
 	"context"
 	"errors"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
@@ -348,8 +349,8 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Asset添加Folder
 	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets,entity.ContentLink(pid), operator)
-		if err != nil{
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets, entity.ContentLink(pid), operator)
+		if err != nil {
 			log.Error(ctx, "can't create folder item", log.Err(err),
 				log.String("link", entity.ContentLink(pid)),
 				log.Any("data", c),
@@ -788,7 +789,7 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 
 	//folder中删除
 	//temp remove folder
-	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
+	err = GetFolderModel().RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
 	if err != nil {
 		log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
 		return err
