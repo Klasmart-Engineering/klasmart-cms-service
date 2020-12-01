@@ -70,6 +70,8 @@ const (
 	LockedByNoBody = "-"
 
 	NoVisibilitySetting = "-"
+
+	FolderRootPath = "/"
 )
 
 const (

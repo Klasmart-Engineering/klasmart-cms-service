@@ -74,7 +74,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.LessonType = ""
 	}
 
-	path := "/"
+	path := constant.FolderRootPath
 	return &entity.Content{
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
@@ -105,23 +105,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Version:       1,
 	}, nil
 }
-
-//func (cm ContentModel) getContentRootFolder(ctx context.Context, contentType entity.ContentType, operator *entity.Operator) string{
-//	//获取根目录地址
-//	folderPartition := entity.RootMaterialsAndPlansFolderName
-//	if contentType == entity.ContentTypeAssets {
-//		folderPartition = entity.RootAssetsFolderName
-//	}
-//	path := ""
-//	rootFolder, err := GetFolderModel().GetRootFolder(ctx, folderPartition, entity.OwnerTypeOrganization, operator)
-//	if err != nil{
-//		log.Warn(ctx, "get root folder failed", log.Err(err),
-//			log.Any("user", operator))
-//	}else{
-//		path = string(rootFolder.ChildrenPath())
-//	}
-//	return path
-//}
 
 func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *entity.Content, data *entity.CreateContentRequest) (*entity.Content, error) {
 	if data.Name != "" {
@@ -238,7 +221,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 }
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
-	content.DirPath = "/"
+	content.DirPath = constant.FolderRootPath
 
 	//assets则隐藏
 	if content.ContentType.IsAsset() {

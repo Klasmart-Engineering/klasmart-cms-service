@@ -184,7 +184,7 @@ type ContentStatisticsInfo struct {
 }
 
 func ContentLink(id string) string {
-	return FileTypeContent + "-" + id
+	return string(FolderFileTypeContent) + "-" + id
 }
 
 type Content struct {
@@ -322,6 +322,12 @@ type CreateContentRequest struct {
 
 	TeacherManual string `json:"teacher_manual"`
 	TeacherManualName string `json:"teacher_manual_name"`
+}
+
+func (c *CreateContentRequest) Trim(){
+	if c.Name != "" {
+		c.Name = strings.TrimSpace(c.Name)
+	}
 }
 
 func (c CreateContentRequest) Validate() error {

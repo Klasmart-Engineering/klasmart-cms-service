@@ -70,6 +70,8 @@ type DBConfig struct {
 type StorageConfig struct {
 	Accelerate    bool   `yaml:"accelerate"`
 	CloudEnv      string `yaml:"cloud_env"`
+	
+	StorageEndPoint string `yaml:"storage_end_point"`
 	StorageBucket string `yaml:"storage_bucket"`
 	StorageRegion string `yaml:"storage_region"`
 
@@ -131,6 +133,7 @@ func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
+	config.StorageConfig.StorageEndPoint = os.Getenv("storage_endpoint")
 	config.StorageConfig.StorageDownloadMode = NewStorageDownloadMode(assertGetEnv("storage_download_mode"))
 	storageSigMode := assertGetEnv("storage_sig_mode") == "true"
 	config.StorageConfig.StorageSigMode = storageSigMode
