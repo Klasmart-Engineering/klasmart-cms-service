@@ -51,6 +51,9 @@ type IFolderModel interface {
 	//删除一批item
 	RemoveItem(ctx context.Context, fid string, operator *entity.Operator) error
 
+	//批量删除item
+	RemoveItemBulk(ctx context.Context, fids []string, operator *entity.Operator) error
+
 	//修改Folder
 	UpdateFolder(ctx context.Context, folderID string, d entity.UpdateFolderRequest, operator *entity.Operator) error
 
@@ -183,6 +186,19 @@ func (f *FolderModel) RemoveItem(ctx context.Context, fid string, operator *enti
 		return nil
 	})
 }
+
+func (f *FolderModel) RemoveItemBulk(ctx context.Context, fids []string, operator *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		for i := range fids {
+			err := f.removeItemInternal(ctx, tx, fids[i])
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (f *FolderModel) MoveItemBulk(ctx context.Context, req entity.MoveFolderIDBulkRequest, operator *entity.Operator) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		distFolder, err := f.getFolderMaybeRoot(ctx, tx, req.Dist, req.OwnerType, req.Partition, operator)
