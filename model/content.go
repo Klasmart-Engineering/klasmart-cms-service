@@ -43,6 +43,8 @@ var (
 	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
 	ErrInvalidVisibleScope           = errors.New("invalid visible scope")
 
+	ErrSuggestTimeTooSmall = errors.New("suggest time is less than sub contents")
+
 	ErrInvalidMaterialType = errors.New("invalid material type")
 
 	ErrBadRequest         = errors.New("bad request")
