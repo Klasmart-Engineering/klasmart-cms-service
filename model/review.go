@@ -17,7 +17,7 @@ type IReviewerModel interface {
 	Reject(ctx context.Context, tx *dbo.DBContext, cid string, reasons []string, remark string, user *entity.Operator) error
 
 	ApproveBulk(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) error
-	RejectBulk(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) error
+	RejectBulk(ctx context.Context, tx *dbo.DBContext, cids []string, reasons []string, remark string, user *entity.Operator) error
 }
 
 type Reviewer struct {
