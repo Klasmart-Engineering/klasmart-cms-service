@@ -29,6 +29,7 @@ import (
 // @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
 // @Success 200 {object} entity.ListAssessmentsResult
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments [get]
 func (s *Server) listAssessments(c *gin.Context) {
@@ -81,6 +82,8 @@ func (s *Server) listAssessments(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	default:
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),
@@ -152,7 +155,6 @@ func (s *Server) addAssessment(c *gin.Context) {
 // @Param assessment body entity.AddAssessmentCommand true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
 // @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments_for_test [post]
 func (s *Server) addAssessmentForTest(c *gin.Context) {
@@ -171,10 +173,6 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
-	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),

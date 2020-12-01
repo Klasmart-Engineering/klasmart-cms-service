@@ -503,9 +503,9 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 		}
 		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
 			log.Info(ctx, "add assessment: invalid class type",
-				log.Err(err),
 				log.Any("cmd", cmd),
-				log.Any("schedule", schedule),
+				log.Any("operator", operator),
+				log.Any("schedule", schedule)
 			)
 			return "", nil
 		}
