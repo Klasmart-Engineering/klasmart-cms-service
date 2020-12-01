@@ -3,17 +3,18 @@ package model
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"math/rand"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 func initDB() {
@@ -29,7 +30,7 @@ func initDB() {
 		panic(err)
 	}
 	config.Set(&config.Config{
-		RedisConfig:     config.RedisConfig{
+		RedisConfig: config.RedisConfig{
 			OpenCache: false,
 			Host:      "",
 			Port:      0,
@@ -45,7 +46,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 	fmt.Println("end test")
 }
-func fakeOperator() *entity.Operator{
+func fakeOperator() *entity.Operator {
 	return &entity.Operator{
 		UserID: "1",
 		Role:   "teacher",
@@ -231,11 +232,11 @@ func TestMoveItem(t *testing.T) {
 	t.Log(itemID2)
 
 	err = GetFolderModel().MoveItem(context.Background(), entity.MoveFolderRequest{
-		ID:              itemID2,
+		ID:             itemID2,
 		OwnerType:      entity.OwnerTypeOrganization,
 		Dist:           subFolderId,
 		Partition:      entity.FolderPartitionMaterialAndPlans,
-		FolderFileType: "content",
+		FolderFileType: entity.FolderFileTypeContent,
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -302,11 +303,11 @@ func TestMoveItemAndFolder(t *testing.T) {
 	t.Log(itemID2)
 
 	err = GetFolderModel().MoveItem(context.Background(), entity.MoveFolderRequest{
-		ID:              itemID2,
+		ID:             itemID2,
 		OwnerType:      entity.OwnerTypeOrganization,
 		Dist:           subFolderId,
 		Partition:      entity.FolderPartitionMaterialAndPlans,
-		FolderFileType: "content",
+		FolderFileType: entity.FolderFileTypeContent,
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -320,11 +321,11 @@ func TestMoveItemAndFolder(t *testing.T) {
 	assert.Equal(t, itemID2, subFolderItems[0].ID)
 
 	err = GetFolderModel().MoveItem(context.Background(), entity.MoveFolderRequest{
-		ID:              itemID2,
+		ID:             itemID2,
 		OwnerType:      entity.OwnerTypeOrganization,
 		Dist:           subFolderId2,
 		Partition:      entity.FolderPartitionMaterialAndPlans,
-		FolderFileType: "folder",
+		FolderFileType: entity.FolderFileTypeFolder,
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -406,7 +407,6 @@ func TestRemoveItemAndFolder(t *testing.T) {
 	}
 	assert.Equal(t, 1, len(subFolderItems))
 
-
 	err = GetFolderModel().RemoveItem(context.Background(), itemID1, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -471,7 +471,7 @@ func TestSearchFolder(t *testing.T) {
 	t.Log(itemID2)
 
 	total, folders, err := GetFolderModel().SearchOrgFolder(context.Background(), entity.SearchFolderCondition{
-		Path:      constant.FolderRootPath,
+		Path: constant.FolderRootPath,
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return

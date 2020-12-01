@@ -106,23 +106,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}, nil
 }
 
-//func (cm ContentModel) getContentRootFolder(ctx context.Context, contentType entity.ContentType, operator *entity.Operator) string{
-//	//获取根目录地址
-//	folderPartition := entity.RootMaterialsAndPlansFolderName
-//	if contentType == entity.ContentTypeAssets {
-//		folderPartition = entity.RootAssetsFolderName
-//	}
-//	path := ""
-//	rootFolder, err := GetFolderModel().GetRootFolder(ctx, folderPartition, entity.OwnerTypeOrganization, operator)
-//	if err != nil{
-//		log.Warn(ctx, "get root folder failed", log.Err(err),
-//			log.Any("user", operator))
-//	}else{
-//		path = string(rootFolder.ChildrenPath())
-//	}
-//	return path
-//}
-
 func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *entity.Content, data *entity.CreateContentRequest) (*entity.Content, error) {
 	if data.Name != "" {
 		content.Name = data.Name
