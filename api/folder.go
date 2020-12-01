@@ -106,7 +106,7 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 // @Description remove folder items bulk
 // @Accept json
 // @Produce json
-// @Param content body entity.CreateFolderItemRequest true "create request"
+// @Param content body entity.RemoveItemBulk true "remove folder ids"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
