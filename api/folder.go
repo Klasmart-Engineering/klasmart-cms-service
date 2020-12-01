@@ -81,7 +81,7 @@ func (s *Server) addFolderItem(c *gin.Context) {
 // @Description remove folder item
 // @Accept json
 // @Produce json
-// @Param content body entity.CreateFolderItemRequest true "create request"
+// @Param item_id path string true "folder item id to delete"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
@@ -137,6 +137,7 @@ func (s *Server) removeFolderItemBulk(c *gin.Context) {
 // @Description update folder item info
 // @Accept json
 // @Produce json
+// @Param item_id path string true "folder item id to delete"
 // @Param content body entity.UpdateFolderRequest true "update request"
 // @Tags folder
 // @Success 200 {object} string ok
