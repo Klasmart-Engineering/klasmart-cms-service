@@ -505,7 +505,7 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 			log.Info(ctx, "add assessment: invalid class type",
 				log.Any("cmd", cmd),
 				log.Any("operator", operator),
-				log.Any("schedule", schedule)
+				log.Any("schedule", schedule),
 			)
 			return "", nil
 		}
