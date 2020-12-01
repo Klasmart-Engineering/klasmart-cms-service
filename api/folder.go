@@ -243,11 +243,11 @@ func (s *Server) moveFolderItemBulk(c *gin.Context) {
 // @Tags folder
 // @Success 200 {object} FolderItemsResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /folders/items/list/{folder_id} [get]
+// @Router /folders/items/list/{item_id} [get]
 func (s *Server) listFolderItems(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	fid := c.Param("folder_id")
+	fid := c.Param("item_id")
 	itemType := utils.ParseInt(ctx, c.Query("item_type"))
 	items, err := model.GetFolderModel().ListItems(ctx, fid, entity.NewItemType(itemType), op)
 	switch err {
@@ -331,11 +331,11 @@ func (s *Server) searchOrgFolderItems(c *gin.Context) {
 // @Success 200 {object} entity.FolderItemInfo
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 404 {object} BadRequestResponse
-// @Router /folders/items/details/{folder_id} [get]
+// @Router /folders/items/details/{item_id} [get]
 func (s *Server) getFolderItemByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	fid := c.Param("folder_id")
+	fid := c.Param("item_id")
 	item, err := model.GetFolderModel().GetFolderByID(ctx, fid, op)
 	switch err {
 	case nil:
