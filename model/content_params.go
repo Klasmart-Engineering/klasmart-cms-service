@@ -8,6 +8,7 @@ import (
 
 	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -25,8 +26,31 @@ func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContent
 	return fmt.Sprintf(constant.SourceTypeMaterialPrefix + materialData.FileType.String())
 }
 
-func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
+func (cm ContentModel) checkSuggestTime(ctx context.Context, suggestTime int, contentType entity.ContentType, subIds []string) error {
+	if contentType == entity.ContentTypeLesson {
+		//if content type is lesson, check suggest time
+		subContents, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), subIds)
+		if err != nil {
+			log.Error(ctx, "get content by id list failed", log.Err(err), log.Strings("subIds", subIds))
+			return ErrReadContentFailed
+		}
+		timeTotal := 0
+		for i := range subContents {
+			timeTotal = timeTotal + subContents[i].SuggestTime
+		}
 
+		if suggestTime < timeTotal {
+			log.Warn(ctx, "suggest time too small", log.Err(err),
+				log.Int("timeTotal", timeTotal),
+				log.Int("suggestTime", suggestTime),
+				log.Any("subContents", subContents))
+			return ErrSuggestTimeTooSmall
+		}
+	}
+	return nil
+}
+
+func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
 	publishStatus := entity.NewContentPublishStatus(entity.ContentStatusDraft)
 
 	if c.Data == "" {
@@ -37,9 +61,17 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
 	}
+
 	err = cd.Validate(ctx, c.ContentType)
 	if err != nil {
 		log.Warn(ctx, "validate content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		return nil, err
+	}
+
+	//check suggest time
+	err = cm.checkSuggestTime(ctx, c.SuggestTime, c.ContentType, cd.SubContentIds(ctx))
+	if err != nil {
+		log.Warn(ctx, "check suggest time failed", log.Err(err), log.Any("req", c))
 		return nil, err
 	}
 
@@ -201,6 +233,13 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 		if data.SourceType == "" {
 			data.SourceType = cm.getSourceType(ctx, *data, cd)
+		}
+
+		//check suggest time
+		err = cm.checkSuggestTime(ctx, data.SuggestTime, data.ContentType, cd.SubContentIds(ctx))
+		if err != nil {
+			log.Warn(ctx, "check suggest time failed", log.Err(err), log.Any("req", data), log.Any("content", content))
+			return nil, err
 		}
 	}
 	content.UpdateAt = time.Now().Unix()
