@@ -507,7 +507,8 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 				log.Any("cmd", cmd),
 				log.Any("schedule", schedule),
 			)
-			return "", errors.New("add assessment: invalid class type")
+
+			return "", constant.ErrInvalidArgs
 		}
 		outcomeIDs, err = GetContentModel().GetVisibleContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
 		if err != nil {
