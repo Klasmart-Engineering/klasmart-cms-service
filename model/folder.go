@@ -713,6 +713,13 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 		return "", err
 	}
 
+	//update linked file info
+	err = f.updateLinkedItemPath(ctx, tx, []string{folderItem.Link}, string(path))
+	if err != nil {
+		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(path)))
+		return "", err
+	}
+
 	//更新parent folder文件数量
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
