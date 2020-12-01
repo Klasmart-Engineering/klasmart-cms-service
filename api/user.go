@@ -29,6 +29,7 @@ type LoginRequest struct {
 // @Param outcome body LoginRequest true "user login"
 // @Success 200
 // @Failure 400 {object} BadRequestResponse
+// @Failure 401 {object} UnAuthorizedResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/login [get]
 func (s *Server) login(c *gin.Context) {
@@ -36,19 +37,20 @@ func (s *Server) login(c *gin.Context) {
 	var req LoginRequest
 	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		log.Error(ctx, "login:ShouldBindQuery failed", log.Err(err))
+		log.Warn(ctx, "login:ShouldBindQuery failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	if req.AuthType != constant.LoginByPassword && req.AuthType != constant.LoginByCode {
+		log.Warn(ctx, "login:param illegal", log.Any("req", req))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
 	user, err := model.GetUserModel().GetUserByAccount(ctx, req.AuthTo)
 	if err == constant.ErrRecordNotFound {
-		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	if err != nil {
@@ -97,6 +99,8 @@ type RegisterRequest struct {
 // @Param outcome body RegisterRequest true "user register"
 // @Success 200
 // @Failure 400 {object} BadRequestResponse
+// @Failure 401 {object} UnAuthorizedResponse
+// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/register [post]
 func (s *Server) register(c *gin.Context) {
@@ -104,7 +108,7 @@ func (s *Server) register(c *gin.Context) {
 	var req RegisterRequest
 	err := c.ShouldBindQuery(&req)
 	if err != nil {
-		log.Error(ctx, "register:ShouldBindQuery failed", log.Err(err))
+		log.Warn(ctx, "register:ShouldBindQuery failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -121,10 +125,12 @@ func (s *Server) register(c *gin.Context) {
 	}
 	user, err := model.GetUserModel().RegisterUser(ctx, req.Account, req.Password, req.ActType)
 	if err == constant.ErrDuplicateRecord {
+		log.Warn(ctx, "register:RegisterUser conflict", log.Err(err))
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
 		return
 	}
 	if err != nil {
+		log.Error(ctx, "register:RegisterUser failed", log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 
@@ -160,7 +166,7 @@ func (s *Server) sendCode(c *gin.Context) {
 	ctx := c.Request.Context()
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		log.Error(ctx, "verification:ShouldBindJSON failed", log.Err(err))
+		log.Warn(ctx, "verification:ShouldBindJSON failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -178,7 +184,7 @@ func (s *Server) sendCode(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
-		c.JSON(http.StatusOK, "ok")
+		c.Status(http.StatusOK)
 		return
 	}
 

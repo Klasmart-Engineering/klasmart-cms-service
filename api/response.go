@@ -52,3 +52,5 @@ type NotFoundResponse ErrorResponse
 type InternalServerErrorResponse ErrorResponse
 
 type ConflictResponse ErrorResponse
+
+type UnAuthorizedResponse ErrorResponse
