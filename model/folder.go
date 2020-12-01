@@ -36,7 +36,7 @@ var (
 	ErrItemNotFound  = errors.New("item not found")
 )
 
-type DescendantItemsInfo struct {
+type DescendantItemsAndLinkItems struct {
 	Ids []string
 	Links []string
 	Total int
@@ -410,7 +410,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//获取目录下的所有文件（所有子文件一起移动）
-	info, err := f.getDescendantItemsInfo(ctx, folder)
+	info, err := f.getDescendantItemsAndLinkItems(ctx, folder)
 	if err != nil {
 		return err
 	}
@@ -1028,7 +1028,7 @@ func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBC
 
 	return nil
 }
-func (f *FolderModel) getDescendantItemsInfo(ctx context.Context, folder *entity.FolderItem) (*DescendantItemsInfo, error){
+func (f *FolderModel) getDescendantItemsAndLinkItems(ctx context.Context, folder *entity.FolderItem) (*DescendantItemsAndLinkItems, error){
 	subItems, err := f.getDescendantItems(ctx, folder)
 	if err != nil{
 		return nil, err
@@ -1047,7 +1047,7 @@ func (f *FolderModel) getDescendantItemsInfo(ctx context.Context, folder *entity
 			links = append(links, subItems[i].Link)
 		}
 	}
-	return &DescendantItemsInfo{
+	return &DescendantItemsAndLinkItems{
 		Ids:   ids,
 		Links: links,
 		Total: len(subItems),
