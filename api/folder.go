@@ -326,6 +326,7 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 	pageSize := utils.ParseInt64(ctx, c.Query("page_size"))
 	pageIndex := utils.ParseInt64(ctx, c.Query("page"))
 	partition := c.Query("partition")
+
 	//Pager   utils.Pager
 	return &entity.SearchFolderCondition{
 		IDs:       nil,

@@ -15,15 +15,35 @@ const (
 	OwnerTypeUser OwnerType = 2
 
 
-	FolderFileTypeContent = "content"
-	FolderFileTypeFolder = "folder"
-	FolderFileTypeFolderItem = "item"
+	FolderFileTypeContent FolderFileType = "content"
+	FolderFileTypeFolder FolderFileType = "folder"
+	FolderFileTypeFolderItem FolderFileType = "item"
 
 	//RootAssetsFolderName FolderPartition = "assets"
 	//RootMaterialsAndPlansFolderName FolderPartition = "plans and materials"
 	FolderPartitionAssets           FolderPartition = "assets"
 	FolderPartitionMaterialAndPlans FolderPartition = "plans and materials"
 )
+
+type FolderFileType string
+func NewFolderFileType(fileType string) FolderFileType {
+	switch fileType {
+	case "content":
+		return FolderFileTypeContent
+	case "folder":
+		return FolderFileTypeFolder
+	case "item":
+		return FolderFileTypeFolderItem
+	}
+	return FolderFileTypeContent
+}
+func (f FolderFileType) Valid() bool{
+	if f == FolderFileTypeContent || f == FolderFileTypeFolder ||
+		f == FolderFileTypeFolderItem {
+		return true
+	}
+	return false
+}
 
 type FolderPartition string
 func NewFolderPartition(partition string) FolderPartition {
@@ -34,6 +54,13 @@ func NewFolderPartition(partition string) FolderPartition {
 		return FolderPartitionMaterialAndPlans
 	}
 	return FolderPartitionMaterialAndPlans
+}
+
+func (f FolderPartition) Valid() bool{
+	if f == FolderPartitionMaterialAndPlans || f == FolderPartitionAssets {
+		return true
+	}
+	return false
 }
 
 type OwnerType int
@@ -68,6 +95,14 @@ func (o ItemType) Valid() bool {
 	return false
 }
 
+func (o ItemType) ValidSearch() bool {
+	if o == FolderItemTypeFolder || o == FolderItemTypeFile ||
+		o == FolderItemTypeAll{
+		return true
+	}
+	return false
+}
+
 func (o ItemType) ValidExcludeFolder() bool {
 	if o == FolderItemTypeFile {
 		return true
@@ -93,20 +128,20 @@ func NewItemType(num int) ItemType{
 }
 
 type CreateFolderRequest struct {
-	OwnerType int       `json:"owner_type"`
+	OwnerType OwnerType       `json:"owner_type"`
 	ParentID  string          `json:"parent_id"`
 	Name      string          `json:"name"`
-	Partition string `json:"partition"`
+	Partition FolderPartition `json:"partition"`
 
 	Thumbnail string `json:"thumbnail"`
 }
 
 type MoveFolderRequest struct {
 	ID             string          `json:"id"`
-	OwnerType      int       `json:"owner_type"`
+	OwnerType      OwnerType       `json:"owner_type"`
 	Dist           string          `json:"dist"`
-	Partition      string `json:"partition"`
-	FolderFileType string          `json:"folder_file_type" enums:"content,folder"`
+	Partition      FolderPartition `json:"partition"`
+	FolderFileType FolderFileType          `json:"folder_file_type" enums:"content,folder"`
 }
 
 type UpdateFolderRequest struct {
@@ -116,23 +151,23 @@ type UpdateFolderRequest struct {
 
 type FolderIdWithFileType struct {
 	ID string `json:"id"`
-	FolderFileType string `json:"folder_file_type" enums:"content,folder"`
+	FolderFileType FolderFileType `json:"folder_file_type" enums:"content,folder"`
 }
 
 type MoveFolderIDBulkRequest struct {
 	FolderInfo []FolderIdWithFileType `json:"folder_info"`
-	OwnerType int `json:"owner_type"`
+	OwnerType OwnerType `json:"owner_type"`
 	Dist string `json:"dist"`
-	Partition string `json:"partition"`
+	Partition FolderPartition `json:"partition"`
 }
 
 type CreateFolderItemRequest struct {
 	//ID string `json:"id"`
 	ParentFolderID string `json:"parent_folder_id"`
 	//ItemType  ItemType  `json:"item_type"`
-	Partition string `json:"partition"`
+	Partition FolderPartition `json:"partition"`
 	Link      string          `json:"link"`
-	OwnerType int `json:"owner_type"`
+	OwnerType OwnerType `json:"owner_type"`
 }
 
 type Path string
@@ -179,7 +214,7 @@ type FolderItem struct {
 
 	ItemType ItemType `gorm:"type:int;NOT NULL" json:"item_type"`
 	DirPath  Path     `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
-	Partition string `gorm:"type:varchar(256);NOT NULL" json:"partition"`
+	Partition FolderPartition `gorm:"type:varchar(256);NOT NULL" json:"partition"`
 	Name     string   `gorm:"type:varchar(256);NOT NULL" json:"name"`
 
 	Thumbnail string	`gorm:"type:text" json:"thumbnail"`
