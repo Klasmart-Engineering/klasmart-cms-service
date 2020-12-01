@@ -443,7 +443,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	content.DirPath = "/"
+	content.DirPath = constant.FolderRootPath
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -1448,7 +1448,7 @@ func (cm *ContentModel) filterRootPath(ctx context.Context, condition *da.Conten
 	//	return err
 	//}
 	//condition.DirPath = string(root.ChildrenPath())
-	condition.DirPath = "/"
+	condition.DirPath = constant.FolderRootPath
 	return nil
 }
 

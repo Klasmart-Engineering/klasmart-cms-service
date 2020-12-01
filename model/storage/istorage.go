@@ -94,9 +94,11 @@ func createStorageByEnv() {
 	switch conf.StorageConfig.CloudEnv {
 	case "aws":
 		defaultStorage = newS3Storage(S3StorageConfig{
+			Endpoint: conf.StorageConfig.StorageEndPoint,
 			Bucket:    conf.StorageConfig.StorageBucket,
 			Region:    conf.StorageConfig.StorageRegion,
 			ArnBucket: os.Getenv("storage_arn_bucket"),
+			Accelerate: config.Get().StorageConfig.Accelerate,
 		})
 		defaultStorage.OpenStorage(context.TODO())
 	default:

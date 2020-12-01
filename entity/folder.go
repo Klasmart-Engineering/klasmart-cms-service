@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 )
@@ -137,14 +138,14 @@ type CreateFolderItemRequest struct {
 type Path string
 
 func (p Path) ParentPath()string {
-	if p == "/" {
+	if p == constant.FolderRootPath {
 		return ""
 	}
 	return string(p)
 }
 
 func (p Path) Parents() []string {
-	if p == "/" {
+	if p == constant.FolderRootPath {
 		return nil
 	}
 	pairs := strings.Split(string(p), "/")
@@ -198,8 +199,8 @@ func (f FolderItem) TableName() string{
 
 func (f FolderItem) ChildrenPath() Path {
 	//根目录情况
-	if f.ID == "/" {
-		return NewPath("/")
+	if f.ID == constant.FolderRootPath {
+		return NewPath(constant.FolderRootPath)
 	}
 	return NewPath(f.DirPath.ParentPath() + "/" + f.ID + "/")
 }

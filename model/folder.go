@@ -5,6 +5,7 @@ import (
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -470,7 +471,7 @@ func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContex
 	folder.ParentID = distFolder.ID
 	err = da.GetFolderDA().UpdateFolder(ctx, tx, fid, folder)
 	if err != nil {
-		log.Warn(ctx, "update folder failed", log.Err(err), log.Any("folder", folder))
+		log.Error(ctx, "update folder failed", log.Err(err), log.Any("folder", folder))
 		return err
 	}
 
@@ -515,86 +516,86 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, ownerType
 	return ErrInvalidFolderItemType
 }
 
-func (f *FolderModel) moveItemBak(ctx context.Context, tx *dbo.DBContext, fid string, distFolder *entity.FolderItem, operator *entity.Operator) error {
-	folder, err := f.getFolder(ctx, tx, fid)
-	if err != nil {
-		return err
-	}
-
-	//检查是否同区
-	if distFolder.Partition != folder.Partition {
-		log.Error(ctx, "can't move to different partition", log.Any("from", folder),
-			log.Any("to", distFolder))
-		return ErrMoveToDifferentPartition
-	}
-
-	//检查参数是否有问题
-	err = f.checkMoveItem(ctx, folder, distFolder)
-	if err != nil {
-		return err
-	}
-
-	//获取目录下的所有文件（所有子文件一起移动）
-	subItems, err := f.getDescendantItems(ctx, folder)
-	if err != nil {
-		return err
-	}
-	ids := make([]string, 0)
-	links := make([]string, 0)
-	for i := range subItems {
-		//更新子文件时排除自己
-		if subItems[i].ID != folder.ID {
-			ids = append(ids, subItems[i].ID)
-		}
-		//更新关联文件时，只更新带link的文件
-		if !subItems[i].ItemType.IsFolder() {
-			links = append(links, subItems[i].Link)
-		}
-	}
-	path := distFolder.ChildrenPath()
-	folder.DirPath = path
-	folder.ParentID = distFolder.ID
-	err = da.GetFolderDA().UpdateFolder(ctx, tx, fid, folder)
-	if err != nil {
-		log.Warn(ctx, "update folder failed", log.Err(err), log.Any("folder", folder))
-		return err
-	}
-	newPath := folder.ChildrenPath()
-	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, ids, newPath)
-	if err != nil {
-		log.Warn(ctx, "update folder path failed", log.Err(err), log.Strings("ids", ids), log.String("path", string(path)))
-		return err
-	}
-
-	if !folder.ItemType.IsFolder() {
-		newPath = distFolder.ChildrenPath()
-	}
-	err = f.updateLinkedItemPath(ctx, tx, links, string(newPath))
-	if err != nil {
-		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", ids), log.Strings("links", links), log.String("path", string(path)))
-		return err
-	}
-
-	//更新文件数量
-	moveCount := len(subItems)
-	err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, folder.ParentID, -moveCount)
-	if err != nil {
-		log.Warn(ctx, "update originParentFolder items count failed", log.Err(err),
-			log.String("folder.ParentID", folder.ParentID),
-			log.Int("count", moveCount))
-		return err
-	}
-
-	err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, distFolder.ID, moveCount)
-	if err != nil {
-		log.Warn(ctx, "update distFolder items count failed", log.Err(err),
-			log.Any("parentFolder", distFolder),
-			log.Int("count", moveCount))
-		return err
-	}
-
-	return nil
-}
+//func (f *FolderModel) moveItemBak(ctx context.Context, tx *dbo.DBContext, fid string, distFolder *entity.FolderItem, operator *entity.Operator) error {
+//	folder, err := f.getFolder(ctx, tx, fid)
+//	if err != nil {
+//		return err
+//	}
+//
+//	//检查是否同区
+//	if distFolder.Partition != folder.Partition {
+//		log.Error(ctx, "can't move to different partition", log.Any("from", folder),
+//			log.Any("to", distFolder))
+//		return ErrMoveToDifferentPartition
+//	}
+//
+//	//检查参数是否有问题
+//	err = f.checkMoveItem(ctx, folder, distFolder)
+//	if err != nil {
+//		return err
+//	}
+//
+//	//获取目录下的所有文件（所有子文件一起移动）
+//	subItems, err := f.getDescendantItems(ctx, folder)
+//	if err != nil {
+//		return err
+//	}
+//	ids := make([]string, 0)
+//	links := make([]string, 0)
+//	for i := range subItems {
+//		//更新子文件时排除自己
+//		if subItems[i].ID != folder.ID {
+//			ids = append(ids, subItems[i].ID)
+//		}
+//		//更新关联文件时，只更新带link的文件
+//		if !subItems[i].ItemType.IsFolder() {
+//			links = append(links, subItems[i].Link)
+//		}
+//	}
+//	path := distFolder.ChildrenPath()
+//	folder.DirPath = path
+//	folder.ParentID = distFolder.ID
+//	err = da.GetFolderDA().UpdateFolder(ctx, tx, fid, folder)
+//	if err != nil {
+//		log.Warn(ctx, "update folder failed", log.Err(err), log.Any("folder", folder))
+//		return err
+//	}
+//	newPath := folder.ChildrenPath()
+//	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, ids, newPath)
+//	if err != nil {
+//		log.Warn(ctx, "update folder path failed", log.Err(err), log.Strings("ids", ids), log.String("path", string(path)))
+//		return err
+//	}
+//
+//	if !folder.ItemType.IsFolder() {
+//		newPath = distFolder.ChildrenPath()
+//	}
+//	err = f.updateLinkedItemPath(ctx, tx, links, string(newPath))
+//	if err != nil {
+//		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", ids), log.Strings("links", links), log.String("path", string(path)))
+//		return err
+//	}
+//
+//	//更新文件数量
+//	moveCount := len(subItems)
+//	err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, folder.ParentID, -moveCount)
+//	if err != nil {
+//		log.Warn(ctx, "update originParentFolder items count failed", log.Err(err),
+//			log.String("folder.ParentID", folder.ParentID),
+//			log.Int("count", moveCount))
+//		return err
+//	}
+//
+//	err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, distFolder.ID, moveCount)
+//	if err != nil {
+//		log.Warn(ctx, "update distFolder items count failed", log.Err(err),
+//			log.Any("parentFolder", distFolder),
+//			log.Int("count", moveCount))
+//		return err
+//	}
+//
+//	return nil
+//}
 
 func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, partition entity.FolderPartition, owner string, link string) (bool, error) {
 	if !ownerType.Valid() {
@@ -685,10 +686,10 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 		return "", err
 	}
 
-	path := entity.NewPath("/")
+	path := entity.NewPath(constant.FolderRootPath)
 	ownerType := entity.NewOwnerType(req.OwnerType)
 	owner := ownerType.Owner(operator)
-	if req.ParentFolderID != "" && req.ParentFolderID != "/" {
+	if req.ParentFolderID != "" && req.ParentFolderID != constant.FolderRootPath {
 		//get parent folder
 		parentFolder, err := f.getFolder(ctx, tx, req.ParentFolderID)
 		if err != nil {
@@ -832,7 +833,7 @@ func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.
 }
 
 func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.CreateFolderRequest, parentFolder *entity.FolderItem, operator *entity.Operator) *entity.FolderItem {
-	path := entity.NewPath("/")
+	path := entity.NewPath(constant.FolderRootPath)
 	ownerType := entity.NewOwnerType(req.OwnerType)
 	owner := ownerType.Owner(operator)
 	if parentFolder != nil {
@@ -841,7 +842,7 @@ func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.
 		owner = parentFolder.Owner
 	}
 	if req.ParentID == "" {
-		req.ParentID = "/"
+		req.ParentID = constant.FolderRootPath
 	}
 	now := time.Now().Unix()
 	id := utils.NewID()
@@ -995,7 +996,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 
 func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, fromID, toID string, total int) error{
 	//根目录无需修改ItemCount
-	if fromID != "/"{
+	if fromID != constant.FolderRootPath{
 		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, fromID, -total)
 		if err != nil {
 			log.Warn(ctx, "update originParentFolder items count failed", log.Err(err),
@@ -1006,7 +1007,7 @@ func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBC
 	}
 
 	//根目录无需修改ItemCount
-	if toID != "/" {
+	if toID != constant.FolderRootPath {
 		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, toID, total)
 		if err != nil {
 			log.Warn(ctx, "update distFolder items count failed", log.Err(err),
@@ -1023,12 +1024,14 @@ func (f *FolderModel) getDescendantItemsInfo(ctx context.Context, folder *entity
 	if err != nil{
 		return nil, err
 	}
-	ids := make([]string, 0)
+	ids := make([]string, len(subItems) - 1)
 	links := make([]string, 0)
+	index := 0
 	for i := range subItems {
 		//更新子文件时排除自己
 		if subItems[i].ID != folder.ID {
-			ids = append(ids, subItems[i].ID)
+			ids[index] = subItems[i].ID
+			index ++
 		}
 		//更新关联文件时，只更新带link的文件
 		if !subItems[i].ItemType.IsFolder() {
@@ -1054,7 +1057,6 @@ func (f *FolderModel) getDescendantItems(ctx context.Context, folder *entity.Fol
 		return nil, err
 	}
 	items = append(items, folder)
-
 
 	return items, nil
 }
@@ -1101,7 +1103,7 @@ func (f *FolderModel) getFolder(ctx context.Context, tx *dbo.DBContext, fid stri
 	return parentFolder, nil
 }
 func (f *FolderModel) getFolderMaybeRoot(ctx context.Context, tx *dbo.DBContext, fid string, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) (*entity.FolderItem, error) {
-	if fid == "/" {
+	if fid == constant.FolderRootPath {
 		return f.rootFolder(ctx, ownerType, partition, operator), nil
 	}
 	parentFolder, err := da.GetFolderDA().GetFolderByID(ctx, tx, fid)
@@ -1114,11 +1116,11 @@ func (f *FolderModel) getFolderMaybeRoot(ctx context.Context, tx *dbo.DBContext,
 
 func (f *FolderModel) rootFolder(ctx context.Context, ownerType entity.OwnerType, partition entity.FolderPartition, operator *entity.Operator) *entity.FolderItem {
 	return &entity.FolderItem{
-		ID:         "/",
+		ID:         constant.FolderRootPath,
 		OwnerType:  ownerType,
 		Owner:      ownerType.Owner(operator),
 		ItemType:   entity.FolderItemTypeFolder,
-		DirPath:    "/",
+		DirPath:    constant.FolderRootPath,
 		Partition:  string(partition),
 	}
 }

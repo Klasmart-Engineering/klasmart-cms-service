@@ -9,6 +9,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -20,8 +21,11 @@ func InitEnv() {
 	os.Setenv("cloud_env", "aws")
 	os.Setenv("storage_bucket", "kidsloop-global-resources-test")
 	os.Setenv("storage_region", "ap-northeast-2")
-	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAXGKUAYT2P2IJ2KX7")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "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")
+	os.Setenv("storage_endpoint", "http://192.168.1.233:65432")
+	//os.Setenv("AWS_ACCESS_KEY_ID", "AKIAXGKUAYT2P2IJ2KX7")
+	//os.Setenv("AWS_SECRET_ACCESS_KEY", "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")
+	os.Setenv("AWS_ACCESS_KEY_ID", "test_access_key")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "test_secret_key")
 	os.Setenv("storage_accelerate", "true")
 	os.Setenv("db_env", "mysql")
 	os.Setenv("cdn_open", "true")
@@ -48,6 +52,25 @@ func TestS3Storage_ExitsFile(t *testing.T) {
 	_, ret := storage.ExistFile(context.Background(), "thumbnail", "5f48815e9be1b049508ccb2c.jpg")
 	t.Log(ret)
 	_, ret = storage.ExistFile(context.Background(), "thumbnail", "5f48815e9be1b049508ccb2b.jpg")
+	t.Log(ret)
+}
+
+func TestLocalS3(t *testing.T) {
+	os.Setenv("AWS_ACCESS_KEY_ID", "test_access_key")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "test_secret_key")
+	defaultStorage = newS3Storage(S3StorageConfig{
+		Endpoint: "http://192.168.1.233:65432",
+		Bucket:    "fucking-bucket",
+		Accelerate: false,
+		Region:    "us-east-1",
+		//ArnBucket: os.Getenv("storage_arn_bucket"),
+	})
+	err := defaultStorage.OpenStorage(context.TODO())
+	if err != nil{
+		t.Error(err)
+		return
+	}
+	_, ret := defaultStorage.ExistFile(context.Background(), "thumbnail", "5f48815e9be1b049508ccb2c.jpg")
 	t.Log(ret)
 }
 
@@ -78,7 +101,7 @@ func TestS3Storage_GetUploadFileTempPath(t *testing.T) {
 
 func TestCDNSignature2(t *testing.T) {
 	cdnConf := config.CDNConfig{
-		CDNRestrictedViewer:           true,
+		//CDNRestrictedViewer:           true,
 		CDNPath:           "https://res-kl2-dev-cms.kidsloop.net",
 		CDNPrivateKeyPath: "./rsa_private_key.pem",
 		CDNKeyId: "K3PUGKGK3R1NHM",
@@ -134,4 +157,16 @@ func TestCDNSignature2(t *testing.T) {
 		return
 	}
 	t.Log(signedURL)
+}
+
+func TestURLEncode(t *testing.T) {
+	s, err := url.Parse("http://192.168.0.127:654321")
+	if err != nil{
+		t.Error(err)
+		return
+	}
+	t.Log(s.Host)
+	t.Log(s.Opaque)
+	t.Log(s.Fragment)
+	t.Log(s.Scheme)
 }

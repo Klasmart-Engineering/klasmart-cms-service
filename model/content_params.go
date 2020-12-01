@@ -74,7 +74,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.LessonType = ""
 	}
 
-	path := "/"
+	path := constant.FolderRootPath
 	return &entity.Content{
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
@@ -238,7 +238,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 }
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
-	content.DirPath = "/"
+	content.DirPath = constant.FolderRootPath
 
 	//assets则隐藏
 	if content.ContentType.IsAsset() {
