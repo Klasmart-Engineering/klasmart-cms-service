@@ -668,12 +668,16 @@ func (r *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 func makeLatestOutcomeIDsTranslator(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (func([]string) []string, error) {
 	m, err := GetOutcomeModel().GetLatestOutcomesByIDsMapResult(ctx, tx, outcomeIDs, operator)
 	if err != nil {
-		log.Error(ctx, "make latest outcome id translator: call outcome model failed",
-			log.Err(err),
-			log.Any("outcome_ids", outcomeIDs),
-			log.Any("operator", operator),
-		)
-		return nil, err
+		if err != constant.ErrRecordNotFound {
+			log.Error(ctx, "make latest outcome id translator: call outcome model failed",
+				log.Err(err),
+				log.Any("outcome_ids", outcomeIDs),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		} else {
+			m = map[string]*entity.Outcome{}
+		}
 	}
 	return func(ids []string) []string {
 		if len(ids) == 0 {
