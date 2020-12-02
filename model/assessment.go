@@ -501,13 +501,21 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 				return "", err
 			}
 		}
-		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
-			log.Error(ctx, "add assessment: invalid class type",
-				log.Err(err),
+		if schedule.Status == entity.ScheduleStatusClosed {
+			log.Info(ctx, "add assessment: schedule status closed",
 				log.Any("cmd", cmd),
+				log.Any("operator", operator),
 				log.Any("schedule", schedule),
 			)
-			return "", errors.New("add assessment: invalid class type")
+			return "", nil
+		}
+		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
+			log.Info(ctx, "add assessment: invalid class type",
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+				log.Any("schedule", schedule),
+			)
+			return "", nil
 		}
 		outcomeIDs, err = GetContentModel().GetVisibleContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
 		if err != nil {
@@ -577,6 +585,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 			)
 			return err
 		}
+		cmd.AttendanceIDs = utils.ExcludeStrings(cmd.AttendanceIDs, teacherIDs)
 	}
 
 	if len(outcomeIDs) == 0 {

@@ -190,6 +190,10 @@ type AddAssessmentCommand struct {
 	ClassEndTime  int64    `json:"class_end_time"`
 }
 
+func (a *AddAssessmentCommand) Valid() error {
+	return nil
+}
+
 type AddAssessmentResult struct {
 	ID string `json:"id"`
 }

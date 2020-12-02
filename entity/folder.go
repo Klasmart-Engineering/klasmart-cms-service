@@ -1,9 +1,10 @@
 package entity
 
 import (
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
 )
 
 const (
@@ -12,11 +13,10 @@ const (
 	FolderItemTypeFile   ItemType = 2
 
 	OwnerTypeOrganization OwnerType = 1
-	OwnerTypeUser OwnerType = 2
+	OwnerTypeUser         OwnerType = 2
 
-
-	FolderFileTypeContent FolderFileType = "content"
-	FolderFileTypeFolder FolderFileType = "folder"
+	FolderFileTypeContent    FolderFileType = "content"
+	FolderFileTypeFolder     FolderFileType = "folder"
 	FolderFileTypeFolderItem FolderFileType = "item"
 
 	//RootAssetsFolderName FolderPartition = "assets"
@@ -26,6 +26,7 @@ const (
 )
 
 type FolderFileType string
+
 func NewFolderFileType(fileType string) FolderFileType {
 	switch fileType {
 	case "content":
@@ -37,7 +38,7 @@ func NewFolderFileType(fileType string) FolderFileType {
 	}
 	return FolderFileTypeContent
 }
-func (f FolderFileType) Valid() bool{
+func (f FolderFileType) Valid() bool {
 	if f == FolderFileTypeContent || f == FolderFileTypeFolder ||
 		f == FolderFileTypeFolderItem {
 		return true
@@ -46,6 +47,7 @@ func (f FolderFileType) Valid() bool{
 }
 
 type FolderPartition string
+
 func NewFolderPartition(partition string) FolderPartition {
 	switch partition {
 	case "assets":
@@ -56,7 +58,7 @@ func NewFolderPartition(partition string) FolderPartition {
 	return FolderPartitionMaterialAndPlans
 }
 
-func (f FolderPartition) Valid() bool{
+func (f FolderPartition) Valid() bool {
 	if f == FolderPartitionMaterialAndPlans || f == FolderPartitionAssets {
 		return true
 	}
@@ -77,7 +79,7 @@ func (o OwnerType) Owner(operator *Operator) string {
 	}
 	return operator.OrgID
 }
-func NewOwnerType(num int) OwnerType{
+func NewOwnerType(num int) OwnerType {
 	switch num {
 	case int(OwnerTypeOrganization):
 		return OwnerTypeOrganization
@@ -88,6 +90,7 @@ func NewOwnerType(num int) OwnerType{
 }
 
 type ItemType int
+
 func (o ItemType) Valid() bool {
 	if o == FolderItemTypeFolder || o == FolderItemTypeFile {
 		return true
@@ -97,7 +100,7 @@ func (o ItemType) Valid() bool {
 
 func (o ItemType) ValidSearch() bool {
 	if o == FolderItemTypeFolder || o == FolderItemTypeFile ||
-		o == FolderItemTypeAll{
+		o == FolderItemTypeAll {
 		return true
 	}
 	return false
@@ -117,7 +120,7 @@ func (o ItemType) IsFolder() bool {
 	return false
 }
 
-func NewItemType(num int) ItemType{
+func NewItemType(num int) ItemType {
 	switch num {
 	case int(FolderItemTypeFile):
 		return FolderItemTypeFile
@@ -141,24 +144,28 @@ type MoveFolderRequest struct {
 	OwnerType      OwnerType       `json:"owner_type"`
 	Dist           string          `json:"dist"`
 	Partition      FolderPartition `json:"partition"`
-	FolderFileType FolderFileType          `json:"folder_file_type" enums:"content,folder"`
+	FolderFileType FolderFileType  `json:"folder_file_type" enums:"content,folder"`
 }
 
 type UpdateFolderRequest struct {
-	Name string `json:"name"`
+	Name      string `json:"name"`
 	Thumbnail string `json:"thumbnail"`
 }
 
 type FolderIdWithFileType struct {
-	ID string `json:"id"`
+	ID             string         `json:"id"`
 	FolderFileType FolderFileType `json:"folder_file_type" enums:"content,folder"`
 }
 
 type MoveFolderIDBulkRequest struct {
 	FolderInfo []FolderIdWithFileType `json:"folder_info"`
-	OwnerType OwnerType `json:"owner_type"`
-	Dist string `json:"dist"`
-	Partition FolderPartition `json:"partition"`
+	OwnerType  OwnerType              `json:"owner_type"`
+	Dist       string                 `json:"dist"`
+	Partition  FolderPartition        `json:"partition"`
+}
+
+type RemoveItemBulk struct {
+	FolderIDs []string `json:"folder_ids"`
 }
 
 type CreateFolderItemRequest struct {
@@ -167,12 +174,12 @@ type CreateFolderItemRequest struct {
 	//ItemType  ItemType  `json:"item_type"`
 	Partition FolderPartition `json:"partition"`
 	Link      string          `json:"link"`
-	OwnerType OwnerType `json:"owner_type"`
+	OwnerType OwnerType       `json:"owner_type"`
 }
 
 type Path string
 
-func (p Path) ParentPath()string {
+func (p Path) ParentPath() string {
 	if p == constant.FolderRootPath {
 		return ""
 	}
@@ -184,9 +191,9 @@ func (p Path) Parents() []string {
 		return nil
 	}
 	pairs := strings.Split(string(p), "/")
-	ret := make([]string, len(pairs) - 1)
+	ret := make([]string, len(pairs)-1)
 	for i := range ret {
-		ret[i] = pairs[i + 1]
+		ret[i] = pairs[i+1]
 	}
 	return ret
 }
@@ -201,7 +208,7 @@ func (p Path) IsChild(f string) bool {
 	return false
 }
 
-func NewPath(p string) Path{
+func NewPath(p string) Path {
 	return Path(p)
 }
 
@@ -212,23 +219,24 @@ type FolderItem struct {
 	ParentID  string    `gorm:"type:varchar(50)" json:"parent_id"`
 	Link      string    `gorm:"type:varchar(50)" json:"link"`
 
-	ItemType ItemType `gorm:"type:int;NOT NULL" json:"item_type"`
-	DirPath  Path     `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
+	ItemType  ItemType        `gorm:"type:int;NOT NULL" json:"item_type"`
+	DirPath   Path            `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
 	Partition FolderPartition `gorm:"type:varchar(256);NOT NULL" json:"partition"`
-	Name     string   `gorm:"type:varchar(256);NOT NULL" json:"name"`
+	Name      string          `gorm:"type:varchar(256);NOT NULL" json:"name"`
 
-	Thumbnail string	`gorm:"type:text" json:"thumbnail"`
-	Creator string 	`gorm:"type:varchar(50)" json:"creator"`
+	Thumbnail string `gorm:"type:text" json:"thumbnail"`
+	Creator   string `gorm:"type:varchar(50)" json:"creator"`
 
-	ItemsCount int `gorm:"type:int" json:"items_count"`
-	Editor string 	`gorm:"type:varchar(50);NOT NULL" json:"editor"`
+	ItemsCount int    `gorm:"type:int" json:"items_count"`
+	Editor     string `gorm:"type:varchar(50);NOT NULL" json:"editor"`
 	//VisibilitySetting string	`gorm:"type:varchar(50)" json:"visibility_setting"`
 
 	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" json:"create_at"`
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" json:"update_at"`
 	DeleteAt int64 `gorm:"type:bigint;column:delete_at" json:"-"`
 }
-func (f FolderItem) TableName() string{
+
+func (f FolderItem) TableName() string {
 	return "cms_folder_items"
 }
 
@@ -237,7 +245,7 @@ func (f FolderItem) ChildrenPath() Path {
 	if f.ID == constant.FolderRootPath {
 		return NewPath(constant.FolderRootPath)
 	}
-	return NewPath(f.DirPath.ParentPath() + "/" + f.ID + "/")
+	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
 }
 
 type FolderItemInfo struct {
@@ -254,8 +262,8 @@ type SearchFolderCondition struct {
 	Link      string
 	Partition string
 
-	Path string
-	Name string
+	Path    string
+	Name    string
 	OrderBy string
 	Pager   utils.Pager
 }

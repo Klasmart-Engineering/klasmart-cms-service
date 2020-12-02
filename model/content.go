@@ -43,6 +43,8 @@ var (
 	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
 	ErrInvalidVisibleScope           = errors.New("invalid visible scope")
 
+	ErrSuggestTimeTooSmall = errors.New("suggest time is less than sub contents")
+
 	ErrInvalidMaterialType = errors.New("invalid material type")
 
 	ErrBadRequest         = errors.New("bad request")
@@ -253,7 +255,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 		IDS: subContentIds,
 	})
 	if err != nil {
-		log.Warn(ctx, "search content data failed", log.Any("IDS", subContentIds), log.Err(err))
+		log.Error(ctx, "search content data failed", log.Any("IDS", subContentIds), log.Err(err))
 		return err
 	}
 	err = cm.checkPublishContentChildren(ctx, content, contentList)
@@ -444,7 +446,11 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	content.DirPath = constant.FolderRootPath
+	err = cm.checkAndUpdateContentPath(ctx, tx, content, operator)
+	if err != nil {
+		return err
+	}
+
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -517,7 +523,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 			SourceID: cid,
 		})
 		if err != nil {
-			log.Info(ctx, "search source content failed", log.String("cid", cid))
+			log.Error(ctx, "search source content failed", log.String("cid", cid))
 			return "", err
 		}
 		if len(data) < 1 {
@@ -1355,6 +1361,13 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 	_, subContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		IDS: subContentIds,
 	})
+	if err != nil {
+		log.Error(ctx, "search data failed", log.Err(err), log.String("cid", cid),
+			log.Int("contentType", int(content.ContentType)),
+			log.String("data", content.Data),
+			log.Strings("subContentIds", subContentIds))
+		return nil, err
+	}
 
 	identityOutComes := make(map[string]bool)
 	outcomesCount := 0

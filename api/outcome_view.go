@@ -175,6 +175,12 @@ type PublishOutcomeReq struct {
 type OutcomeRejectReq struct {
 	RejectReason string `json:"reject_reason"`
 }
+
+type OutcomeBulkRejectRequest struct {
+	OutcomeIDs   []string `json:"outcome_ids"`
+	RejectReason string   `json:"reject_reason"`
+}
+
 type Program struct {
 	ProgramID   string `json:"program_id"`
 	ProgramName string `json:"program_name"`
