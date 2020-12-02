@@ -34,10 +34,21 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 			log.String("scheduleID", scheduleID))
 		return "", err
 	}
+	classType := schedule.ClassType.ConvertToLiveClassType()
+	if classType == entity.LiveClassTypeInvalid {
+		log.Error(ctx, "MakeLiveToken:ConvertToLiveClassType invalid",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("scheduleID", scheduleID),
+			log.Any("schedule.ClassType", schedule.ClassType),
+		)
+		return "", err
+	}
 	liveTokenInfo := entity.LiveTokenInfo{
-		UserID: op.UserID,
-		Type:   entity.LiveTokenTypeLive,
-		RoomID: scheduleID,
+		UserID:    op.UserID,
+		Type:      entity.LiveTokenTypeLive,
+		RoomID:    scheduleID,
+		ClassType: classType,
 	}
 	liveTokenInfo.ScheduleID = schedule.ID
 
@@ -98,15 +109,27 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	isTeacher, err := s.isTeacherByClass(ctx, op, classID)
-	if err != nil {
-		log.Error(ctx, "MakeLivePreviewToken:judge is teacher error",
-			log.Err(err),
-			log.Any("op", op))
-		return "", err
+	var isTeacher bool
+	if classID == "" {
+		isTeacher, err = s.isTeacherByPermission(ctx, op)
+		if err != nil {
+			log.Error(ctx, "MakeLivePreviewToken:isTeacherByPermission error",
+				log.Err(err),
+				log.Any("op", op))
+			return "", err
+		}
+	} else {
+		isTeacher, err = s.isTeacherByClass(ctx, op, classID)
+		if err != nil {
+			log.Error(ctx, "MakeLivePreviewToken:isTeacherByClass error",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("classID", classID),
+			)
+			return "", err
+		}
 	}
 	liveTokenInfo.Teacher = isTeacher
-
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, contentID)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:get material error",
@@ -198,35 +221,16 @@ func (s *liveTokenModel) isTeacherByClass(ctx context.Context, op *entity.Operat
 }
 
 func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {
-	organization, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, external.LiveClassTeacher)
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.LiveClassTeacher)
 	if err != nil {
-		log.Error(ctx, "isTeacher:GetOrganizationServiceProvider.GetByPermission error",
-			log.String("permission", string(external.LiveClassTeacher)),
+		log.Error(ctx, "isTeacherByPermission:GetPermissionServiceProvider.HasOrganizationPermission error",
+			log.String("permission", external.LiveClassTeacher.String()),
 			log.Any("operator", op),
 			log.Err(err),
 		)
 		return false, err
 	}
-	school, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.LiveClassTeacher)
-	if err != nil {
-		log.Error(ctx, "isTeacher:GetSchoolServiceProvider.GetByPermission error",
-			log.String("permission", string(external.LiveClassTeacher)),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return false, err
-	}
-	log.Info(ctx, "isTeacher:GetSchoolServiceProvider.GetByPermission error",
-		log.String("permission", string(external.LiveClassTeacher)),
-		log.Any("operator", op),
-		log.Any("organization", organization),
-		log.Any("school", school),
-		log.Err(err),
-	)
-	if len(organization) != 0 || len(school) != 0 {
-		return true, nil
-	}
-	return false, nil
+	return hasPermission, nil
 }
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {

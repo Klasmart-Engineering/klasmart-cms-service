@@ -41,6 +41,11 @@ type IOutcomeModel interface {
 
 	ApproveLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error
 	RejectLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, reason string, operator *entity.Operator) error
+
+	BulkApproveLearningOutcome(ctx context.Context, outcomeIDs []string, operator *entity.Operator) error
+	BulkRejectLearningOutcome(ctx context.Context, outcomeIDs []string, reason string, operator *entity.Operator) error
+
+	GetLatestOutcomesByIDsMapResult(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (map[string]*entity.Outcome, error)
 }
 
 type OutcomeModel struct {
@@ -578,6 +583,119 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 	return err
 }
 
+func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, outcomeIDs []string, operator *entity.Operator) error {
+	for _, o := range outcomeIDs {
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview, o)
+		if err != nil {
+			log.Error(ctx, "RejectLearningOutcome: NewLock failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.String("outcome_id", o))
+			return err
+		}
+		locker.Lock()
+		defer locker.Unlock()
+	}
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &da.OutcomeCondition{IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true}})
+		if len(outcomes) == 0 {
+			log.Warn(ctx, "BulkApproveLearningOutcome: SearchOutcome failed",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return ErrResourceNotFound
+		}
+		if err != nil {
+			log.Error(ctx, "BulkApproveLearningOutcome: SearchOutcome failed",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return err
+		}
+		for _, outcome := range outcomes {
+			err = outcome.SetStatus(ctx, entity.OutcomeStatusPublished)
+			if err != nil {
+				log.Error(ctx, "BulkApproveLearningOutcome: SetStatus failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return ErrInvalidPublishStatus
+			}
+			if outcome.LatestID == "" {
+				outcome.LatestID = outcome.ID
+			}
+			err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
+			if err != nil {
+				log.Error(ctx, "BulkApproveLearningOutcome: UpdateOutcome failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return err
+			}
+			err = ocm.hideParent(ctx, tx, outcome)
+			if err != nil {
+				log.Error(ctx, "BulkApproveLearningOutcome: hideParent failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return err
+			}
+			err = ocm.updateLatestToHead(ctx, tx, outcome)
+			if err != nil {
+				log.Error(ctx, "BulkApproveLearningOutcome: updateLatestToHead failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
+func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, outcomeIDs []string, reason string, operator *entity.Operator) error {
+	for _, o := range outcomeIDs {
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview, o)
+		if err != nil {
+			log.Error(ctx, "RejectLearningOutcome: NewLock failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.String("outcome_id", o))
+			return err
+		}
+		locker.Lock()
+		defer locker.Unlock()
+	}
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &da.OutcomeCondition{IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true}})
+		if len(outcomes) == 0 {
+			log.Warn(ctx, "BulkRejectLearningOutcome: SearchOutcome failed",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return ErrResourceNotFound
+		}
+		if err != nil {
+			log.Error(ctx, "BulkRejectLearningOutcome: SearchOutcome failed",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return err
+		}
+		for _, outcome := range outcomes {
+			err = outcome.SetStatus(ctx, entity.OutcomeStatusRejected)
+			outcome.RejectReason = reason
+			if err != nil {
+				log.Error(ctx, "BulkRejectLearningOutcome: SetStatus failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return ErrInvalidPublishStatus
+			}
+			err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcome)
+			if err != nil {
+				log.Error(ctx, "BulkRejectLearningOutcome: UpdateOutcome failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
+
 func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) ([]*entity.Outcome, error) {
 	condition := da.OutcomeCondition{
 		IDs:            dbo.NullStrings{Strings: outcomeIDs, Valid: true},
@@ -634,6 +752,59 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBCo
 			outcomes = []*entity.Outcome{}
 		} else {
 			outcomes = otcs2
+		}
+		return nil
+	})
+	return
+}
+
+func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (latests map[string]*entity.Outcome, err error) {
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		cond1 := da.OutcomeCondition{
+			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		}
+		total, otcs1, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &cond1)
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return err
+		}
+		if total == 0 {
+			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return constant.ErrRecordNotFound
+		}
+		cond2 := da.OutcomeCondition{}
+		for _, o := range otcs1 {
+			cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
+		}
+		cond2.IDs.Valid = true
+		total, otcs2, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &cond2)
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", cond2.IDs.Strings))
+			return err
+		}
+		if total == 0 {
+			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", cond2.IDs.Strings))
+			return constant.ErrRecordNotFound
+		} else {
+			latests = make(map[string]*entity.Outcome, len(otcs1))
+			for _, o := range otcs1 {
+				for _, l := range otcs2 {
+					if o.LatestID == l.ID {
+						latests[l.ID] = l
+						break
+					}
+				}
+			}
 		}
 		return nil
 	})
