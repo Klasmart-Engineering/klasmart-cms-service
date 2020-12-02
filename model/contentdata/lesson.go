@@ -8,6 +8,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
+	"strings"
 )
 
 type LessonData struct {
@@ -17,6 +18,7 @@ type LessonData struct {
 	Material   *entity.ContentInfo `json:"material"`
 	NextNode   []*LessonData   `json:"next"`
 	TeacherManual string 	`json:"teacher_manual"`
+	TeacherManualName string 	`json:"teacher_manual_name"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -64,6 +66,7 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 }
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	h.TeacherManual = t.TeacherManual
+	h.TeacherManualName = t.TeacherManualName
 	return nil
 }
 func (l *LessonData) SubContentIds(ctx context.Context) []string {
@@ -79,9 +82,16 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 		return ErrInvalidContentType
 	}
 	if l.TeacherManual != "" {
-		_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, l.TeacherManual)
+		teacherManualPairs :=strings.Split(l.TeacherManual, "-")
+		if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
+			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
+				log.String("partition", string(storage.TeacherManualStoragePartition)))
+			return ErrInvalidTeacherManual
+		}
+
+		_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, teacherManualPairs[1])
 		if !exist {
-			log.Warn(ctx, "unmarshal material failed", log.String("TeacherManual", l.TeacherManual),
+			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
 				log.String("partition", string(storage.TeacherManualStoragePartition)))
 			return ErrTeacherManual
 		}

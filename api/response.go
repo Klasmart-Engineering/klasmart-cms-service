@@ -19,10 +19,11 @@ const (
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
 
 	//Library
-	LibraryMsgContentLocked ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentLocked      ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
 
 	// schedule
-	ScheduleMsgEditOverlap   ResponseLabel = "schedule_schedule_msg_edit_all"
+	ScheduleMsgEditOverlap   ResponseLabel = "schedule_msg_edit_overlap"
 	ScheduleMsgDeleteOverlap ResponseLabel = "schedule_msg_delete_overlap"
 	ScheduleMsgOverlap       ResponseLabel = "schedule_msg_overlap"
 	ScheduleMsgNoPermission  ResponseLabel = "schedule_msg_no_permission"
@@ -39,7 +40,7 @@ func LD(lable ResponseLabel, data interface{}) interface{} {
 }
 
 type ErrorResponse struct {
-	Label string      `json:"label,omitempty" example:"unknown" enums:"unknown"`
+	Label string      `json:"label,omitempty" example:"unknown"`
 	Data  interface{} `json:"data"`
 }
 

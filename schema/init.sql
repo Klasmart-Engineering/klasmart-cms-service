@@ -179,6 +179,7 @@ CREATE TABLE `cms_folder_items` (
     `editor` varchar(50) NOT NULL comment 'folder item editor',
     `items_count` int NOT NULL comment 'folder item count',
     `name` varchar(256) NOT NULL comment 'folder item name',
+    `partition` varchar(256) NOT NULL comment 'folder item partition',
     `thumbnail` text comment 'folder item thumbnail',
     `creator` varchar(50) comment 'folder item creator',
     `create_at` bigint NOT NULL comment 'create time (unix seconds)',
@@ -194,6 +195,7 @@ create fulltext index fullindex_name_description_keywords_author_shortcode on le
 drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
 alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 
+<<<<<<< HEAD
 Create Table: CREATE TABLE `users` (
   `user_id` char(64) NOT NULL,
   `user_name` varchar(30) NOT NULL DEFAULT '',
@@ -214,3 +216,14 @@ Create Table: CREATE TABLE `users` (
   UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`),
   UNIQUE KEY `uix_email_phone` (`email`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+=======
+CREATE TABLE IF NOT EXISTS `user_settings` (
+  `id` varchar(50) NOT NULL COMMENT 'id',
+  `user_id` varchar(100) NOT NULL COMMENT 'user_id',
+  `setting_json` JSON DEFAULT NULL COMMENT 'setting_json',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='user_settings';
+INSERT INTO `user_settings` (`id`,`user_id`,`setting_json`) VALUES ("default_setting_0","default_setting_0",'{"cms_page_size":20}');
+
+>>>>>>> test

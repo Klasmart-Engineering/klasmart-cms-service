@@ -8,6 +8,7 @@ import (
 
 	dbo "gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -25,8 +26,31 @@ func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContent
 	return fmt.Sprintf(constant.SourceTypeMaterialPrefix + materialData.FileType.String())
 }
 
-func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
+func (cm ContentModel) checkSuggestTime(ctx context.Context, suggestTime int, contentType entity.ContentType, subIds []string) error {
+	if contentType == entity.ContentTypeLesson {
+		//if content type is lesson, check suggest time
+		subContents, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), subIds)
+		if err != nil {
+			log.Error(ctx, "get content by id list failed", log.Err(err), log.Strings("subIds", subIds))
+			return ErrReadContentFailed
+		}
+		timeTotal := 0
+		for i := range subContents {
+			timeTotal = timeTotal + subContents[i].SuggestTime
+		}
 
+		if suggestTime < timeTotal {
+			log.Warn(ctx, "suggest time too small", log.Err(err),
+				log.Int("timeTotal", timeTotal),
+				log.Int("suggestTime", suggestTime),
+				log.Any("subContents", subContents))
+			return ErrSuggestTimeTooSmall
+		}
+	}
+	return nil
+}
+
+func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (*entity.Content, error) {
 	publishStatus := entity.NewContentPublishStatus(entity.ContentStatusDraft)
 
 	if c.Data == "" {
@@ -37,13 +61,21 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
 	}
+
 	err = cd.Validate(ctx, c.ContentType)
 	if err != nil {
 		log.Warn(ctx, "validate content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
-		return nil, ErrInvalidContentData
+		return nil, err
 	}
 
-	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: c.TeacherManual})
+	//check suggest time
+	err = cm.checkSuggestTime(ctx, c.SuggestTime, c.ContentType, cd.SubContentIds(ctx))
+	if err != nil {
+		log.Warn(ctx, "check suggest time failed", log.Err(err), log.Any("req", c))
+		return nil, err
+	}
+
+	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: c.TeacherManual, TeacherManualName: c.TeacherManualName})
 	if err != nil {
 		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
@@ -74,8 +106,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.LessonType = ""
 	}
 
-	path := cm.getContentRootFolder(ctx, c.ContentType, operator)
-
+	path := constant.FolderRootPath
 	return &entity.Content{
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
@@ -105,23 +136,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		PublishStatus: publishStatus,
 		Version:       1,
 	}, nil
-}
-
-func (cm ContentModel) getContentRootFolder(ctx context.Context, contentType entity.ContentType, operator *entity.Operator) string{
-	//获取根目录地址
-	folderPartition := entity.RootMaterialsAndPlansFolderName
-	if contentType == entity.ContentTypeAssets {
-		folderPartition = entity.RootAssetsFolderName
-	}
-	path := ""
-	rootFolder, err := GetFolderModel().GetRootFolder(ctx, folderPartition, entity.OwnerTypeOrganization, operator)
-	if err != nil{
-		log.Warn(ctx, "get root folder failed", log.Err(err),
-			log.Any("user", operator))
-	}else{
-		path = string(rootFolder.ChildrenPath())
-	}
-	return path
 }
 
 func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *entity.Content, data *entity.CreateContentRequest) (*entity.Content, error) {
@@ -202,10 +216,10 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		}
 		err = cd.Validate(ctx, content.ContentType)
 		if err != nil {
-			return nil, ErrInvalidContentData
+			return nil, err
 		}
 
-		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual})
+		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual, TeacherManualName: data.TeacherManualName})
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}
@@ -219,6 +233,13 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 		if data.SourceType == "" {
 			data.SourceType = cm.getSourceType(ctx, *data, cd)
+		}
+
+		//check suggest time
+		err = cm.checkSuggestTime(ctx, data.SuggestTime, data.ContentType, cd.SubContentIds(ctx))
+		if err != nil {
+			log.Warn(ctx, "check suggest time failed", log.Err(err), log.Any("req", data), log.Any("content", content))
+			return nil, err
 		}
 	}
 	content.UpdateAt = time.Now().Unix()
@@ -239,7 +260,7 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 }
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
-	content.DirPath = cm.getContentRootFolder(ctx, content.ContentType, user)
+	content.DirPath = constant.FolderRootPath
 
 	//assets则隐藏
 	if content.ContentType.IsAsset() {

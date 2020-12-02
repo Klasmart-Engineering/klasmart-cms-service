@@ -22,19 +22,17 @@ import (
 
 type ILiveTokenModel interface {
 	MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
-	MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error)
+	MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string, classID string) (string, error)
 }
 
 func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error) {
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, scheduleID)
 	if err != nil {
+		log.Error(ctx, "MakeLiveToken:GetScheduleModel.GetPlainByID error",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("scheduleID", scheduleID))
 		return "", err
-	}
-	if schedule.Status == entity.ScheduleStatusNotStart {
-		err := GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), schedule.ID, entity.ScheduleStatusStarted)
-		if err != nil {
-			return "", err
-		}
 	}
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
@@ -52,7 +50,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	isTeacher, err := s.isTeacher(ctx, op)
+	isTeacher, err := s.isTeacherByClass(ctx, op, schedule.ClassID)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:judge is teacher error",
 			log.Err(err),
@@ -85,7 +83,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	}
 	return token, nil
 }
-func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string) (string, error) {
+func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string, classID string) (string, error) {
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID: op.UserID,
 		Type:   entity.LiveTokenTypePreview,
@@ -100,7 +98,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	isTeacher, err := s.isTeacher(ctx, op)
+	isTeacher, err := s.isTeacherByClass(ctx, op, classID)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:judge is teacher error",
 			log.Err(err),
@@ -168,7 +166,38 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 	return token, nil
 }
 
-func (s *liveTokenModel) isTeacher(ctx context.Context, op *entity.Operator) (bool, error) {
+func (s *liveTokenModel) isTeacherByClass(ctx context.Context, op *entity.Operator, classID string) (bool, error) {
+	classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, []string{classID})
+	if err != nil {
+		log.Error(ctx, "isTeacherByClass:GetTeacherServiceProvider.GetByClasses error",
+			log.Err(err),
+			log.String("classID", classID),
+			log.Any("op", op),
+		)
+		return false, err
+	}
+	teachers, ok := classTeacherMap[classID]
+	if !ok {
+		log.Info(ctx, "isTeacherByClass:No teacher under the class",
+			log.String("classID", classID),
+			log.Any("op", op),
+		)
+		return false, nil
+	}
+	log.Debug(ctx, "isTeacherByClass:classTeacherMap info",
+		log.String("classID", classID),
+		log.Any("op", op),
+		log.Any("classTeacherMap", classTeacherMap),
+	)
+	for _, t := range teachers {
+		if t.ID == op.UserID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {
 	organization, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, external.LiveClassTeacher)
 	if err != nil {
 		log.Error(ctx, "isTeacher:GetOrganizationServiceProvider.GetByPermission error",

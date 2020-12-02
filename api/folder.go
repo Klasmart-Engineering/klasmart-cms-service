@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"net/http"
 )
 
 // @Summary createFolder
@@ -53,7 +54,7 @@ func (s *Server) createFolder(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /folders/items [post]
-func (s *Server) addFolderItem(c *gin.Context){
+func (s *Server) addFolderItem(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	var data entity.CreateFolderItemRequest
@@ -80,17 +81,48 @@ func (s *Server) addFolderItem(c *gin.Context){
 // @Description remove folder item
 // @Accept json
 // @Produce json
-// @Param content body entity.CreateFolderItemRequest true "create request"
+// @Param item_id path string true "folder item id to delete"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /folders/items/{item_id} [delete]
-func (s *Server) removeFolderItem(c *gin.Context){
+func (s *Server) removeFolderItem(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	fid := c.Param("item_id")
 	err := model.GetFolderModel().RemoveItem(ctx, fid, op)
+
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "")
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+// @Summary removeFolderItemBulk
+// @ID removeFolderItemBulk
+// @Description remove folder items bulk
+// @Accept json
+// @Produce json
+// @Param content body entity.RemoveItemBulk true "remove folder ids"
+// @Tags folder
+// @Success 200 {object} string ok
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /folders/items [delete]
+func (s *Server) removeFolderItemBulk(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var data entity.RemoveItemBulk
+	err := c.ShouldBind(&data)
+	if err != nil {
+		log.Warn(ctx, "add folder item failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	err = model.GetFolderModel().RemoveItemBulk(ctx, data.FolderIDs, op)
 
 	switch err {
 	case nil:
@@ -105,13 +137,14 @@ func (s *Server) removeFolderItem(c *gin.Context){
 // @Description update folder item info
 // @Accept json
 // @Produce json
+// @Param item_id path string true "folder item id to delete"
 // @Param content body entity.UpdateFolderRequest true "update request"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /folders/items/details/{item_id} [put]
-func (s *Server) updateFolderItem(c *gin.Context){
+func (s *Server) updateFolderItem(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	fid := c.Param("item_id")
@@ -138,17 +171,16 @@ func (s *Server) updateFolderItem(c *gin.Context){
 // @Description move folder item
 // @Accept json
 // @Produce json
+// @Param content body entity.MoveFolderRequest true "move folder request"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 406 {object} BadRequestResponse
-// @Router /folders/items/move/{item_id} [put]
-func (s *Server) moveFolderItem(c *gin.Context){
+// @Router /folders/items/move [put]
+func (s *Server) moveFolderItem(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	fid := c.Param("item_id")
-
 	var data entity.MoveFolderRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
@@ -157,7 +189,7 @@ func (s *Server) moveFolderItem(c *gin.Context){
 		return
 	}
 
-	err = model.GetFolderModel().MoveItem(ctx, fid, data.Dist, op)
+	err = model.GetFolderModel().MoveItem(ctx, data, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
@@ -168,24 +200,22 @@ func (s *Server) moveFolderItem(c *gin.Context){
 	}
 }
 
-
-
 // @Summary moveFolderItemBulk
 // @ID moveFolderItemBulk
 // @Description bulk move folder item
 // @Accept json
 // @Produce json
-// @Param content body entity.MoveFolderIDBulk true "move folder item buck request"
+// @Param content body entity.MoveFolderIDBulkRequest true "move folder item buck request"
 // @Tags folder
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 406 {object} BadRequestResponse
 // @Router /folders/items/bulk/move [put]
-func (s *Server) moveFolderItemBulk(c *gin.Context){
+func (s *Server) moveFolderItemBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data entity.MoveFolderIDBulk
+	var data entity.MoveFolderIDBulkRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
 		log.Warn(ctx, "update folder item failed", log.Err(err))
@@ -193,7 +223,7 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 		return
 	}
 
-	err = model.GetFolderModel().MoveItemBulk(ctx, data.IDs, data.Dist, op)
+	err = model.GetFolderModel().MoveItemBulk(ctx, data, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
@@ -206,18 +236,18 @@ func (s *Server) moveFolderItemBulk(c *gin.Context){
 
 // @Summary listFolderItems
 // @ID listFolderItems
-// @Description list folder items
+// @Description list folder items (deprecated)
 // @Accept json
 // @Produce json
-// @Param item_type query string false "list items type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
 // @Tags folder
 // @Success 200 {object} FolderItemsResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /folders/items/list/{folder_id} [get]
-func (s *Server) listFolderItems(c *gin.Context){
+// @Router /folders/items/list/{item_id} [get]
+func (s *Server) listFolderItems(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	fid := c.Param("folder_id")
+	fid := c.Param("item_id")
 	itemType := utils.ParseInt(ctx, c.Query("item_type"))
 	items, err := model.GetFolderModel().ListItems(ctx, fid, entity.NewItemType(itemType), op)
 	switch err {
@@ -234,8 +264,9 @@ func (s *Server) listFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query integer false "list items type"
-// @Param owner_type query integer false "list items owner type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
+// @Param owner_type query integer false "list items owner type. 1.org folder 2.private folder"
+// @Param partition query string false "list items type. [assets, plans and materials]"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -245,7 +276,7 @@ func (s *Server) listFolderItems(c *gin.Context){
 // @Success 200 {object} FolderItemsResponseWithTotal
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /folders/items/search/private [get]
-func (s *Server) searchPrivateFolderItems(c *gin.Context){
+func (s *Server) searchPrivateFolderItems(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.buildFolderCondition(c)
@@ -265,8 +296,9 @@ func (s *Server) searchPrivateFolderItems(c *gin.Context){
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
-// @Param item_type query integer false "list items type"
-// @Param owner_type query integer false "list items owner type"
+// @Param item_type query integer false "list items type. 1.folder 2.file"
+// @Param owner_type query integer false "list items owner type. 1.org folder 2.private folder"
+// @Param partition query string false "list items type. [assets, plans and materials]"
 // @Param parent_id query string false "list items from parent"
 // @Param path query string false "list items in path"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, create_at, -create_at, update_at, -update_at)
@@ -276,7 +308,7 @@ func (s *Server) searchPrivateFolderItems(c *gin.Context){
 // @Success 200 {object} FolderItemsResponseWithTotal
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /folders/items/search/org [get]
-func (s *Server) searchOrgFolderItems(c *gin.Context){
+func (s *Server) searchOrgFolderItems(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := s.buildFolderCondition(c)
@@ -299,11 +331,11 @@ func (s *Server) searchOrgFolderItems(c *gin.Context){
 // @Success 200 {object} entity.FolderItemInfo
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 404 {object} BadRequestResponse
-// @Router /folders/items/details/:folder_id [get]
-func (s *Server) getFolderItemByID(c *gin.Context){
+// @Router /folders/items/details/{item_id} [get]
+func (s *Server) getFolderItemByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	fid := c.Param("folder_id")
+	fid := c.Param("item_id")
 	item, err := model.GetFolderModel().GetFolderByID(ctx, fid, op)
 	switch err {
 	case nil:
@@ -315,37 +347,7 @@ func (s *Server) getFolderItemByID(c *gin.Context){
 	}
 }
 
-// @Summary getRootFolder
-// @ID getRootFolder
-// @Description get the root folder of org or user
-// @Accept json
-// @Produce json
-// @Tags folder
-// @Param owner_type query integer false "get item owner type"
-// @Param partition query string false "get item partition"
-// @Success 200 {object} CreateFolderResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Failure 400 {object} BadRequestResponse
-// @Router /folders/items/root [get]
-func (s *Server) getRootFolder(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	fid := utils.ParseInt(ctx, c.Query("owner_type"))
-	partition := c.Param("partition")
-	rootFolderID, err := model.GetFolderModel().GetRootFolder(ctx, entity.NewFolderPartition(partition), entity.NewOwnerType(fid), op)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, gin.H{
-			"id": rootFolderID,
-		})
-	case model.ErrInvalidPartition:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
-	}
-}
-
-func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondition{
+func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondition {
 	ctx := c.Request.Context()
 	//OwnerType OwnerType
 	ownerType := utils.ParseInt(ctx, c.Query("owner_type"))
@@ -356,6 +358,8 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 	orderBy := c.Query("order_by")
 	pageSize := utils.ParseInt64(ctx, c.Query("page_size"))
 	pageIndex := utils.ParseInt64(ctx, c.Query("page"))
+	partition := c.Query("partition")
+
 	//Pager   utils.Pager
 	return &entity.SearchFolderCondition{
 		IDs:       nil,
@@ -364,17 +368,19 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 		ParentID:  parentID,
 		Path:      path,
 		Name:      name,
+		Partition: partition,
 		OrderBy:   orderBy,
-		Pager:     utils.Pager{
+		Pager: utils.Pager{
 			PageIndex: pageIndex,
 			PageSize:  pageSize,
 		},
 	}
 }
+
 type FolderItemsResponse struct {
 	Items []*entity.FolderItem `json:"items"`
 }
 type FolderItemsResponseWithTotal struct {
 	Items []*entity.FolderItem `json:"items"`
-	Total int `json:"total"`
+	Total int                  `json:"total"`
 }

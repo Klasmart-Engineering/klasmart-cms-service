@@ -6,6 +6,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"time"
 )
 
@@ -36,18 +37,17 @@ func (s *scheduleModel) getMaxRepeatYear() int {
 func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
 	var (
 		result []*entity.Schedule
-		items  []*entity.Schedule
 		err    error
 	)
 	switch options.Type {
 	case entity.RepeatTypeDaily:
-		items, err = s.repeatScheduleDaily(ctx, template, &options.Daily, location)
+		result, err = s.repeatScheduleDaily(ctx, template, &options.Daily, location)
 	case entity.RepeatTypeWeekly:
-		items, err = s.repeatScheduleWeekly(ctx, template, &options.Weekly, location)
+		result, err = s.repeatScheduleWeekly(ctx, template, &options.Weekly, location)
 	case entity.RepeatTypeMonthly:
-		items, err = s.repeatScheduleMonthly(ctx, template, &options.Monthly, location)
+		result, err = s.repeatScheduleMonthly(ctx, template, &options.Monthly, location)
 	case entity.RepeatTypeYearly:
-		items, err = s.repeatScheduleYearly(ctx, template, &options.Yearly, location)
+		result, err = s.repeatScheduleYearly(ctx, template, &options.Yearly, location)
 	}
 	if err != nil {
 		log.Error(ctx, "repeat schedule failed",
@@ -57,7 +57,9 @@ func (s *scheduleModel) repeatSchedule(ctx context.Context, template *entity.Sch
 		)
 		return nil, err
 	}
-	result = append(result, items...)
+	for _, item := range result {
+		item.ID = utils.NewID()
+	}
 	return result, nil
 }
 

@@ -18,6 +18,7 @@ const (
 	TableNameSkill             = "skills"
 	TableNameSubject           = "subjects"
 	TableNameVisibilitySetting = "visibility_settings"
+	TableNameUserSetting       = "user_settings"
 
 	TableNameProgramAge         = "programs_ages"
 	TableNameProgramDevelopment = "programs_developments"
@@ -69,6 +70,8 @@ const (
 	LockedByNoBody = "-"
 
 	NoVisibilitySetting = "-"
+
+	FolderRootPath = "/"
 )
 
 const (

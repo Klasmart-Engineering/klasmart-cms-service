@@ -14,6 +14,21 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
+var (
+	StorageDownloadNativeMode     StorageDownloadMode = "native"
+	StorageDownloadCloudFrontMode StorageDownloadMode = "cloudfront"
+)
+
+type StorageDownloadMode string
+
+func NewStorageDownloadMode(mode string) StorageDownloadMode {
+	if mode == "native" {
+		return StorageDownloadNativeMode
+	} else {
+		return StorageDownloadCloudFrontMode
+	}
+}
+
 type Config struct {
 	StorageConfig         StorageConfig         `yaml:"storage_config"`
 	CDNConfig             CDNConfig             `yaml:"cdn_config"`
@@ -55,18 +70,22 @@ type DBConfig struct {
 }
 
 type StorageConfig struct {
-	Accelerate    bool   `yaml:"accelerate"`
-	CloudEnv      string `yaml:"cloud_env"`
-	StorageBucket string `yaml:"storage_bucket"`
-	StorageRegion string `yaml:"storage_region"`
+	Accelerate bool   `yaml:"accelerate"`
+	CloudEnv   string `yaml:"cloud_env"`
+
+	StorageEndPoint string `yaml:"storage_end_point"`
+	StorageBucket   string `yaml:"storage_bucket"`
+	StorageRegion   string `yaml:"storage_region"`
+
+	StorageDownloadMode StorageDownloadMode `yaml:"storage_download_mode"`
+	StorageSigMode      bool                `yaml:"storage_sig_mode"`
 }
 
 type CDNConfig struct {
-	CDNRestrictedViewer bool `yaml:"cdn_enable_restricted_viewer"`
-
-	CDNPath           string `yaml:"cdn_path"`
-	CDNKeyId          string `yaml:"cdn_key_id"`
-	CDNPrivateKeyPath string `yaml:"cdn_private_key_path"`
+	CDNRestrictedViewer bool   `yaml:"cdn_enable_restricted_viewer"`
+	CDNPath             string `yaml:"cdn_path"`
+	CDNKeyId            string `yaml:"cdn_key_id"`
+	CDNPrivateKeyPath   string `yaml:"cdn_private_key_path"`
 }
 
 type ScheduleConfig struct {
@@ -80,7 +99,8 @@ type LiveTokenConfig struct {
 }
 
 type AssessmentConfig struct {
-	CacheExpiration time.Duration `yaml:"cache_expiration"`
+	CacheExpiration     time.Duration `yaml:"cache_expiration"`
+	AddAssessmentSecret interface{}   `json:"add_assessment_secret"`
 }
 
 type AMSConfig struct {
@@ -168,6 +188,7 @@ func loadTencentConfig(ctx context.Context) {
 	config.TencentConfig.Sms.TemplateParamSet = assertGetEnv("tc_sms_template_param_set")
 	config.TencentConfig.Sms.MobilePrefix = assertGetEnv("tc_scm_mobile_prefix")
 	config.TencentConfig.Sms.OTPPeriod = os.Getenv("OTP_PERIOD")
+	loadAssessmentConfig(ctx)
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
@@ -178,6 +199,10 @@ func loadStorageEnvConfig(ctx context.Context) {
 	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
+	config.StorageConfig.StorageEndPoint = os.Getenv("storage_endpoint")
+	config.StorageConfig.StorageDownloadMode = NewStorageDownloadMode(assertGetEnv("storage_download_mode"))
+	storageSigMode := assertGetEnv("storage_sig_mode") == "true"
+	config.StorageConfig.StorageSigMode = storageSigMode
 
 	accelerateStr := assertGetEnv("storage_accelerate")
 	accelerate, err := strconv.ParseBool(accelerateStr)
@@ -188,13 +213,12 @@ func loadStorageEnvConfig(ctx context.Context) {
 	}
 	config.StorageConfig.Accelerate = accelerate
 
-	cdnRestrictedViewer := os.Getenv("cdn_enable_restricted_viewer") == "true"
-	config.CDNConfig.CDNRestrictedViewer = cdnRestrictedViewer
-	config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
-
-	if cdnRestrictedViewer {
-		config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
-		config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
+	if config.StorageConfig.StorageDownloadMode == StorageDownloadCloudFrontMode {
+		config.CDNConfig.CDNPath = assertGetEnv("cdn_path")
+		if config.StorageConfig.StorageSigMode {
+			config.CDNConfig.CDNKeyId = assertGetEnv("cdn_key_id")
+			config.CDNConfig.CDNPrivateKeyPath = assertGetEnv("cdn_private_key_path")
+		}
 	}
 }
 
@@ -293,6 +317,17 @@ func loadAssessmentConfig(ctx context.Context) {
 	} else {
 		config.Assessment.CacheExpiration = cacheExpiration
 	}
+
+	publicKeyPath := os.Getenv("ams_assessment_jwt_public_key_path")
+	content, err := ioutil.ReadFile(publicKeyPath)
+	if err != nil {
+		log.Panic(ctx, "load assessment config: load public key failed", log.Err(err), log.String("public_key_path", publicKeyPath))
+	}
+	key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+	if err != nil {
+		log.Panic(ctx, "load assessment config: ParseRSAPublicKeyFromPEM failed", log.Err(err))
+	}
+	config.Assessment.AddAssessmentSecret = key
 }
 
 func loadAMSConfig(ctx context.Context) {

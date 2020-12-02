@@ -3,10 +3,11 @@ package model
 import (
 	"context"
 	"errors"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
@@ -20,7 +21,7 @@ import (
 )
 
 var (
-	ErrNoAuth              = errors.New("no auth to operate")
+	ErrNoAuth = errors.New("no auth to operate")
 
 	ErrNoContentData                     = errors.New("no content data")
 	ErrInvalidResourceId                 = errors.New("invalid resource id")
@@ -31,16 +32,18 @@ var (
 	ErrInvalidContentStatusToPublish     = errors.New("content status is invalid to publish")
 	ErrNoContent                         = errors.New("no content")
 	//ErrContentAlreadyLocked              = errors.New("content is already locked")
-	ErrDeleteLessonInSchedule            = errors.New("can't delete lesson in schedule")
-	ErrGetUnpublishedContent             = errors.New("unpublished content")
-	ErrGetUnauthorizedContent            = errors.New("unauthorized content")
-	ErrCloneContentFailed                = errors.New("clone content failed")
-	ErrParseContentDataFailed            = errors.New("parse content data failed")
-	ErrParseContentDataDetailsFailed     = errors.New("parse content data details failed")
-	ErrUpdateContentFailed               = errors.New("update contentdata into data access failed")
-	ErrReadContentFailed                 = errors.New("read content failed")
-	ErrDeleteContentFailed               = errors.New("delete contentdata into data access failed")
-	ErrInvalidVisibleScope               = errors.New("invalid visible scope")
+	ErrDeleteLessonInSchedule        = errors.New("can't delete lesson in schedule")
+	ErrGetUnpublishedContent         = errors.New("unpublished content")
+	ErrGetUnauthorizedContent        = errors.New("unauthorized content")
+	ErrCloneContentFailed            = errors.New("clone content failed")
+	ErrParseContentDataFailed        = errors.New("parse content data failed")
+	ErrParseContentDataDetailsFailed = errors.New("parse content data details failed")
+	ErrUpdateContentFailed           = errors.New("update contentdata into data access failed")
+	ErrReadContentFailed             = errors.New("read content failed")
+	ErrDeleteContentFailed           = errors.New("delete contentdata into data access failed")
+	ErrInvalidVisibleScope           = errors.New("invalid visible scope")
+
+	ErrSuggestTimeTooSmall = errors.New("suggest time is less than sub contents")
 
 	ErrInvalidMaterialType = errors.New("invalid material type")
 
@@ -50,19 +53,21 @@ var (
 	ErrNoRejectReason     = errors.New("no reject reason")
 
 	ErrInvalidSelectForm = errors.New("invalid select form")
-	ErrUserNotFound = errors.New("user not found in locked by")
+	ErrUserNotFound      = errors.New("user not found in locked by")
+
+	ErrMoveToDifferentPartition = errors.New("move to different parititon")
 )
 
 type ErrContentAlreadyLocked struct {
 	LockedBy *external.User
 }
 
-func (e *ErrContentAlreadyLocked) Error() string{
+func (e *ErrContentAlreadyLocked) Error() string {
 	return "content is already locked"
 }
-func NewErrContentAlreadyLocked(ctx context.Context, lockedBy string, operator *entity.Operator) error{
+func NewErrContentAlreadyLocked(ctx context.Context, lockedBy string, operator *entity.Operator) error {
 	user, err := external.GetUserServiceProvider().Get(ctx, operator, lockedBy)
-	if err != nil{
+	if err != nil {
 		return ErrUserNotFound
 	}
 	return &ErrContentAlreadyLocked{LockedBy: user}
@@ -250,7 +255,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 		IDS: subContentIds,
 	})
 	if err != nil {
-		log.Warn(ctx, "search content data failed", log.Any("IDS", subContentIds), log.Err(err))
+		log.Error(ctx, "search content data failed", log.Any("IDS", subContentIds), log.Err(err))
 		return err
 	}
 	err = cm.checkPublishContentChildren(ctx, content, contentList)
@@ -313,6 +318,8 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
 	//检查数据信息是否正确
+	c.Trim()
+
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
 		// use operator's org id as asset publish scope, maybe not right...
@@ -344,8 +351,8 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Asset添加Folder
 	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootAssetsFolderName,entity.ContentLink(pid), operator)
-		if err != nil{
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets, entity.ContentLink(pid), operator)
+		if err != nil {
 			log.Error(ctx, "can't create folder item", log.Err(err),
 				log.String("link", entity.ContentLink(pid)),
 				log.Any("data", c),
@@ -358,6 +365,8 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 }
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
+	data.Trim()
+
 	if data.ContentType.IsAsset() {
 		//Assets can't be updated
 		return ErrInvalidContentType
@@ -401,7 +410,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	return nil
 }
 
-func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error{
+func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content on update path", log.Err(err))
@@ -437,14 +446,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	rootFolder, err := GetFolderModel().GetRootFolder(ctx, entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, operator)
-	if err != nil{
-		log.Warn(ctx, "get root folder failed", log.Err(err),
-			log.Any("user", operator))
-		return err
-	}else{
-		content.DirPath = string(rootFolder.ChildrenPath())
-	}
+	content.DirPath = constant.FolderRootPath
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -454,7 +456,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.RootMaterialsAndPlansFolderName, entity.ContentLink(content.ID), operator)
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.ContentLink(content.ID), operator)
 	if err != nil {
 		return err
 	}
@@ -517,7 +519,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 			SourceID: cid,
 		})
 		if err != nil {
-			log.Info(ctx, "search source content failed", log.String("cid", cid))
+			log.Error(ctx, "search source content failed", log.String("cid", cid))
 			return "", err
 		}
 		if len(data) < 1 {
@@ -788,12 +790,12 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	}
 
 	//folder中删除
-	err = folderModel.RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
+	//temp remove folder
+	err = GetFolderModel().RemoveItemByLink(ctx, tx, entity.OwnerTypeOrganization, content.Org, entity.ContentLink(content.ID))
 	if err != nil {
 		log.Error(ctx, "remove content folder item failed", log.Err(err), log.Any("content", content))
 		return err
 	}
-
 
 	//解锁source content
 	if content.SourceID != "" {
@@ -1063,18 +1065,24 @@ func (cm *ContentModel) GetPastContentIDByID(ctx context.Context, tx *dbo.DBCont
 		return nil, ErrReadContentFailed
 	}
 
+	latestID := data.LatestID
+	if data.LatestID == "" {
+		latestID = data.ID
+	}
+
 	_, res, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
-		LatestID: data.LatestID,
+		LatestID: latestID,
 	})
 	if err != nil {
 		log.Error(ctx, "can't search content", log.Err(err), log.String("latest id", data.LatestID))
 		return nil, ErrReadContentFailed
 	}
-	resp := make([]string, len(res))
+	resp := make([]string, len(res)+1)
 	for i := range res {
 		resp[i] = res[i].ID
 	}
-	return resp, nil
+	resp[len(res)] = data.ID
+	return utils.SliceDeduplication(resp), nil
 }
 
 func (cm *ContentModel) GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
@@ -1165,6 +1173,10 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
 		scope = []string{constant.NoSearchItem}
 	}
+	err = cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
+	if err != nil {
+		return 0, nil, err
+	}
 	condition.Scope = scope
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
 	condition.JoinUserIdList = searchUserIds
@@ -1184,8 +1196,12 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 }
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
+	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
+	if err != nil {
+		return 0, nil, err
+	}
 	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIds, user)
@@ -1205,7 +1221,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	//logger.WithContext(ctx).WithField("subject", "content").Infof("Combine condition: %#v, params: %#v", where, params)
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
 	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
-	if err != nil{
+	if err != nil {
 		return 0, nil, err
 	}
 	return cm.searchContentUnsafe(ctx, tx, combineCondition, user)
@@ -1248,8 +1264,7 @@ func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.Cont
 	condition.JoinUserIdList = cm.getRelatedUserId(ctx, condition.Name, user)
 }
 
-
-func (cm *ContentModel) getRelatedUserId(ctx context.Context, keyword string, user *entity.Operator) []string{
+func (cm *ContentModel) getRelatedUserId(ctx context.Context, keyword string, user *entity.Operator) []string {
 	if keyword == "" {
 		return nil
 	}
@@ -1342,6 +1357,13 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 	_, subContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		IDS: subContentIds,
 	})
+	if err != nil {
+		log.Error(ctx, "search data failed", log.Err(err), log.String("cid", cid),
+			log.Int("contentType", int(content.ContentType)),
+			log.String("data", content.Data),
+			log.Strings("subContentIds", subContentIds))
+		return nil, err
+	}
 
 	identityOutComes := make(map[string]bool)
 	outcomesCount := 0
@@ -1410,6 +1432,39 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 	return newStatus
 }
 
+func (cm *ContentModel) filterRootPath(ctx context.Context, condition *da.ContentCondition, ownerType entity.OwnerType, operator *entity.Operator) error {
+	if condition.DirPath != "" {
+		return nil
+	}
+
+	//isAssets := false
+	//for i := range condition.ContentType {
+	//	if entity.NewContentType(condition.ContentType[i]).IsAsset() {
+	//		isAssets = true
+	//		break
+	//	}
+	//}
+	//
+	//if isAssets {
+	//	root, err := GetFolderModel().GetRootFolder(ctx, entity.RootAssetsFolderName, ownerType, operator)
+	//	if err != nil{
+	//		log.Error(ctx, "can't get root folder", log.Err(err), log.Any("ownerType", ownerType), log.Any("operator", operator), log.String("partition", string(entity.RootAssetsFolderName)))
+	//		return err
+	//	}
+	//	condition.DirPath = string(root.ChildrenPath())
+	//	return nil
+	//}
+	//
+	//root, err := GetFolderModel().GetRootFolder(ctx, entity.RootMaterialsAndPlansFolderName, ownerType, operator)
+	//if err != nil{
+	//	log.Error(ctx, "can't get root folder", log.Err(err), log.Any("ownerType", ownerType), log.Any("operator", operator), log.String("partition", string(entity.RootMaterialsAndPlansFolderName)))
+	//	return err
+	//}
+	//condition.DirPath = string(root.ChildrenPath())
+	condition.DirPath = constant.FolderRootPath
+	return nil
+}
+
 func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status []string) []string {
 	newStatus := make([]string, 0)
 	for i := range status {
@@ -1426,7 +1481,7 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) (*da.CombineConditions, error){
+func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) (*da.CombineConditions, error) {
 	condition1 := condition
 	condition2 := condition
 
@@ -1703,7 +1758,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		}
 
 		outcomeEntities := make([]*entity.Outcome, 0)
-		if outComes{
+		if outComes {
 			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), contentList[i].Outcomes, user)
 			if err != nil {
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
@@ -1724,9 +1779,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
 			OrgName:           orgName,
 			//AuthorName:        userNameMap[contentList[i].Author],
-			CreatorName:       userNameMap[contentList[i].Creator],
-			OutcomeEntities:   outcomeEntities,
-			IsMine: 			contentList[i].Author == user.UserID,
+			CreatorName:     userNameMap[contentList[i].Creator],
+			OutcomeEntities: outcomeEntities,
+			IsMine:          contentList[i].Author == user.UserID,
 		}
 	}
 
@@ -1784,24 +1839,28 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	return ret, nil
 }
 
-func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) *da.FolderCondition{
+func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) *da.FolderCondition {
 	dirPath := condition.DirPath
-	if dirPath == "" {
-		if len(condition.ContentType) < 0 {
-			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
-		}else if condition.ContentType[0] == entity.ContentTypeAssets {
-			dirPath = entity.RootAssetsFolderName.Path()
-		}else {
-			dirPath = entity.RootMaterialsAndPlansFolderName.Path()
+	isAssets := false
+	for i := range condition.ContentType {
+		if entity.NewContentType(condition.ContentType[i]).IsAsset() {
+			isAssets = true
+			break
 		}
 	}
+	partition := entity.FolderPartitionMaterialAndPlans
+	if isAssets {
+		partition = entity.FolderPartitionAssets
+	}
+
 	folderCondition := &da.FolderCondition{
 		OwnerType:    int(entity.OwnerTypeOrganization),
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
 		Name:         condition.Name,
-		ExactDirPath: condition.DirPath,
-		Editors: searchUserIds,
+		ExactDirPath: dirPath,
+		Editors:      searchUserIds,
+		Partition:    partition,
 	}
 	return folderCondition
 }
@@ -1813,7 +1872,7 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 	}
 
 	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, authorIds)
-	if err != nil{
+	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("objs", objs))
 	}
 	authorMap := make(map[string]string)
@@ -1827,7 +1886,6 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 		objs[i].ContentTypeName = objs[i].ContentType.Name()
 	}
 }
-
 
 var (
 	_contentModel     IContentModel

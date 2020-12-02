@@ -84,11 +84,11 @@ func URLSignature(id string, url string)(*SignatureResult, error){
 
 type H5pClaims struct {
 	jwt.StandardClaims
-	ContentId string `json:"content_id"`
+	ContentId string `json:"contentId"`
 }
 
 func GenerateH5pJWT(ctx context.Context, sub, contentID string) (string ,error){
-	stdClaims := getStdClaims("h5p", time.Hour*2, contentID, sub)
+	stdClaims := getStdClaims("H5P", time.Hour*2, contentID, sub)
 	claims := &H5pClaims{
 		StandardClaims: stdClaims,
 		ContentId: contentID,
@@ -125,7 +125,7 @@ func getStdClaims(aud string, expire time.Duration, id, subject string) jwt.Stan
 		ExpiresAt: expiresAt.Unix(),
 		Id:        id,
 		IssuedAt:  now.Unix(),
-		Issuer:    "Calmisland",
+		Issuer:    "kl2-h5p",
 		NotBefore: 0,
 		Subject:   subject,
 	}

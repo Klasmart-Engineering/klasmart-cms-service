@@ -45,6 +45,9 @@ func (s Server) registeRoute() {
 		content.PUT("/contents/:content_id/publish/assets", s.mustLogin, s.publishContentWithAssets)
 		content.PUT("/contents/:content_id/review/approve", s.mustLogin, s.approve)
 		content.PUT("/contents/:content_id/review/reject", s.mustLogin, s.reject)
+		content.PUT("/contents_review/approve", s.mustLogin, s.approveBulk)
+		content.PUT("/contents_review/reject", s.mustLogin, s.rejectBulk)
+
 		content.DELETE("/contents/:content_id", s.mustLogin, s.deleteContent)
 		content.GET("/contents", s.mustLogin, s.queryContent)
 		content.GET("/contents/:content_id/statistics", s.mustLogin, s.contentDataCount)
@@ -76,7 +79,8 @@ func (s Server) registeRoute() {
 	assessments := s.engine.Group("/v1")
 	{
 		assessments.GET("/assessments", s.mustLogin, s.listAssessments)
-		assessments.POST("/assessments", s.mustLogin, s.addAssessment)
+		assessments.POST("/assessments", s.addAssessment)
+		assessments.POST("/assessments_for_test", s.mustLogin, s.addAssessmentForTest)
 		assessments.GET("/assessments/:id", s.mustLogin, s.getAssessmentDetail)
 		assessments.PUT("/assessments/:id", s.mustLogin, s.updateAssessment)
 	}
@@ -113,15 +117,15 @@ func (s Server) registeRoute() {
 		folders.POST("", s.mustLogin, s.createFolder)
 		folders.POST("/items", s.mustLogin, s.addFolderItem)
 		folders.DELETE("/items/:item_id", s.mustLogin, s.removeFolderItem)
+		folders.DELETE("/items", s.mustLogin, s.removeFolderItemBulk)
 		folders.PUT("/items/details/:item_id", s.mustLogin, s.updateFolderItem)
-		folders.PUT("/items/move/:item_id", s.mustLogin, s.moveFolderItem)
+		folders.PUT("/items/move", s.mustLogin, s.moveFolderItem)
 		folders.PUT("/items/bulk/move", s.mustLogin, s.moveFolderItemBulk)
 
 		folders.GET("/items/list/:item_id", s.mustLogin, s.listFolderItems)
 		folders.GET("/items/search/private", s.mustLogin, s.searchPrivateFolderItems)
 		folders.GET("/items/search/org", s.mustLogin, s.searchOrgFolderItems)
 		folders.GET("/items/details/:item_id", s.mustLogin, s.getFolderItemByID)
-		folders.GET("/items/root", s.mustLogin, s.getRootFolder)
 
 	}
 
@@ -199,6 +203,11 @@ func (s Server) registeRoute() {
 	{
 		visibilitySettings.GET("", s.mustLogin, s.getVisibilitySetting)
 		visibilitySettings.GET("/:id", s.mustLogin, s.getVisibilitySettingByID)
+	}
+	userSettings := s.engine.Group("/v1/user_settings")
+	{
+		userSettings.POST("", s.mustLoginWithoutOrgID, s.setUserSetting)
+		userSettings.GET("", s.mustLoginWithoutOrgID, s.getUserSettingByOperator)
 	}
 }
 

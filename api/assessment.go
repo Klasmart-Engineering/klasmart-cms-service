@@ -2,6 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"github.com/dgrijalva/jwt-go"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"net/http"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -101,10 +103,61 @@ func (s *Server) listAssessments(c *gin.Context) {
 // @Param assessment body entity.AddAssessmentCommand true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
 // @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments [post]
 func (s *Server) addAssessment(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	log.Debug(ctx, "add assessment jwt: call")
+	body := struct {
+		Token string `json:"token"`
+	}{}
+	if err := c.ShouldBind(&body); err != nil {
+		log.Info(ctx, "add assessment jwt: bind failed",
+			log.Err(err),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	cmd := entity.AddAssessmentCommand{}
+	if _, err := jwt.ParseWithClaims(body.Token, &cmd, func(token *jwt.Token) (interface{}, error) {
+		return config.Get().Assessment.AddAssessmentSecret, nil
+	}); err != nil {
+		log.Error(ctx, "add assessment jwt: parse with claims failed",
+			log.Err(err),
+			log.Any("token", body.Token),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd), log.String("token", body.Token))
+	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	default:
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary add assessments for test
+// @Description add assessments for test
+// @Tags assessments
+// @ID addAssessmentForTest
+// @Accept json
+// @Produce json
+// @Param assessment body entity.AddAssessmentCommand true "add assessment command"
+// @Success 200 {object} entity.AddAssessmentResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments_for_test [post]
+func (s *Server) addAssessmentForTest(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	cmd := entity.AddAssessmentCommand{}
@@ -120,8 +173,6 @@ func (s *Server) addAssessment(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
-	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	default:
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),

@@ -35,8 +35,10 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 		return nil, err
 	}
 	teacherManual := ""
+	teacherManualName := ""
 	if obj.ContentType == entity.ContentTypeLesson {
 		teacherManual = contentData.(*LessonData).TeacherManual
+		teacherManualName = contentData.(*LessonData).TeacherManualName
 	}
 
 	subjects := make([]string, 0)
@@ -100,8 +102,8 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 		Extra:         obj.Extra,
 		Outcomes:      outcomes,
 		Author:        obj.Author,
-		//AuthorName: 	authorName,
 		TeacherManual: teacherManual,
+		TeacherManualName: teacherManualName,
 		Creator:		obj.Creator,
 		SelfStudy:     obj.SelfStudy.Bool(),
 		DrawActivity:  obj.DrawActivity.Bool(),

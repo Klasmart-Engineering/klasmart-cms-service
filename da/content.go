@@ -101,10 +101,20 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.IDS)
 	}
 	if s.Name != "" {
-		conditions = append(conditions, "match(content_name, description, keywords) against(? in boolean mode)")
-		params = append(params, s.Name)
+		condition := "match(content_name, description, keywords) against(? in boolean mode)"
+		if len(s.JoinUserIdList) > 0 {
+			condition1 := "author in (?)"
+			where := "(" +condition + " OR " + condition1+")"
 
+			conditions = append(conditions, where)
+			params = append(params, s.Name)
+			params = append(params, s.JoinUserIdList)
+		}else{
+			conditions = append(conditions, condition)
+			params = append(params, s.Name)
+		}
 	}
+
 	if s.Program != "" {
 		conditions = append(conditions, "program = ?")
 		params = append(params, s.Program)
@@ -160,15 +170,6 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := " org = ? "
 		conditions = append(conditions, condition)
 		params = append(params, s.Org)
-	}
-
-	if len(s.JoinUserIdList) > 0 {
-		condition1 := "(" + strings.Join(conditions, " and ") + ")"
-		condition2 := "author in (?)"
-
-		where := "(" +condition1 + " OR " + condition2+")"
-		conditions = []string{where}
-		params = append(params, s.JoinUserIdList)
 	}
 
 	conditions = append(conditions, " delete_at = 0")
@@ -378,7 +379,7 @@ func (cd *DBContentDA) searchFolderContentSQL(query1, query2 []string) string{
 	rawQuery2 := strings.Join(query2, " and ")
 	return `SELECT 
 id, 0 as content_type, name, items_count, '' AS description, '' as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
-FROM folder_items 
+FROM cms_folder_items 
 WHERE ` + rawQuery2 +` 
 UNION ALL SELECT 
 id, content_type, content_name AS name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
@@ -394,7 +395,7 @@ func (cd *DBContentDA) countFolderContentSQL(query1, query2 []string) string{
 (SELECT 
     name
 FROM
-    folder_items 
+    cms_folder_items 
 WHERE ` + rawQuery2 + `
 UNION ALL (SELECT 
     content_name

@@ -184,7 +184,7 @@ type ContentStatisticsInfo struct {
 }
 
 func ContentLink(id string) string {
-	return FileTypeContent + "-" + id
+	return string(FolderFileTypeContent) + "-" + id
 }
 
 type Content struct {
@@ -321,6 +321,13 @@ type CreateContentRequest struct {
 	Extra string `json:"extra"`
 
 	TeacherManual string `json:"teacher_manual"`
+	TeacherManualName string `json:"teacher_manual_name"`
+}
+
+func (c *CreateContentRequest) Trim(){
+	if c.Name != "" {
+		c.Name = strings.TrimSpace(c.Name)
+	}
 }
 
 func (c CreateContentRequest) Validate() error {
@@ -440,6 +447,7 @@ type ContentInfo struct {
 	Extra string `json:"extra"`
 
 	TeacherManual string `json:"teacher_manual"`
+	TeacherManualName string `json:"teacher_manual_name"`
 
 	Author     string `json:"author"`
 	Creator string `json:"creator"`
@@ -454,6 +462,7 @@ type ContentInfo struct {
 
 type ExtraDataInRequest struct {
 	TeacherManual string `json:"teacher_manual"`
+	TeacherManualName string `json:"teacher_manual_name"`
 }
 
 type ContentData interface {
