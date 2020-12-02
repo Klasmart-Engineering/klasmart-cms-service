@@ -96,6 +96,9 @@ func (s Server) registeRoute() {
 		outcomes.PUT("/learning_outcomes/:id/approve", s.mustLogin, s.approveOutcome)
 		outcomes.PUT("/learning_outcomes/:id/reject", s.mustLogin, s.rejectOutcome)
 
+		outcomes.PUT("/bulk_approve/learning_outcomes", s.mustLogin, s.bulkApproveOutcome)
+		outcomes.PUT("/bulk_reject/learning_outcomes", s.mustLogin, s.bulkRejectOutcome)
+
 		outcomes.PUT("/bulk_publish/learning_outcomes", s.mustLogin, s.bulkPublishOutcomes)
 		outcomes.DELETE("/bulk/learning_outcomes", s.mustLogin, s.bulkDeleteOutcomes)
 

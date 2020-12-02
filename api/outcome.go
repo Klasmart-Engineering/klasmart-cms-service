@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
@@ -444,6 +446,100 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+// @ID approveLearningOutcomesBulk
+// @Summary bulk approve learning outcome
+// @Tags learning_outcomes
+// @Description approve learning outcomes
+// @Accept json
+// @Produce json
+// @Param id_list body OutcomeIDList true "outcome id list"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /bulk_approve/learning_outcomes [put]
+func (s *Server) bulkApproveOutcome(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var data OutcomeIDList
+	err := c.ShouldBindJSON(&data)
+	if err != nil || len(data.OutcomeIDs) == 0 {
+		log.Warn(ctx, "bulkApproveOutcome: ShouldBind failed", log.Any("req", data), log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	err = model.GetOutcomeModel().BulkApproveLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), op)
+	switch err {
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+// @ID rejectLearningOutcomesBulk
+// @Summary bulk reject learning outcome
+// @Tags learning_outcomes
+// @Description reject learning outcomes
+// @Accept json
+// @Produce json
+// @Param id_list body OutcomeBulkRejectRequest true "outcome id list"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /bulk_reject/learning_outcomes [put]
+func (s *Server) bulkRejectOutcome(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var data OutcomeBulkRejectRequest
+	err := c.ShouldBindJSON(&data)
+	if err != nil || len(data.OutcomeIDs) == 0 {
+		log.Warn(ctx, "bulkRejectOutcome: ShouldBind failed", log.Any("req", data), log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	err = model.GetOutcomeModel().BulkRejectLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), data.RejectReason, op)
+	switch err {
+	case model.ErrInvalidResourceId:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequireContentName:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrRequirePublishScope:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case entity.ErrInvalidContentType:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrResourceNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
