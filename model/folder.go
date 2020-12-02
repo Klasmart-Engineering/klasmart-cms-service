@@ -76,7 +76,7 @@ type IFolderModel interface {
 	//内部API，修改Folder的Visibility Settings
 	//查看路径是否存在
 	ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error)
-	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, link string, operator *entity.Operator) error
+	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
 
@@ -124,7 +124,7 @@ func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 
-func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, link string, operator *entity.Operator) error {
+func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error {
 	//Update folder item visibility settings
 	hasLink, err := f.hasFolderFileItem(ctx, tx, entity.OwnerTypeOrganization, partition, operator.OrgID, link)
 	if err != nil {
@@ -137,11 +137,16 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 		return nil
 	}
 
+	parentFolder := constant.FolderRootPath
+	if path != "" && path != constant.FolderRootPath {
+		parentID := f.getParentFromPath(ctx, path)
+		parentFolder = parentID
+	}
 	//若不存在，则创建
 	//新发布的content
 	_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
 		Partition:      partition,
-		ParentFolderID: constant.FolderRootPath,
+		ParentFolderID: parentFolder,
 		Link:           link,
 		OwnerType:      entity.OwnerTypeOrganization,
 	}, operator)
@@ -298,6 +303,20 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 	condition.OwnerType = entity.OwnerTypeOrganization
 
 	return f.SearchFolder(ctx, condition, operator)
+}
+
+func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string {
+	if path == "" || path == "/" {
+		return constant.FolderRootPath
+	}
+	pathDirs := strings.Split(path, "/")
+	if len(pathDirs) < 1 {
+		log.Info(ctx, "check folder exists with array 0",
+			log.Strings("pathDirs", pathDirs))
+		return constant.FolderRootPath
+	}
+	parentID := pathDirs[len(pathDirs)-1]
+	return parentID
 }
 
 func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error) {
