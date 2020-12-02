@@ -442,7 +442,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//更新文件数量
-	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, info.Total)
+	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, 1)
 	if err != nil {
 		return err
 	}
