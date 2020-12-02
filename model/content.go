@@ -446,14 +446,9 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	existPath, err := GetFolderModel().ExistsPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, content.DirPath, entity.FolderPartitionMaterialAndPlans, operator)
+	err = cm.checkAndUpdateContentPath(ctx, tx, content, operator)
 	if err != nil {
-		log.Error(ctx, "search content folder failed",
-			log.Err(err), log.Any("content", content))
 		return err
-	}
-	if !existPath {
-		content.DirPath = constant.FolderRootPath
 	}
 
 	rejectReason := strings.Join(reason, ",")
