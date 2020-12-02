@@ -32,6 +32,33 @@ func ExcludeStrings(source []string, targets []string) []string {
 	return result
 }
 
+func FilterStrings(source []string, whitelist, blacklist []string) []string {
+	var result []string
+	for _, item := range source {
+		pass := false
+		for _, target := range whitelist {
+			if item == target {
+				pass = true
+			}
+		}
+		if !pass {
+			find := false
+			for _, target := range blacklist {
+				if item == target {
+					find = true
+				}
+			}
+			if !find {
+				pass = true
+			}
+		}
+		if pass {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 func ContainsStr(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
