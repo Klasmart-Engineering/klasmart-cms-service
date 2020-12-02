@@ -329,6 +329,9 @@ func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerTy
 			log.Any("condition", condition))
 		return false, err
 	}
+	log.Info(ctx, "search folder count",
+		log.Any("condition", condition),
+		log.Int("total", total))
 	return total > 0, nil
 }
 
