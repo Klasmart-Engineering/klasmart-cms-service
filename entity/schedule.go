@@ -206,6 +206,25 @@ const (
 	ScheduleClassTypeTask         ScheduleClassType = "Task"
 )
 
+//Live (online class)
+//Class (offline class)
+//Study (homework)
+//Task (task)
+func (s ScheduleClassType) ConvertToLiveClassType() LiveClassType {
+	switch s {
+	case ScheduleClassTypeOnlineClass:
+		return LiveClassTypeLive
+	case ScheduleClassTypeOfflineClass:
+		return LiveClassTypeClass
+	case ScheduleClassTypeHomework:
+		return LiveClassTypeStudy
+	case ScheduleClassTypeTask:
+		return LiveClassTypeTask
+	default:
+		return LiveClassTypeInvalid
+	}
+}
+
 type Schedule struct {
 	ID              string            `gorm:"column:id;PRIMARY_KEY"`
 	Title           string            `gorm:"column:title;type:varchar(100)"`

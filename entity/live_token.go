@@ -1,6 +1,8 @@
 package entity
 
-import "github.com/dgrijalva/jwt-go"
+import (
+	"github.com/dgrijalva/jwt-go"
+)
 
 type LiveTokenType string
 
@@ -18,6 +20,20 @@ const (
 	MaterialTypeImage MaterialType = "Image"
 )
 
+//Live (online class)
+//Class (offline class)
+//Study (homework)
+//Task (task)
+type LiveClassType string
+
+const (
+	LiveClassTypeInvalid LiveClassType = "invalid"
+	LiveClassTypeLive    LiveClassType = "live"
+	LiveClassTypeClass   LiveClassType = "class"
+	LiveClassTypeStudy   LiveClassType = "study"
+	LiveClassTypeTask    LiveClassType = "task"
+)
+
 type LiveTokenInfo struct {
 	Name       string          `json:"name,omitempty"`
 	ScheduleID string          `json:"schedule_id,omitempty"`
@@ -26,6 +42,7 @@ type LiveTokenInfo struct {
 	Teacher    bool            `json:"teacher"`
 	RoomID     string          `json:"roomid"`
 	Materials  []*LiveMaterial `json:"materials"`
+	ClassType  LiveClassType   `json:"class_type"`
 }
 
 type LiveMaterial struct {
