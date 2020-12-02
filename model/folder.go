@@ -302,14 +302,24 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 
 func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error) {
 	if path == "" || path == "/" {
+		log.Info(ctx, "check folder exists with nil",
+			log.String("path", path))
 		return false, nil
 	}
+	pathDirs := strings.Split(path, "/")
+	if len(pathDirs) < 1 {
+		log.Info(ctx, "check folder exists with array 0",
+			log.Strings("pathDirs", pathDirs))
+		return false, nil
+	}
+
+	parentID := pathDirs[len(pathDirs)-1]
 	condition := da.FolderCondition{
-		ExactDirPath: path,
-		OwnerType:    int(ownerType),
-		Owner:        ownerType.Owner(operator),
-		Partition:    partition,
-		ItemType:     int(itemType),
+		IDs:       []string{parentID},
+		OwnerType: int(ownerType),
+		Owner:     ownerType.Owner(operator),
+		Partition: partition,
+		ItemType:  int(itemType),
 	}
 
 	total, err := da.GetFolderDA().SearchFolderCount(ctx, tx, condition)
@@ -319,6 +329,9 @@ func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerTy
 			log.Any("condition", condition))
 		return false, err
 	}
+	log.Info(ctx, "search folder count",
+		log.Any("condition", condition),
+		log.Int("total", total))
 	return total > 0, nil
 }
 
