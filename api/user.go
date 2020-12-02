@@ -50,31 +50,36 @@ func (s *Server) login(c *gin.Context) {
 
 	user, err := model.GetUserModel().GetUserByAccount(ctx, req.AuthTo)
 	if err == constant.ErrRecordNotFound {
+		log.Warn(ctx, "login:GetUserByAccount", log.Any("req", req))
 		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	if err != nil {
+		log.Error(ctx, "login:GetUserByAccount", log.Any("req", req), log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	var pass bool
 	if req.AuthType == constant.LoginByCode {
 		pass, err = model.VerifyCode(ctx, req.AuthTo, req.AuthCode)
+		if err != nil {
+			log.Error(ctx, "login:GetUserByAccount", log.Any("req", req), log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
 	}
 	if req.AuthType == constant.LoginByPassword {
 		pass = model.VerifySecretWithSalt(ctx, req.AuthCode, user.Secret, user.Salt)
 	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
 	if !pass {
+		log.Warn(ctx, "login:not pass", log.Bool("pass", pass), log.Any("req", req))
 		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
 		return
 	}
 
-	token, err := user.Token()
+	token, err := model.GetTokenFromUser(ctx, user)
 	if err != nil {
+		log.Error(ctx, "login:GetUserByAccount", log.Any("req", req), log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
@@ -134,8 +139,9 @@ func (s *Server) register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 
-	token, err := user.Token()
+	token, err := model.GetTokenFromUser(ctx, user)
 	if err != nil {
+		log.Error(ctx, "register:Token failed", log.Any("req", req), log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}

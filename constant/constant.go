@@ -79,6 +79,7 @@ const (
 const (
 	URLOrganizationIDParameter = "org_id"
 	DefaultRole                = "admin"
+	DefaultSalt                = "Kidsloop2@GetHashK3y"
 )
 
 const (
@@ -92,4 +93,9 @@ const (
 
 	AccountPhone = "" // as default
 	AccountEmail = "email"
+)
+
+const (
+	DefaultPeriod uint8 = 120
+	DefaultWindow uint8 = 5
 )

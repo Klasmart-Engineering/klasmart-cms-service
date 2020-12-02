@@ -131,6 +131,7 @@ func (u *UserSqlDA) GetUserByAccount(ctx context.Context, tx *dbo.DBContext, acc
 	err := tx.Raw(sql).Find(&user).Error
 
 	if gorm.IsRecordNotFoundError(err) {
+		log.Error(ctx, "GetUserByAccount: Find failed", log.String("account", account), log.Err(err))
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {

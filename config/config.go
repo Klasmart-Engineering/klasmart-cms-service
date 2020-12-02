@@ -107,6 +107,7 @@ type TencentSmsConfig struct {
 	TemplateID       string `json:"template_id" yaml:"template_id"`
 	TemplateParamSet string `json:"template_param_set" yaml:"template_param_set"`
 	MobilePrefix     string `json:"mobile_prefix" yaml:"mobile_prefix"`
+	OTPPeriod        string `json:"otp_period" yaml:"otp_period"`
 }
 
 func assertGetEnv(key string) string {
@@ -166,6 +167,7 @@ func loadTencentConfig(ctx context.Context) {
 	config.TencentConfig.Sms.TemplateID = assertGetEnv("tc_sms_template_id")
 	config.TencentConfig.Sms.TemplateParamSet = assertGetEnv("tc_sms_template_param_set")
 	config.TencentConfig.Sms.MobilePrefix = assertGetEnv("tc_scm_mobile_prefix")
+	config.TencentConfig.Sms.OTPPeriod = os.Getenv("OTP_PERIOD")
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {

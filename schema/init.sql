@@ -195,7 +195,6 @@ drop index fullindex_name_description_keywords_author_shortcode on learning_outc
 alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 
 Create Table: CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` char(64) NOT NULL,
   `user_name` varchar(30) NOT NULL DEFAULT '',
   `phone` char(24) NOT NULL,
@@ -208,10 +207,9 @@ Create Table: CREATE TABLE `users` (
   `create_at` bigint(20) DEFAULT '0',
   `update_at` bigint(20) DEFAULT '0',
   `delete_at` bigint(20) DEFAULT '0',
-  `create_id` int(11) DEFAULT '0',
-  `update_id` int(11) DEFAULT '0',
-  `deleted_id` int(11) DEFAULT '0',
-  PRIMARY KEY (`id`),
+  `create_id` char(64),
+  `update_id` char(64),
+  `deleted_id` char(64),
   UNIQUE KEY `uix_user_id` (`user_id`,`delete_at`),
   UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`),
   UNIQUE KEY `uix_email_phone` (`email`,`delete_at`)

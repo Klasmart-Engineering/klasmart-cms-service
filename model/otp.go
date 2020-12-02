@@ -3,12 +3,15 @@ package model
 import (
 	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,8 +27,8 @@ import (
 type OTPSecret string
 
 // defaultPeriod and defaultWindow should only change for testing.
-var defaultPeriod uint8 = 120
-var defaultWindow uint8 = 5
+var defaultPeriod uint8 = constant.DefaultPeriod
+var defaultWindow uint8 = constant.DefaultWindow
 var totpPool = sync.Pool{
 	New: func() interface{} {
 		return &otp.TOTP{
@@ -37,13 +40,13 @@ var totpPool = sync.Pool{
 }
 
 func init() {
-	periodStr := os.Getenv("OTP_PERIOD")
+	periodStr := config.Get().TencentConfig.Sms.OTPPeriod
 	if periodStr == "" {
 		return
 	}
 	period, err := strconv.Atoi(periodStr)
 	if err != nil || period < 0 || period > 255 {
-		log.Warn(context.Background(), "", log.Int("period", period), log.Err(err))
+		log.Warn(context.Background(), "", log.String("period", periodStr), log.Err(err))
 		return
 	}
 	defaultPeriod = uint8(period)
@@ -66,7 +69,7 @@ func NewOTPSecret(ctx context.Context) (s OTPSecret, err error) {
 	rdm := [24]byte{}
 	bs := rdm[:]
 	if _, err = rand.Read(bs); err != nil {
-		log.Error(ctx, "NewOPTSecret: rand failed", log.Err(err))
+		log.Error(ctx, "NewOPTSecret: rand failed", log.String("bs", string(bs)), log.Err(err))
 		return
 	}
 	s = OTPSecret(base64.StdEncoding.EncodeToString(bs))
