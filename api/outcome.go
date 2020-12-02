@@ -477,6 +477,19 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 		return
 	}
 
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingLearningOutcome)
+	if err != nil {
+		log.Error(ctx, "approveOutcome: HasOrganizationPermission failed", log.Strings("ids", data.OutcomeIDs), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "approveOutcome: no permission",
+			log.Any("op", op), log.Strings("ids", data.OutcomeIDs),
+			log.String("perm", string(external.ApprovePendingLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
 	err = model.GetOutcomeModel().BulkApproveLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), op)
 	switch err {
 	case model.ErrNoAuth:
@@ -526,6 +539,19 @@ func (s *Server) bulkRejectOutcome(c *gin.Context) {
 		return
 	}
 
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingLearningOutcome)
+	if err != nil {
+		log.Error(ctx, "rejectOutcome: HasOrganizationPermission failed", log.Strings("ids", data.OutcomeIDs), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "rejectOutcome: no permission",
+			log.Any("op", op), log.Strings("ids", data.OutcomeIDs),
+			log.String("perm", string(external.RejectPendingLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
 	err = model.GetOutcomeModel().BulkRejectLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), data.RejectReason, op)
 	switch err {
 	case model.ErrNoAuth:
