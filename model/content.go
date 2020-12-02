@@ -460,7 +460,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.ContentLink(content.ID), operator)
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), operator)
 	if err != nil {
 		return err
 	}
