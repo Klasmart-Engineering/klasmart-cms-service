@@ -479,8 +479,10 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 
 	err = model.GetOutcomeModel().BulkApproveLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), op)
 	switch err {
-	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoAuth:
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:
@@ -526,8 +528,10 @@ func (s *Server) bulkRejectOutcome(c *gin.Context) {
 
 	err = model.GetOutcomeModel().BulkRejectLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), data.RejectReason, op)
 	switch err {
-	case model.ErrInvalidResourceId:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoAuth:
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentData:

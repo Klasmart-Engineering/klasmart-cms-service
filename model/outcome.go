@@ -585,7 +585,7 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 
 func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, outcomeIDs []string, operator *entity.Operator) error {
 	for _, o := range outcomeIDs {
-		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview, o)
 		if err != nil {
 			log.Error(ctx, "RejectLearningOutcome: NewLock failed",
 				log.Err(err),
@@ -649,7 +649,7 @@ func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, outcomeI
 }
 func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, outcomeIDs []string, reason string, operator *entity.Operator) error {
 	for _, o := range outcomeIDs {
-		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview, o)
 		if err != nil {
 			log.Error(ctx, "RejectLearningOutcome: NewLock failed",
 				log.Err(err),
