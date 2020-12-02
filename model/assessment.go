@@ -585,6 +585,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 			)
 			return err
 		}
+		cmd.AttendanceIDs = utils.ExcludeStrings(cmd.AttendanceIDs, teacherIDs)
 	}
 
 	if len(outcomeIDs) == 0 {
