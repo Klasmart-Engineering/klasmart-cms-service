@@ -74,6 +74,8 @@ type IFolderModel interface {
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
 
 	//内部API，修改Folder的Visibility Settings
+	//查看路径是否存在
+	ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error)
 	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
@@ -296,6 +298,28 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 	condition.OwnerType = entity.OwnerTypeOrganization
 
 	return f.SearchFolder(ctx, condition, operator)
+}
+
+func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error) {
+	if path == "" || path == "/" {
+		return false, nil
+	}
+	condition := da.FolderCondition{
+		ExactDirPath: path,
+		OwnerType:    int(ownerType),
+		Owner:        ownerType.Owner(operator),
+		Partition:    partition,
+		ItemType:     int(itemType),
+	}
+
+	total, err := da.GetFolderDA().SearchFolderCount(ctx, tx, condition)
+	if err != nil {
+		log.Error(ctx, "search folder failed",
+			log.Err(err),
+			log.Any("condition", condition))
+		return false, err
+	}
+	return total > 0, nil
 }
 
 func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
