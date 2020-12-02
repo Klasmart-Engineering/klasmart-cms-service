@@ -186,7 +186,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operato
 			)
 		}
 		result.NumberOfActivities = counts.SubContentCount
-		result.NumberOfOutcomes = counts.OutcomesCount
+		//result.NumberOfOutcomes = counts.OutcomesCount
 	}
 
 	// fill outcome attendance maps
@@ -200,6 +200,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operato
 			)
 			return nil, err
 		}
+		result.NumberOfOutcomes = len(outcomeIDs)
 		if len(outcomeIDs) > 0 {
 			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
 			if err != nil {
@@ -500,13 +501,21 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 				return "", err
 			}
 		}
-		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
-			log.Error(ctx, "add assessment: invalid class type",
-				log.Err(err),
+		if schedule.Status == entity.ScheduleStatusClosed {
+			log.Info(ctx, "add assessment: schedule status closed",
 				log.Any("cmd", cmd),
+				log.Any("operator", operator),
 				log.Any("schedule", schedule),
 			)
-			return "", errors.New("add assessment: invalid class type")
+			return "", nil
+		}
+		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
+			log.Info(ctx, "add assessment: invalid class type",
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+				log.Any("schedule", schedule),
+			)
+			return "", nil
 		}
 		outcomeIDs, err = GetContentModel().GetVisibleContentOutcomeByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID)
 		if err != nil {
@@ -529,63 +538,68 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 }
 
 func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, cmd entity.AddAssessmentCommand, newID string, outcomeIDs []string, schedule *entity.SchedulePlain) error {
+	nowUnix := time.Now().Unix()
+	newItem := entity.Assessment{
+		ID:           newID,
+		ScheduleID:   cmd.ScheduleID,
+		ProgramID:    schedule.ProgramID,
+		SubjectID:    schedule.SubjectID,
+		ClassLength:  cmd.ClassLength,
+		ClassEndTime: cmd.ClassEndTime,
+		CreateAt:     nowUnix,
+		UpdateAt:     nowUnix,
+	}
+	classNameMap, err := a.getClassNameMap(ctx, operator, []string{schedule.ClassID})
+	if err != nil {
+		log.Error(ctx, "add assessment: get class name map failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+		)
+		return err
+	}
+	newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
+
+	// fill teacher ids
 	{
-		nowUnix := time.Now().Unix()
-		newItem := entity.Assessment{
-			ID:           newID,
-			ScheduleID:   cmd.ScheduleID,
-			ProgramID:    schedule.ProgramID,
-			SubjectID:    schedule.SubjectID,
-			ClassLength:  cmd.ClassLength,
-			ClassEndTime: cmd.ClassEndTime,
-			CreateAt:     nowUnix,
-			UpdateAt:     nowUnix,
-		}
-		classNameMap, err := a.getClassNameMap(ctx, operator, []string{schedule.ClassID})
-		if err != nil {
-			log.Error(ctx, "add assessment: get class name map failed",
-				log.Err(err),
-				log.Any("cmd", cmd),
-			)
-			return err
-		}
-		newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
-		// fill teacher ids
+		var teacherIDs []string
 		if schedule.ClassID != "" {
 			classID2TeachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, []string{schedule.ClassID})
 			if err != nil {
+				log.Error(ctx, "add assessment: get class teachers failed",
+					log.Err(err),
+					log.Any("schedule", schedule),
+					log.Any("cmd", cmd),
+				)
 				return err
 			}
 			teachers := classID2TeachersMap[schedule.ClassID]
-			if len(teachers) > 0 {
-				var teacherIDs []string
-				for _, teacher := range teachers {
-					teacherIDs = append(teacherIDs, teacher.ID)
-				}
-				if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
-					log.Error(ctx, "add assessment: encode and set teacher ids failed",
-						log.Err(err),
-						log.Any("schedule", schedule),
-						log.Any("cmd", cmd),
-					)
-					return err
-				}
+			for _, teacher := range teachers {
+				teacherIDs = append(teacherIDs, teacher.ID)
 			}
 		}
-		if len(outcomeIDs) == 0 {
-			newItem.Status = entity.AssessmentStatusComplete
-			newItem.CompleteTime = time.Now().Unix()
-		} else {
-			newItem.Status = entity.AssessmentStatusInProgress
-		}
-		if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newItem); err != nil {
-			log.Error(ctx, "add assessment: add failed",
+		if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
+			log.Error(ctx, "add assessment: encode and set teacher ids failed",
 				log.Err(err),
+				log.Any("schedule", schedule),
 				log.Any("cmd", cmd),
-				log.Any("new_item", newItem),
 			)
 			return err
 		}
+	}
+
+	if len(outcomeIDs) == 0 {
+		newItem.Status = entity.AssessmentStatusComplete
+		newItem.CompleteTime = time.Now().Unix()
+	} else {
+		newItem.Status = entity.AssessmentStatusInProgress
+	}
+	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newItem); err != nil {
+		log.Error(ctx, "add assessment: add failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+			log.Any("new_item", newItem),
+		)
+		return err
 	}
 
 	if cmd.AttendanceIDs != nil {

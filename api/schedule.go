@@ -562,7 +562,7 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 	log.Info(ctx, "schedule status error", log.String("id", id), log.String("status", status))
 	switch err {
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
 	case nil:
 		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
 	default:

@@ -197,7 +197,6 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
 	}
-
 	// add to schedules
 	_, err = da.GetScheduleDA().BatchInsert(ctx, tx, scheduleList)
 	if err != nil {

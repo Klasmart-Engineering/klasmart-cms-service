@@ -173,8 +173,11 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 		User struct {
 			SchoolsWithPermission []struct {
 				School struct {
-					SchoolID   string `json:"school_id"`
-					SchoolName string `json:"school_name"`
+					SchoolID     string `json:"school_id"`
+					SchoolName   string `json:"school_name"`
+					Organization struct {
+						OrganizationID string `json:"organization_id"`
+					} `json:"organization"`
 				} `json:"school"`
 			} `json:"schoolsWithPermission"`
 		} `json:"user"`
@@ -195,6 +198,11 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 
 	schools := make([]*School, 0, len(data.User.SchoolsWithPermission))
 	for _, membership := range data.User.SchoolsWithPermission {
+		// filtering by operator's org id
+		if membership.School.Organization.OrganizationID != operator.OrgID {
+			continue
+		}
+
 		schools = append(schools, &School{
 			ID:   membership.School.SchoolID,
 			Name: membership.School.SchoolName,

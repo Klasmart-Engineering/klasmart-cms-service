@@ -46,6 +46,7 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param content_id path string true "content id"
+// @Param class_id path string true "class id"
 // @Tags content
 // @Success 200 {object} entity.LiveTokenView
 // @Failure 400 {object} BadRequestResponse
@@ -56,7 +57,8 @@ func (s *Server) getContentLiveToken(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	contentID := c.Param("content_id")
-	token, err := model.GetLiveTokenModel().MakeLivePreviewToken(ctx, op, contentID)
+	classID := c.Param("class_id")
+	token, err := model.GetLiveTokenModel().MakeLivePreviewToken(ctx, op, contentID, classID)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.LiveTokenView{Token: token})
