@@ -60,6 +60,7 @@ var (
 
 // GetEmailModel get user logic
 func GetEmailModel() IEmailModel {
+	// TODO
 	_emailOnce.Do(func() {
 		_emailModel = &AwsSesModel{
 			Host:          "", // config.Get().PrivateConfig.Social.Email.Host,
