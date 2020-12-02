@@ -500,6 +500,10 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, ownerType
 		log.Error(ctx, "move to an item not folder", log.Any("parentFolder", distFolder))
 		return ErrMoveToNotFolder
 	}
+	if fid == distFolder.ID {
+		log.Error(ctx, "move to item self", log.Any("parentFolder", distFolder), log.String("fid", fid))
+		return ErrMoveToNotFolder
+	}
 	switch folderFileType {
 	case entity.FolderFileTypeFolder:
 		//若文件为Folder
