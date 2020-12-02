@@ -149,7 +149,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 // @Summary add assessments for test
 // @Description add assessments for test
 // @Tags assessments
-// @ID addAssessment
+// @ID addAssessmentForTest
 // @Accept json
 // @Produce json
 // @Param assessment body entity.AddAssessmentCommand true "add assessment command"
