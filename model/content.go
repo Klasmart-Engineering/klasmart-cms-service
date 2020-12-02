@@ -446,7 +446,11 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	content.DirPath = constant.FolderRootPath
+	err = cm.checkAndUpdateContentPath(ctx, tx, content, operator)
+	if err != nil {
+		return err
+	}
+
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark

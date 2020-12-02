@@ -260,7 +260,8 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 }
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
-	content.DirPath = constant.FolderRootPath
+	//删除的时候不去掉路径信息
+	// content.DirPath = constant.FolderRootPath
 
 	//assets则隐藏
 	if content.ContentType.IsAsset() {
@@ -280,11 +281,31 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 	return content
 }
 
+func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+	existPath, err := GetFolderModel().ExistsPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, content.DirPath, entity.FolderPartitionMaterialAndPlans, user)
+	if err != nil {
+		log.Error(ctx, "search content folder failed",
+			log.Err(err), log.Any("content", content))
+		return err
+	}
+	//若路径不存在，则放到根目录
+	if !existPath {
+		content.DirPath = constant.FolderRootPath
+	}
+	return nil
+}
+
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//若content为archive，则直接发布
 	if content.PublishStatus == entity.ContentStatusArchive {
 		content.PublishStatus = entity.ContentStatusPublished
 		content.UpdateAt = time.Now().Unix()
+		//更新content的path
+		err := cm.checkAndUpdateContentPath(ctx, tx, content, user)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 
