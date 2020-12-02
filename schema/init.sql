@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS `user_settings` (
   `user_id` varchar(100) NOT NULL COMMENT 'user_id',
   `setting_json` JSON DEFAULT NULL COMMENT 'setting_json',
   PRIMARY KEY (`id`),
-  UNIQUE [unique_user_id] (user_id)
+  UNIQUE KEY `unique_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='user_settings';
 INSERT INTO `user_settings` (`id`,`user_id`,`setting_json`) VALUES ("default_setting_0","default_setting_0",'{"cms_page_size":20}');
 
