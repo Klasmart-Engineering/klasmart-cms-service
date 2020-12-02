@@ -101,7 +101,18 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 
 	data, err := r.getAttendanceOutcomeData(ctx, tx, assessmentIDs)
 	if err != nil {
+		log.Error(ctx, "list student report: get assessment outcome data failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+		)
 		return nil, err
+	}
+	outcomeIDsTranslatorFunc, err := makeLatestOutcomeIDsTranslator(ctx, tx, data.AllOutcomeIDs, operator)
+	if err != nil {
+		log.Error(ctx, "list student report: make latest outcome ids translator failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+		)
 	}
 	var result = entity.StudentsReport{AssessmentIDs: assessmentIDs}
 	for _, student := range students {
@@ -114,9 +125,9 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		}
 
 		newItem.Attend = true
-		newItem.AchievedCount = len(data.AchievedAttendanceID2OutcomeIDsMap[student.ID])
-		newItem.NotAttemptedCount = len(data.SkipAttendanceID2OutcomeIDsMap[student.ID])
-		newItem.NotAchievedCount = len(data.NotAchievedAttendanceID2OutcomeIDsMap[student.ID])
+		newItem.AchievedCount = len(outcomeIDsTranslatorFunc(data.AchievedAttendanceID2OutcomeIDsMap[student.ID]))
+		newItem.NotAttemptedCount = len(outcomeIDsTranslatorFunc(data.SkipAttendanceID2OutcomeIDsMap[student.ID]))
+		newItem.NotAchievedCount = len(outcomeIDsTranslatorFunc(data.NotAchievedAttendanceID2OutcomeIDsMap[student.ID]))
 
 		result.Items = append(result.Items, &newItem)
 	}
@@ -243,11 +254,18 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 			)
 			return nil, err
 		}
-
+		outcomeIDsTranslatorFunc, err := makeLatestOutcomeIDsTranslator(ctx, tx, data.AllOutcomeIDs, operator)
+		if err != nil {
+			log.Error(ctx, "get student detail report: make latest outcome ids translator failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+			)
+		}
 		for _, developmental := range developmentalList {
 			newItem := entity.StudentReportCategory{Name: developmental.Name}
 			{
-				outcomeIDs := data.AchievedAttendanceID2OutcomeIDsMap[cmd.StudentID]
+				outcomeIDs := outcomeIDsTranslatorFunc(data.AchievedAttendanceID2OutcomeIDsMap[cmd.StudentID])
 				for _, outcomeID := range outcomeIDs {
 					outcome := outcomeID2OutcomeMap[outcomeID]
 					if outcome == nil {
@@ -259,7 +277,7 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				}
 			}
 			{
-				outcomeIDs := data.NotAchievedAttendanceID2OutcomeIDsMap[cmd.StudentID]
+				outcomeIDs := outcomeIDsTranslatorFunc(data.NotAchievedAttendanceID2OutcomeIDsMap[cmd.StudentID])
 				for _, outcomeID := range outcomeIDs {
 					outcome := outcomeID2OutcomeMap[outcomeID]
 					if outcome == nil {
@@ -271,7 +289,7 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 				}
 			}
 			{
-				outcomeIDs := data.SkipAttendanceID2OutcomeIDsMap[cmd.StudentID]
+				outcomeIDs := outcomeIDsTranslatorFunc(data.SkipAttendanceID2OutcomeIDsMap[cmd.StudentID])
 				for _, outcomeID := range outcomeIDs {
 					outcome := outcomeID2OutcomeMap[outcomeID]
 					if outcome == nil {
@@ -632,4 +650,25 @@ func (r *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 		sort.Sort((*entity.TeacherReportSortByCount)(result))
 	}
 	return result, nil
+}
+
+func makeLatestOutcomeIDsTranslator(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (func([]string) []string, error) {
+	m, err := GetOutcomeModel().GetLatestOutcomesByIDsMapResult(ctx, tx, outcomeIDs, operator)
+	if err != nil {
+		log.Error(ctx, "make latest outcome id translator: call outcome model failed",
+			log.Err(err),
+			log.Any("outcome_ids", outcomeIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	return func(ids []string) []string {
+		var result []string
+		for _, id := range ids {
+			if v, ok := m[id]; ok {
+				result = append(result, v.ID)
+			}
+		}
+		return utils.SliceDeduplication(result)
+	}, nil
 }
