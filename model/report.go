@@ -103,6 +103,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment outcome data failed",
 			log.Err(err),
+			log.Any("assessment_ids", assessmentIDs),
 			log.Any("cmd", cmd),
 		)
 		return nil, err
@@ -111,7 +112,9 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 	if err != nil {
 		log.Error(ctx, "list student report: make latest outcome ids translator failed",
 			log.Err(err),
+			log.Any("data", data),
 			log.Any("cmd", cmd),
+			log.Any("operator", operator),
 		)
 	}
 	var result = entity.StudentsReport{AssessmentIDs: assessmentIDs}
@@ -259,6 +262,7 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 			log.Error(ctx, "get student detail report: make latest outcome ids translator failed",
 				log.Err(err),
 				log.Any("cmd", cmd),
+				log.Any("data", data),
 				log.Any("operator", operator),
 			)
 		}
@@ -607,6 +611,15 @@ func (r *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, o
 			outcomeIDs = append(outcomeIDs, item.OutcomeID)
 		}
 		utils.SliceDeduplication(outcomeIDs)
+		outcomeIDsTranslatorFunc, err := makeLatestOutcomeIDsTranslator(ctx, tx, outcomeIDs, operator)
+		if err != nil {
+			log.Error(ctx, "get student detail report: make latest outcome ids translator failed",
+				log.Err(err),
+				log.Any("outcome_ids", outcomeIDs),
+				log.Any("operator", operator),
+			)
+		}
+		outcomeIDs = outcomeIDsTranslatorFunc(outcomeIDs)
 		outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, operator)
 		if err != nil {
 			log.Error(ctx, "get teacher report: get learning outcome failed by ids",
