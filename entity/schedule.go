@@ -340,6 +340,7 @@ type ScheduleListView struct {
 	LessonPlanID string            `json:"lesson_plan_id"`
 	ClassType    ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	Status       ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID      string            `json:"class_id"`
 }
 
 type ScheduleDetailsView struct {
