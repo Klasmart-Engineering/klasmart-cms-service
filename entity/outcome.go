@@ -2,9 +2,9 @@ package entity
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -137,11 +137,10 @@ func (oc *Outcome) SetStatus(ctx context.Context, status OutcomeStatus) error {
 			return nil
 		}
 	}
-	err := errors.New(fmt.Sprintf("unsupported:[%s]", status))
 	log.Error(ctx, "SetStatus failed",
-		log.Err(err),
+		log.Err(constant.ErrForbidden),
 		log.String("status", string(status)))
-	return err
+	return constant.ErrForbidden
 }
 
 func (oc Outcome) allowedToArchive() bool {
