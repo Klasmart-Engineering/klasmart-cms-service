@@ -663,6 +663,9 @@ func makeLatestOutcomeIDsTranslator(ctx context.Context, tx *dbo.DBContext, outc
 		return nil, err
 	}
 	return func(ids []string) []string {
+		if len(ids) == 0 {
+			return nil
+		}
 		var result []string
 		for _, id := range ids {
 			if v, ok := m[id]; ok {
