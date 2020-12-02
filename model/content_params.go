@@ -305,6 +305,10 @@ func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBCon
 		if err != nil {
 			return err
 		}
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), user)
+		if err != nil {
+			return err
+		}
 
 		return nil
 	}
