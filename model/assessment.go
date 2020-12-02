@@ -501,6 +501,14 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 				return "", err
 			}
 		}
+		if schedule.Status == entity.ScheduleStatusClosed {
+			log.Info(ctx, "add assessment: schedule status closed",
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+				log.Any("schedule", schedule),
+			)
+			return "", nil
+		}
 		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
 			log.Info(ctx, "add assessment: invalid class type",
 				log.Any("cmd", cmd),
