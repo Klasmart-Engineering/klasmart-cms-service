@@ -138,7 +138,7 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 	}
 
 	parentFolder := constant.FolderRootPath
-	if path != "" {
+	if path != "" && path != constant.FolderRootPath {
 		parentID := f.getParentFromPath(ctx, path)
 		parentFolder = parentID
 	}
