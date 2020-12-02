@@ -572,6 +572,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 				return err
 			}
 			teachers := classID2TeachersMap[schedule.ClassID]
+			teacherIDs = make([]string, 0, len(teachers))
 			for _, teacher := range teachers {
 				teacherIDs = append(teacherIDs, teacher.ID)
 			}
@@ -600,6 +601,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 				)
 				return err
 			}
+			studentIDs = make([]string, 0, len(students))
 			for _, student := range students {
 				studentIDs = append(studentIDs, student.ID)
 			}
