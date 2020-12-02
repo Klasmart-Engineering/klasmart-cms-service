@@ -41,6 +41,8 @@ type IOutcomeModel interface {
 
 	ApproveLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error
 	RejectLearningOutcome(ctx context.Context, tx *dbo.DBContext, outcomeID string, reason string, operator *entity.Operator) error
+
+	GetLatestOutcomesByIDsMapResult(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (map[string]*entity.Outcome, error)
 }
 
 type OutcomeModel struct {
@@ -634,6 +636,59 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, tx *dbo.DBCo
 			outcomes = []*entity.Outcome{}
 		} else {
 			outcomes = otcs2
+		}
+		return nil
+	})
+	return
+}
+
+func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (latests map[string]*entity.Outcome, err error) {
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		cond1 := da.OutcomeCondition{
+			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		}
+		total, otcs1, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &cond1)
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return err
+		}
+		if total == 0 {
+			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", outcomeIDs))
+			return constant.ErrRecordNotFound
+		}
+		cond2 := da.OutcomeCondition{}
+		for _, o := range otcs1 {
+			cond2.IDs.Strings = append(cond2.IDs.Strings, o.LatestID)
+		}
+		cond2.IDs.Valid = true
+		total, otcs2, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &cond2)
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", cond2.IDs.Strings))
+			return err
+		}
+		if total == 0 {
+			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_ids", cond2.IDs.Strings))
+			return constant.ErrRecordNotFound
+		} else {
+			latests = make(map[string]*entity.Outcome, len(otcs1))
+			for _, o := range otcs1 {
+				for _, l := range otcs2 {
+					if o.LatestID == l.ID {
+						latests[l.ID] = l
+						break
+					}
+				}
+			}
 		}
 		return nil
 	})
