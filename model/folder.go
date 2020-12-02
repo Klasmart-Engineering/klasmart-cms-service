@@ -138,9 +138,10 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 	//若不存在，则创建
 	//新发布的content
 	_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
-		Partition: partition,
-		Link:      link,
-		OwnerType: entity.OwnerTypeOrganization,
+		Partition:      partition,
+		ParentFolderID: constant.FolderRootPath,
+		Link:           link,
+		OwnerType:      entity.OwnerTypeOrganization,
 	}, operator)
 	if err != nil {
 		log.Error(ctx, "add folder item failed", log.Err(err),
