@@ -497,7 +497,18 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, ownerType
 	}
 	//check if parentFolder is a folder
 	if !distFolder.ItemType.IsFolder() {
-		log.Error(ctx, "move to an item not folder", log.Any("parentFolder", distFolder))
+		log.Warn(ctx, "move to an item not folder", log.Any("parentFolder", distFolder))
+		return ErrMoveToNotFolder
+	}
+	log.Info(ctx, "move item",
+		log.Int("ownerType", int(ownerType)),
+		log.String("fileType", string(folderFileType)),
+		log.String("partition", string(partition)),
+		log.Any("parentFolder", distFolder),
+		log.Any("user", operator),
+		log.String("fid", fid))
+	if fid == distFolder.ID {
+		log.Warn(ctx, "move to item self", log.Any("parentFolder", distFolder), log.String("fid", fid))
 		return ErrMoveToNotFolder
 	}
 	switch folderFileType {
