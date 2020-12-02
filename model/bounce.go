@@ -28,8 +28,8 @@ type OptFunc func(*Bubble)
 func GetBubbleMachine(codeKey string, opts ...OptFunc) *Bubble {
 	machine := &Bubble{
 		codeKey:  codeKey,
-		counts:   5,
-		interval: time.Hour * 2,
+		counts:   constant.BounceMax,
+		interval: time.Hour * constant.BounceInterval,
 	}
 
 	for i := range opts {

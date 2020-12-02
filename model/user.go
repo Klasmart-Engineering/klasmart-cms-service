@@ -75,14 +75,12 @@ func GetUserModel() IUserModel {
 	return _userModel
 }
 
-const ValidDays = 30
-
 func GetTokenFromUser(ctx context.Context, user *entity.User) (string, error) {
 	now := time.Now()
 	claim := &jwt.StandardClaims{
 		Audience:  "Kidsloop",
 		Id:        user.UserID,
-		ExpiresAt: now.Add(time.Hour * 24 * ValidDays).Unix(),
+		ExpiresAt: now.Add(time.Hour * 24 * constant.ValidDays).Unix(),
 		IssuedAt:  now.Add(-30 * time.Second).Unix(),
 		Issuer:    "Kidsloop_cn",
 		NotBefore: 0,

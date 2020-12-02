@@ -195,7 +195,6 @@ create fulltext index fullindex_name_description_keywords_author_shortcode on le
 drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
 alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 
-<<<<<<< HEAD
 Create Table: CREATE TABLE `users` (
   `user_id` char(64) NOT NULL,
   `user_name` varchar(30) NOT NULL DEFAULT '',
@@ -216,7 +215,7 @@ Create Table: CREATE TABLE `users` (
   UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`),
   UNIQUE KEY `uix_email_phone` (`email`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-=======
+
 CREATE TABLE IF NOT EXISTS `user_settings` (
   `id` varchar(50) NOT NULL COMMENT 'id',
   `user_id` varchar(100) NOT NULL COMMENT 'user_id',
@@ -226,4 +225,3 @@ CREATE TABLE IF NOT EXISTS `user_settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='user_settings';
 INSERT INTO `user_settings` (`id`,`user_id`,`setting_json`) VALUES ("default_setting_0","default_setting_0",'{"cms_page_size":20}');
 
->>>>>>> test

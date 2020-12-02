@@ -137,13 +137,8 @@ func TestAddAndUpdateItem(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c0389bff85a26a0e86585",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c0389bff85a26a0e86585",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -151,13 +146,8 @@ func TestAddAndUpdateItem(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c04712ac27c637384d9cb",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c04712ac27c637384d9cb",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -224,13 +214,8 @@ func TestMoveItem(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c0389bff85a26a0e86585",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c0389bff85a26a0e86585",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -238,13 +223,8 @@ func TestMoveItem(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c04712ac27c637384d9cb",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c04712ac27c637384d9cb",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -305,13 +285,8 @@ func TestMoveItemAndFolder(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c0389bff85a26a0e86585",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c0389bff85a26a0e86585",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -319,13 +294,8 @@ func TestMoveItemAndFolder(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c04712ac27c637384d9cb",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c04712ac27c637384d9cb",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -405,13 +375,8 @@ func TestRemoveItemAndFolder(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c0389bff85a26a0e86585",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c0389bff85a26a0e86585",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -419,13 +384,8 @@ func TestRemoveItemAndFolder(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c04712ac27c637384d9cb",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c04712ac27c637384d9cb",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -493,13 +453,8 @@ func TestSearchFolder(t *testing.T) {
 	t.Log(subFolderId2)
 
 	itemID1, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c0389bff85a26a0e86585",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c0389bff85a26a0e86585",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -507,13 +462,8 @@ func TestSearchFolder(t *testing.T) {
 	t.Log(itemID1)
 
 	itemID2, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-<<<<<<< HEAD
-		FolderID: subFolderId2,
-		Link:     "content-5f6c04712ac27c637384d9cb",
-=======
 		ParentFolderID: subFolderId2,
 		Link:           "content-5f6c04712ac27c637384d9cb",
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -521,11 +471,7 @@ func TestSearchFolder(t *testing.T) {
 	t.Log(itemID2)
 
 	total, folders, err := GetFolderModel().SearchOrgFolder(context.Background(), entity.SearchFolderCondition{
-<<<<<<< HEAD
-		Path: "/",
-=======
 		Path: constant.FolderRootPath,
->>>>>>> test
 	}, fakeOperator())
 	if !assert.NoError(t, err) {
 		return
@@ -542,30 +488,6 @@ func TestSearchFolder(t *testing.T) {
 	t.Logf("%#v\n", folderInfo)
 }
 
-<<<<<<< HEAD
-func TestFolderModel_GetRootFolder(t *testing.T) {
-	rootId, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, fakeOperator())
-	if !assert.NoError(t, err) {
-		return
-	}
-	t.Logf("%#v\n", rootId)
-
-	rootId2, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootAssetsFolderName, entity.OwnerTypeOrganization, fakeOperator())
-	if !assert.NoError(t, err) {
-		return
-	}
-	t.Logf("%#v\n", rootId2)
-
-	res, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-		FolderID: rootId.ID,
-		Link:     "content-5f695a3bcc3a933a1c16d4db",
-	}, fakeOperator())
-	if !assert.NoError(t, err) {
-		return
-	}
-	t.Logf("%#v\n", res)
-}
-=======
 //func TestFolderModel_GetRootFolder(t *testing.T) {
 //	rootId, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, fakeOperator())
 //	if !assert.NoError(t, err) {
@@ -588,7 +510,6 @@ func TestFolderModel_GetRootFolder(t *testing.T) {
 //	}
 //	t.Logf("%#v\n", res)
 //}
->>>>>>> test
 
 func TestSplit(t *testing.T) {
 	t.Log(strings.Split("/", "/"))

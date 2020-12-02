@@ -109,6 +109,7 @@ type AMSConfig struct {
 }
 
 type KidsloopCNLoginConfig struct {
+	Open         string      `json:"open" yaml:"open"`
 	PrivateKey   interface{} `json:"private_key" yaml:"private_key"`
 	PublicKey    interface{} `json:"public_key" yaml:"public_key"`
 	CookieDomain string      `json:"cookie_domain" yaml:"cookie_domain"`
@@ -153,6 +154,10 @@ func LoadEnvConfig() {
 }
 
 func loadKidsloopCNLoginConfig(ctx context.Context) {
+	config.KidsloopCNLoginConfig.Open = os.Getenv("kidsloop2_cn_is_open")
+	if config.KidsloopCNLoginConfig.Open != constant.KidsloopCnIsOpen {
+		return
+	}
 	privateKeyPath := os.Getenv("kidsloop_cn_login_private_key_path")
 	content, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
@@ -179,6 +184,10 @@ func loadKidsloopCNLoginConfig(ctx context.Context) {
 }
 
 func loadTencentConfig(ctx context.Context) {
+	config.KidsloopCNLoginConfig.Open = os.Getenv("kidsloop2_cn_is_open")
+	if config.KidsloopCNLoginConfig.Open != constant.KidsloopCnIsOpen {
+		return
+	}
 	config.TencentConfig.Sms.SDKAppID = assertGetEnv("tc_sms_sdk_app_id")
 	config.TencentConfig.Sms.SecretID = assertGetEnv("tc_sms_secret_id")
 	config.TencentConfig.Sms.SecretKey = assertGetEnv("tc_sms_secret_key")
