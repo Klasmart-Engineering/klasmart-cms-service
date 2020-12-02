@@ -285,6 +285,16 @@ func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBCon
 	if content.PublishStatus == entity.ContentStatusArchive {
 		content.PublishStatus = entity.ContentStatusPublished
 		content.UpdateAt = time.Now().Unix()
+		//更新content的path
+		existPath, err := GetFolderModel().ExistsPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, content.DirPath, entity.FolderPartitionMaterialAndPlans, user)
+		if err != nil {
+			log.Error(ctx, "search content folder failed",
+				log.Err(err), log.Any("content", content))
+			return err
+		}
+		if !existPath {
+			content.DirPath = constant.FolderRootPath
+		}
 		return nil
 	}
 
