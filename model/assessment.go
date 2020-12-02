@@ -559,9 +559,8 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 	}
 	newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
 
-	// fill teacher ids
+	var teacherIDs []string
 	{
-		var teacherIDs []string
 		if schedule.ClassID != "" {
 			classID2TeachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, []string{schedule.ClassID})
 			if err != nil {
@@ -577,16 +576,38 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 				teacherIDs = append(teacherIDs, teacher.ID)
 			}
 		}
-		if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
-			log.Error(ctx, "add assessment: encode and set teacher ids failed",
-				log.Err(err),
-				log.Any("schedule", schedule),
-				log.Any("cmd", cmd),
-			)
-			return err
-		}
-		cmd.AttendanceIDs = utils.ExcludeStrings(cmd.AttendanceIDs, teacherIDs)
 	}
+
+	// fill teacher ids
+	if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
+		log.Error(ctx, "add assessment: encode and set teacher ids failed",
+			log.Err(err),
+			log.Any("schedule", schedule),
+			log.Any("cmd", cmd),
+		)
+		return err
+	}
+
+	var studentIDs []string
+	{
+		if schedule.ClassID != "" {
+			students, err := external.GetStudentServiceProvider().GetByClassID(ctx, operator, schedule.ClassID)
+			if err != nil {
+				log.Error(ctx, "add assessment: get students by class id failed",
+					log.Err(err),
+					log.Any("schedule", schedule),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+			for _, student := range students {
+				studentIDs = append(studentIDs, student.ID)
+			}
+		}
+	}
+
+	// filter attendance ids
+	cmd.AttendanceIDs = utils.FilterStrings(cmd.AttendanceIDs, teacherIDs, studentIDs)
 
 	if len(outcomeIDs) == 0 {
 		newItem.Status = entity.AssessmentStatusComplete
