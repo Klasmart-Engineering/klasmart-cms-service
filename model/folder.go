@@ -1027,7 +1027,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 
 func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, fromID, toID string, total int) error {
 	//根目录无需修改ItemCount
-	if fromID != constant.FolderRootPath {
+	if fromID != constant.FolderRootPath && fromID != "" {
 		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, fromID, -total)
 		if err != nil {
 			log.Error(ctx, "update originParentFolder items count failed", log.Err(err),
@@ -1038,7 +1038,7 @@ func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBC
 	}
 
 	//根目录无需修改ItemCount
-	if toID != constant.FolderRootPath {
+	if toID != constant.FolderRootPath && toID != "" {
 		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, toID, total)
 		if err != nil {
 			log.Error(ctx, "update distFolder items count failed", log.Err(err),
