@@ -15,6 +15,8 @@ const (
 
 	RedisKeyPrefixOutcomeCondition = "outcome:condition"
 	RedisKeyPrefixOutcomeId        = "outcome:id"
+
+	RedisKeyPrefixVerifyCodeLock = "verify_code:lock"
 )
 
 const (

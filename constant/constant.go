@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	KidsloopCN               = "CN"
 	TableNameSchedule        = "schedules"
 	TableNameScheduleTeacher = "schedules_teachers"
 
@@ -82,9 +83,26 @@ const (
 const (
 	URLOrganizationIDParameter = "org_id"
 	DefaultRole                = "admin"
+	DefaultSalt                = "Kidsloop2@GetHashK3y"
 )
 
 const (
 	NoSearchItem = "{nothing}"
 	Self         = "{self}"
+)
+
+const (
+	LoginByPassword = ""
+	LoginByCode     = "temp_code"
+
+	AccountPhone = "" // as default
+	AccountEmail = "email"
+)
+
+const (
+	DefaultPeriod  uint8 = 120
+	DefaultWindow  uint8 = 5
+	ValidDays            = 30
+	BounceMax            = 5
+	BounceInterval       = 2 //unit, hour
 )

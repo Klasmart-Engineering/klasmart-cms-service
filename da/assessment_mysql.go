@@ -110,6 +110,7 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 
 type QueryAssessmentsCondition struct {
 	Status                         *entity.AssessmentStatus                `json:"status"`
+	ScheduleIDs                    []string                                `json:"schedule_ids"`
 	TeacherIDs                     []string                                `json:"teacher_ids"`
 	TeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter `json:"teacher_assessment_status_filters"`
 	OrderBy                        *entity.ListAssessmentsOrderBy          `json:"order_by"`
@@ -205,6 +206,11 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		}
 		formats = append(formats, "("+strings.Join(partFormats, " and ")+")")
 		values = append(values, partValues...)
+	}
+
+	if len(c.ScheduleIDs) > 0 {
+		formats = append(formats, "schedule_id in (?)")
+		values = append(values, c.ScheduleIDs)
 	}
 
 	return formats, values

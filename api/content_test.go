@@ -4,21 +4,20 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/go-redis/redis"
-	"github.com/sirupsen/logrus"
-	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
-	logger2 "gitlab.badanamu.com.cn/calmisland/common-cn/logger"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
+
+	"github.com/go-redis/redis"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
 var server *Server
@@ -46,36 +45,9 @@ func initCache() {
 		})
 	}
 }
+
 func TestMain(m *testing.M) {
-	log.Info(context.TODO(), "start kidsloop2 api service")
-	defer func() {
-		if err := recover(); err != nil {
-			log.Info(context.TODO(), "kidsloop2 api service stopped", log.Any("err", err))
-		} else {
-			log.Info(context.TODO(), "kidsloop2 api service stopped")
-		}
-	}()
-
-	// temp solution, will remove in next version
-	logger2.SetLevel(logrus.DebugLevel)
-
-	// read config
-	config.LoadEnvConfig()
-
-	log.Debug(context.TODO(), "load config success", log.Any("config", config.Get()))
-
-	// init database connection
-	initDB()
-
-	log.Debug(context.TODO(), "init db success")
-	initCache()
-
-	log.Debug(context.TODO(), "init cache success")
-	// init dynamodb connection
-	storage.DefaultStorage()
-
-	log.Debug(context.TODO(), "init storage success")
-
+	userSetup()
 	if os.Getenv("env") == "HTTP" {
 		common.Setenv(common.EnvHTTP)
 	} else {
