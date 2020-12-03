@@ -208,7 +208,10 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		values = append(values, partValues...)
 	}
 
-	if len(c.ScheduleIDs) > 0 {
+	if c.ScheduleIDs != nil {
+		if len(c.ScheduleIDs) == 0 {
+			return []string{"1 = 2"}, nil
+		}
 		formats = append(formats, "schedule_id in (?)")
 		values = append(values, c.ScheduleIDs)
 	}
