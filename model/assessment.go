@@ -501,14 +501,35 @@ func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cm
 				return "", err
 			}
 		}
-		if schedule.Status == entity.ScheduleStatusClosed {
-			log.Info(ctx, "add assessment: schedule status closed",
+		var assessments []entity.Assessment
+		if err = da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentsCondition{
+			ScheduleIDs: []string{cmd.ScheduleID},
+		}, &assessments); err != nil {
+			log.Error(ctx, "add assessment: query assessment by schedule ids failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+				log.Any("schedule", schedule),
+			)
+			return "", err
+		}
+		if len(assessments) > 0 {
+			log.Info(ctx, "add assessment: schedule has created assessment",
+				log.Err(err),
 				log.Any("cmd", cmd),
 				log.Any("operator", operator),
 				log.Any("schedule", schedule),
 			)
 			return "", nil
 		}
+		//if schedule.Status == entity.ScheduleStatusClosed {
+		//	log.Info(ctx, "add assessment: schedule status closed",
+		//		log.Any("cmd", cmd),
+		//		log.Any("operator", operator),
+		//		log.Any("schedule", schedule),
+		//	)
+		//	return "", nil
+		//}
 		if schedule.ClassType == entity.ScheduleClassTypeHomework || schedule.ClassType == entity.ScheduleClassTypeTask {
 			log.Info(ctx, "add assessment: invalid class type",
 				log.Any("cmd", cmd),
@@ -559,9 +580,8 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 	}
 	newItem.Title = a.title(newItem.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
 
-	// fill teacher ids
+	var teacherIDs []string
 	{
-		var teacherIDs []string
 		if schedule.ClassID != "" {
 			classID2TeachersMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, []string{schedule.ClassID})
 			if err != nil {
@@ -573,20 +593,44 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 				return err
 			}
 			teachers := classID2TeachersMap[schedule.ClassID]
+			teacherIDs = make([]string, 0, len(teachers))
 			for _, teacher := range teachers {
 				teacherIDs = append(teacherIDs, teacher.ID)
 			}
 		}
-		if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
-			log.Error(ctx, "add assessment: encode and set teacher ids failed",
-				log.Err(err),
-				log.Any("schedule", schedule),
-				log.Any("cmd", cmd),
-			)
-			return err
-		}
-		cmd.AttendanceIDs = utils.ExcludeStrings(cmd.AttendanceIDs, teacherIDs)
 	}
+
+	// fill teacher ids
+	if err := newItem.EncodeAndSetTeacherIDs(teacherIDs); err != nil {
+		log.Error(ctx, "add assessment: encode and set teacher ids failed",
+			log.Err(err),
+			log.Any("schedule", schedule),
+			log.Any("cmd", cmd),
+		)
+		return err
+	}
+
+	var studentIDs []string
+	{
+		if schedule.ClassID != "" {
+			students, err := external.GetStudentServiceProvider().GetByClassID(ctx, operator, schedule.ClassID)
+			if err != nil {
+				log.Error(ctx, "add assessment: get students by class id failed",
+					log.Err(err),
+					log.Any("schedule", schedule),
+					log.Any("cmd", cmd),
+				)
+				return err
+			}
+			studentIDs = make([]string, 0, len(students))
+			for _, student := range students {
+				studentIDs = append(studentIDs, student.ID)
+			}
+		}
+	}
+
+	// filter attendance ids
+	cmd.AttendanceIDs = utils.FilterStrings(cmd.AttendanceIDs, studentIDs, teacherIDs)
 
 	if len(outcomeIDs) == 0 {
 		newItem.Status = entity.AssessmentStatusComplete
@@ -696,16 +740,16 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 		}
 	}
 
-	{
-		if err := GetScheduleModel().UpdateScheduleStatus(ctx, tx, schedule.ID, entity.ScheduleStatusClosed); err != nil {
-			log.Error(ctx, "add assessment: update schedule status to closed",
-				log.Err(err),
-				log.Any("cmd", cmd),
-				log.Any("id", schedule.ID),
-			)
-			return err
-		}
-	}
+	//{
+	//	if err := GetScheduleModel().UpdateScheduleStatus(ctx, tx, schedule.ID, entity.ScheduleStatusClosed); err != nil {
+	//		log.Error(ctx, "add assessment: update schedule status to closed",
+	//			log.Err(err),
+	//			log.Any("cmd", cmd),
+	//			log.Any("id", schedule.ID),
+	//		)
+	//		return err
+	//	}
+	//}
 	return nil
 }
 

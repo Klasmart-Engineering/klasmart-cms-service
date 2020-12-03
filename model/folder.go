@@ -74,7 +74,9 @@ type IFolderModel interface {
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
 
 	//内部API，修改Folder的Visibility Settings
-	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, link string, operator *entity.Operator) error
+	//查看路径是否存在
+	ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error)
+	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
 
@@ -122,7 +124,7 @@ func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBCon
 	return nil
 }
 
-func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, link string, operator *entity.Operator) error {
+func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error {
 	//Update folder item visibility settings
 	hasLink, err := f.hasFolderFileItem(ctx, tx, entity.OwnerTypeOrganization, partition, operator.OrgID, link)
 	if err != nil {
@@ -135,12 +137,18 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 		return nil
 	}
 
+	parentFolder := constant.FolderRootPath
+	if path != "" && path != constant.FolderRootPath {
+		parentID := f.getParentFromPath(ctx, path)
+		parentFolder = parentID
+	}
 	//若不存在，则创建
 	//新发布的content
 	_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
-		Partition: partition,
-		Link:      link,
-		OwnerType: entity.OwnerTypeOrganization,
+		Partition:      partition,
+		ParentFolderID: parentFolder,
+		Link:           link,
+		OwnerType:      entity.OwnerTypeOrganization,
 	}, operator)
 	if err != nil {
 		log.Error(ctx, "add folder item failed", log.Err(err),
@@ -297,6 +305,55 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 	return f.SearchFolder(ctx, condition, operator)
 }
 
+func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string {
+	if path == "" || path == "/" {
+		return constant.FolderRootPath
+	}
+	pathDirs := strings.Split(path, "/")
+	if len(pathDirs) < 1 {
+		log.Info(ctx, "check folder exists with array 0",
+			log.Strings("pathDirs", pathDirs))
+		return constant.FolderRootPath
+	}
+	parentID := pathDirs[len(pathDirs)-1]
+	return parentID
+}
+
+func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error) {
+	if path == "" || path == "/" {
+		log.Info(ctx, "check folder exists with nil",
+			log.String("path", path))
+		return false, nil
+	}
+	pathDirs := strings.Split(path, "/")
+	if len(pathDirs) < 1 {
+		log.Info(ctx, "check folder exists with array 0",
+			log.Strings("pathDirs", pathDirs))
+		return false, nil
+	}
+
+	parentID := pathDirs[len(pathDirs)-1]
+	condition := da.FolderCondition{
+		IDs:       []string{parentID},
+		OwnerType: int(ownerType),
+		Owner:     ownerType.Owner(operator),
+		Partition: partition,
+		ItemType:  int(itemType),
+	}
+
+	total, err := da.GetFolderDA().SearchFolderCount(ctx, tx, condition)
+	if err != nil {
+		log.Error(ctx, "search folder failed",
+			log.Err(err),
+			log.Any("condition", condition))
+		return false, err
+	}
+	log.Info(ctx, "search folder count",
+		log.Any("condition", condition),
+		log.Int("total", total))
+	return total > 0, nil
+}
+
 func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
 	folderItem, err := da.GetFolderDA().GetFolderByID(ctx, dbo.MustGetDB(ctx), folderID)
 	if err != nil {
@@ -441,7 +498,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//更新文件数量
-	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, info.Total)
+	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, 1)
 	if err != nil {
 		return err
 	}

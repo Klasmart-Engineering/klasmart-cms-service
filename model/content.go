@@ -351,7 +351,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Asset添加Folder
 	if c.ContentType.IsAsset() {
-		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets, entity.ContentLink(pid), operator)
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets, constant.FolderRootPath, entity.ContentLink(pid), operator)
 		if err != nil {
 			log.Error(ctx, "can't create folder item", log.Err(err),
 				log.String("link", entity.ContentLink(pid)),
@@ -446,7 +446,11 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 	}
 
 	//更新content的path
-	content.DirPath = constant.FolderRootPath
+	err = cm.checkAndUpdateContentPath(ctx, tx, content, operator)
+	if err != nil {
+		return err
+	}
+
 	rejectReason := strings.Join(reason, ",")
 	content.RejectReason = rejectReason
 	content.Remark = remark
@@ -456,7 +460,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, entity.ContentLink(content.ID), operator)
+	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), operator)
 	if err != nil {
 		return err
 	}

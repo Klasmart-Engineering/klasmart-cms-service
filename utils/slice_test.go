@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -15,4 +16,34 @@ func TestIntersectStrSlice(t *testing.T) {
 	s2 := []string{"1", "22", "3", "4"}
 	result := IntersectAndDeduplicateStrSlice(s1, s2)
 	t.Log(result)
+}
+
+func TestFilterStrings(t *testing.T) {
+	type args struct {
+		source    []string
+		whitelist []string
+		blacklist []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "t1",
+			args: args{
+				source:    []string{"a", "b", "c", "d"},
+				whitelist: []string{"b", "c"},
+				blacklist: []string{"c", "d"},
+			},
+			want: []string{"a", "b", "c"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FilterStrings(tt.args.source, tt.args.whitelist, tt.args.blacklist); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FilterStrings() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
