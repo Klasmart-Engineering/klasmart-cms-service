@@ -30,7 +30,7 @@ type ApproveReasonBulkRequest struct {
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /contents/review/approve [put]
+// @Router /contents_review/approve [put]
 func (s *Server) approveBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
@@ -228,7 +228,7 @@ type RejectReasonBulkRequest struct {
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /contents/review/reject [put]
+// @Router /contents_review/reject [put]
 func (s *Server) rejectBulk(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
