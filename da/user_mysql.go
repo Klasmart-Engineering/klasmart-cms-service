@@ -148,6 +148,7 @@ func (u *UserSqlDA) InsertTx(ctx context.Context, db *dbo.DBContext, value *enti
 	res, err := u.BaseDA.InsertTx(ctx, db, value)
 	if err != nil {
 		log.Error(ctx, "InsertTx: failed", log.Err(err))
+		return nil, err
 	}
 	if err == dbo.ErrDuplicateRecord {
 		return nil, constant.ErrDuplicateRecord

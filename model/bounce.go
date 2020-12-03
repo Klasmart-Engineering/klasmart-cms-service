@@ -54,15 +54,17 @@ func OptInterval(interval time.Duration) OptFunc {
 func (machine *Bubble) Launch(ctx context.Context) (bubble string, err error) {
 	err = machine.next(ctx)
 	if err != nil {
-		return "", err
+		return
 	}
-	baseSecret, err := NewOTPSecret(ctx)
-	if err != nil {
+	baseSecret, e := NewOTPSecret(ctx)
+	if e != nil {
+		err = e
 		log.Error(ctx, "Launch: NewOTPSecret failed", log.Err(err))
 		return
 	}
-	client, err := ro.GetRedis(ctx)
-	if err != nil {
+	client, e := ro.GetRedis(ctx)
+	if e != nil {
+		err = e
 		log.Error(ctx, "Launch: GetRedis failed", log.Err(err))
 		return
 	}
@@ -82,25 +84,31 @@ func (machine *Bubble) lockKey() string {
 }
 
 func (machine *Bubble) next(ctx context.Context) (err error) {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixVerifyCodeLock, machine.lockKey())
-	if err != nil {
-		return err
+	locker, e := mutex.NewLock(ctx, da.RedisKeyPrefixVerifyCodeLock, machine.lockKey())
+	if e != nil {
+		err = e
+		log.Error(ctx, "next: NewLock failed", log.Err(err))
+		return
 	}
 	locker.Lock()
 	defer locker.Unlock()
 
-	client, err := ro.GetRedis(ctx)
-	if err != nil {
+	client, e := ro.GetRedis(ctx)
+	if e != nil {
+		err = e
 		log.Error(ctx, "next: GetRedis failed", log.Err(err))
-		return err
+		return
 	}
 	_, err = client.RPush(machine.codeKey, time.Now().Unix()).Result()
 	if err != nil {
+		log.Error(ctx, "next: RPush failed", log.Err(err))
 		return
 	}
 
-	sendTimeUnixList, err := client.LRange(machine.codeKey, 0, int64(machine.counts)).Result()
-	if err != nil {
+	sendTimeUnixList, e := client.LRange(machine.codeKey, 0, int64(machine.counts)).Result()
+	if e != nil {
+		err = e
+		log.Error(ctx, "next: LRange failed", log.Err(err))
 		return
 	}
 
@@ -113,6 +121,7 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 		tmUnix, e := strconv.ParseInt(tmUnixStr, 10, 64)
 		if e != nil {
 			err = fmt.Errorf("parse sendTime err %v ", e)
+			log.Error(ctx, "next: ParseInt failed", log.Err(err))
 			return
 		}
 
@@ -125,12 +134,14 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 	}
 	if expiredCount == 0 {
 		err = constant.ErrExceededLimit
-		return
+		log.Error(ctx, "next: exceed", log.Err(err))
+		return err
 	}
 
 	// remain [expiredCount,s.maxTimes-1]
 	_, err = client.LTrim(machine.codeKey, int64(expiredCount), int64(machine.counts)).Result()
 	if err != nil {
+		log.Error(ctx, "next: LTrim failed", log.Err(err))
 		return
 	}
 
