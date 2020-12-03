@@ -41,6 +41,7 @@ type IScheduleModel interface {
 	GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
+	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1030,6 +1031,26 @@ func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.D
 	err = da.GetScheduleDA().Query(ctx, daCondition, &scheduleList)
 	if err != nil {
 		log.Error(ctx, "schedule query error", log.Err(err), log.Any("daCondition", daCondition))
+		return nil, err
+	}
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.ID
+	}
+	return result, nil
+}
+
+func (s *scheduleModel) GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error) {
+	condition := &da.ScheduleCondition{
+		OrgID: sql.NullString{
+			String: orgID,
+			Valid:  true,
+		},
+	}
+	var scheduleList []*entity.Schedule
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "GetScheduleIDsByOrgID:GetScheduleDA.Query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	var result = make([]string, len(scheduleList))
