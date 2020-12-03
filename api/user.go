@@ -221,6 +221,10 @@ func (s *Server) sendCode(c *gin.Context) {
 }
 
 type ForgottenPasswordRequest struct {
+	AuthTo   string `json:"auth_to" form:"auth_to"`
+	AuthCode string `json:"auth_code" form:"auth_code"`
+	AuthType string `json:"auth_type" from:"auth_type"`
+	Password string `json:"password" form:"password"`
 }
 
 // @ID forgottenPassword
@@ -235,10 +239,13 @@ type ForgottenPasswordRequest struct {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/forgotten_pwd [post]
 func (s *Server) forgottenPassword(c *gin.Context) {
+
 	// TODO
 }
 
 type ResetPasswordRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
 }
 
 // @ID resetPassword

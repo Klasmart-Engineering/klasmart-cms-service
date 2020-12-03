@@ -100,12 +100,14 @@ func TestUserLogin(t *testing.T) {
 	fmt.Println(res)
 }
 
+// 15026743257
+// 15221776376
+var phone = "15221776376"
+
 func TestUserRegister(t *testing.T) {
-	// 15026743257
-	// 15221776376
 	req := RegisterRequest{
-		Account:  "15221776376",
-		AuthCode: "800036",
+		Account:  phone,
+		AuthCode: "428580",
 		Password: "Bada1234",
 		ActType:  constant.AccountPhone,
 	}
@@ -119,10 +121,8 @@ func TestUserRegister(t *testing.T) {
 }
 
 func TestUserSendCode(t *testing.T) {
-	// 15026743257
-	// 15221776376
 	req := SendCodeRequest{
-		Mobile: "15221776376",
+		Mobile: phone,
 	}
 	data, err := json.Marshal(req)
 	if err != nil {
