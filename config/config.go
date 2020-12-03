@@ -39,6 +39,7 @@ type Config struct {
 	LiveTokenConfig       LiveTokenConfig       `yaml:"live_token_config"`
 	Assessment            AssessmentConfig      `yaml:"assessment_config"`
 	AMS                   AMSConfig             `json:"ams" yaml:"ams"`
+	KidsLoopRegion        string                `json:"kidsloop_region" yaml:"kidsloop_region"`
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
 }
@@ -154,8 +155,8 @@ func LoadEnvConfig() {
 }
 
 func loadKidsloopCNLoginConfig(ctx context.Context) {
-	config.KidsloopCNLoginConfig.Open = os.Getenv("eidsloop2_cn_is_open")
-	if config.KidsloopCNLoginConfig.Open != constant.KidsloopCnIsOpen {
+	config.KidsLoopRegion = os.Getenv("kidsloop_region")
+	if config.KidsLoopRegion != constant.KidsloopRegion {
 		return
 	}
 	privateKeyPath := os.Getenv("kidsloop_cn_login_private_key_path")
@@ -184,8 +185,8 @@ func loadKidsloopCNLoginConfig(ctx context.Context) {
 }
 
 func loadTencentConfig(ctx context.Context) {
-	config.KidsloopCNLoginConfig.Open = os.Getenv("kidsloop2_cn_is_open")
-	if config.KidsloopCNLoginConfig.Open != constant.KidsloopCnIsOpen {
+	config.KidsLoopRegion = os.Getenv("kidsloop_region")
+	if config.KidsLoopRegion != constant.KidsloopRegion {
 		return
 	}
 	config.TencentConfig.Sms.SDKAppID = assertGetEnv("tc_sms_sdk_app_id")

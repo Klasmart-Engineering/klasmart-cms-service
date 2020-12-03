@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	KidsloopCnIsOpen         = "IsOpen"
+	KidsloopRegion           = "CN"
 	TableNameSchedule        = "schedules"
 	TableNameScheduleTeacher = "schedules_teachers"
 
