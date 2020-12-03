@@ -43,8 +43,8 @@ func userSetup() {
 		DBConfig: config.DBConfig{
 			ConnectionString: os.Getenv("connection_string"),
 		},
+		KidsLoopRegion: os.Getenv("kidsloop_region"),
 		KidsloopCNLoginConfig: config.KidsloopCNLoginConfig{
-			Open:       os.Getenv("kidsloop2_cn_is_open"),
 			PrivateKey: prv,
 			PublicKey:  pub,
 		},
