@@ -66,6 +66,9 @@ func userSetup() {
 				MobilePrefix:     os.Getenv("tc_sms_mobile_prefix"),
 			},
 		},
+		AMS: config.AMSConfig{
+			EndPoint: os.Getenv("ams_endpoint"),
+		},
 	})
 	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
 		dbConf := config.Get().DBConfig
@@ -98,9 +101,11 @@ func TestUserLogin(t *testing.T) {
 }
 
 func TestUserRegister(t *testing.T) {
+	// 15026743257
+	// 15221776376
 	req := RegisterRequest{
 		Account:  "15221776376",
-		AuthCode: "975080",
+		AuthCode: "800036",
 		Password: "Bada1234",
 		ActType:  constant.AccountPhone,
 	}
@@ -114,6 +119,8 @@ func TestUserRegister(t *testing.T) {
 }
 
 func TestUserSendCode(t *testing.T) {
+	// 15026743257
+	// 15221776376
 	req := SendCodeRequest{
 		Mobile: "15221776376",
 	}
