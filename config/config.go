@@ -156,7 +156,7 @@ func LoadEnvConfig() {
 
 func loadKidsloopCNLoginConfig(ctx context.Context) {
 	config.KidsLoopRegion = os.Getenv("kidsloop_region")
-	if config.KidsLoopRegion != constant.KidsloopRegion {
+	if config.KidsLoopRegion != constant.KidsloopCN {
 		return
 	}
 	privateKeyPath := os.Getenv("kidsloop_cn_login_private_key_path")
@@ -186,7 +186,7 @@ func loadKidsloopCNLoginConfig(ctx context.Context) {
 
 func loadTencentConfig(ctx context.Context) {
 	config.KidsLoopRegion = os.Getenv("kidsloop_region")
-	if config.KidsLoopRegion != constant.KidsloopRegion {
+	if config.KidsLoopRegion != constant.KidsloopCN {
 		return
 	}
 	config.TencentConfig.Sms.SDKAppID = assertGetEnv("tc_sms_sdk_app_id")

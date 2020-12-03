@@ -21,7 +21,7 @@ func (s Server) registeRoute() {
 
 	s.engine.GET("/v1/ping", s.ping)
 
-	if config.Get().KidsLoopRegion == constant.KidsloopRegion {
+	if config.Get().KidsLoopRegion == constant.KidsloopCN {
 		users := s.engine.Group("/v1/users")
 		{
 			users.POST("/send_code", s.sendCode)
