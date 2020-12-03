@@ -4,6 +4,9 @@ import (
 	"errors"
 	"net/http"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,6 +20,17 @@ func (s Server) registeRoute() {
 	})
 
 	s.engine.GET("/v1/ping", s.ping)
+
+	if config.Get().KidsLoopRegion == constant.KidsloopCN {
+		users := s.engine.Group("/v1/users")
+		{
+			users.POST("/send_code", s.sendCode)
+			users.POST("/login", s.login)
+			users.POST("/register", s.register)
+			users.POST("/forgotten_pwd", s.forgottenPassword)
+			users.PUT("/reset_password", s.mustLogin, s.resetPassword)
+		}
+	}
 
 	assets := s.engine.Group("/v1/assets")
 	{
