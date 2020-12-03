@@ -345,6 +345,9 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			if viewData.EditType == entity.ScheduleEditWithFollowing {
 				repeatOptions = &viewData.Repeat
 			}
+			if schedule.RepeatID == "" {
+				schedule.RepeatID = utils.NewID()
+			}
 		} else {
 			// if repeat not selected,but need to update follow schedule, use old schedule repeat rule
 			if viewData.EditType == entity.ScheduleEditWithFollowing {
