@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -102,4 +103,17 @@ func TestAmsPermissionService_HasPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(perms)
+}
+
+func TestAmsUserService_NewUser(t *testing.T) {
+	config.Set(&config.Config{
+		AMS: config.AMSConfig{
+			EndPoint: os.Getenv("ams_endpoint"),
+		},
+	})
+	id, err := GetUserServiceProvider().NewUser(context.Background(), nil, "15221776389")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(id)
 }

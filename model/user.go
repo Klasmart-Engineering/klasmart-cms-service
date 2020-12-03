@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/ro"
@@ -35,7 +37,13 @@ func (um *UserModel) GetUserByAccount(ctx context.Context, account string) (*ent
 
 func (um *UserModel) RegisterUser(ctx context.Context, account string, password string, actType string) (*entity.User, error) {
 	var user entity.User
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	AmsID, err := external.GetUserServiceProvider().NewUser(ctx, nil, account)
+	if err != nil {
+		// Just warning now
+		log.Warn(ctx, "RegisterUser:NewUser failed", log.String("account", account))
+	}
+	user.AmsID = AmsID
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, err := um.GetUserByAccount(ctx, account)
 		if err == nil {
 			log.Warn(ctx, "RegisterUser: already exist", log.String("account", account))

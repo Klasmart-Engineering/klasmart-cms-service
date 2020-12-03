@@ -16,6 +16,7 @@ type UserServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*User, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
+	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 }
 
 type User struct {
@@ -155,4 +156,34 @@ func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, or
 		log.Any("users", users))
 
 	return users, nil
+}
+
+func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error) {
+	request := chlorine.NewRequest(`
+	mutation newUser($email: String){
+		newUser(email:$email){
+			user_id
+		}
+	}`)
+	request.Var("$email", email)
+
+	data := &struct {
+		NewUser struct {
+			UserID string `json:"user_id"`
+		} `json:"newUser"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetChlorine().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query users by keyword failed",
+			log.Err(err),
+			log.String("email", email))
+		return "", err
+	}
+
+	return data.NewUser.UserID, nil
 }
