@@ -263,8 +263,8 @@ func (s ScheduleStatus) Valid() bool {
 	}
 }
 
-func (s ScheduleStatus) GetScheduleStatus(t int64) ScheduleStatus {
-	if t < time.Now().Unix() {
+func (s ScheduleStatus) GetScheduleStatus(scheduleEndAt int64) ScheduleStatus {
+	if scheduleEndAt < time.Now().Unix() {
 		return ScheduleStatusClosed
 	}
 	return s
