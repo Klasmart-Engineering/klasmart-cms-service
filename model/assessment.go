@@ -609,7 +609,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 	}
 
 	// filter attendance ids
-	cmd.AttendanceIDs = utils.FilterStrings(cmd.AttendanceIDs, teacherIDs, studentIDs)
+	cmd.AttendanceIDs = utils.FilterStrings(cmd.AttendanceIDs, studentIDs, teacherIDs)
 
 	if len(outcomeIDs) == 0 {
 		newItem.Status = entity.AssessmentStatusComplete
