@@ -41,6 +41,7 @@ type IScheduleModel interface {
 	GetParticipateClass(ctx context.Context, operator *entity.Operator) ([]*external.Class, error)
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
+	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -509,7 +510,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			EndAt:        item.EndAt,
 			IsRepeat:     item.RepeatID != "",
 			LessonPlanID: item.LessonPlanID,
-			Status:       item.Status,
+			Status:       item.Status.GetScheduleStatus(item.EndAt),
 			ClassType:    item.ClassType,
 			ClassID:      item.ClassID,
 		}
@@ -741,7 +742,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		Description: schedule.Description,
 		Version:     schedule.ScheduleVersion,
 		IsRepeat:    schedule.RepeatID != "",
-		Status:      schedule.Status,
+		Status:      schedule.Status.GetScheduleStatus(schedule.EndAt),
 	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
@@ -1021,15 +1022,35 @@ func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.D
 			Strings: lessonPlanPastIDs,
 			Valid:   true,
 		},
-		Status: sql.NullString{
-			String: string(condition.Status),
-			Valid:  true,
+		EndAtLt: sql.NullInt64{
+			Int64: condition.EndAt,
+			Valid: true,
 		},
 	}
 	var scheduleList []*entity.Schedule
 	err = da.GetScheduleDA().Query(ctx, daCondition, &scheduleList)
 	if err != nil {
 		log.Error(ctx, "schedule query error", log.Err(err), log.Any("daCondition", daCondition))
+		return nil, err
+	}
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.ID
+	}
+	return result, nil
+}
+
+func (s *scheduleModel) GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error) {
+	condition := &da.ScheduleCondition{
+		OrgID: sql.NullString{
+			String: orgID,
+			Valid:  true,
+		},
+	}
+	var scheduleList []*entity.Schedule
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "GetScheduleIDsByOrgID:GetScheduleDA.Query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
 	var result = make([]string, len(scheduleList))

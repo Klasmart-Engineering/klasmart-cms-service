@@ -616,9 +616,9 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		return
 	}
 	condition := &da.ScheduleCondition{
-		Status: sql.NullString{
-			String: string(entity.ScheduleStatusClosed),
-			Valid:  true,
+		EndAtLt: sql.NullInt64{
+			Int64: time.Now().Unix(),
+			Valid: true,
 		},
 		ClassID: sql.NullString{
 			String: classID,

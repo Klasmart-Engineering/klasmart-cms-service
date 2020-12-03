@@ -186,6 +186,7 @@ type ScheduleCondition struct {
 	OrgID     sql.NullString
 	StartAtGe sql.NullInt64
 	EndAtLe   sql.NullInt64
+	EndAtLt   sql.NullInt64
 	//TeacherID                sql.NullString
 	//TeacherIDs               entity.NullStrings
 	StartAndEndRange         []sql.NullInt64
@@ -240,6 +241,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.EndAtLe.Valid {
 		wheres = append(wheres, "end_at <= ?")
 		params = append(params, c.EndAtLe.Int64)
+	}
+	if c.EndAtLt.Valid {
+		wheres = append(wheres, "end_at < ?")
+		params = append(params, c.EndAtLt.Int64)
 	}
 	//if c.TeacherID.Valid {
 	//	sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",

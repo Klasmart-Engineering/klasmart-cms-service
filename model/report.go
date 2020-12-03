@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -341,7 +342,7 @@ func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, ope
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
 		ClassID:      classID,
 		LessonPlanID: lessonPlanID,
-		Status:       entity.ScheduleStatusClosed,
+		EndAt:        time.Now().Unix(),
 	})
 	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
 	if err != nil {
