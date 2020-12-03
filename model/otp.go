@@ -5,14 +5,11 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -37,19 +34,6 @@ var totpPool = sync.Pool{
 			WindowForward: defaultWindow,
 		}
 	},
-}
-
-func init() {
-	periodStr := config.Get().TencentConfig.Sms.OTPPeriod
-	if periodStr == "" {
-		return
-	}
-	period, err := strconv.Atoi(periodStr)
-	if err != nil || period < 0 || period > 255 {
-		log.Warn(context.Background(), "", log.String("period", periodStr), log.Err(err))
-		return
-	}
-	defaultPeriod = uint8(period)
 }
 
 func (s OTPSecret) getTOTPFromPool(group string) *otp.TOTP {

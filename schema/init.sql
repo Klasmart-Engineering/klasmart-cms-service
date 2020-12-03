@@ -210,7 +210,8 @@ Create Table: CREATE TABLE `users` (
   `delete_at` bigint(20) DEFAULT '0',
   `create_id` char(64),
   `update_id` char(64),
-  `deleted_id` char(64),
+  `delete_id` char(64),
+  `badanamu_id` char(64),
   UNIQUE KEY `uix_user_id` (`user_id`,`delete_at`),
   UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`),
   UNIQUE KEY `uix_email_phone` (`email`,`delete_at`)

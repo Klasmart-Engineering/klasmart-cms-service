@@ -154,7 +154,7 @@ func LoadEnvConfig() {
 }
 
 func loadKidsloopCNLoginConfig(ctx context.Context) {
-	config.KidsloopCNLoginConfig.Open = os.Getenv("kidsloop2_cn_is_open")
+	config.KidsloopCNLoginConfig.Open = os.Getenv("eidsloop2_cn_is_open")
 	if config.KidsloopCNLoginConfig.Open != constant.KidsloopCnIsOpen {
 		return
 	}

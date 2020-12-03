@@ -3,8 +3,6 @@ package api
 import (
 	"net/http"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -20,6 +18,10 @@ type LoginRequest struct {
 	AuthType string `json:"auth_type" from:"auth_type"`
 }
 
+type LoginResponse struct {
+	Token string `json:"token"`
+}
+
 // @ID userLogin
 // @Summary login
 // @Tags user
@@ -27,15 +29,15 @@ type LoginRequest struct {
 // @Accept json
 // @Produce json
 // @Param outcome body LoginRequest true "user login"
-// @Success 200
+// @Success 200	{object} LoginResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 401 {object} UnAuthorizedResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /users/login [get]
+// @Router /users/login [post]
 func (s *Server) login(c *gin.Context) {
 	ctx := c.Request.Context()
 	var req LoginRequest
-	err := c.ShouldBindQuery(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Warn(ctx, "login:ShouldBindQuery failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -84,8 +86,9 @@ func (s *Server) login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access", token, 0, "/", config.Get().KidsloopCNLoginConfig.CookieDomain, true, true)
-	c.Status(http.StatusOK)
+	c.JSON(http.StatusOK, LoginResponse{token})
+	//c.SetCookie("access", token, 0, "/", config.Get().KidsloopCNLoginConfig.CookieDomain, true, true)
+	//c.Status(http.StatusOK)
 }
 
 type RegisterRequest struct {
@@ -102,7 +105,7 @@ type RegisterRequest struct {
 // @Accept json
 // @Produce json
 // @Param outcome body RegisterRequest true "user register"
-// @Success 200
+// @Success 200 {object} LoginResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 401 {object} UnAuthorizedResponse
 // @Failure 409 {object} ConflictResponse
@@ -111,7 +114,7 @@ type RegisterRequest struct {
 func (s *Server) register(c *gin.Context) {
 	ctx := c.Request.Context()
 	var req RegisterRequest
-	err := c.ShouldBindQuery(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Warn(ctx, "register:ShouldBindQuery failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -124,7 +127,7 @@ func (s *Server) register(c *gin.Context) {
 		return
 	}
 	if !pass {
-		log.Warn(ctx, "register", log.Any("req", req))
+		log.Warn(ctx, "register: not pass", log.Any("req", req))
 		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
 		return
 	}
@@ -146,14 +149,14 @@ func (s *Server) register(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access", token, 0, "/", config.Get().KidsloopCNLoginConfig.CookieDomain, true, true)
-	c.Status(http.StatusOK)
+	c.JSON(http.StatusOK, LoginResponse{token})
+	//c.SetCookie("access", token, 0, "/", config.Get().KidsloopCNLoginConfig.CookieDomain, true, true)
+	//c.Status(http.StatusOK)
 }
 
 type SendCodeRequest struct {
 	Mobile string `json:"mobile" form:"mobile"`
 	Email  string `json:"email" form:"email"`
-	Reason string `json:"reason" form:"reason"`
 }
 
 // @ID sendCode
@@ -178,7 +181,7 @@ func (s *Server) sendCode(c *gin.Context) {
 	}
 
 	if req.Mobile != "" {
-		code, err := model.GetBubbleMachine(req.Mobile + ":" + req.Reason).Launch(ctx)
+		code, err := model.GetBubbleMachine(req.Mobile).Launch(ctx)
 		if err != nil {
 			log.Error(ctx, "sendCode: launch failed", log.Err(err))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -195,7 +198,7 @@ func (s *Server) sendCode(c *gin.Context) {
 	}
 
 	if req.Email != "" {
-		code, err := model.GetBubbleMachine(req.Email + ":" + req.Reason).Launch(ctx)
+		code, err := model.GetBubbleMachine(req.Email).Launch(ctx)
 		if err != nil {
 			log.Error(ctx, "sendCode: launch failed", log.Err(err))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))

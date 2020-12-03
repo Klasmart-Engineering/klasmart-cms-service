@@ -17,9 +17,10 @@ type User struct {
 	UpdateAt int64 `gorm:"column:update_at"`
 	DeleteAt int64 `gorm:"column:delete_at"`
 
-	CreateID int64 `gorm:"column:create_id"`
-	UpdateID int64 `gorm:"column:update_id"`
-	DeleteID int64 `gorm:"column:delete_id"`
+	CreateID   int64  `gorm:"column:create_id"`
+	UpdateID   int64  `gorm:"column:update_id"`
+	DeleteID   int64  `gorm:"column:delete_id"`
+	BadanamuID string `gorm:"column:badanamu_id"`
 }
 
 func (User) TableName() string {

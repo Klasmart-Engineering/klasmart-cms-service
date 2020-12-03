@@ -25,7 +25,7 @@ func (s Server) registeRoute() {
 		users := s.engine.Group("/v1/users")
 		{
 			users.POST("/send_code", s.sendCode)
-			users.GET("/login", s.login)
+			users.POST("/login", s.login)
 			users.POST("/register", s.register)
 			users.POST("/forgotten_pwd", s.forgottenPassword)
 			users.PUT("/reset_password", s.mustLogin, s.resetPassword)

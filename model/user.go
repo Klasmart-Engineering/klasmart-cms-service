@@ -75,16 +75,29 @@ func GetUserModel() IUserModel {
 	return _userModel
 }
 
+type LoginClaim struct {
+	jwt.StandardClaims
+	Co    string `json:"co"`
+	Di    string `json:"di"`
+	Email string `json:"em"`
+	ID    string `json:"id"`
+}
+
 func GetTokenFromUser(ctx context.Context, user *entity.User) (string, error) {
 	now := time.Now()
-	claim := &jwt.StandardClaims{
-		Audience:  "Kidsloop",
-		Id:        user.UserID,
-		ExpiresAt: now.Add(time.Hour * 24 * constant.ValidDays).Unix(),
-		IssuedAt:  now.Add(-30 * time.Second).Unix(),
-		Issuer:    "Kidsloop_cn",
-		NotBefore: 0,
-		Subject:   "authorization",
+	claim := &LoginClaim{
+		StandardClaims: jwt.StandardClaims{
+			Audience:  "Kidsloop",
+			ExpiresAt: now.Add(time.Hour * 24 * constant.ValidDays).Unix(),
+			IssuedAt:  now.Add(-30 * time.Second).Unix(),
+			Issuer:    "Kidsloop_cn",
+			NotBefore: 0,
+			Subject:   "authorization",
+		},
+		ID:    user.UserID,
+		Co:    "xx",
+		Di:    "webpage",
+		Email: user.Phone,
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS512, claim).SignedString(config.Get().KidsloopCNLoginConfig.PrivateKey)
 	if err != nil {
@@ -95,7 +108,7 @@ func GetTokenFromUser(ctx context.Context, user *entity.User) (string, error) {
 }
 
 func NewUserFromToken(token string) (*entity.User, error) {
-	var claim jwt.StandardClaims
+	var claim LoginClaim
 	_, err := jwt.ParseWithClaims(token, &claim, func(t *jwt.Token) (interface{}, error) {
 		return config.Get().KidsloopCNLoginConfig.PublicKey, nil
 	})
@@ -103,7 +116,7 @@ func NewUserFromToken(token string) (*entity.User, error) {
 		return nil, err
 	}
 	return &entity.User{
-		UserID: claim.Id,
+		UserID: claim.ID,
 	}, nil
 }
 
@@ -116,7 +129,7 @@ func VerifyCode(ctx context.Context, codeKey string, code string) (bool, error) 
 	key := utils.GetHashKeyFromPlatformedString(codeKey)
 	otpSecret, err := client.Get(key).Result()
 	if err != nil {
-		log.Error(ctx, "VerifyCode: Get failed", log.String("otp_secret", otpSecret), log.Err(err))
+		log.Error(ctx, "VerifyCode: Get failed", log.String("code_key", codeKey), log.String("key", key), log.Err(err))
 		return false, err
 	}
 

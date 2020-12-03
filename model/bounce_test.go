@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/go-redis/redis"
@@ -21,14 +22,14 @@ func Setup() {
 		},
 		TencentConfig: config.TencentConfig{
 			Sms: config.TencentSmsConfig{
-				SDKAppID:         "1400392114",
-				SecretID:         "AKIDGL9HBpFNo20BxSuq8BxTrb3RYP0UKKJ7",
-				SecretKey:        "jALI5brFMGsDjyOYj9YbNTGxc4btsdpn",
-				EndPoint:         "sms.tencentcloudapi.com",
-				Sign:             "预元岛",
-				TemplateID:       "650697",
-				TemplateParamSet: "2",
-				MobilePrefix:     "+86",
+				SDKAppID:         os.Getenv("tc_sms_sdk_app_id"),
+				SecretID:         os.Getenv("tc_sms_secret_id"),
+				SecretKey:        os.Getenv("tc_sms_secret_key"),
+				EndPoint:         os.Getenv("tc_sms_endpoint"),
+				Sign:             os.Getenv("tc_sms_sign"),
+				TemplateID:       os.Getenv("tc_sms_template_id"),
+				TemplateParamSet: os.Getenv("tc_sms_template_param_set"),
+				MobilePrefix:     os.Getenv("tc_sms_mobile_prefix"),
 			},
 		},
 	})
