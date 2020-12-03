@@ -227,6 +227,7 @@ INSERT INTO `programs` (`id`, `name`, `create_id`, `update_id`, `delete_id`, `cr
 ('program4','Bada Genius','','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','',0,1605514594,0,0),
 ('program5','Bada Read','','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','',0,1605515005,0,0),
 ('program6','Bada Sound','','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','',0,1605515107,0,0),
+('program7','Bada Rhyme',NULL,NULL,NULL,0,0,0,0);
 
 INSERT INTO `subjects` (`id`, `name`, `create_id`, `update_id`, `delete_id`, `create_at`, `update_at`, `delete_at`, `number`) VALUES
 ('subject0','None Specified',NULL,NULL,NULL,0,0,0,1000),
@@ -247,7 +248,7 @@ INSERT INTO `skills` (`id`, `name`,  `create_id`, `update_id`, `delete_id`, `cre
 ('5fb243e8993e7591084c8451','Writing','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','','64a36ec1-7aa2-53ab-bb96-4c4ff752096b',1605518312,0,1605518420,0),
 ('5fb243f4993e7591084c8454','Drag','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','','',1605518324,0,0,0),
 ('5fb243f9993e7591084c8457','Click','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','','',1605518329,0,0,0),
-('5fb24c82993e7591084c856d','Phonemic Awareness, Phonics, and Word Recognition','','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','','',1605520514,0,0,0),
+('5fb24c82993e7591084c856d','Phonemic Awareness, Phonics, and Word Recognition','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','','',1605520514,0,0,0),
 ('5fb24df3993e7591084c85a2','Comprehension','64a36ec1-7aa2-53ab-bb96-4c4ff752096b','','',1605520883,0,0,0),
 ('skills0','None Specified',NULL,NULL,NULL,0,0,0,1000),
 ('skills1','Speaking & Listening',NULL,NULL,NULL,0,0,0,0),
