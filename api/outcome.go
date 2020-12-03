@@ -521,7 +521,7 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 // @Description reject learning outcomes
 // @Accept json
 // @Produce json
-// @Param id_list body OutcomeBulkRejectRequest true "outcome id list"
+// @Param bulk_reject_list body OutcomeBulkRejectRequest true "outcome id list"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
