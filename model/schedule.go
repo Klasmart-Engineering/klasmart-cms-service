@@ -345,6 +345,9 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			if viewData.EditType == entity.ScheduleEditWithFollowing {
 				repeatOptions = &viewData.Repeat
 			}
+			if schedule.RepeatID == "" {
+				schedule.RepeatID = utils.NewID()
+			}
 		} else {
 			// if repeat not selected,but need to update follow schedule, use old schedule repeat rule
 			if viewData.EditType == entity.ScheduleEditWithFollowing {
@@ -427,11 +430,14 @@ func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext,
 
 	case entity.ScheduleEditWithFollowing:
 		if schedule.RepeatID == "" {
-			log.Error(ctx, "delete schedule with following,but repeat id is empty",
-				log.Any("schedule", schedule),
-				log.String("edit_type", string(editType)),
-			)
-			return constant.ErrInternalServer
+			if err := da.GetScheduleDA().SoftDelete(ctx, tx, schedule.ID, op); err != nil {
+				log.Error(ctx, "delete schedule: soft delete failed",
+					log.Any("schedule", schedule),
+					log.String("edit_type", string(editType)),
+				)
+				return err
+			}
+			return nil
 		}
 		if err := da.GetScheduleDA().DeleteWithFollowing(ctx, tx, schedule.RepeatID, schedule.StartAt); err != nil {
 			log.Error(ctx, "delete schedule: delete with following failed",

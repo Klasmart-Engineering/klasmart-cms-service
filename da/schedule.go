@@ -111,6 +111,7 @@ func (s *scheduleDA) DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext,
 func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error {
 	if err := tx.Model(&entity.Schedule{}).
 		Where("id = ?", id).
+		Where("status = ?", entity.ScheduleStatusNotStart).
 		Updates(map[string]interface{}{
 			"deleted_id": operator.UserID,
 			"delete_at":  time.Now().Unix(),
