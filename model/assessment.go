@@ -300,6 +300,16 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 				cond.TeacherIDs = []string{}
 			}
 		}
+		scheduleIDs, err := GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID)
+		if err != nil {
+			log.Error(ctx, "list assessments: get schedule ids failed by org id",
+				log.Err(err),
+				log.Any("cmd", cmd),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		cond.ScheduleIDs = append(cond.ScheduleIDs, scheduleIDs...)
 	}
 
 	var items []*entity.Assessment
