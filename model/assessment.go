@@ -309,6 +309,9 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 			)
 			return nil, err
 		}
+		if cond.ScheduleIDs == nil {
+			cond.ScheduleIDs = []string{}
+		}
 		cond.ScheduleIDs = append(cond.ScheduleIDs, scheduleIDs...)
 	}
 
