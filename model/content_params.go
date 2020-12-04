@@ -282,16 +282,14 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 }
 
 func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
-	existPath, err := GetFolderModel().ExistsPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, content.DirPath, entity.FolderPartitionMaterialAndPlans, user)
+	contentPath, err := GetFolderModel().ExistsPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, content.DirPath, entity.FolderPartitionMaterialAndPlans, user)
 	if err != nil {
 		log.Error(ctx, "search content folder failed",
 			log.Err(err), log.Any("content", content))
 		return err
 	}
 	//若路径不存在，则放到根目录
-	if !existPath {
-		content.DirPath = constant.FolderRootPath
-	}
+	content.DirPath = contentPath
 	return nil
 }
 
