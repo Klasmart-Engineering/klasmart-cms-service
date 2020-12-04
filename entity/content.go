@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"reflect"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 const (
@@ -21,6 +22,8 @@ const (
 	ContentTypeMaterial = 1
 	ContentTypeLesson   = 2
 	ContentTypeAssets   = 3
+
+	AliasContentTypeFolder = 10
 
 	MaterialInputSourceH5p    = 1
 	MaterialInputSourceDisk   = 2
@@ -209,7 +212,7 @@ type Content struct {
 
 	SuggestTime int    `gorm:"type:int;NOT NULL;column:suggest_time"`
 	Author      string `gorm:"type:varchar(50);NOT NULL;column:author"`
-	Creator string `gorm:"type:varchar(50);NOT NULL;column:creator"`
+	Creator     string `gorm:"type:varchar(50);NOT NULL;column:creator"`
 	Org         string `gorm:"type:varchar(50);NOT NULL;column:org"`
 
 	SelfStudy    BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:self_study"`
@@ -320,11 +323,11 @@ type CreateContentRequest struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
-	TeacherManual string `json:"teacher_manual"`
+	TeacherManual     string `json:"teacher_manual"`
 	TeacherManualName string `json:"teacher_manual_name"`
 }
 
-func (c *CreateContentRequest) Trim(){
+func (c *CreateContentRequest) Trim() {
 	if c.Name != "" {
 		c.Name = strings.TrimSpace(c.Name)
 	}
@@ -357,7 +360,7 @@ type ContentInfoWithDetailsResponse struct {
 }
 
 type FolderContentInfoWithDetailsResponse struct {
-	Total       int                       `json:"total"`
+	Total       int              `json:"total"`
 	ContentList []*FolderContent `json:"list"`
 }
 
@@ -396,21 +399,21 @@ type SubContentsWithName struct {
 
 //Content in folder
 type FolderContent struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	ContentType ContentType `json:"content_type"`
-	Description string `json:"description"`
-	Keywords string `json:"keywords"`
-	Author string `json:"author"`
-	ItemsCount int `json:"items_count"`
-	PublishStatus string `json:"publish_status"`
-	Thumbnail string `json:"thumbnail"`
-	Data string `json:"data"`
-	AuthorName string `json:"author_name"`
-	DirPath string `json:"dir_path"`
-	ContentTypeName string `json:"content_type_name"`
-	CreateAt int `json:"create_at"`
-	UpdateAt int `json:"update_at"`
+	ID              string      `json:"id"`
+	Name            string      `json:"name"`
+	ContentType     ContentType `json:"content_type"`
+	Description     string      `json:"description"`
+	Keywords        string      `json:"keywords"`
+	Author          string      `json:"author"`
+	ItemsCount      int         `json:"items_count"`
+	PublishStatus   string      `json:"publish_status"`
+	Thumbnail       string      `json:"thumbnail"`
+	Data            string      `json:"data"`
+	AuthorName      string      `json:"author_name"`
+	DirPath         string      `json:"dir_path"`
+	ContentTypeName string      `json:"content_type_name"`
+	CreateAt        int         `json:"create_at"`
+	UpdateAt        int         `json:"update_at"`
 }
 
 type ContentInfo struct {
@@ -429,7 +432,7 @@ type ContentInfo struct {
 	Version       int64       `json:"version"`
 	SuggestTime   int         `json:"suggest_time"`
 	SourceType    string      `json:"source_type"`
-	AuthorName 		string `json:"author_name"`
+	AuthorName    string      `json:"author_name"`
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
@@ -446,12 +449,12 @@ type ContentInfo struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
-	TeacherManual string `json:"teacher_manual"`
+	TeacherManual     string `json:"teacher_manual"`
 	TeacherManualName string `json:"teacher_manual_name"`
 
-	Author     string `json:"author"`
+	Author  string `json:"author"`
 	Creator string `json:"creator"`
-	Org        string `json:"org"`
+	Org     string `json:"org"`
 
 	PublishScope  string               `json:"publish_scope"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
@@ -461,7 +464,7 @@ type ContentInfo struct {
 }
 
 type ExtraDataInRequest struct {
-	TeacherManual string `json:"teacher_manual"`
+	TeacherManual     string `json:"teacher_manual"`
 	TeacherManualName string `json:"teacher_manual_name"`
 }
 
