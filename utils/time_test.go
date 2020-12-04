@@ -89,3 +89,11 @@ func TestTodayZero(t *testing.T) {
 	t2 := TodayZero(time.Now().In(loc))
 	fmt.Println(t2)
 }
+
+func TestTimeUtil_GetTimeByWeekday(t *testing.T) {
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	tu := NewTimeUtil(time.Now().Unix(), loc)
+	tt := tu.GetTimeByWeekday(time.Monday)
+	t.Log(time.Now())
+	t.Log(tt)
+}
