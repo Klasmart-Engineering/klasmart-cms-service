@@ -123,3 +123,15 @@ func GetTimeLocationByName(tz string) (*time.Location, error) {
 	}
 	return loc, nil
 }
+
+func (tu *TimeUtil) GetTimeByWeekday(weekday time.Weekday) time.Time {
+	t := time.Unix(tu.TimeStamp, 0).In(tu.Location)
+
+	var newTime time.Time
+	if t.Weekday() == weekday {
+		return t
+	} else {
+		newTime = t.AddDate(0, 0, int(time.Monday-t.Weekday()+7)%7)
+	}
+	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, t.Location())
+}
