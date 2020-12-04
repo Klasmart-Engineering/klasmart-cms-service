@@ -317,7 +317,7 @@ func (s *Server) resetPassword(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param account query string true "account"
-// @Success 200 {object}
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 409
 // @Failure 500 {object} InternalServerErrorResponse
