@@ -75,9 +75,18 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error {
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	sql := `UPDATE cms_folder_items SET path = replace(path,?,?) WHERE id IN (?)`
-	err := tx.Exec(sql, []interface{}{oldPath, path, fids}).Error
+	params := []interface{}{oldPath, path, fids}
+	err := tx.Exec(sql, params).Error
+
+	log.Info(ctx, "update folder",
+		log.String("sql", sql),
+		log.Any("params", params))
 	if err != nil {
-		log.Error(ctx, "update folder da failed", log.Err(err), log.Strings("fids", fids), log.String("path", string(path)))
+		log.Error(ctx, "update folder da failed", log.Err(err),
+			log.Strings("fids", fids),
+			log.String("path", string(path)),
+			log.String("sql", sql),
+			log.Any("params", params))
 		return err
 	}
 

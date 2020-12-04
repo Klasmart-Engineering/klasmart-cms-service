@@ -348,7 +348,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 
 	//查询
 	folderContents := make([]*entity.FolderContent, 0)
-	db := tx.Raw(cd.searchFolderContentSQL(query1, query2), params1...)
+	db := tx.Raw(cd.searchFolderContentSQL(ctx, query1, query2), params1...)
 	orderBy := condition1.GetOrderBy()
 	if orderBy != "" {
 		db = db.Order(orderBy)
@@ -374,17 +374,20 @@ func (cd *DBContentDA) Count(ctx context.Context, condition dbo.Conditions) (int
 	return cd.s.Count(ctx, condition, &entity.Content{})
 }
 
-func (cd *DBContentDA) searchFolderContentSQL(query1, query2 []string) string {
+func (cd *DBContentDA) searchFolderContentSQL(ctx context.Context, query1, query2 []string) string {
 	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
-	return `SELECT 
-id, 10 as content_type, name AS content_name, items_count, '' AS description, '' as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
-FROM cms_folder_items 
-WHERE ` + rawQuery2 + ` 
-UNION ALL SELECT 
-id, content_type, content_name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
-FROM cms_contents 
-WHERE ` + rawQuery1
+	sql := fmt.Sprintf(`SELECT 
+	id, %v as content_type, name AS content_name, items_count, '' AS description, '' as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
+	FROM cms_folder_items 
+	WHERE  %v
+	UNION ALL SELECT 
+	id, content_type, content_name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
+	FROM cms_contents 
+	WHERE %v`, entity.AliasContentTypeFolder, rawQuery2, rawQuery1)
+
+	log.Info(ctx, "search folder content", log.String("sql", sql))
+	return sql
 }
 
 func (cd *DBContentDA) countFolderContentSQL(query1, query2 []string) string {
