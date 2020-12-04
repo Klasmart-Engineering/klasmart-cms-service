@@ -88,8 +88,8 @@ func userSetup() {
 
 func TestUserLogin(t *testing.T) {
 	req := LoginRequest{
-		AuthTo:   "15221776376",
-		AuthCode: "Bada1234",
+		AuthTo:   phone,
+		AuthCode: "Bada123456",
 		AuthType: constant.LoginByPassword,
 	}
 	data, err := json.Marshal(req)
@@ -102,13 +102,13 @@ func TestUserLogin(t *testing.T) {
 
 // 15026743257
 // 15221776376
-var phone = "15221776376"
+var phone = "15026743257"
 
 func TestUserRegister(t *testing.T) {
 	req := RegisterRequest{
 		Account:  phone,
-		AuthCode: "428580",
-		Password: "Bada1234",
+		AuthCode: "861782",
+		Password: "Bada123456",
 		ActType:  constant.AccountPhone,
 	}
 	data, err := json.Marshal(req)
@@ -135,8 +135,35 @@ func TestUserSendCode(t *testing.T) {
 
 func TestUserForgetPassword(t *testing.T) {
 
+	req := ForgottenPasswordRequest{
+		AuthTo:   phone,
+		AuthCode: "972031",
+		Password: "Bada123456",
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(string(data))
+	res := DoHttp(http.MethodPost, prefix+"/users/forgotten_pwd", string(data))
+	fmt.Println(res)
 }
 
-func TestUserRestPassword(t *testing.T) {
+func TestUserResetPassword(t *testing.T) {
+	req := ResetPasswordRequest{
+		OldPassword: "Bada1234",
+		NewPassword: "12345",
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(string(data))
+	res := DoHttp(http.MethodPost, prefix+"/users/reset_password", string(data))
+	fmt.Println(res)
+}
 
+func TestUserCheckAccount(t *testing.T) {
+	res := DoHttp(http.MethodGet, prefix+"/users/check_account?account="+"15026743257", "")
+	fmt.Println(res)
 }
