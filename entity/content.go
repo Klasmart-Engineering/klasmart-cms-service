@@ -400,7 +400,7 @@ type SubContentsWithName struct {
 //Content in folder
 type FolderContent struct {
 	ID              string      `json:"id"`
-	Name            string      `json:"content_name"`
+	ContentName     string      `json:"name"`
 	ContentType     ContentType `json:"content_type"`
 	Description     string      `json:"description"`
 	Keywords        string      `json:"keywords"`
