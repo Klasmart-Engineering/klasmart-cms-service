@@ -75,7 +75,7 @@ type IFolderModel interface {
 
 	//内部API，修改Folder的Visibility Settings
 	//查看路径是否存在
-	ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
+	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
 	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
@@ -319,7 +319,7 @@ func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string
 	return parentID
 }
 
-func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
+func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
 	if path == "" || path == "/" {
 		log.Info(ctx, "check folder exists with nil",
 			log.String("path", path))

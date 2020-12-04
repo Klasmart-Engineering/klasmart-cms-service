@@ -282,7 +282,7 @@ func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *
 }
 
 func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
-	contentPath, err := GetFolderModel().ExistsPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, content.DirPath, entity.FolderPartitionMaterialAndPlans, user)
+	contentPath, err := GetFolderModel().UpdateContentPath(ctx, tx, entity.OwnerTypeOrganization, entity.FolderItemTypeFolder, content.DirPath, entity.FolderPartitionMaterialAndPlans, user)
 	if err != nil {
 		log.Error(ctx, "search content folder failed",
 			log.Err(err), log.Any("content", content))
