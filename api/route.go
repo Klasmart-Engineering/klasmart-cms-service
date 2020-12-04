@@ -24,6 +24,7 @@ func (s Server) registeRoute() {
 	if config.Get().KidsLoopRegion == constant.KidsloopCN {
 		users := s.engine.Group("/v1/users")
 		{
+			users.GET("/check_account", s.checkAccount)
 			users.POST("/send_code", s.sendCode)
 			users.POST("/login", s.login)
 			users.POST("/register", s.register)

@@ -27,6 +27,8 @@ import (
 type IUserModel interface {
 	GetUserByAccount(ctx context.Context, account string) (*entity.User, error)
 	RegisterUser(ctx context.Context, account string, password string, actType string) (*entity.User, error)
+	UpdateAccountPassword(ctx context.Context, account string, password string) (*entity.User, error)
+	ResetUserPassword(ctx context.Context, userID string, oldPassword string, newPassword string) error
 }
 
 type UserModel struct{}
@@ -69,6 +71,51 @@ func (um *UserModel) RegisterUser(ctx context.Context, account string, password 
 		return nil
 	})
 	return &user, err
+}
+
+func (um *UserModel) UpdateAccountPassword(ctx context.Context, account string, password string) (user *entity.User, err error) {
+	salt, secret := MakeSecretAndSalt(ctx, password)
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		user, err = da.GetUserDA().GetUserByAccount(ctx, tx, account)
+		if err != nil {
+			log.Error(ctx, "UpdateAccountPassword: GetUserByAccount failed", log.String("account", account), log.Err(err))
+			return err
+		}
+		user.Salt = salt
+		user.Secret = secret
+		user.UpdateAt = time.Now().Unix()
+		_, err = da.GetUserDA().UpdateTx(ctx, tx, user)
+		if err != nil {
+			log.Error(ctx, "UpdateAccountPassword: UpdateTx failed", log.String("account", account), log.Err(err))
+			return err
+		}
+		return nil
+	})
+	return
+}
+
+func (um *UserModel) ResetUserPassword(ctx context.Context, userID string, oldPassword string, newPassword string) error {
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		user, err := da.GetUserDA().GetUserByAccount(ctx, tx, userID)
+		if err != nil {
+			log.Error(ctx, "ResetUserPassword: GetUserByAccount failed", log.String("user_id", userID), log.Err(err))
+			return err
+		}
+		pass := VerifySecretWithSalt(ctx, oldPassword, user.Secret, user.Salt)
+		if !pass {
+			log.Warn(ctx, "ResetUserPassword: not pass", log.String("user_id", userID))
+			return constant.ErrUnAuthorized
+		}
+		user.Salt, user.Secret = MakeSecretAndSalt(ctx, newPassword)
+		_, err = da.GetUserDA().UpdateTx(ctx, tx, user)
+		if err != nil {
+			log.Error(ctx, "ResetUserPassword:UpdateTx failed", log.String("user_id", userID), log.Err(err))
+			return err
+		}
+		return nil
+	})
+	return err
 }
 
 var (
