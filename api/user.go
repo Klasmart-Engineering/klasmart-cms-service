@@ -167,7 +167,7 @@ type SendCodeRequest struct {
 // @Accept json
 // @Produce json
 // @Param outcome body SendCodeRequest true "send verify code"
-// @Success 200 {object} LoginResponse
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/send_code [post]
@@ -234,7 +234,7 @@ type ForgottenPasswordRequest struct {
 // @Accept json
 // @Produce json
 // @Param outcome body ForgottenPasswordRequest true "login by new password and update password"
-// @Success 200 {object} LoginResponse
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/forgotten_pwd [post]
@@ -287,7 +287,7 @@ type ResetPasswordRequest struct {
 // @Accept json
 // @Produce json
 // @Param outcome body ResetPasswordRequest true "user reset password"
-// @Success 200 {object} LoginResponse
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/reset_password [post]
@@ -317,9 +317,9 @@ func (s *Server) resetPassword(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param account query string true "account"
-// @Success 200 {object} LoginResponse
+// @Success 200
 // @Failure 400 {object} BadRequestResponse
-// @Failure 409 {object} ConflictResponse
+// @Failure 409
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/check_account [get]
 func (s *Server) checkAccount(c *gin.Context) {
