@@ -15,19 +15,19 @@ import (
 
 var (
 	ErrInvalidUploadPartition = errors.New("unknown storage partition")
-	ErrInvalidPrivateKeyFile = errors.New("invalid private key file")
+	ErrInvalidPrivateKeyFile  = errors.New("invalid private key file")
 )
 
 const (
-	AssetStoragePartition        StoragePartition      = "assets"
-	ThumbnailStoragePartition      StoragePartition    = "thumbnail"
-	TeacherManualStoragePartition      StoragePartition    = "teacher_manual"
+	AssetStoragePartition              StoragePartition = "assets"
+	ThumbnailStoragePartition          StoragePartition = "thumbnail"
+	TeacherManualStoragePartition      StoragePartition = "teacher_manual"
 	ScheduleAttachmentStoragePartition StoragePartition = "schedule_attachment"
-
 )
+
 type StoragePartition string
 
-func (s StoragePartition) SizeLimit() int64{
+func (s StoragePartition) SizeLimit() int64 {
 	switch s {
 	case AssetStoragePartition:
 		return 1024 * 1000
@@ -39,7 +39,7 @@ func (s StoragePartition) SizeLimit() int64{
 	return 0
 }
 
-func NewStoragePartition(partition string) (StoragePartition, error){
+func NewStoragePartition(partition string) (StoragePartition, error) {
 	switch partition {
 	case string(AssetStoragePartition):
 		return AssetStoragePartition, nil
@@ -91,13 +91,13 @@ func assertGetEnv(key string) string {
 func createStorageByEnv() {
 	conf := config.Get()
 
-	switch conf.StorageConfig.CloudEnv {
-	case "aws":
+	switch conf.StorageConfig.StorageProtocol {
+	case "s3":
 		defaultStorage = newS3Storage(S3StorageConfig{
-			Endpoint: conf.StorageConfig.StorageEndPoint,
-			Bucket:    conf.StorageConfig.StorageBucket,
-			Region:    conf.StorageConfig.StorageRegion,
-			ArnBucket: os.Getenv("storage_arn_bucket"),
+			Endpoint:   conf.StorageConfig.StorageEndPoint,
+			Bucket:     conf.StorageConfig.StorageBucket,
+			Region:     conf.StorageConfig.StorageRegion,
+			ArnBucket:  os.Getenv("storage_arn_bucket"),
 			Accelerate: config.Get().StorageConfig.Accelerate,
 		})
 		defaultStorage.OpenStorage(context.TODO())
