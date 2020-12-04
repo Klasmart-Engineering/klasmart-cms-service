@@ -115,14 +115,14 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 	return nil
 }
 
-func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error {
-	err := da.GetFolderDA().BatchUpdateFolderPathByLink(ctx, tx, links, path)
-	if err != nil {
-		log.Error(ctx, "update folder item visibility settings failed", log.Err(err), log.Any("links", links))
-		return err
-	}
-	return nil
-}
+// func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error {
+// 	err := da.GetFolderDA().BatchUpdateFolderPathByLink(ctx, tx, links, path)
+// 	if err != nil {
+// 		log.Error(ctx, "update folder item visibility settings failed", log.Err(err), log.Any("links", links))
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error {
 	//Update folder item visibility settings
@@ -478,6 +478,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return err
 	}
 	//更新当前目录
+	originPath := folder.DirPath
 	originParentID := folder.ParentID
 	path := distFolder.ChildrenPath()
 	folder.DirPath = path
@@ -490,7 +491,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 
 	//更新子目录
 	newPath := folder.ChildrenPath()
-	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, newPath)
+	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, originPath, newPath)
 	if err != nil {
 		log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
 		return err
