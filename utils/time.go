@@ -6,13 +6,15 @@ import (
 	"time"
 )
 
+type TimeLayout string
+
 const (
-	Year   string = "2006"
-	Month  string = "2006-01"
-	Day    string = "2006-01-02"
-	Hour   string = "2006-01-02 15"
-	Minute string = "2006-01-02 15:04"
-	Second string = "2006-01-02 15:04:05"
+	Year   TimeLayout = "2006"
+	Month  TimeLayout = "2006-01"
+	Day    TimeLayout = "2006-01-02"
+	Hour   TimeLayout = "2006-01-02 15"
+	Minute TimeLayout = "2006-01-02 15:04"
+	Second TimeLayout = "2006-01-02 15:04:05"
 )
 
 type TimeUtil struct {
@@ -133,4 +135,9 @@ func (tu *TimeUtil) GetTimeByWeekday(weekday time.Weekday) time.Time {
 	}
 	newTime := t.AddDate(0, 0, offset)
 	return newTime
+}
+
+func (tu *TimeUtil) NextDayStart(t time.Time) time.Time {
+	newTime := t.AddDate(0, 0, 1)
+	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, tu.Location)
 }
