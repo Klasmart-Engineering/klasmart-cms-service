@@ -13,40 +13,48 @@ import (
 
 var testFlag = true
 
-type RepeatCycleRule struct {
+type RepeatConfig struct {
+	*entity.RepeatOptions
+}
+
+func NewRepeatConfig(options *entity.RepeatOptions) *RepeatConfig {
+	return &RepeatConfig{options}
+}
+
+type RepeatCyclePlan struct {
 	Location    *time.Location
 	BaseTime    int64
 	IntervalDay int
 }
 
-func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location, options *entity.RepeatOptions) ([]*RepeatCycleRule, error) {
-	if !options.Type.Valid() {
+func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location, repeatCfg *RepeatConfig) ([]*RepeatCyclePlan, error) {
+	if !repeatCfg.Type.Valid() {
 		return nil, constant.ErrInvalidArgs
 	}
-	result := make([]*RepeatCycleRule, 0)
+	result := make([]*RepeatCyclePlan, 0)
 
-	switch options.Type {
+	switch repeatCfg.Type {
 	case entity.RepeatTypeDaily:
-		result = append(result, &RepeatCycleRule{
-			IntervalDay: options.Daily.Interval,
+		result = append(result, &RepeatCyclePlan{
+			IntervalDay: repeatCfg.Daily.Interval,
 			BaseTime:    baseTime,
 			Location:    loc,
 		})
 
 	case entity.RepeatTypeWeekly:
-		if !options.Weekly.Valid() {
-			log.Info(ctx, "options.Weekly rule invalid", log.Any("options", options))
+		if !repeatCfg.Weekly.Valid() {
+			log.Info(ctx, "repeatCfg.Weekly rule invalid", log.Any("repeatCfg", repeatCfg))
 			return nil, constant.ErrInvalidArgs
 		}
-		for _, item := range options.Weekly.On {
+		for _, item := range repeatCfg.Weekly.On {
 			if !item.Valid() {
-				log.Info(ctx, "options.Weekly.On rule invalid", log.Any("options", options))
+				log.Info(ctx, "repeatCfg.Weekly.On rule invalid", log.Any("repeatCfg", repeatCfg))
 				return nil, constant.ErrInvalidArgs
 			}
 			tu := utils.NewTimeUtil(baseTime, loc)
 			selectWeekDayTime := tu.GetTimeByWeekday(item.TimeWeekday())
-			result = append(result, &RepeatCycleRule{
-				IntervalDay: options.Weekly.Interval * 7,
+			result = append(result, &RepeatCyclePlan{
+				IntervalDay: repeatCfg.Weekly.Interval * 7,
 				BaseTime:    selectWeekDayTime.Unix(),
 				Location:    loc,
 			})
@@ -57,14 +65,14 @@ func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location,
 	return nil, nil
 }
 
-func (r *RepeatCycleRule) getMaxRepeatYear() int {
+func (r *RepeatCyclePlan) getMaxRepeatYear() int {
 	if testFlag {
 		return 2
 	}
 	return config.Get().Schedule.MaxRepeatYear
 }
 
-func (r *RepeatCycleRule) GenerateTimeByRule(endRule *EndRepeatCycleRule) ([]int64, error) {
+func (r *RepeatCyclePlan) GenerateTimeByRule(endRule *RepeatCycleEndRule) ([]int64, error) {
 	result := make([]int64, 0)
 	if !endRule.CycleRuleType.Valid() {
 		return nil, constant.ErrInvalidArgs
@@ -95,17 +103,17 @@ func (r *RepeatCycleRule) GenerateTimeByRule(endRule *EndRepeatCycleRule) ([]int
 	return result, nil
 }
 
-type EndRepeatCycleRule struct {
+type RepeatCycleEndRule struct {
 	CycleRuleType entity.RepeatEndType
 	AfterCount    int
 	AfterTime     int64
 }
 
-func NewEndRepeatCycleRule(options *entity.RepeatOptions) (*EndRepeatCycleRule, error) {
+func NewEndRepeatCycleRule(options *entity.RepeatOptions) (*RepeatCycleEndRule, error) {
 	if !options.Type.Valid() {
 		return nil, constant.ErrInvalidArgs
 	}
-	result := new(EndRepeatCycleRule)
+	result := new(RepeatCycleEndRule)
 	switch options.Type {
 	case entity.RepeatTypeDaily:
 		result.CycleRuleType = options.Daily.End.Type
