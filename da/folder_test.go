@@ -3,6 +3,8 @@ package da
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
@@ -11,7 +13,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"testing"
 )
 
 func initDB() {
@@ -27,7 +28,7 @@ func initDB() {
 		panic(err)
 	}
 	config.Set(&config.Config{
-		RedisConfig:     config.RedisConfig{
+		RedisConfig: config.RedisConfig{
 			OpenCache: false,
 			Host:      "",
 			Port:      0,
@@ -71,14 +72,31 @@ func TestSearchFolderContent(t *testing.T) {
 			},
 		},
 	}, FolderCondition{
-		Name:              "plans and materials",
+		Name: "plans and materials",
 	})
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(total)
-	for i := range folderContent{
+	for i := range folderContent {
 		t.Logf("%#v\n", folderContent[i])
 	}
+}
+
+func TestBatchUpdatePath(t *testing.T) {
+	fids := []string{
+		"5fc9edc9bfbf99d0a0eb2435",
+		"5fc9edbebfbf99d0a0eb242d",
+		"5fc9edb4bfbf99d0a0eb2422",
+		"5fc9edaba06736d33312750e",
+		"5fc9eda4bfbf99d0a0eb241a",
+	}
+	err := GetFolderDA().BatchUpdateFolderPath(context.Background(), dbo.MustGetDB(context.Background()),
+		fids, "/", "/5fca13af8c9ae169ed002557/5fc88381285b97fd15b7a58f/")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log("done")
 }
