@@ -99,6 +99,8 @@ func NewContentType(contentType int) ContentType {
 		return ContentTypeLesson
 	case ContentTypeAssets:
 		return ContentTypeAssets
+	case AliasContentTypeFolder:
+		return AliasContentTypeFolder
 	default:
 		return ContentTypeAssets
 	}
@@ -132,6 +134,8 @@ func (c ContentType) ContentTypeInt() []int {
 		return []int{ContentTypeMaterial}
 	case ContentTypeAssets:
 		return []int{ContentTypeAssets}
+	case AliasContentTypeFolder:
+		return []int{AliasContentTypeFolder}
 	}
 	return []int{ContentTypeLesson}
 }
