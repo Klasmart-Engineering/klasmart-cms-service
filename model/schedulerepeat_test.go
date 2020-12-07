@@ -605,3 +605,10 @@ func Test_repeatScheduleYearly(t *testing.T) {
 
 	}
 }
+
+func TestTemp2(t *testing.T) {
+	tt := time.Now()
+	t.Log(tt)
+	tt = tt.AddDate(0, 0, 30)
+	t.Log(tt)
+}

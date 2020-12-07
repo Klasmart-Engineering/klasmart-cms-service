@@ -150,3 +150,40 @@ func (tu *TimeUtil) StartOfMonth() time.Time {
 	temp := tu.ToTime()
 	return time.Date(temp.Year(), temp.Month(), 1, 0, 0, 0, 0, tu.Location)
 }
+
+func (tu *TimeUtil) EndOfMonth() time.Time {
+	temp := tu.ToTime()
+	return time.Date(temp.Year(), temp.Month()+1, 1, 0, 0, 0, 0, tu.Location).Add(-time.Millisecond)
+}
+
+func IsSameDay(t1, t2 int64, loc *time.Location) bool {
+	time1 := time.Unix(t1, 0).In(loc)
+	time2 := time.Unix(t2, 0).In(loc)
+
+	return IsSameDayByTime(time1, time2)
+}
+
+func IsSameDayByTime(t1, t2 time.Time) bool {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+func IsSameMonth(t1, t2 int64, loc *time.Location) bool {
+	time1 := time.Unix(t1, 0).In(loc)
+	time2 := time.Unix(t2, 0).In(loc)
+
+	return IsSameMonthByTime(time1, time2)
+}
+
+func IsSameMonthByTime(t1, t2 time.Time) bool {
+	y1, m1, _ := t1.Date()
+	y2, m2, _ := t2.Date()
+
+	return y1 == y2 && m1 == m2
+}
+
+func GetTimeDiffToDay(start, end int64) int64 {
+	return (end - start) / 86400
+}
