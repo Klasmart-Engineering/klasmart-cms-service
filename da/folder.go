@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/lib/pq"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -75,7 +76,7 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error {
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	sql := `UPDATE cms_folder_items SET path = replace(path,?,?) WHERE id IN (?)`
-	params := []interface{}{oldPath, path, fids}
+	params := []interface{}{oldPath, path, pq.Array(fids)}
 	err := tx.Exec(sql, params).Error
 
 	log.Info(ctx, "update folder",
