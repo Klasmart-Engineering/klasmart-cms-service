@@ -2,6 +2,9 @@ package da
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -10,6 +13,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+)
+
+var (
+	ErrNoFids = errors.New("fids length is 0")
 )
 
 type IFolderDA interface {
@@ -74,8 +81,18 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 
 func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error {
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
-	sql := `UPDATE cms_folder_items SET path = replace(path,?,?) WHERE id IN (?)`
-	params := []interface{}{oldPath, path, fids}
+	if len(fids) < 1 {
+		return ErrNoFids
+	}
+	fidsSQLParts := make([]string, len(fids))
+	params := []interface{}{oldPath, path}
+	for i := range fids {
+		fidsSQLParts[i] = "?"
+		params = append(params, fids[i])
+	}
+	fidsSQL := strings.Join(fidsSQLParts, ",")
+
+	sql := fmt.Sprintf(`UPDATE cms_folder_items SET path = replace(path,?,?) WHERE id IN (%s)`, fidsSQL)
 	err := tx.Exec(sql, params).Error
 
 	log.Info(ctx, "update folder",
