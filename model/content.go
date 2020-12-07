@@ -1865,7 +1865,7 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		OwnerType:    int(entity.OwnerTypeOrganization),
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
-		Name:         condition.Name,
+		NameLike:     condition.Name,
 		ExactDirPath: dirPath,
 		Editors:      searchUserIds,
 		Partition:    partition,

@@ -274,7 +274,7 @@ func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType e
 func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
 	total, folderItems, err := da.GetFolderDA().SearchFolderPage(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
 		ParentID:  condition.ParentID,
-		Name:      condition.Name,
+		NameLike:  condition.Name,
 		ItemType:  int(condition.ItemType),
 		OwnerType: int(condition.OwnerType),
 		Owner:     condition.Owner,
@@ -1023,27 +1023,6 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 	if total > 0 {
 		return ErrDuplicateFolderName
 	}
-	//check duplicate parentFolder name
-	//if len(folders) > 0 {
-	//	//if owner type is organization,parentFolder can be the same
-	//	//in different partition
-	//	if ownerType == entity.OwnerTypeOrganization {
-	//		p := parentFolder.DirPath.Parents()
-	//		if len(p) < 1 {
-	//			//root path can't be the same
-	//			return ErrDuplicateFolderName
-	//		}
-	//		for i := range folders {
-	//			parents := folders[i].DirPath.Parents()
-	//			if len(parents) > 1 && parents[0] == p[0]{
-	//				return ErrDuplicateFolderName
-	//			}
-	//		}
-	//		return nil
-	//	}
-	//
-	//	return ErrDuplicateFolderName
-	//}
 
 	return nil
 }
