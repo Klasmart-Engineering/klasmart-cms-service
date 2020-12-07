@@ -82,7 +82,8 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error {
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(fids) < 1 {
-		return ErrNoFids
+		//若fids为空，则不更新
+		return nil
 	}
 	fidsSQLParts := make([]string, len(fids))
 	params := []interface{}{oldPath, path}
