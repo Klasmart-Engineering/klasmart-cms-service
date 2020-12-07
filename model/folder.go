@@ -490,7 +490,17 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//更新子目录
+	//origin: /
+	//target: /xxx => /xxx/
 	newPath := folder.ChildrenPath()
+	if originPath == constant.FolderRootPath && newPath != constant.FolderRootPath {
+		newPath = newPath + "/"
+	}
+	//origin: /xxx => /xxx/
+	//target: /
+	if originPath != constant.FolderRootPath && newPath == constant.FolderRootPath {
+		originPath = originPath + "/"
+	}
 	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, originPath, newPath)
 	if err != nil {
 		log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
