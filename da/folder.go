@@ -94,7 +94,7 @@ func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContex
 	fidsSQL := strings.Join(fidsSQLParts, ",")
 
 	sql := fmt.Sprintf(`UPDATE cms_folder_items SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
-	err := tx.Exec(sql, params).Error
+	err := tx.Exec(sql, params...).Error
 
 	log.Info(ctx, "update folder",
 		log.String("sql", sql),
