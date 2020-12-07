@@ -49,7 +49,8 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 
 	if c.FuzzyKey.Valid && c.FuzzyAuthors.Valid {
 		wheres = append(wheres, fmt.Sprintf("((match(name, keywords, description, shortcode) against(? in boolean mode)) or (id in (%s)))", c.FuzzyAuthors.SQLPlaceHolder()))
-		params = append(params, strings.TrimSpace(c.FuzzyKey.String), c.FuzzyAuthors.ToInterfaceSlice())
+		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
+		params = append(params, c.FuzzyAuthors.ToInterfaceSlice()...)
 
 	}
 
