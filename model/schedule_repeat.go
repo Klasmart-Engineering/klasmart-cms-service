@@ -60,8 +60,10 @@ func (r *RepeatCyclePlan) GenerateTimeByRule(endRule *RepeatCycleEndRule) ([]int
 	switch endRule.CycleRuleType {
 	case entity.RepeatEndAfterCount:
 		var count = 0
+		var isFirst = true
 		for count < endRule.AfterCount && baseTime.Before(maxTime) {
-			day, err := r.Interval(baseTime.Unix(), r.repeatCfg)
+			day, err := r.Interval(baseTime.Unix(), r.repeatCfg, isFirst)
+			isFirst = false
 			if err != nil {
 				return nil, err
 			}
@@ -71,10 +73,13 @@ func (r *RepeatCyclePlan) GenerateTimeByRule(endRule *RepeatCycleEndRule) ([]int
 				count++
 			}
 		}
+
 	case entity.RepeatEndAfterTime:
 		afterTime := time.Unix(endRule.AfterTime, 0).In(r.repeatCfg.Location)
+		var isFirst = true
 		for baseTime.Before(afterTime) && baseTime.Before(maxTime) {
-			day, err := r.Interval(baseTime.Unix(), r.repeatCfg)
+			day, err := r.Interval(baseTime.Unix(), r.repeatCfg, isFirst)
+			isFirst = false
 			if err != nil {
 				return nil, err
 			}
@@ -87,21 +92,19 @@ func (r *RepeatCyclePlan) GenerateTimeByRule(endRule *RepeatCycleEndRule) ([]int
 	return result, nil
 }
 
-type DynamicIntervalFunc func(baseTime int64, cfg *RepeatConfig) (int, error)
+type DynamicIntervalFunc func(baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error)
 
-func DefaultDynamicInterval(baseTime int64, cfg *RepeatConfig) (int, error) {
+func DefaultDynamicInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
 	return 0, nil
 }
-func DynamicDayInterval(baseTime int64, cfg *RepeatConfig) (int, error) {
-	equal := utils.IsSameDay(baseTime, time.Now().Unix(), cfg.Location)
-	if equal {
+func DynamicDayInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
+	if isFirst {
 		return 0, nil
 	}
 	return cfg.Daily.Interval, nil
 }
-func DynamicWeekInterval(baseTime int64, cfg *RepeatConfig) (int, error) {
-	equal := utils.IsSameDay(baseTime, time.Now().Unix(), cfg.Location)
-	if equal {
+func DynamicWeekInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
+	if isFirst {
 		return 0, nil
 	}
 	return cfg.Monthly.Interval * 7, nil
@@ -111,7 +114,7 @@ var (
 	ErrOverLimit = errors.New("Over the limit")
 )
 
-func DynamicMonthInterval(baseTime int64, cfg *RepeatConfig) (int, error) {
+func DynamicMonthInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
 	if !cfg.Monthly.OnType.Valid() {
 		return 0, constant.ErrInvalidArgs
 	}
@@ -125,19 +128,35 @@ func DynamicMonthInterval(baseTime int64, cfg *RepeatConfig) (int, error) {
 			return 0, ErrOverLimit
 		}
 
-		isSameMonth2 := utils.IsSameMonthByTime(time.Now().In(cfg.Location), currentMonthTime)
-		if isSameMonth2 && currentMonthTime.After(time.Now().In(cfg.Location)) {
-			return currentMonthTime.Day() - tu.ToTime().Day(), nil
+		var afterMonthTime time.Time
+		if isFirst {
+			isSameMonth2 := utils.IsSameMonthByTime(time.Now().In(cfg.Location), monthStart)
+			if isSameMonth2 {
+				return currentMonthTime.Day() - tu.ToTime().Day(), nil
+			}
+			afterMonthTime = currentMonthTime
+		} else {
+			afterMonthTime = monthStart.AddDate(0, cfg.Monthly.Interval, cfg.Monthly.OnDateDay).In(cfg.Location)
 		}
-		afterMonthTime := monthStart.AddDate(0, cfg.Monthly.Interval, cfg.Monthly.OnDateDay).In(cfg.Location)
 		day := utils.GetTimeDiffToDay(baseTime, afterMonthTime.Unix())
 		return int(day), nil
 	case entity.RepeatMonthlyOnWeek:
-		_, err := dateOfWeekday(baseTime, cfg.Monthly.OnWeek, cfg.Monthly.OnWeekSeq, cfg.Location)
+		date, err := dateOfWeekday(baseTime, cfg.Monthly.OnWeek, cfg.Monthly.OnWeekSeq, cfg.Location)
 		if err != nil {
 			return 0, err
 		}
-
+		var afterMonthTime time.Time
+		if isFirst {
+			isSameMonth2 := utils.IsSameMonthByTime(time.Now().In(cfg.Location), date)
+			if isSameMonth2 {
+				return date.Day() - tu.ToTime().Day(), nil
+			}
+			afterMonthTime = date
+		} else {
+			afterMonthTime = date.AddDate(0, cfg.Monthly.Interval, 0).In(cfg.Location)
+		}
+		day := utils.GetTimeDiffToDay(baseTime, afterMonthTime.Unix())
+		return int(day), nil
 	}
 	return 0, constant.ErrInvalidArgs
 }
