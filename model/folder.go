@@ -34,6 +34,7 @@ var (
 	ErrNoFolder               = errors.New("no folder")
 	ErrMoveRootFolder         = errors.New("move root folder")
 	ErrMoveToChild            = errors.New("move to child folder")
+	ErrMoveToSameFolder       = errors.New("move to same folder")
 	ErrItemNotFound           = errors.New("item not found")
 )
 
@@ -306,7 +307,7 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 }
 
 func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string {
-	if path == "" || path == "/" {
+	if path == "" || path == constant.FolderRootPath {
 		return constant.FolderRootPath
 	}
 	pathDirs := strings.Split(path, "/")
@@ -320,7 +321,7 @@ func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string
 }
 
 func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
-	if path == "" || path == "/" {
+	if path == "" || path == constant.FolderRootPath {
 		log.Info(ctx, "check folder exists with nil",
 			log.String("path", path))
 		return constant.FolderRootPath, nil
@@ -390,6 +391,10 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 	if folder.ItemType.IsFolder() && distFolder.DirPath.IsChild(folder.ID) {
 		//distFolder.DirPath
 		return ErrMoveToChild
+	}
+	if distFolder.DirPath == folder.ChildrenPath() {
+		//distFolder.DirPath
+		return ErrMoveToSameFolder
 	}
 
 	return nil
@@ -489,22 +494,31 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return err
 	}
 
-	//更新子目录
-	//origin: /
-	//target: /xxx => /xxx/
+	//if originPath == target path
 	newPath := folder.DirPath
-	if originPath == constant.FolderRootPath && newPath != constant.FolderRootPath {
-		newPath = newPath + "/"
-	}
-	//origin: /xxx => /xxx/
-	//target: /
-	if originPath != constant.FolderRootPath && newPath == constant.FolderRootPath {
-		originPath = originPath + "/"
-	}
-	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, originPath, newPath)
-	if err != nil {
-		log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
-		return err
+	if originPath == constant.FolderRootPath {
+		//if origin path is root("/")
+		//when old path is root path("/"), replace function in mysql will replace all "/" in path
+		//we prefix the new path as => new_path + origin_path
+		err = da.GetFolderDA().BatchUpdateFolderPathPrefix(ctx, tx, info.Ids, newPath)
+		if err != nil {
+			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+			return err
+		}
+	} else {
+		//origin: /xxx => /xxx/
+		//target: /
+		//to prevent target path build as //xxxx
+		if newPath == constant.FolderRootPath {
+			originPath = originPath + "/"
+		}
+		//when old path is not root path like "/xxx/xxx"
+		//replace origin path "/xxx/xxx" to target path "/yyy/yyy/yyy"
+		err = da.GetFolderDA().BatchReplaceFolderPath(ctx, tx, info.Ids, originPath, newPath)
+		if err != nil {
+			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+			return err
+		}
 	}
 
 	//更新子目录link文件
@@ -705,7 +719,7 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 	var parentFolder *entity.FolderItem
 	var err error
 	//get parent folder if exists
-	if req.ParentID != "" && req.ParentID != "/" {
+	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
 		parentFolder, err = f.getFolder(ctx, tx, req.ParentID)
 		if err != nil {
 			return "", err

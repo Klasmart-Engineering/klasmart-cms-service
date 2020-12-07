@@ -92,8 +92,21 @@ func TestBatchUpdatePath(t *testing.T) {
 		"5fc9edaba06736d33312750e",
 		"5fc9eda4bfbf99d0a0eb241a",
 	}
-	err := GetFolderDA().BatchUpdateFolderPath(context.Background(), dbo.MustGetDB(context.Background()),
+	err := GetFolderDA().BatchReplaceFolderPath(context.Background(), dbo.MustGetDB(context.Background()),
 		fids, "/", "/5fca13af8c9ae169ed002557/5fc88381285b97fd15b7a58f/")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log("done")
+}
+
+func TestBatchUpdatePathPrefix(t *testing.T) {
+	fids := []string{
+		"5fb791ccb6574c2e81d2be7b",
+	}
+	err := GetFolderDA().BatchUpdateFolderPathPrefix(context.Background(), dbo.MustGetDB(context.Background()),
+		fids, "/5fca13af8c9ae169ed002557/5fc88381285b97fd15b7a58f")
 	if err != nil {
 		t.Error(err)
 		return
