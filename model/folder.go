@@ -492,7 +492,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	//更新子目录
 	//origin: /
 	//target: /xxx => /xxx/
-	newPath := folder.ChildrenPath()
+	newPath := folder.DirPath
 	if originPath == constant.FolderRootPath && newPath != constant.FolderRootPath {
 		newPath = newPath + "/"
 	}
