@@ -121,6 +121,12 @@ func (s *Server) register(c *gin.Context) {
 		return
 	}
 	pass, err := model.VerifyCode(ctx, req.Account, req.AuthCode)
+	if err == constant.ErrUnAuthorized {
+		log.Warn(ctx, "register: VerifyCode failed", log.Any("req", req))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
 	if err != nil {
 		log.Error(ctx, "register:VerifyCode failed", log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -128,7 +134,7 @@ func (s *Server) register(c *gin.Context) {
 	}
 	if !pass {
 		log.Warn(ctx, "register: not pass", log.Any("req", req))
-		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	user, err := model.GetUserModel().RegisterUser(ctx, req.Account, req.Password, req.ActType)
@@ -310,6 +316,10 @@ func (s *Server) resetPassword(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+type CheckAccountResponse struct {
+	Status string `json:"status"`
+}
+
 // @ID checkAccount
 // @Summary checkAccount
 // @Tags user
@@ -317,7 +327,7 @@ func (s *Server) resetPassword(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param account query string true "account"
-// @Success 200
+// @Success 200 {object} CheckAccountResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 409
 // @Failure 500 {object} InternalServerErrorResponse
@@ -335,11 +345,11 @@ func (s *Server) checkAccount(c *gin.Context) {
 	}
 	user, err := model.GetUserModel().GetUserByAccount(ctx, req.Account)
 	if err == constant.ErrRecordNotFound {
-		c.Status(http.StatusOK)
+		c.JSON(http.StatusOK, CheckAccountResponse{constant.AccountUnregister})
 		return
 	}
 	if user != nil {
-		c.Status(http.StatusConflict)
+		c.JSON(http.StatusOK, CheckAccountResponse{constant.AccountExist})
 		return
 	}
 
