@@ -494,7 +494,6 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return err
 	}
 
-	//if originPath == target path
 	newPath := folder.DirPath
 	if originPath == constant.FolderRootPath {
 		//if origin path is root("/")
