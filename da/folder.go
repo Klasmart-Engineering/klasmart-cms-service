@@ -24,8 +24,8 @@ type IFolderDA interface {
 	UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f *entity.FolderItem) error
 	AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error
 
-	BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error
-	// BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error
+	BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error
+	BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DBContext, fids []string, prefix entity.Path) error
 
 	DeleteFolder(ctx context.Context, tx *dbo.DBContext, fid string) error
 	GetFolderByID(ctx context.Context, tx *dbo.DBContext, fid string) (*entity.FolderItem, error)
@@ -79,7 +79,8 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 	return nil
 }
 
-func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error {
+//Unused because when old path is root path("/"), replace function in mysql will replace all "/" in path
+func (fda *FolderDA) BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error {
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(fids) < 1 {
 		//若fids为空，则不更新
@@ -103,6 +104,40 @@ func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "update folder da failed", log.Err(err),
 			log.Strings("fids", fids),
 			log.String("path", string(path)),
+			log.String("oldPath", string(oldPath)),
+			log.String("sql", sql),
+			log.Any("params", params))
+		return err
+	}
+
+	return nil
+}
+
+func (fda *FolderDA) BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DBContext, fids []string, prefix entity.Path) error {
+	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
+	if len(fids) < 1 {
+		//若fids为空，则不更新
+		return nil
+	}
+
+	fidsSQLParts := make([]string, len(fids))
+	params := []interface{}{prefix}
+	for i := range fids {
+		fidsSQLParts[i] = "?"
+		params = append(params, fids[i])
+	}
+	fidsSQL := strings.Join(fidsSQLParts, ",")
+
+	sql := fmt.Sprintf(`UPDATE cms_folder_items SET dir_path = CONCAT(?, dir_path) WHERE id IN (%s)`, fidsSQL)
+	err := tx.Exec(sql, params...).Error
+
+	log.Info(ctx, "update folder",
+		log.String("sql", sql),
+		log.Any("params", params))
+	if err != nil {
+		log.Error(ctx, "update folder da failed", log.Err(err),
+			log.Strings("fids", fids),
+			log.String("path", string(prefix)),
 			log.String("sql", sql),
 			log.Any("params", params))
 		return err
