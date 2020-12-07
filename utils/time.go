@@ -137,7 +137,16 @@ func (tu *TimeUtil) GetTimeByWeekday(weekday time.Weekday) time.Time {
 	return newTime
 }
 
+func (tu *TimeUtil) ToTime() time.Time {
+	return time.Unix(tu.TimeStamp, 0).In(tu.Location)
+}
+
 func (tu *TimeUtil) NextDayStart(t time.Time) time.Time {
 	newTime := t.AddDate(0, 0, 1)
 	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, tu.Location)
+}
+
+func (tu *TimeUtil) StartOfMonth() time.Time {
+	temp := tu.ToTime()
+	return time.Date(temp.Year(), temp.Month(), 1, 0, 0, 0, 0, tu.Location)
 }

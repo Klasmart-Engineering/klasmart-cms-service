@@ -32,7 +32,7 @@ func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location,
 		return nil, constant.ErrInvalidArgs
 	}
 	result := make([]*RepeatCyclePlan, 0)
-
+	timeTool := utils.NewTimeUtil(baseTime, loc)
 	switch repeatCfg.Type {
 	case entity.RepeatTypeDaily:
 		result = append(result, &RepeatCyclePlan{
@@ -51,8 +51,7 @@ func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location,
 				log.Info(ctx, "repeatCfg.Weekly.On rule invalid", log.Any("repeatCfg", repeatCfg))
 				return nil, constant.ErrInvalidArgs
 			}
-			tu := utils.NewTimeUtil(baseTime, loc)
-			selectWeekDayTime := tu.GetTimeByWeekday(item.TimeWeekday())
+			selectWeekDayTime := timeTool.GetTimeByWeekday(item.TimeWeekday())
 			result = append(result, &RepeatCyclePlan{
 				IntervalDay: repeatCfg.Weekly.Interval * 7,
 				BaseTime:    selectWeekDayTime.Unix(),
@@ -60,6 +59,13 @@ func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location,
 			})
 		}
 	case entity.RepeatTypeMonthly:
+		//monthStart := timeTool.StartOfMonth()
+		//switch repeatCfg.Monthly.OnType {
+		//case entity.RepeatMonthlyOnDate:
+		//	for {
+		//
+		//	}
+		//}
 	case entity.RepeatTypeYearly:
 	}
 	return nil, nil
