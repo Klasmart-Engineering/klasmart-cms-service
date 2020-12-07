@@ -210,9 +210,9 @@ Create Table: CREATE TABLE `users` (
   `update_id` varchar(64) DEFAULT NULL,
   `delete_id` varchar(64) DEFAULT NULL,
   `ams_id` varchar(64) DEFAULT NULL,
-  PRIMARY KEY (`user_id`,`delete_at`),
+  PRIMARY KEY (`user_id`),
   UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 alter table learning_outcomes
 add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);

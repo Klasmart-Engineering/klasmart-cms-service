@@ -75,7 +75,7 @@ type IFolderModel interface {
 
 	//内部API，修改Folder的Visibility Settings
 	//查看路径是否存在
-	ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error)
+	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
 	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
@@ -115,14 +115,14 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 	return nil
 }
 
-func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error {
-	err := da.GetFolderDA().BatchUpdateFolderPathByLink(ctx, tx, links, path)
-	if err != nil {
-		log.Error(ctx, "update folder item visibility settings failed", log.Err(err), log.Any("links", links))
-		return err
-	}
-	return nil
-}
+// func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error {
+// 	err := da.GetFolderDA().BatchUpdateFolderPathByLink(ctx, tx, links, path)
+// 	if err != nil {
+// 		log.Error(ctx, "update folder item visibility settings failed", log.Err(err), log.Any("links", links))
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error {
 	//Update folder item visibility settings
@@ -274,7 +274,7 @@ func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType e
 func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
 	total, folderItems, err := da.GetFolderDA().SearchFolderPage(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
 		ParentID:  condition.ParentID,
-		Name:      condition.Name,
+		NameLike:  condition.Name,
 		ItemType:  int(condition.ItemType),
 		OwnerType: int(condition.OwnerType),
 		Owner:     condition.Owner,
@@ -319,17 +319,17 @@ func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string
 	return parentID
 }
 
-func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error) {
+func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
 	if path == "" || path == "/" {
 		log.Info(ctx, "check folder exists with nil",
 			log.String("path", path))
-		return false, nil
+		return constant.FolderRootPath, nil
 	}
 	pathDirs := strings.Split(path, "/")
 	if len(pathDirs) < 1 {
 		log.Info(ctx, "check folder exists with array 0",
 			log.Strings("pathDirs", pathDirs))
-		return false, nil
+		return constant.FolderRootPath, nil
 	}
 
 	parentID := pathDirs[len(pathDirs)-1]
@@ -341,17 +341,23 @@ func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerTy
 		ItemType:  int(itemType),
 	}
 
-	total, err := da.GetFolderDA().SearchFolderCount(ctx, tx, condition)
+	folders, err := da.GetFolderDA().SearchFolder(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "search folder failed",
 			log.Err(err),
 			log.Any("condition", condition))
-		return false, err
+		return constant.FolderRootPath, err
 	}
 	log.Info(ctx, "search folder count",
 		log.Any("condition", condition),
-		log.Int("total", total))
-	return total > 0, nil
+		log.Any("folders", folders))
+	if len(folders) < 1 {
+		log.Info(ctx, "search folder response no folders",
+			log.Err(err),
+			log.Any("condition", condition))
+		return constant.FolderRootPath, nil
+	}
+	return folders[0].ChildrenPath().ParentPath(), nil
 }
 
 func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
@@ -472,6 +478,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return err
 	}
 	//更新当前目录
+	originPath := folder.DirPath
 	originParentID := folder.ParentID
 	path := distFolder.ChildrenPath()
 	folder.DirPath = path
@@ -484,7 +491,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 
 	//更新子目录
 	newPath := folder.ChildrenPath()
-	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, newPath)
+	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, originPath, newPath)
 	if err != nil {
 		log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
 		return err
@@ -1016,27 +1023,6 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 	if total > 0 {
 		return ErrDuplicateFolderName
 	}
-	//check duplicate parentFolder name
-	//if len(folders) > 0 {
-	//	//if owner type is organization,parentFolder can be the same
-	//	//in different partition
-	//	if ownerType == entity.OwnerTypeOrganization {
-	//		p := parentFolder.DirPath.Parents()
-	//		if len(p) < 1 {
-	//			//root path can't be the same
-	//			return ErrDuplicateFolderName
-	//		}
-	//		for i := range folders {
-	//			parents := folders[i].DirPath.Parents()
-	//			if len(parents) > 1 && parents[0] == p[0]{
-	//				return ErrDuplicateFolderName
-	//			}
-	//		}
-	//		return nil
-	//	}
-	//
-	//	return ErrDuplicateFolderName
-	//}
 
 	return nil
 }

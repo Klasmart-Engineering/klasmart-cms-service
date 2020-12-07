@@ -43,6 +43,7 @@ type LiveTokenInfo struct {
 	RoomID     string          `json:"roomid"`
 	Materials  []*LiveMaterial `json:"materials"`
 	ClassType  LiveClassType   `json:"classtype"`
+	OrgID      string          `json:"org_id"`
 }
 
 type LiveMaterial struct {

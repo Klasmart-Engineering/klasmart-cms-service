@@ -11,6 +11,7 @@ import (
 type IUserDA interface {
 	GetUserByAccount(ctx context.Context, tx *dbo.DBContext, account string) (*entity.User, error)
 	InsertTx(context.Context, *dbo.DBContext, *entity.User) (*entity.User, error)
+	UpdateTx(context.Context, *dbo.DBContext, *entity.User) (int64, error)
 }
 
 var _userOnce sync.Once

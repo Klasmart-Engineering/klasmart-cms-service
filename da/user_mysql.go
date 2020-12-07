@@ -127,7 +127,7 @@ func (c *UserCondition) GetUserOrderBy() string {
 
 func (u *UserSqlDA) GetUserByAccount(ctx context.Context, tx *dbo.DBContext, account string) (*entity.User, error) {
 	var user entity.User
-	sql := fmt.Sprintf("select * from %s where phone = %s or email = %s", user.TableName(), account, account)
+	sql := fmt.Sprintf("select * from %s where user_id = '%s' or phone = '%s' or email = '%s'", user.TableName(), account, account, account)
 	err := tx.Raw(sql).Find(&user).Error
 
 	if gorm.IsRecordNotFoundError(err) {
@@ -154,4 +154,8 @@ func (u *UserSqlDA) InsertTx(ctx context.Context, db *dbo.DBContext, value *enti
 		return nil, constant.ErrDuplicateRecord
 	}
 	return res.(*entity.User), err
+}
+
+func (u *UserSqlDA) UpdateTx(ctx context.Context, tx *dbo.DBContext, user *entity.User) (int64, error) {
+	return u.BaseDA.UpdateTx(ctx, tx, user)
 }

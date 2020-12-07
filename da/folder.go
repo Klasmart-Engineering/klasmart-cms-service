@@ -2,22 +2,23 @@ package da
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 type IFolderDA interface {
-	CreateFolder(ctx context.Context, tx *dbo.DBContext, f *entity.FolderItem) (string ,error)
+	CreateFolder(ctx context.Context, tx *dbo.DBContext, f *entity.FolderItem) (string, error)
 	UpdateFolder(ctx context.Context, tx *dbo.DBContext, fid string, f *entity.FolderItem) error
 	AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext, fid string, addon int) error
 
-	BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path entity.Path) error
-	BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error
+	BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error
+	// BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error
 
 	DeleteFolder(ctx context.Context, tx *dbo.DBContext, fid string) error
 	GetFolderByID(ctx context.Context, tx *dbo.DBContext, fid string) (*entity.FolderItem, error)
@@ -29,7 +30,7 @@ type IFolderDA interface {
 	SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error)
 }
 
-type FolderDA struct{
+type FolderDA struct {
 	s dbo.BaseDA
 }
 
@@ -71,17 +72,27 @@ func (fda *FolderDA) AddFolderItemsCount(ctx context.Context, tx *dbo.DBContext,
 	return nil
 }
 
+func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, oldPath, path entity.Path) error {
+	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
+	sql := `UPDATE cms_folder_items SET path = replace(path,?,?) WHERE id IN (?)`
+	params := []interface{}{oldPath, path, fids}
+	err := tx.Exec(sql, params).Error
 
-func (fda *FolderDA) BatchUpdateFolderPath(ctx context.Context, tx *dbo.DBContext, fids []string, path entity.Path) error{
-	err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
+	log.Info(ctx, "update folder",
+		log.String("sql", sql),
+		log.Any("params", params))
 	if err != nil {
-		log.Error(ctx, "update folder da failed", log.Err(err), log.Strings("fids", fids), log.String("path", string(path)))
+		log.Error(ctx, "update folder da failed", log.Err(err),
+			log.Strings("fids", fids),
+			log.String("path", string(path)),
+			log.String("sql", sql),
+			log.Any("params", params))
 		return err
 	}
 
 	return nil
 }
-func (fda *FolderDA) BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, link []string, path entity.Path) error{
+func (fda *FolderDA) BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DBContext, link []string, path entity.Path) error {
 	err := tx.Model(entity.FolderItem{}).Where("link IN (?)", link).Updates(map[string]interface{}{"path": path}).Error
 	if err != nil {
 		log.Error(ctx, "update folder da failed", log.Err(err), log.Strings("link", link), log.String("path", string(path)))
@@ -93,7 +104,7 @@ func (fda *FolderDA) BatchUpdateFolderPathByLink(ctx context.Context, tx *dbo.DB
 
 func (fda *FolderDA) DeleteFolder(ctx context.Context, tx *dbo.DBContext, fid string) error {
 	folderItem, err := fda.GetFolderByID(ctx, tx, fid)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	folderItem.ID = fid
@@ -124,7 +135,7 @@ func (fda *FolderDA) GetFolderByID(ctx context.Context, tx *dbo.DBContext, fid s
 func (fda *FolderDA) GetFolderByIDList(ctx context.Context, tx *dbo.DBContext, fids []string) ([]*entity.FolderItem, error) {
 	objs := make([]*entity.FolderItem, 0)
 	err := fda.s.QueryTx(ctx, tx, &FolderCondition{
-		IDs:           fids,
+		IDs: fids,
 	}, &objs)
 	if err != nil {
 		return nil, err
@@ -142,7 +153,7 @@ func (fda *FolderDA) SearchFolderPage(ctx context.Context, tx *dbo.DBContext, co
 
 	return count, objs, nil
 }
-func (fda *FolderDA) SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error){
+func (fda *FolderDA) SearchFolder(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) ([]*entity.FolderItem, error) {
 	objs := make([]*entity.FolderItem, 0)
 	err := fda.s.QueryTx(ctx, tx, &condition, &objs)
 	if err != nil {
@@ -151,7 +162,7 @@ func (fda *FolderDA) SearchFolder(ctx context.Context, tx *dbo.DBContext, condit
 
 	return objs, nil
 }
-func (fda *FolderDA) SearchFolderCount(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, error){
+func (fda *FolderDA) SearchFolderCount(ctx context.Context, tx *dbo.DBContext, condition FolderCondition) (int, error) {
 	total, err := fda.s.CountTx(ctx, tx, &condition, entity.FolderItem{})
 	if err != nil {
 		return 0, err
@@ -160,9 +171,8 @@ func (fda *FolderDA) SearchFolderCount(ctx context.Context, tx *dbo.DBContext, c
 	return total, nil
 }
 
-
-
 type FolderOrderBy int
+
 const (
 	FolderOrderByCreatedAtDesc = iota
 	FolderOrderByCreatedAt
@@ -219,12 +229,14 @@ type FolderCondition struct {
 	Owner     string
 	ParentID  string
 	Partition entity.FolderPartition
-	Link string
+	Link      string
 
+	NameLike      string
 	Name          string
 	DirDescendant string
 
 	Editors []string
+	Disable bool
 
 	ExactDirPath string
 
@@ -262,6 +274,10 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Editors)
 	}
 
+	if s.Disable {
+		conditions = append(conditions, "1!=1")
+	}
+
 	if s.ParentID != "" {
 		conditions = append(conditions, "parent_id = ?")
 		params = append(params, s.ParentID)
@@ -270,13 +286,18 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, "link = ?")
 		params = append(params, s.Link)
 	}
+	if s.NameLike != "" {
+		conditions = append(conditions, "name like ?")
+		params = append(params, s.NameLike+"%")
+	}
 	if s.Name != "" {
 		conditions = append(conditions, "name = ?")
 		params = append(params, s.Name)
 	}
+
 	if s.DirDescendant != "" {
 		conditions = append(conditions, "dir_path like ?")
-		params = append(params, s.DirDescendant+ "%")
+		params = append(params, s.DirDescendant+"%")
 	}
 	if s.ExactDirPath != "" {
 		conditions = append(conditions, "dir_path = ?")
@@ -304,7 +325,7 @@ func (f *FolderCondition) GetOrderBy() string {
 }
 
 var (
-	folderDA    IFolderDA
+	folderDA      IFolderDA
 	_folderDAOnce sync.Once
 )
 

@@ -1846,10 +1846,14 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIds []string, user *entity.Operator) *da.FolderCondition {
 	dirPath := condition.DirPath
 	isAssets := false
+	disableFolder := true
 	for i := range condition.ContentType {
 		if entity.NewContentType(condition.ContentType[i]).IsAsset() {
 			isAssets = true
-			break
+			continue
+		}
+		if entity.NewContentType(condition.ContentType[i]) == entity.AliasContentTypeFolder {
+			disableFolder = false
 		}
 	}
 	partition := entity.FolderPartitionMaterialAndPlans
@@ -1861,10 +1865,11 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		OwnerType:    int(entity.OwnerTypeOrganization),
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
-		Name:         condition.Name,
+		NameLike:     condition.Name,
 		ExactDirPath: dirPath,
 		Editors:      searchUserIds,
 		Partition:    partition,
+		Disable:      disableFolder,
 	}
 	return folderCondition
 }
