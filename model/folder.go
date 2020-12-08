@@ -484,6 +484,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 	//更新当前目录
 	originPath := folder.DirPath
+	linkOriginPath := folder.ChildrenPath()
 	originParentID := folder.ParentID
 	path := distFolder.ChildrenPath()
 	folder.DirPath = path
@@ -521,9 +522,9 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//更新子目录link文件
-	// linkPath := folder.ChildrenPath()
+	linkPath := folder.ChildrenPath()
 	//replaceLinkedItemPath
-	err = f.replaceLinkedItemPath(ctx, tx, info.Links, string(originPath), string(newPath))
+	err = f.replaceLinkedItemPath(ctx, tx, info.Links, string(linkOriginPath), string(linkPath))
 	if err != nil {
 		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", info.Ids), log.Strings("links", info.Links), log.String("path", string(path)))
 		return err
@@ -1059,6 +1060,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 		IDs:       nil,
 		ItemType:  int(entity.FolderItemTypeFolder),
 		OwnerType: int(folder.OwnerType),
+		Partition: folder.Partition,
 		Owner:     folder.Owner,
 		Name:      name,
 	}
