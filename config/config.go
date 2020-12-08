@@ -42,9 +42,14 @@ type Config struct {
 	KidsLoopRegion        string                `json:"kidsloop_region" yaml:"kidsloop_region"`
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
+	CORS                  CORSConfig            `json:"cors" yaml:"cors"`
 }
 
 var config *Config
+
+type CORSConfig struct {
+	AllowOrigins []string `json:"allow_origins"`
+}
 
 type CryptoConfig struct {
 	PrivateKeyPath string `yaml:"h5p_private_key_path"`
@@ -71,8 +76,8 @@ type DBConfig struct {
 }
 
 type StorageConfig struct {
-	Accelerate bool   `yaml:"accelerate"`
-	CloudEnv   string `yaml:"cloud_env"`
+	Accelerate      bool   `yaml:"accelerate"`
+	StorageProtocol string `yaml:"storage_protocol"`
 
 	StorageEndPoint string `yaml:"storage_end_point"`
 	StorageBucket   string `yaml:"storage_bucket"`
@@ -153,6 +158,7 @@ func LoadEnvConfig() {
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
 	loadAssessmentConfig(ctx)
+	loadCORSConfig(ctx)
 }
 
 func loadKidsloopCNLoginConfig(ctx context.Context) {
@@ -197,7 +203,7 @@ func loadTencentConfig(ctx context.Context) {
 	config.TencentConfig.Sms.Sign = assertGetEnv("tc_sms_sign")
 	config.TencentConfig.Sms.TemplateID = assertGetEnv("tc_sms_template_id")
 	config.TencentConfig.Sms.TemplateParamSet = assertGetEnv("tc_sms_template_param_set")
-	config.TencentConfig.Sms.MobilePrefix = assertGetEnv("tc_scm_mobile_prefix")
+	config.TencentConfig.Sms.MobilePrefix = assertGetEnv("tc_sms_mobile_prefix")
 	config.TencentConfig.Sms.OTPPeriod = os.Getenv("OTP_PERIOD")
 }
 
@@ -206,7 +212,7 @@ func loadCryptoEnvConfig(ctx context.Context) {
 }
 
 func loadStorageEnvConfig(ctx context.Context) {
-	config.StorageConfig.CloudEnv = assertGetEnv("cloud_env")
+	config.StorageConfig.StorageProtocol = assertGetEnv("storage_protocol")
 	config.StorageConfig.StorageBucket = assertGetEnv("storage_bucket")
 	config.StorageConfig.StorageRegion = assertGetEnv("storage_region")
 	config.StorageConfig.StorageEndPoint = os.Getenv("storage_endpoint")
@@ -287,7 +293,7 @@ func loadDBEnvConfig(ctx context.Context) {
 	maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
 	if err != nil {
 		log.Error(ctx, "Can't parse max_idle_conns", log.Err(err))
-		maxOpenConns = 16
+		maxIdleConns = 16
 	}
 	config.DBConfig.MaxIdleConns = maxIdleConns
 
@@ -301,7 +307,7 @@ func loadDBEnvConfig(ctx context.Context) {
 	showSQL, err := strconv.ParseBool(showSQLStr)
 	if err != nil {
 		log.Error(ctx, "Can't parse show_sql", log.Err(err))
-		showLog = true
+		showSQL = true
 	}
 	config.DBConfig.ShowSQL = showSQL
 
@@ -352,6 +358,10 @@ func loadAMSConfig(ctx context.Context) {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.AMS.TokenVerifyKey = key
+}
+
+func loadCORSConfig(ctx context.Context) {
+	config.CORS.AllowOrigins = strings.Split(os.Getenv("cors_domain_list"), ",")
 }
 
 func Get() *Config {

@@ -488,29 +488,6 @@ func TestSearchFolder(t *testing.T) {
 	t.Logf("%#v\n", folderInfo)
 }
 
-//func TestFolderModel_GetRootFolder(t *testing.T) {
-//	rootId, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootMaterialsAndPlansFolderName, entity.OwnerTypeOrganization, fakeOperator())
-//	if !assert.NoError(t, err) {
-//		return
-//	}
-//	t.Logf("%#v\n", rootId)
-//
-//	rootId2, err := GetFolderModel().GetRootFolder(context.Background(), entity.RootAssetsFolderName, entity.OwnerTypeOrganization, fakeOperator())
-//	if !assert.NoError(t, err) {
-//		return
-//	}
-//	t.Logf("%#v\n", rootId2)
-//
-//	res, err := GetFolderModel().AddItem(context.Background(), entity.CreateFolderItemRequest{
-//		ParentFolderID: rootId.ID,
-//		Link:           "content-5f695a3bcc3a933a1c16d4db",
-//	}, fakeOperator())
-//	if !assert.NoError(t, err) {
-//		return
-//	}
-//	t.Logf("%#v\n", res)
-//}
-
 func TestSplit(t *testing.T) {
 	t.Log(strings.Split("/", "/"))
 }

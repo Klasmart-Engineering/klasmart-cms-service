@@ -194,25 +194,25 @@ drop index fullindex_name_description_keywords_author_shortcode on learning_outc
 alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 
 Create Table: CREATE TABLE `users` (
-  `user_id` char(64) NOT NULL,
+  `user_id` varchar(64) NOT NULL,
   `user_name` varchar(30) DEFAULT NULL,
-  `phone` char(24) DEFAULT NULL,
+  `phone` varchar(24) DEFAULT NULL,
   `email` varchar(80) DEFAULT NULL,
-  `secret` char(128) DEFAULT NULL,
-  `salt` char(128) DEFAULT NULL,
-  `gender` char(8) DEFAULT NULL,
+  `secret` varchar(128) DEFAULT NULL,
+  `salt` varchar(128) DEFAULT NULL,
+  `gender` varchar(8) DEFAULT NULL,
   `birthday` bigint(20) DEFAULT NULL,
   `avatar` text DEFAULT NULL,
   `create_at` bigint(20) DEFAULT '0',
   `update_at` bigint(20) DEFAULT '0',
   `delete_at` bigint(20) DEFAULT '0',
-  `create_id` char(64),
-  `update_id` char(64),
-  `delete_id` char(64),
-  `ams_id` char(64),
-  UNIQUE KEY `uix_user_id` (`user_id`,`delete_at`),
+  `create_id` varchar(64) DEFAULT NULL,
+  `update_id` varchar(64) DEFAULT NULL,
+  `delete_id` varchar(64) DEFAULT NULL,
+  `ams_id` varchar(64) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
   UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 alter table learning_outcomes
 add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);

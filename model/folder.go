@@ -34,6 +34,7 @@ var (
 	ErrNoFolder               = errors.New("no folder")
 	ErrMoveRootFolder         = errors.New("move root folder")
 	ErrMoveToChild            = errors.New("move to child folder")
+	ErrMoveToSameFolder       = errors.New("move to same folder")
 	ErrItemNotFound           = errors.New("item not found")
 )
 
@@ -75,7 +76,7 @@ type IFolderModel interface {
 
 	//内部API，修改Folder的Visibility Settings
 	//查看路径是否存在
-	ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error)
+	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
 	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
 }
@@ -115,14 +116,14 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 	return nil
 }
 
-func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error {
-	err := da.GetFolderDA().BatchUpdateFolderPathByLink(ctx, tx, links, path)
-	if err != nil {
-		log.Error(ctx, "update folder item visibility settings failed", log.Err(err), log.Any("links", links))
-		return err
-	}
-	return nil
-}
+// func (f *FolderModel) updateFolderPathByLinks(ctx context.Context, tx *dbo.DBContext, links []string, path entity.Path) error {
+// 	err := da.GetFolderDA().BatchUpdateFolderPathByLink(ctx, tx, links, path)
+// 	if err != nil {
+// 		log.Error(ctx, "update folder item visibility settings failed", log.Err(err), log.Any("links", links))
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error {
 	//Update folder item visibility settings
@@ -274,7 +275,7 @@ func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType e
 func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
 	total, folderItems, err := da.GetFolderDA().SearchFolderPage(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
 		ParentID:  condition.ParentID,
-		Name:      condition.Name,
+		NameLike:  condition.Name,
 		ItemType:  int(condition.ItemType),
 		OwnerType: int(condition.OwnerType),
 		Owner:     condition.Owner,
@@ -306,7 +307,7 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 }
 
 func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string {
-	if path == "" || path == "/" {
+	if path == "" || path == constant.FolderRootPath {
 		return constant.FolderRootPath
 	}
 	pathDirs := strings.Split(path, "/")
@@ -319,17 +320,17 @@ func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string
 	return parentID
 }
 
-func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (bool, error) {
-	if path == "" || path == "/" {
+func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
+	if path == "" || path == constant.FolderRootPath {
 		log.Info(ctx, "check folder exists with nil",
 			log.String("path", path))
-		return false, nil
+		return constant.FolderRootPath, nil
 	}
 	pathDirs := strings.Split(path, "/")
 	if len(pathDirs) < 1 {
 		log.Info(ctx, "check folder exists with array 0",
 			log.Strings("pathDirs", pathDirs))
-		return false, nil
+		return constant.FolderRootPath, nil
 	}
 
 	parentID := pathDirs[len(pathDirs)-1]
@@ -341,17 +342,23 @@ func (f *FolderModel) ExistsPath(ctx context.Context, tx *dbo.DBContext, ownerTy
 		ItemType:  int(itemType),
 	}
 
-	total, err := da.GetFolderDA().SearchFolderCount(ctx, tx, condition)
+	folders, err := da.GetFolderDA().SearchFolder(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "search folder failed",
 			log.Err(err),
 			log.Any("condition", condition))
-		return false, err
+		return constant.FolderRootPath, err
 	}
 	log.Info(ctx, "search folder count",
 		log.Any("condition", condition),
-		log.Int("total", total))
-	return total > 0, nil
+		log.Any("folders", folders))
+	if len(folders) < 1 {
+		log.Info(ctx, "search folder response no folders",
+			log.Err(err),
+			log.Any("condition", condition))
+		return constant.FolderRootPath, nil
+	}
+	return folders[0].ChildrenPath().ParentPath(), nil
 }
 
 func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error) {
@@ -384,6 +391,10 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 	if folder.ItemType.IsFolder() && distFolder.DirPath.IsChild(folder.ID) {
 		//distFolder.DirPath
 		return ErrMoveToChild
+	}
+	if distFolder.DirPath == folder.ChildrenPath() {
+		//distFolder.DirPath
+		return ErrMoveToSameFolder
 	}
 
 	return nil
@@ -472,6 +483,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return err
 	}
 	//更新当前目录
+	originPath := folder.DirPath
 	originParentID := folder.ParentID
 	path := distFolder.ChildrenPath()
 	folder.DirPath = path
@@ -482,12 +494,30 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return err
 	}
 
-	//更新子目录
-	newPath := folder.ChildrenPath()
-	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, newPath)
-	if err != nil {
-		log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
-		return err
+	newPath := folder.DirPath
+	if originPath == constant.FolderRootPath {
+		//if origin path is root("/")
+		//when old path is root path("/"), replace function in mysql will replace all "/" in path
+		//we prefix the new path as => new_path + origin_path
+		err = da.GetFolderDA().BatchUpdateFolderPathPrefix(ctx, tx, info.Ids, newPath)
+		if err != nil {
+			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+			return err
+		}
+	} else {
+		//origin: /xxx => /xxx/
+		//target: /
+		//to prevent target path build as //xxxx
+		if newPath == constant.FolderRootPath {
+			originPath = originPath + "/"
+		}
+		//when old path is not root path like "/xxx/xxx"
+		//replace origin path "/xxx/xxx" to target path "/yyy/yyy/yyy"
+		err = da.GetFolderDA().BatchReplaceFolderPath(ctx, tx, info.Ids, originPath, newPath)
+		if err != nil {
+			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+			return err
+		}
 	}
 
 	//更新子目录link文件
@@ -688,7 +718,7 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 	var parentFolder *entity.FolderItem
 	var err error
 	//get parent folder if exists
-	if req.ParentID != "" && req.ParentID != "/" {
+	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
 		parentFolder, err = f.getFolder(ctx, tx, req.ParentID)
 		if err != nil {
 			return "", err
@@ -1016,27 +1046,6 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 	if total > 0 {
 		return ErrDuplicateFolderName
 	}
-	//check duplicate parentFolder name
-	//if len(folders) > 0 {
-	//	//if owner type is organization,parentFolder can be the same
-	//	//in different partition
-	//	if ownerType == entity.OwnerTypeOrganization {
-	//		p := parentFolder.DirPath.Parents()
-	//		if len(p) < 1 {
-	//			//root path can't be the same
-	//			return ErrDuplicateFolderName
-	//		}
-	//		for i := range folders {
-	//			parents := folders[i].DirPath.Parents()
-	//			if len(parents) > 1 && parents[0] == p[0]{
-	//				return ErrDuplicateFolderName
-	//			}
-	//		}
-	//		return nil
-	//	}
-	//
-	//	return ErrDuplicateFolderName
-	//}
 
 	return nil
 }

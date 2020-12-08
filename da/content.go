@@ -104,12 +104,12 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := "match(content_name, description, keywords) against(? in boolean mode)"
 		if len(s.JoinUserIdList) > 0 {
 			condition1 := "author in (?)"
-			where := "(" +condition + " OR " + condition1+")"
+			where := "(" + condition + " OR " + condition1 + ")"
 
 			conditions = append(conditions, where)
 			params = append(params, s.Name)
 			params = append(params, s.JoinUserIdList)
-		}else{
+		} else {
 			conditions = append(conditions, condition)
 			params = append(params, s.Name)
 		}
@@ -122,7 +122,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 
 	if len(s.ContentType) > 0 {
 		var subConditions []string
-		
+
 		for _, item := range s.ContentType {
 			subConditions = append(subConditions, "content_type in (?) ")
 			params = append(params, fmt.Sprintf("%d", item))
@@ -290,7 +290,7 @@ func (cd *DBContentDA) GetContentByID(ctx context.Context, tx *dbo.DBContext, ci
 func (cd *DBContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error) {
 	objs := make([]*entity.Content, 0)
 	err := cd.s.QueryTx(ctx, tx, &ContentCondition{
-		IDS:           cids,
+		IDS: cids,
 	}, &objs)
 	if err != nil {
 		return nil, err
@@ -326,7 +326,7 @@ func (cd *DBContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContex
 	return cd.doSearchFolderContent(ctx, tx, &condition1, &condition2)
 }
 
-func (cd *DBContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error){
+func (cd *DBContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error) {
 	return cd.doSearchFolderContent(ctx, tx, &condition1, &condition2)
 }
 func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 dbo.Conditions) (int, []*entity.FolderContent, error) {
@@ -339,7 +339,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	//获取数量
 	query := cd.countFolderContentSQL(query1, query2)
 	err = tx.Raw(query, params1...).Scan(&total).Error
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "count raw sql failed", log.Err(err),
 			log.String("query", query), log.Any("params", params1),
 			log.Any("condition1", condition1), log.Any("condition2", condition2))
@@ -348,7 +348,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 
 	//查询
 	folderContents := make([]*entity.FolderContent, 0)
-	db := tx.Raw(cd.searchFolderContentSQL(query1, query2), params1...)
+	db := tx.Raw(cd.searchFolderContentSQL(ctx, query1, query2), params1...)
 	orderBy := condition1.GetOrderBy()
 	if orderBy != "" {
 		db = db.Order(orderBy)
@@ -361,7 +361,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 		db = db.Offset(offset).Limit(limit)
 	}
 	err = db.Find(&folderContents).Error
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "query raw sql failed", log.Err(err),
 			log.String("query", query), log.Any("params", params1),
 			log.Any("condition1", condition1), log.Any("condition2", condition2))
@@ -374,21 +374,23 @@ func (cd *DBContentDA) Count(ctx context.Context, condition dbo.Conditions) (int
 	return cd.s.Count(ctx, condition, &entity.Content{})
 }
 
-func (cd *DBContentDA) searchFolderContentSQL(query1, query2 []string) string{
+func (cd *DBContentDA) searchFolderContentSQL(ctx context.Context, query1, query2 []string) string {
 	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
-	return `SELECT 
-id, 0 as content_type, name, items_count, '' AS description, '' as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
-FROM cms_folder_items 
-WHERE ` + rawQuery2 +` 
-UNION ALL SELECT 
-id, content_type, content_name AS name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
-FROM cms_contents 
-WHERE ` + rawQuery1
+	sql := fmt.Sprintf(`SELECT 
+	id, %v as content_type, name AS content_name, items_count, '' AS description, '' as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
+	FROM cms_folder_items 
+	WHERE  %v
+	UNION ALL SELECT 
+	id, content_type, content_name, 0 AS items_count, description, keywords, author, dir_path, publish_status, thumbnail, data, create_at, update_at
+	FROM cms_contents 
+	WHERE %v`, entity.AliasContentTypeFolder, rawQuery2, rawQuery1)
+
+	log.Info(ctx, "search folder content", log.String("sql", sql))
+	return sql
 }
 
-
-func (cd *DBContentDA) countFolderContentSQL(query1, query2 []string) string{
+func (cd *DBContentDA) countFolderContentSQL(query1, query2 []string) string {
 	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
 	return `SELECT COUNT(*) AS total FROM 

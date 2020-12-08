@@ -97,6 +97,9 @@ const (
 
 	AccountPhone = "" // as default
 	AccountEmail = "email"
+
+	AccountExist      = "exist"
+	AccountUnregister = "unregister"
 )
 
 const (

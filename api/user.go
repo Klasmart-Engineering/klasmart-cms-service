@@ -121,6 +121,12 @@ func (s *Server) register(c *gin.Context) {
 		return
 	}
 	pass, err := model.VerifyCode(ctx, req.Account, req.AuthCode)
+	if err == constant.ErrUnAuthorized {
+		log.Warn(ctx, "register: VerifyCode failed", log.Any("req", req))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
 	if err != nil {
 		log.Error(ctx, "register:VerifyCode failed", log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -128,7 +134,7 @@ func (s *Server) register(c *gin.Context) {
 	}
 	if !pass {
 		log.Warn(ctx, "register: not pass", log.Any("req", req))
-		c.JSON(http.StatusUnauthorized, L(GeneralUnknown))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
 		return
 	}
 	user, err := model.GetUserModel().RegisterUser(ctx, req.Account, req.Password, req.ActType)
@@ -140,6 +146,7 @@ func (s *Server) register(c *gin.Context) {
 	if err != nil {
 		log.Error(ctx, "register:RegisterUser failed", log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
 	}
 
 	token, err := model.GetTokenFromUser(ctx, user)
@@ -221,6 +228,9 @@ func (s *Server) sendCode(c *gin.Context) {
 }
 
 type ForgottenPasswordRequest struct {
+	AuthTo   string `json:"auth_to" form:"auth_to"`
+	AuthCode string `json:"auth_code" form:"auth_code"`
+	Password string `json:"password" form:"password"`
 }
 
 // @ID forgottenPassword
@@ -235,10 +245,45 @@ type ForgottenPasswordRequest struct {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/forgotten_pwd [post]
 func (s *Server) forgottenPassword(c *gin.Context) {
-	// TODO
+	ctx := c.Request.Context()
+	var req ForgottenPasswordRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Warn(ctx, "forgottenPassword: ShouldBindJson failed", log.Any("req", req), log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	pass, err := model.VerifyCode(ctx, req.AuthTo, req.AuthCode)
+	if err != nil {
+		log.Error(ctx, "forgottenPassword:VerifyCode failed", log.Any("req", req), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !pass {
+		log.Warn(ctx, "forgottenPassword:VerifyCode failed", log.Any("req", req), log.Err(err))
+		c.JSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+	user, err := model.GetUserModel().UpdateAccountPassword(ctx, req.AuthTo, req.Password)
+	if err != nil {
+		log.Error(ctx, "forgottenPassword:UpdateAccountPassword failed", log.Any("req", req), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	token, err := model.GetTokenFromUser(ctx, user)
+	if err != nil {
+		log.Error(ctx, "forgottenPassword:GetTokenFromUser failed", log.Any("req", req), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
+	c.JSON(http.StatusOK, LoginResponse{token})
 }
 
 type ResetPasswordRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
 }
 
 // @ID resetPassword
@@ -253,5 +298,61 @@ type ResetPasswordRequest struct {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /users/reset_password [post]
 func (s *Server) resetPassword(c *gin.Context) {
-	// TODO
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var req ResetPasswordRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Warn(ctx, "resetPassword: ShouldBindJSON failed")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	err = model.GetUserModel().ResetUserPassword(ctx, op.UserID, req.OldPassword, req.NewPassword)
+	if err != nil {
+		log.Error(ctx, "resetPassword:ResetUserPassword failed", log.Any("req", req), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+type CheckAccountResponse struct {
+	Status string `json:"status"`
+}
+
+// @ID checkAccount
+// @Summary checkAccount
+// @Tags user
+// @Description check account register
+// @Accept json
+// @Produce json
+// @Param account query string true "account"
+// @Success 200 {object} CheckAccountResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 409
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /users/check_account [get]
+func (s *Server) checkAccount(c *gin.Context) {
+	ctx := c.Request.Context()
+	var req struct {
+		Account string `json:"account" form:"account"`
+	}
+	err := c.ShouldBindQuery(&req)
+	if err != nil || req.Account == "" {
+		log.Warn(ctx, "checkAccount:ShouldBindQuery failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	user, err := model.GetUserModel().GetUserByAccount(ctx, req.Account)
+	if err == constant.ErrRecordNotFound {
+		c.JSON(http.StatusOK, CheckAccountResponse{constant.AccountUnregister})
+		return
+	}
+	if user != nil {
+		c.JSON(http.StatusOK, CheckAccountResponse{constant.AccountExist})
+		return
+	}
+
+	log.Error(ctx, "checkAccount: error", log.String("account", req.Account), log.Err(err))
+	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 }
