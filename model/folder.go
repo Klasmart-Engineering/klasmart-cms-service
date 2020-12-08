@@ -1278,7 +1278,7 @@ func (f *FolderModel) replaceLinkedItemPath(ctx context.Context, tx *dbo.DBConte
 
 	err := GetContentModel().BatchReplaceContentPath(ctx, tx, contentLinkIds, originPath, path)
 	if err != nil {
-		log.Warn(ctx, "can't update content path by id", log.Err(err),
+		log.Error(ctx, "can't update content path by id", log.Err(err),
 			log.String("itemType", "content"), log.Strings("ids", contentLinkIds),
 			log.String("originPath", originPath), log.String("path", path))
 		return err
