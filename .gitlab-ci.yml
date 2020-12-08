@@ -1,0 +1,73 @@
+include:
+  - project: 'devops/ci-center'
+    ref: 'master'
+    file: 'gitlab-ci-kidsloopr/.gitlab-ci-cdk.yml'
+  - project: 'devops/ci-center'
+    ref: 'master'
+    file: 'gitlab-ci-kidsloopr/.gitlab-ci-api.yml'
+
+stages:
+  - deploy_swagger
+  - build_cdk
+  - deploy_cdk
+  - deploy_cdk_release
+
+DEPLOY_SWAGGER_JOB:
+  extends:
+    - .DEPLOY_SWAGGER_API
+  only:
+    - /^test.*$/
+  except:
+    - triggers
+
+Build_Go_Push:
+  stage: build_cdk
+  tags:
+    - kidsloop2
+  extends:
+    - .TIGGER_RULES_CHECK
+    - .EXECUTEBUILD_JOB
+  resource_group: $CI_JOB_NAME
+
+
+Deploy_To_Lambda_Push:
+  extends:
+    - .TIGGER_RULES_DEPLOY
+    - .PACKAGEZIP_UPDATECDK
+  stage: deploy_cdk
+  tags:
+    - kidsloop2
+  resource_group: $CI_JOB_NAME
+
+#############################################
+############# BELOW FOR ops-dev #############
+#############################################
+.OPS_DEV_BEFORE_SCRIPT:
+  before_script:
+    # switch to the correct branch in niobium
+    - set -e
+    - niobium_dir="$HOME/devops/niobium"
+    - git clone git@gitlab.badanamu.com.cn:devops/niobium.git "$niobium_dir"
+    - cd "$niobium_dir"
+    - git checkout $CI_COMMIT_TAG
+    - cd -
+
+OPS_DEV_BUILD:
+  stage: build_cdk
+  tags:
+    - ops-dev
+  extends:
+    - .OPS_DEV_BEFORE_SCRIPT
+    - .EXECUTEBUILD_JOB
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^(ops-dev\/).*$/ && $CI_PIPELINE_SOURCE != "trigger"'
+
+OPS_DEV_DEPLOY:
+  stage: deploy_cdk
+  tags:
+    - ops-dev
+  extends:
+    - .OPS_DEV_BEFORE_SCRIPT
+    - .PACKAGEZIP_UPDATECDK
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^(ops-dev\/).*$/ && $CI_PIPELINE_SOURCE == "trigger"'
