@@ -137,23 +137,9 @@ func (tu *TimeUtil) GetTimeByWeekday(weekday time.Weekday) time.Time {
 	return newTime
 }
 
-func (tu *TimeUtil) ToTime() time.Time {
-	return time.Unix(tu.TimeStamp, 0).In(tu.Location)
-}
-
 func (tu *TimeUtil) NextDayStart(t time.Time) time.Time {
 	newTime := t.AddDate(0, 0, 1)
 	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, tu.Location)
-}
-
-func (tu *TimeUtil) StartOfMonth() time.Time {
-	temp := tu.ToTime()
-	return time.Date(temp.Year(), temp.Month(), 1, 0, 0, 0, 0, tu.Location)
-}
-
-func (tu *TimeUtil) EndOfMonth() time.Time {
-	temp := tu.ToTime()
-	return time.Date(temp.Year(), temp.Month()+1, 1, 0, 0, 0, 0, tu.Location).Add(-time.Millisecond)
 }
 
 func IsSameDay(t1, t2 int64, loc *time.Location) bool {
@@ -184,10 +170,45 @@ func IsSameMonthByTime(t1, t2 time.Time) bool {
 	return y1 == y2 && m1 == m2
 }
 
-func GetTimeDiffToDay(start, end int64) int64 {
-	return (end - start) / 86400
+//func GetTimeDiffToDay(start, end int64) int64 {
+//	return (end - start) / 86400
+//}
+func GetTimeDiffToDayByTime(start, end time.Time, loc *time.Location) int64 {
+	t1 := BeginOfDayByTime(start, loc).Unix()
+	t2 := BeginOfDayByTime(end, loc).Unix()
+	return (t2 - t1) / 86400
 }
 
 func SetTimeDatePart(src time.Time, year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), src.Location())
+}
+
+func ConvertTime(ts int64, loc *time.Location) time.Time {
+	return time.Unix(ts, 0).In(loc)
+}
+
+func StartOfYear(year int, loc *time.Location) time.Time {
+	return time.Date(year, 1, 1, 0, 0, 0, 0, loc)
+}
+func StartOfYearByTimeStamp(ts int64, loc *time.Location) time.Time {
+	t := ConvertTime(ts, loc)
+	return StartOfYear(t.Year(), loc)
+}
+
+func StartOfMonth(year int, month time.Month, loc *time.Location) time.Time {
+	return time.Date(year, month, 1, 0, 0, 0, 0, loc)
+}
+
+func EndOfMonth(year int, month time.Month, loc *time.Location) time.Time {
+	return time.Date(year, month+1, 1, 0, 0, 0, 0, loc).Add(-time.Millisecond)
+}
+
+func GetTimeByWeekday(ts int64, weekday time.Weekday, loc *time.Location) time.Time {
+	t := time.Unix(ts, 0).In(loc)
+	offset := int(weekday - t.Weekday())
+	if weekday == time.Sunday {
+		offset = offset + 7
+	}
+	newTime := t.AddDate(0, 0, offset)
+	return newTime
 }
