@@ -1060,6 +1060,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 		IDs:       nil,
 		ItemType:  int(entity.FolderItemTypeFolder),
 		OwnerType: int(folder.OwnerType),
+		Partition: folder.Partition,
 		Owner:     folder.Owner,
 		Name:      name,
 	}
