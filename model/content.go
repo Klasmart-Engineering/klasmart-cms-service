@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -429,33 +428,10 @@ func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext
 }
 
 func (cm *ContentModel) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {
-	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
-	if len(cids) < 1 {
-		//若fids为空，则不更新
-		return nil
-	}
-	fidsSQLParts := make([]string, len(cids))
-	params := []interface{}{oldPath, path}
-	for i := range cids {
-		fidsSQLParts[i] = "?"
-		params = append(params, cids[i])
-	}
-	fidsSQL := strings.Join(fidsSQLParts, ",")
-
-	sql := fmt.Sprintf(`UPDATE cms_contents SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
-	err := tx.Exec(sql, params...).Error
-
-	log.Info(ctx, "update folder",
-		log.String("sql", sql),
-		log.Any("params", params))
+	err := da.GetContentDA().BatchReplaceContentPath(ctx, tx, cids, oldPath, path)
 	if err != nil {
-		log.Error(ctx, "update folder da failed", log.Err(err),
-			log.Strings("fids", cids),
-			log.String("path", string(path)),
-			log.String("oldPath", string(oldPath)),
-			log.String("sql", sql),
-			log.Any("params", params))
-		return err
+		log.Error(ctx, "update content path failed", log.Err(err))
+		return ErrUpdateContentFailed
 	}
 
 	return nil
