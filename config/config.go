@@ -152,6 +152,7 @@ func LoadEnvConfig() {
 	loadAMSConfig(ctx)
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
+	loadAssessmentConfig(ctx)
 }
 
 func loadKidsloopCNLoginConfig(ctx context.Context) {
@@ -198,7 +199,6 @@ func loadTencentConfig(ctx context.Context) {
 	config.TencentConfig.Sms.TemplateParamSet = assertGetEnv("tc_sms_template_param_set")
 	config.TencentConfig.Sms.MobilePrefix = assertGetEnv("tc_scm_mobile_prefix")
 	config.TencentConfig.Sms.OTPPeriod = os.Getenv("OTP_PERIOD")
-	loadAssessmentConfig(ctx)
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
