@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"errors"
-	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -125,55 +124,9 @@ func (r *RepeatCyclePlan) GenerateTimeByRule(endRule *RepeatCycleEndRule) ([]int
 			}
 		}
 	}
+
 	return result, nil
 }
-
-//func GenerateTimeByRule(r []*RepeatCyclePlan, endRule *RepeatCycleEndRule) ([]int64, error) {
-//	if !endRule.CycleRuleType.Valid() {
-//		return nil, constant.ErrInvalidArgs
-//	}
-//	result := make([]int64, 0)
-//	var count = 0
-//	for _, plan := range r {
-//		baseTime := time.Unix(plan.BaseTime, 0).In(plan.repeatCfg.Location)
-//		maxTime := time.Now().AddDate(plan.getMaxRepeatYear(), 0, 0).In(plan.repeatCfg.Location)
-//		minTime := time.Now().In(plan.repeatCfg.Location)
-//
-//		switch endRule.CycleRuleType {
-//		case entity.RepeatEndAfterCount:
-//			var isFirst = true
-//			for count < endRule.AfterCount && baseTime.Before(maxTime) {
-//				day, err := plan.Interval(baseTime.Unix(), plan.repeatCfg, isFirst)
-//				isFirst = false
-//				if err != nil {
-//					return nil, err
-//				}
-//
-//				baseTime = baseTime.AddDate(0, 0, day)
-//				if baseTime.After(minTime) {
-//					result = append(result, baseTime.Unix())
-//					count++
-//				}
-//			}
-//
-//		case entity.RepeatEndAfterTime:
-//			afterTime := time.Unix(endRule.AfterTime, 0).In(plan.repeatCfg.Location)
-//			var isFirst = true
-//			for baseTime.Before(afterTime) && baseTime.Before(maxTime) {
-//				day, err := plan.Interval(baseTime.Unix(), plan.repeatCfg, isFirst)
-//				isFirst = false
-//				if err != nil {
-//					return nil, err
-//				}
-//				baseTime = baseTime.AddDate(0, 0, day)
-//				if baseTime.After(minTime) && baseTime.Before(afterTime) {
-//					result = append(result, baseTime.Unix())
-//				}
-//			}
-//		}
-//	}
-//	return result, nil
-//}
 
 type DynamicIntervalFunc func(baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error)
 
@@ -212,9 +165,9 @@ func DynamicMonthInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int,
 	}
 	switch cfg.Monthly.OnType {
 	case entity.RepeatMonthlyOnDate:
-		t := utils.ConvertTime(baseTime, cfg.Location)
-		monthStart := utils.StartOfMonth(t.Year(), t.Month(), cfg.Location)
-		currentMonthTime := monthStart.AddDate(0, 0, cfg.Monthly.OnDateDay).In(cfg.Location)
+		base := utils.ConvertTime(baseTime, cfg.Location)
+		monthStart := utils.StartOfMonth(base.Year(), base.Month(), cfg.Location)
+		currentMonthTime := monthStart.AddDate(0, 0, cfg.Monthly.OnDateDay-1).In(cfg.Location)
 		isSameMonth := utils.IsSameMonthByTime(monthStart, currentMonthTime)
 		if !isSameMonth {
 			return 0, ErrOverLimit
@@ -222,37 +175,27 @@ func DynamicMonthInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int,
 
 		var afterMonthTime time.Time
 		if isFirst {
-			isSameMonth2 := utils.IsSameMonthByTime(time.Now().In(cfg.Location), monthStart)
-			if isSameMonth2 {
-				day := utils.GetTimeDiffToDayByTime(t, currentMonthTime, cfg.Location)
-				return int(day), nil
-			}
 			afterMonthTime = currentMonthTime
 		} else {
-			afterMonthTime = monthStart.AddDate(0, cfg.Monthly.Interval, cfg.Monthly.OnDateDay).In(cfg.Location)
+			afterMonthTime = currentMonthTime.AddDate(0, cfg.Monthly.Interval, 0).In(cfg.Location)
 		}
-		day := utils.GetTimeDiffToDayByTime(t, afterMonthTime, cfg.Location)
+
+		day := utils.GetTimeDiffToDayByTime(base, afterMonthTime, cfg.Location)
 		return int(day), nil
 	case entity.RepeatMonthlyOnWeek:
-		t := utils.ConvertTime(baseTime, cfg.Location)
-		date, err := dateOfWeekday(t.Year(), t.Month(), cfg.Monthly.OnWeek, cfg.Monthly.OnWeekSeq, cfg.Location)
+		base := utils.ConvertTime(baseTime, cfg.Location)
+		var afterMonthTime time.Time
+		if isFirst {
+			afterMonthTime = base
+		} else {
+			afterMonthTime = base.AddDate(0, cfg.Monthly.Interval, 0).In(cfg.Location)
+		}
+
+		date, err := dateOfWeekday(afterMonthTime.Year(), afterMonthTime.Month(), cfg.Monthly.OnWeek, cfg.Monthly.OnWeekSeq, cfg.Location)
 		if err != nil {
 			return 0, err
 		}
-		fmt.Println(date)
-		var afterMonthTime time.Time
-		if isFirst {
-			isSameMonth2 := utils.IsSameMonthByTime(time.Now().In(cfg.Location), date)
-			if isSameMonth2 {
-				day := utils.GetTimeDiffToDayByTime(t, date, cfg.Location)
-				fmt.Println(day)
-				return int(day), nil
-			}
-			afterMonthTime = date
-		} else {
-			afterMonthTime = date.AddDate(0, cfg.Monthly.Interval, 0).In(cfg.Location)
-		}
-		day := utils.GetTimeDiffToDayByTime(t, afterMonthTime, cfg.Location)
+		day := utils.GetTimeDiffToDayByTime(base, date, cfg.Location)
 		return int(day), nil
 	}
 	return 0, constant.ErrInvalidArgs
@@ -265,84 +208,35 @@ func DynamicYearlyInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int
 	if cfg.Yearly.Interval == 0 {
 		return 0, constant.ErrInvalidArgs
 	}
-	switch cfg.Monthly.OnType {
-	case entity.RepeatMonthlyOnDate:
+	switch cfg.Yearly.OnType {
+	case entity.RepeatYearlyOnDate:
+		var interval = cfg.Yearly.Interval
+		if isFirst {
+			interval = 0
+		}
 		selectedStartYear := utils.StartOfYearByTimeStamp(baseTime, cfg.Location)
-		var year = cfg.Yearly.Interval
-		if isFirst {
-			year = 0
-		}
-		selectedTime := selectedStartYear.AddDate(year, cfg.Yearly.OnDateMonth, cfg.Yearly.OnDateDay)
-		t := utils.ConvertTime(baseTime, cfg.Location)
-		day := utils.GetTimeDiffToDayByTime(t, selectedTime, cfg.Location)
+		selectedTime := selectedStartYear.AddDate(interval, cfg.Yearly.OnDateMonth-1, cfg.Yearly.OnDateDay-1)
+		base := utils.ConvertTime(baseTime, cfg.Location)
+		day := utils.GetTimeDiffToDayByTime(base, selectedTime, cfg.Location)
 		return int(day), nil
-	case entity.RepeatMonthlyOnWeek:
-		t := utils.ConvertTime(baseTime, cfg.Location)
-		selectedDate, _ := dateOfWeekday(t.Year(), time.Month(cfg.Yearly.OnWeekMonth), cfg.Yearly.OnWeek, cfg.Yearly.OnWeekSeq, cfg.Location)
-		var year = cfg.Yearly.Interval
+	case entity.RepeatYearlyOnWeek:
+		base := utils.ConvertTime(baseTime, cfg.Location)
+		var afterYearTime time.Time
 		if isFirst {
-			year = 0
+			afterYearTime = base
+		} else {
+			afterYearTime = base.AddDate(cfg.Yearly.Interval, 0, 0).In(cfg.Location)
 		}
-		selectedTime := selectedDate.AddDate(year, cfg.Yearly.OnDateMonth, cfg.Yearly.OnDateDay)
-		day := utils.GetTimeDiffToDayByTime(t, selectedTime, cfg.Location)
+
+		date, err := dateOfWeekday(afterYearTime.Year(), time.Month(cfg.Yearly.OnWeekMonth), cfg.Yearly.OnWeek, cfg.Yearly.OnWeekSeq, cfg.Location)
+		if err != nil {
+			return 0, err
+		}
+		day := utils.GetTimeDiffToDayByTime(base, date, cfg.Location)
 		return int(day), nil
 	}
 	return 0, constant.ErrInvalidArgs
 }
-
-//func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location, repeatCfg *RepeatConfig) ([]*RepeatCyclePlan, error) {
-//	if !repeatCfg.Type.Valid() {
-//		return nil, constant.ErrInvalidArgs
-//	}
-//	result := make([]*RepeatCyclePlan, 0)
-//	timeTool := utils.NewTimeUtil(baseTime, loc)
-//	switch repeatCfg.Type {
-//	case entity.RepeatTypeDaily:
-//		result = append(result, &RepeatCyclePlan{
-//			Interval: repeatCfg.Daily.Interval,
-//			BaseTime: baseTime,
-//			Location: loc,
-//		})
-//
-//	case entity.RepeatTypeWeekly:
-//		if !repeatCfg.Weekly.Valid() {
-//			log.Info(ctx, "repeatCfg.Weekly rule invalid", log.Any("repeatCfg", repeatCfg))
-//			return nil, constant.ErrInvalidArgs
-//		}
-//		for _, item := range repeatCfg.Weekly.On {
-//			if !item.Valid() {
-//				log.Info(ctx, "repeatCfg.Weekly.On rule invalid", log.Any("repeatCfg", repeatCfg))
-//				return nil, constant.ErrInvalidArgs
-//			}
-//			selectWeekDayTime := timeTool.GetTimeByWeekday(item.TimeWeekday())
-//			result = append(result, &RepeatCyclePlan{
-//				Interval: repeatCfg.Weekly.Interval * 7,
-//				BaseTime: selectWeekDayTime.Unix(),
-//				Location: loc,
-//			})
-//		}
-//	case entity.RepeatTypeMonthly:
-//		switch repeatCfg.Monthly.OnType {
-//		case entity.RepeatMonthlyOnDate:
-//			result = append(result, &RepeatCyclePlan{
-//				Location:      loc,
-//				BaseTime:      baseTime,
-//				IntervalDay:   repeatCfg.Monthly.OnDateDay,
-//				IntervalMonth: repeatCfg.Monthly.Interval,
-//			})
-//		case entity.RepeatMonthlyOnWeek:
-//			 := dateOfWeekday(baseTime, repeatCfg.Monthly.OnWeek, repeatCfg.Monthly.OnWeekSeq, loc)
-//			result = append(result, &RepeatCyclePlan{
-//				Location:      loc,
-//				BaseTime:      baseTime,
-//				IntervalDay:   repeatCfg.Monthly.OnWeekSeq,
-//				IntervalMonth: repeatCfg.Monthly.Interval,
-//			})
-//		}
-//	case entity.RepeatTypeYearly:
-//	}
-//	return nil, nil
-//}
 
 func dateOfWeekday(year int, month time.Month, w entity.RepeatWeekday, seq entity.RepeatWeekSeq, location *time.Location) (time.Time, error) {
 	switch seq {
@@ -405,4 +299,104 @@ func NewEndRepeatCycleRule(options *entity.RepeatOptions) (*RepeatCycleEndRule, 
 //	case entity.RepeatTypeDaily:
 //
 //	}
+//}
+//func NewRepeatCycleRule(ctx context.Context, baseTime int64, loc *time.Location, repeatCfg *RepeatConfig) ([]*RepeatCyclePlan, error) {
+//	if !repeatCfg.Type.Valid() {
+//		return nil, constant.ErrInvalidArgs
+//	}
+//	result := make([]*RepeatCyclePlan, 0)
+//	timeTool := utils.NewTimeUtil(baseTime, loc)
+//	switch repeatCfg.Type {
+//	case entity.RepeatTypeDaily:
+//		result = append(result, &RepeatCyclePlan{
+//			Interval: repeatCfg.Daily.Interval,
+//			BaseTime: baseTime,
+//			Location: loc,
+//		})
+//
+//	case entity.RepeatTypeWeekly:
+//		if !repeatCfg.Weekly.Valid() {
+//			log.Info(ctx, "repeatCfg.Weekly rule invalid", log.Any("repeatCfg", repeatCfg))
+//			return nil, constant.ErrInvalidArgs
+//		}
+//		for _, item := range repeatCfg.Weekly.On {
+//			if !item.Valid() {
+//				log.Info(ctx, "repeatCfg.Weekly.On rule invalid", log.Any("repeatCfg", repeatCfg))
+//				return nil, constant.ErrInvalidArgs
+//			}
+//			selectWeekDayTime := timeTool.GetTimeByWeekday(item.TimeWeekday())
+//			result = append(result, &RepeatCyclePlan{
+//				Interval: repeatCfg.Weekly.Interval * 7,
+//				BaseTime: selectWeekDayTime.Unix(),
+//				Location: loc,
+//			})
+//		}
+//	case entity.RepeatTypeMonthly:
+//		switch repeatCfg.Monthly.OnType {
+//		case entity.RepeatMonthlyOnDate:
+//			result = append(result, &RepeatCyclePlan{
+//				Location:      loc,
+//				BaseTime:      baseTime,
+//				IntervalDay:   repeatCfg.Monthly.OnDateDay,
+//				IntervalMonth: repeatCfg.Monthly.Interval,
+//			})
+//		case entity.RepeatMonthlyOnWeek:
+//			 := dateOfWeekday(baseTime, repeatCfg.Monthly.OnWeek, repeatCfg.Monthly.OnWeekSeq, loc)
+//			result = append(result, &RepeatCyclePlan{
+//				Location:      loc,
+//				BaseTime:      baseTime,
+//				IntervalDay:   repeatCfg.Monthly.OnWeekSeq,
+//				IntervalMonth: repeatCfg.Monthly.Interval,
+//			})
+//		}
+//	case entity.RepeatTypeYearly:
+//	}
+//	return nil, nil
+//}
+
+//func GenerateTimeByRule(r []*RepeatCyclePlan, endRule *RepeatCycleEndRule) ([]int64, error) {
+//	if !endRule.CycleRuleType.Valid() {
+//		return nil, constant.ErrInvalidArgs
+//	}
+//	result := make([]int64, 0)
+//	var count = 0
+//	for _, plan := range r {
+//		baseTime := time.Unix(plan.BaseTime, 0).In(plan.repeatCfg.Location)
+//		maxTime := time.Now().AddDate(plan.getMaxRepeatYear(), 0, 0).In(plan.repeatCfg.Location)
+//		minTime := time.Now().In(plan.repeatCfg.Location)
+//
+//		switch endRule.CycleRuleType {
+//		case entity.RepeatEndAfterCount:
+//			var isFirst = true
+//			for count < endRule.AfterCount && baseTime.Before(maxTime) {
+//				day, err := plan.Interval(baseTime.Unix(), plan.repeatCfg, isFirst)
+//				isFirst = false
+//				if err != nil {
+//					return nil, err
+//				}
+//
+//				baseTime = baseTime.AddDate(0, 0, day)
+//				if baseTime.After(minTime) {
+//					result = append(result, baseTime.Unix())
+//					count++
+//				}
+//			}
+//
+//		case entity.RepeatEndAfterTime:
+//			afterTime := time.Unix(endRule.AfterTime, 0).In(plan.repeatCfg.Location)
+//			var isFirst = true
+//			for baseTime.Before(afterTime) && baseTime.Before(maxTime) {
+//				day, err := plan.Interval(baseTime.Unix(), plan.repeatCfg, isFirst)
+//				isFirst = false
+//				if err != nil {
+//					return nil, err
+//				}
+//				baseTime = baseTime.AddDate(0, 0, day)
+//				if baseTime.After(minTime) && baseTime.Before(afterTime) {
+//					result = append(result, baseTime.Unix())
+//				}
+//			}
+//		}
+//	}
+//	return result, nil
 //}

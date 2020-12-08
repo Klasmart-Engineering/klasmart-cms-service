@@ -176,7 +176,7 @@ func IsSameMonthByTime(t1, t2 time.Time) bool {
 func GetTimeDiffToDayByTime(start, end time.Time, loc *time.Location) int64 {
 	t1 := BeginOfDayByTime(start, loc).Unix()
 	t2 := BeginOfDayByTime(end, loc).Unix()
-	return ((t2 - t1) / 86400) - 1
+	return (t2 - t1) / 86400
 }
 
 func SetTimeDatePart(src time.Time, year int, month time.Month, day int) time.Time {
