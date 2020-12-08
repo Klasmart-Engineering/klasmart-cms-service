@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -37,9 +38,8 @@ type RepeatCyclePlan struct {
 
 	repeatCfg *RepeatConfig
 
-	BaseTime  int64
-	BaseTimes []int64
-	Interval  DynamicIntervalFunc
+	BaseTime int64
+	Interval DynamicIntervalFunc
 }
 
 func NewRepeatCyclePlan(ctx context.Context, baseTime int64, repeatCfg *RepeatConfig) ([]*RepeatCyclePlan, error) {
@@ -104,7 +104,7 @@ func (r *RepeatCyclePlan) GenerateTimeByRule(endRule *RepeatCycleEndRule) ([]int
 			}
 
 			baseTime = baseTime.AddDate(0, 0, day)
-			if baseTime.After(minTime) {
+			if baseTime.After(minTime) && baseTime.Before(maxTime) {
 				result = append(result, baseTime.Unix())
 				count++
 			}
@@ -224,7 +224,8 @@ func DynamicMonthInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int,
 		if isFirst {
 			isSameMonth2 := utils.IsSameMonthByTime(time.Now().In(cfg.Location), monthStart)
 			if isSameMonth2 {
-				return currentMonthTime.Day() - t.Day(), nil
+				day := utils.GetTimeDiffToDayByTime(t, currentMonthTime, cfg.Location)
+				return int(day), nil
 			}
 			afterMonthTime = currentMonthTime
 		} else {
@@ -238,11 +239,14 @@ func DynamicMonthInterval(baseTime int64, cfg *RepeatConfig, isFirst bool) (int,
 		if err != nil {
 			return 0, err
 		}
+		fmt.Println(date)
 		var afterMonthTime time.Time
 		if isFirst {
 			isSameMonth2 := utils.IsSameMonthByTime(time.Now().In(cfg.Location), date)
 			if isSameMonth2 {
-				return date.Day() - t.Day(), nil
+				day := utils.GetTimeDiffToDayByTime(t, date, cfg.Location)
+				fmt.Println(day)
+				return int(day), nil
 			}
 			afterMonthTime = date
 		} else {
