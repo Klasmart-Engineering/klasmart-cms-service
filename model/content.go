@@ -120,6 +120,7 @@ type IContentModel interface {
 	ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error)
 
 	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error
+	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 }
 
 type ContentModel struct {
@@ -418,6 +419,16 @@ func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext
 	}
 	content.DirPath = path
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
+	if err != nil {
+		log.Error(ctx, "update content path failed", log.Err(err))
+		return ErrUpdateContentFailed
+	}
+
+	return nil
+}
+
+func (cm *ContentModel) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {
+	err := da.GetContentDA().BatchReplaceContentPath(ctx, tx, cids, oldPath, path)
 	if err != nil {
 		log.Error(ctx, "update content path failed", log.Err(err))
 		return ErrUpdateContentFailed
