@@ -3,9 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
-	"time"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -29,13 +27,13 @@ func NewServer() *Server {
 
 	// CORS
 	if len(config.Get().CORS.AllowOrigins) > 0 {
-		server.engine.Use(cors.New(cors.Config{
-			AllowOrigins:     config.Get().CORS.AllowOrigins,
-			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"},
-			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
-			AllowCredentials: true,
-			MaxAge:           12 * time.Hour,
-		}))
+		// server.engine.Use(cors.New(cors.Config{
+		// 	AllowOrigins:     config.Get().CORS.AllowOrigins,
+		// 	AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"},
+		// 	AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type"},
+		// 	AllowCredentials: true,
+		// 	MaxAge:           12 * time.Hour,
+		// }))
 	}
 
 	server.registeRoute()
