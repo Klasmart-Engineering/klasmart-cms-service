@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"errors"
-	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -21,39 +20,6 @@ type DynamicIntervalFunc func(baseTime int64, isFirst bool) (int, error)
 var (
 	ErrOverLimit = errors.New("over the limit")
 )
-
-func StartScheduleRepeat(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
-	cfg := NewRepeatConfig(options, location)
-	plan, err := NewRepeatCyclePlan(ctx, template.StartAt, template.EndAt, cfg)
-	if err != nil {
-		log.Error(ctx, "StartScheduleRepeat:NewRepeatCyclePlan error", log.Err(err), log.Any("template", template), log.Any("cfg", cfg))
-		return nil, err
-	}
-	endRule, err := NewEndRepeatCycleRule(options)
-	if err != nil {
-		log.Error(ctx, "StartScheduleRepeat:NewEndRepeatCycleRule error", log.Err(err), log.Any("template", template), log.Any("options", options))
-		return nil, err
-	}
-	planResult, err := plan.GenerateTimeByEndRule(endRule)
-	if err != nil {
-		log.Error(ctx, "StartScheduleRepeat:GenerateTimeByEndRule error", log.Err(err),
-			log.Any("template", template),
-			log.Any("plan", plan),
-			log.Any("endRule", endRule),
-		)
-		return nil, err
-	}
-	result := make([]*entity.Schedule, len(planResult))
-	for i, item := range planResult {
-		fmt.Println(item.Start, item.End)
-		temp := template.Clone()
-		temp.StartAt = item.Start
-		temp.EndAt = item.End
-		temp.ID = utils.NewID()
-		result[i] = &temp
-	}
-	return result, nil
-}
 
 type RepeatConfig struct {
 	*entity.RepeatOptions
@@ -267,7 +233,7 @@ func (r *RepeatCyclePlan) DynamicWeekInterval(baseTime int64, isFirst bool) (int
 	}
 	return cfg.Weekly.Interval * 7, nil
 }
-func validateMonthlyData(ctx context.Context, monthlyCfg entity.RepeatMonthly) error {
+func (r *RepeatCyclePlan) validateMonthlyData(ctx context.Context, monthlyCfg entity.RepeatMonthly) error {
 	if !monthlyCfg.OnType.Valid() {
 		log.Info(ctx, "DynamicMonthInterval:Monthly OnType invalid", log.Any("Monthly", monthlyCfg))
 		return constant.ErrInvalidArgs
@@ -281,7 +247,7 @@ func validateMonthlyData(ctx context.Context, monthlyCfg entity.RepeatMonthly) e
 func (r *RepeatCyclePlan) DynamicMonthInterval(baseTime int64, isFirst bool) (int, error) {
 	ctx := r.ctx
 	cfg := r.repeatCfg
-	if err := validateMonthlyData(ctx, cfg.Monthly); err != nil {
+	if err := r.validateMonthlyData(ctx, cfg.Monthly); err != nil {
 		return 0, err
 	}
 	switch cfg.Monthly.OnType {
@@ -325,7 +291,7 @@ func (r *RepeatCyclePlan) DynamicMonthInterval(baseTime int64, isFirst bool) (in
 	}
 	return 0, constant.ErrInvalidArgs
 }
-func validateYearlyData(ctx context.Context, yearlyCfg entity.RepeatYearly) error {
+func (r *RepeatCyclePlan) validateYearlyData(ctx context.Context, yearlyCfg entity.RepeatYearly) error {
 	if !yearlyCfg.OnType.Valid() {
 		log.Info(ctx, "DynamicYearlyInterval:yearly OnType invalid", log.Any("Yearly", yearlyCfg))
 		return constant.ErrInvalidArgs
@@ -340,7 +306,7 @@ func (r *RepeatCyclePlan) DynamicYearlyInterval(baseTime int64, isFirst bool) (i
 	ctx := r.ctx
 	cfg := r.repeatCfg
 
-	if err := validateYearlyData(ctx, cfg.Yearly); err != nil {
+	if err := r.validateYearlyData(ctx, cfg.Yearly); err != nil {
 		return 0, err
 	}
 	switch cfg.Yearly.OnType {

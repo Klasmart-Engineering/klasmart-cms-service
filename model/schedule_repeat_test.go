@@ -343,7 +343,8 @@ func TestStartScheduleRepeat(t *testing.T) {
 			},
 		},
 	}
-	result, _ := StartScheduleRepeat(context.Background(), &entity.Schedule{
+	sm := scheduleModel{}
+	result, _ := sm.StartScheduleRepeat(context.Background(), &entity.Schedule{
 		StartAt: time.Now().In(loc).Unix(),
 		EndAt:   time.Now().Add(1 * time.Hour).In(loc).Unix(),
 	}, options, loc)
