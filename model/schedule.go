@@ -193,7 +193,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 }
 
 func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location) (string, error) {
-	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
+	scheduleList, err := StartScheduleRepeat(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err

@@ -23,11 +23,7 @@ func TestDynamicDayInterval_RepeatEndAfterCount(t *testing.T) {
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	testTime := time.Now() //time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
 
-	tests := []struct {
-		baseTime time.Time
-		options  *entity.RepeatOptions
-		enable   bool
-	}{
+	tests := []testData{
 		// RepeatEndAfterCount
 		{
 			options: func() *entity.RepeatOptions {
@@ -35,7 +31,7 @@ func TestDynamicDayInterval_RepeatEndAfterCount(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.Add(1 * time.Hour).In(loc),
-			enable:   false,
+			enable:   true,
 		},
 		{
 			options: func() *entity.RepeatOptions {
@@ -45,7 +41,7 @@ func TestDynamicDayInterval_RepeatEndAfterCount(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.Add(-1 * time.Hour).In(loc),
-			enable:   false,
+			enable:   true,
 		},
 		// RepeatEndAfterTime
 		{
@@ -54,11 +50,11 @@ func TestDynamicDayInterval_RepeatEndAfterCount(t *testing.T) {
 				temp.Daily.Interval = 3
 				temp.Daily.End.AfterCount = 0
 				temp.Daily.End.Type = entity.RepeatEndAfterTime
-				temp.Daily.End.AfterTime = testTime.AddDate(0, 1, 0).Unix()
+				temp.Daily.End.AfterTime = testTime.AddDate(0, 0, 10).Unix()
 				return &temp
 			}(),
 			baseTime: testTime.AddDate(0, 0, -2).Add(-1 * time.Hour).In(loc),
-			enable:   true,
+			enable:   false,
 		},
 		{
 			options: func() *entity.RepeatOptions {
@@ -66,33 +62,14 @@ func TestDynamicDayInterval_RepeatEndAfterCount(t *testing.T) {
 				temp.Daily.Interval = 5
 				temp.Daily.End.AfterCount = 0
 				temp.Daily.End.Type = entity.RepeatEndAfterTime
-				temp.Daily.End.AfterTime = testTime.AddDate(0, 2, 0).Unix()
+				temp.Daily.End.AfterTime = testTime.AddDate(0, 0, 20).Unix()
 				return &temp
 			}(),
 			baseTime: testTime.AddDate(0, 0, 2).Add(1 * time.Hour).In(loc),
-			enable:   true,
+			enable:   false,
 		},
 	}
-	for _, item := range tests {
-		if !item.enable {
-			continue
-		}
-		after := utils.ConvertTime(item.options.Daily.End.AfterTime, loc)
-		t.Log("base time:", item.baseTime, "-----end after time:", after)
-		conf := NewRepeatConfig(item.options, loc)
-		plan, _ := NewRepeatCyclePlan(context.Background(), item.baseTime.Unix(), conf)
-		rule, err := NewEndRepeatCycleRule(item.options)
-		if err != nil {
-			t.Fatal(err)
-			return
-		}
-
-		result, _ := plan[0].GenerateTimeByRule(rule)
-		for _, item := range result {
-			temp := utils.ConvertTime(item, loc)
-			t.Log(temp)
-		}
-	}
+	execute(tests, t, loc)
 }
 
 func TestDynamicWeekInterval(t *testing.T) {
@@ -113,11 +90,7 @@ func TestDynamicWeekInterval(t *testing.T) {
 	}
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	testTime := time.Now() //time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
-	tests := []struct {
-		baseTime time.Time
-		options  *entity.RepeatOptions
-		enable   bool
-	}{
+	tests := []testData{
 		// RepeatEndAfterCount
 		{
 			options: func() *entity.RepeatOptions {
@@ -169,32 +142,7 @@ func TestDynamicWeekInterval(t *testing.T) {
 		},
 	}
 
-	for _, item := range tests {
-		if !item.enable {
-			continue
-		}
-		after := utils.ConvertTime(item.options.Weekly.End.AfterTime, loc)
-		t.Log("base time:", item.baseTime, "-----end after time:", after)
-		conf := NewRepeatConfig(item.options, loc)
-		plan, _ := NewRepeatCyclePlan(context.Background(), item.baseTime.Unix(), conf)
-		rule, err := NewEndRepeatCycleRule(item.options)
-		if err != nil {
-			t.Fatal(err)
-			return
-		}
-		//result, _ := GenerateTimeByRule(plan, rule)
-		//for _, item := range result {
-		//	temp := utils.ConvertTime(item, loc)
-		//	t.Log(temp)
-		//}
-		for _, item := range plan {
-			result, _ := item.GenerateTimeByRule(rule)
-			for _, item := range result {
-				temp := utils.ConvertTime(item, loc)
-				t.Log(temp)
-			}
-		}
-	}
+	execute(tests, t, loc)
 }
 
 func TestDynamicMonthInterval(t *testing.T) {
@@ -213,11 +161,7 @@ func TestDynamicMonthInterval(t *testing.T) {
 	}
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	testTime := time.Now() //time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
-	tests := []struct {
-		baseTime time.Time
-		options  *entity.RepeatOptions
-		enable   bool
-	}{
+	tests := []testData{
 		// RepeatEndAfterCount
 		{
 			options: func() *entity.RepeatOptions {
@@ -292,39 +236,43 @@ func TestDynamicMonthInterval(t *testing.T) {
 			enable:   false,
 		},
 	}
+	execute(tests, t, loc)
+}
 
+func execute(tests []testData, t *testing.T, loc *time.Location) {
 	for _, item := range tests {
 		if !item.enable {
 			continue
 		}
 
-		after := utils.ConvertTime(item.options.Monthly.End.AfterTime, loc)
-		t.Log("base time:", item.baseTime, "-----end after time:", after)
+		t.Log("start time:", item.baseTime)
 		conf := NewRepeatConfig(item.options, loc)
-		plan, _ := NewRepeatCyclePlan(context.Background(), item.baseTime.Unix(), conf)
+		plan, _ := NewRepeatCyclePlan(context.Background(), item.baseTime.Unix(), item.baseTime.AddDate(0, 0, 1).Unix(), conf)
 		rule, err := NewEndRepeatCycleRule(item.options)
 		if err != nil {
 			t.Fatal(err)
 			return
 		}
-		for _, item := range plan {
-			result, _ := item.GenerateTimeByRule(rule)
-			for _, item := range result {
-				temp := utils.ConvertTime(item, loc)
-				t.Log(temp)
-			}
+
+		result, _ := plan.GenerateTimeByEndRule(rule)
+		for _, item := range result {
+			temp := utils.ConvertTime(item.Start, loc)
+			temp2 := utils.ConvertTime(item.End, loc)
+			t.Log(temp, temp2)
 		}
 	}
+}
+
+type testData struct {
+	baseTime time.Time
+	options  *entity.RepeatOptions
+	enable   bool
 }
 
 func TestDynamicYearlyInterval(t *testing.T) {
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	testTime := time.Now() //time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
-	tests := []struct {
-		baseTime time.Time
-		options  *entity.RepeatOptions
-		enable   bool
-	}{
+	tests := []testData{
 		{
 			baseTime: testTime.Add(-1 * time.Hour),
 			options: &entity.RepeatOptions{
@@ -343,7 +291,7 @@ func TestDynamicYearlyInterval(t *testing.T) {
 					},
 				},
 			},
-			enable: false,
+			enable: true,
 		},
 		{
 			baseTime: testTime.Add(1 * time.Hour),
@@ -367,33 +315,12 @@ func TestDynamicYearlyInterval(t *testing.T) {
 		},
 	}
 
-	for _, item := range tests {
-		if !item.enable {
-			continue
-		}
-
-		after := utils.ConvertTime(item.options.Monthly.End.AfterTime, loc)
-		t.Log("base time:", item.baseTime, "-----end after time:", after)
-		conf := NewRepeatConfig(item.options, loc)
-		plan, _ := NewRepeatCyclePlan(context.Background(), item.baseTime.Unix(), conf)
-		rule, err := NewEndRepeatCycleRule(item.options)
-		if err != nil {
-			t.Fatal(err)
-			return
-		}
-		for _, item := range plan {
-			result, _ := item.GenerateTimeByRule(rule)
-			for _, item := range result {
-				temp := utils.ConvertTime(item, loc)
-				t.Log(temp)
-			}
-		}
-	}
+	execute(tests, t, loc)
 }
 
 func TestDateOfWeekday(t *testing.T) {
 	tt := time.Now()
-	r, _ := dateOfWeekday(tt.Year(), tt.Month()+1, entity.RepeatWeekdaySunday, entity.RepeatWeekSeqFirst, tt.Location())
+	r := dateOfWeekday(tt.Year(), tt.Month()+1, entity.RepeatWeekdaySunday, entity.RepeatWeekSeqFirst, tt.Location())
 	t.Log(r)
 }
 func TestDateOfWeekday2(t *testing.T) {
@@ -402,4 +329,27 @@ func TestDateOfWeekday2(t *testing.T) {
 	r := utils.GetTimeDiffToDayByTime(tt, tt2, time.Now().Location())
 	t.Log(r)
 	t.Log(tt.Day() - tt2.Day())
+}
+func TestStartScheduleRepeat(t *testing.T) {
+	loc := time.Now().Location()
+	options := &entity.RepeatOptions{
+		Type: entity.RepeatTypeDaily,
+		Daily: entity.RepeatDaily{
+			Interval: 1,
+			End: entity.RepeatEnd{
+				Type:       entity.RepeatEndAfterCount,
+				AfterCount: 3,
+				AfterTime:  0,
+			},
+		},
+	}
+	result, _ := StartScheduleRepeat(context.Background(), &entity.Schedule{
+		StartAt: time.Now().In(loc).Unix(),
+		EndAt:   time.Now().Add(1 * time.Hour).In(loc).Unix(),
+	}, options, loc)
+	for _, item := range result {
+		t1 := utils.ConvertTime(item.StartAt, loc)
+		t2 := utils.ConvertTime(item.EndAt, loc)
+		t.Log(t1, t2)
+	}
 }
