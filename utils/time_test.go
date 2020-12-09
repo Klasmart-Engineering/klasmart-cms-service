@@ -13,14 +13,6 @@ func TestTodayZero(t *testing.T) {
 	fmt.Println(t2)
 }
 
-func TestTimeUtil_GetTimeByWeekday(t *testing.T) {
-	loc, _ := time.LoadLocation("Asia/Shanghai")
-	tu := NewTimeUtil(time.Now().Unix(), loc)
-	tt := tu.GetTimeByWeekday(time.Monday)
-	t.Log(time.Now())
-	t.Log(tt)
-}
-
 func TestGetTimeDiffToDay(t *testing.T) {
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	base := time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
