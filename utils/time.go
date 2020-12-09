@@ -126,22 +126,6 @@ func GetTimeLocationByName(tz string) (*time.Location, error) {
 	return loc, nil
 }
 
-// get time by weekday
-func (tu *TimeUtil) GetTimeByWeekday(weekday time.Weekday) time.Time {
-	t := time.Unix(tu.TimeStamp, 0).In(tu.Location)
-	offset := int(weekday - t.Weekday())
-	if weekday == time.Sunday {
-		offset = offset + 7
-	}
-	newTime := t.AddDate(0, 0, offset)
-	return newTime
-}
-
-func (tu *TimeUtil) NextDayStart(t time.Time) time.Time {
-	newTime := t.AddDate(0, 0, 1)
-	return time.Date(newTime.Year(), newTime.Month(), newTime.Day(), 0, 0, 0, 0, tu.Location)
-}
-
 func IsSameDay(t1, t2 int64, loc *time.Location) bool {
 	time1 := time.Unix(t1, 0).In(loc)
 	time2 := time.Unix(t2, 0).In(loc)
@@ -170,9 +154,6 @@ func IsSameMonthByTime(t1, t2 time.Time) bool {
 	return y1 == y2 && m1 == m2
 }
 
-//func GetTimeDiffToDay(start, end int64) int64 {
-//	return (end - start) / 86400
-//}
 func GetTimeDiffToDayByTime(start, end time.Time, loc *time.Location) int64 {
 	t1 := BeginOfDayByTime(start, loc).Unix()
 	t2 := BeginOfDayByTime(end, loc).Unix()
