@@ -250,7 +250,7 @@ func (f FolderItem) ChildrenPath() Path {
 
 type FolderItemInfo struct {
 	FolderItem
-	Available int           `json:available`
+	Available int           `json:"available"`
 	Items     []*FolderItem `json:"items"`
 }
 
