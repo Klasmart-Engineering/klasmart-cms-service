@@ -333,6 +333,9 @@ func validateYearlyData(ctx context.Context, yearlyCfg entity.RepeatYearly) erro
 	return nil
 }
 func DynamicYearlyInterval(ctx context.Context, baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
+	if err := validateYearlyData(ctx, cfg.Yearly); err != nil {
+		return 0, err
+	}
 	switch cfg.Yearly.OnType {
 	case entity.RepeatYearlyOnDate:
 		var interval = cfg.Yearly.Interval
