@@ -17,6 +17,8 @@ const (
 	RedisKeyPrefixOutcomeId        = "outcome:id"
 
 	RedisKeyPrefixVerifyCodeLock = "verify_code:lock"
+
+	RedisKeyPrefixFolderName = "folder:name"
 )
 
 const (

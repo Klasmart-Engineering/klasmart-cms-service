@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
@@ -103,6 +104,17 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 		if err != nil {
 			return err
 		}
+		//Lock folder name
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixFolderName, d.Name)
+		if err != nil {
+			log.Error(ctx, "get locker failed",
+				log.Err(err),
+				log.String("prefix", da.RedisKeyPrefixFolderName),
+				log.String("name", d.Name))
+			return err
+		}
+		locker.Lock()
+		defer locker.Unlock()
 	}
 
 	folder.Name = d.Name
@@ -736,6 +748,20 @@ func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, 
 func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req entity.CreateFolderRequest, operator *entity.Operator) (string, error) {
 	var parentFolder *entity.FolderItem
 	var err error
+
+	//Lock folder name
+	if req.Name != "" {
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixFolderName, req.Name)
+		if err != nil {
+			log.Error(ctx, "get locker failed",
+				log.Err(err),
+				log.String("prefix", da.RedisKeyPrefixFolderName),
+				log.String("name", req.Name))
+			return "", err
+		}
+		locker.Lock()
+		defer locker.Unlock()
+	}
 	//get parent folder if exists
 	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
 		parentFolder, err = f.getFolder(ctx, tx, req.ParentID)
