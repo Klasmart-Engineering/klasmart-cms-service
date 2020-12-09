@@ -104,6 +104,7 @@ type IContentModel interface {
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
+	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, error)
 	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error)
 	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error)
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -120,6 +121,7 @@ type IContentModel interface {
 	ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error)
 
 	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error
+	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 }
 
 type ContentModel struct {
@@ -418,6 +420,16 @@ func (cm *ContentModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext
 	}
 	content.DirPath = path
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
+	if err != nil {
+		log.Error(ctx, "update content path failed", log.Err(err))
+		return ErrUpdateContentFailed
+	}
+
+	return nil
+}
+
+func (cm *ContentModel) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {
+	err := da.GetContentDA().BatchReplaceContentPath(ctx, tx, cids, oldPath, path)
 	if err != nil {
 		log.Error(ctx, "update content path failed", log.Err(err))
 		return ErrUpdateContentFailed
@@ -1198,14 +1210,39 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	cm.fillFolderContent(ctx, objs, user)
 	return count, objs, nil
 }
+
+func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, error) {
+	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
+	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
+	if err != nil {
+		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
+		return 0, err
+	}
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
+	if err != nil {
+		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIds", searchUserIds), log.String("uid", user.UserID))
+		return 0, err
+	}
+	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIds, user)
+
+	log.Info(ctx, "count folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+	total, err := da.GetContentDA().CountFolderContentUnsafe(ctx, tx, *combineCondition, *folderCondition)
+	if err != nil {
+		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
+		return 0, ErrReadContentFailed
+	}
+	return total, nil
+}
 func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
 	searchUserIds := cm.getRelatedUserId(ctx, condition.Name, user)
 	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
 	if err != nil {
+		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
 	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIds, user)
 	if err != nil {
+		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIds", searchUserIds), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
 	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIds, user)

@@ -34,6 +34,7 @@ var (
 	ErrNoFolder               = errors.New("no folder")
 	ErrMoveRootFolder         = errors.New("move root folder")
 	ErrMoveToChild            = errors.New("move to child folder")
+	ErrMoveToSameFolder       = errors.New("move to same folder")
 	ErrItemNotFound           = errors.New("item not found")
 )
 
@@ -306,7 +307,7 @@ func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.Sear
 }
 
 func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string {
-	if path == "" || path == "/" {
+	if path == "" || path == constant.FolderRootPath {
 		return constant.FolderRootPath
 	}
 	pathDirs := strings.Split(path, "/")
@@ -320,7 +321,7 @@ func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string
 }
 
 func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error) {
-	if path == "" || path == "/" {
+	if path == "" || path == constant.FolderRootPath {
 		log.Info(ctx, "check folder exists with nil",
 			log.String("path", path))
 		return constant.FolderRootPath, nil
@@ -380,6 +381,22 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 			return nil, err
 		}
 
+		//calculate avalible
+		contentTypeList := []int{entity.ContentTypeAssets, entity.AliasContentTypeFolder}
+		if folderItem.Partition == entity.FolderPartitionMaterialAndPlans {
+			contentTypeList = []int{entity.ContentTypeLesson, entity.ContentTypeMaterial, entity.AliasContentTypeFolder}
+		}
+		condition := da.ContentCondition{
+			ContentType:   contentTypeList,
+			PublishStatus: []string{entity.ContentStatusPublished},
+			DirPath:       string(folderItem.ChildrenPath()),
+		}
+		total, err := GetContentModel().CountUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, operator)
+		if err != nil {
+			log.Warn(ctx, "count folder failed failed", log.Err(err), log.Any("condition", condition))
+			return nil, err
+		}
+		result.Available = total
 		result.Items = folderItems
 	}
 	return result, nil
@@ -390,6 +407,10 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 	if folder.ItemType.IsFolder() && distFolder.DirPath.IsChild(folder.ID) {
 		//distFolder.DirPath
 		return ErrMoveToChild
+	}
+	if distFolder.DirPath == folder.ChildrenPath() {
+		//distFolder.DirPath
+		return ErrMoveToSameFolder
 	}
 
 	return nil
@@ -479,6 +500,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 	//更新当前目录
 	originPath := folder.DirPath
+	linkOriginPath := folder.ChildrenPath()
 	originParentID := folder.ParentID
 	path := distFolder.ChildrenPath()
 	folder.DirPath = path
@@ -489,16 +511,36 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return err
 	}
 
-	//更新子目录
-	newPath := folder.ChildrenPath()
-	err = da.GetFolderDA().BatchUpdateFolderPath(ctx, tx, info.Ids, originPath, newPath)
-	if err != nil {
-		log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
-		return err
+	newPath := folder.DirPath
+	if originPath == constant.FolderRootPath {
+		//if origin path is root("/")
+		//when old path is root path("/"), replace function in mysql will replace all "/" in path
+		//we prefix the new path as => new_path + origin_path
+		err = da.GetFolderDA().BatchUpdateFolderPathPrefix(ctx, tx, info.Ids, newPath)
+		if err != nil {
+			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+			return err
+		}
+	} else {
+		//origin: /xxx => /xxx/
+		//target: /
+		//to prevent target path build as //xxxx
+		if newPath == constant.FolderRootPath {
+			originPath = originPath + "/"
+		}
+		//when old path is not root path like "/xxx/xxx"
+		//replace origin path "/xxx/xxx" to target path "/yyy/yyy/yyy"
+		err = da.GetFolderDA().BatchReplaceFolderPath(ctx, tx, info.Ids, originPath, newPath)
+		if err != nil {
+			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
+			return err
+		}
 	}
 
 	//更新子目录link文件
-	err = f.updateLinkedItemPath(ctx, tx, info.Links, string(newPath))
+	linkPath := folder.ChildrenPath()
+	//replaceLinkedItemPath
+	err = f.replaceLinkedItemPath(ctx, tx, info.Links, string(linkOriginPath), string(linkPath))
 	if err != nil {
 		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", info.Ids), log.Strings("links", info.Links), log.String("path", string(path)))
 		return err
@@ -695,7 +737,7 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 	var parentFolder *entity.FolderItem
 	var err error
 	//get parent folder if exists
-	if req.ParentID != "" && req.ParentID != "/" {
+	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
 		parentFolder, err = f.getFolder(ctx, tx, req.ParentID)
 		if err != nil {
 			return "", err
@@ -1034,6 +1076,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 		IDs:       nil,
 		ItemType:  int(entity.FolderItemTypeFolder),
 		OwnerType: int(folder.OwnerType),
+		Partition: folder.Partition,
 		Owner:     folder.Owner,
 		Name:      name,
 	}
@@ -1224,6 +1267,39 @@ func (f *FolderModel) updateLinkedItemPath(ctx context.Context, tx *dbo.DBContex
 				log.String("itemType", string(fileType)), log.String("id", id))
 			return ErrInvalidFolderItemType
 		}
+	}
+	return nil
+}
+
+func (f *FolderModel) replaceLinkedItemPath(ctx context.Context, tx *dbo.DBContext, links []string, originPath, path string) error {
+	contentLinkIds := make([]string, 0)
+	for _, link := range links {
+		fileType, id, err := parseLink(ctx, link)
+		if err != nil {
+			return err
+		}
+		switch fileType {
+		case entity.FolderFileTypeContent:
+			// err = GetContentModel().UpdateContentPath(ctx, tx, id, path)
+			// if err != nil {
+			// 	log.Warn(ctx, "can't update content path by id", log.Err(err),
+			// 		log.String("itemType", string(fileType)), log.String("id", id), log.String("path", path))
+			// 	return err
+			// }
+			contentLinkIds = append(contentLinkIds, id)
+		default:
+			log.Warn(ctx, "unsupported file type",
+				log.String("itemType", string(fileType)), log.String("id", id))
+			return ErrInvalidFolderItemType
+		}
+	}
+
+	err := GetContentModel().BatchReplaceContentPath(ctx, tx, contentLinkIds, originPath, path)
+	if err != nil {
+		log.Error(ctx, "can't update content path by id", log.Err(err),
+			log.String("itemType", "content"), log.Strings("ids", contentLinkIds),
+			log.String("originPath", originPath), log.String("path", path))
+		return err
 	}
 	return nil
 }
