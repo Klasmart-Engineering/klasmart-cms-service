@@ -475,7 +475,7 @@ func (s *scheduleModel) repeatScheduleYearly(ctx context.Context, template *enti
 				log.Info(ctx, "repeat schedule yearly after time: validate time widely failed",
 					log.Any("template", template),
 					log.Any("options", options),
-					log.String("[location", location.String()),
+					log.String("location", location.String()),
 				)
 				return nil, constant.ErrInvalidArgs
 			}
