@@ -9,12 +9,12 @@ import (
 type TimeLayout string
 
 const (
-	Year   TimeLayout = "2006"
-	Month  TimeLayout = "2006-01"
-	Day    TimeLayout = "2006-01-02"
-	Hour   TimeLayout = "2006-01-02 15"
-	Minute TimeLayout = "2006-01-02 15:04"
-	Second TimeLayout = "2006-01-02 15:04:05"
+	TimeLayoutYear   TimeLayout = "2006"
+	TimeLayoutMonth  TimeLayout = "2006-01"
+	TimeLayoutDay    TimeLayout = "2006-01-02"
+	TimeLayoutHour   TimeLayout = "2006-01-02 15"
+	TimeLayoutMinute TimeLayout = "2006-01-02 15:04"
+	TimeLayoutSecond TimeLayout = "2006-01-02 15:04:05"
 )
 
 type TimeUtil struct {

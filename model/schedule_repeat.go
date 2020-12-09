@@ -16,7 +16,7 @@ import (
 
 var testFlag = true
 
-type DynamicIntervalFunc func(ctx context.Context, baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error)
+type DynamicIntervalFunc func(baseTime int64, isFirst bool) (int, error)
 
 var (
 	ErrOverLimit = errors.New("over the limit")
@@ -110,7 +110,7 @@ func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, rep
 
 	switch repeatCfg.Type {
 	case entity.RepeatTypeDaily:
-		general.Interval = DynamicDayInterval
+		general.Interval = general.DynamicDayInterval
 		return general, nil
 
 	case entity.RepeatTypeWeekly:
@@ -130,7 +130,7 @@ func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, rep
 		sort.Sort(weeklyOnDiff)
 		plan := &RepeatCyclePlan{
 			ctx:           ctx,
-			Interval:      DynamicWeekInterval,
+			Interval:      general.DynamicWeekInterval,
 			repeatCfg:     repeatCfg,
 			BaseTimeStamp: &RepeatBaseTimeStamp{},
 			Diff:          make([]*RepeatBaseTimeStamp, 0),
@@ -151,11 +151,11 @@ func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, rep
 		return plan, nil
 
 	case entity.RepeatTypeMonthly:
-		general.Interval = DynamicMonthInterval
+		general.Interval = general.DynamicMonthInterval
 		return general, nil
 
 	case entity.RepeatTypeYearly:
-		general.Interval = DynamicYearlyInterval
+		general.Interval = general.DynamicYearlyInterval
 		return general, nil
 
 	default:
@@ -181,7 +181,7 @@ func (r *RepeatCyclePlan) GenerateTimeByEndRule(endRule *RepeatCycleEndRule) ([]
 		var count = 0
 		var isFirst = true
 		for count < endRule.AfterCount && baseEnd.Before(r.repeatCfg.MaxTime) {
-			day, err := r.Interval(r.ctx, baseStart.Unix(), r.repeatCfg, isFirst)
+			day, err := r.Interval(baseStart.Unix(), isFirst)
 			if err == ErrOverLimit {
 				continue
 			}
@@ -214,7 +214,7 @@ func (r *RepeatCyclePlan) GenerateTimeByEndRule(endRule *RepeatCycleEndRule) ([]
 		afterTime := time.Unix(endRule.AfterTime, 0).In(r.repeatCfg.Location)
 		var isFirst = true
 		for baseEnd.Before(afterTime) && baseEnd.Before(r.repeatCfg.MaxTime) {
-			day, err := r.Interval(r.ctx, baseStart.Unix(), r.repeatCfg, isFirst)
+			day, err := r.Interval(baseStart.Unix(), isFirst)
 			if err == ErrOverLimit {
 				continue
 			}
@@ -245,9 +245,10 @@ func (r *RepeatCyclePlan) GenerateTimeByEndRule(endRule *RepeatCycleEndRule) ([]
 	return result, nil
 }
 
-func DynamicDayInterval(ctx context.Context, baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
+func (r *RepeatCyclePlan) DynamicDayInterval(baseTime int64, isFirst bool) (int, error) {
+	cfg := r.repeatCfg
 	if cfg.Daily.Interval == 0 {
-		log.Info(ctx, "DynamicDayInterval:Daily Interval invalid", log.Any("Daily", cfg.Daily))
+		log.Info(r.ctx, "DynamicDayInterval:Daily Interval invalid", log.Any("Daily", cfg.Daily))
 		return 0, constant.ErrInvalidArgs
 	}
 	if isFirst {
@@ -255,9 +256,10 @@ func DynamicDayInterval(ctx context.Context, baseTime int64, cfg *RepeatConfig, 
 	}
 	return cfg.Daily.Interval, nil
 }
-func DynamicWeekInterval(ctx context.Context, baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
+func (r *RepeatCyclePlan) DynamicWeekInterval(baseTime int64, isFirst bool) (int, error) {
+	cfg := r.repeatCfg
 	if cfg.Weekly.Interval == 0 {
-		log.Info(ctx, "DynamicWeekInterval:Weekly Interval invalid", log.Any("Daily", cfg.Daily))
+		log.Info(r.ctx, "DynamicWeekInterval:Weekly Interval invalid", log.Any("Daily", cfg.Daily))
 		return 0, constant.ErrInvalidArgs
 	}
 	if isFirst {
@@ -276,7 +278,9 @@ func validateMonthlyData(ctx context.Context, monthlyCfg entity.RepeatMonthly) e
 	}
 	return nil
 }
-func DynamicMonthInterval(ctx context.Context, baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
+func (r *RepeatCyclePlan) DynamicMonthInterval(baseTime int64, isFirst bool) (int, error) {
+	ctx := r.ctx
+	cfg := r.repeatCfg
 	if err := validateMonthlyData(ctx, cfg.Monthly); err != nil {
 		return 0, err
 	}
@@ -332,7 +336,10 @@ func validateYearlyData(ctx context.Context, yearlyCfg entity.RepeatYearly) erro
 	}
 	return nil
 }
-func DynamicYearlyInterval(ctx context.Context, baseTime int64, cfg *RepeatConfig, isFirst bool) (int, error) {
+func (r *RepeatCyclePlan) DynamicYearlyInterval(baseTime int64, isFirst bool) (int, error) {
+	ctx := r.ctx
+	cfg := r.repeatCfg
+
 	if err := validateYearlyData(ctx, cfg.Yearly); err != nil {
 		return 0, err
 	}
