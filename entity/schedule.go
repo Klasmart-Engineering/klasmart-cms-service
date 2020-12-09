@@ -171,13 +171,6 @@ type RepeatWeekly struct {
 	End      RepeatEnd       `json:"end,omitempty"`
 }
 
-func (r RepeatWeekly) Valid() bool {
-	if r.Interval <= 0 || r.End.AfterCount <= 0 || r.End.AfterTime <= time.Now().Unix() {
-		return false
-	}
-	return true
-}
-
 type RepeatMonthly struct {
 	Interval  int                 `json:"interval,omitempty"`
 	OnType    RepeatMonthlyOnType `json:"on_type,omitempty" enums:"date,week"`
