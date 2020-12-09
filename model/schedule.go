@@ -1061,6 +1061,10 @@ func (s *scheduleModel) GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBCon
 }
 
 func (s *scheduleModel) StartScheduleRepeat(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
+	if options == nil || !options.Type.Valid() {
+		return []*entity.Schedule{template}, nil
+	}
+
 	cfg := NewRepeatConfig(options, location)
 	plan, err := NewRepeatCyclePlan(ctx, template.StartAt, template.EndAt, cfg)
 	if err != nil {

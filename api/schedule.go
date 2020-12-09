@@ -65,7 +65,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	operator := s.getOperator(c)
 	data.OrgID = operator.OrgID
 	now := time.Now().Unix()
-	if data.StartAt < now || data.StartAt >= data.EndAt {
+	if !data.IsRepeat && (data.StartAt < now || data.StartAt >= data.EndAt) {
 		log.Info(ctx, "schedule start_at or end_at is invalid",
 			log.Int64("StartAt", data.StartAt),
 			log.Int64("EndAt", data.EndAt),
@@ -73,6 +73,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
@@ -169,7 +170,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", data.TimeZoneOffset))
 	data.OrgID = op.OrgID
 	now := time.Now().Unix()
-	if data.StartAt < now || data.StartAt >= data.EndAt {
+	if !data.IsRepeat && (data.StartAt < now || data.StartAt >= data.EndAt) {
 		log.Info(ctx, "schedule start_at or end_at is invalid",
 			log.Int64("StartAt", data.StartAt),
 			log.Int64("EndAt", data.EndAt),

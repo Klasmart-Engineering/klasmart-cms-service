@@ -13,7 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-var testFlag = true
+var testFlag = false
 
 type DynamicIntervalFunc func(baseTime int64, isFirst bool) (int, error)
 
