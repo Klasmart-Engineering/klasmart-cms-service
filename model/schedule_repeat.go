@@ -13,8 +13,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-var testFlag = false
-
 type DynamicIntervalFunc func(baseTime int64, isFirst bool) (int, error)
 
 var (
@@ -33,11 +31,7 @@ func NewRepeatConfig(options *entity.RepeatOptions, loc *time.Location) *RepeatC
 	cfg := new(RepeatConfig)
 	cfg.RepeatOptions = options
 	cfg.Location = loc
-	if testFlag {
-		cfg.RepeatEndYear = 2
-	} else {
-		cfg.RepeatEndYear = config.Get().Schedule.MaxRepeatYear
-	}
+	cfg.RepeatEndYear = config.Get().Schedule.MaxRepeatYear
 	cfg.MaxTime = time.Now().AddDate(cfg.RepeatEndYear, 0, 0).In(loc)
 	cfg.MinTime = time.Now().In(loc)
 	return cfg
