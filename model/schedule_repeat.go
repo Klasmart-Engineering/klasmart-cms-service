@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sort"
 	"time"
@@ -31,7 +30,7 @@ func NewRepeatConfig(options *entity.RepeatOptions, loc *time.Location) *RepeatC
 	cfg := new(RepeatConfig)
 	cfg.RepeatOptions = options
 	cfg.Location = loc
-	cfg.RepeatEndYear = config.Get().Schedule.MaxRepeatYear
+	cfg.RepeatEndYear = 2 //config.Get().Schedule.MaxRepeatYear
 	cfg.MaxTime = time.Now().AddDate(cfg.RepeatEndYear, 0, 0).In(loc)
 	cfg.MinTime = time.Now().In(loc)
 	return cfg
@@ -45,10 +44,11 @@ type RepeatBaseTimeStamp struct {
 type RepeatCyclePlan struct {
 	ctx context.Context
 
-	repeatCfg     *RepeatConfig
-	BaseTimeStamp *RepeatBaseTimeStamp
-	Diff          []*RepeatBaseTimeStamp
-	Interval      DynamicIntervalFunc
+	repeatCfg       *RepeatConfig
+	BaseTimeStamp   *RepeatBaseTimeStamp
+	Diff            []*RepeatBaseTimeStamp
+	Interval        DynamicIntervalFunc
+	sourceTimeStamp *RepeatBaseTimeStamp
 }
 
 func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, repeatCfg *RepeatConfig) (*RepeatCyclePlan, error) {
@@ -66,6 +66,10 @@ func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, rep
 			},
 		},
 		Interval: nil,
+		sourceTimeStamp: &RepeatBaseTimeStamp{
+			Start: baseStart,
+			End:   baseEnd,
+		},
 	}
 
 	switch repeatCfg.Type {
@@ -94,6 +98,10 @@ func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, rep
 			repeatCfg:     repeatCfg,
 			BaseTimeStamp: &RepeatBaseTimeStamp{},
 			Diff:          make([]*RepeatBaseTimeStamp, 0),
+			sourceTimeStamp: &RepeatBaseTimeStamp{
+				Start: baseStart,
+				End:   baseEnd,
+			},
 		}
 		baseStartEndDiff := baseEnd - baseStart
 		for i, wd := range weeklyOnDiff {
@@ -108,6 +116,7 @@ func NewRepeatCyclePlan(ctx context.Context, baseStart int64, baseEnd int64, rep
 				End:   endDiff,
 			})
 		}
+
 		return plan, nil
 
 	case entity.RepeatTypeMonthly:
@@ -135,6 +144,7 @@ func (r *RepeatCyclePlan) GenerateTimeByEndRule(endRule *RepeatCycleEndRule) ([]
 	}
 	baseStart := time.Unix(r.BaseTimeStamp.Start, 0).In(r.repeatCfg.Location)
 	baseEnd := time.Unix(r.BaseTimeStamp.End, 0).In(r.repeatCfg.Location)
+	sourceStartTime := time.Unix(r.sourceTimeStamp.Start, 0).In(r.repeatCfg.Location)
 
 	switch endRule.CycleRuleType {
 	case entity.RepeatEndAfterCount:
@@ -160,7 +170,11 @@ func (r *RepeatCyclePlan) GenerateTimeByEndRule(endRule *RepeatCycleEndRule) ([]
 			for _, d := range r.Diff {
 				nextStart := utils.ConvertTime(baseStart.Unix()+d.Start, r.repeatCfg.Location)
 				nextEnd := utils.ConvertTime(baseEnd.Unix()+d.End, r.repeatCfg.Location)
-				if nextStart.After(r.repeatCfg.MinTime) && nextEnd.Before(r.repeatCfg.MaxTime) && count < endRule.AfterCount {
+
+				if (nextStart.After(sourceStartTime) || nextStart.Equal(sourceStartTime)) &&
+					nextStart.After(r.repeatCfg.MinTime) &&
+					nextEnd.Before(r.repeatCfg.MaxTime) &&
+					count < endRule.AfterCount {
 					result = append(result, &RepeatBaseTimeStamp{
 						Start: nextStart.Unix(),
 						End:   nextEnd.Unix(),
@@ -193,7 +207,9 @@ func (r *RepeatCyclePlan) GenerateTimeByEndRule(endRule *RepeatCycleEndRule) ([]
 			for _, d := range r.Diff {
 				nextStart := utils.ConvertTime(baseStart.Unix()+d.Start, r.repeatCfg.Location)
 				nextEnd := utils.ConvertTime(baseEnd.Unix()+d.End, r.repeatCfg.Location)
-				if nextStart.After(r.repeatCfg.MinTime) && nextEnd.Before(afterTime) {
+				if (nextStart.After(sourceStartTime) || nextStart.Equal(sourceStartTime)) &&
+					nextStart.After(r.repeatCfg.MinTime) &&
+					nextEnd.Before(afterTime) {
 					result = append(result, &RepeatBaseTimeStamp{
 						Start: nextStart.Unix(),
 						End:   nextEnd.Unix(),
