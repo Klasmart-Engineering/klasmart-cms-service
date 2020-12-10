@@ -41,7 +41,7 @@ func TestDynamicDayInterval_RepeatEndAfterCount(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.Add(-1 * time.Hour).In(loc),
-			enable:   true,
+			enable:   false,
 		},
 		// RepeatEndAfterTime
 		{
@@ -78,18 +78,19 @@ func TestDynamicWeekInterval(t *testing.T) {
 		Weekly: entity.RepeatWeekly{
 			Interval: 1,
 			On: []entity.RepeatWeekday{
-				entity.RepeatWeekdayMonday,
-				entity.RepeatWeekdayTuesday,
+				entity.RepeatWeekdayWednesday,
+				entity.RepeatWeekdayThursday,
 			},
 			End: entity.RepeatEnd{
 				Type:       entity.RepeatEndAfterCount,
-				AfterCount: 3,
+				AfterCount: 6,
 				AfterTime:  0,
 			},
 		},
 	}
 	loc, _ := time.LoadLocation("Asia/Shanghai")
-	testTime := time.Now() //time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
+	//testTime := time.Now() //time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
+	testTime := time.Date(2020, 12, 10, 15, 30, 0, 0, loc)
 	tests := []testData{
 		// RepeatEndAfterCount
 		{
@@ -97,8 +98,8 @@ func TestDynamicWeekInterval(t *testing.T) {
 				temp := options
 				return &temp
 			}(),
-			baseTime: testTime.Add(1 * time.Hour).In(loc),
-			enable:   false,
+			baseTime: testTime.In(loc),
+			enable:   true,
 		},
 		{
 			options: func() *entity.RepeatOptions {
@@ -112,7 +113,7 @@ func TestDynamicWeekInterval(t *testing.T) {
 				temp.Weekly.End.AfterCount = 5
 				return &temp
 			}(),
-			baseTime: testTime.Add(-1 * time.Hour).In(loc),
+			baseTime: testTime.In(loc),
 			enable:   false,
 		},
 		// RepeatEndAfterTime
@@ -126,7 +127,7 @@ func TestDynamicWeekInterval(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.AddDate(0, 0, -2).Add(-1 * time.Hour).In(loc),
-			enable:   true,
+			enable:   false,
 		},
 		{
 			options: func() *entity.RepeatOptions {
@@ -138,7 +139,7 @@ func TestDynamicWeekInterval(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.AddDate(0, 0, 2).Add(1 * time.Hour).In(loc),
-			enable:   true,
+			enable:   false,
 		},
 	}
 
@@ -151,7 +152,7 @@ func TestDynamicMonthInterval(t *testing.T) {
 		Monthly: entity.RepeatMonthly{
 			Interval:  1,
 			OnType:    entity.RepeatMonthlyOnDate,
-			OnDateDay: 2,
+			OnDateDay: 10,
 			End: entity.RepeatEnd{
 				Type:       entity.RepeatEndAfterCount,
 				AfterCount: 5,
@@ -160,7 +161,7 @@ func TestDynamicMonthInterval(t *testing.T) {
 		},
 	}
 	loc, _ := time.LoadLocation("Asia/Shanghai")
-	testTime := time.Now() //time.Date(2020, 12, 8, 12, 30, 0, 0, loc)
+	testTime := time.Date(2020, 12, 10, 9, 30, 0, 0, loc)
 	tests := []testData{
 		// RepeatEndAfterCount
 		{
@@ -169,7 +170,7 @@ func TestDynamicMonthInterval(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.Add(1 * time.Hour).In(loc),
-			enable:   false,
+			enable:   true,
 		},
 		{
 			options: func() *entity.RepeatOptions {
@@ -192,7 +193,7 @@ func TestDynamicMonthInterval(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.Add(1 * time.Hour).In(loc),
-			enable:   true,
+			enable:   false,
 		},
 		{
 			options: func() *entity.RepeatOptions {
@@ -205,7 +206,7 @@ func TestDynamicMonthInterval(t *testing.T) {
 				return &temp
 			}(),
 			baseTime: testTime.Add(-1 * time.Hour).In(loc),
-			enable:   true,
+			enable:   false,
 		},
 		// RepeatEndAfterTime  RepeatMonthlyOnWeek
 		{
@@ -245,7 +246,7 @@ func execute(tests []testData, t *testing.T, loc *time.Location) {
 			continue
 		}
 
-		t.Log("start time:", item.baseTime)
+		t.Log("start time:", item.baseTime.In(time.Now().Location()))
 		conf := NewRepeatConfig(item.options, loc)
 		plan, _ := NewRepeatCyclePlan(context.Background(), item.baseTime.Unix(), item.baseTime.AddDate(0, 0, 1).Unix(), conf)
 		rule, err := NewEndRepeatCycleRule(item.options)
