@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sort"
 	"time"
@@ -30,7 +31,7 @@ func NewRepeatConfig(options *entity.RepeatOptions, loc *time.Location) *RepeatC
 	cfg := new(RepeatConfig)
 	cfg.RepeatOptions = options
 	cfg.Location = loc
-	cfg.RepeatEndYear = 2 //config.Get().Schedule.MaxRepeatYear
+	cfg.RepeatEndYear = config.Get().Schedule.MaxRepeatYear
 	cfg.MaxTime = time.Now().AddDate(cfg.RepeatEndYear, 0, 0).In(loc)
 	cfg.MinTime = time.Now().In(loc)
 	return cfg
