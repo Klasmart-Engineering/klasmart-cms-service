@@ -381,6 +381,22 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 			return nil, err
 		}
 
+		//calculate avalible
+		contentTypeList := []int{entity.ContentTypeAssets, entity.AliasContentTypeFolder}
+		if folderItem.Partition == entity.FolderPartitionMaterialAndPlans {
+			contentTypeList = []int{entity.ContentTypeLesson, entity.ContentTypeMaterial, entity.AliasContentTypeFolder}
+		}
+		condition := da.ContentCondition{
+			ContentType:   contentTypeList,
+			PublishStatus: []string{entity.ContentStatusPublished},
+			DirPath:       string(folderItem.ChildrenPath()),
+		}
+		total, err := GetContentModel().CountUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, operator)
+		if err != nil {
+			log.Warn(ctx, "count folder failed failed", log.Err(err), log.Any("condition", condition))
+			return nil, err
+		}
+		result.Available = total
 		result.Items = folderItems
 	}
 	return result, nil

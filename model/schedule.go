@@ -193,7 +193,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 }
 
 func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location) (string, error) {
-	scheduleList, err := s.RepeatSchedule(ctx, schedule, options, location)
+	scheduleList, err := s.StartScheduleRepeat(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
 		return "", err
@@ -1056,6 +1056,42 @@ func (s *scheduleModel) GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBCon
 	var result = make([]string, len(scheduleList))
 	for i, item := range scheduleList {
 		result[i] = item.ID
+	}
+	return result, nil
+}
+
+func (s *scheduleModel) StartScheduleRepeat(ctx context.Context, template *entity.Schedule, options *entity.RepeatOptions, location *time.Location) ([]*entity.Schedule, error) {
+	if options == nil || !options.Type.Valid() {
+		return []*entity.Schedule{template}, nil
+	}
+
+	cfg := NewRepeatConfig(options, location)
+	plan, err := NewRepeatCyclePlan(ctx, template.StartAt, template.EndAt, cfg)
+	if err != nil {
+		log.Error(ctx, "StartScheduleRepeat:NewRepeatCyclePlan error", log.Err(err), log.Any("template", template), log.Any("cfg", cfg))
+		return nil, err
+	}
+	endRule, err := NewEndRepeatCycleRule(options)
+	if err != nil {
+		log.Error(ctx, "StartScheduleRepeat:NewEndRepeatCycleRule error", log.Err(err), log.Any("template", template), log.Any("options", options))
+		return nil, err
+	}
+	planResult, err := plan.GenerateTimeByEndRule(endRule)
+	if err != nil {
+		log.Error(ctx, "StartScheduleRepeat:GenerateTimeByEndRule error", log.Err(err),
+			log.Any("template", template),
+			log.Any("plan", plan),
+			log.Any("endRule", endRule),
+		)
+		return nil, err
+	}
+	result := make([]*entity.Schedule, len(planResult))
+	for i, item := range planResult {
+		temp := template.Clone()
+		temp.StartAt = item.Start
+		temp.EndAt = item.End
+		temp.ID = utils.NewID()
+		result[i] = &temp
 	}
 	return result, nil
 }
