@@ -114,7 +114,7 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 // @Success 200 {object} string
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
-// @Router /contents_auth [delete]
+// @Router /contents_auth/batch [delete]
 func (s *Server) batchDeleteAuthedContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
