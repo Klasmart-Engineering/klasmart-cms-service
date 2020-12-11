@@ -444,6 +444,5 @@ type SchedulePageView struct {
 type ScheduleIDsCondition struct {
 	ClassID      string
 	LessonPlanID string
-	EndAt        int64
-	//Status       ScheduleStatus
+	StartAt      int64
 }

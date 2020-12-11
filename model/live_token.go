@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -20,6 +21,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
+var (
+	LiveErrGoLiveTimeNotUp = errors.New("go live time not up")
+	LiveErrGoLiveNotAllow  = errors.New("go live not allow")
+)
+
 type ILiveTokenModel interface {
 	MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
 	MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string, classID string) (string, error)
@@ -33,6 +39,26 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID))
 		return "", err
+	}
+	now := time.Now().Unix()
+	diff := utils.GetDiffToMinutesByTimeStamp(schedule.StartAt, now)
+	if diff >= constant.ScheduleAllowGoLiveTime.Minutes() {
+		log.Warn(ctx, "MakeLiveToken: go live time not up",
+			log.Any("op", op),
+			log.String("scheduleID", scheduleID),
+			log.Int64("schedule.StartAt", schedule.StartAt),
+			log.Int64("time.Now", now),
+		)
+		return "", LiveErrGoLiveTimeNotUp
+	}
+	if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
+		log.Warn(ctx, "MakeLiveToken:go live not allow",
+			log.Any("op", op),
+			log.Any("schedule", schedule),
+			log.Int64("schedule.StartAt", schedule.StartAt),
+			log.Int64("time.Now", now),
+		)
+		return "", LiveErrGoLiveNotAllow
 	}
 	classType := schedule.ClassType.ConvertToLiveClassType()
 	if classType == entity.LiveClassTypeInvalid {

@@ -193,3 +193,7 @@ func GetTimeByWeekday(ts int64, weekday time.Weekday, loc *time.Location) time.T
 	newTime := t.AddDate(0, 0, offset)
 	return newTime
 }
+
+func GetDiffToMinutesByTimeStamp(t1 int64, t2 int64) float64 {
+	return float64((t1 - t2) / 60)
+}

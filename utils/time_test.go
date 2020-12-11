@@ -32,3 +32,11 @@ func TestGetTimeDiffToDay(t *testing.T) {
 		assert.Equal(t, result, int64(item.r))
 	}
 }
+
+func TestCheckedDiffToMinuteByTimeStamp(t *testing.T) {
+	loc := time.Now().Location()
+	s := time.Now().Unix()
+	e := time.Now().Add(20 * time.Minute).In(loc).Unix()
+	result := GetDiffToMinutesByTimeStamp(e, s)
+	t.Log(result)
+}
