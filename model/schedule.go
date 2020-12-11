@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	ScheduleErrEditMissTime = errors.New("editable time has expired")
+	ErrScheduleEditMissTime = errors.New("editable time has expired")
 )
 
 type IScheduleModel interface {
@@ -252,7 +252,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*en
 			log.Any("diff", diff),
 			log.Any("ScheduleAllowEditTime", constant.ScheduleAllowEditTime.Minutes()),
 		)
-		return nil, ScheduleErrEditMissTime
+		return nil, ErrScheduleEditMissTime
 	}
 
 	return schedule, nil

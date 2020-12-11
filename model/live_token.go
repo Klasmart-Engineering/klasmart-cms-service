@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	LiveErrGoLiveTimeNotUp = errors.New("go live time not up")
-	LiveErrGoLiveNotAllow  = errors.New("go live not allow")
+	ErrGoLiveTimeNotUp = errors.New("go live time not up")
+	ErrGoLiveNotAllow  = errors.New("go live not allow")
 )
 
 type ILiveTokenModel interface {
@@ -49,7 +49,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 			log.Int64("schedule.StartAt", schedule.StartAt),
 			log.Int64("time.Now", now),
 		)
-		return "", LiveErrGoLiveTimeNotUp
+		return "", ErrGoLiveTimeNotUp
 	}
 	if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
 		log.Warn(ctx, "MakeLiveToken:go live not allow",
@@ -58,7 +58,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 			log.Int64("schedule.StartAt", schedule.StartAt),
 			log.Int64("time.Now", now),
 		)
-		return "", LiveErrGoLiveNotAllow
+		return "", ErrGoLiveNotAllow
 	}
 	classType := schedule.ClassType.ConvertToLiveClassType()
 	if classType == entity.LiveClassTypeInvalid {
