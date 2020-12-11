@@ -97,7 +97,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
-	case model.ScheduleErrEditMissTime:
+	case model.ErrScheduleEditMissTime:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissTime))
 	case nil:
 		c.JSON(http.StatusOK, entity.IDResponse{ID: newID})
@@ -142,7 +142,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
-	case model.ScheduleErrEditMissTime:
+	case model.ErrScheduleEditMissTime:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissTime))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))

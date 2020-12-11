@@ -41,8 +41,8 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 		return "", err
 	}
 	now := time.Now().Unix()
-	diff := utils.GetDiffToMinutesByTimeStamp(schedule.StartAt, now)
-	if diff >= constant.ScheduleAllowGoLiveTime.Minutes() {
+	diff := utils.TimeStampDiff(schedule.StartAt, now)
+	if diff >= constant.ScheduleAllowGoLiveTime {
 		log.Warn(ctx, "MakeLiveToken: go live time not up",
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID),

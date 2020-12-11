@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"github.com/go-playground/assert/v2"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"testing"
 	"time"
 )
@@ -37,6 +38,7 @@ func TestCheckedDiffToMinuteByTimeStamp(t *testing.T) {
 	loc := time.Now().Location()
 	s := time.Now().Unix()
 	e := time.Now().Add(20 * time.Minute).In(loc).Unix()
-	result := GetDiffToMinutesByTimeStamp(e, s)
-	t.Log(result)
+	result := TimeStampDiff(e, s)
+
+	t.Log(result > constant.ScheduleAllowEditTime)
 }
