@@ -275,7 +275,7 @@ func (a *assessmentDA) FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo
 		}
 		return nil, err
 	}
-	var result []string
+	result := make([]string, 0, len(items))
 	for _, item := range items {
 		result = append(result, item.ID)
 	}
