@@ -47,12 +47,13 @@ type AuthedContentRecordInfoResponse struct {
 }
 
 type AuthedOrgList struct {
-	List []*OrganizationInfo `json:"orgs"`
+	Total int                 `json:"total"`
+	List  []*OrganizationInfo `json:"orgs"`
 }
 
 type OrganizationInfo struct {
-	OrgId string `json:"org_id"`
-	Name  string `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type SearchAuthedContentRequest struct {
