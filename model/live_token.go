@@ -40,26 +40,26 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 			log.String("scheduleID", scheduleID))
 		return "", err
 	}
-	//now := time.Now().Unix()
-	//diff := utils.TimeStampDiff(schedule.StartAt, now)
-	//if diff >= constant.ScheduleAllowGoLiveTime {
-	//	log.Warn(ctx, "MakeLiveToken: go live time not up",
-	//		log.Any("op", op),
-	//		log.String("scheduleID", scheduleID),
-	//		log.Int64("schedule.StartAt", schedule.StartAt),
-	//		log.Int64("time.Now", now),
-	//	)
-	//	return "", ErrGoLiveTimeNotUp
-	//}
-	//if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
-	//	log.Warn(ctx, "MakeLiveToken:go live not allow",
-	//		log.Any("op", op),
-	//		log.Any("schedule", schedule),
-	//		log.Int64("schedule.StartAt", schedule.StartAt),
-	//		log.Int64("time.Now", now),
-	//	)
-	//	return "", ErrGoLiveNotAllow
-	//}
+	now := time.Now().Unix()
+	diff := utils.TimeStampDiff(schedule.StartAt, now)
+	if diff >= constant.ScheduleAllowGoLiveTime {
+		log.Warn(ctx, "MakeLiveToken: go live time not up",
+			log.Any("op", op),
+			log.String("scheduleID", scheduleID),
+			log.Int64("schedule.StartAt", schedule.StartAt),
+			log.Int64("time.Now", now),
+		)
+		return "", ErrGoLiveTimeNotUp
+	}
+	if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
+		log.Warn(ctx, "MakeLiveToken:go live not allow",
+			log.Any("op", op),
+			log.Any("schedule", schedule),
+			log.Int64("schedule.StartAt", schedule.StartAt),
+			log.Int64("time.Now", now),
+		)
+		return "", ErrGoLiveNotAllow
+	}
 	classType := schedule.ClassType.ConvertToLiveClassType()
 	if classType == entity.LiveClassTypeInvalid {
 		log.Error(ctx, "MakeLiveToken:ConvertToLiveClassType invalid",
