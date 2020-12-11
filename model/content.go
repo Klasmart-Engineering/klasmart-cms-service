@@ -122,6 +122,10 @@ type IContentModel interface {
 
 	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
+
+	//For authed content
+	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error)
 }
 
 type ContentModel struct {
@@ -156,6 +160,8 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "update old content failed", log.Err(err), log.String("SourceID", sourceContent.ID))
 		return ErrUpdateContentFailed
 	}
+
+	oldContentIDs := make([]string, len(oldContents))
 	for i := range oldContents {
 		oldContents[i].LockedBy = constant.LockedByNoBody
 		oldContents[i].PublishStatus = entity.ContentStatusHidden
@@ -165,6 +171,18 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 			log.Error(ctx, "update old content failed", log.Err(err), log.String("OldID", oldContents[i].ID))
 			return ErrUpdateContentFailed
 		}
+
+		oldContentIDs[i] = oldContents[i].ID
+	}
+
+	//TODO:For authed content => handle source for authed content list version => done
+	err = GetAuthedContentRecordsModel().BatchUpdateAuthedContentVersion(ctx, tx, oldContentIDs, contentId)
+	if err != nil {
+		log.Error(ctx, "batch update authed content reocrds failed",
+			log.Err(err),
+			log.String("contentId", contentId),
+			log.Strings("oldContentIDs", oldContentIDs))
+		return err
 	}
 
 	return nil
@@ -600,6 +618,114 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 	return err
 }
 
+//TODO:For authed content => implement search auth content => done
+func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+	//set condition with authed flag
+	condition.AuthedContentFlag = true
+	condition.AuthedOrgID = user.OrgID
+	condition.PublishStatus = []string{entity.ContentStatusPublished}
+	return cm.searchContent(ctx, tx, &condition, user)
+}
+
+//TODO:For authed content => implement copy content => done
+func (cm *ContentModel) CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error) {
+	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", op.UserID))
+		return "", ErrNoContent
+	}
+	if err != nil {
+		log.Error(ctx, "can't read content on copy", log.Err(err), log.String("cid", cid), log.String("uid", op.UserID))
+		return "", err
+	}
+	if content.ContentType.IsAsset() {
+		return "", ErrInvalidContentType
+	}
+
+	//if deep copy & content is lesson plan copy sub contents
+	if deep && content.ContentType == entity.ContentTypeLesson {
+		//get sub contents in plan
+		cd, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
+		if err != nil {
+			return "", err
+		}
+		materialIds := cd.SubContentIds(ctx)
+		//深度拷贝
+		//copy sub contents & get id map
+		materialMap, err := cm.copyContentList(ctx, tx, materialIds, op)
+		//replace subcontent ids
+		cd.ReplaceContentIds(ctx, materialMap)
+
+		newData, err := cd.Marshal(ctx)
+		if err != nil {
+			return "", err
+		}
+		content.Data = newData
+	}
+
+	id, err := cm.doCopyContent(ctx, tx, content, op)
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+func (cm *ContentModel) copyContentList(ctx context.Context, tx *dbo.DBContext, cids []string, op *entity.Operator) (map[string]string, error) {
+	contentList, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
+	if err != nil {
+		log.Error(ctx, "can't read content on copy", log.Err(err), log.Strings("cids", cids), log.String("uid", op.UserID))
+		return nil, err
+	}
+	if len(contentList) != len(cids) {
+		log.Warn(ctx, "copy content list contains invalid content",
+			log.Err(err),
+			log.Strings("cids", cids),
+			log.Any("contentList", contentList))
+		return nil, ErrNoContent
+	}
+	ret := make(map[string]string)
+	for i := range contentList {
+		copyedID, err := cm.doCopyContent(ctx, tx, contentList[i], op)
+		if err != nil {
+			return nil, err
+		}
+		ret[contentList[i].ID] = copyedID
+	}
+	return ret, nil
+}
+func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, op *entity.Operator) (string, error) {
+	//检查是否有克隆权限
+	err := cm.CheckContentAuthorization(ctx, tx, &entity.Content{
+		ID:            content.ID,
+		PublishScope:  content.PublishScope,
+		PublishStatus: content.PublishStatus,
+		Author:        content.Author,
+		Org:           content.Org,
+	}, op)
+	if err != nil {
+		log.Error(ctx, "no auth to read content for cloning",
+			log.Err(err),
+			log.String("cid", content.ID),
+			log.String("uid", op.UserID))
+		return "", ErrCloneContentFailed
+	}
+
+	obj := cm.prepareCopyContentParams(ctx, content, op)
+
+	now := time.Now()
+	obj.UpdateAt = now.Unix()
+	obj.CreateAt = now.Unix()
+	id, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
+	if err != nil {
+		log.Error(ctx, "clone contentdata failed",
+			log.Err(err),
+			log.String("cid", content.ID),
+			log.String("uid", op.UserID))
+		return "", err
+	}
+	return id, nil
+}
+
 func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -1014,6 +1140,13 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	contentData, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		return nil, err
+	}
+
+	//TODO:For authed content => prepare result for latest version content => done
+	err = contentData.PrepareVersion(ctx)
+	if err != nil {
+		log.Error(ctx, "can't update contentdata version for details", log.Err(err))
+		return nil, ErrParseContentDataDetailsFailed
 	}
 	err = contentData.PrepareResult(ctx, user)
 	if err != nil {
@@ -1577,6 +1710,8 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 			return ErrInvalidPublishStatus
 		}
 	}
+	//TODO:For authed content => update check for authed content list
+
 	return nil
 }
 

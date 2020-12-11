@@ -3,22 +3,23 @@ package contentdata
 import (
 	"context"
 	"encoding/json"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
-	"strings"
 )
 
 type LessonData struct {
-	SegmentId  string          `json:"segmentId"`
-	Condition  string          `json:"condition"`
-	MaterialId string          `json:"materialId"`
-	Material   *entity.ContentInfo `json:"material"`
-	NextNode   []*LessonData   `json:"next"`
-	TeacherManual string 	`json:"teacher_manual"`
-	TeacherManualName string 	`json:"teacher_manual_name"`
+	SegmentId         string              `json:"segmentId"`
+	Condition         string              `json:"condition"`
+	MaterialId        string              `json:"materialId"`
+	Material          *entity.ContentInfo `json:"material"`
+	NextNode          []*LessonData       `json:"next"`
+	TeacherManual     string              `json:"teacher_manual"`
+	TeacherManualName string              `json:"teacher_manual_name"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -77,12 +78,21 @@ func (l *LessonData) SubContentIds(ctx context.Context) []string {
 	return materialList
 }
 
+func (l *LessonData) ReplaceContentIds(ctx context.Context, IDMap map[string]string) {
+	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+		newID, ok := IDMap[l.MaterialId]
+		if ok {
+			l.MaterialId = newID
+		}
+	})
+}
+
 func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentType) error {
 	if contentType != entity.ContentTypeLesson {
 		return ErrInvalidContentType
 	}
 	if l.TeacherManual != "" {
-		teacherManualPairs :=strings.Split(l.TeacherManual, "-")
+		teacherManualPairs := strings.Split(l.TeacherManual, "-")
 		if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
 			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
 				log.String("partition", string(storage.TeacherManualStoragePartition)))
@@ -127,6 +137,37 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	return nil
 }
 
+func (l *LessonData) PrepareVersion(ctx context.Context) error {
+	//list all related content ids
+	ids := l.SubContentIds(ctx)
+	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
+		IDS: ids,
+	})
+	if err != nil {
+		return err
+	}
+
+	//build version map
+	contentIDMap := make(map[string]string)
+	for i := range contentList {
+		if contentList[i].LatestID != "" {
+			contentIDMap[contentList[i].ID] = contentList[i].LatestID
+		} else {
+			contentIDMap[contentList[i].ID] = contentList[i].ID
+		}
+	}
+
+	//update materials to new version
+	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+		newID, ok := contentIDMap[l.MaterialId]
+		if ok {
+			l.MaterialId = newID
+		}
+	})
+
+	return nil
+}
+
 func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
@@ -144,7 +185,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operato
 		contentMap[contentList[i].ID] = contentList[i]
 	}
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
-		data, ok:= contentMap[l.MaterialId]
+		data, ok := contentMap[l.MaterialId]
 		if ok {
 			material, _ := ConvertContentObj(ctx, data, operator)
 			l.Material = material

@@ -479,7 +479,10 @@ type ContentData interface {
 	Validate(ctx context.Context, contentType ContentType) error
 	PrepareResult(ctx context.Context, operator *Operator) error
 	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
+	PrepareVersion(ctx context.Context) error
 	SubContentIds(ctx context.Context) []string
+
+	ReplaceContentIds(ctx context.Context, IDMap map[string]string)
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {

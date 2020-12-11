@@ -2,11 +2,12 @@ package api
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -594,6 +595,7 @@ func (s *Server) queryContent(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
+
 // @Summary queryFolderContent
 // @ID queryFolderContent
 // @Description query content by condition
@@ -623,7 +625,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 
 	//TODO: add check folder permission
 	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
@@ -636,7 +638,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	var results []*entity.FolderContent
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	}else{
+	} else {
 		total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}
 	switch err {
@@ -651,7 +653,6 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
 }
-
 
 // @Summary queryPrivateContent
 // @ID searchPrivateContents

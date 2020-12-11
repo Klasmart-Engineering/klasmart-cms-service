@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -29,6 +31,17 @@ func (s *Server) createFolder(c *gin.Context) {
 	if err != nil {
 		log.Warn(ctx, "create folder failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	//check permission
+	hasPermission, err := s.checkFolderOperatorPermission(ctx, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 
@@ -64,6 +77,16 @@ func (s *Server) addFolderItem(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	//check permission
+	hasPermission, err := s.checkFolderOperatorPermission(ctx, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
 
 	cid, err := model.GetFolderModel().AddItem(ctx, data, op)
 	switch err {
@@ -92,6 +115,17 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 	op := s.getOperator(c)
 	fid := c.Param("item_id")
 	err := model.GetFolderModel().RemoveItem(ctx, fid, op)
+
+	//check permission
+	hasPermission, err := s.checkFolderOperatorPermission(ctx, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
 
 	switch err {
 	case nil:
@@ -122,6 +156,18 @@ func (s *Server) removeFolderItemBulk(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+
+	//check permission
+	hasPermission, err := s.checkFolderOperatorPermission(ctx, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	err = model.GetFolderModel().RemoveItemBulk(ctx, data.FolderIDs, op)
 
 	switch err {
@@ -156,6 +202,17 @@ func (s *Server) updateFolderItem(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	//check permission
+	hasPermission, err := s.checkFolderOperatorPermission(ctx, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	err = model.GetFolderModel().UpdateFolder(ctx, fid, data, op)
 
 	switch err {
@@ -186,6 +243,17 @@ func (s *Server) moveFolderItem(c *gin.Context) {
 	if err != nil {
 		log.Warn(ctx, "update folder item failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	//check permission
+	hasPermission, err := s.checkFolderOperatorPermission(ctx, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 
@@ -220,6 +288,17 @@ func (s *Server) moveFolderItemBulk(c *gin.Context) {
 	if err != nil {
 		log.Warn(ctx, "update folder item failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	//check permission
+	hasPermission, err := s.checkFolderOperatorPermission(ctx, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
 
@@ -345,6 +424,20 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}
+}
+
+func (s *Server) checkFolderOperatorPermission(ctx context.Context, op *entity.Operator) (bool, error) {
+	var permission external.PermissionName
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
+	if err != nil {
+		log.Error(ctx, "get permission failed", log.Err(err))
+		return false, err
+	}
+	//有permission，直接返回
+	if hasPermission {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondition {

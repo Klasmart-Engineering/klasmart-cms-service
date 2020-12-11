@@ -219,6 +219,13 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 			return nil, err
 		}
 
+		//TODO:For authed content => update contentdata sub content versions => done
+		//update for version
+		err = cd.PrepareVersion(ctx)
+		if err != nil {
+			log.Error(ctx, "can't update contentdata version for details", log.Err(err))
+			return nil, ErrParseContentDataDetailsFailed
+		}
 		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual, TeacherManualName: data.TeacherManualName})
 		if err != nil {
 			return nil, ErrInvalidContentData
@@ -256,6 +263,16 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	//content.Author = user.UserID
 	//content.Org = user.OrgID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)
+	return content
+}
+
+func (cm ContentModel) prepareCopyContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
+	content.Version = 1
+	content.ID = ""
+	content.LockedBy = constant.LockedByNoBody
+	content.Author = user.UserID
+	content.Org = user.OrgID
+	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 	return content
 }
 

@@ -88,8 +88,10 @@ type ContentCondition struct {
 	SourceType    string   `json:"source_type"`
 	DirPath       string   `json:"dir_path"`
 
-	OrderBy ContentOrderBy `json:"order_by"`
-	Pager   utils.Pager
+	AuthedContentFlag bool           `json:"authed_content"`
+	AuthedOrgID       string         `json:"authed_org_id"`
+	OrderBy           ContentOrderBy `json:"order_by"`
+	Pager             utils.Pager
 
 	JoinUserIdList []string `json:"join_user_id_list"`
 }
@@ -132,6 +134,15 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		}
 		conditions = append(conditions, "("+strings.Join(subConditions, " or ")+")")
 	}
+
+	//Search authed content
+	if s.AuthedContentFlag && s.AuthedOrgID != "" {
+		sql := fmt.Sprintf(`select content_id from %v where org_id = ?`, entity.AuthedContentRecord{}.TableName())
+		condition := fmt.Sprintf("id in (%v)", sql)
+		conditions = append(conditions, condition)
+		params = append(params, s.AuthedOrgID)
+	}
+
 	if len(s.Scope) > 0 {
 		condition := " publish_scope in (?) "
 		conditions = append(conditions, condition)
