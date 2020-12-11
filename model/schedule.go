@@ -21,6 +21,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
+var (
+	ErrScheduleEditMissTime = errors.New("editable time has expired")
+)
+
 type IScheduleModel interface {
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
@@ -238,8 +242,19 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*en
 			log.String("id", id),
 			log.Any("schedule", schedule),
 		)
-		return schedule, constant.ErrOperateNotAllowed
+		return nil, constant.ErrOperateNotAllowed
 	}
+	diff := utils.TimeStampDiff(schedule.StartAt, time.Now().Unix())
+	if diff <= constant.ScheduleAllowEditTime {
+		log.Warn(ctx, "checkScheduleStatus: GetDiffToMinutesByTimeStamp warn",
+			log.Any("schedule", schedule),
+			log.Int64("schedule.StartAt", schedule.StartAt),
+			log.Any("diff", diff),
+			log.Any("ScheduleAllowEditTime", constant.ScheduleAllowEditTime),
+		)
+		return nil, ErrScheduleEditMissTime
+	}
+
 	return schedule, nil
 }
 func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
@@ -493,6 +508,9 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			log.Any("condition", condition),
 			log.Any("cacheData", cacheData),
 		)
+		for _, item := range cacheData {
+			item.Status = item.Status.GetScheduleStatus(item.EndAt)
+		}
 		return cacheData, nil
 	}
 	var scheduleList []*entity.Schedule
@@ -715,7 +733,9 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 			log.Any("id", id),
 			log.Any("cacheData", cacheData),
 		)
-		return cacheData[0], nil
+		data := cacheData[0]
+		data.Status = data.Status.GetScheduleStatus(data.EndAt)
+		return data, nil
 	}
 	var schedule = new(entity.Schedule)
 	err = da.GetScheduleDA().Get(ctx, id, schedule)
@@ -1022,8 +1042,8 @@ func (s *scheduleModel) GetScheduleIDsByCondition(ctx context.Context, tx *dbo.D
 			Strings: lessonPlanPastIDs,
 			Valid:   true,
 		},
-		EndAtLt: sql.NullInt64{
-			Int64: condition.EndAt,
+		StartLt: sql.NullInt64{
+			Int64: condition.StartAt,
 			Valid: true,
 		},
 	}

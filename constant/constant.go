@@ -109,3 +109,8 @@ const (
 	BounceMax            = 5
 	BounceInterval       = 2 //unit, hour
 )
+
+const (
+	ScheduleAllowEditTime   = 15 * time.Minute
+	ScheduleAllowGoLiveTime = 15 * time.Minute
+)
