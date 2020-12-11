@@ -184,11 +184,10 @@ type ListAssessmentsResult struct {
 }
 
 type AddAssessmentCommand struct {
-	Type          LiveTokenType `json:"type" enums:"preview,live"`
-	ScheduleID    string        `json:"schedule_id"`
-	AttendanceIDs []string      `json:"attendance_ids"`
-	ClassLength   int           `json:"class_length"`
-	ClassEndTime  int64         `json:"class_end_time"`
+	ScheduleID    string   `json:"schedule_id"`
+	AttendanceIDs []string `json:"attendance_ids"`
+	ClassLength   int      `json:"class_length"`
+	ClassEndTime  int64    `json:"class_end_time"`
 }
 
 func (a *AddAssessmentCommand) Valid() error {
