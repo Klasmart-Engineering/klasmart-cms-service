@@ -262,7 +262,7 @@ func (a *assessmentDA) FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo
 	var items []struct {
 		ID string `gorm:"column:id"`
 	}
-	if err := tx.Model(entity.Assessment{}).
+	if err := tx.Table(entity.Assessment{}.TableName()).
 		Select("id").
 		Where("id in (?) and status = ?", ids, entity.AssessmentStatusComplete).
 		Find(&items).Error; err != nil {
