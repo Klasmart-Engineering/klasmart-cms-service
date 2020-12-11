@@ -94,6 +94,59 @@ func (s *Server) createContent(c *gin.Context) {
 	}
 }
 
+// @Summary copyContent
+// @ID copyContent
+// @Description copy lesson plan, lesson material
+// @Accept json
+// @Produce json
+// @Param content body entity.CreateContentRequest true "create request"
+// @Tags content
+// @Success 200 {object} CreateContentResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents/copy [post]
+func (s *Server) copyContent(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var data entity.CopyContentRequest
+	err := c.ShouldBind(&data)
+	if err != nil {
+		log.Error(ctx, "create content failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	// hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
+	// if err != nil {
+	// 	log.Error(ctx, "get permission failed", log.Err(err))
+	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	// 	return
+	// }
+	// //有permission，直接返回
+	// if hasPermission {
+	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
+	// 	return
+	// }
+	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := model.GetContentModel().CopyContent(ctx, tx, data.ContentID, data.Deep, op)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+
+	switch err {
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": cid,
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
 // @Summary publishContentBulk
 // @ID publishContentBulk
 // @Description publish contents bulk
@@ -596,9 +649,9 @@ func (s *Server) queryContent(c *gin.Context) {
 	}
 }
 
-// @Summary queryContent
-// @ID searchContents
-// @Description query content by condition
+// @Summary queryAuthContent
+// @ID queryAuthContent
+// @Description query authed content by condition
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"

@@ -44,6 +44,7 @@ func (s Server) registeRoute() {
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
+		content.POST("/contents/copy", s.mustLogin, s.copyContent)
 		content.GET("/contents/:content_id", s.mustLogin, s.getContent)
 		content.PUT("/contents/:content_id", s.mustLogin, s.updateContent)
 		content.PUT("/contents/:content_id/lock", s.mustLogin, s.lockContent)

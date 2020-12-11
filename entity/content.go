@@ -301,6 +301,11 @@ func (b BoolTinyInt) Bool() TinyIntBool {
 	return false
 }
 
+type CopyContentRequest struct {
+	ContentID string `json:"content_id"`
+	Deep      bool   `json:"deep"`
+}
+
 type CreateContentRequest struct {
 	ContentType   ContentType `json:"content_type"`
 	SourceType    string      `json:"source_type"`
