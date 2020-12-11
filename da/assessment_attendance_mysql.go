@@ -37,13 +37,13 @@ func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContex
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{"id", "assessment_id", "attendance_id"}
+	columns := []string{"id", "assessment_id", "attendance_id", "checked"}
 	var values [][]interface{}
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.AssessmentID, item.AttendanceID})
+		values = append(values, []interface{}{item.ID, item.AssessmentID, item.AttendanceID, item.Checked})
 	}
 	template := SQLBatchInsert(entity.AssessmentAttendance{}.TableName(), columns, values)
 	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {

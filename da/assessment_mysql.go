@@ -3,6 +3,8 @@ package da
 import (
 	"context"
 	"fmt"
+	"github.com/jinzhu/gorm"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +20,7 @@ type IAssessmentDA interface {
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
 	BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]*entity.Assessment, error)
+	FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, ids []string) ([]string, error)
 }
 
 var (
@@ -251,6 +254,30 @@ func (a *assessmentDA) BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx 
 			log.Strings("schedule_ids", scheduleIDs),
 		)
 		return nil, err
+	}
+	return result, nil
+}
+
+func (a *assessmentDA) FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, ids []string) ([]string, error) {
+	var items []struct {
+		ID string `gorm:"column:id"`
+	}
+	if err := tx.Model(entity.Assessment{}).
+		Select("id").
+		Where("id in (?) and status = ?", ids, entity.AssessmentStatusComplete).
+		Find(&items).Error; err != nil {
+		log.Error(ctx, "filter completed assessment ids failed",
+			log.Err(err),
+			log.Strings("ids", ids),
+		)
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, constant.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		result = append(result, item.ID)
 	}
 	return result, nil
 }
