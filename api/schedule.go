@@ -627,7 +627,7 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		return
 	}
 	condition := &da.ScheduleCondition{
-		EndAtLt: sql.NullInt64{
+		StartLt: sql.NullInt64{
 			Int64: time.Now().Unix(),
 			Valid: true,
 		},
