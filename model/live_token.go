@@ -63,12 +63,11 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	classType := schedule.ClassType.ConvertToLiveClassType()
 	if classType == entity.LiveClassTypeInvalid {
 		log.Error(ctx, "MakeLiveToken:ConvertToLiveClassType invalid",
-			log.Err(err),
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID),
 			log.Any("schedule.ClassType", schedule.ClassType),
 		)
-		return "", err
+		return "", constant.ErrInvalidArgs
 	}
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID:    op.UserID,

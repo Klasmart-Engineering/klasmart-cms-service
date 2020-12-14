@@ -39,6 +39,9 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgGoLiveTimeNotUp))
 	case model.ErrGoLiveNotAllow:
 		log.Info(ctx, "go live not allow", log.Err(err), log.String("scheduleID", scheduleID))
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgTimeExpired))
+	case constant.ErrInvalidArgs:
+		log.Info(ctx, "invalid args", log.Err(err), log.String("scheduleID", scheduleID))
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
 	default:
 		log.Error(ctx, "make schedule live token error", log.Err(err), log.String("scheduleID", scheduleID))
