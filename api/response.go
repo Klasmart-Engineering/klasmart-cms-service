@@ -30,6 +30,7 @@ const (
 	ScheduleMsgDeleteMissTime  ResponseLabel = "schedule_msg_delete_minutes"
 	ScheduleMsgEditMissTime    ResponseLabel = "schedule_msg_edit_minutes"
 	ScheduleMsgGoLiveTimeNotUp ResponseLabel = "schedule_msg_start_minutes"
+	ScheduleMsgTimeExpired     ResponseLabel = "schedule_msg_time_expired"
 )
 
 // L create response object with label
