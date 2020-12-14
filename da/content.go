@@ -42,6 +42,9 @@ type IContentDA interface {
 
 	SearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 ContentCondition, condition2 FolderCondition) (int, []*entity.FolderContent, error)
 	SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error)
+	CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, error)
+
+	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 }
 
 type CombineConditions struct {
@@ -318,6 +321,39 @@ func (cd *DBContentDA) SearchContentUnSafe(ctx context.Context, tx *dbo.DBContex
 	return count, objs, nil
 }
 
+func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error {
+	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
+	if len(cids) < 1 {
+		//若fids为空，则不更新
+		return nil
+	}
+	fidsSQLParts := make([]string, len(cids))
+	params := []interface{}{oldPath, path}
+	for i := range cids {
+		fidsSQLParts[i] = "?"
+		params = append(params, cids[i])
+	}
+	fidsSQL := strings.Join(fidsSQLParts, ",")
+
+	sql := fmt.Sprintf(`UPDATE cms_contents SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
+	err := tx.Exec(sql, params...).Error
+
+	log.Info(ctx, "update folder",
+		log.String("sql", sql),
+		log.Any("params", params))
+	if err != nil {
+		log.Error(ctx, "update folder da failed", log.Err(err),
+			log.Strings("fids", cids),
+			log.String("path", string(path)),
+			log.String("oldPath", string(oldPath)),
+			log.String("sql", sql),
+			log.Any("params", params))
+		return err
+	}
+
+	return nil
+}
+
 type TotalContentResponse struct {
 	Total int
 }
@@ -329,6 +365,26 @@ func (cd *DBContentDA) SearchFolderContent(ctx context.Context, tx *dbo.DBContex
 func (cd *DBContentDA) SearchFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, []*entity.FolderContent, error) {
 	return cd.doSearchFolderContent(ctx, tx, &condition1, &condition2)
 }
+
+func (cd *DBContentDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition1 CombineConditions, condition2 FolderCondition) (int, error) {
+	query1, params1 := condition1.GetConditions()
+	query2, params2 := condition2.GetConditions()
+
+	params1 = append(params2, params1...)
+	var total TotalContentResponse
+	var err error
+	//获取数量
+	query := cd.countFolderContentSQL(query1, query2)
+	err = tx.Raw(query, params1...).Scan(&total).Error
+	if err != nil {
+		log.Error(ctx, "count raw sql failed", log.Err(err),
+			log.String("query", query), log.Any("params", params1),
+			log.Any("condition1", condition1), log.Any("condition2", condition2))
+		return 0, err
+	}
+	return total.Total, nil
+}
+
 func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBContext, condition1 dbo.Conditions, condition2 dbo.Conditions) (int, []*entity.FolderContent, error) {
 	query1, params1 := condition1.GetConditions()
 	query2, params2 := condition2.GetConditions()
