@@ -628,7 +628,7 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	}
 	condition := &da.ScheduleCondition{
 		StartLt: sql.NullInt64{
-			Int64: time.Now().Add(-constant.ScheduleAllowGoLiveTime).Unix(),
+			Int64: time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
 			Valid: true,
 		},
 		ClassID: sql.NullString{
