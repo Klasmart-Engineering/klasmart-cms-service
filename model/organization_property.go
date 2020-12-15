@@ -10,8 +10,10 @@ import (
 )
 
 type IOrganizationPropertyModel interface {
-	Get(ctx context.Context, id string) (*entity.OrganizationProperty, error)
-	GetTx(ctx context.Context, tx *dbo.DBContext, id string) (*entity.OrganizationProperty, error)
+	MustGet(ctx context.Context, id string) (*entity.OrganizationProperty, error)
+	MustGetTx(ctx context.Context, tx *dbo.DBContext, id string) (*entity.OrganizationProperty, error)
+	GetOrDefault(ctx context.Context, id string) (*entity.OrganizationProperty, error)
+	GetTxOrDefault(ctx context.Context, tx *dbo.DBContext, id string) (*entity.OrganizationProperty, error)
 }
 
 var (
@@ -28,7 +30,7 @@ func GetOrganizationPropertyModel() IOrganizationPropertyModel {
 
 type organizationPropertyModel struct{}
 
-func (s organizationPropertyModel) Get(ctx context.Context, id string) (*entity.OrganizationProperty, error) {
+func (s organizationPropertyModel) MustGet(ctx context.Context, id string) (*entity.OrganizationProperty, error) {
 	organizationProperty := new(entity.OrganizationProperty)
 	err := da.GetOrganizationPropertyDA().Get(ctx, id, organizationProperty)
 	if err != nil {
@@ -38,7 +40,7 @@ func (s organizationPropertyModel) Get(ctx context.Context, id string) (*entity.
 	return organizationProperty, nil
 }
 
-func (s organizationPropertyModel) GetTx(ctx context.Context, tx *dbo.DBContext, id string) (*entity.OrganizationProperty, error) {
+func (s organizationPropertyModel) MustGetTx(ctx context.Context, tx *dbo.DBContext, id string) (*entity.OrganizationProperty, error) {
 	organizationProperty := new(entity.OrganizationProperty)
 	err := da.GetOrganizationPropertyDA().GetTx(ctx, tx, id, organizationProperty)
 	if err != nil {
@@ -46,4 +48,37 @@ func (s organizationPropertyModel) GetTx(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	return organizationProperty, nil
+}
+
+func (s organizationPropertyModel) GetOrDefault(ctx context.Context, id string) (*entity.OrganizationProperty, error) {
+	organizationProperty, err := s.MustGet(ctx, id)
+	if err == nil {
+		return organizationProperty, nil
+	}
+
+	if err == dbo.ErrRecordNotFound {
+		return s.createDefault(id), nil
+	}
+
+	return nil, err
+}
+
+func (s organizationPropertyModel) GetTxOrDefault(ctx context.Context, tx *dbo.DBContext, id string) (*entity.OrganizationProperty, error) {
+	organizationProperty, err := s.MustGetTx(ctx, tx, id)
+	if err == nil {
+		return organizationProperty, nil
+	}
+
+	if err == dbo.ErrRecordNotFound {
+		return s.createDefault(id), nil
+	}
+
+	return nil, err
+}
+
+func (s organizationPropertyModel) createDefault(id string) *entity.OrganizationProperty {
+	return &entity.OrganizationProperty{
+		ID:   id,
+		Type: entity.OrganizationTypeNormal,
+	}
 }

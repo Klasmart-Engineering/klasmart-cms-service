@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
@@ -22,9 +22,9 @@ import (
 func (s *Server) getOrganizationPropertyByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := model.GetOrganizationPropertyModel().Get(ctx, id)
+	result, err := model.GetOrganizationPropertyModel().MustGet(ctx, id)
 	switch err {
-	case constant.ErrRecordNotFound:
+	case dbo.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
