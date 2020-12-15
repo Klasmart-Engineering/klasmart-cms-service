@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
@@ -16,16 +15,13 @@ import (
 // @Param id path string true "organization id"
 // @Tags organizationProperty
 // @Success 200 {object} entity.OrganizationProperty
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /organizations_propertys/{id} [get]
 func (s *Server) getOrganizationPropertyByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	result, err := model.GetOrganizationPropertyModel().MustGet(ctx, id)
+	result, err := model.GetOrganizationPropertyModel().GetOrDefault(ctx, id)
 	switch err {
-	case dbo.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
