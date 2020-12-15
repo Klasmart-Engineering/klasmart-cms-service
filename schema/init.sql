@@ -238,6 +238,6 @@ CREATE TABLE IF NOT EXISTS `organizations_properties` (
     `deleted_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
     `created_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
     `updated_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
-    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    `deleted_at` bigint(20) DEFAULT 0 COMMENT 'deleted_at',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'organizations_properties';
