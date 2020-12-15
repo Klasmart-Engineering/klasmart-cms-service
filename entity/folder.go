@@ -152,6 +152,17 @@ type UpdateFolderRequest struct {
 	Thumbnail string `json:"thumbnail"`
 }
 
+type ShareFoldersRequest struct {
+	FolderIDs []string `json:"folder_ids"`
+	OrgIDs    []string `json:"org_ids"`
+}
+
+type ShareFoldersDeleteAddOrgList struct {
+	Orgs       []string
+	DeleteOrgs []string
+	AddOrgs    []string
+}
+
 type FolderIdWithFileType struct {
 	ID             string         `json:"id"`
 	FolderFileType FolderFileType `json:"folder_file_type" enums:"content,folder"`

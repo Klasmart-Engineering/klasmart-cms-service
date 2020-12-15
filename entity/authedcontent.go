@@ -23,13 +23,14 @@ type BatchDeleteAuthedContentRequest struct {
 }
 
 type AuthedContentRecord struct {
-	ID        string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
-	OrgID     string `json:"org_id" gorm:"type:varchar(255);NOT NULL;column:org_id"`
-	ContentID string `json:"content_id" gorm:"type:varchar(255);NOT NULL;column:content_id"`
-	Creator   string `json:"creator" gorm:"type:varchar(255);NOT NULL;column:creator"`
-	CreateAt  int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`
-	DeleteAt  int64  `json:"delete_at" gorm:"type:int;NOT NULL;column:delete_at"`
-	Duration  int    `json:"duration" gorm:"type:int;NOT NULL;column:duration"`
+	ID           string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
+	OrgID        string `json:"org_id" gorm:"type:varchar(50);NOT NULL;column:org_id"`
+	FromFolderID string `json:"from_folder_id" gorm:"type:varchar(50);NOT NULL;column:from_folder_id"`
+	ContentID    string `json:"content_id" gorm:"type:varchar(50);NOT NULL;column:content_id"`
+	Creator      string `json:"creator" gorm:"type:varchar(50);NOT NULL;column:creator"`
+	CreateAt     int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`
+	DeleteAt     int64  `json:"delete_at" gorm:"type:int;NOT NULL;DEFAULT: 0;column:delete_at"`
+	Duration     int    `json:"duration" gorm:"type:int;NOT NULL;DEFAULT: 0;column:duration"`
 }
 
 func (AuthedContentRecord) TableName() string {
@@ -62,4 +63,18 @@ type SearchAuthedContentRequest struct {
 	ContentIds []string `json:"content_ids"`
 	Creator    []string `json:"creator"`
 	Pager      utils.Pager
+}
+
+type SharedFolderRecord struct {
+	ID       string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
+	FolderID string `json:"folder_id" gorm:"type:varchar(255);NOT NULL;column:folder_id"`
+	OrgID    string `json:"org_id" gorm:"type:varchar(255);NOT NULL;column:org_id"`
+	Creator  string `json:"creator" gorm:"type:varchar(255);NOT NULL;column:creator"`
+	CreateAt int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`
+	UpdateAt int64  `json:"update_at" gorm:"type:int;NOT NULL;column:update_at"`
+	DeleteAt int64  `json:"delete_at" gorm:"type:int;NOT NULL;DEFAULT: 0;column:delete_at"`
+}
+
+func (SharedFolderRecord) TableName() string {
+	return "cms_shared_folder_records"
 }

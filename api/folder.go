@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -427,17 +426,20 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 }
 
 func (s *Server) checkFolderOperatorPermission(ctx context.Context, op *entity.Operator) (bool, error) {
-	var permission external.PermissionName
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
-	if err != nil {
-		log.Error(ctx, "get permission failed", log.Err(err))
-		return false, err
-	}
-	//有permission，直接返回
-	if hasPermission {
-		return true, nil
-	}
-	return false, nil
+	// TODO:Waiting for folder operate permission name
+	// var permission external.PermissionName
+	// hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
+	// if err != nil {
+	// 	log.Error(ctx, "get permission failed", log.Err(err))
+	// 	return false, err
+	// }
+	// //有permission，直接返回
+	// if hasPermission {
+	// 	return true, nil
+	// }
+	// return false, nil
+
+	return true, nil
 }
 
 func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondition {

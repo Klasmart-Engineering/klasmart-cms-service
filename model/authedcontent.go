@@ -95,9 +95,9 @@ func (ac *AuthedContent) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBCo
 		pendingAddIDs = req.ContentIds
 	}
 
-	data := make([]entity.AuthedContentRecord, len(pendingAddIDs))
+	data := make([]*entity.AuthedContentRecord, len(pendingAddIDs))
 	for i := range pendingAddIDs {
-		data[i] = entity.AuthedContentRecord{
+		data[i] = &entity.AuthedContentRecord{
 			OrgID:     req.OrgId,
 			ContentID: pendingAddIDs[i],
 			Creator:   op.UserID,

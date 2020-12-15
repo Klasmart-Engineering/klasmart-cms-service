@@ -256,6 +256,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
 	content.SourceID = content.ID
+	content.CopySourceID = content.ID
 	content.Version = content.Version + 1
 	content.ID = ""
 	content.LockedBy = constant.LockedByNoBody
@@ -272,6 +273,7 @@ func (cm ContentModel) prepareCopyContentParams(ctx context.Context, content *en
 	content.LockedBy = constant.LockedByNoBody
 	content.Author = user.UserID
 	content.Org = user.OrgID
+	content.CopySourceID = content.ID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 	return content
 }

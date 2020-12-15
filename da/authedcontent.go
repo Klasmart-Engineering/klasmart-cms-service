@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,8 +14,9 @@ import (
 
 type IAuthedContentDA interface {
 	AddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.AuthedContentRecord) error
-	BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req []entity.AuthedContentRecord) error
+	BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req []*entity.AuthedContentRecord) error
 	BatchDeleteAuthedContent(ctx context.Context, tx *dbo.DBContext, orgID string, contentIDs []string) error
+	BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, orgID []string, contentIDs []string) error
 
 	ReplaceContentID(ctx context.Context, tx *dbo.DBContext, oldContentIDs []string, newContentID string) error
 	SearchAuthedContentRecords(ctx context.Context, tx *dbo.DBContext, condition AuthedContentCondition) (int, []*entity.AuthedContentRecord, error)
@@ -29,13 +31,14 @@ type AuthedContentDA struct {
 func (ac *AuthedContentDA) AddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.AuthedContentRecord) error {
 	req.ID = utils.NewID()
 	req.CreateAt = time.Now().Unix()
+	fmt.Println(req)
 	_, err := ac.s.InsertTx(ctx, tx, &req)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req []entity.AuthedContentRecord) error {
+func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req []*entity.AuthedContentRecord) error {
 	if len(req) < 1 {
 		return nil
 	}
@@ -73,7 +76,19 @@ func (ac *AuthedContentDA) BatchDeleteAuthedContent(ctx context.Context, tx *dbo
 	}
 	return nil
 }
-
+func (ac *AuthedContentDA) BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, orgIDs []string, contentIDs []string) error {
+	now := time.Now().Unix()
+	err := tx.Model(&entity.AuthedContentRecord{}).Where("org_id in (?) and content_id in (?)", orgIDs, contentIDs).Updates(entity.AuthedContentRecord{DeleteAt: now}).Error
+	if err != nil {
+		log.Error(ctx, "batch delete cms_authed_contents: batch delete failed",
+			log.Err(err),
+			log.Strings("orgIDs", orgIDs),
+			log.Strings("contentIDs", contentIDs),
+		)
+		return err
+	}
+	return nil
+}
 func (ac *AuthedContentDA) ReplaceContentID(ctx context.Context, tx *dbo.DBContext, oldContentIDs []string, newContentID string) error {
 	err := tx.Model(&entity.AuthedContentRecord{}).Where(" content_id in (?)", oldContentIDs).Updates(entity.AuthedContentRecord{ContentID: newContentID}).Error
 	if err != nil {

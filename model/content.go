@@ -96,6 +96,7 @@ type IContentModel interface {
 	GetContentByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error)
 	GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error)
 	GetPastContentIDByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
+	GetRawContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
 
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
@@ -1113,6 +1114,19 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 		Name:        obj.Name,
 		ContentType: obj.ContentType,
 	}, nil
+}
+
+func (cm *ContentModel) GetRawContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error) {
+	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
+	if err == dbo.ErrRecordNotFound {
+		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid))
+		return nil, ErrNoContent
+	}
+	if err != nil {
+		log.Error(ctx, "can't read contentdata", log.Err(err), log.String("cid", cid))
+		return nil, err
+	}
+	return obj, nil
 }
 
 func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {

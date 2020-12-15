@@ -1,4 +1,4 @@
-CREATE TABLE `cms_contents` (
+CREATE TABLE IF NOT EXISTS `cms_contents` (
     `id` VARCHAR(50) NOT NULL COMMENT 'content_id',
     `content_type` int NOT NULL COMMENT '数据类型',
     `content_name` VARCHAR(255) NOT NULL COMMENT '内容名称',
@@ -29,6 +29,7 @@ CREATE TABLE `cms_contents` (
     `version` INT NOT NULL DEFAULT 0 COMMENT '版本',
     `locked_by` VARCHAR(50) COMMENT '封锁人',
     `source_id` VARCHAR(50) COMMENT 'source_id',
+    `copy_source_id` VARCHAR(50) COMMENT 'copy_source_id',
     `latest_id` VARCHAR(50) COMMENT 'latest_id',
     `lesson_type` VARCHAR(100) COMMENT 'lesson_type',
     `create_at` BIGINT NOT NULL COMMENT 'created_at',
@@ -191,29 +192,28 @@ create fulltext index fullindex_name_description_keywords_author_shortcode on le
     `shortcode`
 );
 drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
-alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
-
+alter table learning_outcomes
+add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 Create Table: CREATE TABLE `users` (
-  `user_id` varchar(64) NOT NULL,
-  `user_name` varchar(30) DEFAULT NULL,
-  `phone` varchar(24) DEFAULT NULL,
-  `email` varchar(80) DEFAULT NULL,
-  `secret` varchar(128) DEFAULT NULL,
-  `salt` varchar(128) DEFAULT NULL,
-  `gender` varchar(8) DEFAULT NULL,
-  `birthday` bigint(20) DEFAULT NULL,
-  `avatar` text DEFAULT NULL,
-  `create_at` bigint(20) DEFAULT '0',
-  `update_at` bigint(20) DEFAULT '0',
-  `delete_at` bigint(20) DEFAULT '0',
-  `create_id` varchar(64) DEFAULT NULL,
-  `update_id` varchar(64) DEFAULT NULL,
-  `delete_id` varchar(64) DEFAULT NULL,
-  `ams_id` varchar(64) DEFAULT NULL,
-  PRIMARY KEY (`user_id`),
-  UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci;
-
+    `user_id` varchar(64) NOT NULL,
+    `user_name` varchar(30) DEFAULT NULL,
+    `phone` varchar(24) DEFAULT NULL,
+    `email` varchar(80) DEFAULT NULL,
+    `secret` varchar(128) DEFAULT NULL,
+    `salt` varchar(128) DEFAULT NULL,
+    `gender` varchar(8) DEFAULT NULL,
+    `birthday` bigint(20) DEFAULT NULL,
+    `avatar` text DEFAULT NULL,
+    `create_at` bigint(20) DEFAULT '0',
+    `update_at` bigint(20) DEFAULT '0',
+    `delete_at` bigint(20) DEFAULT '0',
+    `create_id` varchar(64) DEFAULT NULL,
+    `update_id` varchar(64) DEFAULT NULL,
+    `delete_id` varchar(64) DEFAULT NULL,
+    `ams_id` varchar(64) DEFAULT NULL,
+    PRIMARY KEY (`user_id`),
+    UNIQUE KEY `uix_user_phone` (`phone`, `delete_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 alter table learning_outcomes
 add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 CREATE TABLE IF NOT EXISTS `user_settings` (
@@ -229,3 +229,29 @@ VALUES (
         "default_setting_0",
         '{"cms_page_size":20}'
     );
+CREATE TABLE IF NOT EXISTS `cms_authed_contents` (
+    `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
+    `org_id` VARCHAR(50) NOT NULL COMMENT 'org_id',
+    `content_id` VARCHAR(50) NOT NULL COMMENT 'content_id',
+    `creator` VARCHAR(50) NOT NULL COMMENT 'creator',
+    `duration` INT NOT NULL DEFAULT 0 COMMENT 'duration',
+    `create_at` BIGINT NOT NULL COMMENT 'created_at',
+    `delete_at` BIGINT NULL COMMENT 'deleted_at',
+    PRIMARY KEY (`id`),
+    KEY `org_id` (`org_id`),
+    KEY `content_id` (`content_id`),
+    KEY `creator` (`creator`),
+) COMMENT '内容授权记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS `cms_shared_folder_records` (
+    `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
+    `folder_id` VARCHAR(50) NOT NULL COMMENT 'folder_id',
+    `org_id` VARCHAR(50) NOT NULL COMMENT 'org_id',
+    `creator` VARCHAR(50) NOT NULL COMMENT 'creator',
+    `create_at` BIGINT NOT NULL COMMENT 'created_at',
+    `update_at` BIGINT NOT NULL COMMENT 'updated_at',
+    `delete_at` BIGINT NULL COMMENT 'deleted_at',
+    PRIMARY KEY (`id`),
+    KEY `org_id` (`org_id`),
+    KEY `folder_id` (`folder_id`),
+    KEY `creator` (`creator`),
+) COMMENT '文件夹分享记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

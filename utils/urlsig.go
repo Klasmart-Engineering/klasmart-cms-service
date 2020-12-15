@@ -11,21 +11,24 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"io/ioutil"
 	"math/rand"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
 
 var (
 	ErrInvalidPrivateKeyFile = errors.New("invalid private key file")
 )
+
 type SignatureResult struct {
 	Signature string `json:"signature"`
-	RandNum int64 `json:"rand_num"`
-	Timestamp int64 `json:"timestamp"`
+	RandNum   int64  `json:"rand_num"`
+	Timestamp int64  `json:"timestamp"`
 }
+
 func buildMessage(url string, badanamuId string, timestamp, randNum int64) string {
 	message := fmt.Sprintf("%v?badanamuId=%v&timestamp=%016x&randNum=%016x", url, badanamuId, timestamp, randNum)
 	return message
@@ -36,6 +39,7 @@ func SHA256Hash(msg string) []byte {
 	msgHash := hash.Sum(nil)
 	return msgHash
 }
+
 //func readPrivateKeyDerBase64() (*rsa.PrivateKey, error){
 //	privateKeyDerBase64 := []byte(config.Get().CryptoConfig.PrivateKey)
 //
@@ -46,9 +50,9 @@ func SHA256Hash(msg string) []byte {
 //	return x509.ParsePKCS1PrivateKey(privateKeyDer)
 //}
 
-func readPrivateKeyPEM() (*rsa.PrivateKey, error){
+func readPrivateKeyPEM() (*rsa.PrivateKey, error) {
 	privateKeyPEM, err := ioutil.ReadFile(config.Get().CryptoConfig.PrivateKeyPath)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	block, _ := pem.Decode(privateKeyPEM)
@@ -58,10 +62,9 @@ func readPrivateKeyPEM() (*rsa.PrivateKey, error){
 	return x509.ParsePKCS1PrivateKey(block.Bytes)
 }
 
-
-func URLSignature(id string, url string)(*SignatureResult, error){
+func URLSignature(id string, url string) (*SignatureResult, error) {
 	privateKey, err := readPrivateKeyPEM()
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -71,7 +74,7 @@ func URLSignature(id string, url string)(*SignatureResult, error){
 
 	msgHash := SHA256Hash(msg)
 	sig, err := rsa.SignPKCS1v15(rand2.Reader, privateKey, crypto.SHA256, msgHash)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -87,11 +90,11 @@ type H5pClaims struct {
 	ContentId string `json:"contentId"`
 }
 
-func GenerateH5pJWT(ctx context.Context, sub, contentID string) (string ,error){
+func GenerateH5pJWT(ctx context.Context, sub, contentID string) (string, error) {
 	stdClaims := getStdClaims("H5P", time.Hour*2, contentID, sub)
 	claims := &H5pClaims{
 		StandardClaims: stdClaims,
-		ContentId: contentID,
+		ContentId:      contentID,
 	}
 
 	// test not expired token
@@ -113,7 +116,6 @@ func createJWT(claims jwt.Claims) (signedToken string, err error) {
 
 	return token.SignedString(privateKey)
 }
-
 
 func getStdClaims(aud string, expire time.Duration, id, subject string) jwt.StandardClaims {
 	now := time.Now()
