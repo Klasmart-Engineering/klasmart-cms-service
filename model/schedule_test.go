@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"testing"
 	"time"
 )
@@ -17,5 +19,12 @@ func TestScheduleModel_GetByID(t *testing.T) {
 }
 
 func TestTemp(t *testing.T) {
-
+	diff := constant.ScheduleAllowGoLiveTime
+	loc, _ := time.LoadLocation("Africa/Algiers")
+	now := time.Now().In(loc)
+	temp := now.Add(diff)
+	fmt.Println(temp.Unix())
+	now = time.Now()
+	temp = now.Add(-diff)
+	fmt.Println(temp)
 }
