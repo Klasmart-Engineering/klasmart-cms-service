@@ -441,8 +441,23 @@ func (s *Server) shareFolders(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
+	orgInfo, err := model.GetOrganizationPropertyModel().GetOrDefault(ctx, op.OrgID)
+	if err != nil {
+		log.Warn(ctx, "parse get folder shared records params failed",
+			log.Err(err),
+			log.String("orgID", op.OrgID))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if orgInfo.Type != entity.OrganizationTypeHeadquarters {
+		log.Info(ctx, "org is not in head quarter",
+			log.Any("orgInfo", orgInfo))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	var data entity.ShareFoldersRequest
-	err := c.ShouldBind(&data)
+	err = c.ShouldBind(&data)
 	if err != nil {
 		log.Warn(ctx, "share folder item failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -471,6 +486,21 @@ func (s *Server) shareFolders(c *gin.Context) {
 func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
+
+	orgInfo, err := model.GetOrganizationPropertyModel().GetOrDefault(ctx, op.OrgID)
+	if err != nil {
+		log.Warn(ctx, "parse get folder shared records params failed",
+			log.Err(err),
+			log.String("orgID", op.OrgID))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if orgInfo.Type != entity.OrganizationTypeHeadquarters {
+		log.Info(ctx, "org is not in head quarter",
+			log.Any("orgInfo", orgInfo))
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
 
 	folderIDsStr := c.Query("folder_ids")
 	if folderIDsStr == "" {
