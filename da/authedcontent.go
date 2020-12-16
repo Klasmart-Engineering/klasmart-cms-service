@@ -146,6 +146,7 @@ type AuthedContentCondition struct {
 	OrgIDs     []string
 	ContentIDs []string
 	Creator    []string
+	FromFolderIDs []string
 
 	Pager utils.Pager
 }
@@ -163,6 +164,11 @@ func (s *AuthedContentCondition) GetConditions() ([]string, []interface{}) {
 		condition := "org_id in (?)"
 		conditions = append(conditions, condition)
 		params = append(params, s.OrgIDs)
+	}
+	if len(s.FromFolderIDs) > 0 {
+		condition := "from_folder_id in (?)"
+		conditions = append(conditions, condition)
+		params = append(params, s.FromFolderIDs)
 	}
 	if len(s.ContentIDs) > 0 {
 		condition := "content_id in (?)"

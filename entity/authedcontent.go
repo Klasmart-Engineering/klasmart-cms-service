@@ -3,12 +3,14 @@ package entity
 import "gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 type AddAuthedContentRequest struct {
-	OrgId     string `json:"org_id"`
-	ContentId string `json:"content_id"`
+	OrgID        string `json:"org_id"`
+	FromFolderID string `json:"from_folder_id"`
+	ContentID    string `json:"content_id"`
 }
 
 type BatchAddAuthedContentRequest struct {
 	OrgId      string   `json:"org_id"`
+	FolderId string `json:"folder_id"`
 	ContentIds []string `json:"content_ids"`
 }
 
@@ -22,10 +24,15 @@ type BatchDeleteAuthedContentRequest struct {
 	ContentIds []string `json:"content_ids"`
 }
 
+type BatchDeleteAuthedContentByOrgsRequest struct {
+	OrgIds     []string   `json:"org_ids"`
+	ContentIds []string `json:"content_ids"`
+}
+
 type AuthedContentRecord struct {
 	ID           string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
 	OrgID        string `json:"org_id" gorm:"type:varchar(50);NOT NULL;column:org_id"`
-	FromFolderID string `json:"from_folder_id" gorm:"type:varchar(50);NOT NULL;column:from_folder_id"`
+	FromFolderID string `json:"from_folder_id" gorm:"type:varchar(50);column:from_folder_id"`
 	ContentID    string `json:"content_id" gorm:"type:varchar(50);NOT NULL;column:content_id"`
 	Creator      string `json:"creator" gorm:"type:varchar(50);NOT NULL;column:creator"`
 	CreateAt     int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`

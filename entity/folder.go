@@ -158,7 +158,6 @@ type ShareFoldersRequest struct {
 }
 
 type ShareFoldersDeleteAddOrgList struct {
-	Orgs       []string
 	DeleteOrgs []string
 	AddOrgs    []string
 }
