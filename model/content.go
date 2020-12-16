@@ -117,7 +117,7 @@ type IContentModel interface {
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
-	GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator)(map[string]entity.ContentAuth, error)
+	GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error)
 
 	IsContentsOperatorByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error)
 	ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error)
@@ -890,9 +890,6 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 			deletedIds = append(deletedIds, contents[i].SourceID)
 		}
 	}
-	if err != nil {
-		return err
-	}
 	da.GetContentRedis().CleanContentCache(ctx, deletedIds)
 	return nil
 }
@@ -1516,7 +1513,7 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 	//if content is a lesson, add materials outcomes
 	if content.ContentType == entity.ContentTypeLesson {
 		data, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "parse content data failed",
 				log.Err(err),
 				log.Any("content", content))
@@ -1525,7 +1522,7 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 		materialIDs := data.SubContentIds(ctx)
 		if len(materialIDs) > 0 {
 			materials, err := da.GetContentDA().GetContentByIDList(ctx, tx, materialIDs)
-			if err != nil{
+			if err != nil {
 				log.Error(ctx, "parse content data failed",
 					log.Err(err),
 					log.Any("content", content))
@@ -1639,9 +1636,9 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-func (cm *ContentModel) GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator)(map[string]entity.ContentAuth, error){
+func (cm *ContentModel) GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
 	contents, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "get content failed",
 			log.Err(err),
 			log.Strings("cids", cids))
@@ -1650,7 +1647,7 @@ func (cm *ContentModel) GetContentAuthByIDList(ctx context.Context, cids []strin
 	return cm.getContentAuth(ctx, contents, operator)
 }
 
-func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.Content, operator *entity.Operator)(map[string]entity.ContentAuth, error){
+func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.Content, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
 	result := make(map[string]entity.ContentAuth)
 	pendingAuthContentIDs := make([]string, 0)
 
@@ -1660,7 +1657,7 @@ func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.C
 		if contents[i].LatestID == "" {
 			contentLatestIDMap[contents[i].ID] = contents[i].ID
 			contentLatestIDRevert[contents[i].ID] = contents[i].ID
-		}else{
+		} else {
 			contentLatestIDMap[contents[i].ID] = contents[i].LatestID
 			contentLatestIDRevert[contents[i].LatestID] = contents[i].ID
 		}
@@ -1669,7 +1666,7 @@ func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.C
 	for i := range contents {
 		if contents[i].Org == operator.OrgID {
 			result[contents[i].ID] = entity.ContentAuthed
-		}else{
+		} else {
 			result[contents[i].ID] = entity.ContentUnauthed
 			//search auth contents use latest id
 			pendingAuthContentIDs = append(pendingAuthContentIDs, contentLatestIDMap[contents[i].ID])
@@ -1680,7 +1677,7 @@ func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.C
 			OrgIds:     []string{operator.OrgID},
 			ContentIds: pendingAuthContentIDs,
 		}, operator)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "query auth contents records failed",
 				log.Err(err),
 				log.String("orgID", operator.OrgID),
