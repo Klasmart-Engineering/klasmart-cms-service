@@ -117,6 +117,7 @@ type IContentModel interface {
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	ContentDataCount(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentStatisticsInfo, error)
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
+	GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator)(map[string]entity.ContentAuth, error)
 
 	IsContentsOperatorByIdList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error)
 	ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error)
@@ -1504,20 +1505,39 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 
 	return ret, nil
 }
+
 func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't get content", log.Err(err), log.String("cid", cid))
 		return nil, err
 	}
-	if content.Outcomes == "" {
-		return nil, nil
-	}
-	outcomes := strings.Split(content.Outcomes, ",")
-	ret := make([]string, 0)
-	for i := range outcomes {
-		if outcomes[i] != "" {
-			ret = append(ret, outcomes[i])
+	ret := cm.parseContentOutcomes(ctx, content)
+	//if content is a lesson, add materials outcomes
+	if content.ContentType == entity.ContentTypeLesson {
+		data, err := contentdata.CreateContentData(ctx, content.ContentType, content.Data)
+		if err != nil{
+			log.Error(ctx, "parse content data failed",
+				log.Err(err),
+				log.Any("content", content))
+			return nil, err
+		}
+		materialIDs := data.SubContentIds(ctx)
+		if len(materialIDs) > 0 {
+			materials, err := da.GetContentDA().GetContentByIDList(ctx, tx, materialIDs)
+			if err != nil{
+				log.Error(ctx, "parse content data failed",
+					log.Err(err),
+					log.Any("content", content))
+				return nil, err
+			}
+
+			for i := range materials {
+				outcomes := cm.parseContentOutcomes(ctx, materials[i])
+				if len(outcomes) > 0 {
+					ret = append(ret, outcomes...)
+				}
+			}
 		}
 	}
 
@@ -1617,6 +1637,77 @@ func (cm *ContentModel) filterInvisiblePublishStatus(ctx context.Context, status
 		}
 	}
 	return newStatus
+}
+
+func (cm *ContentModel) GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator)(map[string]entity.ContentAuth, error){
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
+	if err != nil{
+		log.Error(ctx, "get content failed",
+			log.Err(err),
+			log.Strings("cids", cids))
+		return nil, err
+	}
+	return cm.getContentAuth(ctx, contents, operator)
+}
+
+func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.Content, operator *entity.Operator)(map[string]entity.ContentAuth, error){
+	result := make(map[string]entity.ContentAuth)
+	pendingAuthContentIDs := make([]string, 0)
+
+	contentLatestIDMap := make(map[string]string)
+	contentLatestIDRevert := make(map[string]string)
+	for i := range contents {
+		if contents[i].LatestID == "" {
+			contentLatestIDMap[contents[i].ID] = contents[i].ID
+			contentLatestIDRevert[contents[i].ID] = contents[i].ID
+		}else{
+			contentLatestIDMap[contents[i].ID] = contents[i].LatestID
+			contentLatestIDRevert[contents[i].LatestID] = contents[i].ID
+		}
+	}
+
+	for i := range contents {
+		if contents[i].Org == operator.OrgID {
+			result[contents[i].ID] = entity.ContentAuthed
+		}else{
+			result[contents[i].ID] = entity.ContentUnauthed
+			//search auth contents use latest id
+			pendingAuthContentIDs = append(pendingAuthContentIDs, contentLatestIDMap[contents[i].ID])
+		}
+	}
+	if len(pendingAuthContentIDs) > 0 {
+		authRecords, err := GetAuthedContentRecordsModel().QueryAuthedContentRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
+			OrgIds:     []string{operator.OrgID},
+			ContentIds: pendingAuthContentIDs,
+		}, operator)
+		if err != nil{
+			log.Error(ctx, "query auth contents records failed",
+				log.Err(err),
+				log.String("orgID", operator.OrgID),
+				log.Strings("contentIDs", pendingAuthContentIDs))
+			return nil, err
+		}
+		for i := range authRecords {
+			//result revert to current id
+			result[contentLatestIDRevert[authRecords[i].ContentID]] = entity.ContentAuthed
+		}
+	}
+
+	return result, nil
+}
+
+func (cm *ContentModel) parseContentOutcomes(ctx context.Context, content *entity.Content) []string {
+	if content.Outcomes == "" {
+		return nil
+	}
+	outcomes := strings.Split(content.Outcomes, ",")
+	ret := make([]string, 0)
+	for i := range outcomes {
+		if outcomes[i] != "" {
+			ret = append(ret, outcomes[i])
+		}
+	}
+	return ret
 }
 
 func (cm *ContentModel) filterRootPath(ctx context.Context, condition *da.ContentCondition, ownerType entity.OwnerType, operator *entity.Operator) error {

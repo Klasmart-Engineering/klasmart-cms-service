@@ -24,6 +24,7 @@ type IAuthedContent interface {
 
 	SearchAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecord, error)
 	SearchAuthedContentDetailsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecordInfo, error)
+	QueryAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) ([]*entity.AuthedContentRecord, error)
 
 	BatchUpdateAuthedContentVersion(ctx context.Context, tx *dbo.DBContext, oldID []string, newID string) error
 }
@@ -252,6 +253,17 @@ func (ac *AuthedContent) BatchDeleteAuthedContentByOrgs(ctx context.Context, tx 
 //SearchAuthedContentRecordsList search authed content records
 func (ac *AuthedContent) SearchAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecord, error) {
 	return da.GetAuthedContentRecordsDA().SearchAuthedContentRecords(ctx, tx, da.AuthedContentCondition{
+		IDs:        condition.IDs,
+		OrgIDs:     condition.OrgIds,
+		ContentIDs: condition.ContentIds,
+		Creator:    condition.Creator,
+
+		Pager: condition.Pager,
+	})
+}
+
+func (ac *AuthedContent) QueryAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) ([]*entity.AuthedContentRecord, error) {
+	return da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, da.AuthedContentCondition{
 		IDs:        condition.IDs,
 		OrgIDs:     condition.OrgIds,
 		ContentIDs: condition.ContentIds,

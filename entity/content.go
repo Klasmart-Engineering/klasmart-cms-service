@@ -43,6 +43,9 @@ const (
 	DrawActivityFalse = 2
 	//LessonTypeTest    = "1"
 	//LessonTypeNotTest = "2"
+
+	ContentAuthed ContentAuth = 1
+	ContentUnauthed ContentAuth = 2
 )
 
 var (
@@ -57,6 +60,8 @@ type ContentPublishStatus string
 type ContentType int
 
 type FileType int
+
+type ContentAuth int
 
 func NewFileType(fileType int) FileType {
 	switch fileType {
