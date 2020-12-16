@@ -411,7 +411,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 
 // @Summary getScheduledDates
 // @ID getScheduledDates
-// @Description get  schedules dates(format:2006-01-02)
+// @Description get schedules dates(format:2006-01-02)
 // @Accept json
 // @Produce json
 // @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month)
@@ -425,26 +425,29 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 // @Tags schedule
 // @Success 200 {array}  string
 // @Failure 400 {object} BadRequestResponse
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view/dates [get]
 func (s *Server) getScheduledDates(c *gin.Context) {
 	ctx := c.Request.Context()
+	offsetStr := c.Query("time_zone_offset")
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil {
+		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	}
+	loc := utils.GetTimeLocationByOffset(offset)
+
 	condition, err := s.getScheduleTimeViewCondition(c)
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().Query(ctx, condition)
-	if err == nil {
-		c.JSON(http.StatusOK, result)
+	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, condition, loc)
+	if err != nil {
+		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	if err == constant.ErrRecordNotFound {
-		log.Info(ctx, "record not found", log.Any("condition", condition))
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-		return
-	}
-	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	c.JSON(http.StatusOK, result)
 }
 
 func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondition, error) {
