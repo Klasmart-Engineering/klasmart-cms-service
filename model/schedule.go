@@ -32,6 +32,7 @@ type IScheduleModel interface {
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	//DeleteTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error)
+	QueryScheduledDates(ctx context.Context, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
 	Page(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
 	GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error)
 	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
@@ -1113,6 +1114,27 @@ func (s *scheduleModel) StartScheduleRepeat(ctx context.Context, template *entit
 		temp.ID = utils.NewID()
 		result[i] = &temp
 	}
+	return result, nil
+}
+
+func (s *scheduleModel) QueryScheduledDates(ctx context.Context, condition *da.ScheduleCondition, loc *time.Location) ([]string, error) {
+	var scheduleList []*entity.Schedule
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "GetHasScheduleDate:GetScheduleDA.Query error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+	dateList := make([]string, 0)
+	for _, item := range scheduleList {
+		if item.ClassType == entity.ScheduleClassTypeHomework {
+			str := utils.TimeStampString(item.DueAt, loc, utils.TimeLayoutDay)
+			dateList = append(dateList, str)
+		} else {
+			betweenTimes := utils.DateBetweenTimeAndFormat(item.StartAt, item.EndAt, loc)
+			dateList = append(dateList, betweenTimes...)
+		}
+	}
+	result := utils.SliceDeduplication(dateList)
 	return result, nil
 }
 

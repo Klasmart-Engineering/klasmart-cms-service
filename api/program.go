@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"strings"
 
@@ -23,7 +24,13 @@ import (
 // @Router /programs [get]
 func (s *Server) getProgram(c *gin.Context) {
 	ctx := c.Request.Context()
-	result, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{})
+	op := s.getOperator(c)
+	result, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{
+		OrgID: sql.NullString{
+			String: op.OrgID,
+			Valid:  len(op.OrgID) != 0,
+		},
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return

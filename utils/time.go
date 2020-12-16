@@ -17,6 +17,10 @@ const (
 	TimeLayoutSecond TimeLayout = "2006-01-02 15:04:05"
 )
 
+func (ts TimeLayout) String() string {
+	return string(ts)
+}
+
 type TimeUtil struct {
 	TimeStamp int64
 	Location  *time.Location
@@ -196,4 +200,37 @@ func GetTimeByWeekday(ts int64, weekday time.Weekday, loc *time.Location) time.T
 
 func TimeStampDiff(t1 int64, t2 int64) time.Duration {
 	return time.Second * time.Duration(t1-t2)
+}
+
+func EndOfYear(year int, loc *time.Location) time.Time {
+	return StartOfYear(year+1, loc).Add(-time.Millisecond)
+}
+func EndOfYearByTimeStamp(ts int64, loc *time.Location) time.Time {
+	t := ConvertTime(ts, loc)
+	return EndOfYear(t.Year(), loc)
+}
+
+func TimeStampString(ts int64, loc *time.Location, layout TimeLayout) string {
+	return time.Unix(ts, 0).In(loc).Format(layout.String())
+}
+
+func DateBetweenTimeAndFormat(start int64, end int64, loc *time.Location) []string {
+	if start >= end {
+		return []string{}
+	}
+	startStr := TimeStampString(start, loc, TimeLayoutDay)
+	endStr := TimeStampString(end, loc, TimeLayoutDay)
+	startTime, _ := time.Parse(TimeLayoutDay.String(), startStr)
+	endTime, _ := time.Parse(TimeLayoutDay.String(), endStr)
+
+	if startTime.Equal(endTime) {
+		return []string{startStr}
+	}
+	result := make([]string, 0)
+
+	for temp := startTime; temp.Before(endTime) || temp.Equal(endTime); {
+		result = append(result, temp.Format(TimeLayoutDay.String()))
+		temp = temp.AddDate(0, 0, 1)
+	}
+	return result
 }

@@ -369,6 +369,10 @@ type ScheduleListView struct {
 	ClassID      string            `json:"class_id"`
 }
 
+type ScheduleDateView struct {
+	DayDate string
+}
+
 type ScheduleDetailsView struct {
 	ID          string            `json:"id"`
 	Title       string            `json:"title"`
@@ -445,4 +449,18 @@ type ScheduleIDsCondition struct {
 	ClassID      string
 	LessonPlanID string
 	StartAt      int64
+}
+
+type ScheduleViewType string
+
+const (
+	ScheduleViewTypeDay      ScheduleViewType = "day"
+	ScheduleViewTypeWorkweek ScheduleViewType = "work_week"
+	ScheduleViewTypeWeek     ScheduleViewType = "week"
+	ScheduleViewTypeMonth    ScheduleViewType = "month"
+	ScheduleViewTypeYear     ScheduleViewType = "year"
+)
+
+func (s ScheduleViewType) String() string {
+	return string(s)
 }

@@ -80,6 +80,7 @@ func (s Server) registeRoute() {
 		schedules.PUT("/schedules/:id/status", s.mustLogin, s.updateScheduleStatus)
 		schedules.GET("/schedules_participate/class", s.mustLogin, s.getParticipateClass)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
+		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
 	}
 
 	assessments := s.engine.Group("/v1")
