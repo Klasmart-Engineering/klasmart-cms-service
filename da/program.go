@@ -29,7 +29,8 @@ func GetProgramDA() IProgramDA {
 }
 
 type ProgramCondition struct {
-	IDs entity.NullStrings
+	IDs     entity.NullStrings
+	OrgType sql.NullString
 
 	OrderBy ProgramOrderBy
 	Pager   dbo.Pager
@@ -44,6 +45,11 @@ func (c ProgramCondition) GetConditions() ([]string, []interface{}) {
 	if c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+
+	if c.OrgType.Valid {
+		wheres = append(wheres, "org_type = ?")
+		params = append(params, c.OrgType.String)
 	}
 
 	if c.DeleteAt.Valid {
