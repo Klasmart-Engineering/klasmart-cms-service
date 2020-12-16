@@ -376,7 +376,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Description get schedule time view
 // @Accept json
 // @Produce json
-// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month)
+// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month,year)
 // @Param time_at query integer true "search schedules by time_at"
 // @Param time_zone_offset query integer true "time zone offset"
 // @Param school_ids query string false "school ids,separated by comma"
@@ -414,7 +414,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 // @Description get schedules dates(format:2006-01-02)
 // @Accept json
 // @Produce json
-// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month)
+// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month,year)
 // @Param time_at query integer true "search schedules by time_at"
 // @Param time_zone_offset query integer true "time zone offset"
 // @Param school_ids query string false "school ids,separated by comma"
