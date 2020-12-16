@@ -31,6 +31,7 @@ func GetProgramDA() IProgramDA {
 type ProgramCondition struct {
 	IDs     entity.NullStrings
 	OrgType sql.NullString
+	OrgID   sql.NullString
 
 	OrderBy ProgramOrderBy
 	Pager   dbo.Pager

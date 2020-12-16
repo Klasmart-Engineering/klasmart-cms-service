@@ -371,13 +371,6 @@ func (s *Server) querySchedule(c *gin.Context) {
 	})
 }
 
-const (
-	ViewTypeDay      = "day"
-	ViewTypeWorkweek = "work_week"
-	ViewTypeWeek     = "week"
-	ViewTypeMonth    = "month"
-)
-
 // @Summary getScheduleTimeView
 // @ID getScheduleTimeView
 // @Description get schedule time view
@@ -398,6 +391,63 @@ const (
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
+	ctx := c.Request.Context()
+	condition, err := s.getScheduleTimeViewCondition(c)
+	if err != nil {
+		return
+	}
+	result, err := model.GetScheduleModel().Query(ctx, condition)
+	if err == nil {
+		c.JSON(http.StatusOK, result)
+		return
+	}
+	if err == constant.ErrRecordNotFound {
+		log.Info(ctx, "record not found", log.Any("condition", condition))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		return
+	}
+	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+}
+
+// @Summary getScheduledDates
+// @ID getScheduledDates
+// @Description get  schedules dates(format:2006-01-02)
+// @Accept json
+// @Produce json
+// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month)
+// @Param time_at query integer true "search schedules by time_at"
+// @Param time_zone_offset query integer true "time zone offset"
+// @Param school_ids query string false "school ids,separated by comma"
+// @Param teacher_ids query string false "teacher id,separated by comma"
+// @Param class_ids query string false "class id,separated by comma"
+// @Param subject_ids query string false "subject id,separated by comma"
+// @Param program_ids query string false "program id,separated by comma"
+// @Tags schedule
+// @Success 200 {array}  string
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_time_view/dates [get]
+func (s *Server) getScheduledDates(c *gin.Context) {
+	ctx := c.Request.Context()
+	condition, err := s.getScheduleTimeViewCondition(c)
+	if err != nil {
+		return
+	}
+	result, err := model.GetScheduleModel().Query(ctx, condition)
+	if err == nil {
+		c.JSON(http.StatusOK, result)
+		return
+	}
+	if err == constant.ErrRecordNotFound {
+		log.Info(ctx, "record not found", log.Any("condition", condition))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		return
+	}
+	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+}
+
+func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondition, error) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
@@ -406,14 +456,14 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	if err != nil {
 		log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("time_at", timeAtStr))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
+		return nil, err
 	}
 	offsetStr := c.Query("time_zone_offset")
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
 		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
+		return nil, err
 	}
 	loc := utils.GetTimeLocationByOffset(offset)
 	log.Debug(ctx, "time location", log.Any("op", op), log.Any("location", loc), log.Int("offset", offset))
@@ -423,20 +473,23 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		start int64
 		end   int64
 	)
-	switch viewType {
-	case ViewTypeDay:
+	switch entity.ScheduleViewType(viewType) {
+	case entity.ScheduleViewTypeDay:
 		start = timeUtil.BeginOfDayByTimeStamp().Unix()
 		end = timeUtil.EndOfDayByTimeStamp().Unix()
-	case ViewTypeWorkweek:
+	case entity.ScheduleViewTypeWorkweek:
 		start, end = timeUtil.FindWorkWeekTimeRange()
-	case ViewTypeWeek:
+	case entity.ScheduleViewTypeWeek:
 		start, end = timeUtil.FindWeekTimeRange()
-	case ViewTypeMonth:
+	case entity.ScheduleViewTypeMonth:
 		start, end = timeUtil.FindMonthRange()
+	case entity.ScheduleViewTypeYear:
+		start = utils.StartOfYearByTimeStamp(timeAt, loc).Unix()
+		end = utils.EndOfYearByTimeStamp(timeAt, loc).Unix()
 	default:
 		log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
+		return nil, constant.ErrInvalidArgs
 	}
 	startAndEndTimeViewRange := make([]sql.NullInt64, 2)
 	startAndEndTimeViewRange[0] = sql.NullInt64{
@@ -461,12 +514,12 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 			log.Any("op", op),
 		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
+		return nil, err
 	}
 	if len(filterClassIDs) == 0 {
 		log.Info(ctx, "getScheduleTimeView:filterClassIDs is empty", log.Any("operator", op))
 		c.JSON(http.StatusOK, []*entity.ScheduleListView{})
-		return
+		return nil, constant.ErrRecordNotFound
 	}
 	if schoolIDs.Valid {
 		schoolClassIDs, err := s.GetClassIDsBySchoolIDs(ctx, op, schoolIDs.Strings)
@@ -477,7 +530,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 				log.Any("schoolIDs", schoolIDs),
 			)
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
+			return nil, err
 		}
 		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, schoolClassIDs)
 	}
@@ -490,7 +543,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 				log.Any("teacherIDs", teacherIDs),
 			)
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
+			return nil, err
 		}
 		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, teacherClassIDs)
 	}
@@ -512,18 +565,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		log.Any("classIDs", classIDs),
 		log.Any("schoolIDs", schoolIDs),
 	)
-	result, err := model.GetScheduleModel().Query(ctx, condition)
-	if err == nil {
-		c.JSON(http.StatusOK, result)
-		return
-	}
-	if err == constant.ErrRecordNotFound {
-		log.Info(ctx, "record not found", log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-		return
-	}
-	log.Info(ctx, "record not found", log.Err(err), log.String("viewType", viewType), log.String("timeAtStr", timeAtStr), log.Any("condition", condition))
-	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	return condition, nil
 }
 
 func (s *Server) GetClassIDsBySchoolIDs(ctx context.Context, op *entity.Operator, schoolIDs []string) ([]string, error) {

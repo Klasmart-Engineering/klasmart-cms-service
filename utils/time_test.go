@@ -42,3 +42,35 @@ func TestCheckedDiffToMinuteByTimeStamp(t *testing.T) {
 
 	t.Log(result > constant.ScheduleAllowEditTime)
 }
+
+func TestDateBetweenTimeAndFormat(t *testing.T) {
+	loc := time.Now().Location()
+	testData := []struct {
+		start int64
+		end   int64
+	}{
+		{
+			start: time.Now().Unix(),
+			end:   time.Now().Add(20 * time.Minute).Unix(),
+		},
+		{
+			start: time.Now().Unix(),
+			end:   time.Now().AddDate(0, 0, 1).Add(-20 * time.Minute).Unix(),
+		},
+		{
+			start: time.Now().Unix(),
+			end:   time.Now().AddDate(0, 0, 3).Add(-20 * time.Minute).Unix(),
+		},
+	}
+	for _, item := range testData {
+		result := DateBetweenTimeAndFormat(item.start, item.end, loc)
+		t.Log(result)
+	}
+}
+
+func TestEndOfYearByTimeStamp(t *testing.T) {
+	end := EndOfYearByTimeStamp(time.Now().Unix(), time.Now().Location())
+	t.Log(end)
+	start := StartOfYearByTimeStamp(time.Now().Unix(), time.Now().Location())
+	t.Log(start)
+}
