@@ -26,6 +26,8 @@ const (
 	TableNameProgramGrade       = "programs_grades"
 	TableNameProgramSubject     = "programs_subjects"
 	TableNameDevelopmentalSkill = "developments_skills"
+
+	TableNameOrganizationProperty = "organizations_properties"
 )
 
 const (

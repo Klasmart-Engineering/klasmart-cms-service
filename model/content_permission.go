@@ -417,8 +417,8 @@ func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope s
 			log.Warn(ctx, "get school permission failed", log.Err(err))
 			return false, err
 		}
-		if !hasPermission {
-			return false, nil
+		if hasPermission {
+			return true, nil
 		}
 	}
 	return false, nil
