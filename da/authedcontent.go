@@ -130,7 +130,7 @@ func (ac *AuthedContentDA) CountAuthedContentRecords(ctx context.Context, tx *db
 
 func (ac *AuthedContentDA) QueryAuthedContentRecords(ctx context.Context, tx *dbo.DBContext, condition AuthedContentCondition) ([]*entity.AuthedContentRecord, error) {
 	objs := make([]*entity.AuthedContentRecord, 0)
-	err := ac.s.QueryTx(ctx, tx, &condition, objs)
+	err := ac.s.QueryTx(ctx, tx, &condition, &objs)
 	if err != nil {
 		log.Error(ctx, "query cms_authed_contents failed",
 			log.Err(err),

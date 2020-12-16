@@ -90,7 +90,7 @@ func (sf *SharedFolderDA) BatchDeleteSharedFolderRecordByOrgIDs(ctx context.Cont
 
 func (sf *SharedFolderDA) SearchSharedFolderRecords(ctx context.Context, tx *dbo.DBContext, condition SharedFolderCondition) ([]*entity.SharedFolderRecord, error) {
 	objs := make([]*entity.SharedFolderRecord, 0)
-	err := sf.s.QueryTx(ctx, tx, &condition, objs)
+	err := sf.s.QueryTx(ctx, tx, &condition, &objs)
 
 	if err != nil {
 		log.Error(ctx, "query cms_shared_folder_records failed",
