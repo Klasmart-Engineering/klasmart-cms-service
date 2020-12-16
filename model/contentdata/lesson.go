@@ -179,6 +179,10 @@ func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operato
 	if err != nil {
 		return err
 	}
+	contentList, err = l.filterMaterialsByPermission(ctx, contentList, operator)
+	if err != nil {
+		return err
+	}
 
 	contentMap := make(map[string]*entity.Content)
 	for i := range contentList {
@@ -192,4 +196,42 @@ func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operato
 		}
 	})
 	return nil
+}
+
+func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentList []*entity.Content, operator *entity.Operator) ([]*entity.Content, error) {
+	result := make([]*entity.Content, 0)
+	pendingCheckAuthContents := make([]*entity.Content, 0)
+	pendingCheckAuthIDs := make([]string, 0)
+	for i := range contentList {
+		if contentList[i].Org == operator.OrgID {
+			result = append(result, contentList[i])
+		}else{
+			pendingCheckAuthContents = append(pendingCheckAuthContents, contentList[i])
+			pendingCheckAuthIDs = append(pendingCheckAuthIDs, contentList[i].ID)
+		}
+	}
+	//if contains materials is not from org, check auth
+	if len(pendingCheckAuthContents) > 0 {
+		condition := da.AuthedContentCondition{
+			OrgIDs: []string{operator.OrgID},
+			ContentIDs: pendingCheckAuthIDs,
+		}
+		authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)
+		if err != nil{
+			log.Error(ctx, "search auth content failed",
+				log.Err(err),
+				log.Any("condition", condition))
+			return nil, err
+		}
+		for i := range pendingCheckAuthContents {
+			for j := range authRecords {
+				if pendingCheckAuthContents[i].ID == authRecords[j].ContentID{
+					result = append(result, pendingCheckAuthContents[i])
+					break
+				}
+			}
+		}
+	}
+
+	return result, nil
 }

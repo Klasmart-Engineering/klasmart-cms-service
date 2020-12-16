@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -420,6 +421,68 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 		c.JSON(http.StatusOK, item)
 	case model.ErrNoFolder:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+
+// @Summary shareFolders
+// @ID shareFolders
+// @Description share folders to org
+// @Accept json
+// @Produce json
+// @Tags folder
+// @Success 200 {object} string ok
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 404 {object} BadRequestResponse
+// @Router /folders/share [get]
+func (s *Server) shareFolders(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+
+	var data entity.ShareFoldersRequest
+	err := c.ShouldBind(&data)
+	if err != nil {
+		log.Warn(ctx, "share folder item failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	err = model.GetFolderModel().ShareFolders(ctx, data, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, "")
+	default:
+		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+	}
+}
+
+// @Summary getFoldersSharedRecords
+// @ID getFoldersSharedRecords
+// @Description get folders shared records
+// @Accept json
+// @Param folder_ids query string false "folder id list, split by ','"
+// @Produce json
+// @Tags folder
+// @Success 200 {object} entity.FolderShareRecords
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 404 {object} BadRequestResponse
+// @Router /folders/share [put]
+func (s *Server) getFoldersSharedRecords(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+
+	folderIDsStr := c.Query("folder_ids")
+	if folderIDsStr == "" {
+		log.Warn(ctx, "parse get folder shared records params failed", log.String("folder_ids", folderIDsStr))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	folderIDs := strings.Split(folderIDsStr, ",")
+	results, err := model.GetFolderModel().GetFoldersSharedRecords(ctx, folderIDs, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, results)
 	default:
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
 	}

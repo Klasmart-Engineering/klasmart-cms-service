@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"strings"
 	"sync"
 	"time"
@@ -80,6 +81,8 @@ type IFolderModel interface {
 
 	//Share folder
 	ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error
+	//Get share records
+	GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error)
 
 	//内部API，修改Folder的Visibility Settings
 	//查看路径是否存在
@@ -98,6 +101,55 @@ func (f *FolderModel) AddItem(ctx context.Context, req entity.CreateFolderItemRe
 	return f.addItemInternal(ctx, dbo.MustGetDB(ctx), req, operator)
 }
 
+func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error){
+	records, err := da.GetSharedFolderDA().SearchSharedFolderRecords(ctx, dbo.MustGetDB(ctx), da.SharedFolderCondition{
+		FolderIDs: fids,
+	})
+	if err != nil{
+		log.Error(ctx, "Get folders failed",
+			log.Err(err),
+			log.Strings("fids", fids),
+			log.Any("operator", operator))
+		return nil, err
+	}
+	orgIDs := make([]string, 0)
+	folderOrgsMap := make(map[string][]string)
+	for i := range records {
+		folderOrgsMap[records[i].FolderID] = append(folderOrgsMap[records[i].FolderID], records[i].OrgID)
+	}
+	orgIDs = utils.SliceDeduplication(orgIDs)
+	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
+	if err != nil{
+		log.Error(ctx, "Get org failed",
+			log.Err(err),
+			log.Any("orgIDs", orgIDs),
+			log.Any("operator", operator))
+		return nil, err
+	}
+	orgMap := make(map[string]*external.NullableOrganization)
+	for i := range orgs {
+		if orgs[i].Valid {
+			orgMap[orgs[i].ID] = orgs[i]
+		}
+	}
+	result := new(entity.FolderShareRecords)
+	for folderId, orgIds := range folderOrgsMap {
+		orgIds = utils.SliceDeduplication(orgIds)
+		orgs := make([]*entity.OrganizationInfo, len(orgIds))
+		for i := range orgIds {
+			orgs[i] = &entity.OrganizationInfo{
+				ID:   orgIds[i],
+				Name: orgMap[orgIds[i]].Name,
+			}
+		}
+		folderInfo := &entity.FolderShareRecord{
+			FolderID: folderId,
+			Orgs:     orgs,
+		}
+		result.Data = append(result.Data, folderInfo)
+	}
+	return result, nil
+}
 func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error {
 	//1.Get folder & check folder exists
 	folderIDs := utils.SliceDeduplication(req.FolderIDs)
@@ -737,16 +789,7 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 	}
 	//取folder，应该只有一个
 	folderItem := folderItems[0]
-
-	originParentID := folderItem.ParentID
 	path := distFolder.ChildrenPath()
-	folderItem.DirPath = path
-	folderItem.ParentID = distFolder.ID
-	err = da.GetFolderDA().UpdateFolder(ctx, tx, folderItem.ID, folderItem)
-	if err != nil {
-		log.Error(ctx, "update folder failed", log.Err(err), log.Any("folder", folderItem))
-		return err
-	}
 
 	parentFolder := f.rootFolder(ctx, ownerType, partition, operator)
 	if folderItem.ParentID != "" && folderItem.ParentID != constant.FolderRootPath {
@@ -767,6 +810,14 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 		return err
 	}
 
+	originParentID := folderItem.ParentID
+	folderItem.DirPath = path
+	folderItem.ParentID = distFolder.ID
+	err = da.GetFolderDA().UpdateFolder(ctx, tx, folderItem.ID, folderItem)
+	if err != nil {
+		log.Error(ctx, "update folder failed", log.Err(err), log.Any("folder", folderItem))
+		return err
+	}
 	//更新文件数量
 	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, 1)
 	if err != nil {

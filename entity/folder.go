@@ -157,6 +157,14 @@ type ShareFoldersRequest struct {
 	OrgIDs    []string `json:"org_ids"`
 }
 
+type FolderShareRecord struct {
+	FolderID string `json:"folder_id"`
+	Orgs []*OrganizationInfo `json:"orgs"`
+}
+type FolderShareRecords struct {
+	Data []*FolderShareRecord `json:"data"`
+}
+
 type ShareFoldersDeleteAddOrgList struct {
 	DeleteOrgs []string
 	AddOrgs    []string

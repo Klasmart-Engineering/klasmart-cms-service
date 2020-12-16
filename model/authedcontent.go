@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 
@@ -33,6 +34,18 @@ type AuthedContent struct {
 //AddAuthedContent add authed content record to org
 func (ac *AuthedContent) AddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.AddAuthedContentRequest, op *entity.Operator) error {
 	//check duplicate
+	contentIDs, err := ac.expandRelatedContentID(ctx, tx, []string{req.ContentID})
+	if err != nil{
+		return err
+	}
+	if len(contentIDs) > 0 {
+		return ac.BatchAddAuthedContent(ctx, tx, entity.BatchAddAuthedContentRequest{
+			OrgId:     req.OrgID,
+			FolderId:   req.FromFolderID,
+			ContentIds: contentIDs,
+		}, op)
+	}
+
 	condition := da.AuthedContentCondition{
 		ContentIDs: []string{req.ContentID},
 		FromFolderIDs: []string{req.FromFolderID},
@@ -77,7 +90,12 @@ func (ac *AuthedContent) BatchAddAuthedContentByOrgIDs(ctx context.Context, tx *
 		orgIDs[i] = reqs[i].OrgID
 	}
 
-	contentIDs = utils.SliceDeduplication(contentIDs)
+	allContentIDs, err := ac.expandRelatedContentID(ctx, tx, contentIDs)
+	if err != nil{
+		return err
+	}
+
+	contentIDs = utils.SliceDeduplication(allContentIDs)
 	folderIDs = utils.SliceDeduplication(folderIDs)
 	orgIDs = utils.SliceDeduplication(orgIDs)
 
@@ -136,8 +154,12 @@ func (ac *AuthedContent) BatchAddAuthedContentByOrgIDs(ctx context.Context, tx *
 //BatchAddAuthedContent add a list of authed content records to org
 //if some of the list records (content_id and org_id) is exists, ignore
 func (ac *AuthedContent) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.BatchAddAuthedContentRequest, op *entity.Operator) error {
+	contentIDs, err := ac.expandRelatedContentID(ctx, tx, req.ContentIds)
+	if err != nil{
+		return err
+	}
 	condition := da.AuthedContentCondition{
-		ContentIDs: req.ContentIds,
+		ContentIDs: contentIDs,
 		OrgIDs:     []string{req.OrgId},
 	}
 	objs, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, condition)
@@ -151,21 +173,21 @@ func (ac *AuthedContent) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBCo
 	//remove duplicate
 	pendingAddIDs := make([]string, 0)
 	if len(objs) > 0 {
-		for i := range req.ContentIds {
+		for i := range contentIDs {
 			flag := false
 			for j := range objs {
-				if req.ContentIds[i] == objs[j].ContentID {
+				if contentIDs[i] == objs[j].ContentID {
 					flag = true
 					break
 				}
 			}
 
 			if !flag {
-				pendingAddIDs = append(pendingAddIDs, req.ContentIds[i])
+				pendingAddIDs = append(pendingAddIDs, contentIDs[i])
 			}
 		}
 	} else {
-		pendingAddIDs = req.ContentIds
+		pendingAddIDs = contentIDs
 	}
 
 	data := make([]*entity.AuthedContentRecord, len(pendingAddIDs))
@@ -276,6 +298,30 @@ func (ac *AuthedContent) SearchAuthedContentDetailsList(ctx context.Context, tx 
 	}
 
 	return total, ret, nil
+}
+
+func (ac *AuthedContent) expandRelatedContentID(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
+	contents, err := GetContentModel().GetRawContentByIDList(ctx, tx, cids)
+	if err != nil{
+		return nil, err
+	}
+	ret := make([]string, 0)
+	for i := range contents {
+		if contents[i].ContentType == entity.ContentTypeLesson {
+			data, err := contentdata.CreateContentData(ctx, entity.ContentTypeLesson, contents[i].Data)
+			if err != nil{
+				log.Error(ctx, "create content data failed",
+					log.Err(err),
+					log.Any("content", contents[i]))
+				return nil, err
+			}
+			relatedIDs := data.SubContentIds(ctx)
+			ret = append(ret, relatedIDs...)
+		}
+
+		ret = append(ret, contents[i].ID)
+	}
+	return ret, nil
 }
 
 //BatchUpdateAuthedContentVersion replace content id for new version
