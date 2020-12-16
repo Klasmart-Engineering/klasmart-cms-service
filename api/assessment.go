@@ -136,6 +136,10 @@ func (s *Server) addAssessment(c *gin.Context) {
 	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
+		log.Debug(ctx, "add assessment jwt success",
+			log.Any("cmd", cmd),
+			log.String("new_id", newID),
+		)
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 	default:
 		log.Error(ctx, "add assessment jwt: add failed",

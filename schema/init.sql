@@ -255,3 +255,15 @@ CREATE TABLE IF NOT EXISTS `cms_shared_folder_records` (
     KEY `folder_id` (`folder_id`),
     KEY `creator` (`creator`),
 ) COMMENT '文件夹分享记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `organizations_properties` (
+    `id` varchar(50) NOT NULL COMMENT 'org_id',
+    `type` varchar(200) NOT NULL COMMENT 'type',
+    `created_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `updated_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `deleted_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `created_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `updated_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `deleted_at` bigint(20) DEFAULT 0 COMMENT 'deleted_at',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'organizations_properties';

@@ -6,13 +6,15 @@ import (
 	"time"
 )
 
+type TimeLayout string
+
 const (
-	Year   string = "2006"
-	Month  string = "2006-01"
-	Day    string = "2006-01-02"
-	Hour   string = "2006-01-02 15"
-	Minute string = "2006-01-02 15:04"
-	Second string = "2006-01-02 15:04:05"
+	TimeLayoutYear   TimeLayout = "2006"
+	TimeLayoutMonth  TimeLayout = "2006-01"
+	TimeLayoutDay    TimeLayout = "2006-01-02"
+	TimeLayoutHour   TimeLayout = "2006-01-02 15"
+	TimeLayoutMinute TimeLayout = "2006-01-02 15:04"
+	TimeLayoutSecond TimeLayout = "2006-01-02 15:04:05"
 )
 
 type TimeUtil struct {
@@ -122,4 +124,76 @@ func GetTimeLocationByName(tz string) (*time.Location, error) {
 		return nil, err
 	}
 	return loc, nil
+}
+
+func IsSameDay(t1, t2 int64, loc *time.Location) bool {
+	time1 := time.Unix(t1, 0).In(loc)
+	time2 := time.Unix(t2, 0).In(loc)
+
+	return IsSameDayByTime(time1, time2)
+}
+
+func IsSameDayByTime(t1, t2 time.Time) bool {
+	y1, m1, d1 := t1.Date()
+	y2, m2, d2 := t2.Date()
+
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+func IsSameMonth(t1, t2 int64, loc *time.Location) bool {
+	time1 := time.Unix(t1, 0).In(loc)
+	time2 := time.Unix(t2, 0).In(loc)
+
+	return IsSameMonthByTime(time1, time2)
+}
+
+func IsSameMonthByTime(t1, t2 time.Time) bool {
+	y1, m1, _ := t1.Date()
+	y2, m2, _ := t2.Date()
+
+	return y1 == y2 && m1 == m2
+}
+
+func GetTimeDiffToDayByTime(start, end time.Time, loc *time.Location) int64 {
+	t1 := BeginOfDayByTime(start, loc).Unix()
+	t2 := BeginOfDayByTime(end, loc).Unix()
+	return (t2 - t1) / 86400
+}
+
+func SetTimeDatePart(src time.Time, year int, month time.Month, day int) time.Time {
+	return time.Date(year, month, day, src.Hour(), src.Minute(), src.Second(), src.Nanosecond(), src.Location())
+}
+
+func ConvertTime(ts int64, loc *time.Location) time.Time {
+	return time.Unix(ts, 0).In(loc)
+}
+
+func StartOfYear(year int, loc *time.Location) time.Time {
+	return time.Date(year, 1, 1, 0, 0, 0, 0, loc)
+}
+func StartOfYearByTimeStamp(ts int64, loc *time.Location) time.Time {
+	t := ConvertTime(ts, loc)
+	return StartOfYear(t.Year(), loc)
+}
+
+func StartOfMonth(year int, month time.Month, loc *time.Location) time.Time {
+	return time.Date(year, month, 1, 0, 0, 0, 0, loc)
+}
+
+func EndOfMonth(year int, month time.Month, loc *time.Location) time.Time {
+	return time.Date(year, month+1, 1, 0, 0, 0, 0, loc).Add(-time.Millisecond)
+}
+
+func GetTimeByWeekday(ts int64, weekday time.Weekday, loc *time.Location) time.Time {
+	t := time.Unix(ts, 0).In(loc)
+	offset := int(weekday - t.Weekday())
+	if weekday == time.Sunday {
+		offset = offset + 7
+	}
+	newTime := t.AddDate(0, 0, offset)
+	return newTime
+}
+
+func TimeStampDiff(t1 int64, t2 int64) time.Duration {
+	return time.Second * time.Duration(t1-t2)
 }

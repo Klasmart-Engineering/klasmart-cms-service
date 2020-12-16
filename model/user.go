@@ -132,9 +132,7 @@ func GetUserModel() IUserModel {
 
 type LoginClaim struct {
 	jwt.StandardClaims
-	Co    string `json:"co"`
-	Di    string `json:"di"`
-	Email string `json:"em"`
+	Phone string `json:"phone"`
 	ID    string `json:"id"`
 }
 
@@ -147,12 +145,10 @@ func GetTokenFromUser(ctx context.Context, user *entity.User) (string, error) {
 			IssuedAt:  now.Add(-30 * time.Second).Unix(),
 			Issuer:    "Kidsloop_cn",
 			NotBefore: 0,
-			Subject:   "authorization",
+			//Subject:   "authorization",
 		},
 		ID:    user.UserID,
-		Co:    "xx",
-		Di:    "webpage",
-		Email: user.Phone,
+		Phone: user.Phone,
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS512, claim).SignedString(config.Get().KidsloopCNLoginConfig.PrivateKey)
 	if err != nil {
@@ -183,6 +179,10 @@ func VerifyCode(ctx context.Context, codeKey string, code string) (bool, error) 
 	}
 	key := utils.GetHashKeyFromPlatformedString(codeKey)
 	otpSecret, err := client.Get(key).Result()
+	if err != nil && err.Error() == "redis: nil" {
+		log.Error(ctx, "VerifyCode: redis nil", log.String("code_key", codeKey), log.String("key", key), log.Err(err))
+		return false, constant.ErrUnAuthorized
+	}
 	if err != nil {
 		log.Error(ctx, "VerifyCode: Get failed", log.String("code_key", codeKey), log.String("key", key), log.Err(err))
 		return false, err

@@ -229,6 +229,11 @@ func (s Server) registeRoute() {
 		userSettings.POST("", s.mustLoginWithoutOrgID, s.setUserSetting)
 		userSettings.GET("", s.mustLoginWithoutOrgID, s.getUserSettingByOperator)
 	}
+
+	organizationProperties := s.engine.Group("/v1/organizations_propertys")
+	{
+		organizationProperties.GET("/:id", s.mustLoginWithoutOrgID, s.getOrganizationPropertyByID)
+	}
 }
 
 // Ping godoc

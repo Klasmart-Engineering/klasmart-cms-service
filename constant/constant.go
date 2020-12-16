@@ -26,6 +26,8 @@ const (
 	TableNameProgramGrade       = "programs_grades"
 	TableNameProgramSubject     = "programs_subjects"
 	TableNameDevelopmentalSkill = "developments_skills"
+
+	TableNameOrganizationProperty = "organizations_properties"
 )
 
 const (
@@ -97,6 +99,9 @@ const (
 
 	AccountPhone = "" // as default
 	AccountEmail = "email"
+
+	AccountExist      = "exist"
+	AccountUnregister = "unregister"
 )
 
 const (
@@ -105,4 +110,9 @@ const (
 	ValidDays            = 30
 	BounceMax            = 5
 	BounceInterval       = 2 //unit, hour
+)
+
+const (
+	ScheduleAllowEditTime   = 15 * time.Minute
+	ScheduleAllowGoLiveTime = 15 * time.Minute
 )

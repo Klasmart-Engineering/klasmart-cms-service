@@ -162,6 +162,9 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 				school {
 					school_id
 					school_name
+					organization {
+						organization_id
+					}
 				}
 			}
 		}

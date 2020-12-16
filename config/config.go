@@ -42,9 +42,14 @@ type Config struct {
 	KidsLoopRegion        string                `json:"kidsloop_region" yaml:"kidsloop_region"`
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
+	CORS                  CORSConfig            `json:"cors" yaml:"cors"`
 }
 
 var config *Config
+
+type CORSConfig struct {
+	AllowOrigins []string `json:"allow_origins"`
+}
 
 type CryptoConfig struct {
 	PrivateKeyPath string `yaml:"h5p_private_key_path"`
@@ -152,6 +157,8 @@ func LoadEnvConfig() {
 	loadAMSConfig(ctx)
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
+	loadAssessmentConfig(ctx)
+	loadCORSConfig(ctx)
 }
 
 func loadKidsloopCNLoginConfig(ctx context.Context) {
@@ -198,7 +205,6 @@ func loadTencentConfig(ctx context.Context) {
 	config.TencentConfig.Sms.TemplateParamSet = assertGetEnv("tc_sms_template_param_set")
 	config.TencentConfig.Sms.MobilePrefix = assertGetEnv("tc_sms_mobile_prefix")
 	config.TencentConfig.Sms.OTPPeriod = os.Getenv("OTP_PERIOD")
-	loadAssessmentConfig(ctx)
 }
 
 func loadCryptoEnvConfig(ctx context.Context) {
@@ -287,7 +293,7 @@ func loadDBEnvConfig(ctx context.Context) {
 	maxIdleConns, err := strconv.Atoi(maxIdleConnsStr)
 	if err != nil {
 		log.Error(ctx, "Can't parse max_idle_conns", log.Err(err))
-		maxOpenConns = 16
+		maxIdleConns = 16
 	}
 	config.DBConfig.MaxIdleConns = maxIdleConns
 
@@ -301,7 +307,7 @@ func loadDBEnvConfig(ctx context.Context) {
 	showSQL, err := strconv.ParseBool(showSQLStr)
 	if err != nil {
 		log.Error(ctx, "Can't parse show_sql", log.Err(err))
-		showLog = true
+		showSQL = true
 	}
 	config.DBConfig.ShowSQL = showSQL
 
@@ -352,6 +358,10 @@ func loadAMSConfig(ctx context.Context) {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.AMS.TokenVerifyKey = key
+}
+
+func loadCORSConfig(ctx context.Context) {
+	config.CORS.AllowOrigins = strings.Split(os.Getenv("cors_domain_list"), ",")
 }
 
 func Get() *Config {

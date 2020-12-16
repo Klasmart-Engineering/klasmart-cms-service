@@ -89,9 +89,7 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		}
 	}
 
-	log.Debug(ctx, "list students report: before call getAssessmentIDs()")
 	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.ClassID, cmd.LessonPlanID)
-	log.Debug(ctx, "list students report: after call getAssessmentIDs()")
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
 			log.Err(err),
@@ -99,6 +97,18 @@ func (r *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext,
 		)
 		return nil, err
 	}
+	log.Debug(ctx, "list students report: before filter", log.Strings("assessment_ids", assessmentIDs))
+	filterAssessmentIDs, err := r.filterCompletedAssessmentIDs(ctx, tx, operator, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "filter completed assessment ids failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+			log.Any("assessmentIDs", assessmentIDs),
+		)
+		return nil, err
+	}
+	assessmentIDs = filterAssessmentIDs
+	log.Debug(ctx, "list students report: after filter", log.Strings("assessment_ids", assessmentIDs))
 
 	data, err := r.getAttendanceOutcomeData(ctx, tx, assessmentIDs)
 	if err != nil {
@@ -208,16 +218,26 @@ func (r *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, o
 		}
 	}
 
-	log.Debug(ctx, "get student detail report: before call getAssessmentIDs()")
 	assessmentIDs, err := r.getAssessmentIDs(ctx, tx, operator, cmd.ClassID, cmd.LessonPlanID)
-	log.Debug(ctx, "get student detail report: after call getAssessmentIDs()")
 	if err != nil {
-		log.Error(ctx, "list student report: get assessment ids failed",
+		log.Error(ctx, "get student detail report: get assessment ids failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
 		)
 		return nil, err
 	}
+	log.Debug(ctx, "get student detail report: before filter", log.Strings("assessment_ids", assessmentIDs))
+	filterAssessmentIDs, err := r.filterCompletedAssessmentIDs(ctx, tx, operator, assessmentIDs)
+	if err != nil {
+		log.Error(ctx, "filter completed assessment ids failed",
+			log.Err(err),
+			log.Any("cmd", cmd),
+			log.Any("assessmentIDs", assessmentIDs),
+		)
+		return nil, err
+	}
+	assessmentIDs = filterAssessmentIDs
+	log.Debug(ctx, "get student detail report: after filter", log.Strings("assessment_ids", assessmentIDs))
 
 	data, err := r.getAttendanceOutcomeData(ctx, tx, assessmentIDs)
 	if err != nil {
@@ -337,12 +357,24 @@ func (r *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 	return result, nil
 }
 
+func (r *reportModel) filterCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) ([]string, error) {
+	result, err := da.GetAssessmentDA().FilterCompletedAssessmentIDs(ctx, tx, ids)
+	if err != nil {
+		log.Error(ctx, "filter completed assessment ids failed",
+			log.Any("operator", operator),
+			log.Strings("ids", ids),
+		)
+		return nil, err
+	}
+	return result, nil
+}
+
 func (r *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
 		ClassID:      classID,
 		LessonPlanID: lessonPlanID,
-		EndAt:        time.Now().Unix(),
+		StartAt:      time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
 	})
 	log.Debug(ctx, "get schedule ids: after call GetScheduleModel().Query()")
 	if err != nil {

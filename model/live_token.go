@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -20,6 +21,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
+var (
+	ErrGoLiveTimeNotUp = errors.New("go live time not up")
+	ErrGoLiveNotAllow  = errors.New("go live not allow")
+)
+
 type ILiveTokenModel interface {
 	MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
 	MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string, classID string) (string, error)
@@ -34,21 +40,41 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 			log.String("scheduleID", scheduleID))
 		return "", err
 	}
+	now := time.Now().Unix()
+	diff := utils.TimeStampDiff(schedule.StartAt, now)
+	if diff >= constant.ScheduleAllowGoLiveTime {
+		log.Warn(ctx, "MakeLiveToken: go live time not up",
+			log.Any("op", op),
+			log.String("scheduleID", scheduleID),
+			log.Int64("schedule.StartAt", schedule.StartAt),
+			log.Int64("time.Now", now),
+		)
+		return "", ErrGoLiveTimeNotUp
+	}
+	if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
+		log.Warn(ctx, "MakeLiveToken:go live not allow",
+			log.Any("op", op),
+			log.Any("schedule", schedule),
+			log.Int64("schedule.StartAt", schedule.StartAt),
+			log.Int64("time.Now", now),
+		)
+		return "", ErrGoLiveNotAllow
+	}
 	classType := schedule.ClassType.ConvertToLiveClassType()
 	if classType == entity.LiveClassTypeInvalid {
 		log.Error(ctx, "MakeLiveToken:ConvertToLiveClassType invalid",
-			log.Err(err),
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID),
 			log.Any("schedule.ClassType", schedule.ClassType),
 		)
-		return "", err
+		return "", constant.ErrInvalidArgs
 	}
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID:    op.UserID,
 		Type:      entity.LiveTokenTypeLive,
 		RoomID:    scheduleID,
 		ClassType: classType,
+		OrgID:     op.OrgID,
 	}
 	liveTokenInfo.ScheduleID = schedule.ID
 
@@ -99,6 +125,7 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 		UserID: op.UserID,
 		Type:   entity.LiveTokenTypePreview,
 		RoomID: contentID,
+		OrgID:  op.OrgID,
 	}
 
 	name, err := s.getUserName(ctx, op)
