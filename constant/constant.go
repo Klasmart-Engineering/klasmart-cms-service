@@ -91,6 +91,7 @@ const (
 const (
 	NoSearchItem = "{nothing}"
 	Self         = "{self}"
+	ShareToAll   = "{share_all}"
 )
 
 const (

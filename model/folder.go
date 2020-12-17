@@ -101,11 +101,11 @@ func (f *FolderModel) AddItem(ctx context.Context, req entity.CreateFolderItemRe
 	return f.addItemInternal(ctx, dbo.MustGetDB(ctx), req, operator)
 }
 
-func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error){
+func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error) {
 	records, err := da.GetSharedFolderDA().SearchSharedFolderRecords(ctx, dbo.MustGetDB(ctx), da.SharedFolderCondition{
 		FolderIDs: fids,
 	})
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "Get folders failed",
 			log.Err(err),
 			log.Strings("fids", fids),
@@ -119,7 +119,7 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 	}
 	orgIDs = utils.SliceDeduplication(orgIDs)
 	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
-	if err != nil{
+	if err != nil {
 		log.Error(ctx, "Get org failed",
 			log.Err(err),
 			log.Any("orgIDs", orgIDs),
@@ -188,16 +188,16 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		}
 
 		//2.Check orgs
-		//orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
-		//if err != nil {
-		//	log.Error(ctx, "Get orgs failed",
-		//		log.Err(err),
-		//		log.Strings("orgIDs", orgIDs),
-		//		log.Strings("folderIDs", folderIDs),
-		//		log.Any("operator", operator))
-		//	return err
-		//}
-		////check if all orgs are exist
+		orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
+		if err != nil {
+			log.Error(ctx, "Get orgs failed",
+				log.Err(err),
+				log.Strings("orgIDs", orgIDs),
+				log.Strings("folderIDs", folderIDs),
+				log.Any("operator", operator))
+			return err
+		}
+		//check if all orgs are exist
 		//if len(orgs) != len(orgIDs) {
 		//	log.Warn(ctx, "Some orgIDs not found",
 		//		log.Err(err),
@@ -209,8 +209,10 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		//}
 
 		orgsMap := make(map[string]bool)
-		for i := range orgIDs {
-			orgsMap[orgIDs[i]] = true
+		for i := range orgs {
+			if orgs[i].Valid || orgs[i].ID == constant.ShareToAll {
+				orgsMap[orgs[i].ID] = true
+			}
 		}
 
 		//3.remove orgs & add orgs
@@ -258,7 +260,7 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 				//check if folder already has the org
 				for j := range folderSharedOrgs {
 					if folderSharedOrgs[j] == orgIDs[i] {
-						flag	 = true
+						flag = true
 						break
 					}
 				}
@@ -286,9 +288,6 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 			}
 		}
 
-		for k, v := range sharedFolderPendingOrgsMap {
-			fmt.Printf("------------->%#v: %#v", k, v)
-		}
 		//5.Remove folder share records
 		for folderID, pendingOrgList := range sharedFolderPendingOrgsMap {
 			if len(pendingOrgList.DeleteOrgs) > 0 {
@@ -344,7 +343,6 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 				}
 			}
 
-
 			allItems = append(allItems, items...)
 			allContentIDs[folders[i].ID] = contentIDs
 		}
@@ -370,7 +368,6 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 				return err
 			}
 		}
-
 
 		//8.Add content auth records
 		authData := make([]*entity.AddAuthedContentRequest, 0)

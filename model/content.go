@@ -623,7 +623,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//set condition with authed flag
 	condition.AuthedContentFlag = true
-	condition.AuthedOrgID = user.OrgID
+	condition.AuthedOrgID = []string{user.OrgID, constant.ShareToAll}
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	return cm.searchContent(ctx, tx, &condition, user)
 }
@@ -1674,7 +1674,7 @@ func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.C
 	}
 	if len(pendingAuthContentIDs) > 0 {
 		authRecords, err := GetAuthedContentRecordsModel().QueryAuthedContentRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
-			OrgIds:     []string{operator.OrgID},
+			OrgIds:     []string{operator.OrgID, constant.ShareToAll},
 			ContentIds: pendingAuthContentIDs,
 		}, operator)
 		if err != nil {
