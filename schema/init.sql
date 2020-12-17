@@ -267,3 +267,6 @@ CREATE TABLE IF NOT EXISTS `organizations_properties` (
     `deleted_at` bigint(20) DEFAULT 0 COMMENT 'deleted_at',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'organizations_properties';
+
+-- Badanamu HQ
+insert into organizations_properties(id, type) values('0f38ce9-5152-4049-b4e7-6d2e2ba884e6', 'headquarters');
