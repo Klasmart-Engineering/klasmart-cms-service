@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"errors"
-	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"strings"
 	"sync"
@@ -155,7 +154,6 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 	folderIDs := utils.SliceDeduplication(req.FolderIDs)
 	orgIDs := utils.SliceDeduplication(req.OrgIDs)
 	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		fmt.Println("folderIDs:", folderIDs)
 		folders, err := da.GetFolderDA().GetFolderByIDList(ctx, tx, folderIDs)
 		if err != nil {
 			log.Error(ctx, "Get folders failed",
@@ -188,20 +186,27 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		}
 
 		//2.Check orgs
-		orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
-		if err != nil {
-			log.Error(ctx, "Get orgs failed",
-				log.Err(err),
-				log.Strings("orgIDs", orgIDs),
-				log.Strings("folderIDs", folderIDs),
-				log.Any("operator", operator))
-			return err
-		}
-		//check if all orgs are exist
+		//orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
+		//if err != nil {
+		//	log.Error(ctx, "Get orgs failed",
+		//		log.Err(err),
+		//		log.Strings("orgIDs", orgIDs),
+		//		log.Strings("folderIDs", folderIDs),
+		//		log.Any("operator", operator))
+		//	return err
+		//}
+		////check if all orgs are exist
+		//orgsMap := make(map[string]bool)
+		//for i := range orgs {
+		//	if orgs[i].Valid || orgs[i].ID == constant.ShareToAll {
+		//		orgsMap[orgs[i].ID] = true
+		//	}
+		//}
+
 		orgsMap := make(map[string]bool)
-		for i := range orgs {
-			if orgs[i].Valid || orgs[i].ID == constant.ShareToAll {
-				orgsMap[orgs[i].ID] = true
+		for i := range orgIDs {
+			if orgIDs[i] == constant.ShareToAll {
+				orgsMap[orgIDs[i]] = true
 			}
 		}
 

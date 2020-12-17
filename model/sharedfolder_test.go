@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"testing"
 
@@ -112,8 +113,6 @@ func TestShareFolderProcess(t *testing.T) {
 	}
 }
 
-
-
 func TestMoveFolderProcess(t *testing.T) {
 	folderIDs, err := createFolders(t)
 	if err != nil {
@@ -170,9 +169,47 @@ func TestMoveFolderProcess(t *testing.T) {
 	}
 }
 
+func TestShareFolderToAllProcess(t *testing.T) {
+	folderIDs, err := createFolders(t)
+	if err != nil {
+		return
+	}
+	contentIDs := fakeContentsID(t)
+
+	folderItemInfos := make([]entity.FolderIdWithFileType, len(contentIDs))
+	for i := range contentIDs {
+		folderItemInfos[i] = entity.FolderIdWithFileType{
+			ID:             contentIDs[i],
+			FolderFileType: entity.FolderFileTypeContent,
+		}
+	}
+
+	err = GetFolderModel().MoveItemBulk(context.Background(), entity.MoveFolderIDBulkRequest{
+		FolderInfo: folderItemInfos,
+		OwnerType:  entity.OwnerTypeOrganization,
+		Dist:       folderIDs[0],
+		Partition:  entity.FolderPartitionMaterialAndPlans,
+	}, fakeOperator())
+
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+
+	err = GetFolderModel().ShareFolders(context.Background(), entity.ShareFoldersRequest{
+		FolderIDs: folderIDs,
+		OrgIDs:    []string{constant.ShareToAll},
+	}, fakeOperator())
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+}
 func TestQuerySharedContents(t *testing.T) {
+	operator := fakeOperator()
+	operator.OrgID = "100"
 	total, data, err := GetContentModel().SearchAuthedContent(context.Background(), dbo.MustGetDB(context.Background()),
-		da.ContentCondition{}, fakeOperator())
+		da.ContentCondition{}, operator)
 
 	assert.NoError(t, err)
 	if err != nil {

@@ -104,8 +104,8 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 	}
 }
 
-// @Summary deleteAuthedContent
-// @ID deleteAuthedContent
+// @Summary batchDeleteAuthedContent
+// @ID batchDeleteAuthedContent
 // @Description batch delete authed content to org
 // @Accept json
 // @Produce json
