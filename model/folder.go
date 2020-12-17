@@ -198,16 +198,6 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 			return err
 		}
 		//check if all orgs are exist
-		//if len(orgs) != len(orgIDs) {
-		//	log.Warn(ctx, "Some orgIDs not found",
-		//		log.Err(err),
-		//		log.Any("req", req),
-		//		log.Strings("orgIDs", orgIDs),
-		//		log.Any("orgs", orgs),
-		//		log.Any("operator", operator))
-		//	return ErrNoFolder
-		//}
-
 		orgsMap := make(map[string]bool)
 		for i := range orgs {
 			if orgs[i].Valid || orgs[i].ID == constant.ShareToAll {
