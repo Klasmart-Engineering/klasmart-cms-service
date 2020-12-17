@@ -142,10 +142,10 @@ func (ac *AuthedContentDA) QueryAuthedContentRecords(ctx context.Context, tx *db
 }
 
 type AuthedContentCondition struct {
-	IDs        []string
-	OrgIDs     []string
-	ContentIDs []string
-	Creator    []string
+	IDs           []string
+	OrgIDs        []string
+	ContentIDs    []string
+	Creator       []string
 	FromFolderIDs []string
 
 	Pager utils.Pager
