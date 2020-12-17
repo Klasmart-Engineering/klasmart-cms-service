@@ -232,6 +232,7 @@ VALUES (
 CREATE TABLE IF NOT EXISTS `cms_authed_contents` (
     `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
     `org_id` VARCHAR(50) NOT NULL COMMENT 'org_id',
+    `from_folder_id` varchar(50) COMMENT 'from_folder_id',
     `content_id` VARCHAR(50) NOT NULL COMMENT 'content_id',
     `creator` VARCHAR(50) NOT NULL COMMENT 'creator',
     `duration` INT NOT NULL DEFAULT 0 COMMENT 'duration',
@@ -240,8 +241,9 @@ CREATE TABLE IF NOT EXISTS `cms_authed_contents` (
     PRIMARY KEY (`id`),
     KEY `org_id` (`org_id`),
     KEY `content_id` (`content_id`),
-    KEY `creator` (`creator`),
+    KEY `creator` (`creator`)
 ) COMMENT '内容授权记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `cms_shared_folder_records` (
     `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
     `folder_id` VARCHAR(50) NOT NULL COMMENT 'folder_id',
@@ -253,7 +255,7 @@ CREATE TABLE IF NOT EXISTS `cms_shared_folder_records` (
     PRIMARY KEY (`id`),
     KEY `org_id` (`org_id`),
     KEY `folder_id` (`folder_id`),
-    KEY `creator` (`creator`),
+    KEY `creator` (`creator`)
 ) COMMENT '文件夹分享记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `organizations_properties` (

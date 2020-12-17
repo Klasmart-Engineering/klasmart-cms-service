@@ -18,6 +18,7 @@ func TestCreateAuthedContentTable(t *testing.T) {
 	}
 	db.LogMode(true)
 	db.AutoMigrate(entity.AuthedContentRecord{})
+	db.AutoMigrate(entity.SharedFolderRecord{})
 }
 
 func TestAddAndBatchAddRecords(t *testing.T) {
