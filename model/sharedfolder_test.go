@@ -2,13 +2,12 @@ package model
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"testing"
 )
 
 func createFolders(t *testing.T) ([]string, error) {
@@ -204,6 +203,64 @@ func TestShareFolderToAllProcess(t *testing.T) {
 	if err != nil {
 		return
 	}
+}
+
+
+func TestMoveSubFolderToAllProcess(t *testing.T) {
+	folderIDs, err := createFolders(t)
+	if err != nil {
+		return
+	}
+	t.Log("FolderID_1:", folderIDs[0])
+	t.Log("FolderID_2:", folderIDs[1])
+	contentIDs := fakeContentsID(t)
+
+	folderItemInfos := make([]entity.FolderIdWithFileType, len(contentIDs))
+	for i := range contentIDs {
+		folderItemInfos[i] = entity.FolderIdWithFileType{
+			ID:             contentIDs[i],
+			FolderFileType: entity.FolderFileTypeContent,
+		}
+	}
+
+	err = GetFolderModel().MoveItemBulk(context.Background(), entity.MoveFolderIDBulkRequest{
+		FolderInfo: folderItemInfos,
+		OwnerType:  entity.OwnerTypeOrganization,
+		Dist:       folderIDs[0],
+		Partition:  entity.FolderPartitionMaterialAndPlans,
+	}, fakeOperator())
+
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+
+	err = GetFolderModel().ShareFolders(context.Background(), entity.ShareFoldersRequest{
+		FolderIDs: []string{folderIDs[1]},
+		OrgIDs:    []string{constant.ShareToAll},
+	}, fakeOperator())
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+
+	err = GetFolderModel().MoveItemBulk(context.Background(), entity.MoveFolderIDBulkRequest{
+		FolderInfo: []entity.FolderIdWithFileType{
+			{
+				ID:             folderIDs[0],
+				FolderFileType: entity.FolderFileTypeFolder,
+			},
+		},
+		OwnerType:  entity.OwnerTypeOrganization,
+		Dist:       folderIDs[1],
+		Partition:  entity.FolderPartitionMaterialAndPlans,
+	}, fakeOperator())
+
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+
 }
 func TestQuerySharedContents(t *testing.T) {
 	operator := fakeOperator()

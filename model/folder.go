@@ -841,8 +841,13 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//更新子目录link文件
-	linkPath := folder.ChildrenPath()
 	linkOriginPath := folder.ChildrenPath()
+	linkPath := "/" + folder.ID
+	//若distFolder为root，则直接移动到"/{current_folder}"
+	//否则移动到"/{dist_folder}/{current_folder}"
+	if distFolder.ID != constant.FolderRootPath {
+		linkPath = string(distFolder.ChildrenPath()) + "/" + folder.ID
+	}
 	//replaceLinkedItemPath
 	err = f.replaceLinkedItemPath(ctx, tx, info.Links, string(linkOriginPath), string(linkPath), folder, distFolder, operator)
 	if err != nil {
