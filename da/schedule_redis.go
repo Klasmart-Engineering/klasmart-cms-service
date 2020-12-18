@@ -15,9 +15,10 @@ import (
 	"time"
 )
 
-func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules []*entity.ScheduleDetailsView) {
+func (r *ScheduleRedisDA) BatchAdd(ctx context.Context, schedules []*entity.ScheduleDetailsView) error {
 	if !config.Get().RedisConfig.OpenCache {
-		return
+		log.Info(ctx, "redis disabled")
+		return nil
 	}
 	for _, item := range schedules {
 		key := r.scheduleKey(item.ID)
@@ -27,7 +28,7 @@ func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules [
 				log.Err(err),
 				log.Any("schedule", item),
 			)
-			continue
+			return err
 		}
 		err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
 		if err != nil {
@@ -35,14 +36,16 @@ func (r *ScheduleRedisDA) BatchAddScheduleCache(ctx context.Context, schedules [
 				log.Err(err),
 				log.Any("schedule", item),
 			)
-			continue
+			return err
 		}
 	}
+	return nil
 }
 
-func (r *ScheduleRedisDA) addScheduleByCondition(ctx context.Context, condition dbo.Conditions, data interface{}) {
+func (r *ScheduleRedisDA) Add(ctx context.Context, condition dbo.Conditions, data interface{}) error {
 	if !config.Get().RedisConfig.OpenCache {
-		return
+		log.Info(ctx, "redis disabled")
+		return nil
 	}
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -51,7 +54,7 @@ func (r *ScheduleRedisDA) addScheduleByCondition(ctx context.Context, condition 
 			log.Any("condition", condition),
 			log.Any("data", data),
 		)
-		return
+		return err
 	}
 	filed := r.conditionHash(condition)
 	err = ro.MustGetRedis(ctx).Expire(RedisKeyPrefixScheduleCondition, r.expiration).Err()
@@ -62,7 +65,7 @@ func (r *ScheduleRedisDA) addScheduleByCondition(ctx context.Context, condition 
 			log.Any("filed", filed),
 			log.Any("data", data),
 		)
-		return
+		return err
 	}
 	err = ro.MustGetRedis(ctx).HSet(RedisKeyPrefixScheduleCondition, filed, string(b)).Err()
 	if err != nil {
@@ -72,18 +75,12 @@ func (r *ScheduleRedisDA) addScheduleByCondition(ctx context.Context, condition 
 			log.Any("filed", filed),
 			log.Any("data", data),
 		)
-		return
+		return err
 	}
+	return nil
 }
 
-func (r *ScheduleRedisDA) AddScheduleListViewByCondition(ctx context.Context, condition dbo.Conditions, schedules []*entity.ScheduleListView) {
-	r.addScheduleByCondition(ctx, condition, schedules)
-}
-func (r *ScheduleRedisDA) AddScheduleDatesByCondition(ctx context.Context, condition dbo.Conditions, dates []string) {
-	r.addScheduleByCondition(ctx, condition, dates)
-}
-
-func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []string) ([]*entity.ScheduleDetailsView, error) {
+func (r *ScheduleRedisDA) GetByIDs(ctx context.Context, ids []string) ([]*entity.ScheduleDetailsView, error) {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil, errors.New("not open cache")
 	}
@@ -116,7 +113,7 @@ func (r *ScheduleRedisDA) GetScheduleCacheByIDs(ctx context.Context, ids []strin
 	return schedules, nil
 }
 
-func (r *ScheduleRedisDA) getScheduleByCondition(ctx context.Context, condition dbo.Conditions) (string, error) {
+func (r *ScheduleRedisDA) search(ctx context.Context, condition dbo.Conditions) (string, error) {
 	if !config.Get().RedisConfig.OpenCache {
 		return "", errors.New("not open cache ")
 	}
@@ -133,8 +130,8 @@ func (r *ScheduleRedisDA) getScheduleByCondition(ctx context.Context, condition 
 	return res, nil
 }
 
-func (r *ScheduleRedisDA) GetScheduleListViewByCondition(ctx context.Context, condition dbo.Conditions) ([]*entity.ScheduleListView, error) {
-	res, err := r.getScheduleByCondition(ctx, condition)
+func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, condition dbo.Conditions) ([]*entity.ScheduleListView, error) {
+	res, err := r.search(ctx, condition)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +147,8 @@ func (r *ScheduleRedisDA) GetScheduleListViewByCondition(ctx context.Context, co
 	}
 	return result, nil
 }
-func (r *ScheduleRedisDA) GetScheduleDatesByCondition(ctx context.Context, condition dbo.Conditions) ([]string, error) {
-	res, err := r.getScheduleByCondition(ctx, condition)
+func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, condition dbo.Conditions) ([]string, error) {
+	res, err := r.search(ctx, condition)
 	if err != nil {
 		return nil, err
 	}
