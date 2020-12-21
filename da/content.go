@@ -137,8 +137,14 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 
 	//Search authed content
 	if s.AuthedOrgID.Valid && len(s.AuthedOrgID.Strings) > 0 {
-		sql := fmt.Sprintf(`select content_id from %v where org_id in (?)`, entity.AuthedContentRecord{}.TableName())
-		condition := fmt.Sprintf("id in (%v)", sql)
+		authContentTable := entity.AuthedContentRecord{}.TableName()
+		contentTable := entity.Content{}.TableName()
+		sql := fmt.Sprintf(`select content_id from %v where %v.org_id in (?) and %v.content_id = %v.id`,
+			authContentTable,
+			authContentTable,
+			authContentTable,
+			contentTable)
+		condition := fmt.Sprintf("exists (%v)", sql)
 		conditions = append(conditions, condition)
 		params = append(params, s.AuthedOrgID.Strings)
 	}
