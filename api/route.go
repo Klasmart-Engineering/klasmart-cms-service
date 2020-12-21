@@ -149,7 +149,7 @@ func (s Server) registeRoute() {
 		folders.GET("/items/details/:item_id", s.mustLogin, s.getFolderItemByID)
 
 		folders.GET("/share", s.mustLogin, s.getFoldersSharedRecords)
-		folders.PUT("/share ", s.mustLogin, s.shareFolders)
+		folders.PUT("/share", s.mustLogin, s.shareFolders)
 
 	}
 
