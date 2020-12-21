@@ -178,7 +178,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	}
 
 	//TODO:For authed content => handle source for authed content list version => done
-	err = GetAuthedContentRecordsModel().BatchUpdateAuthedContentVersion(ctx, tx, oldContentIDs, contentId)
+	err = GetAuthedContentRecordsModel().BatchUpdateVersion(ctx, tx, oldContentIDs, contentId)
 	if err != nil {
 		log.Error(ctx, "batch update authed content reocrds failed",
 			log.Err(err),
@@ -622,8 +622,10 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 //TODO:For authed content => implement search auth content => done
 func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//set condition with authed flag
-	condition.AuthedContentFlag = true
-	condition.AuthedOrgID = []string{user.OrgID, constant.ShareToAll}
+	condition.AuthedOrgID = entity.NullStrings{
+		Strings: []string{user.OrgID, constant.ShareToAll},
+		Valid:   true,
+	}
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	return cm.searchContent(ctx, tx, &condition, user)
 }
@@ -1673,9 +1675,9 @@ func (cm *ContentModel) getContentAuth(ctx context.Context, contents []*entity.C
 		}
 	}
 	if len(pendingAuthContentIDs) > 0 {
-		authRecords, err := GetAuthedContentRecordsModel().QueryAuthedContentRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
-			OrgIds:     []string{operator.OrgID, constant.ShareToAll},
-			ContentIds: pendingAuthContentIDs,
+		authRecords, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
+			OrgIDs:     []string{operator.OrgID, constant.ShareToAll},
+			ContentIDs: pendingAuthContentIDs,
 		}, operator)
 		if err != nil {
 			log.Error(ctx, "query auth contents records failed",

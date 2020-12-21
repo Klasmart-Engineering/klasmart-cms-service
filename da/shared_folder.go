@@ -2,7 +2,6 @@ package da
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -13,29 +12,30 @@ import (
 )
 
 type ISharedFolderDA interface {
-	AddSharedFolderRecord(ctx context.Context, tx *dbo.DBContext, req entity.SharedFolderRecord) error
-	BatchAddSharedFolderRecord(ctx context.Context, tx *dbo.DBContext, req []*entity.SharedFolderRecord) error
-	BatchDeleteSharedFolderRecord(ctx context.Context, tx *dbo.DBContext, orgID string, folderIDs []string) error
-	BatchDeleteSharedFolderRecordByOrgIDs(ctx context.Context, tx *dbo.DBContext, folderID string, orgIDs []string) error
+	Add(ctx context.Context, tx *dbo.DBContext, req entity.SharedFolderRecord) error
+	BatchAdd(ctx context.Context, tx *dbo.DBContext, req []*entity.SharedFolderRecord) error
+	BatchDelete(ctx context.Context, tx *dbo.DBContext, orgID string, folderIDs []string) error
+	BatchDeleteByOrgIDs(ctx context.Context, tx *dbo.DBContext, folderID string, orgIDs []string) error
 
-	SearchSharedFolderRecords(ctx context.Context, tx *dbo.DBContext, condition SharedFolderCondition) ([]*entity.SharedFolderRecord, error)
+	Search(ctx context.Context, tx *dbo.DBContext, condition SharedFolderCondition) ([]*entity.SharedFolderRecord, error)
 }
 
 type SharedFolderDA struct {
 	s dbo.BaseDA
 }
 
-func (sf *SharedFolderDA) AddSharedFolderRecord(ctx context.Context, tx *dbo.DBContext, req entity.SharedFolderRecord) error {
-	req.ID = utils.NewID()
+func (sf *SharedFolderDA) Add(ctx context.Context, tx *dbo.DBContext, req entity.SharedFolderRecord) error {
+	if req.ID == "" {
+		req.ID = utils.NewID()
+	}
 	req.CreateAt = time.Now().Unix()
-	fmt.Println(req)
 	_, err := sf.s.InsertTx(ctx, tx, &req)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (sf *SharedFolderDA) BatchAddSharedFolderRecord(ctx context.Context, tx *dbo.DBContext, req []*entity.SharedFolderRecord) error {
+func (sf *SharedFolderDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, req []*entity.SharedFolderRecord) error {
 	if len(req) < 1 {
 		return nil
 	}
@@ -60,7 +60,7 @@ func (sf *SharedFolderDA) BatchAddSharedFolderRecord(ctx context.Context, tx *db
 	}
 	return nil
 }
-func (sf *SharedFolderDA) BatchDeleteSharedFolderRecord(ctx context.Context, tx *dbo.DBContext, orgID string, folderIDs []string) error {
+func (sf *SharedFolderDA) BatchDelete(ctx context.Context, tx *dbo.DBContext, orgID string, folderIDs []string) error {
 	now := time.Now().Unix()
 	err := tx.Model(&entity.SharedFolderRecord{}).Where("org_id = ? and folder_id in (?)", orgID, folderIDs).Updates(entity.SharedFolderRecord{DeleteAt: now}).Error
 	if err != nil {
@@ -74,7 +74,7 @@ func (sf *SharedFolderDA) BatchDeleteSharedFolderRecord(ctx context.Context, tx 
 	return nil
 }
 
-func (sf *SharedFolderDA) BatchDeleteSharedFolderRecordByOrgIDs(ctx context.Context, tx *dbo.DBContext, folderID string, orgIDs []string) error {
+func (sf *SharedFolderDA) BatchDeleteByOrgIDs(ctx context.Context, tx *dbo.DBContext, folderID string, orgIDs []string) error {
 	now := time.Now().Unix()
 	err := tx.Model(&entity.SharedFolderRecord{}).Where("org_id in (?) and folder_id = ?", orgIDs, folderID).Updates(entity.SharedFolderRecord{DeleteAt: now}).Error
 	if err != nil {
@@ -88,7 +88,7 @@ func (sf *SharedFolderDA) BatchDeleteSharedFolderRecordByOrgIDs(ctx context.Cont
 	return nil
 }
 
-func (sf *SharedFolderDA) SearchSharedFolderRecords(ctx context.Context, tx *dbo.DBContext, condition SharedFolderCondition) ([]*entity.SharedFolderRecord, error) {
+func (sf *SharedFolderDA) Search(ctx context.Context, tx *dbo.DBContext, condition SharedFolderCondition) ([]*entity.SharedFolderRecord, error) {
 	objs := make([]*entity.SharedFolderRecord, 0)
 	err := sf.s.QueryTx(ctx, tx, &condition, &objs)
 

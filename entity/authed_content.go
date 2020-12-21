@@ -9,24 +9,24 @@ type AddAuthedContentRequest struct {
 }
 
 type BatchAddAuthedContentRequest struct {
-	OrgId      string   `json:"org_id"`
-	FolderId string `json:"folder_id"`
-	ContentIds []string `json:"content_ids"`
+	OrgID      string   `json:"org_id"`
+	FolderID   string   `json:"folder_id"`
+	ContentIDs []string `json:"content_ids"`
 }
 
 type DeleteAuthedContentRequest struct {
-	OrgId     string `json:"org_id"`
-	ContentId string `json:"content_id"`
+	OrgID     string `json:"org_id"`
+	ContentID string `json:"content_id"`
 }
 
 type BatchDeleteAuthedContentRequest struct {
-	OrgId      string   `json:"org_id"`
-	ContentIds []string `json:"content_ids"`
+	OrgID      string   `json:"org_id"`
+	ContentIDs []string `json:"content_ids"`
 }
 
 type BatchDeleteAuthedContentByOrgsRequest struct {
-	OrgIds     []string   `json:"org_ids"`
-	ContentIds []string `json:"content_ids"`
+	OrgIDs     []string `json:"org_ids"`
+	ContentIDs []string `json:"content_ids"`
 }
 
 type AuthedContentRecord struct {
@@ -66,10 +66,10 @@ type OrganizationInfo struct {
 
 type SearchAuthedContentRequest struct {
 	IDs        []string `json:"ids"`
-	OrgIds     []string `json:"org_ids"`
-	ContentIds []string `json:"content_ids"`
+	OrgIDs     []string `json:"org_ids"`
+	ContentIDs []string `json:"content_ids"`
 	Creator    []string `json:"creator"`
-	Pager      utils.Pager
+	Pager      *utils.Pager
 }
 
 type SharedFolderRecord struct {

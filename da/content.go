@@ -88,8 +88,8 @@ type ContentCondition struct {
 	SourceType    string   `json:"source_type"`
 	DirPath       string   `json:"dir_path"`
 
-	AuthedContentFlag bool           `json:"authed_content"`
-	AuthedOrgID       []string       `json:"authed_org_ids"`
+	//AuthedContentFlag bool           `json:"authed_content"`
+	AuthedOrgID       entity.NullStrings       `json:"authed_org_ids"`
 	OrderBy           ContentOrderBy `json:"order_by"`
 	Pager             utils.Pager
 
@@ -136,11 +136,11 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	//Search authed content
-	if s.AuthedContentFlag && len(s.AuthedOrgID) > 0 {
+	if s.AuthedOrgID.Valid && len(s.AuthedOrgID.Strings) > 0 {
 		sql := fmt.Sprintf(`select content_id from %v where org_id in (?)`, entity.AuthedContentRecord{}.TableName())
 		condition := fmt.Sprintf("id in (%v)", sql)
 		conditions = append(conditions, condition)
-		params = append(params, s.AuthedOrgID)
+		params = append(params, s.AuthedOrgID.Strings)
 	}
 
 	if len(s.Scope) > 0 {

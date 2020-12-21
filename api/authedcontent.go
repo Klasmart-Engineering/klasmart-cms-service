@@ -33,7 +33,7 @@ func (s *Server) addAuthedContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetAuthedContentRecordsModel().AddAuthedContent(ctx, dbo.MustGetDB(ctx), data, op)
+	err = model.GetAuthedContentRecordsModel().Add(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
@@ -64,7 +64,7 @@ func (s *Server) batchAddAuthedContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetAuthedContentRecordsModel().BatchAddAuthedContent(ctx, dbo.MustGetDB(ctx), data, op)
+	err = model.GetAuthedContentRecordsModel().BatchAdd(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
@@ -95,7 +95,7 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetAuthedContentRecordsModel().DeleteAuthedContent(ctx, dbo.MustGetDB(ctx), data, op)
+	err = model.GetAuthedContentRecordsModel().Delete(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
@@ -109,7 +109,7 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 // @Description batch delete authed content to org
 // @Accept json
 // @Produce json
-// @Param content body entity.BatchDeleteAuthedContentRequest true "batch delete authed content request"
+// @Param content body entity.BatchDeleteAuthedContentByOrgsRequest true "batch delete authed content request"
 // @Tags content
 // @Success 200 {object} string
 // @Failure 500 {object} InternalServerErrorResponse
@@ -118,7 +118,7 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 func (s *Server) batchDeleteAuthedContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data entity.BatchDeleteAuthedContentRequest
+	var data entity.BatchDeleteAuthedContentByOrgsRequest
 	err := c.ShouldBind(&data)
 	if err != nil {
 		log.Error(ctx, "create content failed", log.Err(err))
@@ -126,7 +126,7 @@ func (s *Server) batchDeleteAuthedContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetAuthedContentRecordsModel().BatchDeleteAuthedContent(ctx, dbo.MustGetDB(ctx), data, op)
+	err = model.GetAuthedContentRecordsModel().BatchDelete(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
@@ -150,8 +150,8 @@ func (s *Server) getOrgAuthedContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	orgID := c.Query("org_id")
-	total, records, err := model.GetAuthedContentRecordsModel().SearchAuthedContentDetailsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
-		OrgIds: []string{orgID},
+	total, records, err := model.GetAuthedContentRecordsModel().SearchDetailsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
+		OrgIDs: []string{orgID},
 	}, op)
 	switch err {
 	case nil:
@@ -179,8 +179,8 @@ func (s *Server) getContentAuthedOrg(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	contentID := c.Query("content_id")
-	total, records, err := model.GetAuthedContentRecordsModel().SearchAuthedContentRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
-		ContentIds: []string{contentID},
+	total, records, err := model.GetAuthedContentRecordsModel().SearchRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
+		ContentIDs: []string{contentID},
 	}, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))

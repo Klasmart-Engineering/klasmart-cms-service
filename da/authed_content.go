@@ -2,7 +2,6 @@ package da
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -31,7 +30,6 @@ type AuthedContentDA struct {
 func (ac *AuthedContentDA) AddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.AuthedContentRecord) error {
 	req.ID = utils.NewID()
 	req.CreateAt = time.Now().Unix()
-	fmt.Println(req)
 	_, err := ac.s.InsertTx(ctx, tx, &req)
 	if err != nil {
 		return err
@@ -148,7 +146,7 @@ type AuthedContentCondition struct {
 	Creator       []string
 	FromFolderIDs []string
 
-	Pager utils.Pager
+	Pager *utils.Pager
 }
 
 func (s *AuthedContentCondition) GetConditions() ([]string, []interface{}) {

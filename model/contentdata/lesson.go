@@ -3,6 +3,7 @@ package contentdata
 import (
 	"context"
 	"encoding/json"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -92,7 +93,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 		return ErrInvalidContentType
 	}
 	if l.TeacherManual != "" {
-		teacherManualPairs := strings.Split(l.TeacherManual, "-")
+		teacherManualPairs := strings.Split(l.TeacherManual, constant.TeacherManualSeparator)
 		if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
 			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
 				log.String("partition", string(storage.TeacherManualStoragePartition)))

@@ -431,6 +431,7 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 // @ID shareFolders
 // @Description share folders to org
 // @Accept json
+// @Param content body entity.ShareFoldersRequest true "create request"
 // @Produce json
 // @Tags folder
 // @Success 200 {object} string ok

@@ -357,7 +357,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		subCondition := make([]string, len(s.DirDescendantList))
 		for i := range s.DirDescendantList {
 			subCondition[i] = "dir_path like ?"
-			params = append(params, s.DirDescendantList[i])
+			params = append(params, s.DirDescendantList[i] + "%")
 		}
 		condition := "(" + strings.Join(subCondition, " or ") + ")"
 		conditions = append(conditions, condition)

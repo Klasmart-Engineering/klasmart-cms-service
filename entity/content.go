@@ -238,7 +238,7 @@ type Content struct {
 	SourceID     string `gorm:"type:varchar(50);NOT NULL;column:source_id"`
 	LatestID     string `gorm:"type:varchar(50);NOT NULL;column:latest_id"`
 
-	CopySourceID string `gorm:"type:varchar(50);NOT NULL; column:copy_source_id"`
+	CopySourceID string `gorm:"type:varchar(50);column:copy_source_id"`
 
 	DirPath string `gorm:"type:varchar(2048);column:dir_path"`
 

@@ -93,6 +93,8 @@ const (
 	Self         = "{self}"
 
 	ShareToAll   = "{share_all}"
+
+	TeacherManualSeparator = "-"
 )
 
 const (

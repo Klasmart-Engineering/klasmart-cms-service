@@ -22,7 +22,7 @@ func TestCreateSharedFolderRecordTable(t *testing.T) {
 
 func TestAddAndBatchAddSharedFolderReocrds(t *testing.T) {
 	ctx := context.Background()
-	err := GetSharedFolderDA().AddSharedFolderRecord(ctx, dbo.MustGetDB(ctx), entity.SharedFolderRecord{
+	err := GetSharedFolderDA().Add(ctx, dbo.MustGetDB(ctx), entity.SharedFolderRecord{
 		OrgID:    "1",
 		FolderID: "abbc",
 		Creator:  "2",
@@ -31,7 +31,7 @@ func TestAddAndBatchAddSharedFolderReocrds(t *testing.T) {
 		return
 	}
 	t.Log("add:", err)
-	err = GetSharedFolderDA().BatchAddSharedFolderRecord(ctx, dbo.MustGetDB(ctx), []*entity.SharedFolderRecord{
+	err = GetSharedFolderDA().BatchAdd(ctx, dbo.MustGetDB(ctx), []*entity.SharedFolderRecord{
 		{
 			OrgID:    "1",
 			FolderID: "abbc2",
@@ -51,7 +51,7 @@ func TestAddAndBatchAddSharedFolderReocrds(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	res, err := GetSharedFolderDA().SearchSharedFolderRecords(ctx, dbo.MustGetDB(ctx), SharedFolderCondition{
+	res, err := GetSharedFolderDA().Search(ctx, dbo.MustGetDB(ctx), SharedFolderCondition{
 		OrgIDs: []string{"1"},
 	})
 	if !assert.NoError(t, err) {

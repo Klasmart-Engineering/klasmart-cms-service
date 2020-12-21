@@ -101,7 +101,7 @@ func (f *FolderModel) AddItem(ctx context.Context, req entity.CreateFolderItemRe
 }
 
 func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error) {
-	records, err := da.GetSharedFolderDA().SearchSharedFolderRecords(ctx, dbo.MustGetDB(ctx), da.SharedFolderCondition{
+	records, err := da.GetSharedFolderDA().Search(ctx, dbo.MustGetDB(ctx), da.SharedFolderCondition{
 		FolderIDs: fids,
 	})
 	if err != nil {
@@ -186,33 +186,33 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		}
 
 		//2.Check orgs
-		//orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
-		//if err != nil {
-		//	log.Error(ctx, "Get orgs failed",
-		//		log.Err(err),
-		//		log.Strings("orgIDs", orgIDs),
-		//		log.Strings("folderIDs", folderIDs),
-		//		log.Any("operator", operator))
-		//	return err
-		//}
-		////check if all orgs are exist
-		//orgsMap := make(map[string]bool)
-		//for i := range orgs {
-		//	if orgs[i].Valid || orgs[i].ID == constant.ShareToAll {
-		//		orgsMap[orgs[i].ID] = true
-		//	}
-		//}
-
+		orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
+		if err != nil {
+			log.Error(ctx, "Get orgs failed",
+				log.Err(err),
+				log.Strings("orgIDs", orgIDs),
+				log.Strings("folderIDs", folderIDs),
+				log.Any("operator", operator))
+			return err
+		}
+		//check if all orgs are exist
 		orgsMap := make(map[string]bool)
-		for i := range orgIDs {
-			if orgIDs[i] == constant.ShareToAll {
-				orgsMap[orgIDs[i]] = true
+		for i := range orgs {
+			if orgs[i].Valid || orgs[i].ID == constant.ShareToAll {
+				orgsMap[orgs[i].ID] = true
 			}
 		}
 
+		//orgsMap := make(map[string]bool)
+		//for i := range orgIDs {
+		//	if orgIDs[i] == constant.ShareToAll {
+		//		orgsMap[orgIDs[i]] = true
+		//	}
+		//}
+
 		//3.remove orgs & add orgs
 		//get folder orgs
-		records, err := da.GetSharedFolderDA().SearchSharedFolderRecords(ctx, tx, da.SharedFolderCondition{
+		records, err := da.GetSharedFolderDA().Search(ctx, tx, da.SharedFolderCondition{
 			FolderIDs: folderIDs,
 		})
 		if err != nil {
@@ -286,7 +286,7 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		//5.Remove folder share records
 		for folderID, pendingOrgList := range sharedFolderPendingOrgsMap {
 			if len(pendingOrgList.DeleteOrgs) > 0 {
-				err = da.GetSharedFolderDA().BatchDeleteSharedFolderRecordByOrgIDs(ctx, tx, folderID, pendingOrgList.DeleteOrgs)
+				err = da.GetSharedFolderDA().BatchDeleteByOrgIDs(ctx, tx, folderID, pendingOrgList.DeleteOrgs)
 				if err != nil {
 					log.Error(ctx, "Batch delete folder failed",
 						log.Err(err),
@@ -324,9 +324,9 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 				return err
 			}
 			if len(sharedFolderPendingOrgsMap[folderIDs[i]].DeleteOrgs) > 0 && len(contentIDs) > 0 {
-				err = GetAuthedContentRecordsModel().BatchDeleteAuthedContentByOrgs(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
-					OrgIds:     sharedFolderPendingOrgsMap[folderIDs[i]].DeleteOrgs,
-					ContentIds: contentIDs,
+				err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
+					OrgIDs:     sharedFolderPendingOrgsMap[folderIDs[i]].DeleteOrgs,
+					ContentIDs: contentIDs,
 				}, operator)
 				if err != nil {
 					log.Error(ctx, "Batch delete auth content failed",
@@ -354,7 +354,7 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 			}
 		}
 		if len(recordsData) > 0 {
-			err = da.GetSharedFolderDA().BatchAddSharedFolderRecord(ctx, tx, recordsData)
+			err = da.GetSharedFolderDA().BatchAdd(ctx, tx, recordsData)
 			if err != nil {
 				log.Error(ctx, "Batch add shared folder failed",
 					log.Err(err),
@@ -379,7 +379,7 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 			}
 		}
 		if len(authData) > 0 {
-			err = GetAuthedContentRecordsModel().BatchAddAuthedContentByOrgIDs(ctx, tx, authData, operator)
+			err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, authData, operator)
 			if err != nil {
 				log.Error(ctx, "Batch add auth contents failed",
 					log.Err(err),
@@ -1621,7 +1621,7 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 	//TODO:check root path
 
 	//2. search folders by parent ids
-	records, err := da.GetSharedFolderDA().SearchSharedFolderRecords(ctx, tx, da.SharedFolderCondition{
+	records, err := da.GetSharedFolderDA().Search(ctx, tx, da.SharedFolderCondition{
 		FolderIDs: []string{fromRootFolder.ID, distFolder.ID},
 	})
 	if err != nil {
@@ -1650,9 +1650,9 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 		}
 		oids := utils.SliceDeduplication(orgIDs)
 		//delete content
-		err = GetAuthedContentRecordsModel().BatchDeleteAuthedContentByOrgs(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
-			OrgIds:     oids,
-			ContentIds: contentLinks,
+		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
+			OrgIDs:     oids,
+			ContentIDs: contentLinks,
 		}, operator)
 		if err != nil {
 			log.Error(ctx, "Can't delete auth content records",
@@ -1681,7 +1681,7 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 			}
 		}
 
-		err = GetAuthedContentRecordsModel().BatchAddAuthedContentByOrgIDs(ctx, tx, data, operator)
+		err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, data, operator)
 		if err != nil {
 			log.Error(ctx, "batch add auth content records",
 				log.Err(err),
@@ -1732,7 +1732,7 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 	condition := da.SharedFolderCondition{
 		FolderIDs: []string{fromFolder.ID, distFolder.ID},
 	}
-	records, err := da.GetSharedFolderDA().SearchSharedFolderRecords(ctx, tx, condition)
+	records, err := da.GetSharedFolderDA().Search(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "search shared folder failed",
 			log.Err(err),
@@ -1755,9 +1755,9 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 	//remove from content id list
 	//when from folder is not root
 	if len(fromOrgs) != 0 {
-		err = GetAuthedContentRecordsModel().BatchDeleteAuthedContentByOrgs(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
-			OrgIds:     fromOrgs,
-			ContentIds: sharedContentIDs,
+		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
+			OrgIDs:     fromOrgs,
+			ContentIDs: sharedContentIDs,
 		}, operator)
 		if err != nil {
 			log.Error(ctx, "Batch delete auth content failed",
@@ -1783,7 +1783,7 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 				}
 			}
 		}
-		err = GetAuthedContentRecordsModel().BatchAddAuthedContentByOrgIDs(ctx, tx, data, operator)
+		err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, data, operator)
 		if err != nil {
 			log.Error(ctx, "Batch add auth content failed",
 				log.Err(err),

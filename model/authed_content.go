@@ -14,36 +14,35 @@ import (
 
 //TODO:For authed content => implement the interface => done
 type IAuthedContent interface {
-	AddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.AddAuthedContentRequest, op *entity.Operator) error
-	BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.BatchAddAuthedContentRequest, op *entity.Operator) error
-	BatchAddAuthedContentByOrgIDs(ctx context.Context, tx *dbo.DBContext, reqs []*entity.AddAuthedContentRequest, op *entity.Operator) error
+	Add(ctx context.Context, tx *dbo.DBContext, req entity.AddAuthedContentRequest, op *entity.Operator) error
+	BatchAdd(ctx context.Context, tx *dbo.DBContext, req entity.BatchAddAuthedContentRequest, op *entity.Operator) error
+	BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext, reqs []*entity.AddAuthedContentRequest, op *entity.Operator) error
 
-	DeleteAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error
-	BatchDeleteAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentRequest, op *entity.Operator) error
-	BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentByOrgsRequest, op *entity.Operator) error
+	Delete(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error
+	BatchDelete(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentByOrgsRequest, op *entity.Operator) error
 
-	SearchAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecord, error)
-	SearchAuthedContentDetailsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecordInfo, error)
-	QueryAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) ([]*entity.AuthedContentRecord, error)
+	SearchRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecord, error)
+	SearchDetailsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecordInfo, error)
+	QueryRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) ([]*entity.AuthedContentRecord, error)
 
-	BatchUpdateAuthedContentVersion(ctx context.Context, tx *dbo.DBContext, oldID []string, newID string) error
+	BatchUpdateVersion(ctx context.Context, tx *dbo.DBContext, oldID []string, newID string) error
 }
 
 type AuthedContent struct {
 }
 
 //AddAuthedContent add authed content record to org
-func (ac *AuthedContent) AddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.AddAuthedContentRequest, op *entity.Operator) error {
+func (ac *AuthedContent) Add(ctx context.Context, tx *dbo.DBContext, req entity.AddAuthedContentRequest, op *entity.Operator) error {
 	//check duplicate
 	contentIDs, err := ac.expandRelatedContentID(ctx, tx, []string{req.ContentID})
 	if err != nil{
 		return err
 	}
 	if len(contentIDs) > 0 {
-		return ac.BatchAddAuthedContent(ctx, tx, entity.BatchAddAuthedContentRequest{
-			OrgId:     req.OrgID,
-			FolderId:   req.FromFolderID,
-			ContentIds: contentIDs,
+		return ac.BatchAdd(ctx, tx, entity.BatchAddAuthedContentRequest{
+			OrgID:      req.OrgID,
+			FolderID:   req.FromFolderID,
+			ContentIDs: contentIDs,
 		}, op)
 	}
 
@@ -80,7 +79,7 @@ func (ac *AuthedContent) AddAuthedContent(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 
-func (ac *AuthedContent) BatchAddAuthedContentByOrgIDs(ctx context.Context, tx *dbo.DBContext, reqs []*entity.AddAuthedContentRequest, op *entity.Operator) error {
+func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext, reqs []*entity.AddAuthedContentRequest, op *entity.Operator) error {
 	contentIDs := make([]string, len(reqs))
 	folderIDs := make([]string, len(reqs))
 	orgIDs := make([]string, len(reqs))
@@ -154,14 +153,14 @@ func (ac *AuthedContent) BatchAddAuthedContentByOrgIDs(ctx context.Context, tx *
 
 //BatchAddAuthedContent add a list of authed content records to org
 //if some of the list records (content_id and org_id) is exists, ignore
-func (ac *AuthedContent) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.BatchAddAuthedContentRequest, op *entity.Operator) error {
-	contentIDs, err := ac.expandRelatedContentID(ctx, tx, req.ContentIds)
+func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req entity.BatchAddAuthedContentRequest, op *entity.Operator) error {
+	contentIDs, err := ac.expandRelatedContentID(ctx, tx, req.ContentIDs)
 	if err != nil{
 		return err
 	}
 	condition := da.AuthedContentCondition{
 		ContentIDs: contentIDs,
-		OrgIDs:     []string{req.OrgId},
+		OrgIDs:     []string{req.OrgID},
 	}
 	objs, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, condition)
 	if err != nil {
@@ -194,9 +193,9 @@ func (ac *AuthedContent) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBCo
 	data := make([]*entity.AuthedContentRecord, len(pendingAddIDs))
 	for i := range pendingAddIDs {
 		data[i] = &entity.AuthedContentRecord{
-			OrgID:     req.OrgId,
+			OrgID:     req.OrgID,
 			ContentID: pendingAddIDs[i],
-			FromFolderID: req.FolderId,
+			FromFolderID: req.FolderID,
 			Creator:   op.UserID,
 		}
 	}
@@ -211,8 +210,8 @@ func (ac *AuthedContent) BatchAddAuthedContent(ctx context.Context, tx *dbo.DBCo
 }
 
 //DeleteAuthedContent delete record by org_id and content_id
-func (ac *AuthedContent) DeleteAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error {
-	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContent(ctx, tx, req.OrgId, []string{req.ContentId})
+func (ac *AuthedContent) Delete(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error {
+	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContent(ctx, tx, req.OrgID, []string{req.ContentID})
 	if err != nil {
 		log.Error(ctx, "remove authed content records failed",
 			log.Err(err),
@@ -224,22 +223,22 @@ func (ac *AuthedContent) DeleteAuthedContent(ctx context.Context, tx *dbo.DBCont
 }
 
 //BatchDeleteAuthedContent delete record by org_id and (content_id list)
-func (ac *AuthedContent) BatchDeleteAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentRequest, op *entity.Operator) error {
-	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContent(ctx, tx, req.OrgId, req.ContentIds)
-	if err != nil {
-		log.Error(ctx, "remove authed content records failed",
-			log.Err(err),
-			log.Any("operator", op),
-			log.Any("req", req))
-		return err
-	}
-	return nil
-}
+//func (ac *AuthedContent) BatchDelete(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentRequest, op *entity.Operator) error {
+//	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContent(ctx, tx, req.OrgID, req.ContentIDs)
+//	if err != nil {
+//		log.Error(ctx, "remove authed content records failed",
+//			log.Err(err),
+//			log.Any("operator", op),
+//			log.Any("req", req))
+//		return err
+//	}
+//	return nil
+//}
 
 
 //BatchDeleteAuthedContent delete record by org_id and (content_id list)
-func (ac *AuthedContent) BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentByOrgsRequest, op *entity.Operator) error {
-	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContentByOrgs(ctx, tx, req.OrgIds, req.ContentIds)
+func (ac *AuthedContent) BatchDelete(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentByOrgsRequest, op *entity.Operator) error {
+	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContentByOrgs(ctx, tx, req.OrgIDs, req.ContentIDs)
 	if err != nil {
 		log.Error(ctx, "remove authed content records failed",
 			log.Err(err),
@@ -251,22 +250,22 @@ func (ac *AuthedContent) BatchDeleteAuthedContentByOrgs(ctx context.Context, tx 
 }
 
 //SearchAuthedContentRecordsList search authed content records
-func (ac *AuthedContent) SearchAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecord, error) {
+func (ac *AuthedContent) SearchRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecord, error) {
 	return da.GetAuthedContentRecordsDA().SearchAuthedContentRecords(ctx, tx, da.AuthedContentCondition{
 		IDs:        condition.IDs,
-		OrgIDs:     condition.OrgIds,
-		ContentIDs: condition.ContentIds,
+		OrgIDs:     condition.OrgIDs,
+		ContentIDs: condition.ContentIDs,
 		Creator:    condition.Creator,
 
 		Pager: condition.Pager,
 	})
 }
 
-func (ac *AuthedContent) QueryAuthedContentRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) ([]*entity.AuthedContentRecord, error) {
+func (ac *AuthedContent) QueryRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) ([]*entity.AuthedContentRecord, error) {
 	return da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, da.AuthedContentCondition{
 		IDs:        condition.IDs,
-		OrgIDs:     condition.OrgIds,
-		ContentIDs: condition.ContentIds,
+		OrgIDs:     condition.OrgIDs,
+		ContentIDs: condition.ContentIDs,
 		Creator:    condition.Creator,
 
 		Pager: condition.Pager,
@@ -274,8 +273,8 @@ func (ac *AuthedContent) QueryAuthedContentRecordsList(ctx context.Context, tx *
 }
 
 //SearchAuthedContentDetailsList search authed content records and content details
-func (ac *AuthedContent) SearchAuthedContentDetailsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecordInfo, error) {
-	total, records, err := ac.SearchAuthedContentRecordsList(ctx, tx, condition, op)
+func (ac *AuthedContent) SearchDetailsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecordInfo, error) {
+	total, records, err := ac.SearchRecordsList(ctx, tx, condition, op)
 	if err != nil {
 		log.Error(ctx, "search authed content records failed",
 			log.Err(err),
@@ -337,7 +336,7 @@ func (ac *AuthedContent) expandRelatedContentID(ctx context.Context, tx *dbo.DBC
 }
 
 //BatchUpdateAuthedContentVersion replace content id for new version
-func (ac *AuthedContent) BatchUpdateAuthedContentVersion(ctx context.Context, tx *dbo.DBContext, oldIDs []string, newID string) error {
+func (ac *AuthedContent) BatchUpdateVersion(ctx context.Context, tx *dbo.DBContext, oldIDs []string, newID string) error {
 	err := da.GetAuthedContentRecordsDA().ReplaceContentID(ctx, tx, oldIDs, newID)
 	if err != nil {
 		log.Error(ctx, "replace authed content records failed",
