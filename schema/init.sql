@@ -270,4 +270,4 @@ CREATE TABLE IF NOT EXISTS `organizations_properties` (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'organizations_properties';
 
 -- Badanamu HQ
-insert into organizations_properties(id, type) values('0f38ce9-5152-4049-b4e7-6d2e2ba884e6', 'headquarters');
+insert into organizations_properties(id, type) values('10f38ce9-5152-4049-b4e7-6d2e2ba884e6', 'headquarters');
