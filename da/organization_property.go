@@ -49,7 +49,7 @@ func (c OrganizationPropertyCondition) GetConditions() ([]string, []interface{})
 	}
 
 	if !c.IncludeDeleted.Valid || !c.IncludeDeleted.Bool {
-		wheres = append(wheres, "(delete_at=0)")
+		wheres = append(wheres, "(deleted_at=0)")
 	}
 
 	return wheres, params
