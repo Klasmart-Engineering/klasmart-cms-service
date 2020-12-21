@@ -69,7 +69,7 @@ func (s *Server) getPath(c *gin.Context) {
 	}
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
 	switch err {
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
 	case storage.ErrInvalidUploadPartition:
 		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))

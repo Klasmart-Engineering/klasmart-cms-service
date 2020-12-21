@@ -74,7 +74,8 @@ const (
 
 	NoVisibilitySetting = "-"
 
-	FolderRootPath = "/"
+	FolderRootPath      = "/"
+	FolderPathSeparator = "/"
 )
 
 const (
@@ -95,6 +96,7 @@ const (
 	ShareToAll   = "{share_all}"
 
 	TeacherManualSeparator = "-"
+	FolderItemLinkSeparator = "-"
 )
 
 const (

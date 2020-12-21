@@ -82,7 +82,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 	outcomeID := c.Param("id")
 	outcome, err := model.GetOutcomeModel().GetLearningOutcomeByID(ctx, dbo.MustGetDB(ctx), outcomeID, op)
 	switch err {
-	//case model.ErrInvalidResourceId:
+	//case model.ErrInvalidResourceID:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -232,7 +232,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	}
 	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
-	//case model.ErrInvalidResourceId:
+	//case model.ErrInvalidResourceID:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	//case model.ErrResourceNotFound:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -605,7 +605,7 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 
 	err = model.GetOutcomeModel().BulkPubLearningOutcome(ctx, dbo.MustGetDB(ctx), data.OutcomeIDs, "", op)
 	switch err {
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -700,7 +700,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 
 	total, outcomes, err := model.GetOutcomeModel().SearchPrivateOutcomes(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -761,7 +761,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))

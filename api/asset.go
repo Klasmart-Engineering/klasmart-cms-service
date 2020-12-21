@@ -32,7 +32,7 @@ func (s *Server) createAsset(c *gin.Context) {
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -79,7 +79,7 @@ func (s *Server) updateAsset(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))

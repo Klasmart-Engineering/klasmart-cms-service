@@ -95,7 +95,10 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetAuthedContentRecordsModel().Delete(ctx, dbo.MustGetDB(ctx), data, op)
+	err = model.GetAuthedContentRecordsModel().BatchDelete(ctx, dbo.MustGetDB(ctx), entity.BatchDeleteAuthedContentByOrgsRequest{
+		OrgIDs:     []string{data.OrgID},
+		ContentIDs: []string{data.ContentID},
+	}, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "ok")

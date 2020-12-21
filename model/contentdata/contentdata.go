@@ -12,7 +12,7 @@ import (
 func CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
 	var contentData entity.ContentData
 	switch contentType {
-	case entity.ContentTypeLesson:
+	case entity.ContentTypePlan:
 		contentData = new(LessonData)
 	case entity.ContentTypeMaterial:
 		contentData = new(MaterialData)
@@ -36,7 +36,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 	}
 	teacherManual := ""
 	teacherManualName := ""
-	if obj.ContentType == entity.ContentTypeLesson {
+	if obj.ContentType == entity.ContentTypePlan {
 		teacherManual = contentData.(*LessonData).TeacherManual
 		teacherManualName = contentData.(*LessonData).TeacherManualName
 	}

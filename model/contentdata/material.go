@@ -87,13 +87,13 @@ func (h *MaterialData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequ
 	h.FileType = fileType
 	return nil
 }
-func (h *MaterialData) SubContentIds(ctx context.Context) []string {
+func (h *MaterialData) SubContentIDs(ctx context.Context) []string {
 	return nil
 }
 func (h *MaterialData) PrepareVersion(ctx context.Context) error {
 	return nil
 }
-func (l *MaterialData) ReplaceContentIds(ctx context.Context, IDMap map[string]string) {
+func (l *MaterialData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
 }
 func (h *MaterialData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	return nil

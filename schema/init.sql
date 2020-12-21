@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS `cms_authed_contents` (
     KEY `creator` (`creator`)
 ) COMMENT '内容授权记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `cms_shared_folder_records` (
+CREATE TABLE IF NOT EXISTS `cms_shared_folders` (
     `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
     `folder_id` VARCHAR(50) NOT NULL COMMENT 'folder_id',
     `org_id` VARCHAR(50) NOT NULL COMMENT 'org_id',

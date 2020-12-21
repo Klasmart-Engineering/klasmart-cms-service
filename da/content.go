@@ -93,7 +93,7 @@ type ContentCondition struct {
 	OrderBy           ContentOrderBy `json:"order_by"`
 	Pager             utils.Pager
 
-	JoinUserIdList []string `json:"join_user_id_list"`
+	JoinUserIDList []string `json:"join_user_id_list"`
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
@@ -107,13 +107,13 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if s.Name != "" {
 		condition := "match(content_name, description, keywords) against(? in boolean mode)"
-		if len(s.JoinUserIdList) > 0 {
+		if len(s.JoinUserIDList) > 0 {
 			condition1 := "author in (?)"
 			where := "(" + condition + " OR " + condition1 + ")"
 
 			conditions = append(conditions, where)
 			params = append(params, s.Name)
-			params = append(params, s.JoinUserIdList)
+			params = append(params, s.JoinUserIDList)
 		} else {
 			conditions = append(conditions, condition)
 			params = append(params, s.Name)

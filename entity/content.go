@@ -20,7 +20,7 @@ const (
 	ContentStatusArchive    = "archive"
 
 	ContentTypeMaterial = 1
-	ContentTypeLesson   = 2
+	ContentTypePlan     = 2
 	ContentTypeAssets   = 3
 
 	AliasContentTypeFolder = 10
@@ -100,8 +100,8 @@ func NewContentType(contentType int) ContentType {
 	switch contentType {
 	case ContentTypeMaterial:
 		return ContentTypeMaterial
-	case ContentTypeLesson:
-		return ContentTypeLesson
+	case ContentTypePlan:
+		return ContentTypePlan
 	case ContentTypeAssets:
 		return ContentTypeAssets
 	case AliasContentTypeFolder:
@@ -115,7 +115,7 @@ func (c ContentType) Validate() error {
 	switch c {
 	case ContentTypeMaterial:
 		return nil
-	case ContentTypeLesson:
+	case ContentTypePlan:
 		return nil
 	case ContentTypeAssets:
 		return nil
@@ -133,8 +133,8 @@ func (c ContentType) IsAsset() bool {
 
 func (c ContentType) ContentTypeInt() []int {
 	switch c {
-	case ContentTypeLesson:
-		return []int{ContentTypeLesson}
+	case ContentTypePlan:
+		return []int{ContentTypePlan}
 	case ContentTypeMaterial:
 		return []int{ContentTypeMaterial}
 	case ContentTypeAssets:
@@ -142,24 +142,24 @@ func (c ContentType) ContentTypeInt() []int {
 	case AliasContentTypeFolder:
 		return []int{AliasContentTypeFolder}
 	}
-	return []int{ContentTypeLesson}
+	return []int{ContentTypePlan}
 }
 
 func (c ContentType) ContentType() []ContentType {
 	switch c {
-	case ContentTypeLesson:
-		return []ContentType{ContentTypeLesson}
+	case ContentTypePlan:
+		return []ContentType{ContentTypePlan}
 	case ContentTypeMaterial:
 		return []ContentType{ContentTypeMaterial}
 	case ContentTypeAssets:
 		return []ContentType{ContentTypeAssets}
 	}
-	return []ContentType{ContentTypeLesson}
+	return []ContentType{ContentTypePlan}
 }
 
 func (c ContentType) Name() string {
 	switch c {
-	case ContentTypeLesson:
+	case ContentTypePlan:
 		return "Plan"
 	case ContentTypeMaterial:
 		return "Material"
@@ -492,9 +492,9 @@ type ContentData interface {
 	PrepareResult(ctx context.Context, operator *Operator) error
 	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
 	PrepareVersion(ctx context.Context) error
-	SubContentIds(ctx context.Context) []string
+	SubContentIDs(ctx context.Context) []string
 
-	ReplaceContentIds(ctx context.Context, IDMap map[string]string)
+	ReplaceContentIDs(ctx context.Context, IDMap map[string]string)
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {

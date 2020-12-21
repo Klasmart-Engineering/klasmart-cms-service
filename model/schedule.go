@@ -912,7 +912,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-	if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
+	if lessonPlanInfo.ContentType != entity.ContentTypePlan {
 		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
 		return constant.ErrInvalidArgs
 	}

@@ -35,7 +35,7 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		}
 	}
 
-	if contentType == entity.ContentTypeLesson {
+	if contentType == entity.ContentTypePlan {
 		ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonPlan221, operator)
 		if err != nil{
 			log.Error(ctx, "query lesson error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))

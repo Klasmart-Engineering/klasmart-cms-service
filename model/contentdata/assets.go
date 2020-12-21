@@ -59,7 +59,7 @@ func (this *AssetsData) Marshal(ctx context.Context) (string, error) {
 
 	return string(data), nil
 }
-func (a *AssetsData) SubContentIds(ctx context.Context) []string {
+func (a *AssetsData) SubContentIDs(ctx context.Context) []string {
 	return nil
 }
 
@@ -92,7 +92,7 @@ func (h *AssetsData) PrepareVersion(ctx context.Context) error {
 func (h *AssetsData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	return nil
 }
-func (l *AssetsData) ReplaceContentIds(ctx context.Context, IDMap map[string]string) {
+func (l *AssetsData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
 }
 func isArray(ext string, extensions []string) bool {
 	for i := range extensions {

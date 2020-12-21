@@ -69,7 +69,7 @@ func (s *Server) createContent(c *gin.Context) {
 	switch err {
 	case contentdata.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -168,7 +168,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIdList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
+	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIDList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
 	//if err != nil {
 	//	log.Error(ctx, "check author failed", log.Err(err))
 	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -382,7 +382,7 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))

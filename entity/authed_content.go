@@ -83,5 +83,5 @@ type SharedFolderRecord struct {
 }
 
 func (SharedFolderRecord) TableName() string {
-	return "cms_shared_folder_records"
+	return "cms_shared_folders"
 }

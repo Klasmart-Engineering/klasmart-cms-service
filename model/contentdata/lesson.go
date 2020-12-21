@@ -71,7 +71,7 @@ func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInReques
 	h.TeacherManualName = t.TeacherManualName
 	return nil
 }
-func (l *LessonData) SubContentIds(ctx context.Context) []string {
+func (l *LessonData) SubContentIDs(ctx context.Context) []string {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -79,7 +79,7 @@ func (l *LessonData) SubContentIds(ctx context.Context) []string {
 	return materialList
 }
 
-func (l *LessonData) ReplaceContentIds(ctx context.Context, IDMap map[string]string) {
+func (l *LessonData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		newID, ok := IDMap[l.MaterialId]
 		if ok {
@@ -89,7 +89,7 @@ func (l *LessonData) ReplaceContentIds(ctx context.Context, IDMap map[string]str
 }
 
 func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentType) error {
-	if contentType != entity.ContentTypeLesson {
+	if contentType != entity.ContentTypePlan {
 		return ErrInvalidContentType
 	}
 	if l.TeacherManual != "" {
@@ -140,7 +140,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 
 func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	//list all related content ids
-	ids := l.SubContentIds(ctx)
+	ids := l.SubContentIDs(ctx)
 	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
 		IDS: ids,
 	})

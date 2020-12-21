@@ -2,7 +2,9 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 
@@ -18,7 +20,7 @@ type IAuthedContent interface {
 	BatchAdd(ctx context.Context, tx *dbo.DBContext, req entity.BatchAddAuthedContentRequest, op *entity.Operator) error
 	BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext, reqs []*entity.AddAuthedContentRequest, op *entity.Operator) error
 
-	Delete(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error
+	//Delete(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error
 	BatchDelete(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentByOrgsRequest, op *entity.Operator) error
 
 	SearchRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecord, error)
@@ -26,6 +28,8 @@ type IAuthedContent interface {
 	QueryRecordsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) ([]*entity.AuthedContentRecord, error)
 
 	BatchUpdateVersion(ctx context.Context, tx *dbo.DBContext, oldID []string, newID string) error
+
+	GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error)
 }
 
 type AuthedContent struct {
@@ -45,6 +49,15 @@ func (ac *AuthedContent) Add(ctx context.Context, tx *dbo.DBContext, req entity.
 			ContentIDs: contentIDs,
 		}, op)
 	}
+
+	//lock org id for batch add
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentAuth, req.OrgID)
+	if err != nil {
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
 
 	condition := da.AuthedContentCondition{
 		ContentIDs: []string{req.ContentID},
@@ -98,6 +111,16 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 	contentIDs = utils.SliceDeduplication(allContentIDs)
 	folderIDs = utils.SliceDeduplication(folderIDs)
 	orgIDs = utils.SliceDeduplication(orgIDs)
+
+	//lock org id for batch add
+	for i := range orgIDs {
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentAuth, orgIDs[i])
+		if err != nil {
+			return err
+		}
+		locker.Lock()
+		defer locker.Unlock()
+	}
 
 	condition := da.AuthedContentCondition{
 		ContentIDs: contentIDs,
@@ -162,6 +185,15 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 		ContentIDs: contentIDs,
 		OrgIDs:     []string{req.OrgID},
 	}
+	//lock org id for batch add
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentAuth, req.OrgID)
+	if err != nil {
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
+
 	objs, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "count authed content records failed",
@@ -210,17 +242,17 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 }
 
 //DeleteAuthedContent delete record by org_id and content_id
-func (ac *AuthedContent) Delete(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error {
-	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContent(ctx, tx, req.OrgID, []string{req.ContentID})
-	if err != nil {
-		log.Error(ctx, "remove authed content records failed",
-			log.Err(err),
-			log.Any("operator", op),
-			log.Any("req", req))
-		return err
-	}
-	return nil
-}
+//func (ac *AuthedContent) Delete(ctx context.Context, tx *dbo.DBContext, req entity.DeleteAuthedContentRequest, op *entity.Operator) error {
+//	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContent(ctx, tx, req.OrgID, []string{req.ContentID})
+//	if err != nil {
+//		log.Error(ctx, "remove authed content records failed",
+//			log.Err(err),
+//			log.Any("operator", op),
+//			log.Any("req", req))
+//		return err
+//	}
+//	return nil
+//}
 
 //BatchDeleteAuthedContent delete record by org_id and (content_id list)
 //func (ac *AuthedContent) BatchDelete(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentRequest, op *entity.Operator) error {
@@ -272,6 +304,16 @@ func (ac *AuthedContent) QueryRecordsList(ctx context.Context, tx *dbo.DBContext
 	})
 }
 
+func (cm *AuthedContent) GetContentAuthByIDList(ctx context.Context, cids []string, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
+	if err != nil {
+		log.Error(ctx, "get content failed",
+			log.Err(err),
+			log.Strings("cids", cids))
+		return nil, err
+	}
+	return cm.getContentAuth(ctx, contents, operator)
+}
 //SearchAuthedContentDetailsList search authed content records and content details
 func (ac *AuthedContent) SearchDetailsList(ctx context.Context, tx *dbo.DBContext, condition entity.SearchAuthedContentRequest, op *entity.Operator) (int, []*entity.AuthedContentRecordInfo, error) {
 	total, records, err := ac.SearchRecordsList(ctx, tx, condition, op)
@@ -287,7 +329,7 @@ func (ac *AuthedContent) SearchDetailsList(ctx context.Context, tx *dbo.DBContex
 		contentIDs[i] = records[i].ContentID
 	}
 
-	contentDetails, err := GetContentModel().GetContentByIdList(ctx, tx, contentIDs, op)
+	contentDetails, err := GetContentModel().GetContentByIDList(ctx, tx, contentIDs, op)
 	if err != nil {
 		log.Error(ctx, "get content list records failed",
 			log.Err(err),
@@ -318,15 +360,15 @@ func (ac *AuthedContent) expandRelatedContentID(ctx context.Context, tx *dbo.DBC
 	}
 	ret := make([]string, 0)
 	for i := range contents {
-		if contents[i].ContentType == entity.ContentTypeLesson {
-			data, err := contentdata.CreateContentData(ctx, entity.ContentTypeLesson, contents[i].Data)
+		if contents[i].ContentType == entity.ContentTypePlan {
+			data, err := contentdata.CreateContentData(ctx, entity.ContentTypePlan, contents[i].Data)
 			if err != nil{
 				log.Error(ctx, "create content data failed",
 					log.Err(err),
 					log.Any("content", contents[i]))
 				return nil, err
 			}
-			relatedIDs := data.SubContentIds(ctx)
+			relatedIDs := data.SubContentIDs(ctx)
 			ret = append(ret, relatedIDs...)
 		}
 
@@ -348,6 +390,51 @@ func (ac *AuthedContent) BatchUpdateVersion(ctx context.Context, tx *dbo.DBConte
 	return nil
 }
 
+func (cm *AuthedContent) getContentAuth(ctx context.Context, contents []*entity.Content, operator *entity.Operator) (map[string]entity.ContentAuth, error) {
+	result := make(map[string]entity.ContentAuth)
+	pendingAuthContentIDs := make([]string, 0)
+
+	contentLatestIDMap := make(map[string]string)
+	contentLatestIDRevert := make(map[string]string)
+	for i := range contents {
+		if contents[i].LatestID == "" {
+			contentLatestIDMap[contents[i].ID] = contents[i].ID
+			contentLatestIDRevert[contents[i].ID] = contents[i].ID
+		} else {
+			contentLatestIDMap[contents[i].ID] = contents[i].LatestID
+			contentLatestIDRevert[contents[i].LatestID] = contents[i].ID
+		}
+	}
+
+	for i := range contents {
+		if contents[i].Org == operator.OrgID {
+			result[contents[i].ID] = entity.ContentAuthed
+		} else {
+			result[contents[i].ID] = entity.ContentUnauthed
+			//search auth contents use latest id
+			pendingAuthContentIDs = append(pendingAuthContentIDs, contentLatestIDMap[contents[i].ID])
+		}
+	}
+	if len(pendingAuthContentIDs) > 0 {
+		authRecords, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
+			OrgIDs:     []string{operator.OrgID, constant.ShareToAll},
+			ContentIDs: pendingAuthContentIDs,
+		}, operator)
+		if err != nil {
+			log.Error(ctx, "query auth contents records failed",
+				log.Err(err),
+				log.String("orgID", operator.OrgID),
+				log.Strings("contentIDs", pendingAuthContentIDs))
+			return nil, err
+		}
+		for i := range authRecords {
+			//result revert to current id
+			result[contentLatestIDRevert[authRecords[i].ContentID]] = entity.ContentAuthed
+		}
+	}
+
+	return result, nil
+}
 var (
 	authedContentModel IAuthedContent
 	_authedContentOnce sync.Once

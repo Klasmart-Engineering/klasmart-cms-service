@@ -208,7 +208,7 @@ func (p Path) Parents() []string {
 	if p == constant.FolderRootPath {
 		return nil
 	}
-	pairs := strings.Split(string(p), "/")
+	pairs := strings.Split(string(p), constant.FolderPathSeparator)
 	ret := make([]string, len(pairs)-1)
 	for i := range ret {
 		ret[i] = pairs[i+1]
@@ -263,7 +263,7 @@ func (f FolderItem) ChildrenPath() Path {
 	if f.ID == constant.FolderRootPath {
 		return NewPath(constant.FolderRootPath)
 	}
-	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
+	return NewPath(f.DirPath.ParentPath() + constant.FolderPathSeparator + f.ID)
 }
 
 type FolderItemInfo struct {
