@@ -1,3 +1,15 @@
+CREATE TABLE IF NOT EXISTS `organizations_properties` (
+    `id` varchar(50) NOT NULL COMMENT 'org_id',
+    `type` varchar(200) NOT NULL COMMENT 'type',
+    `created_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `updated_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `deleted_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `created_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `updated_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'organizations_properties';
+
 -- init headquarters: Badanamu HQ
 insert into organizations_properties(id, type) values('0f38ce9-5152-4049-b4e7-6d2e2ba884e6', 'headquarters');
 
