@@ -136,9 +136,14 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 		orgIds = utils.SliceDeduplication(orgIds)
 		orgs := make([]*entity.OrganizationInfo, len(orgIds))
 		for i := range orgIds {
+			org := orgMap[orgIDs[i]]
+			name := ""
+			if org != nil{
+				name = org.Name
+			}
 			orgs[i] = &entity.OrganizationInfo{
 				ID:   orgIds[i],
-				Name: orgMap[orgIds[i]].Name,
+				Name: name,
 			}
 		}
 		folderInfo := &entity.FolderShareRecord{
