@@ -168,7 +168,7 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 	//不是自己的，查看lock_by和修改权限
 	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't update content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, nil
+		return false, NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 	if content.LockedBy == user.UserID {
 		log.Info(ctx, "locked by user", log.String("cid", cid), log.String("user_id", user.UserID))
@@ -201,7 +201,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 	}
 	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't lock content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, nil
+		return false, NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 	//排除其他机构
 	if content.Org != user.OrgID {

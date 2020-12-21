@@ -2047,7 +2047,7 @@ func (cm *ContentModel) ListVisibleScopes(ctx context.Context, permission visibl
 	return ret, nil
 }
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
-	schools, err := external.GetOrganizationServiceProvider().GetChildren(ctx, operator, operator.OrgID)
+	schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
 	if err != nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err

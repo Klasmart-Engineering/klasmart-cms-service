@@ -192,30 +192,29 @@ create fulltext index fullindex_name_description_keywords_author_shortcode on le
     `shortcode`
 );
 drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
-alter table learning_outcomes
-add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
-Create Table: CREATE TABLE `users` (
-    `user_id` varchar(64) NOT NULL,
-    `user_name` varchar(30) DEFAULT NULL,
-    `phone` varchar(24) DEFAULT NULL,
-    `email` varchar(80) DEFAULT NULL,
-    `secret` varchar(128) DEFAULT NULL,
-    `salt` varchar(128) DEFAULT NULL,
-    `gender` varchar(8) DEFAULT NULL,
-    `birthday` bigint(20) DEFAULT NULL,
-    `avatar` text DEFAULT NULL,
-    `create_at` bigint(20) DEFAULT '0',
-    `update_at` bigint(20) DEFAULT '0',
-    `delete_at` bigint(20) DEFAULT '0',
-    `create_id` varchar(64) DEFAULT NULL,
-    `update_id` varchar(64) DEFAULT NULL,
-    `delete_id` varchar(64) DEFAULT NULL,
-    `ams_id` varchar(64) DEFAULT NULL,
-    PRIMARY KEY (`user_id`),
-    UNIQUE KEY `uix_user_phone` (`phone`, `delete_at`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-alter table learning_outcomes
-add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
+alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
+
+CREATE TABLE IF NOT EXISTS  `users` (
+  `user_id` varchar(64) NOT NULL,
+  `user_name` varchar(30) DEFAULT NULL,
+  `phone` varchar(24) DEFAULT NULL,
+  `email` varchar(80) DEFAULT NULL,
+  `secret` varchar(128) DEFAULT NULL,
+  `salt` varchar(128) DEFAULT NULL,
+  `gender` varchar(8) DEFAULT NULL,
+  `birthday` bigint(20) DEFAULT NULL,
+  `avatar` text DEFAULT NULL,
+  `create_at` bigint(20) DEFAULT '0',
+  `update_at` bigint(20) DEFAULT '0',
+  `delete_at` bigint(20) DEFAULT '0',
+  `create_id` varchar(64) DEFAULT NULL,
+  `update_id` varchar(64) DEFAULT NULL,
+  `delete_id` varchar(64) DEFAULT NULL,
+  `ams_id` varchar(64) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `user_settings` (
     `id` varchar(50) NOT NULL COMMENT 'id',
     `user_id` varchar(100) NOT NULL COMMENT 'user_id',
