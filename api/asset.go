@@ -51,7 +51,7 @@ func (s *Server) createAsset(c *gin.Context) {
 			"id": cid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 func (s *Server) updateAsset(c *gin.Context) {
@@ -102,7 +102,7 @@ func (s *Server) updateAsset(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -126,7 +126,7 @@ func (s *Server) deleteAsset(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -148,7 +148,7 @@ func (s *Server) getAssetByID(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 func (s *Server) searchAssets(c *gin.Context) {
@@ -168,7 +168,7 @@ func (s *Server) searchAssets(c *gin.Context) {
 			"list":  results,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 

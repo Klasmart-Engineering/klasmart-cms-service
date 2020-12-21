@@ -38,7 +38,7 @@ func (s *Server) addAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -69,7 +69,7 @@ func (s *Server) batchAddAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -103,7 +103,7 @@ func (s *Server) deleteAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -134,7 +134,7 @@ func (s *Server) batchDeleteAuthedContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -163,7 +163,7 @@ func (s *Server) getOrgAuthedContent(c *gin.Context) {
 			List:  records,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -186,7 +186,7 @@ func (s *Server) getContentAuthedOrg(c *gin.Context) {
 		ContentIDs: []string{contentID},
 	}, op)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 
@@ -196,7 +196,7 @@ func (s *Server) getContentAuthedOrg(c *gin.Context) {
 	}
 	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, op, oids)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	list := make([]*entity.OrganizationInfo, len(orgs))
@@ -214,6 +214,6 @@ func (s *Server) getContentAuthedOrg(c *gin.Context) {
 			List:  list,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

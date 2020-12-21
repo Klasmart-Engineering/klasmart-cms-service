@@ -90,7 +90,7 @@ func (s *Server) createContent(c *gin.Context) {
 			"id": cid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -143,7 +143,7 @@ func (s *Server) copyContent(c *gin.Context) {
 			"id": cid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -201,7 +201,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	case model.ErrInvalidContentStatusToPublish:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -246,7 +246,7 @@ func (s *Server) publishContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -290,7 +290,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -332,7 +332,7 @@ func (s *Server) getContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -405,7 +405,7 @@ func (s *Server) updateContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -462,7 +462,7 @@ func (s *Server) lockContent(c *gin.Context) {
 			"id": ncid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -517,7 +517,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -568,7 +568,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -591,7 +591,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, res)
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -645,7 +645,7 @@ func (s *Server) queryContent(c *gin.Context) {
 			ContentList: results,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -688,7 +688,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 			ContentList: results,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -746,7 +746,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -797,7 +797,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -846,7 +846,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 			ContentList: results,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 

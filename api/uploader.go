@@ -37,14 +37,14 @@ func (s *Server) getUploadPath(c *gin.Context) {
 	name, path, err := model.GetResourceUploaderModel().GetResourceUploadPath(ctx, partition, extension)
 	switch err {
 	case storage.ErrInvalidUploadPartition:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, UploadPathResponse{
 			Path:       path,
 			ResourceId: name,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -70,12 +70,12 @@ func (s *Server) getPath(c *gin.Context) {
 	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
 	switch err {
 	case model.ErrInvalidResourceID:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case storage.ErrInvalidUploadPartition:
-		c.JSON(http.StatusBadRequest, responseMsg(err.Error()))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.Redirect(http.StatusFound, path)
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

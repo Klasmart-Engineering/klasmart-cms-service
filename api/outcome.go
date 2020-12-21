@@ -60,7 +60,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, op, &data, outcome))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -99,7 +99,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeView(ctx, op, outcome))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -146,7 +146,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -179,7 +179,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -249,7 +249,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -301,7 +301,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, OutcomeLockResponse{newID})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -351,7 +351,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -396,7 +396,7 @@ func (s *Server) approveOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -449,7 +449,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -511,7 +511,7 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -573,7 +573,7 @@ func (s *Server) bulkRejectOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -622,7 +622,7 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -660,7 +660,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -719,7 +719,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -780,6 +780,6 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
