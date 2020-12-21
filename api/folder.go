@@ -436,7 +436,7 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 // @Success 200 {object} string ok
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 404 {object} BadRequestResponse
-// @Router /folders/share [get]
+// @Router /folders/share [put]
 func (s *Server) shareFolders(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
@@ -482,7 +482,7 @@ func (s *Server) shareFolders(c *gin.Context) {
 // @Success 200 {object} entity.FolderShareRecords
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 404 {object} BadRequestResponse
-// @Router /folders/share [put]
+// @Router /folders/share [get]
 func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
