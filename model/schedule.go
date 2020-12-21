@@ -47,7 +47,6 @@ type IScheduleModel interface {
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
-	ExistByLessonPlanIDTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, lessonPlanID string) (bool, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1177,34 +1176,6 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, condition *da.S
 	}
 
 	return result, nil
-}
-
-func (s *scheduleModel) ExistByLessonPlanIDTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, lessonPlanID string) (bool, error) {
-	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, lessonPlanID)
-	if err != nil {
-		logger.Error(ctx, "ExistByLessonPlanIDTx:get past lessonPlan id error",
-			log.Err(err),
-			log.String("lessonPlanID", lessonPlanID),
-			log.Any("operator", op),
-		)
-		return false, err
-	}
-	condition := da.ScheduleCondition{
-		LessonPlanIDs: entity.NullStrings{
-			Strings: lessonPlanPastIDs,
-			Valid:   true,
-		},
-	}
-	var scheduleList []*entity.Schedule
-	err = da.GetScheduleDA().QueryTx(ctx, tx, condition, &scheduleList)
-	if err != nil {
-		log.Error(ctx, "ExistByLessonPlanID:GetScheduleDA.Query error", log.Err(err),
-			log.Any("condition", condition),
-			log.Any("op", op),
-		)
-		return false, err
-	}
-	return len(scheduleList) > 0, nil
 }
 
 var (
