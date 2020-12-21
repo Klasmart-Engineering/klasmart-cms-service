@@ -121,7 +121,7 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 	if err != nil {
 		log.Error(ctx, "Get org failed",
 			log.Err(err),
-			log.Any("orgIDs", orgIDs),
+			log.Any("ids", orgIDs),
 			log.Any("operator", operator))
 		return nil, err
 	}
@@ -132,17 +132,17 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 		}
 	}
 	result := new(entity.FolderShareRecords)
-	for folderId, orgIds := range folderOrgsMap {
-		orgIds = utils.SliceDeduplication(orgIds)
-		orgs := make([]*entity.OrganizationInfo, len(orgIds))
-		for i := range orgIds {
-			org := orgMap[orgIDs[i]]
+	for folderId, ids := range folderOrgsMap {
+		ids = utils.SliceDeduplication(ids)
+		orgs := make([]*entity.OrganizationInfo, len(ids))
+		for i := range ids {
+			org := orgMap[ids[i]]
 			name := ""
 			if org != nil{
 				name = org.Name
 			}
 			orgs[i] = &entity.OrganizationInfo{
-				ID:   orgIds[i],
+				ID:   ids[i],
 				Name: name,
 			}
 		}
