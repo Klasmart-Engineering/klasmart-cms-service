@@ -88,10 +88,12 @@ type ContentCondition struct {
 	SourceType    string   `json:"source_type"`
 	DirPath       string   `json:"dir_path"`
 
-	OrderBy ContentOrderBy `json:"order_by"`
-	Pager   utils.Pager
+	//AuthedContentFlag bool           `json:"authed_content"`
+	AuthedOrgID       entity.NullStrings       `json:"authed_org_ids"`
+	OrderBy           ContentOrderBy `json:"order_by"`
+	Pager             utils.Pager
 
-	JoinUserIdList []string `json:"join_user_id_list"`
+	JoinUserIDList []string `json:"join_user_id_list"`
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
@@ -105,13 +107,13 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if s.Name != "" {
 		condition := "match(content_name, description, keywords) against(? in boolean mode)"
-		if len(s.JoinUserIdList) > 0 {
+		if len(s.JoinUserIDList) > 0 {
 			condition1 := "author in (?)"
 			where := "(" + condition + " OR " + condition1 + ")"
 
 			conditions = append(conditions, where)
 			params = append(params, s.Name)
-			params = append(params, s.JoinUserIdList)
+			params = append(params, s.JoinUserIDList)
 		} else {
 			conditions = append(conditions, condition)
 			params = append(params, s.Name)
@@ -132,6 +134,21 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		}
 		conditions = append(conditions, "("+strings.Join(subConditions, " or ")+")")
 	}
+
+	//Search authed content
+	if s.AuthedOrgID.Valid && len(s.AuthedOrgID.Strings) > 0 {
+		authContentTable := entity.AuthedContentRecord{}.TableName()
+		contentTable := entity.Content{}.TableName()
+		sql := fmt.Sprintf(`select content_id from %v where %v.org_id in (?) and %v.content_id = %v.id`,
+			authContentTable,
+			authContentTable,
+			authContentTable,
+			contentTable)
+		condition := fmt.Sprintf("exists (%v)", sql)
+		conditions = append(conditions, condition)
+		params = append(params, s.AuthedOrgID.Strings)
+	}
+
 	if len(s.Scope) > 0 {
 		condition := " publish_scope in (?) "
 		conditions = append(conditions, condition)

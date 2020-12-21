@@ -267,7 +267,7 @@ func (s *Server) rejectBulk(c *gin.Context) {
 func (s *Server) checkApproveAuthByCIDs(ctx context.Context, cids []string, permission external.PermissionName, op *entity.Operator) error {
 	//Search content by ids
 	cids = utils.SliceDeduplication(cids)
-	contentList, err := model.GetContentModel().GetContentByIdList(ctx, dbo.MustGetDB(ctx), cids, op)
+	contentList, err := model.GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids, op)
 	if err != nil {
 		return err
 	}

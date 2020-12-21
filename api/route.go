@@ -44,6 +44,7 @@ func (s Server) registeRoute() {
 	content := s.engine.Group("/v1")
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
+		content.POST("/contents/copy", s.mustLogin, s.copyContent)
 		content.GET("/contents/:content_id", s.mustLogin, s.getContent)
 		content.PUT("/contents/:content_id", s.mustLogin, s.updateContent)
 		content.PUT("/contents/:content_id/lock", s.mustLogin, s.lockContent)
@@ -60,6 +61,7 @@ func (s Server) registeRoute() {
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
 		content.GET("/contents_folders", s.mustLogin, s.queryFolderContent)
+		content.GET("/contents_authed", s.mustLogin, s.queryAuthContent)
 
 		content.PUT("/contents_bulk/publish", s.mustLogin, s.publishContentBulk)
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)
@@ -67,6 +69,15 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources", s.mustLogin, s.getUploadPath)
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
+	}
+	authedContents := s.engine.Group("/v1")
+	{
+		authedContents.POST("/contents_auth", s.mustLogin, s.addAuthedContent)
+		authedContents.POST("/contents_auth/batch", s.mustLogin, s.batchAddAuthedContent)
+		authedContents.DELETE("/contents_auth", s.mustLogin, s.deleteAuthedContent)
+		authedContents.DELETE("/contents_auth/batch", s.mustLogin, s.batchDeleteAuthedContent)
+		authedContents.GET("/contents_auth/org", s.mustLogin, s.getOrgAuthedContent)
+		authedContents.GET("/contents_auth/content", s.mustLogin, s.getContentAuthedOrg)
 	}
 	schedules := s.engine.Group("/v1")
 	{
@@ -136,6 +147,9 @@ func (s Server) registeRoute() {
 		folders.GET("/items/search/private", s.mustLogin, s.searchPrivateFolderItems)
 		folders.GET("/items/search/org", s.mustLogin, s.searchOrgFolderItems)
 		folders.GET("/items/details/:item_id", s.mustLogin, s.getFolderItemByID)
+
+		folders.GET("/share", s.mustLogin, s.getFoldersSharedRecords)
+		folders.PUT("/share ", s.mustLogin, s.shareFolders)
 
 	}
 

@@ -57,7 +57,7 @@ func (rv *Reviewer) Approve(ctx context.Context, tx *dbo.DBContext, cid string, 
 func (rv *Reviewer) ApproveBulk(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) error {
 	//Search content by ids
 	cids = utils.SliceDeduplication(cids)
-	contentList, err := GetContentModel().GetContentByIdList(ctx, tx, cids, user)
+	contentList, err := GetContentModel().GetContentByIDList(ctx, tx, cids, user)
 	if err != nil {
 		log.Error(ctx, "Get content list failed", log.Strings("cids", cids), log.Err(err))
 		return err
@@ -133,7 +133,7 @@ func (rv *Reviewer) Reject(ctx context.Context, tx *dbo.DBContext, cid string, r
 func (rv *Reviewer) RejectBulk(ctx context.Context, tx *dbo.DBContext, cids []string, reasons []string, remark string, user *entity.Operator) error {
 	//Search content by ids
 	cids = utils.SliceDeduplication(cids)
-	contentList, err := GetContentModel().GetContentByIdList(ctx, tx, cids, user)
+	contentList, err := GetContentModel().GetContentByIDList(ctx, tx, cids, user)
 	if err != nil {
 		log.Error(ctx, "Get content list failed", log.Strings("cids", cids), log.Err(err))
 		return err

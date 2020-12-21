@@ -37,7 +37,7 @@ func (r *ResourceUploaderModel) GetResourcePath(ctx context.Context, resourceId 
 	parts := strings.Split(resourceId, "-")
 	if len(parts) != 2 {
 		log.Error(ctx, "invalid resource id", log.String("resourceId", resourceId))
-		return "", ErrInvalidResourceId
+		return "", ErrInvalidResourceID
 	}
 	pat, err := storage.NewStoragePartition(parts[0])
 	if err != nil{

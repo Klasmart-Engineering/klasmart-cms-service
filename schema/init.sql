@@ -1,4 +1,4 @@
-CREATE TABLE `cms_contents` (
+CREATE TABLE IF NOT EXISTS `cms_contents` (
     `id` VARCHAR(50) NOT NULL COMMENT 'content_id',
     `content_type` int NOT NULL COMMENT '数据类型',
     `content_name` VARCHAR(255) NOT NULL COMMENT '内容名称',
@@ -29,6 +29,7 @@ CREATE TABLE `cms_contents` (
     `version` INT NOT NULL DEFAULT 0 COMMENT '版本',
     `locked_by` VARCHAR(50) COMMENT '封锁人',
     `source_id` VARCHAR(50) COMMENT 'source_id',
+    `copy_source_id` VARCHAR(50) COMMENT 'copy_source_id',
     `latest_id` VARCHAR(50) COMMENT 'latest_id',
     `lesson_type` VARCHAR(100) COMMENT 'lesson_type',
     `create_at` BIGINT NOT NULL COMMENT 'created_at',
@@ -227,6 +228,34 @@ VALUES (
         "default_setting_0",
         '{"cms_page_size":20}'
     );
+CREATE TABLE IF NOT EXISTS `cms_authed_contents` (
+    `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
+    `org_id` VARCHAR(50) NOT NULL COMMENT 'org_id',
+    `from_folder_id` varchar(50) COMMENT 'from_folder_id',
+    `content_id` VARCHAR(50) NOT NULL COMMENT 'content_id',
+    `creator` VARCHAR(50) NOT NULL COMMENT 'creator',
+    `duration` INT NOT NULL DEFAULT 0 COMMENT 'duration',
+    `create_at` BIGINT NOT NULL COMMENT 'created_at',
+    `delete_at` BIGINT NULL COMMENT 'deleted_at',
+    PRIMARY KEY (`id`),
+    KEY `org_id` (`org_id`),
+    KEY `content_id` (`content_id`),
+    KEY `creator` (`creator`)
+) COMMENT '内容授权记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `cms_shared_folders` (
+    `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
+    `folder_id` VARCHAR(50) NOT NULL COMMENT 'folder_id',
+    `org_id` VARCHAR(50) NOT NULL COMMENT 'org_id',
+    `creator` VARCHAR(50) NOT NULL COMMENT 'creator',
+    `create_at` BIGINT NOT NULL COMMENT 'created_at',
+    `update_at` BIGINT NOT NULL COMMENT 'updated_at',
+    `delete_at` BIGINT NULL COMMENT 'deleted_at',
+    PRIMARY KEY (`id`),
+    KEY `org_id` (`org_id`),
+    KEY `folder_id` (`folder_id`),
+    KEY `creator` (`creator`)
+) COMMENT '文件夹分享记录表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `organizations_properties` (
     `id` varchar(50) NOT NULL COMMENT 'org_id',

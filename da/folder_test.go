@@ -53,6 +53,7 @@ func TestCreateTable(t *testing.T) {
 	}
 	db.LogMode(true)
 	db.AutoMigrate(entity.FolderItem{})
+	db.AutoMigrate(entity.Content{})
 }
 
 func TestSearchFolderContent(t *testing.T) {
