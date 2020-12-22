@@ -73,6 +73,7 @@ CREATE TABLE `programs` (
 `name` varchar(255) DEFAULT NULL COMMENT  'name',
 `number` int DEFAULT 0 COMMENT  'number',
 `org_type` varchar(100) DEFAULT NULL COMMENT  'org_type',
+`group_name` varchar(100) DEFAULT NULL COMMENT  'group_name',
 `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
 `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
 `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
@@ -82,6 +83,7 @@ CREATE TABLE `programs` (
 PRIMARY KEY (`id`),
 KEY `idx_id_delete` (`id`,`delete_at`),
 KEY `idx_org_type_delete_at` (`org_type`,`delete_at`)
+KEY `idx_group_name_delete_at` (`group_name`,`delete_at`)
 ) COMMENT 'programs' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 CREATE TABLE `subjects` (
