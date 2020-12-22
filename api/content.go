@@ -872,7 +872,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
 	publish := c.Query("publish_status")
-	program := c.Query("program")
+	programs := c.Query("programs")
 	path := c.Query("path")
 	condition := da.ContentCondition{
 		Author:  parseAuthor(c, op),
@@ -905,7 +905,8 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)
 	}
-	if program != "" {
+	if programs != "" {
+		program := strings.Split(programs, ",")
 		condition.Program = program
 	}
 	if sourceType != "" {
