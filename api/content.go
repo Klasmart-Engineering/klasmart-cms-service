@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -916,7 +917,22 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		condition.Program = program
 	}
 	if programGroup != "" {
-
+		programs, err := model.GetProgramModel().Query(c.Request.Context(), &da.ProgramCondition{
+			GroupName: sql.NullString{
+				Valid: true,
+				String: programGroup,
+			},
+		})
+		if err != nil{
+			log.Error(c.Request.Context(), "get program by groups failed", log.Err(err),
+				log.String("group", programGroup))
+		}else if len(programs) > 0{
+			programIDs := make([]string, len(programs))
+			for i := range programs {
+				programIDs[i] = programs[i].ID
+			}
+			condition.Program = append(condition.Program, programIDs...)
+		}
 	}
 	if sourceType != "" {
 		condition.SourceType = sourceType
