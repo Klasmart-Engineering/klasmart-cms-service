@@ -29,9 +29,10 @@ func GetProgramDA() IProgramDA {
 }
 
 type ProgramCondition struct {
-	IDs     entity.NullStrings
-	OrgType sql.NullString
-	OrgID   sql.NullString
+	IDs       entity.NullStrings
+	OrgType   sql.NullString
+	OrgID     sql.NullString
+	GroupName sql.NullString
 
 	OrderBy ProgramOrderBy
 	Pager   dbo.Pager
@@ -51,6 +52,11 @@ func (c ProgramCondition) GetConditions() ([]string, []interface{}) {
 	if c.OrgType.Valid {
 		wheres = append(wheres, "org_type = ?")
 		params = append(params, c.OrgType.String)
+	}
+
+	if c.GroupName.Valid {
+		wheres = append(wheres, "group_name = ?")
+		params = append(params, c.GroupName.String)
 	}
 
 	if c.DeleteAt.Valid {
