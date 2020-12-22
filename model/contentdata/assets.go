@@ -3,10 +3,11 @@ package contentdata
 import (
 	"context"
 	"encoding/json"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
 )
 
 func NewAssetsData() *AssetsData {
@@ -14,18 +15,19 @@ func NewAssetsData() *AssetsData {
 }
 
 type AssetsData struct {
-	Size     int      `json:"size"`
-	FileType entity.FileType      `json:"file_type"`
-	Source   SourceID `json:"source"`
+	Size     int             `json:"size"`
+	FileType entity.FileType `json:"file_type"`
+	Source   SourceID        `json:"source"`
 }
 
 type SourceID string
+
 func (s SourceID) Ext() string {
 	parts := strings.Split(string(s), ".")
 	if len(parts) < 2 {
 		return ""
 	}
-	ext := parts[len(parts) - 1]
+	ext := parts[len(parts)-1]
 	ext = strings.ToLower(ext)
 	return ext
 }
@@ -57,7 +59,7 @@ func (this *AssetsData) Marshal(ctx context.Context) (string, error) {
 
 	return string(data), nil
 }
-func (a *AssetsData) SubContentIds(ctx context.Context) []string{
+func (a *AssetsData) SubContentIDs(ctx context.Context) []string {
 	return nil
 }
 
@@ -76,18 +78,23 @@ func (a *AssetsData) Validate(ctx context.Context, contentType entity.ContentTyp
 }
 func (h *AssetsData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	fileType, err := ExtensionToFileType(ctx, h.Source)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	h.FileType = fileType
 	return nil
 }
 
-func (h *AssetsData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
+func (h *AssetsData) PrepareVersion(ctx context.Context) error {
 	return nil
 }
 
-func isArray(ext string, extensions []string) bool{
+func (h *AssetsData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
+	return nil
+}
+func (l *AssetsData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
+}
+func isArray(ext string, extensions []string) bool {
 	for i := range extensions {
 		if extensions[i] == ext {
 			return true
@@ -95,7 +102,6 @@ func isArray(ext string, extensions []string) bool{
 	}
 	return false
 }
-
 
 func ExtensionToFileType(ctx context.Context, sourceId SourceID) (entity.FileType, error) {
 	if sourceId.IsNil() {

@@ -17,7 +17,7 @@ import (
 
 type IContentRedis interface {
 	SaveContentCacheList(ctx context.Context, contents []*entity.ContentInfo)
-	GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfo)
+	GetContentCacheByIDList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfo)
 
 	SaveContentCache(ctx context.Context, content *entity.ContentInfo)
 	GetContentCacheByID(ctx context.Context, id string) *entity.ContentInfo
@@ -81,7 +81,7 @@ func (r *ContentRedis) GetContentCacheByID(ctx context.Context, id string) *enti
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
-	_, res := r.GetContentCacheByIdList(ctx, []string{id})
+	_, res := r.GetContentCacheByIDList(ctx, []string{id})
 	if len(res) > 0 {
 		return res[0]
 	}
@@ -89,7 +89,7 @@ func (r *ContentRedis) GetContentCacheByID(ctx context.Context, id string) *enti
 }
 
 
-func (r *ContentRedis) GetContentCacheByIdList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfo) {
+func (r *ContentRedis) GetContentCacheByIDList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfo) {
 	if !config.Get().RedisConfig.OpenCache {
 		return ids, nil
 	}

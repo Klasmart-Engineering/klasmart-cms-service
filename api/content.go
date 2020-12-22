@@ -2,11 +2,13 @@ package api
 
 import (
 	"context"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
+	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -68,7 +70,7 @@ func (s *Server) createContent(c *gin.Context) {
 	switch err {
 	case contentdata.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -89,7 +91,60 @@ func (s *Server) createContent(c *gin.Context) {
 			"id": cid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary copyContent
+// @ID copyContent
+// @Description copy lesson plan, lesson material
+// @Accept json
+// @Produce json
+// @Param content body entity.CreateContentRequest true "create request"
+// @Tags content
+// @Success 200 {object} CreateContentResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents/copy [post]
+func (s *Server) copyContent(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	var data entity.CopyContentRequest
+	err := c.ShouldBind(&data)
+	if err != nil {
+		log.Error(ctx, "create content failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	// hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
+	// if err != nil {
+	// 	log.Error(ctx, "get permission failed", log.Err(err))
+	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	// 	return
+	// }
+	// //有permission，直接返回
+	// if hasPermission {
+	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
+	// 	return
+	// }
+	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := model.GetContentModel().CopyContent(ctx, tx, data.ContentID, data.Deep, op)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+
+	switch err {
+	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, gin.H{
+			"id": cid,
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -114,7 +169,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIdList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
+	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIDList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
 	//if err != nil {
 	//	log.Error(ctx, "check author failed", log.Err(err))
 	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -147,7 +202,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	case model.ErrInvalidContentStatusToPublish:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -192,7 +247,7 @@ func (s *Server) publishContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -236,7 +291,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -278,7 +333,7 @@ func (s *Server) getContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -328,7 +383,7 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case model.ErrInvalidResourceId:
+	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -351,7 +406,7 @@ func (s *Server) updateContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -408,7 +463,7 @@ func (s *Server) lockContent(c *gin.Context) {
 			"id": ncid,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -463,7 +518,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -514,7 +569,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -537,7 +592,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, res)
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -550,6 +605,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
+// @Param program_group query string false "search program group"
 // @Param program query string false "search content program"
 // @Param path query string false "search content path"
 // @Param source_type query string false "search content source type"
@@ -591,9 +647,54 @@ func (s *Server) queryContent(c *gin.Context) {
 			ContentList: results,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary queryAuthContent
+// @ID queryAuthContent
+// @Description query authed content by condition
+// @Accept json
+// @Produce json
+// @Param name query string false "search content name"
+// @Param content_type query string false "search content type"
+// @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
+// @Param source_type query string false "search content source type"
+// @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
+// @Param page_size query int false "content list page size"
+// @Param page query int false "content list page index"
+// @Tags content
+// @Success 200 {object} entity.ContentInfoWithDetailsResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents_authed [get]
+func (s *Server) queryAuthContent(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	condition := queryCondition(c, op)
+
+	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
+			Total:       total,
+			ContentList: results,
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
 // @Summary queryFolderContent
 // @ID queryFolderContent
 // @Description query content by condition
@@ -604,6 +705,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
 // @Param path query string false "search content path"
 // @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -623,7 +725,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 
 	//TODO: add check folder permission
 	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
@@ -636,7 +738,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	var results []*entity.FolderContent
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
-	}else{
+	} else {
 		total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}
 	switch err {
@@ -648,10 +750,9 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
-
 
 // @Summary queryPrivateContent
 // @ID searchPrivateContents
@@ -662,6 +763,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -700,7 +802,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -714,6 +816,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
@@ -749,7 +852,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 			ContentList: results,
 		})
 	default:
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
@@ -775,8 +878,9 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
 	publish := c.Query("publish_status")
-	program := c.Query("program")
+	programs := c.Query("programs")
 	path := c.Query("path")
+	programGroup := c.Query("program_group")
 	condition := da.ContentCondition{
 		Author:  parseAuthor(c, op),
 		Org:     parseOrg(c, op),
@@ -808,8 +912,27 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)
 	}
-	if program != "" {
+	if programs != "" {
+		program := strings.Split(programs, ",")
 		condition.Program = program
+	}
+	if programGroup != "" {
+		programs, err := model.GetProgramModel().Query(c.Request.Context(), &da.ProgramCondition{
+			GroupName: sql.NullString{
+				Valid: true,
+				String: programGroup,
+			},
+		})
+		if err != nil{
+			log.Error(c.Request.Context(), "get program by groups failed", log.Err(err),
+				log.String("group", programGroup))
+		}else if len(programs) > 0{
+			programIDs := make([]string, len(programs))
+			for i := range programs {
+				programIDs[i] = programs[i].ID
+			}
+			condition.Program = append(condition.Program, programIDs...)
+		}
 	}
 	if sourceType != "" {
 		condition.SourceType = sourceType

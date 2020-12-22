@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
@@ -36,6 +38,8 @@ var (
 	ErrMoveToChild            = errors.New("move to child folder")
 	ErrMoveToSameFolder       = errors.New("move to same folder")
 	ErrItemNotFound           = errors.New("item not found")
+
+	ErrSearchSharedFolderFailed = errors.New("search shared folder failed")
 )
 
 type DescendantItemsAndLinkItems struct {
@@ -74,6 +78,11 @@ type IFolderModel interface {
 	//获取Folder
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
 
+	//Share folder
+	ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error
+	//Get share records
+	GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error)
+
 	//内部API，修改Folder的Visibility Settings
 	//查看路径是否存在
 	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
@@ -91,6 +100,365 @@ func (f *FolderModel) AddItem(ctx context.Context, req entity.CreateFolderItemRe
 	return f.addItemInternal(ctx, dbo.MustGetDB(ctx), req, operator)
 }
 
+func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error) {
+	records, err := da.GetSharedFolderDA().Search(ctx, dbo.MustGetDB(ctx), da.SharedFolderCondition{
+		FolderIDs: fids,
+	})
+	if err != nil {
+		log.Error(ctx, "Get folders failed",
+			log.Err(err),
+			log.Strings("fids", fids),
+			log.Any("operator", operator))
+		return nil, err
+	}
+	orgIDs := make([]string, 0)
+	folderOrgsMap := make(map[string][]string)
+	for i := range records {
+		folderOrgsMap[records[i].FolderID] = append(folderOrgsMap[records[i].FolderID], records[i].OrgID)
+	}
+	orgIDs = utils.SliceDeduplication(orgIDs)
+	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
+	if err != nil {
+		log.Error(ctx, "Get org failed",
+			log.Err(err),
+			log.Any("ids", orgIDs),
+			log.Any("operator", operator))
+		return nil, err
+	}
+	orgMap := make(map[string]*external.NullableOrganization)
+	for i := range orgs {
+		if orgs[i].Valid {
+			orgMap[orgs[i].ID] = orgs[i]
+		}
+	}
+	result := new(entity.FolderShareRecords)
+	for folderId, ids := range folderOrgsMap {
+		ids = utils.SliceDeduplication(ids)
+		orgs := make([]*entity.OrganizationInfo, len(ids))
+		for i := range ids {
+			org := orgMap[ids[i]]
+			name := ""
+			if org != nil{
+				name = org.Name
+			}
+			orgs[i] = &entity.OrganizationInfo{
+				ID:   ids[i],
+				Name: name,
+			}
+		}
+		folderInfo := &entity.FolderShareRecord{
+			FolderID: folderId,
+			Orgs:     orgs,
+		}
+		result.Data = append(result.Data, folderInfo)
+	}
+	return result, nil
+}
+func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error {
+	//1.Get folder & check folder exists
+	folderIDs := utils.SliceDeduplication(req.FolderIDs)
+	orgIDs := utils.SliceDeduplication(req.OrgIDs)
+	for i := range folderIDs{
+		//lock all folders for share folders
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixFolderShare, folderIDs[i])
+		if err != nil{
+			return err
+		}
+		locker.Lock()
+		defer locker.Unlock()
+	}
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		//get folder objects by folder ids
+		folders, err := da.GetFolderDA().GetFolderByIDList(ctx, tx, folderIDs)
+		if err != nil {
+			log.Error(ctx, "Get folders failed",
+				log.Err(err),
+				log.Any("req", req),
+				log.Strings("folderIDs", folderIDs),
+				log.Any("operator", operator))
+			return err
+		}
+		//check if all folders are exist
+		if len(folders) != len(folderIDs) {
+			log.Warn(ctx, "Some folders not found",
+				log.Err(err),
+				log.Any("req", req),
+				log.Strings("folderIDs", folderIDs),
+				log.Any("folders", folders),
+				log.Any("operator", operator))
+			return ErrNoFolder
+		}
+
+		//check if all folders partition are right
+		for i := range folders {
+			if folders[i].Partition != entity.FolderPartitionMaterialAndPlans {
+				log.Error(ctx, "invalid partition",
+					log.Err(ErrInvalidPartition),
+					log.Any("folders[i]", folders[i]),
+					log.Strings("folderIDs", folderIDs),
+					log.Any("operator", operator))
+				return ErrInvalidPartition
+			}
+		}
+
+		//2.Check organizations validation
+		orgsMap, err := f.checkOrgs(ctx, orgIDs, operator)
+		if err != nil {
+			log.Error(ctx, "Get orgs failed",
+				log.Err(err),
+				log.Strings("orgIDs", orgIDs),
+				log.Strings("folderIDs", folderIDs),
+				log.Any("operator", operator))
+			return err
+		}
+
+		//3.search shared folders from database
+		//for removing and adding pending modified organizations list
+		records, err := da.GetSharedFolderDA().Search(ctx, tx, da.SharedFolderCondition{
+			FolderIDs: folderIDs,
+		})
+		if err != nil {
+			log.Error(ctx, "Search records failed",
+				log.Err(err),
+				log.Strings("orgIDs", orgIDs),
+				log.Strings("folderIDs", folderIDs),
+				log.Any("operator", operator))
+			return ErrSearchSharedFolderFailed
+		}
+		//build folders already shared organizations map
+		//mapping folder ids and shared organizations
+		sharedFolderOrgsMap := make(map[string][]string)
+		for i := range records {
+			sharedFolderOrgsMap[records[i].FolderID] = append(sharedFolderOrgsMap[records[i].FolderID], records[i].OrgID)
+		}
+		//4.get pending add folders in orgs & pending delete folders in orgs
+		sharedFolderPendingOrgsMap := f.getFolderPendingOrgs(ctx, sharedFolderOrgsMap, orgsMap, orgIDs, folderIDs)
+
+		//5.Remove folder share records & Remove content auth records & Get contents from folders
+		allContentIDs, err := f.removeSharedFolderAndAuthedContent(ctx, tx,
+			sharedFolderPendingOrgsMap, folders, operator)
+		if err != nil{
+			return err
+		}
+
+		//6.Add folder share records & authed contents
+		err = f.addSharedFolderAndAuthedContent(ctx, tx, sharedFolderPendingOrgsMap,
+			folders, allContentIDs, operator)
+		if err != nil{
+			return err
+		}
+		return nil
+	})
+}
+
+func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *dbo.DBContext,
+	sharedFolderPendingOrgsMap map[string]*entity.ShareFoldersDeleteAddOrgList, folders []*entity.FolderItem,
+	allContentIDs map[string][]string, operator *entity.Operator) error{
+	recordsData := make([]*entity.SharedFolderRecord, 0)
+	for i := range folders {
+		for j := range sharedFolderPendingOrgsMap[folders[i].ID].AddOrgs {
+			recordsData = append(recordsData, &entity.SharedFolderRecord{
+				FolderID: folders[i].ID,
+				OrgID:    sharedFolderPendingOrgsMap[folders[i].ID].AddOrgs[j],
+				Creator:  operator.UserID,
+			})
+		}
+	}
+	if len(recordsData) > 0 {
+		err := da.GetSharedFolderDA().BatchAdd(ctx, tx, recordsData)
+		if err != nil {
+			log.Error(ctx, "Batch add shared folder failed",
+				log.Err(err),
+				log.Any("recordsData", recordsData),
+				log.Any("operator", operator))
+			return err
+		}
+	}
+
+	//8.Add content auth records
+	authData := make([]*entity.AddAuthedContentRequest, 0)
+	for i := range folders {
+		for j := range allContentIDs[folders[i].ID] {
+			for k := range sharedFolderPendingOrgsMap[folders[i].ID].AddOrgs {
+				authData = append(authData, &entity.AddAuthedContentRequest{
+					FromFolderID: folders[i].ID,
+					ContentID:    allContentIDs[folders[i].ID][j],
+					OrgID:        sharedFolderPendingOrgsMap[folders[i].ID].AddOrgs[k],
+				})
+			}
+
+		}
+	}
+	if len(authData) > 0 {
+		err := GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, authData, operator)
+		if err != nil {
+			log.Error(ctx, "Batch add auth contents failed",
+				log.Err(err),
+				log.Any("authData", authData),
+				log.Any("operator", operator))
+			return err
+		}
+	}
+	return nil
+}
+
+func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx *dbo.DBContext,
+	sharedFolderPendingOrgsMap map[string]*entity.ShareFoldersDeleteAddOrgList,
+	folders []*entity.FolderItem, operator *entity.Operator) (map[string][]string, error){
+	//allItems := make([]*entity.FolderItem, 0)
+	allContentIDs := make(map[string][]string, 0)
+	for folderID, pendingOrgList := range sharedFolderPendingOrgsMap {
+		if len(pendingOrgList.DeleteOrgs) > 0 {
+			err := da.GetSharedFolderDA().BatchDeleteByOrgIDs(ctx, tx, folderID, pendingOrgList.DeleteOrgs)
+			if err != nil {
+				log.Error(ctx, "Batch delete folder failed",
+					log.Err(err),
+					log.String("folderID", folderID),
+					log.Any("item", pendingOrgList),
+					log.Any("operator", operator))
+				return nil, err
+			}
+		}
+	}
+
+	//6.Remove content auth records & Get contents from folders
+	for i := range folders {
+		//4.Get contents from folders
+		searchCondition := da.FolderCondition{
+			DirDescendant: string(folders[i].ChildrenPath()),
+			Partition:     entity.FolderPartitionMaterialAndPlans,
+			ItemType:      int(entity.FolderItemTypeFile),
+		}
+		items, err := da.GetFolderDA().SearchFolder(ctx, tx, searchCondition)
+		if err != nil {
+			log.Error(ctx, "Search folder items failed",
+				log.Err(err),
+				log.Any("searchCondition", searchCondition),
+				log.Any("operator", operator))
+			return nil, err
+		}
+
+		//parse link in folder item
+		contentIDs, err := f.parseLink(ctx, entity.FolderFileTypeContent, items)
+		if err != nil {
+			return nil, err
+		}
+		if len(sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs) > 0 && len(contentIDs) > 0 {
+			err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
+				OrgIDs:     sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs,
+				ContentIDs: contentIDs,
+			}, operator)
+			if err != nil {
+				log.Error(ctx, "Batch delete auth content failed",
+					log.Err(err),
+					log.Strings("orgIDs", sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs),
+					log.Strings("contentIDs", contentIDs),
+					log.Any("operator", operator))
+				return nil, err
+			}
+		}
+
+		//allItems = append(allItems, items...)
+		allContentIDs[folders[i].ID] = contentIDs
+	}
+	return allContentIDs, nil
+}
+
+func (f *FolderModel) getFolderPendingOrgs(ctx context.Context,
+	sharedFolderOrgsMap map[string][]string, orgsMap map[string]bool,
+	orgIDs []string, folderIDs []string) map[string]*entity.ShareFoldersDeleteAddOrgList {
+	sharedFolderPendingOrgsMap := make(map[string]*entity.ShareFoldersDeleteAddOrgList)
+	//handle every folder shared orgs
+	for fid, folderSharedOrgs := range sharedFolderOrgsMap {
+		//get pending delete orgs
+		//delete org is orgs not exist in req.OrgIDs
+		for i := range folderSharedOrgs {
+			_, ok := orgsMap[folderSharedOrgs[i]]
+			//if org in current records, but not in req.org
+			//remove the org from records
+			if !ok {
+				//if orgsList is not exist, create a new one
+				orgsList, existOrgsList := sharedFolderPendingOrgsMap[fid]
+				if !existOrgsList {
+					orgsList = new(entity.ShareFoldersDeleteAddOrgList)
+				}
+				//add pending delete orgs
+				orgsList.DeleteOrgs = append(orgsList.DeleteOrgs, folderSharedOrgs[i])
+				sharedFolderPendingOrgsMap[fid] = orgsList
+			}
+		}
+		//get pending add orgs
+		for i := range orgIDs {
+			flag := false
+			//check if folder already has the org
+			for j := range folderSharedOrgs {
+				if folderSharedOrgs[j] == orgIDs[i] {
+					flag = true
+					break
+				}
+			}
+
+			//if already has org, don't add, else add to pending add orgs
+			if !flag {
+				orgsList, existOrgsList := sharedFolderPendingOrgsMap[fid]
+				if !existOrgsList {
+					orgsList = new(entity.ShareFoldersDeleteAddOrgList)
+				}
+				//add pending delete orgs
+				orgsList.AddOrgs = append(orgsList.AddOrgs, orgIDs[i])
+				sharedFolderPendingOrgsMap[fid] = orgsList
+			}
+		}
+	}
+
+	//when sharedFolderPendingOrgsMap doesn't contains folder, add all orgs
+	for i := range folderIDs {
+		_, exist := sharedFolderPendingOrgsMap[folderIDs[i]]
+		if !exist {
+			sharedFolderPendingOrgsMap[folderIDs[i]] = &entity.ShareFoldersDeleteAddOrgList{
+				AddOrgs: orgIDs,
+			}
+		}
+	}
+	return sharedFolderPendingOrgsMap
+}
+
+func (f *FolderModel) checkOrgs(ctx context.Context, orgIDs []string, operator *entity.Operator) (map[string]bool, error){
+	//Get orgs by ids
+	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
+	if err != nil {
+		log.Error(ctx, "Get orgs failed",
+			log.Err(err),
+			log.Strings("orgIDs", orgIDs),
+			log.Any("operator", operator))
+		return nil, err
+	}
+	//check if all orgs are exist
+	orgsMap := make(map[string]bool)
+	for i := range orgs {
+		if orgs[i].Valid || orgs[i].ID == constant.ShareToAll {
+			orgsMap[orgs[i].ID] = true
+		}
+	}
+	return orgsMap, nil
+}
+
+func (f *FolderModel) parseLink(ctx context.Context, prefix entity.FolderFileType, items []*entity.FolderItem) ([]string, error) {
+	contentIDs := make([]string, len(items))
+	for i := range items {
+		parts := strings.Split(items[i].Link, constant.FolderItemLinkSeparator)
+		if len(parts) != 2 || parts[0] != string(prefix) {
+			log.Error(ctx, "Invalid item link",
+				log.Err(ErrInvalidItemLink),
+				log.Strings("parts", parts),
+				log.Any("item", items[i]))
+			return nil, ErrInvalidItemLink
+		}
+		contentIDs[i] = parts[1]
+	}
+	return contentIDs, nil
+}
+
 func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entity.UpdateFolderRequest, operator *entity.Operator) error {
 	//get folder object
 	folder, err := f.getFolder(ctx, dbo.MustGetDB(ctx), folderID)
@@ -103,6 +471,17 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 		if err != nil {
 			return err
 		}
+		//Lock folder name
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixFolderName, d.Name)
+		if err != nil {
+			log.Error(ctx, "get locker failed",
+				log.Err(err),
+				log.String("prefix", da.RedisKeyPrefixFolderName),
+				log.String("name", d.Name))
+			return err
+		}
+		locker.Lock()
+		defer locker.Unlock()
 	}
 
 	folder.Name = d.Name
@@ -310,7 +689,7 @@ func (f *FolderModel) getParentFromPath(ctx context.Context, path string) string
 	if path == "" || path == constant.FolderRootPath {
 		return constant.FolderRootPath
 	}
-	pathDirs := strings.Split(path, "/")
+	pathDirs := strings.Split(path, constant.FolderPathSeparator)
 	if len(pathDirs) < 1 {
 		log.Info(ctx, "check folder exists with array 0",
 			log.Strings("pathDirs", pathDirs))
@@ -326,7 +705,7 @@ func (f *FolderModel) UpdateContentPath(ctx context.Context, tx *dbo.DBContext, 
 			log.String("path", path))
 		return constant.FolderRootPath, nil
 	}
-	pathDirs := strings.Split(path, "/")
+	pathDirs := strings.Split(path, constant.FolderPathSeparator)
 	if len(pathDirs) < 1 {
 		log.Info(ctx, "check folder exists with array 0",
 			log.Strings("pathDirs", pathDirs))
@@ -384,7 +763,7 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		//calculate avalible
 		contentTypeList := []int{entity.ContentTypeAssets, entity.AliasContentTypeFolder}
 		if folderItem.Partition == entity.FolderPartitionMaterialAndPlans {
-			contentTypeList = []int{entity.ContentTypeLesson, entity.ContentTypeMaterial, entity.AliasContentTypeFolder}
+			contentTypeList = []int{entity.ContentTypePlan, entity.ContentTypeMaterial, entity.AliasContentTypeFolder}
 		}
 		condition := da.ContentCondition{
 			ContentType:   contentTypeList,
@@ -452,9 +831,28 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 	}
 	//取folder，应该只有一个
 	folderItem := folderItems[0]
+	path := distFolder.ChildrenPath()
+
+	parentFolder := f.rootFolder(ctx, ownerType, partition, operator)
+	if folderItem.ParentID != "" && folderItem.ParentID != constant.FolderRootPath {
+		parentFolder, err = da.GetFolderDA().GetFolderByID(ctx, tx, folderItem.ParentID)
+		if err != nil {
+			log.Error(ctx, "get parent folder failed", log.Err(err), log.Any("folder", folderItem))
+			return err
+		}
+	}
+
+	//更新子目录link文件
+	err = f.updateLinkedItemPath(ctx, tx,
+		[]string{folderItem.Link},
+		string(distFolder.ChildrenPath()),
+		parentFolder, distFolder, operator)
+	if err != nil {
+		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(path)))
+		return err
+	}
 
 	originParentID := folderItem.ParentID
-	path := distFolder.ChildrenPath()
 	folderItem.DirPath = path
 	folderItem.ParentID = distFolder.ID
 	err = da.GetFolderDA().UpdateFolder(ctx, tx, folderItem.ID, folderItem)
@@ -462,13 +860,6 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 		log.Error(ctx, "update folder failed", log.Err(err), log.Any("folder", folderItem))
 		return err
 	}
-	//更新子目录link文件
-	err = f.updateLinkedItemPath(ctx, tx, []string{folderItem.Link}, string(distFolder.ChildrenPath()))
-	if err != nil {
-		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(path)))
-		return err
-	}
-
 	//更新文件数量
 	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, 1)
 	if err != nil {
@@ -498,9 +889,24 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	if err != nil {
 		return err
 	}
+
+	//更新子目录link文件
+	linkOriginPath := folder.ChildrenPath()
+	linkPath := constant.FolderPathSeparator + folder.ID
+	//若distFolder为root，则直接移动到"/{current_folder}"
+	//否则移动到"/{dist_folder}/{current_folder}"
+	if distFolder.ID != constant.FolderRootPath {
+		linkPath = string(distFolder.ChildrenPath()) + constant.FolderPathSeparator + folder.ID
+	}
+	//replaceLinkedItemPath
+	err = f.replaceLinkedItemPath(ctx, tx, info.Links, string(linkOriginPath), string(linkPath), folder, distFolder, operator)
+	if err != nil {
+		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", info.Ids), log.Strings("links", info.Links), log.String("linkPath", string(linkPath)))
+		return err
+	}
+
 	//更新当前目录
 	originPath := folder.DirPath
-	linkOriginPath := folder.ChildrenPath()
 	originParentID := folder.ParentID
 	path := distFolder.ChildrenPath()
 	folder.DirPath = path
@@ -526,7 +932,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		//target: /
 		//to prevent target path build as //xxxx
 		if newPath == constant.FolderRootPath {
-			originPath = originPath + "/"
+			originPath = originPath + constant.FolderPathSeparator
 		}
 		//when old path is not root path like "/xxx/xxx"
 		//replace origin path "/xxx/xxx" to target path "/yyy/yyy/yyy"
@@ -535,15 +941,6 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 			log.Error(ctx, "update folder path failed", log.Err(err), log.Strings("ids", info.Ids), log.String("path", string(path)))
 			return err
 		}
-	}
-
-	//更新子目录link文件
-	linkPath := folder.ChildrenPath()
-	//replaceLinkedItemPath
-	err = f.replaceLinkedItemPath(ctx, tx, info.Links, string(linkOriginPath), string(linkPath))
-	if err != nil {
-		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Strings("ids", info.Ids), log.Strings("links", info.Links), log.String("path", string(path)))
-		return err
 	}
 
 	//更新文件数量
@@ -569,21 +966,21 @@ func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContex
 		return err
 	}
 
+	path := distFolder.ChildrenPath()
+	//更新子目录link文件
+	err = f.updateLinkedItemPath(ctx, tx, []string{folder.Link}, string(path), folder, distFolder, operator)
+	if err != nil {
+		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Any("folder", folder), log.String("link", folder.Link), log.String("path", string(path)))
+		return err
+	}
+
 	//更新当前目录
 	originParentID := folder.ParentID
-	path := distFolder.ChildrenPath()
 	folder.DirPath = path
 	folder.ParentID = distFolder.ID
 	err = da.GetFolderDA().UpdateFolder(ctx, tx, fid, folder)
 	if err != nil {
 		log.Error(ctx, "update folder failed", log.Err(err), log.Any("folder", folder))
-		return err
-	}
-
-	//更新子目录link文件
-	err = f.updateLinkedItemPath(ctx, tx, []string{folder.Link}, string(path))
-	if err != nil {
-		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Any("folder", folder), log.String("link", folder.Link), log.String("path", string(path)))
 		return err
 	}
 
@@ -736,6 +1133,20 @@ func (f *FolderModel) hasFolderFileItem(ctx context.Context, tx *dbo.DBContext, 
 func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req entity.CreateFolderRequest, operator *entity.Operator) (string, error) {
 	var parentFolder *entity.FolderItem
 	var err error
+
+	//Lock folder name
+	if req.Name != "" {
+		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixFolderName, req.Name)
+		if err != nil {
+			log.Error(ctx, "get locker failed",
+				log.Err(err),
+				log.String("prefix", da.RedisKeyPrefixFolderName),
+				log.String("name", req.Name))
+			return "", err
+		}
+		locker.Lock()
+		defer locker.Unlock()
+	}
 	//get parent folder if exists
 	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
 		parentFolder, err = f.getFolder(ctx, tx, req.ParentID)
@@ -813,6 +1224,10 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	}
 
 	path := entity.NewPath(constant.FolderRootPath)
+
+	fromFolder := f.rootFolder(ctx, req.OwnerType, req.Partition, operator)
+	toFolder := f.rootFolder(ctx, req.OwnerType, req.Partition, operator)
+
 	owner := req.OwnerType.Owner(operator)
 	if req.ParentFolderID != "" && req.ParentFolderID != constant.FolderRootPath {
 		//get parent folder
@@ -829,6 +1244,8 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 		path = parentFolder.ChildrenPath()
 		req.OwnerType = parentFolder.OwnerType
 		owner = parentFolder.Owner
+
+		toFolder = parentFolder
 	}
 	//build add item params
 	folderItem := f.prepareAddItemParams(ctx, req, path, req.OwnerType, owner, item, operator)
@@ -841,7 +1258,7 @@ func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, re
 	}
 
 	//update linked file info
-	err = f.updateLinkedItemPath(ctx, tx, []string{folderItem.Link}, string(path))
+	err = f.updateLinkedItemPath(ctx, tx, []string{folderItem.Link}, string(path), fromFolder, toFolder, operator)
 	if err != nil {
 		log.Error(ctx, "update notify move item path failed", log.Err(err), log.Any("folderItem", folderItem), log.String("path", string(path)))
 		return "", err
@@ -1248,7 +1665,187 @@ type FolderItem struct {
 	VisibilitySetting string
 }
 
-func (f *FolderModel) updateLinkedItemPath(ctx context.Context, tx *dbo.DBContext, links []string, path string) error {
+func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context, tx *dbo.DBContext, contentLinks []string, fromRootFolder, distFolder *entity.FolderItem, operator *entity.Operator) error {
+	//TODO:shared folder
+	//1. search items from folders
+	//TODO:check root path
+
+	//2. search folders by parent ids
+	records, err := da.GetSharedFolderDA().Search(ctx, tx, da.SharedFolderCondition{
+		FolderIDs: []string{fromRootFolder.ID, distFolder.ID},
+	})
+	if err != nil {
+		log.Error(ctx, "Can't search folder records",
+			log.Err(err),
+			log.String("FromFolderID", fromRootFolder.ID))
+		return err
+	}
+	fromRecords := make([]*entity.SharedFolderRecord, 0)
+	toRecords := make([]*entity.SharedFolderRecord, 0)
+	for i := range records {
+		if records[i].FolderID == fromRootFolder.ID {
+			fromRecords = append(fromRecords, records[i])
+		} else if records[i].FolderID == distFolder.ID {
+			toRecords = append(toRecords, records[i])
+		}
+	}
+
+	//delete auth content from from_folder
+	if len(fromRecords) > 0 && fromRootFolder.ID != constant.FolderRootPath {
+		//folder has shared to orgs
+		//need to remove
+		orgIDs := make([]string, len(fromRecords))
+		for i := range fromRecords {
+			orgIDs[i] = fromRecords[i].OrgID
+		}
+		oids := utils.SliceDeduplication(orgIDs)
+		//delete content
+		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
+			OrgIDs:     oids,
+			ContentIDs: contentLinks,
+		}, operator)
+		if err != nil {
+			log.Error(ctx, "Can't delete auth content records",
+				log.Err(err),
+				log.Strings("contentLinks", contentLinks),
+				log.Strings("orgIDs", oids),
+			)
+			return err
+		}
+	}
+	//add auth content to to_folder
+	if len(toRecords) > 0 && distFolder.ID != constant.FolderRootPath {
+		orgIDs := make([]string, len(toRecords))
+		for i := range toRecords {
+			orgIDs[i] = toRecords[i].OrgID
+		}
+		data := make([]*entity.AddAuthedContentRequest, 0)
+		oids := utils.SliceDeduplication(orgIDs)
+		for i := range oids {
+			for j := range contentLinks {
+				data = append(data, &entity.AddAuthedContentRequest{
+					OrgID:        oids[i],
+					FromFolderID: distFolder.ID,
+					ContentID:    contentLinks[j],
+				})
+			}
+		}
+
+		err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, data, operator)
+		if err != nil {
+			log.Error(ctx, "batch add auth content records",
+				log.Err(err),
+				log.Any("data", data),
+				log.Strings("orgIDs", oids),
+			)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBContext, cidList []string, fromFolder, distFolder *entity.FolderItem, operator *entity.Operator) error {
+	//1.Check content type, filter assets
+	contents, err := GetContentModel().GetRawContentByIDList(ctx, tx, cidList)
+	if err != nil {
+		return err
+	}
+	//if content is asset, no need to share
+	sharedContentIDs := make([]string, 0)
+	for i := range contents {
+		if !contents[i].ContentType.IsAsset() {
+			sharedContentIDs = append(sharedContentIDs, contents[i].ID)
+		}
+	}
+	if len(sharedContentIDs) < 1 {
+		log.Info(ctx, "No need to share",
+			log.Strings("cids", cidList))
+		return nil
+	}
+
+	//2.Get from path & to path
+	folderIDs := make([]string, 0)
+	if fromFolder.ID != constant.FolderRootPath {
+		folderIDs = append(folderIDs, fromFolder.ID)
+	}
+	if distFolder.ID != constant.FolderRootPath {
+		folderIDs = append(folderIDs, distFolder.ID)
+	}
+
+	if len(folderIDs) < 1 {
+		//in this case from root to root
+		//no need to share
+		return nil
+	}
+
+	condition := da.SharedFolderCondition{
+		FolderIDs: []string{fromFolder.ID, distFolder.ID},
+	}
+	records, err := da.GetSharedFolderDA().Search(ctx, tx, condition)
+	if err != nil {
+		log.Error(ctx, "search shared folder failed",
+			log.Err(err),
+			log.Any("condition", condition))
+		return err
+	}
+
+	//3.Get orgs from folder
+	fromOrgs := make([]string, 0)
+	toOrgs := make([]string, 0)
+	for i := range records {
+		if records[i].FolderID == fromFolder.ID {
+			fromOrgs = append(fromOrgs, records[i].OrgID)
+		} else if records[i].FolderID == distFolder.ID {
+			toOrgs = append(toOrgs, records[i].OrgID)
+		}
+	}
+
+	//4.Update content auth records (remove/add)
+	//remove from content id list
+	//when from folder is not root
+	if len(fromOrgs) != 0 {
+		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
+			OrgIDs:     fromOrgs,
+			ContentIDs: sharedContentIDs,
+		}, operator)
+		if err != nil {
+			log.Error(ctx, "Batch delete auth content failed",
+				log.Err(err),
+				log.Strings("fromOrgs", fromOrgs),
+				log.Strings("fromContentIDs", sharedContentIDs))
+			return err
+		}
+	}
+
+	//when to folder is not root
+	if len(toOrgs) != 0 {
+		//add to content id list
+		toContentIDSize := len(sharedContentIDs)
+		toOrgsSize := len(toOrgs)
+		data := make([]*entity.AddAuthedContentRequest, toOrgsSize*toContentIDSize)
+		for i := range toOrgs {
+			for j := range sharedContentIDs {
+				data[i*toContentIDSize+j] = &entity.AddAuthedContentRequest{
+					OrgID:        toOrgs[i],
+					FromFolderID: distFolder.ID,
+					ContentID:    sharedContentIDs[j],
+				}
+			}
+		}
+		err = GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, data, operator)
+		if err != nil {
+			log.Error(ctx, "Batch add auth content failed",
+				log.Err(err),
+				log.Any("data", data))
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *FolderModel) updateLinkedItemPath(ctx context.Context, tx *dbo.DBContext, links []string, path string, fromFolder, toFolder *entity.FolderItem, operator *entity.Operator) error {
 	for _, link := range links {
 		fileType, id, err := parseLink(ctx, link)
 		if err != nil {
@@ -1262,6 +1859,16 @@ func (f *FolderModel) updateLinkedItemPath(ctx context.Context, tx *dbo.DBContex
 					log.String("itemType", string(fileType)), log.String("id", id), log.String("path", path))
 				return err
 			}
+			err = f.handleMoveSharedContent(ctx, tx, []string{id}, fromFolder, toFolder, operator)
+			if err != nil {
+				log.Error(ctx, "can't handle move shared content", log.Err(err),
+					log.String("itemType", string(fileType)),
+					log.Any("fromFolder", fromFolder),
+					log.Any("toFolder", toFolder),
+					log.String("id", id),
+					log.String("path", path))
+				return err
+			}
 		default:
 			log.Warn(ctx, "unsupported file type",
 				log.String("itemType", string(fileType)), log.String("id", id))
@@ -1271,7 +1878,7 @@ func (f *FolderModel) updateLinkedItemPath(ctx context.Context, tx *dbo.DBContex
 	return nil
 }
 
-func (f *FolderModel) replaceLinkedItemPath(ctx context.Context, tx *dbo.DBContext, links []string, originPath, path string) error {
+func (f *FolderModel) replaceLinkedItemPath(ctx context.Context, tx *dbo.DBContext, links []string, originPath, path string, fromRootFolder, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	contentLinkIds := make([]string, 0)
 	for _, link := range links {
 		fileType, id, err := parseLink(ctx, link)
@@ -1301,6 +1908,16 @@ func (f *FolderModel) replaceLinkedItemPath(ctx context.Context, tx *dbo.DBConte
 			log.String("originPath", originPath), log.String("path", path))
 		return err
 	}
+	err = f.handleMoveSharedContentFolderRecursion(ctx, tx, contentLinkIds, fromRootFolder, distFolder, operator)
+	if err != nil {
+		log.Error(ctx, "can't handle move shared content",
+			log.Err(err),
+			log.Any("toFolder", distFolder),
+			log.Strings("contentLinkIds", contentLinkIds),
+			log.String("path", path))
+		return err
+	}
+
 	return nil
 }
 

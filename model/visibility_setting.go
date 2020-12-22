@@ -35,7 +35,7 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		}
 	}
 
-	if contentType == entity.ContentTypeLesson {
+	if contentType == entity.ContentTypePlan {
 		ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonPlan221, operator)
 		if err != nil{
 			log.Error(ctx, "query lesson error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
@@ -43,8 +43,8 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		}
 		for i := range ret2 {
 			orgMap[ret2[i].ID] = &entity.VisibilitySetting{
-				ID:   ret[i].ID,
-				Name: ret[i].Name,
+				ID:   ret2[i].ID,
+				Name: ret2[i].Name,
 			}
 		}
 	}else if contentType == entity.ContentTypeMaterial {
@@ -55,8 +55,8 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 		}
 		for i := range ret2 {
 			orgMap[ret2[i].ID] = &entity.VisibilitySetting{
-				ID:   ret[i].ID,
-				Name: ret[i].Name,
+				ID:   ret2[i].ID,
+				Name: ret2[i].Name,
 			}
 		}
 	}

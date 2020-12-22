@@ -10,7 +10,7 @@ type OrganizationProperty struct {
 	DeletedID string           `json:"-" gorm:"column:deleted_id;type:varchar(100)"`
 	CreatedAt int64            `json:"-" gorm:"column:created_at;type:bigint"`
 	UpdatedAt int64            `json:"-" gorm:"column:updated_at;type:bigint"`
-	DeletedAt int64            `json:"-" gorm:"column:deleted_at;type:bigint"`
+	DeleteAt  int64            `json:"-" gorm:"column:delete_at;type:bigint"`
 }
 
 func (OrganizationProperty) TableName() string {
