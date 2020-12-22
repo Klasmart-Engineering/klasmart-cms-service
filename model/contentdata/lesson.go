@@ -17,7 +17,7 @@ type LessonData struct {
 	SegmentId         string              `json:"segmentId"`
 	Condition         string              `json:"condition"`
 	MaterialId        string              `json:"materialId"`
-	Material          *entity.ContentInfo `json:"material"`
+	Material          *entity.ContentInfo `json:"material,omitempty"`
 	NextNode          []*LessonData       `json:"next"`
 	TeacherManual     string              `json:"teacher_manual"`
 	TeacherManualName string              `json:"teacher_manual_name"`
@@ -69,6 +69,7 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	h.TeacherManual = t.TeacherManual
 	h.TeacherManualName = t.TeacherManualName
+	h.Material = nil
 	return nil
 }
 func (l *LessonData) SubContentIDs(ctx context.Context) []string {
