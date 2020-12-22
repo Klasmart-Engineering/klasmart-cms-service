@@ -930,7 +930,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		return err
 	}
 
-	// lessPlan
+	// verify lessPlan type
 	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
@@ -940,6 +940,8 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
 		return constant.ErrInvalidArgs
 	}
+	// verify lessPlan is valid
+
 	return nil
 }
 
