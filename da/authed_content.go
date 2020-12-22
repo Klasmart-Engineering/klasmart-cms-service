@@ -183,6 +183,9 @@ func (s *AuthedContentCondition) GetConditions() ([]string, []interface{}) {
 	return conditions, params
 }
 func (s *AuthedContentCondition) GetPager() *dbo.Pager {
+	if s.Pager == nil {
+		return &dbo.NoPager
+	}
 	return &dbo.Pager{
 		Page:     int(s.Pager.PageIndex),
 		PageSize: int(s.Pager.PageSize),
