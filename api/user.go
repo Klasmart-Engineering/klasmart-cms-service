@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"net/http"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
@@ -249,8 +250,7 @@ func (s *Server) inviteNotify(c *gin.Context) {
 	}
 
 	if req.Mobile != "" {
-		// TODO: text
-		code := "some text"
+		code := config.Get().KidsloopCNLoginConfig.InviteNotify
 		err = model.GetSMSSender().SendSms(ctx, []string{req.Mobile}, code)
 		if err != nil {
 			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
@@ -263,7 +263,7 @@ func (s *Server) inviteNotify(c *gin.Context) {
 
 	if req.Email != "" {
 		// TODO: text
-		code := "some text"
+		code := config.Get().KidsloopCNLoginConfig.InviteNotify
 		// TODO: uri
 		err = model.GetEmailModel().SendEmail(ctx, req.Email, "", "", code)
 		if err != nil {
