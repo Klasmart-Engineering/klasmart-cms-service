@@ -15,7 +15,7 @@ type IAuthedContentDA interface {
 	AddAuthedContent(ctx context.Context, tx *dbo.DBContext, req entity.AuthedContentRecord) error
 	BatchAddAuthedContent(ctx context.Context, tx *dbo.DBContext, req []*entity.AuthedContentRecord) error
 	BatchDeleteAuthedContent(ctx context.Context, tx *dbo.DBContext, orgID string, contentIDs []string) error
-	BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, orgID []string, contentIDs []string) error
+	BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, orgID []string, contentIDs []string, folderIDs []string) error
 
 	ReplaceContentID(ctx context.Context, tx *dbo.DBContext, oldContentIDs []string, newContentID string) error
 	SearchAuthedContentRecords(ctx context.Context, tx *dbo.DBContext, condition AuthedContentCondition) (int, []*entity.AuthedContentRecord, error)
@@ -74,9 +74,16 @@ func (ac *AuthedContentDA) BatchDeleteAuthedContent(ctx context.Context, tx *dbo
 	}
 	return nil
 }
-func (ac *AuthedContentDA) BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, orgIDs []string, contentIDs []string) error {
+func (ac *AuthedContentDA) BatchDeleteAuthedContentByOrgs(ctx context.Context, tx *dbo.DBContext, orgIDs []string, contentIDs []string, folderIDs []string) error {
 	now := time.Now().Unix()
-	err := tx.Model(&entity.AuthedContentRecord{}).Where("org_id in (?) and content_id in (?)", orgIDs, contentIDs).Updates(entity.AuthedContentRecord{DeleteAt: now}).Error
+	where := "org_id in (?) and content_id in (?)"
+	params := []interface{}{orgIDs, contentIDs}
+	if len(folderIDs) > 0 {
+		where = where + " and from_folder_id in (?)"
+		params = append(params, folderIDs)
+	}
+	//err := tx.Model(&entity.AuthedContentRecord{}).Where("org_id in (?) and content_id in (?)", orgIDs, contentIDs).Updates(entity.AuthedContentRecord{DeleteAt: now}).Error
+	err := tx.Model(&entity.AuthedContentRecord{}).Where(where, params...).Updates(entity.AuthedContentRecord{DeleteAt: now}).Error
 	if err != nil {
 		log.Error(ctx, "batch delete cms_authed_contents: batch delete failed",
 			log.Err(err),

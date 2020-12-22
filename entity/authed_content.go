@@ -26,6 +26,7 @@ type BatchDeleteAuthedContentRequest struct {
 
 type BatchDeleteAuthedContentByOrgsRequest struct {
 	OrgIDs     []string `json:"org_ids"`
+	FolderIDs []string `json:"folder_i_ds"`
 	ContentIDs []string `json:"content_ids"`
 }
 
@@ -74,7 +75,7 @@ type SearchAuthedContentRequest struct {
 
 type SharedFolderRecord struct {
 	ID       string `json:"record_id" gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
-	FolderID string `json:"folder_id" gorm:"type:varchar(255);NOT NULL;column:folder_id"`
+	FolderID string `json:"from_folder_id" gorm:"type:varchar(255);NOT NULL;column:from_folder_id"`
 	OrgID    string `json:"org_id" gorm:"type:varchar(255);NOT NULL;column:org_id"`
 	Creator  string `json:"creator" gorm:"type:varchar(255);NOT NULL;column:creator"`
 	CreateAt int64  `json:"create_at" gorm:"type:int;NOT NULL;column:create_at"`
