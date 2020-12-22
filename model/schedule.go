@@ -827,10 +827,18 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 		log.Info(ctx, "lessonPlanID is empty", log.String("lessonPlanID", lessonPlanID))
 		return false, errors.New("lessonPlanID is empty")
 	}
-	condition := &da.ScheduleCondition{
-		LessonPlanID: sql.NullString{
-			String: lessonPlanID,
-			Valid:  true,
+	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, dbo.MustGetDB(ctx), lessonPlanID)
+	if err != nil {
+		logger.Error(ctx, "ExistScheduleByLessonPlanID:GetContentModel.GetPastContentIDByID error",
+			log.Err(err),
+			log.String("lessonPlanID", lessonPlanID),
+		)
+		return false, err
+	}
+	condition := da.ScheduleCondition{
+		LessonPlanIDs: entity.NullStrings{
+			Strings: lessonPlanPastIDs,
+			Valid:   true,
 		},
 	}
 	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
