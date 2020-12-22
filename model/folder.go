@@ -346,6 +346,7 @@ func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx
 		if len(sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs) > 0 && len(contentIDs) > 0 {
 			err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 				OrgIDs:     sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs,
+				FolderIDs: []string{folders[i].ID},
 				ContentIDs: contentIDs,
 			}, operator)
 			if err != nil {
@@ -1702,6 +1703,7 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 		//delete content
 		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 			OrgIDs:     oids,
+			FolderIDs: []string{fromRootFolder.ID},
 			ContentIDs: contentLinks,
 		}, operator)
 		if err != nil {
@@ -1807,6 +1809,7 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 	if len(fromOrgs) != 0 {
 		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 			OrgIDs:     fromOrgs,
+			FolderIDs: []string{fromFolder.ID},
 			ContentIDs: sharedContentIDs,
 		}, operator)
 		if err != nil {

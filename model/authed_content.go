@@ -270,7 +270,7 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 
 //BatchDeleteAuthedContent delete record by org_id and (content_id list)
 func (ac *AuthedContent) BatchDelete(ctx context.Context, tx *dbo.DBContext, req entity.BatchDeleteAuthedContentByOrgsRequest, op *entity.Operator) error {
-	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContentByOrgs(ctx, tx, req.OrgIDs, req.ContentIDs)
+	err := da.GetAuthedContentRecordsDA().BatchDeleteAuthedContentByOrgs(ctx, tx, req.OrgIDs, req.ContentIDs, req.FolderIDs)
 	if err != nil {
 		log.Error(ctx, "remove authed content records failed",
 			log.Err(err),
