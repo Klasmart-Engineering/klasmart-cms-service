@@ -227,6 +227,7 @@ func (m *programModel) Update(ctx context.Context, op *entity.Operator, data *en
 	old.OrgType = data.OrgType
 	old.UpdateID = op.UserID
 	old.UpdateAt = time.Now().Unix()
+	old.GroupName = data.GroupName
 	_, err = da.GetProgramDA().Update(ctx, old)
 	if err != nil {
 		log.Error(ctx, "update error", log.Err(err), log.Any("data", data))
