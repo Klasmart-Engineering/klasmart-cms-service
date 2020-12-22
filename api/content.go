@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -604,6 +605,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
+// @Param program_group query string false "search program group"
 // @Param program query string false "search content program"
 // @Param path query string false "search content path"
 // @Param source_type query string false "search content source type"
@@ -657,6 +659,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param name query string false "search content name"
 // @Param content_type query string false "search content type"
 // @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -702,6 +705,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
 // @Param path query string false "search content path"
 // @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -759,6 +763,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -811,6 +816,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
@@ -874,6 +880,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	publish := c.Query("publish_status")
 	programs := c.Query("programs")
 	path := c.Query("path")
+	programGroup := c.Query("program_group")
 	condition := da.ContentCondition{
 		Author:  parseAuthor(c, op),
 		Org:     parseOrg(c, op),
@@ -908,6 +915,24 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	if programs != "" {
 		program := strings.Split(programs, ",")
 		condition.Program = program
+	}
+	if programGroup != "" {
+		programs, err := model.GetProgramModel().Query(c.Request.Context(), &da.ProgramCondition{
+			GroupName: sql.NullString{
+				Valid: true,
+				String: programGroup,
+			},
+		})
+		if err != nil{
+			log.Error(c.Request.Context(), "get program by groups failed", log.Err(err),
+				log.String("group", programGroup))
+		}else if len(programs) > 0{
+			programIDs := make([]string, len(programs))
+			for i := range programs {
+				programIDs[i] = programs[i].ID
+			}
+			condition.Program = append(condition.Program, programIDs...)
+		}
 	}
 	if sourceType != "" {
 		condition.SourceType = sourceType
