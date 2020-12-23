@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS `schedules` (
     KEY `schedules_end_at` (`end_at`),
     KEY `schedules_deleted_at` (`delete_at`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'schedules';
+
 CREATE TABLE `learning_outcomes` (
     `id` VARCHAR(50) NOT NULL COMMENT 'outcome_id',
     `ancestor_id` VARCHAR(50) NOT NULL COMMENT 'ancestor_id',
@@ -108,14 +109,14 @@ CREATE TABLE `learning_outcomes` (
     KEY `index_latest_id` (`latest_id`),
     KEY `index_publish_status` (`publish_status`),
     KEY `index_source_id` (`source_id`),
-    FULLTEXT INDEX `fullindex_name_description_keywords_author_shortcode` (
+    FULLTEXT INDEX `fullindex_name_description_keywords_shortcode` (
         `name`,
         `keywords`,
         `description`,
-        `author_name`,
         `shortcode`
     )
 ) COMMENT 'outcomes table' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 create table `assessments` (
     `id` varchar(64) not null comment 'id',
     `schedule_id` varchar(64) not null comment 'schedule id',
@@ -183,16 +184,6 @@ CREATE TABLE `cms_folder_items` (
     `delete_at` bigint comment 'delete time (unix seconds)',
     PRIMARY KEY (`id`)
 ) comment 'cms folder' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
-create fulltext index fullindex_name_description_keywords_author_shortcode on learning_outcomes(
-    `name`,
-    `keywords`,
-    `description`,
-    `author_name`,
-    `shortcode`
-);
-drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
-alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 
 CREATE TABLE IF NOT EXISTS  `users` (
   `user_id` varchar(64) NOT NULL,
