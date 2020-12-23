@@ -261,7 +261,8 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 		}
 		for i := range pendingCheckAuthContents {
 			for j := range authRecords {
-				if pendingCheckAuthContents[i].ID == authRecords[j].ContentID{
+				if pendingCheckAuthContents[i].ID == authRecords[j].ContentID &&
+					pendingCheckAuthContents[i].PublishStatus == entity.ContentStatusPublished{
 					result = append(result, pendingCheckAuthContents[i])
 					break
 				}
