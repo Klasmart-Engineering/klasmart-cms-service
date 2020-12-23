@@ -195,6 +195,8 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 	defer locker.Unlock()
 
 
+	log.Info(ctx, "query already exists records",
+		log.Any("condition", condition))
 	objs, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "count authed content records failed",
@@ -202,6 +204,10 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 			log.Any("condition", condition))
 		return err
 	}
+
+	log.Info(ctx, "query already exists records results",
+		log.Any("objs", objs),
+		log.Strings("contentIDs", contentIDs))
 
 	//remove duplicate
 	pendingAddIDs := make([]string, 0)
@@ -222,6 +228,10 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 	} else {
 		pendingAddIDs = contentIDs
 	}
+	log.Info(ctx, "pendingAddIDs",
+		log.Any("objs", objs),
+		log.Strings("pendingAddIDs", pendingAddIDs),
+		log.Strings("contentIDs", contentIDs))
 
 	data := make([]*entity.AuthedContentRecord, len(pendingAddIDs))
 	for i := range pendingAddIDs {
@@ -232,6 +242,8 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 			Creator:   op.UserID,
 		}
 	}
+	log.Info(ctx, "add records",
+		log.Any("data", data))
 	err = da.GetAuthedContentRecordsDA().BatchAddAuthedContent(ctx, tx, data)
 	if err != nil {
 		log.Error(ctx, "add authed content records failed",
