@@ -1475,6 +1475,37 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
+func (cm *ContentModel) getVisibleContentOutcomeByIDs(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error){
+	//get latest content ids
+	newCids, err := cm.GetLatestContentIDByIDList(ctx, tx, cids)
+	if err != nil {
+		log.Error(ctx, "can't get content latest id", log.Err(err), log.Strings("cids", cids))
+		return nil, err
+	}
+	//get content objects
+	contents, err := da.GetContentDA().GetContentByIDList(ctx, tx, newCids)
+	if err != nil {
+		log.Error(ctx, "can't read content", log.Err(err), log.Strings("newCids", newCids))
+		return nil, err
+	}
+
+	//collect outcomes
+	ret := make([]string, 0)
+	for i := range contents {
+		if contents[i].Outcomes == "" {
+			continue
+		}
+		outcomes := strings.Split(contents[i].Outcomes, ",")
+		for i := range outcomes {
+			if outcomes[i] != "" {
+				ret = append(ret, outcomes[i])
+			}
+		}
+	}
+	ret = utils.SliceDeduplication(ret)
+	return ret, nil
+}
+
 func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
@@ -1488,17 +1519,38 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 			return nil, err
 		}
 	}
+	ret := make([]string, 0)
+	//if content is a plan, collect outcomes from materials
+	if content.ContentType == entity.ContentTypePlan {
+		contentData, err := CreateContentData(ctx, entity.ContentTypePlan, content.Data)
+		if err != nil{
+			log.Error(ctx, "can't parse content data",
+				log.Err(err),
+				log.String("cid", cid),
+				log.String("data", content.Data))
+			return nil, err
+		}
+		contentIDList := contentData.(*MaterialData).SubContentIDs(ctx)
+		outcomes, err := cm.getVisibleContentOutcomeByIDs(ctx, tx, contentIDList)
+		if err != nil{
+			log.Error(ctx, "can't get outcomes from materials",
+				log.Err(err),
+				log.Strings("contentIDList", contentIDList))
+			return nil, err
+		}
+		ret = append(ret, outcomes...)
+	}
 
 	if content.Outcomes == "" {
 		return nil, nil
 	}
 	outcomes := strings.Split(content.Outcomes, ",")
-	ret := make([]string, 0)
 	for i := range outcomes {
 		if outcomes[i] != "" {
 			ret = append(ret, outcomes[i])
 		}
 	}
+	ret = utils.SliceDeduplication(ret)
 
 	return ret, nil
 }
