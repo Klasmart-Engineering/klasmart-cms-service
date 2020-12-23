@@ -63,7 +63,7 @@ func (w *TencentSMS) SendSms(ctx context.Context, receivers []string, msg string
 
 	for _, r := range resp.Response.SendStatusSet {
 		if *r.Fee == 0 {
-			log.Warn(ctx, "SendSms: response error", log.String("failed", *(r.Message)))
+			log.Warn(ctx, "SendSms: response error", log.Strings("receives", receivers), log.String("failed", *(r.Message)))
 		}
 	}
 
