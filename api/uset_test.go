@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,8 +12,6 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 )
 
@@ -70,19 +67,19 @@ func userSetup() {
 			EndPoint: os.Getenv("ams_endpoint"),
 		},
 	})
-	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
-		dbConf := config.Get().DBConfig
-		c.ShowLog = dbConf.ShowLog
-		c.ShowSQL = dbConf.ShowSQL
-		c.MaxIdleConns = dbConf.MaxIdleConns
-		c.MaxOpenConns = dbConf.MaxOpenConns
-		c.ConnectionString = dbConf.ConnectionString
-	})
-	if err != nil {
-		log.Error(context.TODO(), "create dbo failed", log.Err(err))
-		panic(err)
-	}
-	dbo.ReplaceGlobal(dboHandler)
+	//dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
+	//	dbConf := config.Get().DBConfig
+	//	c.ShowLog = dbConf.ShowLog
+	//	c.ShowSQL = dbConf.ShowSQL
+	//	c.MaxIdleConns = dbConf.MaxIdleConns
+	//	c.MaxOpenConns = dbConf.MaxOpenConns
+	//	c.ConnectionString = dbConf.ConnectionString
+	//})
+	//if err != nil {
+	//	log.Error(context.TODO(), "create dbo failed", log.Err(err))
+	//	panic(err)
+	//}
+	//dbo.ReplaceGlobal(dboHandler)
 	initCache()
 }
 
@@ -102,7 +99,7 @@ func TestUserLogin(t *testing.T) {
 
 // 15026743257
 // 15221776376
-var phone = "15026743257"
+var phone = "+8615221776376"
 
 func TestUserRegister(t *testing.T) {
 	req := RegisterRequest{
