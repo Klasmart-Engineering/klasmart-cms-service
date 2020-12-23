@@ -424,7 +424,7 @@ func (ac *AuthedContent) expandRelatedContentIDMap(ctx context.Context, tx *dbo.
 	if err != nil{
 		return nil, err
 	}
-	ret := make(map[string][]string, 0)
+	ret := make(map[string][]string)
 	for i := range contents {
 		ret[contents[i].ID] = []string{contents[i].ID}
 		if contents[i].ContentType == entity.ContentTypePlan {
