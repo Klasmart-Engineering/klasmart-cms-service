@@ -144,6 +144,8 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
 	case model.ErrScheduleEditMissTime:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissTime))
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
@@ -161,6 +163,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Success 200 {object} entity.IDResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 409 {object} ConflictResponse
+// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [post]
 func (s *Server) addSchedule(c *gin.Context) {
@@ -205,6 +208,10 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusConflict, L(ScheduleMsgOverlap))
 	case constant.ErrFileNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	case nil:
 		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
 	default:

@@ -50,6 +50,8 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		log.Info(ctx, "invalid args", log.Err(err), log.String("scheduleID", scheduleID))
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	default:
 		log.Error(ctx, "make schedule live token error", log.Err(err), log.String("scheduleID", scheduleID))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -79,7 +81,8 @@ func (s *Server) getContentLiveToken(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		log.Info(ctx, "content not found", log.Err(err), log.String("contentID", contentID))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	default:
 		log.Error(ctx, "make content live token error", log.Err(err), log.String("contentID", contentID))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
