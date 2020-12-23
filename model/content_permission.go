@@ -125,7 +125,7 @@ func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context
 		log.Info(ctx, "view content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
 		//check if it is shared content
 		condition := entity.SearchAuthedContentRequest{
-			OrgIDs:     []string{user.OrgID},
+			OrgIDs:     []string{user.OrgID, constant.ShareToAll},
 			ContentIDs: []string{content.ID},
 		}
 		records, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), condition, user)
