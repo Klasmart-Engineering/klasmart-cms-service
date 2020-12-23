@@ -498,7 +498,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			log.Any("scheduleList", scheduleList))
 		return 0, nil, err
 	}
-	for i, item := range scheduleList {
+	for _, item := range scheduleList {
 		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
 			log.Info(ctx, "schedule type is homework", log.Any("schedule", item))
 			continue
@@ -513,7 +513,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			viewData.ScheduleBasic = *v
 		}
 
-		result[i] = viewData
+		result = append(result, viewData)
 	}
 
 	return total, result, nil
@@ -538,7 +538,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 		return nil, err
 	}
 	result := make([]*entity.ScheduleListView, 0, len(scheduleList))
-	for i, item := range scheduleList {
+	for _, item := range scheduleList {
 		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
 			log.Info(ctx, "schedule type is homework", log.Any("schedule", item))
 			continue
@@ -554,7 +554,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			ClassType:    item.ClassType,
 			ClassID:      item.ClassID,
 		}
-		result[i] = temp
+		result = append(result, temp)
 	}
 	err = da.GetScheduleRedisDA().Add(ctx, condition, result)
 	if err != nil {
@@ -1201,13 +1201,11 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, condition *da.S
 	}
 	dateList := make([]string, 0)
 	for _, item := range scheduleList {
-		if item.ClassType == entity.ScheduleClassTypeHomework {
-			str := utils.TimeStampString(item.DueAt, loc, utils.TimeLayoutDay)
-			dateList = append(dateList, str)
-		} else {
-			betweenTimes := utils.DateBetweenTimeAndFormat(item.StartAt, item.EndAt, loc)
-			dateList = append(dateList, betweenTimes...)
+		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
+			continue
 		}
+		betweenTimes := utils.DateBetweenTimeAndFormat(item.StartAt, item.EndAt, loc)
+		dateList = append(dateList, betweenTimes...)
 	}
 	result := utils.SliceDeduplication(dateList)
 	err = da.GetScheduleRedisDA().Add(ctx, condition, result)
