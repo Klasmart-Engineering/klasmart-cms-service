@@ -114,6 +114,19 @@ func TestMigrateContentData(t *testing.T) {
 				return
 			}
 			contents[i] = tempContent
+		case entity.ContentTypePlan:
+			contentData, err := CreateContentData(ctx, entity.ContentTypePlan, contents[i].Data)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			lessonData := contentData.(*LessonData)
+			lessonData.Material = nil
+			data, err = lessonData.Marshal(ctx)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 		case entity.ContentTypeMaterial:
 			contentData, err := CreateContentData(ctx, entity.ContentTypeMaterial, contents[i].Data)
 			if err != nil {
