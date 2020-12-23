@@ -184,6 +184,7 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 	condition := da.AuthedContentCondition{
 		ContentIDs: contentIDs,
 		OrgIDs:     []string{req.OrgID},
+		FromFolderIDs: []string{req.FolderID},
 	}
 	//lock org id for batch add
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentAuth, req.OrgID)
