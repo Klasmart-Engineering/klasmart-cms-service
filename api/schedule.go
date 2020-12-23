@@ -79,34 +79,14 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 	}
-	if data.ClassType == entity.ScheduleClassTypeTask && data.DueAt > 0 {
-		day := utils.GetTimeDiffToDayByTimeStamp(data.EndAt, data.DueAt, loc)
-		if day < 0 {
-			log.Info(ctx, "schedule dueAt is invalid",
-				log.Int64("StartAt", data.StartAt),
-				log.Int64("EndAt", data.EndAt),
-				log.Int64("now", now),
-				log.Int64("DueAt", data.DueAt),
-				log.Any("data", data))
-			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
-			return
-		}
+	start, end, ok := s.processScheduleDueDate(c, data.StartAt, data.EndAt, data.DueAt, data.ClassType, loc)
+	if !ok {
+		log.Info(ctx, "process schedule due date failure")
+		return
 	}
-	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
-		day := utils.GetTimeDiffToDayByTimeStamp(now, data.DueAt, loc)
-		if day < 0 {
-			log.Info(ctx, "schedule dueAt is invalid",
-				log.Int64("StartAt", data.StartAt),
-				log.Int64("EndAt", data.EndAt),
-				log.Int64("now", now),
-				log.Int64("DueAt", data.DueAt),
-				log.Any("data", data))
-			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierToDay))
-			return
-		}
-		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
-		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
-	}
+	data.StartAt = start
+	data.EndAt = end
+
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
@@ -220,34 +200,14 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	if data.ClassType == entity.ScheduleClassTypeTask && data.DueAt > 0 {
-		day := utils.GetTimeDiffToDayByTimeStamp(data.EndAt, data.DueAt, loc)
-		if day < 0 {
-			log.Info(ctx, "schedule dueAt is invalid",
-				log.Int64("StartAt", data.StartAt),
-				log.Int64("EndAt", data.EndAt),
-				log.Int64("now", now),
-				log.Int64("DueAt", data.DueAt),
-				log.Any("data", data))
-			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
-			return
-		}
+	start, end, ok := s.processScheduleDueDate(c, data.StartAt, data.EndAt, data.DueAt, data.ClassType, loc)
+	if !ok {
+		log.Info(ctx, "process schedule due date failure")
+		return
 	}
-	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
-		day := utils.GetTimeDiffToDayByTimeStamp(now, data.DueAt, loc)
-		if day < 0 {
-			log.Info(ctx, "schedule dueAt is invalid",
-				log.Int64("StartAt", data.StartAt),
-				log.Int64("EndAt", data.EndAt),
-				log.Int64("now", now),
-				log.Int64("DueAt", data.DueAt),
-				log.Any("data", data))
-			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierToDay))
-			return
-		}
-		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
-		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
-	}
+	data.StartAt = start
+	data.EndAt = end
+
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
@@ -274,6 +234,35 @@ func (s *Server) addSchedule(c *gin.Context) {
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
+}
+
+func (s *Server) processScheduleDueDate(c *gin.Context, startSrc int64, endSrc int64, dueAt int64, classType entity.ScheduleClassType, loc *time.Location) (int64, int64, bool) {
+	if dueAt <= 0 {
+		return startSrc, endSrc, true
+	}
+	now := time.Now().Unix()
+	ctx := c.Request.Context()
+	var day int64
+	switch classType {
+	case entity.ScheduleClassTypeTask:
+		day = utils.GetTimeDiffToDayByTimeStamp(endSrc, dueAt, loc)
+	case entity.ScheduleClassTypeHomework:
+		day = utils.GetTimeDiffToDayByTimeStamp(now, dueAt, loc)
+		startSrc = utils.StartOfDayByTimeStamp(dueAt, loc)
+		endSrc = utils.EndOfDayByTimeStamp(dueAt, loc)
+	}
+	if day < 0 {
+		log.Info(ctx, "schedule dueAt is invalid",
+			log.Int64("StartAt", startSrc),
+			log.Int64("EndAt", endSrc),
+			log.Int64("now", now),
+			log.Int64("DueAt", dueAt),
+			log.Any("classType", classType))
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
+		return 0, 0, false
+	}
+
+	return startSrc, endSrc, true
 }
 
 // @Summary getScheduleByID
