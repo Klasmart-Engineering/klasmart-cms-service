@@ -243,3 +243,9 @@ func EndOfDayByTimeStamp(ts int64, loc *time.Location) int64 {
 	t := time.Unix(ts, 0).In(loc)
 	return EndOfDayByTime(t, loc).Unix()
 }
+func GetTimeDiffToDayByTimeStamp(start, end int64, loc *time.Location) int64 {
+	t1 := time.Unix(start, 0).In(loc)
+	t2 := time.Unix(end, 0).In(loc)
+
+	return GetTimeDiffToDayByTime(t1, t2, loc)
+}
