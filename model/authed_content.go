@@ -114,8 +114,11 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 		log.Strings("folderIDs", folderIDs),
 		log.Strings("orgIDs", orgIDs))
 
+	allContentsWithChildren := make([]string, 0)
 	for k, _ := range allContentIDsMap {
 		allContentIDsMap[k] = utils.SliceDeduplication(allContentIDsMap[k])
+
+		allContentsWithChildren = append(allContentsWithChildren, allContentIDsMap[k]...)
 	}
 	folderIDs = utils.SliceDeduplication(folderIDs)
 	orgIDs = utils.SliceDeduplication(orgIDs)
@@ -136,7 +139,7 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 	}
 
 	condition := da.AuthedContentCondition{
-		ContentIDs: contentIDs,
+		ContentIDs: allContentsWithChildren,
 		FromFolderIDs: folderIDs,
 		OrgIDs:     orgIDs,
 	}
@@ -168,7 +171,11 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 			}
 			//only if alreadyRecord == false, (means auth is not in record)
 			if !alreadyRecord {
-				filteredReq = append(filteredReq, reqs[i])
+				filteredReq = append(filteredReq, &entity.AddAuthedContentRequest{
+					OrgID:        reqs[i].OrgID,
+					FromFolderID: reqs[i].FromFolderID,
+					ContentID:    contentID,
+				})
 			}
 		}
 	}
