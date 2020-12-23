@@ -74,3 +74,14 @@ func TestEndOfYearByTimeStamp(t *testing.T) {
 	start := StartOfYearByTimeStamp(time.Now().Unix(), time.Now().Location())
 	t.Log(start)
 }
+
+func TestStartOfDayByTimeStamp(t *testing.T) {
+	loc := time.Now().Location()
+	start := StartOfDayByTimeStamp(time.Now().Unix(), loc)
+	t.Log(ConvertTime(start, loc))
+}
+func TestEndOfDayByTimeStamp(t *testing.T) {
+	loc := time.Now().Location()
+	end := EndOfDayByTimeStamp(time.Now().Unix(), loc)
+	t.Log(ConvertTime(end, loc))
+}

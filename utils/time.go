@@ -234,3 +234,12 @@ func DateBetweenTimeAndFormat(start int64, end int64, loc *time.Location) []stri
 	}
 	return result
 }
+
+func StartOfDayByTimeStamp(ts int64, loc *time.Location) int64 {
+	t2 := time.Unix(ts, 0).In(loc)
+	return time.Date(t2.Year(), t2.Month(), t2.Day(), 0, 0, 0, 0, loc).Unix()
+}
+func EndOfDayByTimeStamp(ts int64, loc *time.Location) int64 {
+	t := time.Unix(ts, 0).In(loc)
+	return EndOfDayByTime(t, loc).Unix()
+}
