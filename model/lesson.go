@@ -1,10 +1,9 @@
-package contentdata
+package model
 
 import (
 	"context"
 	"encoding/json"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -172,7 +171,7 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 }
 
 func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error){
-	orgInfo, err := model.GetOrganizationPropertyModel().GetOrDefault(ctx, orgID)
+	orgInfo, err := GetOrganizationPropertyModel().GetOrDefault(ctx, orgID)
 	if err != nil {
 		log.Warn(ctx, "parse get folder shared records params failed",
 			log.Err(err),

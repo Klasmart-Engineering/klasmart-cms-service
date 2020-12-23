@@ -11,8 +11,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
-
 	"sync"
 	"time"
 
@@ -283,7 +281,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 		materialItem := &entity.LiveMaterial{
 			Name: item.Name,
 		}
-		mData, ok := item.Data.(*contentdata.MaterialData)
+		mData, ok := item.Data.(*MaterialData)
 		if !ok {
 			log.Debug(ctx, "content data convert materialdata error", log.Any("item", item))
 			continue

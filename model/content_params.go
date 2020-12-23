@@ -12,7 +12,6 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 )
 
 func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string {
@@ -22,7 +21,7 @@ func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContent
 	if c.ContentType == entity.ContentTypeAssets {
 		return constant.SourceTypeAssets
 	}
-	materialData := d.(*contentdata.MaterialData)
+	materialData := d.(*MaterialData)
 	return fmt.Sprintf(constant.SourceTypeMaterialPrefix + materialData.FileType.String())
 }
 
@@ -56,7 +55,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	if c.Data == "" {
 		return nil, ErrNoContentData
 	}
-	cd, err := contentdata.CreateContentData(ctx, c.ContentType, c.Data)
+	cd, err := CreateContentData(ctx, c.ContentType, c.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
@@ -210,7 +209,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 	//检查data
 	if data.Data != "" {
-		cd, err := contentdata.CreateContentData(ctx, data.ContentType, data.Data)
+		cd, err := CreateContentData(ctx, data.ContentType, data.Data)
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}

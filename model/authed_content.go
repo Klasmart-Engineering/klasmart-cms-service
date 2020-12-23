@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
@@ -404,7 +403,7 @@ func (ac *AuthedContent) expandRelatedContentID(ctx context.Context, tx *dbo.DBC
 	ret := make([]string, 0)
 	for i := range contents {
 		if contents[i].ContentType == entity.ContentTypePlan {
-			data, err := contentdata.CreateContentData(ctx, entity.ContentTypePlan, contents[i].Data)
+			data, err := CreateContentData(ctx, entity.ContentTypePlan, contents[i].Data)
 			if err != nil{
 				log.Error(ctx, "create content data failed",
 					log.Err(err),

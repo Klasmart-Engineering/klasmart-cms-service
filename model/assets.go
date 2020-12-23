@@ -1,4 +1,4 @@
-package contentdata
+package model
 
 import (
 	"context"
