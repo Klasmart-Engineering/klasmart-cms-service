@@ -30,6 +30,7 @@ func (s Server) registeRoute() {
 			users.POST("/register", s.register)
 			users.POST("/forgotten_pwd", s.forgottenPassword)
 			users.PUT("/reset_password", s.mustLogin, s.resetPassword)
+			users.POST("/invite_notify", s.mustAms, s.inviteNotify)
 		}
 	}
 

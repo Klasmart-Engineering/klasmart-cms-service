@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"net/http"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
@@ -219,6 +220,58 @@ func (s *Server) sendCode(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, "ok")
+		return
+	}
+
+	log.Warn(c.Request.Context(), "verification:param wrong", log.Any("req", req))
+	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	return
+}
+
+// @ID inviteNotify
+// @Summary invite notify
+// @Tags user
+// @Description send verify code or uri
+// @Accept json
+// @Produce json
+// @Param outcome body SendCodeRequest true "send verify code"
+// @Success 200
+// @Failure 400 {object} BadRequestResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /users/send_code [post]
+func (s *Server) inviteNotify(c *gin.Context) {
+	var req SendCodeRequest
+	ctx := c.Request.Context()
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Warn(ctx, "verification:ShouldBindJSON failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	if req.Mobile != "" {
+		code := config.Get().KidsloopCNLoginConfig.InviteNotify
+		err = model.GetSMSSender().SendSms(ctx, []string{req.Mobile}, code)
+		if err != nil {
+			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.Status(http.StatusOK)
+		return
+	}
+
+	if req.Email != "" {
+		// TODO: text
+		code := config.Get().KidsloopCNLoginConfig.InviteNotify
+		// TODO: uri
+		err = model.GetEmailModel().SendEmail(ctx, req.Email, "", "", code)
+		if err != nil {
+			log.Error(ctx, "sendCode: SendSms failed", log.Err(err))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.Status(http.StatusOK)
 		return
 	}
 

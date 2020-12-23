@@ -119,6 +119,7 @@ type KidsloopCNLoginConfig struct {
 	PrivateKey   interface{} `json:"private_key" yaml:"private_key"`
 	PublicKey    interface{} `json:"public_key" yaml:"public_key"`
 	CookieDomain string      `json:"cookie_domain" yaml:"cookie_domain"`
+	InviteNotify string      `json:"invite_notify" yaml:"invite_notify"`
 }
 
 type TencentConfig struct {
@@ -189,6 +190,8 @@ func loadKidsloopCNLoginConfig(ctx context.Context) {
 	config.KidsloopCNLoginConfig.PublicKey = pub
 
 	config.KidsloopCNLoginConfig.CookieDomain = os.Getenv("kidsloop_cn_login_cookie_domain")
+
+	config.KidsloopCNLoginConfig.InviteNotify = os.Getenv("kidsloop_cn_invite_notify")
 }
 
 func loadTencentConfig(ctx context.Context) {
