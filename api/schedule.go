@@ -908,7 +908,7 @@ func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, pe
 
 // @Summary get schedule real-time status
 // @Description get schedule real-time status
-// @Tags reports
+// @Tags schedule
 // @ID getScheduleRealTimeStatus
 // @Accept json
 // @Produce json
