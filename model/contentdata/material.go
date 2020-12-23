@@ -95,6 +95,6 @@ func (h *MaterialData) PrepareVersion(ctx context.Context) error {
 }
 func (l *MaterialData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
 }
-func (h *MaterialData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
+func (h *MaterialData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
 	return nil
 }

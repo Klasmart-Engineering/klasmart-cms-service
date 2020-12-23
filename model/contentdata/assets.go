@@ -89,7 +89,7 @@ func (h *AssetsData) PrepareVersion(ctx context.Context) error {
 	return nil
 }
 
-func (h *AssetsData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
+func (h *AssetsData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
 	return nil
 }
 func (l *AssetsData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {

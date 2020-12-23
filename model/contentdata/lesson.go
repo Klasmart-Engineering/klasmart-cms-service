@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -170,7 +171,23 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	return nil
 }
 
-func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
+func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error){
+	orgInfo, err := model.GetOrganizationPropertyModel().GetOrDefault(ctx, orgID)
+	if err != nil {
+		log.Warn(ctx, "parse get folder shared records params failed",
+			log.Err(err),
+			log.String("orgID", orgID))
+		return false, err
+	}
+	if orgInfo.Type != entity.OrganizationTypeHeadquarters {
+		log.Info(ctx, "org is not in head quarter",
+			log.Any("orgInfo", orgInfo))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -181,10 +198,28 @@ func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operato
 	if err != nil {
 		return err
 	}
-	contentList, err = l.filterMaterialsByPermission(ctx, contentList, operator)
+
+	isHeadQuarter, err :=  l.isOrganizationHeadquarters(ctx, content.Org)
 	if err != nil {
 		return err
 	}
+	if !isHeadQuarter {
+		//if is not head quarter, filter unauthed materials
+		contentList, err = l.filterMaterialsByPermission(ctx, contentList, operator)
+		if err != nil {
+			return err
+		}
+	}else{
+		//if is head quarter, remove unpublished materials
+		newContentList := make([]*entity.Content, 0)
+		for i := range contentList{
+			if contentList[i].PublishStatus == entity.ContentStatusPublished {
+				newContentList = append(newContentList, contentList[i])
+			}
+		}
+		contentList = newContentList
+	}
+
 
 	contentMap := make(map[string]*entity.Content)
 	for i := range contentList {

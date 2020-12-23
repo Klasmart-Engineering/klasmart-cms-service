@@ -1160,7 +1160,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 		log.Error(ctx, "can't update contentdata version for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
 	}
-	err = contentData.PrepareResult(ctx, user)
+	err = contentData.PrepareResult(ctx, content, user)
 	if err != nil {
 		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
