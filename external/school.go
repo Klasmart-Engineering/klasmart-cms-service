@@ -225,10 +225,6 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
 			school_memberships{
-				school{
-					id:school_id
-					name:school_name
-				}
 				school {
 					school_id
 					school_name
