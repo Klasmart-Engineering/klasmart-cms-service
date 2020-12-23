@@ -1542,7 +1542,7 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 	}
 
 	if content.Outcomes == "" {
-		return nil, nil
+		return ret, nil
 	}
 	outcomes := strings.Split(content.Outcomes, ",")
 	for i := range outcomes {

@@ -74,8 +74,8 @@ func TestMigrateInvalidData(t *testing.T) {
 }
 
 func TestMigrateContentData(t *testing.T) {
-	Author := "b2275a92-06cd-5837-b127-850ceeb03c8a"
-	Org := "8901cdbe-3e6e-46b2-ad2a-bb1927a5fbc4"
+	Author := "0a552952-9890-52dc-93d1-f3d028a4dfcd"
+	Org := "ae630b2e-59f8-4c35-8d17-57d6b9994f4e"
 
 	ctx := context.Background()
 	err := dbo.MustGetDB(ctx).AutoMigrate(entity.Content{}).Error
@@ -169,6 +169,51 @@ func TestMigrateContentData(t *testing.T) {
 			contents[i].Grade = "grade0"
 		}
 
+		err = da.GetContentDA().UpdateContent(ctx, dbo.MustGetDB(ctx), contents[i].ID, *contents[i])
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+	}
+	t.Log(count)
+}
+
+
+
+func TestUpdatePlanContentData(t *testing.T) {
+	ctx := context.Background()
+	err := dbo.MustGetDB(ctx).AutoMigrate(entity.Content{}).Error
+	if err != nil{
+		t.Error(err)
+		return
+	}
+	total, contents, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(total)
+	count := 0
+	for i := range contents {
+		data := contents[i].Data
+		switch contents[i].ContentType {
+		case entity.ContentTypePlan:
+			contentData, err := CreateContentData(ctx, entity.ContentTypePlan, contents[i].Data)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			lessonData := contentData.(*LessonData)
+			lessonData.Material = nil
+			data, err = lessonData.Marshal(ctx)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+		}
+		contents[i].Data = data
+		contents[i].DirPath = constant.FolderRootPath
 		err = da.GetContentDA().UpdateContent(ctx, dbo.MustGetDB(ctx), contents[i].ID, *contents[i])
 		if err != nil {
 			t.Error(err)
