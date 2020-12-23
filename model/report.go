@@ -569,8 +569,8 @@ func (r *reportModel) checkPermission603(ctx context.Context, operator *entity.O
 		)
 		return false, err
 	}
-	if !hasP603 {
-		return false, nil
+	if hasP603 {
+		return true, nil
 	}
 	return false, nil
 }
