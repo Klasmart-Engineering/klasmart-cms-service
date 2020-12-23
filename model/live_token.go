@@ -27,11 +27,11 @@ var (
 )
 
 type ILiveTokenModel interface {
-	MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
-	MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string, classID string) (string, error)
+	MakeScheduleLiveToken(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType) (string, error)
+	MakeContentLiveToken(ctx context.Context, op *entity.Operator, contentID string) (string, error)
 }
 
-func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator, scheduleID string) (string, error) {
+func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType) (string, error) {
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, scheduleID)
 	if err != nil {
 		log.Error(ctx, "MakeLiveToken:GetScheduleModel.GetPlainByID error",
@@ -71,7 +71,7 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	}
 	liveTokenInfo := entity.LiveTokenInfo{
 		UserID:    op.UserID,
-		Type:      entity.LiveTokenTypeLive,
+		Type:      tokenType, //entity.LiveTokenTypeLive,
 		RoomID:    scheduleID,
 		ClassType: classType,
 		OrgID:     op.OrgID,
@@ -120,12 +120,14 @@ func (s *liveTokenModel) MakeLiveToken(ctx context.Context, op *entity.Operator,
 	}
 	return token, nil
 }
-func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Operator, contentID string, classID string) (string, error) {
+
+func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Operator, contentID string) (string, error) {
 	liveTokenInfo := entity.LiveTokenInfo{
-		UserID: op.UserID,
-		Type:   entity.LiveTokenTypePreview,
-		RoomID: contentID,
-		OrgID:  op.OrgID,
+		UserID:    op.UserID,
+		Type:      entity.LiveTokenTypePreview,
+		RoomID:    contentID,
+		OrgID:     op.OrgID,
+		ClassType: entity.LiveClassTypeLive,
 	}
 
 	name, err := s.getUserName(ctx, op)
@@ -137,24 +139,12 @@ func (s *liveTokenModel) MakeLivePreviewToken(ctx context.Context, op *entity.Op
 	}
 	liveTokenInfo.Name = name
 	var isTeacher bool
-	if classID == "" {
-		isTeacher, err = s.isTeacherByPermission(ctx, op)
-		if err != nil {
-			log.Error(ctx, "MakeLivePreviewToken:isTeacherByPermission error",
-				log.Err(err),
-				log.Any("op", op))
-			return "", err
-		}
-	} else {
-		isTeacher, err = s.isTeacherByClass(ctx, op, classID)
-		if err != nil {
-			log.Error(ctx, "MakeLivePreviewToken:isTeacherByClass error",
-				log.Err(err),
-				log.Any("op", op),
-				log.String("classID", classID),
-			)
-			return "", err
-		}
+	isTeacher, err = s.isTeacherByPermission(ctx, op)
+	if err != nil {
+		log.Error(ctx, "MakeLivePreviewToken:isTeacherByPermission error",
+			log.Err(err),
+			log.Any("op", op))
+		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
 	liveTokenInfo.Materials, err = s.getMaterials(ctx, contentID)
