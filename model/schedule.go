@@ -49,6 +49,7 @@ type IScheduleModel interface {
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error
+	GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1211,6 +1212,35 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, condition *da.S
 	err = da.GetScheduleRedisDA().Add(ctx, condition, result)
 	if err != nil {
 		log.Info(ctx, "QueryScheduledDates:GetScheduleRedisDA.AddDates error", log.Err(err))
+	}
+
+	return result, nil
+}
+
+func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error) {
+	var schedule = new(entity.Schedule)
+	err := da.GetScheduleDA().Get(ctx, id, schedule)
+	if err == dbo.ErrRecordNotFound {
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "GetScheduleRealTimeStatus error",
+			log.Err(err),
+			log.String("id", id),
+			log.Any("op", op),
+		)
+		return nil, err
+	}
+	if schedule.DeleteAt != 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+	result := new(entity.ScheduleRealTimeView)
+	result.ID = schedule.ID
+
+	// lesson plan real time info
+	err = s.VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+	if err == nil {
+		result.LessonPlanIsAuth = true
 	}
 
 	return result, nil

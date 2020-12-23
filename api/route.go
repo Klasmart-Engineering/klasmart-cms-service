@@ -93,6 +93,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_participate/class", s.mustLogin, s.getParticipateClass)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
 		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
+		schedules.GET("/schedules/:id/real_time", s.mustLogin, s.getScheduleRealTimeStatus)
 	}
 
 	assessments := s.engine.Group("/v1")

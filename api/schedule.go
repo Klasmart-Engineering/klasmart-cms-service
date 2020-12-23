@@ -242,14 +242,17 @@ func (s *Server) processScheduleDueDate(c *gin.Context, startSrc int64, endSrc i
 	}
 	now := time.Now().Unix()
 	ctx := c.Request.Context()
+	lable := GeneralUnknown
 	var day int64
 	switch classType {
 	case entity.ScheduleClassTypeTask:
 		day = utils.GetTimeDiffToDayByTimeStamp(endSrc, dueAt, loc)
+		lable = ScheduleMsgDueDateEarlierEndDate
 	case entity.ScheduleClassTypeHomework:
 		day = utils.GetTimeDiffToDayByTimeStamp(now, dueAt, loc)
 		startSrc = utils.StartOfDayByTimeStamp(dueAt, loc)
 		endSrc = utils.EndOfDayByTimeStamp(dueAt, loc)
+		lable = ScheduleMsgDueDateEarlierToDay
 	}
 	if day < 0 {
 		log.Info(ctx, "schedule dueAt is invalid",
@@ -258,7 +261,7 @@ func (s *Server) processScheduleDueDate(c *gin.Context, startSrc int64, endSrc i
 			log.Int64("now", now),
 			log.Int64("DueAt", dueAt),
 			log.Any("classType", classType))
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
+		c.JSON(http.StatusBadRequest, L(lable))
 		return 0, 0, false
 	}
 
@@ -901,6 +904,32 @@ func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, pe
 		return false
 	}
 	return true
+}
+
+// @Summary get schedule real-time status
+// @Description get schedule real-time status
+// @Tags reports
+// @ID getScheduleRealTimeStatus
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Success 200 {object} entity.ScheduleRealTimeView
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id}/real_time [get]
+func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	op := s.getOperator(c)
+	result, err := model.GetScheduleModel().GetScheduleRealTimeStatus(ctx, op, id)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
 
 //func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) map[external.PermissionName]bool {
