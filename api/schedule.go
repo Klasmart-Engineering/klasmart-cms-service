@@ -85,6 +85,10 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
+	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
+		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
+		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
+	}
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
 	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
@@ -196,6 +200,10 @@ func (s *Server) addSchedule(c *gin.Context) {
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
+	}
+	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
+		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
+		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
