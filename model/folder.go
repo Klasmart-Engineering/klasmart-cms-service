@@ -346,6 +346,7 @@ func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx
 		if len(sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs) > 0 && len(contentIDs) > 0 {
 			err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 				OrgIDs:     sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs,
+				FolderIDs: []string{folders[i].ID},
 				ContentIDs: contentIDs,
 			}, operator)
 			if err != nil {
@@ -833,6 +834,10 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 	folderItem := folderItems[0]
 	path := distFolder.ChildrenPath()
 
+	log.Info(ctx, "search folder item result",
+		log.Any("folderItems", folderItems),
+		log.Any("folderItem", folderItem))
+
 	parentFolder := f.rootFolder(ctx, ownerType, partition, operator)
 	if folderItem.ParentID != "" && folderItem.ParentID != constant.FolderRootPath {
 		parentFolder, err = da.GetFolderDA().GetFolderByID(ctx, tx, folderItem.ParentID)
@@ -841,6 +846,10 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 			return err
 		}
 	}
+	log.Info(ctx, "pending update linked item path",
+		log.String("folderItem.Link", folderItem.Link),
+		log.Any("distFolder", distFolder),
+		log.Any("parentFolder", parentFolder))
 
 	//更新子目录link文件
 	err = f.updateLinkedItemPath(ctx, tx,
@@ -1669,6 +1678,10 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 	//TODO:shared folder
 	//1. search items from folders
 	//TODO:check root path
+	log.Info(ctx, "handle move shared content",
+		log.Strings("links", contentLinks),
+		log.Any("from", fromRootFolder),
+		log.Any("dist", distFolder))
 
 	//2. search folders by parent ids
 	records, err := da.GetSharedFolderDA().Search(ctx, tx, da.SharedFolderCondition{
@@ -1702,6 +1715,7 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 		//delete content
 		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 			OrgIDs:     oids,
+			FolderIDs: []string{fromRootFolder.ID},
 			ContentIDs: contentLinks,
 		}, operator)
 		if err != nil {
@@ -1747,6 +1761,10 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 
 func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBContext, cidList []string, fromFolder, distFolder *entity.FolderItem, operator *entity.Operator) error {
 	//1.Check content type, filter assets
+	log.Info(ctx, "handle move shared content",
+		log.Strings("cids", cidList),
+		log.Any("from", fromFolder),
+		log.Any("dist", distFolder))
 	contents, err := GetContentModel().GetRawContentByIDList(ctx, tx, cidList)
 	if err != nil {
 		return err
@@ -1758,6 +1776,9 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 			sharedContentIDs = append(sharedContentIDs, contents[i].ID)
 		}
 	}
+
+	log.Info(ctx, "pending shared content ids",
+		log.Strings("cids", sharedContentIDs))
 	if len(sharedContentIDs) < 1 {
 		log.Info(ctx, "No need to share",
 			log.Strings("cids", cidList))
@@ -1772,6 +1793,9 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 	if distFolder.ID != constant.FolderRootPath {
 		folderIDs = append(folderIDs, distFolder.ID)
 	}
+
+	log.Info(ctx, "pending update folder IDs",
+		log.Strings("folderIDs", folderIDs))
 
 	if len(folderIDs) < 1 {
 		//in this case from root to root
@@ -1790,6 +1814,9 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 		return err
 	}
 
+	log.Info(ctx, "shared folders result",
+		log.Any("records", records))
+
 	//3.Get orgs from folder
 	fromOrgs := make([]string, 0)
 	toOrgs := make([]string, 0)
@@ -1800,13 +1827,16 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 			toOrgs = append(toOrgs, records[i].OrgID)
 		}
 	}
-
+	log.Info(ctx, "from orgs and to orgs",
+		log.Strings("fromOrgs", fromOrgs),
+		log.Strings("toOrgs", toOrgs))
 	//4.Update content auth records (remove/add)
 	//remove from content id list
 	//when from folder is not root
 	if len(fromOrgs) != 0 {
 		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 			OrgIDs:     fromOrgs,
+			FolderIDs: []string{fromFolder.ID},
 			ContentIDs: sharedContentIDs,
 		}, operator)
 		if err != nil {

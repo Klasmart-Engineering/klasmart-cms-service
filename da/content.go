@@ -139,7 +139,7 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	if s.AuthedOrgID.Valid && len(s.AuthedOrgID.Strings) > 0 {
 		authContentTable := entity.AuthedContentRecord{}.TableName()
 		contentTable := entity.Content{}.TableName()
-		sql := fmt.Sprintf(`select content_id from %v where %v.org_id in (?) and %v.content_id = %v.id`,
+		sql := fmt.Sprintf(`select content_id from %v where %v.org_id in (?) and %v.content_id = %v.id and delete_at = 0`,
 			authContentTable,
 			authContentTable,
 			authContentTable,
@@ -276,7 +276,7 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 }
 func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
 	co.ID = cid
-	log.Info(ctx, "Update contentdata da", log.String("id", co.ID))
+	log.Info(ctx, "Update contentdata path", log.String("id", co.ID))
 	_, err := cd.s.UpdateTx(ctx, tx, &co)
 	if err != nil {
 		return err

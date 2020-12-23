@@ -11,6 +11,15 @@ const (
 	LiveTokenTypeLive    LiveTokenType = "live"
 )
 
+func (t LiveTokenType) Valid() bool {
+	switch t {
+	case LiveTokenTypePreview, LiveTokenTypeLive:
+		return true
+	default:
+		return false
+	}
+}
+
 type MaterialType string
 
 const (
