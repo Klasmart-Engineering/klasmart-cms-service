@@ -123,6 +123,23 @@ func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context
 	if content.Org != user.OrgID {
 		//若org_id不相等，则无权限
 		log.Info(ctx, "view content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
+		//check if it is shared content
+		condition := entity.SearchAuthedContentRequest{
+			OrgIDs:     []string{user.OrgID},
+			ContentIDs: []string{content.ID},
+		}
+		records, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), condition, user)
+		if err != nil {
+			log.Warn(ctx, "get authed record failed",
+				log.String("id", cid),
+				log.Err(err),
+				log.Any("condition", condition))
+			return false, err
+		}
+		if len(records) > 0 {
+			return true, nil
+		}
+
 		return false, nil
 	}
 	//若是自己的content，则可以获取
