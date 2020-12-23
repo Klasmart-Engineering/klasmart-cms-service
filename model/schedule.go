@@ -489,7 +489,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 		return 0, nil, err
 	}
 
-	result := make([]*entity.ScheduleSearchView, len(scheduleList))
+	result := make([]*entity.ScheduleSearchView, 0, len(scheduleList))
 	basicInfo, err := s.getBasicInfo(ctx, operator, scheduleList)
 	if err != nil {
 		log.Error(ctx, "Page: get basic info error",
@@ -499,6 +499,10 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 		return 0, nil, err
 	}
 	for i, item := range scheduleList {
+		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
+			log.Info(ctx, "schedule type is homework", log.Any("schedule", item))
+			continue
+		}
 		viewData := &entity.ScheduleSearchView{
 			ID:      item.ID,
 			StartAt: item.StartAt,
@@ -508,6 +512,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 		if v, ok := basicInfo[item.ID]; ok {
 			viewData.ScheduleBasic = *v
 		}
+
 		result[i] = viewData
 	}
 
@@ -532,7 +537,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
-	result := make([]*entity.ScheduleListView, len(scheduleList))
+	result := make([]*entity.ScheduleListView, 0, len(scheduleList))
 	for i, item := range scheduleList {
 		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
 			log.Info(ctx, "schedule type is homework", log.Any("schedule", item))
@@ -548,10 +553,6 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			Status:       item.Status.GetScheduleStatus(item.EndAt),
 			ClassType:    item.ClassType,
 			ClassID:      item.ClassID,
-		}
-		if item.ClassType == entity.ScheduleClassTypeHomework {
-			temp.StartAt = utils.StartOfDayByTimeStamp(item.DueAt, loc)
-			temp.EndAt = utils.EndOfDayByTimeStamp(item.DueAt, loc)
 		}
 		result[i] = temp
 	}

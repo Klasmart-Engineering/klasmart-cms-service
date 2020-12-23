@@ -40,14 +40,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 			log.String("scheduleID", scheduleID))
 		return "", err
 	}
-	err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
-	if err != nil {
-		log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
-			log.Err(err),
-			log.Any("op", op),
-			log.Any("schedule", schedule))
-		return "", err
-	}
+
 	now := time.Now().Unix()
 	diff := utils.TimeStampDiff(schedule.StartAt, now)
 	if diff >= constant.ScheduleAllowGoLiveTime {
@@ -106,6 +99,14 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	if schedule.ClassType == entity.ScheduleClassTypeTask {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
+		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+		if err != nil {
+			log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("schedule", schedule))
+			return "", err
+		}
 		liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:get material error",
