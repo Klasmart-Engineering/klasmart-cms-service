@@ -215,7 +215,7 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 	//if contains materials is not from org, check auth
 	if len(pendingCheckAuthContents) > 0 {
 		condition := da.AuthedContentCondition{
-			OrgIDs: []string{operator.OrgID},
+			OrgIDs: []string{operator.OrgID, constant.ShareToAll},
 			ContentIDs: pendingCheckAuthIDs,
 		}
 		authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)

@@ -103,15 +103,28 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 		orgIDs[i] = reqs[i].OrgID
 	}
 
-	allContentIDs, err := ac.expandRelatedContentID(ctx, tx, contentIDs)
+	allContentIDsMap, err := ac.expandRelatedContentIDMap(ctx, tx, contentIDs)
 	if err != nil{
 		return err
 	}
+	log.Info(ctx, "query already exists records results",
+		log.Any("reqs", reqs),
+		log.Any("allContentIDsMap", allContentIDsMap),
+		log.Strings("contentIDs", contentIDs),
+		log.Strings("folderIDs", folderIDs),
+		log.Strings("orgIDs", orgIDs))
 
-	contentIDs = utils.SliceDeduplication(allContentIDs)
+	for k, _ := range allContentIDsMap {
+		allContentIDsMap[k] = utils.SliceDeduplication(allContentIDsMap[k])
+	}
 	folderIDs = utils.SliceDeduplication(folderIDs)
 	orgIDs = utils.SliceDeduplication(orgIDs)
 
+	log.Info(ctx, "duplicated records results",
+		log.Any("allContentIDsMap", allContentIDsMap),
+		log.Strings("contentIDs", contentIDs),
+		log.Strings("folderIDs", folderIDs),
+		log.Strings("orgIDs", orgIDs))
 	//lock org id for batch add
 	for i := range orgIDs {
 		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentAuth, orgIDs[i])
@@ -127,7 +140,8 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 		FromFolderIDs: folderIDs,
 		OrgIDs:     orgIDs,
 	}
-
+	log.Info(ctx, "query authed content records",
+		log.Any("condition", condition))
 	authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, condition)
 	if err != nil{
 		log.Error(ctx, "query authed content records failed",
@@ -135,25 +149,32 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 			log.Any("condition", condition))
 		return err
 	}
+	log.Info(ctx, "query authed content records results",
+		log.Any("authRecords", authRecords))
 	filteredReq := make([]*entity.AddAuthedContentRequest, 0)
 	for i := range reqs {
-		alreadyRecord := false
-		for j := range authRecords {
-			//if already auth the content
-			//ignore
-			if reqs[i].OrgID == authRecords[j].OrgID &&
-				reqs[i].FromFolderID == authRecords[j].FromFolderID &&
-				reqs[i].ContentID == authRecords[j].ContentID {
-				alreadyRecord = true
-				break
+		for j := range allContentIDsMap[reqs[i].ContentID] {
+			alreadyRecord := false
+			contentID := allContentIDsMap[reqs[i].ContentID][j]
+			for k := range authRecords {
+				//if already auth the content
+				//ignore
+				if reqs[i].OrgID == authRecords[k].OrgID &&
+					reqs[i].FromFolderID == authRecords[k].FromFolderID &&
+					contentID == authRecords[k].ContentID {
+					alreadyRecord = true
+					break
+				}
+			}
+			//only if alreadyRecord == false, (means auth is not in record)
+			if !alreadyRecord {
+				filteredReq = append(filteredReq, reqs[i])
 			}
 		}
-
-		//only if alreadyRecord == false, (means auth is not in record)
-		if !alreadyRecord {
-			filteredReq = append(filteredReq, reqs[i])
-		}
 	}
+
+	log.Info(ctx, "filtered records results",
+		log.Any("filteredReq", filteredReq))
 
 	data := make([]*entity.AuthedContentRecord, len(filteredReq))
 	for i := range filteredReq {
@@ -164,6 +185,8 @@ func (ac *AuthedContent) BatchAddByOrgIDs(ctx context.Context, tx *dbo.DBContext
 			Creator:   op.UserID,
 		}
 	}
+	log.Info(ctx, "pending add records",
+		log.Any("data", data))
 	err = da.GetAuthedContentRecordsDA().BatchAddAuthedContent(ctx, tx, data)
 	if err != nil {
 		log.Error(ctx, "add authed content records failed",
@@ -184,6 +207,7 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 	condition := da.AuthedContentCondition{
 		ContentIDs: contentIDs,
 		OrgIDs:     []string{req.OrgID},
+		FromFolderIDs: []string{req.FolderID},
 	}
 	//lock org id for batch add
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentAuth, req.OrgID)
@@ -194,6 +218,8 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 	defer locker.Unlock()
 
 
+	log.Info(ctx, "query already exists records",
+		log.Any("condition", condition))
 	objs, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "count authed content records failed",
@@ -201,6 +227,10 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 			log.Any("condition", condition))
 		return err
 	}
+
+	log.Info(ctx, "query already exists records results",
+		log.Any("objs", objs),
+		log.Strings("contentIDs", contentIDs))
 
 	//remove duplicate
 	pendingAddIDs := make([]string, 0)
@@ -221,6 +251,10 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 	} else {
 		pendingAddIDs = contentIDs
 	}
+	log.Info(ctx, "pendingAddIDs",
+		log.Any("objs", objs),
+		log.Strings("pendingAddIDs", pendingAddIDs),
+		log.Strings("contentIDs", contentIDs))
 
 	data := make([]*entity.AuthedContentRecord, len(pendingAddIDs))
 	for i := range pendingAddIDs {
@@ -231,6 +265,8 @@ func (ac *AuthedContent) BatchAdd(ctx context.Context, tx *dbo.DBContext, req en
 			Creator:   op.UserID,
 		}
 	}
+	log.Info(ctx, "add records",
+		log.Any("data", data))
 	err = da.GetAuthedContentRecordsDA().BatchAddAuthedContent(ctx, tx, data)
 	if err != nil {
 		log.Error(ctx, "add authed content records failed",
@@ -370,9 +406,44 @@ func (ac *AuthedContent) expandRelatedContentID(ctx context.Context, tx *dbo.DBC
 			}
 			relatedIDs := data.SubContentIDs(ctx)
 			ret = append(ret, relatedIDs...)
+			log.Info(ctx, "expanding content IDs",
+				log.Strings("ids", relatedIDs))
 		}
 
+		log.Info(ctx, "content IDs",
+			log.String("id", contents[i].ID),
+			log.Any("content", contents[i]))
 		ret = append(ret, contents[i].ID)
+	}
+	return ret, nil
+}
+
+
+func (ac *AuthedContent) expandRelatedContentIDMap(ctx context.Context, tx *dbo.DBContext, cids []string) (map[string][]string, error) {
+	contents, err := GetContentModel().GetRawContentByIDList(ctx, tx, cids)
+	if err != nil{
+		return nil, err
+	}
+	ret := make(map[string][]string)
+	for i := range contents {
+		ret[contents[i].ID] = []string{contents[i].ID}
+		if contents[i].ContentType == entity.ContentTypePlan {
+			data, err := contentdata.CreateContentData(ctx, entity.ContentTypePlan, contents[i].Data)
+			if err != nil{
+				log.Error(ctx, "create content data failed",
+					log.Err(err),
+					log.Any("content", contents[i]))
+				return nil, err
+			}
+			relatedIDs := data.SubContentIDs(ctx)
+			ret[contents[i].ID] = append(ret[contents[i].ID], relatedIDs...)
+			log.Info(ctx, "expanding content IDs",
+				log.Strings("ids", relatedIDs))
+		}
+
+		log.Info(ctx, "content IDs",
+			log.String("id", contents[i].ID),
+			log.Any("content", contents[i]))
 	}
 	return ret, nil
 }

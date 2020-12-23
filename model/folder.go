@@ -200,6 +200,9 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 				return ErrInvalidPartition
 			}
 		}
+		log.Info(ctx, "GetFolderByIDList",
+			log.Strings("folderIDs", folderIDs),
+			log.Any("folders", folders))
 
 		//2.Check organizations validation
 		orgsMap, err := f.checkOrgs(ctx, orgIDs, operator)
@@ -211,6 +214,9 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 				log.Any("operator", operator))
 			return err
 		}
+		log.Info(ctx, "check org maps",
+			log.Strings("orgIDs", orgIDs),
+			log.Any("orgsMap", orgsMap))
 
 		//3.search shared folders from database
 		//for removing and adding pending modified organizations list
@@ -225,6 +231,9 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 				log.Any("operator", operator))
 			return ErrSearchSharedFolderFailed
 		}
+		log.Info(ctx, "check org maps",
+			log.Strings("FolderIDs", folderIDs),
+			log.Any("records", records))
 		//build folders already shared organizations map
 		//mapping folder ids and shared organizations
 		sharedFolderOrgsMap := make(map[string][]string)
@@ -358,6 +367,7 @@ func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx
 				return nil, err
 			}
 		}
+
 
 		//allItems = append(allItems, items...)
 		allContentIDs[folders[i].ID] = contentIDs

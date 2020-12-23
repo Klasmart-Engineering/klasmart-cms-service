@@ -42,14 +42,14 @@ func (ac *AuthedContentDA) BatchAddAuthedContent(ctx context.Context, tx *dbo.DB
 	}
 	createAt := time.Now().Unix()
 	columns := []string{
-		"id", "org_id", "content_id", "creator", "create_at", "duration",
+		"id", "org_id", "content_id", "from_folder_id", "creator", "create_at", "duration",
 	}
 	var values [][]interface{}
 	for _, item := range req {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.OrgID, item.ContentID, item.Creator, createAt, item.Duration})
+		values = append(values, []interface{}{item.ID, item.OrgID, item.ContentID, item.FromFolderID, item.Creator, createAt, item.Duration})
 	}
 	template := SQLBatchInsert(entity.AuthedContentRecord{}.TableName(), columns, values)
 	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {
