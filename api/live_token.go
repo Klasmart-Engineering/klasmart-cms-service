@@ -31,7 +31,7 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 	tokenType := entity.LiveTokenType(c.Query("live_token_type"))
 	if !tokenType.Valid() {
 		log.Info(ctx, "token type is invalid", log.String("tokenType", string(tokenType)))
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	token, err := model.GetLiveTokenModel().MakeScheduleLiveToken(ctx, op, scheduleID, tokenType)
