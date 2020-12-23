@@ -498,7 +498,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 			log.Any("scheduleList", scheduleList))
 		return 0, nil, err
 	}
-	for i, item := range scheduleList {
+	for _, item := range scheduleList {
 		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
 			log.Info(ctx, "schedule type is homework", log.Any("schedule", item))
 			continue
