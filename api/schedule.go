@@ -66,7 +66,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	data.OrgID = operator.OrgID
 	now := time.Now().Unix()
 
-	if !data.IsRepeat || (data.IsRepeat && data.EditType == entity.ScheduleEditOnlyCurrent) {
+	if (data.ClassType != entity.ScheduleClassTypeHomework) &&
+		(!data.IsRepeat || (data.IsRepeat && data.EditType == entity.ScheduleEditOnlyCurrent)) {
 		if data.StartAt < now || data.StartAt >= data.EndAt {
 			log.Info(ctx, "schedule start_at or end_at is invalid",
 				log.Int64("StartAt", data.StartAt),
@@ -78,17 +79,41 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 	}
-
+	if data.ClassType == entity.ScheduleClassTypeTask && data.DueAt > 0 {
+		day := utils.GetTimeDiffToDayByTimeStamp(data.EndAt, data.DueAt, loc)
+		if day < 0 {
+			log.Info(ctx, "schedule dueAt is invalid",
+				log.Int64("StartAt", data.StartAt),
+				log.Int64("EndAt", data.EndAt),
+				log.Int64("now", now),
+				log.Int64("DueAt", data.DueAt),
+				log.Any("data", data))
+			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
+			return
+		}
+	}
+	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
+		day := utils.GetTimeDiffToDayByTimeStamp(now, data.DueAt, loc)
+		if day < 0 {
+			log.Info(ctx, "schedule dueAt is invalid",
+				log.Int64("StartAt", data.StartAt),
+				log.Int64("EndAt", data.EndAt),
+				log.Int64("now", now),
+				log.Int64("DueAt", data.DueAt),
+				log.Any("data", data))
+			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierToDay))
+			return
+		}
+		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
+		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
+	}
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
-	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
-		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
-		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
-	}
+
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
 	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
@@ -186,7 +211,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", data.TimeZoneOffset))
 	data.OrgID = op.OrgID
 	now := time.Now().Unix()
-	if !data.IsRepeat && (data.StartAt < now || data.StartAt >= data.EndAt) {
+	if (data.ClassType != entity.ScheduleClassTypeHomework) &&
+		(!data.IsRepeat && (data.StartAt < now || data.StartAt >= data.EndAt)) {
 		log.Info(ctx, "schedule start_at or end_at is invalid",
 			log.Int64("StartAt", data.StartAt),
 			log.Int64("EndAt", data.EndAt),
@@ -194,16 +220,39 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-
+	if data.ClassType == entity.ScheduleClassTypeTask && data.DueAt > 0 {
+		day := utils.GetTimeDiffToDayByTimeStamp(data.EndAt, data.DueAt, loc)
+		if day < 0 {
+			log.Info(ctx, "schedule dueAt is invalid",
+				log.Int64("StartAt", data.StartAt),
+				log.Int64("EndAt", data.EndAt),
+				log.Int64("now", now),
+				log.Int64("DueAt", data.DueAt),
+				log.Any("data", data))
+			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
+			return
+		}
+	}
+	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
+		day := utils.GetTimeDiffToDayByTimeStamp(now, data.DueAt, loc)
+		if day < 0 {
+			log.Info(ctx, "schedule dueAt is invalid",
+				log.Int64("StartAt", data.StartAt),
+				log.Int64("EndAt", data.EndAt),
+				log.Int64("now", now),
+				log.Int64("DueAt", data.DueAt),
+				log.Any("data", data))
+			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierToDay))
+			return
+		}
+		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
+		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
+	}
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
-	}
-	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
-		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
-		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule

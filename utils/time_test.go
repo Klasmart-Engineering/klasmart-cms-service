@@ -85,3 +85,12 @@ func TestEndOfDayByTimeStamp(t *testing.T) {
 	end := EndOfDayByTimeStamp(time.Now().Unix(), loc)
 	t.Log(ConvertTime(end, loc))
 }
+func TestGetTimeDiffToDayByTimeStamp(t *testing.T) {
+	loc := time.Now().Location()
+	start := time.Now()
+	end := time.Now().AddDate(0, 0, -1)
+	r := GetTimeDiffToDayByTimeStamp(start.Unix(), end.Unix(), loc)
+	t.Log(start)
+	t.Log(end)
+	t.Log(r)
+}
