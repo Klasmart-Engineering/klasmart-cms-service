@@ -243,13 +243,18 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		//4.get pending add folders in orgs & pending delete folders in orgs
 		sharedFolderPendingOrgsMap := f.getFolderPendingOrgs(ctx, sharedFolderOrgsMap, orgsMap, orgIDs, folderIDs)
 
+		log.Info(ctx, "getFolderPendingOrgs",
+			log.Any("sharedFolderPendingOrgsMap", sharedFolderPendingOrgsMap),
+			log.Any("sharedFolderOrgsMap", sharedFolderOrgsMap),
+			log.Any("orgsMap", orgsMap))
 		//5.Remove folder share records & Remove content auth records & Get contents from folders
 		allContentIDs, err := f.removeSharedFolderAndAuthedContent(ctx, tx,
 			sharedFolderPendingOrgsMap, folders, operator)
 		if err != nil{
 			return err
 		}
-
+		log.Info(ctx, "allContentIDs",
+			log.Any("allContentIDs", allContentIDs))
 		//6.Add folder share records & authed contents
 		err = f.addSharedFolderAndAuthedContent(ctx, tx, sharedFolderPendingOrgsMap,
 			folders, allContentIDs, operator)
@@ -264,6 +269,9 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 	sharedFolderPendingOrgsMap map[string]*entity.ShareFoldersDeleteAddOrgList, folders []*entity.FolderItem,
 	allContentIDs map[string][]string, operator *entity.Operator) error{
 	recordsData := make([]*entity.SharedFolderRecord, 0)
+	log.Info(ctx, "building recordsData",
+		log.Any("folders", folders),
+		log.Any("sharedFolderPendingOrgsMap", sharedFolderPendingOrgsMap))
 	for i := range folders {
 		for j := range sharedFolderPendingOrgsMap[folders[i].ID].AddOrgs {
 			recordsData = append(recordsData, &entity.SharedFolderRecord{
@@ -273,6 +281,8 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 			})
 		}
 	}
+	log.Info(ctx, "recordsData",
+		log.Any("recordsData", recordsData))
 	if len(recordsData) > 0 {
 		err := da.GetSharedFolderDA().BatchAdd(ctx, tx, recordsData)
 		if err != nil {
@@ -285,6 +295,10 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 	}
 
 	//8.Add content auth records
+	log.Info(ctx, "records authed Data",
+		log.Any("folders", folders),
+		log.Any("allContentIDs", allContentIDs),
+		log.Any("sharedFolderPendingOrgsMap", sharedFolderPendingOrgsMap))
 	authData := make([]*entity.AddAuthedContentRequest, 0)
 	for i := range folders {
 		for j := range allContentIDs[folders[i].ID] {
@@ -298,6 +312,9 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 
 		}
 	}
+
+	log.Info(ctx, "authData",
+		log.Any("authData", authData))
 	if len(authData) > 0 {
 		err := GetAuthedContentRecordsModel().BatchAddByOrgIDs(ctx, tx, authData, operator)
 		if err != nil {
