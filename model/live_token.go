@@ -34,16 +34,24 @@ type ILiveTokenModel interface {
 func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.Operator, scheduleID string, tokenType entity.LiveTokenType) (string, error) {
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, scheduleID)
 	if err != nil {
-		log.Error(ctx, "MakeLiveToken:GetScheduleModel.GetPlainByID error",
+		log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.GetPlainByID error",
 			log.Err(err),
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID))
 		return "", err
 	}
+	err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+	if err != nil {
+		log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("schedule", schedule))
+		return "", err
+	}
 	now := time.Now().Unix()
 	diff := utils.TimeStampDiff(schedule.StartAt, now)
 	if diff >= constant.ScheduleAllowGoLiveTime {
-		log.Warn(ctx, "MakeLiveToken: go live time not up",
+		log.Warn(ctx, "MakeScheduleLiveToken: go live time not up",
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID),
 			log.Int64("schedule.StartAt", schedule.StartAt),
@@ -52,7 +60,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", ErrGoLiveTimeNotUp
 	}
 	if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
-		log.Warn(ctx, "MakeLiveToken:go live not allow",
+		log.Warn(ctx, "MakeScheduleLiveToken:go live not allow",
 			log.Any("op", op),
 			log.Any("schedule", schedule),
 			log.Int64("schedule.StartAt", schedule.StartAt),
@@ -62,7 +70,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	}
 	classType := schedule.ClassType.ConvertToLiveClassType()
 	if classType == entity.LiveClassTypeInvalid {
-		log.Error(ctx, "MakeLiveToken:ConvertToLiveClassType invalid",
+		log.Error(ctx, "MakeScheduleLiveToken:ConvertToLiveClassType invalid",
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID),
 			log.Any("schedule.ClassType", schedule.ClassType),
@@ -80,7 +88,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 
 	name, err := s.getUserName(ctx, op)
 	if err != nil {
-		log.Error(ctx, "MakeLiveToken:get user name by id error",
+		log.Error(ctx, "MakeScheduleLiveToken:get user name by id error",
 			log.Err(err),
 			log.Any("op", op),
 			log.String("scheduleID", scheduleID))
@@ -89,7 +97,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	liveTokenInfo.Name = name
 	isTeacher, err := s.isTeacherByClass(ctx, op, schedule.ClassID)
 	if err != nil {
-		log.Error(ctx, "MakeLivePreviewToken:judge is teacher error",
+		log.Error(ctx, "MakeScheduleLiveToken:judge is teacher error",
 			log.Err(err),
 			log.Any("op", op))
 		return "", err
@@ -100,7 +108,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	} else {
 		liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
 		if err != nil {
-			log.Error(ctx, "MakeLiveToken:get material error",
+			log.Error(ctx, "MakeScheduleLiveToken:get material error",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("liveTokenInfo", liveTokenInfo),
@@ -111,7 +119,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 
 	token, err := s.createJWT(ctx, liveTokenInfo)
 	if err != nil {
-		log.Error(ctx, "MakeLiveToken:create jwt error",
+		log.Error(ctx, "MakeScheduleLiveToken:create jwt error",
 			log.Err(err),
 			log.Any("op", op),
 			log.Any("liveTokenInfo", liveTokenInfo),
@@ -129,7 +137,14 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		OrgID:     op.OrgID,
 		ClassType: entity.LiveClassTypeLive,
 	}
-
+	err := GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, contentID)
+	if err != nil {
+		log.Error(ctx, "MakeContentLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("contentID", contentID))
+		return "", err
+	}
 	name, err := s.getUserName(ctx, op)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:get user name by id error",

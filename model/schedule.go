@@ -22,7 +22,8 @@ import (
 )
 
 var (
-	ErrScheduleEditMissTime = errors.New("editable time has expired")
+	ErrScheduleEditMissTime       = errors.New("editable time has expired")
+	ErrScheduleLessonPlanUnAuthed = errors.New("schedule content data unAuthed")
 )
 
 type IScheduleModel interface {
@@ -47,6 +48,7 @@ type IScheduleModel interface {
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
+	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -892,12 +894,12 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 	classService := external.GetClassServiceProvider()
 	classInfos, err := classService.BatchGet(ctx, operator, []string{v.ClassID})
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		log.Error(ctx, "verifyData:GetClassServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
 	for _, item := range classInfos {
 		if item == nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider class info not found", log.Any("ScheduleVerify", v))
+			log.Error(ctx, "verifyData:GetClassServiceProvider class info not found", log.Any("ScheduleVerify", v))
 			return constant.ErrRecordNotFound
 		}
 	}
@@ -914,7 +916,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		log.Error(ctx, "verifyData:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
 	// program
@@ -926,22 +928,48 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+		log.Error(ctx, "verifyData:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
 
 	// verify lessPlan type
 	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
+		log.Error(ctx, "verifyData:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
 	if lessonPlanInfo.ContentType != entity.ContentTypePlan {
-		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
+		log.Error(ctx, "verifyData:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
 		return constant.ErrInvalidArgs
 	}
 	// verify lessPlan is valid
+	err = s.VerifyLessonPlanAuthed(ctx, operator, v.LessonPlanID)
 
+	return err
+}
+
+func (s *scheduleModel) VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error {
+	// verify lessPlan is valid
+	contentMap, err := GetAuthedContentRecordsModel().GetContentAuthByIDList(ctx, []string{lessonPlanID}, operator)
+	if err != nil {
+		log.Error(ctx, "verifyLessonPlanAuthed:GetAuthedContentRecordsModel.GetContentAuthByIDList error", log.Err(err),
+			log.String("lessonPlanID", lessonPlanID),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	item, ok := contentMap[lessonPlanID]
+	if !ok {
+		log.Error(ctx, "verifyLessonPlanAuthed:lesson plan not found", log.Any("operator", operator), log.String("lessonPlanID", lessonPlanID))
+		return constant.ErrRecordNotFound
+	}
+	if item == entity.ContentUnauthed {
+		log.Info(ctx, "verifyLessonPlanAuthed:lesson plan unAuthed", log.Any("operator", operator),
+			log.Any("lessonInfo", item),
+			log.String("lessonPlanID", lessonPlanID),
+		)
+		return ErrScheduleLessonPlanUnAuthed
+	}
 	return nil
 }
 
