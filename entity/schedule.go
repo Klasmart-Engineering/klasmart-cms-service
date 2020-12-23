@@ -464,3 +464,8 @@ const (
 func (s ScheduleViewType) String() string {
 	return string(s)
 }
+
+type ScheduleRealTimeView struct {
+	ID               string `json:"id"`
+	LessonPlanIsAuth bool   `json:"lesson_plan_is_auth"`
+}
