@@ -582,7 +582,7 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 			validTeacherIDs = append(validTeacherIDs, teacher.ID)
 		}
 		var schoolIDs []string
-		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator, operator.UserID)
+		schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
 		for _, school := range schools {
 			schoolIDs = append(schoolIDs, school.ID)
 		}

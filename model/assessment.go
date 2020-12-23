@@ -1157,7 +1157,7 @@ func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator
 		var teacherIDs []string
 		{
 			var schoolIDs []string
-			schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator, operator.UserID)
+			schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
 			if err != nil {
 				log.Error(ctx, "check and filter list with org: get schools failed",
 					log.Any("operator", operator),
