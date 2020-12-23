@@ -183,16 +183,6 @@ CREATE TABLE `cms_folder_items` (
     `delete_at` bigint comment 'delete time (unix seconds)',
     PRIMARY KEY (`id`)
 ) comment 'cms folder' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
-create fulltext index fullindex_name_description_keywords_author_shortcode on learning_outcomes(
-    `name`,
-    `keywords`,
-    `description`,
-    `author_name`,
-    `shortcode`
-);
-drop index fullindex_name_description_keywords_author_shortcode on learning_outcomes;
-alter table learning_outcomes add fulltext index fullindex_name_description_keywords_shortcode(`name`, `keywords`, `description`, `shortcode`);
 
 CREATE TABLE IF NOT EXISTS  `users` (
   `user_id` varchar(64) NOT NULL,
