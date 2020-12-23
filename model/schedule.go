@@ -1201,13 +1201,11 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, condition *da.S
 	}
 	dateList := make([]string, 0)
 	for _, item := range scheduleList {
-		if item.ClassType == entity.ScheduleClassTypeHomework {
-			str := utils.TimeStampString(item.DueAt, loc, utils.TimeLayoutDay)
-			dateList = append(dateList, str)
-		} else {
-			betweenTimes := utils.DateBetweenTimeAndFormat(item.StartAt, item.EndAt, loc)
-			dateList = append(dateList, betweenTimes...)
+		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt <= 0 {
+			continue
 		}
+		betweenTimes := utils.DateBetweenTimeAndFormat(item.StartAt, item.EndAt, loc)
+		dateList = append(dateList, betweenTimes...)
 	}
 	result := utils.SliceDeduplication(dateList)
 	err = da.GetScheduleRedisDA().Add(ctx, condition, result)
