@@ -107,7 +107,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				log.Any("schedule", schedule))
 			return "", err
 		}
-		liveTokenInfo.Materials, err = s.getMaterials(ctx, schedule.LessonPlanID)
+		liveTokenInfo.Materials, err = s.getMaterials(ctx, op, schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:get material error",
 				log.Err(err),
@@ -163,7 +163,7 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	liveTokenInfo.Materials, err = s.getMaterials(ctx, contentID)
+	liveTokenInfo.Materials, err = s.getMaterials(ctx, op, contentID)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:get material error",
 			log.Err(err),
@@ -266,7 +266,7 @@ func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.O
 	return hasPermission, nil
 }
 
-func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]*entity.LiveMaterial, error) {
+func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, contentID string) ([]*entity.LiveMaterial, error) {
 	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err == dbo.ErrRecordNotFound {
@@ -281,9 +281,34 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, contentID string) ([]
 			log.String("contentID", contentID))
 		return nil, err
 	}
+	ids := make([]string, 0, len(contentList))
+	for _, item := range contentList {
+		if item == nil {
+			continue
+		}
+		ids = append(ids, item.ID)
+	}
+	contentMap, err := GetAuthedContentRecordsModel().GetContentAuthByIDList(ctx, ids, op)
+	if err != nil {
+		log.Error(ctx, "getMaterials:GetAuthedContentRecordsModel.GetContentAuthByIDList error",
+			log.Err(err),
+			log.Strings("lessonPlanIDs", ids),
+			log.Any("operator", op),
+		)
+		return nil, err
+	}
 	materials := make([]*entity.LiveMaterial, 0, len(contentList))
 	for _, item := range contentList {
 		if item == nil {
+			continue
+		}
+		authInfo, ok := contentMap[item.ID]
+		if !ok || authInfo == entity.ContentUnauthed {
+			log.Info(ctx, "material data error",
+				log.Any("item", item),
+				log.Int("authInfo", int(authInfo)),
+				log.String("lessonPlanID", contentID),
+			)
 			continue
 		}
 		materialItem := &entity.LiveMaterial{
