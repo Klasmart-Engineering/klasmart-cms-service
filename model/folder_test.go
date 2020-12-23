@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -22,7 +23,8 @@ func initDB() {
 		c.ShowSQL = true
 		c.MaxIdleConns = 2
 		c.MaxOpenConns = 4
-		c.ConnectionString = "root:Badanamu123456@tcp(192.168.1.234:3310)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+		//c.ConnectionString = "root:Badanamu123456@tcp(192.168.1.234:3310)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+		c.ConnectionString = "root:Badanamu123456@tcp(192.168.1.234:3307)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
 	})
 	if err != nil {
 		log.Error(context.TODO(), "create dbo failed", log.Err(err))
@@ -39,12 +41,12 @@ func initDB() {
 	dbo.ReplaceGlobal(dboHandler)
 }
 
-//func TestMain(m *testing.M) {
-//	fmt.Println("begin test")
-//	initDB()
-//	m.Run()
-//	fmt.Println("end test")
-//}
+func TestMain(m *testing.M) {
+	fmt.Println("begin test")
+	initDB()
+	m.Run()
+	fmt.Println("end test")
+}
 func fakeOperator() *entity.Operator {
 	return &entity.Operator{
 		UserID: "1",

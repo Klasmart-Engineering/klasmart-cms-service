@@ -3,22 +3,24 @@ package contentdata
 import (
 	"context"
 	"encoding/json"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
-	"strings"
 )
 
 type LessonData struct {
-	SegmentId  string          `json:"segmentId"`
-	Condition  string          `json:"condition"`
-	MaterialId string          `json:"materialId"`
-	Material   *entity.ContentInfo `json:"material"`
-	NextNode   []*LessonData   `json:"next"`
-	TeacherManual string 	`json:"teacher_manual"`
-	TeacherManualName string 	`json:"teacher_manual_name"`
+	SegmentId         string              `json:"segmentId"`
+	Condition         string              `json:"condition"`
+	MaterialId        string              `json:"materialId"`
+	Material          *entity.ContentInfo `json:"material,omitempty"`
+	NextNode          []*LessonData       `json:"next"`
+	TeacherManual     string              `json:"teacher_manual"`
+	TeacherManualName string              `json:"teacher_manual_name"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -67,9 +69,10 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	h.TeacherManual = t.TeacherManual
 	h.TeacherManualName = t.TeacherManualName
+	h.Material = nil
 	return nil
 }
-func (l *LessonData) SubContentIds(ctx context.Context) []string {
+func (l *LessonData) SubContentIDs(ctx context.Context) []string {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -77,12 +80,21 @@ func (l *LessonData) SubContentIds(ctx context.Context) []string {
 	return materialList
 }
 
+func (l *LessonData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
+	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+		newID, ok := IDMap[l.MaterialId]
+		if ok {
+			l.MaterialId = newID
+		}
+	})
+}
+
 func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentType) error {
-	if contentType != entity.ContentTypeLesson {
+	if contentType != entity.ContentTypePlan {
 		return ErrInvalidContentType
 	}
 	if l.TeacherManual != "" {
-		teacherManualPairs :=strings.Split(l.TeacherManual, "-")
+		teacherManualPairs := strings.Split(l.TeacherManual, constant.TeacherManualSeparator)
 		if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
 			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
 				log.String("partition", string(storage.TeacherManualStoragePartition)))
@@ -127,6 +139,37 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 	return nil
 }
 
+func (l *LessonData) PrepareVersion(ctx context.Context) error {
+	//list all related content ids
+	ids := l.SubContentIDs(ctx)
+	_, contentList, err := da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
+		IDS: ids,
+	})
+	if err != nil {
+		return err
+	}
+
+	//build version map
+	contentIDMap := make(map[string]string)
+	for i := range contentList {
+		if contentList[i].LatestID != "" {
+			contentIDMap[contentList[i].ID] = contentList[i].LatestID
+		} else {
+			contentIDMap[contentList[i].ID] = contentList[i].ID
+		}
+	}
+
+	//update materials to new version
+	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+		newID, ok := contentIDMap[l.MaterialId]
+		if ok {
+			l.MaterialId = newID
+		}
+	})
+
+	return nil
+}
+
 func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
@@ -138,17 +181,59 @@ func (l *LessonData) PrepareResult(ctx context.Context, operator *entity.Operato
 	if err != nil {
 		return err
 	}
+	contentList, err = l.filterMaterialsByPermission(ctx, contentList, operator)
+	if err != nil {
+		return err
+	}
 
 	contentMap := make(map[string]*entity.Content)
 	for i := range contentList {
 		contentMap[contentList[i].ID] = contentList[i]
 	}
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
-		data, ok:= contentMap[l.MaterialId]
+		data, ok := contentMap[l.MaterialId]
 		if ok {
 			material, _ := ConvertContentObj(ctx, data, operator)
 			l.Material = material
 		}
 	})
 	return nil
+}
+
+func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentList []*entity.Content, operator *entity.Operator) ([]*entity.Content, error) {
+	result := make([]*entity.Content, 0)
+	pendingCheckAuthContents := make([]*entity.Content, 0)
+	pendingCheckAuthIDs := make([]string, 0)
+	for i := range contentList {
+		if contentList[i].Org == operator.OrgID {
+			result = append(result, contentList[i])
+		}else{
+			pendingCheckAuthContents = append(pendingCheckAuthContents, contentList[i])
+			pendingCheckAuthIDs = append(pendingCheckAuthIDs, contentList[i].ID)
+		}
+	}
+	//if contains materials is not from org, check auth
+	if len(pendingCheckAuthContents) > 0 {
+		condition := da.AuthedContentCondition{
+			OrgIDs: []string{operator.OrgID},
+			ContentIDs: pendingCheckAuthIDs,
+		}
+		authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)
+		if err != nil{
+			log.Error(ctx, "search auth content failed",
+				log.Err(err),
+				log.Any("condition", condition))
+			return nil, err
+		}
+		for i := range pendingCheckAuthContents {
+			for j := range authRecords {
+				if pendingCheckAuthContents[i].ID == authRecords[j].ContentID{
+					result = append(result, pendingCheckAuthContents[i])
+					break
+				}
+			}
+		}
+	}
+
+	return result, nil
 }

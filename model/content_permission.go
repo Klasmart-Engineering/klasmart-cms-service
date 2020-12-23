@@ -477,7 +477,7 @@ func (s *ContentPermissionModel) createPermissionName(ctx context.Context, conte
 	switch contentType {
 	case entity.ContentTypeMaterial:
 		return []external.PermissionName{external.CreateContentPage201, external.CreateLessonMaterial220}
-	case entity.ContentTypeLesson:
+	case entity.ContentTypePlan:
 		return []external.PermissionName{external.CreateContentPage201, external.CreateLessonPlan221}
 	case entity.ContentTypeAssets:
 		return []external.PermissionName{external.CreateContentPage201, external.CreateAsset320}
@@ -489,7 +489,7 @@ func (s *ContentPermissionModel) editPermissionName(ctx context.Context, content
 	switch contentType {
 	case entity.ContentTypeMaterial:
 		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonMaterialMetadataAndContent236}
-	case entity.ContentTypeLesson:
+	case entity.ContentTypePlan:
 		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonPlanContent238, external.EditLessonPlanMetadata237}
 	}
 	return []external.PermissionName{external.EditOrgPublishedContent235}

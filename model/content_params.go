@@ -16,7 +16,7 @@ import (
 )
 
 func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string {
-	if c.ContentType == entity.ContentTypeLesson {
+	if c.ContentType == entity.ContentTypePlan {
 		return constant.SourceTypeLesson
 	}
 	if c.ContentType == entity.ContentTypeAssets {
@@ -27,7 +27,7 @@ func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContent
 }
 
 func (cm ContentModel) checkSuggestTime(ctx context.Context, suggestTime int, contentType entity.ContentType, subIds []string) error {
-	if contentType == entity.ContentTypeLesson {
+	if contentType == entity.ContentTypePlan {
 		//if content type is lesson, check suggest time
 		subContents, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), subIds)
 		if err != nil {
@@ -69,7 +69,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}
 
 	//check suggest time
-	err = cm.checkSuggestTime(ctx, c.SuggestTime, c.ContentType, cd.SubContentIds(ctx))
+	err = cm.checkSuggestTime(ctx, c.SuggestTime, c.ContentType, cd.SubContentIDs(ctx))
 	if err != nil {
 		log.Warn(ctx, "check suggest time failed", log.Err(err), log.Any("req", c))
 		return nil, err
@@ -102,7 +102,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		c.DrawActivity = false
 		c.LessonType = ""
 	}
-	if c.ContentType == entity.ContentTypeLesson {
+	if c.ContentType == entity.ContentTypePlan {
 		c.LessonType = ""
 	}
 
@@ -219,6 +219,13 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 			return nil, err
 		}
 
+		//TODO:For authed content => update contentdata sub content versions => done
+		//update for version
+		err = cd.PrepareVersion(ctx)
+		if err != nil {
+			log.Error(ctx, "can't update contentdata version for details", log.Err(err))
+			return nil, ErrParseContentDataDetailsFailed
+		}
 		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual, TeacherManualName: data.TeacherManualName})
 		if err != nil {
 			return nil, ErrInvalidContentData
@@ -236,7 +243,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		}
 
 		//check suggest time
-		err = cm.checkSuggestTime(ctx, data.SuggestTime, data.ContentType, cd.SubContentIds(ctx))
+		err = cm.checkSuggestTime(ctx, data.SuggestTime, data.ContentType, cd.SubContentIDs(ctx))
 		if err != nil {
 			log.Warn(ctx, "check suggest time failed", log.Err(err), log.Any("req", data), log.Any("content", content))
 			return nil, err
@@ -249,6 +256,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
 	content.SourceID = content.ID
+	content.CopySourceID = content.ID
 	content.Version = content.Version + 1
 	content.ID = ""
 	content.LockedBy = constant.LockedByNoBody
@@ -256,6 +264,17 @@ func (cm ContentModel) prepareCloneContentParams(ctx context.Context, content *e
 	//content.Author = user.UserID
 	//content.Org = user.OrgID
 	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusDraft)
+	return content
+}
+
+func (cm ContentModel) prepareCopyContentParams(ctx context.Context, content *entity.Content, user *entity.Operator) *entity.Content {
+	content.Version = 1
+	content.ID = ""
+	content.LockedBy = constant.LockedByNoBody
+	content.Author = user.UserID
+	content.Org = user.OrgID
+	content.CopySourceID = content.ID
+	content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 	return content
 }
 

@@ -827,10 +827,18 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 		log.Info(ctx, "lessonPlanID is empty", log.String("lessonPlanID", lessonPlanID))
 		return false, errors.New("lessonPlanID is empty")
 	}
-	condition := &da.ScheduleCondition{
-		LessonPlanID: sql.NullString{
-			String: lessonPlanID,
-			Valid:  true,
+	lessonPlanPastIDs, err := GetContentModel().GetPastContentIDByID(ctx, dbo.MustGetDB(ctx), lessonPlanID)
+	if err != nil {
+		logger.Error(ctx, "ExistScheduleByLessonPlanID:GetContentModel.GetPastContentIDByID error",
+			log.Err(err),
+			log.String("lessonPlanID", lessonPlanID),
+		)
+		return false, err
+	}
+	condition := da.ScheduleCondition{
+		LessonPlanIDs: entity.NullStrings{
+			Strings: lessonPlanPastIDs,
+			Valid:   true,
 		},
 	}
 	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
@@ -922,16 +930,18 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		return err
 	}
 
-	// lessPlan
+	// verify lessPlan type
 	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get lessPlan info error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-	if lessonPlanInfo.ContentType != entity.ContentTypeLesson {
+	if lessonPlanInfo.ContentType != entity.ContentTypePlan {
 		log.Error(ctx, "getBasicInfo:content type is not lesson", log.Any("lessonPlanInfo", lessonPlanInfo), log.Any("ScheduleVerify", v))
 		return constant.ErrInvalidArgs
 	}
+	// verify lessPlan is valid
+
 	return nil
 }
 
