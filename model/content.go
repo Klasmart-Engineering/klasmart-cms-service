@@ -1530,7 +1530,7 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 				log.String("data", content.Data))
 			return nil, err
 		}
-		contentIDList := contentData.(*MaterialData).SubContentIDs(ctx)
+		contentIDList := contentData.(*LessonData).SubContentIDs(ctx)
 		outcomes, err := cm.getVisibleContentOutcomeByIDs(ctx, tx, contentIDList)
 		if err != nil{
 			log.Error(ctx, "can't get outcomes from materials",
