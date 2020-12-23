@@ -370,8 +370,13 @@ func (ac *AuthedContent) expandRelatedContentID(ctx context.Context, tx *dbo.DBC
 			}
 			relatedIDs := data.SubContentIDs(ctx)
 			ret = append(ret, relatedIDs...)
+			log.Info(ctx, "expanding content IDs",
+				log.Strings("ids", relatedIDs))
 		}
 
+		log.Info(ctx, "content IDs",
+			log.String("id", contents[i].ID),
+			log.Any("content", contents[i]))
 		ret = append(ret, contents[i].ID)
 	}
 	return ret, nil
