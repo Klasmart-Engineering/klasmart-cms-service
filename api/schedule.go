@@ -399,11 +399,19 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	ctx := c.Request.Context()
+	offsetStr := c.Query("time_zone_offset")
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil {
+		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	}
+	loc := utils.GetTimeLocationByOffset(offset)
+
 	condition, err := s.getScheduleTimeViewCondition(c)
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().Query(ctx, condition)
+	result, err := model.GetScheduleModel().Query(ctx, condition, loc)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
