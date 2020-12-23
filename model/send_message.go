@@ -78,10 +78,11 @@ func (w *TencentSMS) assignStringList(src []string, dst *[]*string) {
 
 // add head to mobile, e.g. in China, +86
 func (w *TencentSMS) addMobilePrefix(mobile, head string) string {
-	sb := strings.Builder{}
 	if !strings.HasPrefix(mobile, head) {
+		sb := strings.Builder{}
 		sb.WriteString(head)
 		sb.WriteString(mobile)
+		return sb.String()
 	}
-	return sb.String()
+	return mobile
 }
