@@ -7,12 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
-
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
@@ -68,7 +66,7 @@ func (s *Server) createContent(c *gin.Context) {
 
 	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
 	switch err {
-	case contentdata.ErrContentDataRequestSource:
+	case model.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -377,7 +375,7 @@ func (s *Server) updateContent(c *gin.Context) {
 		return
 	}
 	switch err {
-	case contentdata.ErrContentDataRequestSource:
+	case model.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))

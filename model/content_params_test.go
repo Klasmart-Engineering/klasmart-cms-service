@@ -7,13 +7,12 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/contentdata"
 	"testing"
 )
 
 func TestUnmarshalContentData(t *testing.T) {
 	data := "{\"segmentId\":\"1\",\"condition\":\"\",\"materialId\":\"5fbdb67de0ad99a97be8681c\",\"material\":null,\"next\":[{\"segmentId\":\"11\",\"condition\":\"\",\"materialId\":\"5fbcd442869fc4f88ee362cd\",\"material\":null,\"next\":[{\"segmentId\":\"111\",\"condition\":\"\",\"materialId\":\"5fbcbc5f4a60a5856c1abbea\",\"material\":null,\"next\":[],\"teacher_manual\":\"\"}],\"teacher_manual\":\"\"}],\"teacher_manual\":\"teacher_manual-5fbf0d0c25b6981b872b7988.pdf\"}"
-	ins := contentdata.LessonData{}
+	ins := LessonData{}
 	err := json.Unmarshal([]byte(data), &ins)
 	if err != nil {
 		t.Error(err)
@@ -33,12 +32,12 @@ func TestMigrateInvalidData(t *testing.T) {
 	count := 0
 	for i := range contents{
 		if contents[i].ContentType == entity.ContentTypeMaterial {
-			contentData, err := contentdata.CreateContentData(ctx, entity.ContentTypeMaterial, contents[i].Data)
+			contentData, err := CreateContentData(ctx, entity.ContentTypeMaterial, contents[i].Data)
 			if err != nil{
 				t.Error(err)
 				return
 			}
-			materialData := contentData.(*contentdata.MaterialData)
+			materialData := contentData.(*MaterialData)
 			if materialData.FileType == 0 || materialData.InputSource == 0 {
 				switch materialData.Source.Ext() {
 					case "jpg":
@@ -116,12 +115,12 @@ func TestMigrateContentData(t *testing.T) {
 			}
 			contents[i] = tempContent
 		case entity.ContentTypeMaterial:
-			contentData, err := contentdata.CreateContentData(ctx, entity.ContentTypeMaterial, contents[i].Data)
+			contentData, err := CreateContentData(ctx, entity.ContentTypeMaterial, contents[i].Data)
 			if err != nil {
 				t.Error(err)
 				return
 			}
-			materialData := contentData.(*contentdata.MaterialData)
+			materialData := contentData.(*MaterialData)
 
 			if materialData.FileType == 0 || materialData.InputSource == 0  {
 				switch materialData.Source.Ext() {
@@ -169,11 +168,11 @@ func TestMigrateContentData(t *testing.T) {
 
 func migrateContentData(ctx context.Context, content *entity.Content, fileType entity.FileType) (*entity.Content, error){
 	content.ContentType = entity.ContentTypeMaterial
-	contentData, err := contentdata.CreateContentData(ctx, entity.ContentTypeMaterial, content.Data)
+	contentData, err := CreateContentData(ctx, entity.ContentTypeMaterial, content.Data)
 	if err != nil {
 		return nil, err
 	}
-	materialData := contentData.(*contentdata.MaterialData)
+	materialData := contentData.(*MaterialData)
 	materialData.FileType = fileType
 	materialData.InputSource = entity.MaterialInputSourceDisk
 	data, err := materialData.Marshal(ctx)

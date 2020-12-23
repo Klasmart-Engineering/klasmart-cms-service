@@ -1,4 +1,4 @@
-package contentdata
+package model
 
 import (
 	"context"
@@ -11,9 +11,7 @@ import (
 )
 
 var (
-	ErrInvalidContentType       = errors.New("invalid content type")
 	ErrContentDataRequestSource = errors.New("material require source")
-	ErrInvalidMaterialType      = errors.New("invalid material type")
 	ErrInvalidSourceExt         = errors.New("invalid source extension")
 
 	ErrTeacherManual        = errors.New("teacher manual resource is not exist")
@@ -95,6 +93,6 @@ func (h *MaterialData) PrepareVersion(ctx context.Context) error {
 }
 func (l *MaterialData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
 }
-func (h *MaterialData) PrepareResult(ctx context.Context, operator *entity.Operator) error {
+func (h *MaterialData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
 	return nil
 }
