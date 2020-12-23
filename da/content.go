@@ -276,7 +276,7 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 }
 func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
 	co.ID = cid
-	log.Info(ctx, "Update contentdata da", log.String("id", co.ID))
+	log.Info(ctx, "Update contentdata path", log.String("id", co.ID))
 	_, err := cd.s.UpdateTx(ctx, tx, &co)
 	if err != nil {
 		return err
