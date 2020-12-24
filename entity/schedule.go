@@ -389,6 +389,7 @@ type ScheduleDetailsView struct {
 	Repeat      RepeatOptions     `json:"repeat"`
 	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ScheduleBasic
+	RealTimeStatus ScheduleRealTimeView `json:"real_time_status"`
 }
 
 type ScheduleSearchView struct {
