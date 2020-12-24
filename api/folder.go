@@ -441,20 +441,17 @@ func (s *Server) shareFolders(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
-	orgInfo, err := model.GetOrganizationPropertyModel().GetOrDefault(ctx, op.OrgID)
+	//check permission
+	hasPermission, err := model.GetFolderPermissionModel().CheckShareFolderOperatorPermission(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "parse get folder shared records params failed",
-			log.Err(err),
-			log.String("orgID", op.OrgID))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	if orgInfo.Type != entity.OrganizationTypeHeadquarters {
-		log.Info(ctx, "org is not in head quarter",
-			log.Any("orgInfo", orgInfo))
+	if !hasPermission {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
+
 
 	var data entity.ShareFoldersRequest
 	err = c.ShouldBind(&data)

@@ -27,6 +27,7 @@ const (
 	AssociateLearningOutcomes284            PermissionName = "associate_learning_outcomes_284"
 
 	CreateFolder289 PermissionName = "create_folder_289"
+	PublishFeaturedContentForAllHub PermissionName = "publish_featured_content_for_all_hub_79000"
 
 	CreateAssetPage301 PermissionName = "create_asset_page_301"
 	CreateAsset320     PermissionName = "create_asset_320"
