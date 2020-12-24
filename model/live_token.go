@@ -39,7 +39,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 
-	if tokenType == entity.LiveTokenTypeLive {
+	if tokenType == entity.LiveTokenTypeLive && schedule.ClassType != entity.ScheduleClassTypeHomework {
 		now := time.Now().Unix()
 		diff := utils.TimeStampDiff(schedule.StartAt, now)
 		if diff >= constant.ScheduleAllowGoLiveTime {
@@ -267,7 +267,7 @@ func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.O
 }
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, contentID string) ([]*entity.LiveMaterial, error) {
-	contentList, err := GetContentModel().  GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID, op)
+	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID, op)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "getMaterials:get content sub by id not found",
