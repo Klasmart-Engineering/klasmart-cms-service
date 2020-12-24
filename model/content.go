@@ -99,7 +99,7 @@ type IContentModel interface {
 
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error)
+	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
@@ -1027,7 +1027,7 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	return nil
 }
 
-func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]*entity.SubContentsWithName, error) {
+func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
@@ -1047,49 +1047,62 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 		return nil, err
 	}
-	ids := cd.SubContentIDs(ctx)
-	//若不存在子内容，则返回当前内容
-	if obj.ContentType == entity.ContentTypeMaterial {
+
+	switch v := cd.(type) {
+	case *LessonData:
+		ids := cd.SubContentIDs(ctx)
+		//存在子内容，则返回子内容
+		content, err := ConvertContentObj(ctx, obj, user)
+		if err != nil {
+			log.Error(ctx, "can't parse contentdata", log.Err(err))
+			return nil, ErrParseContentDataFailed
+		}
+		err = v.PrepareResult(ctx, content, user)
+		if err != nil {
+			log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
+			return nil, err
+		}
+		ret := make([]*entity.SubContentsWithName, 0)
+		v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+			if l.Material != nil {
+				cd0, err := CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+				if err != nil {
+					log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", subContentMap[ids[i]]))
+					return
+				}
+				ret = append(ret, &entity.SubContentsWithName{
+					ID:   l.Material.ID,
+					Name: l.Material.Name,
+					Data: cd0,
+				})
+			}
+		})
+		return ret, nil
+	case *MaterialData:
+		//若不存在子内容，则返回当前内容
 		ret := []*entity.SubContentsWithName{
 			{
 				ID:   cid,
 				Name: obj.Name,
-				Data: cd,
+				Data: v,
+			},
+		}
+		return ret, nil
+	case *AssetsData:
+		//若不存在子内容，则返回当前内容
+		ret := []*entity.SubContentsWithName{
+			{
+				ID:   cid,
+				Name: obj.Name,
+				Data: v,
 			},
 		}
 		return ret, nil
 	}
 
-	//存在子内容，则返回子内容
-	subContents, err := da.GetContentDA().GetContentByIDList(ctx, tx, ids)
-	if err != nil {
-		log.Error(ctx, "can't get sub contents", log.Err(err), log.Strings("ids", ids))
-		return nil, err
-	}
-	subContentMap := make(map[string]*entity.Content, len(subContents))
-	for i := range subContents {
-		subContentMap[subContents[i].ID] = subContents[i]
-	}
 
-	ret := make([]*entity.SubContentsWithName, 0)
-	for i := range ids {
-		subContent, ok := subContentMap[ids[i]]
-		if !ok {
-			continue
-		}
-		cd, err := CreateContentData(ctx, subContent.ContentType, subContent.Data)
-		if err != nil {
-			log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", subContentMap[ids[i]]))
-			return nil, err
-		}
-		ret = append(ret, &entity.SubContentsWithName{
-			ID:   ids[i],
-			Name: subContent.Name,
-			Data: cd,
-		})
-	}
 
-	return ret, nil
+	return nil, ErrInvalidContentData
 }
 
 func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error) {
