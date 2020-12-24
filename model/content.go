@@ -1216,7 +1216,7 @@ func (cm *ContentModel) GetContentNameByIDList(ctx context.Context, tx *dbo.DBCo
 		return resp, nil
 	}
 
-	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
+	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, nid)
 	if err != nil {
 		log.Error(ctx, "can't search content", log.Err(err), log.Strings("cids", cids))
 		return nil, ErrReadContentFailed
