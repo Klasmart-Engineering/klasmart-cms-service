@@ -754,6 +754,15 @@ func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, progr
 }
 
 func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
+	realTimeData, err := s.GetScheduleRealTimeStatus(ctx, operator, id)
+	if err != nil {
+		log.Error(ctx, "GetByID using cache:GetScheduleRealTimeStatus error",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("scheduleID", id),
+		)
+		return nil, err
+	}
 	cacheData, err := da.GetScheduleRedisDA().GetByIDs(ctx, []string{id})
 	if err == nil && len(cacheData) > 0 {
 		log.Debug(ctx, "GetByID:using cache",
@@ -762,6 +771,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		)
 		data := cacheData[0]
 		data.Status = data.Status.GetScheduleStatus(data.EndAt)
+		data.RealTimeStatus = *realTimeData
 		return data, nil
 	}
 	var schedule = new(entity.Schedule)
@@ -778,18 +788,19 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 	}
 
 	result := &entity.ScheduleDetailsView{
-		ID:          schedule.ID,
-		Title:       schedule.Title,
-		OrgID:       schedule.OrgID,
-		StartAt:     schedule.StartAt,
-		EndAt:       schedule.EndAt,
-		IsAllDay:    schedule.IsAllDay,
-		ClassType:   schedule.ClassType,
-		DueAt:       schedule.DueAt,
-		Description: schedule.Description,
-		Version:     schedule.ScheduleVersion,
-		IsRepeat:    schedule.RepeatID != "",
-		Status:      schedule.Status.GetScheduleStatus(schedule.EndAt),
+		ID:             schedule.ID,
+		Title:          schedule.Title,
+		OrgID:          schedule.OrgID,
+		StartAt:        schedule.StartAt,
+		EndAt:          schedule.EndAt,
+		IsAllDay:       schedule.IsAllDay,
+		ClassType:      schedule.ClassType,
+		DueAt:          schedule.DueAt,
+		Description:    schedule.Description,
+		Version:        schedule.ScheduleVersion,
+		IsRepeat:       schedule.RepeatID != "",
+		Status:         schedule.Status.GetScheduleStatus(schedule.EndAt),
+		RealTimeStatus: *realTimeData,
 	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
