@@ -1247,11 +1247,12 @@ func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entit
 	}
 	result := new(entity.ScheduleRealTimeView)
 	result.ID = schedule.ID
-
-	// lesson plan real time info
-	err = s.VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
-	if err == nil {
-		result.LessonPlanIsAuth = true
+	if schedule.ClassType != entity.ScheduleClassTypeTask {
+		// lesson plan real time info
+		err = s.VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+		if err == nil {
+			result.LessonPlanIsAuth = true
+		}
 	}
 
 	return result, nil
