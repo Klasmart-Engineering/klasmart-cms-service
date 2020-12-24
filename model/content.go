@@ -1050,7 +1050,6 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 
 	switch v := cd.(type) {
 	case *LessonData:
-		ids := cd.SubContentIDs(ctx)
 		//存在子内容，则返回子内容
 		content, err := ConvertContentObj(ctx, obj, user)
 		if err != nil {
@@ -1067,7 +1066,10 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			if l.Material != nil {
 				cd0, err := CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
 				if err != nil {
-					log.Error(ctx, "can't parse sub content data", log.Err(err), log.Any("subContent", subContentMap[ids[i]]))
+					log.Error(ctx, "can't parse sub content data",
+						log.Err(err),
+						log.Any("lesson", l),
+						log.Any("subContent", l.Material))
 					return
 				}
 				ret = append(ret, &entity.SubContentsWithName{
@@ -1099,8 +1101,6 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		}
 		return ret, nil
 	}
-
-
 
 	return nil, ErrInvalidContentData
 }
