@@ -66,7 +66,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	data.OrgID = operator.OrgID
 	now := time.Now().Unix()
 
-	if !data.IsRepeat || (data.IsRepeat && data.EditType == entity.ScheduleEditOnlyCurrent) {
+	if (data.ClassType != entity.ScheduleClassTypeHomework) &&
+		(!data.IsRepeat || (data.IsRepeat && data.EditType == entity.ScheduleEditOnlyCurrent)) {
 		if data.StartAt < now || data.StartAt >= data.EndAt {
 			log.Info(ctx, "schedule start_at or end_at is invalid",
 				log.Int64("StartAt", data.StartAt),
@@ -78,6 +79,13 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 	}
+	start, end, ok := s.processScheduleDueDate(c, data.StartAt, data.EndAt, data.DueAt, data.ClassType, loc)
+	if !ok {
+		log.Info(ctx, "process schedule due date failure")
+		return
+	}
+	data.StartAt = start
+	data.EndAt = end
 
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
@@ -85,10 +93,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
-	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
-		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
-		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
-	}
+
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
 	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
@@ -186,7 +191,8 @@ func (s *Server) addSchedule(c *gin.Context) {
 	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", data.TimeZoneOffset))
 	data.OrgID = op.OrgID
 	now := time.Now().Unix()
-	if !data.IsRepeat && (data.StartAt < now || data.StartAt >= data.EndAt) {
+	if (data.ClassType != entity.ScheduleClassTypeHomework) &&
+		(!data.IsRepeat && (data.StartAt < now || data.StartAt >= data.EndAt)) {
 		log.Info(ctx, "schedule start_at or end_at is invalid",
 			log.Int64("StartAt", data.StartAt),
 			log.Int64("EndAt", data.EndAt),
@@ -194,16 +200,19 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	start, end, ok := s.processScheduleDueDate(c, data.StartAt, data.EndAt, data.DueAt, data.ClassType, loc)
+	if !ok {
+		log.Info(ctx, "process schedule due date failure")
+		return
+	}
+	data.StartAt = start
+	data.EndAt = end
 
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
 		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
-	}
-	if data.ClassType == entity.ScheduleClassTypeHomework && data.DueAt > 0 {
-		data.StartAt = utils.StartOfDayByTimeStamp(data.DueAt, loc)
-		data.EndAt = utils.EndOfDayByTimeStamp(data.DueAt, loc)
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
@@ -225,6 +234,38 @@ func (s *Server) addSchedule(c *gin.Context) {
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
+}
+
+func (s *Server) processScheduleDueDate(c *gin.Context, startSrc int64, endSrc int64, dueAt int64, classType entity.ScheduleClassType, loc *time.Location) (int64, int64, bool) {
+	if dueAt <= 0 {
+		return startSrc, endSrc, true
+	}
+	now := time.Now().Unix()
+	ctx := c.Request.Context()
+	lable := GeneralUnknown
+	var day int64
+	switch classType {
+	case entity.ScheduleClassTypeTask:
+		day = utils.GetTimeDiffToDayByTimeStamp(endSrc, dueAt, loc)
+		lable = ScheduleMsgDueDateEarlierEndDate
+	case entity.ScheduleClassTypeHomework:
+		day = utils.GetTimeDiffToDayByTimeStamp(now, dueAt, loc)
+		startSrc = utils.StartOfDayByTimeStamp(dueAt, loc)
+		endSrc = utils.EndOfDayByTimeStamp(dueAt, loc)
+		lable = ScheduleMsgDueDateEarlierToDay
+	}
+	if day < 0 {
+		log.Info(ctx, "schedule dueAt is invalid",
+			log.Int64("StartAt", startSrc),
+			log.Int64("EndAt", endSrc),
+			log.Int64("now", now),
+			log.Int64("DueAt", dueAt),
+			log.Any("classType", classType))
+		c.JSON(http.StatusBadRequest, L(lable))
+		return 0, 0, false
+	}
+
+	return startSrc, endSrc, true
 }
 
 // @Summary getScheduleByID
@@ -863,6 +904,32 @@ func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, pe
 		return false
 	}
 	return true
+}
+
+// @Summary get schedule real-time status
+// @Description get schedule real-time status
+// @Tags schedule
+// @ID getScheduleRealTimeStatus
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Success 200 {object} entity.ScheduleRealTimeView
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id}/real_time [get]
+func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	op := s.getOperator(c)
+	result, err := model.GetScheduleModel().GetScheduleRealTimeStatus(ctx, op, id)
+	switch err {
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
 
 //func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) map[external.PermissionName]bool {
