@@ -360,6 +360,11 @@ func (s *Server) updateContent(c *gin.Context) {
 
 	hasPermission, err := model.GetContentPermissionModel().CheckUpdateContentPermission(ctx, cid, op)
 	if err != nil {
+		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+		if ok {
+			c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
@@ -369,11 +374,6 @@ func (s *Server) updateContent(c *gin.Context) {
 	}
 
 	err = model.GetContentModel().UpdateContent(ctx, dbo.MustGetDB(ctx), cid, data, op)
-	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
-	if ok {
-		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
-		return
-	}
 	switch err {
 	case model.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
@@ -426,6 +426,11 @@ func (s *Server) lockContent(c *gin.Context) {
 
 	hasPermission, err := model.GetContentPermissionModel().CheckLockContentPermission(ctx, cid, op)
 	if err != nil {
+		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+		if ok {
+			c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
