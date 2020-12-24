@@ -30,7 +30,7 @@ func (s Server) h5pSignature(c *gin.Context) {
 	urlStr := c.Query("url")
 	res, err := utils.URLSignature(operator.UserID, urlStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	h5pPath := fmt.Sprintf("%v?badanamuId=%v&timestamp=%016x&randNum=%016x&signature=%v", urlStr, operator.UserID, res.Timestamp, res.RandNum, res.Signature)
@@ -54,7 +54,7 @@ func (s Server) generateH5pJWT(c *gin.Context) {
 	contentId := c.Query("content_id")
 	token, err := utils.GenerateH5pJWT(c.Request.Context(), sub, contentId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, responseMsg(err.Error()))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 

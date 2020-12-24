@@ -369,6 +369,10 @@ type ScheduleListView struct {
 	ClassID      string            `json:"class_id"`
 }
 
+type ScheduleDateView struct {
+	DayDate string
+}
+
 type ScheduleDetailsView struct {
 	ID          string            `json:"id"`
 	Title       string            `json:"title"`
@@ -385,6 +389,7 @@ type ScheduleDetailsView struct {
 	Repeat      RepeatOptions     `json:"repeat"`
 	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ScheduleBasic
+	RealTimeStatus ScheduleRealTimeView `json:"real_time_status"`
 }
 
 type ScheduleSearchView struct {
@@ -445,4 +450,23 @@ type ScheduleIDsCondition struct {
 	ClassID      string
 	LessonPlanID string
 	StartAt      int64
+}
+
+type ScheduleViewType string
+
+const (
+	ScheduleViewTypeDay      ScheduleViewType = "day"
+	ScheduleViewTypeWorkweek ScheduleViewType = "work_week"
+	ScheduleViewTypeWeek     ScheduleViewType = "week"
+	ScheduleViewTypeMonth    ScheduleViewType = "month"
+	ScheduleViewTypeYear     ScheduleViewType = "year"
+)
+
+func (s ScheduleViewType) String() string {
+	return string(s)
+}
+
+type ScheduleRealTimeView struct {
+	ID               string `json:"id"`
+	LessonPlanIsAuth bool   `json:"lesson_plan_is_auth"`
 }

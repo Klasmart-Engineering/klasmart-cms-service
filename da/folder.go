@@ -284,9 +284,10 @@ type FolderCondition struct {
 	Partition entity.FolderPartition
 	Link      string
 
-	NameLike      string
-	Name          string
-	DirDescendant string
+	NameLike          string
+	Name              string
+	DirDescendant     string
+	DirDescendantList []string
 
 	Editors []string
 	Disable bool
@@ -352,6 +353,16 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, "dir_path like ?")
 		params = append(params, s.DirDescendant+"%")
 	}
+	if len(s.DirDescendantList) > 0 {
+		subCondition := make([]string, len(s.DirDescendantList))
+		for i := range s.DirDescendantList {
+			subCondition[i] = "dir_path like ?"
+			params = append(params, s.DirDescendantList[i] + "%")
+		}
+		condition := "(" + strings.Join(subCondition, " or ") + ")"
+		conditions = append(conditions, condition)
+	}
+
 	if s.ExactDirPath != "" {
 		conditions = append(conditions, "dir_path = ?")
 		params = append(params, s.ExactDirPath)

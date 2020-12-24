@@ -532,22 +532,53 @@ func (r *reportModel) getAchievedAttendanceID2OutcomeIDsMap(ctx context.Context,
 }
 
 func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+	checkP603, err := r.checkPermission603(ctx, operator, teacherID)
+	if err != nil {
+		return false, err
+	}
+	if !checkP603 {
+		return false, nil
+	}
+
+	optionalCheckers := []func(context.Context, *entity.Operator, string) (bool, error){
+		r.checkPermission614,
+		r.checkPermission610,
+		r.checkPermission611,
+		r.checkPermission612,
+	}
+	for _, check := range optionalCheckers {
+		ok, err := check(ctx, operator, teacherID)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (r *reportModel) checkPermission603(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP603, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportTeacherReports603)
 	if err != nil {
-		log.Error(ctx, "has report permission: check permission 603 failed",
+		log.Error(ctx, "check permission 603 failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("teacher_id", teacherID),
 		)
 		return false, err
 	}
-	if !hasP603 {
-		return false, nil
+	if hasP603 {
+		return true, nil
 	}
+	return false, nil
+}
 
+func (r *reportModel) checkPermission614(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP614, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewMyReports614)
 	if err != nil {
-		log.Error(ctx, "has report permission: check permission 614 failed",
+		log.Error(ctx, "check permission 614 failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("teacher_id", teacherID),
@@ -557,21 +588,25 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 	if hasP614 && operator.UserID == teacherID {
 		return true, nil
 	}
+	return false, nil
+}
 
+func (r *reportModel) checkPermission610(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP610, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewReports610)
 	if err != nil {
-		log.Error(ctx, "has report permission: check permission 610 failed",
+		log.Error(ctx, "check permission 610 failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("teacher_id", teacherID),
 		)
 		return false, err
 	}
+
 	if hasP610 {
 		var validTeacherIDs []string
 		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 		if err != nil {
-			log.Error(ctx, "has report permission: call external \"GetByOrganization()\" failed",
+			log.Error(ctx, "check permission 610: call external \"GetByOrganization()\" failed",
 				log.Err(err),
 				log.Any("operator", operator),
 				log.Any("teacher_id", teacherID),
@@ -582,13 +617,13 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 			validTeacherIDs = append(validTeacherIDs, teacher.ID)
 		}
 		var schoolIDs []string
-		schools, err := external.GetSchoolServiceProvider().GetSchoolsAssociatedWithUserID(ctx, operator, operator.UserID)
+		schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
 		for _, school := range schools {
 			schoolIDs = append(schoolIDs, school.ID)
 		}
 		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
 		if err != nil {
-			log.Error(ctx, "has report permission: call external \"GetBySchools()\" failed",
+			log.Error(ctx, "check permission 610: call external \"GetBySchools()\" failed",
 				log.Err(err),
 				log.Any("operator", operator),
 				log.Any("teacher_id", teacherID),
@@ -599,6 +634,83 @@ func (r *reportModel) hasReportPermission(ctx context.Context, operator *entity.
 			for _, teacher := range teachers {
 				validTeacherIDs = append(validTeacherIDs, teacher.ID)
 			}
+		}
+		for _, item := range validTeacherIDs {
+			if item == teacherID {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func (r *reportModel) checkPermission611(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+	hasP611, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewMySchoolReports611)
+	if err != nil {
+		log.Error(ctx, "check permission 611 failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("teacher_id", teacherID),
+		)
+		return false, err
+	}
+
+	if hasP611 {
+		var validTeacherIDs []string
+		var schoolIDs []string
+		schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
+		for _, school := range schools {
+			schoolIDs = append(schoolIDs, school.ID)
+		}
+		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
+		if err != nil {
+			log.Error(ctx, "check permission 611: call external \"GetBySchools()\" failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("teacher_id", teacherID),
+			)
+			return false, err
+		}
+		for _, teachers := range schoolID2TeachersMap {
+			for _, teacher := range teachers {
+				validTeacherIDs = append(validTeacherIDs, teacher.ID)
+			}
+		}
+		for _, item := range validTeacherIDs {
+			if item == teacherID {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func (r *reportModel) checkPermission612(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+	hasP612, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewMyOrganizationsReports612)
+	if err != nil {
+		log.Error(ctx, "check permission 612 failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("teacher_id", teacherID),
+		)
+		return false, err
+	}
+
+	if hasP612 {
+		var validTeacherIDs []string
+		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
+		if err != nil {
+			log.Error(ctx, "check permission 612: call external \"GetByOrganization()\" failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("teacher_id", teacherID),
+			)
+			return false, err
+		}
+		for _, teacher := range teachers {
+			validTeacherIDs = append(validTeacherIDs, teacher.ID)
 		}
 		for _, item := range validTeacherIDs {
 			if item == teacherID {

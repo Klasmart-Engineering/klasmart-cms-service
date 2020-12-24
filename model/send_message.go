@@ -63,7 +63,7 @@ func (w *TencentSMS) SendSms(ctx context.Context, receivers []string, msg string
 
 	for _, r := range resp.Response.SendStatusSet {
 		if *r.Fee == 0 {
-			log.Warn(ctx, "SendSms: response error", log.String("failed", *(r.Message)))
+			log.Warn(ctx, "SendSms: response error", log.Strings("receives", receivers), log.String("failed", *(r.Message)))
 		}
 	}
 
@@ -78,10 +78,11 @@ func (w *TencentSMS) assignStringList(src []string, dst *[]*string) {
 
 // add head to mobile, e.g. in China, +86
 func (w *TencentSMS) addMobilePrefix(mobile, head string) string {
-	sb := strings.Builder{}
 	if !strings.HasPrefix(mobile, head) {
+		sb := strings.Builder{}
 		sb.WriteString(head)
 		sb.WriteString(mobile)
+		return sb.String()
 	}
-	return sb.String()
+	return mobile
 }

@@ -27,6 +27,29 @@ func ExtractSession(c *gin.Context) (string, error) {
 	return token, nil
 }
 
+func (Server) mustAms(c *gin.Context) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		log.Info(c.Request.Context(), "mustAms", log.String("session", "no authorization"))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+
+	prefix := "Bearer "
+	if strings.HasPrefix(token, prefix) {
+		token = token[len(prefix):]
+	}
+
+	_, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		return config.Get().AMS.TokenVerifyKey, nil
+	})
+	if err != nil {
+		log.Info(c.Request.Context(), "mustAms", log.String("token", token), log.Err(err))
+		c.AbortWithStatusJSON(http.StatusUnauthorized, L(GeneralUnAuthorized))
+		return
+	}
+}
+
 const operatorKey = "_op_"
 
 func (Server) mustLogin(c *gin.Context) {

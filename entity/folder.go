@@ -152,6 +152,24 @@ type UpdateFolderRequest struct {
 	Thumbnail string `json:"thumbnail"`
 }
 
+type ShareFoldersRequest struct {
+	FolderIDs []string `json:"folder_ids"`
+	OrgIDs    []string `json:"org_ids"`
+}
+
+type FolderShareRecord struct {
+	FolderID string `json:"folder_id"`
+	Orgs []*OrganizationInfo `json:"orgs"`
+}
+type FolderShareRecords struct {
+	Data []*FolderShareRecord `json:"data"`
+}
+
+type ShareFoldersDeleteAddOrgList struct {
+	DeleteOrgs []string
+	AddOrgs    []string
+}
+
 type FolderIdWithFileType struct {
 	ID             string         `json:"id"`
 	FolderFileType FolderFileType `json:"folder_file_type" enums:"content,folder"`
@@ -190,7 +208,7 @@ func (p Path) Parents() []string {
 	if p == constant.FolderRootPath {
 		return nil
 	}
-	pairs := strings.Split(string(p), "/")
+	pairs := strings.Split(string(p), constant.FolderPathSeparator)
 	ret := make([]string, len(pairs)-1)
 	for i := range ret {
 		ret[i] = pairs[i+1]
@@ -245,7 +263,7 @@ func (f FolderItem) ChildrenPath() Path {
 	if f.ID == constant.FolderRootPath {
 		return NewPath(constant.FolderRootPath)
 	}
-	return NewPath(f.DirPath.ParentPath() + "/" + f.ID)
+	return NewPath(f.DirPath.ParentPath() + constant.FolderPathSeparator + f.ID)
 }
 
 type FolderItemInfo struct {

@@ -18,7 +18,7 @@ type SchoolServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
 	GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
-	GetSchoolsAssociatedWithUserID(ctx context.Context, operator *entity.Operator, id string) ([]*School, error)
+	GetByOperator(ctx context.Context, operator *entity.Operator) ([]*School, error)
 }
 
 type School struct {
@@ -220,24 +220,33 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, operator *entity.Operator, id string) ([]*School, error) {
+func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Operator) ([]*School, error) {
 	request := chlorine.NewRequest(`
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
 			school_memberships{
-				school{
-					id:school_id
-					name:school_name
+				school {
+					school_id
+					school_name
+					organization {
+						organization_id
+					}
 				}
 			}
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("user_id", id)
+	request.Var("user_id", operator.UserID)
 
 	data := &struct {
 		User struct {
 			SchoolMemberships []struct {
-				School School `json:"school"`
+				School struct {
+					SchoolID     string `json:"school_id"`
+					SchoolName   string `json:"school_name"`
+					Organization struct {
+						OrganizationID string `json:"organization_id"`
+					} `json:"organization"`
+				} `json:"school"`
 			} `json:"school_memberships"`
 		} `json:"user"`
 	}{}
@@ -248,23 +257,27 @@ func (s AmsSchoolService) GetSchoolsAssociatedWithUserID(ctx context.Context, op
 
 	_, err := GetChlorine().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get schools by user failed",
+		log.Error(ctx, "get schools by operator failed",
 			log.Err(err),
-			log.String("userID", id))
+			log.Any("operator", operator))
 		return nil, err
 	}
 
 	schools := make([]*School, 0)
 	for _, membership := range data.User.SchoolMemberships {
+		// filtering by operator's org id
+		if membership.School.Organization.OrganizationID != operator.OrgID {
+			continue
+		}
+
 		schools = append(schools, &School{
-			ID:   membership.School.ID,
-			Name: membership.School.Name,
+			ID:   membership.School.SchoolID,
+			Name: membership.School.SchoolName,
 		})
 	}
 
-	log.Info(ctx, "get schools by user success",
-		log.String("userID", id),
-		log.Any("schools", schools))
+	log.Info(ctx, "get schools by operator success",
+		log.Any("operator", operator))
 
 	return schools, nil
 }

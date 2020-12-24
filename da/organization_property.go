@@ -48,8 +48,8 @@ func (c OrganizationPropertyCondition) GetConditions() ([]string, []interface{})
 		params = append(params, c.Types.ToInterfaceSlice()...)
 	}
 
-	if !c.IncludeDeleted.Valid {
-		wheres = append(wheres, "(delete_at=0)")
+	if !c.IncludeDeleted.Valid || !c.IncludeDeleted.Bool {
+		wheres = append(wheres, "(deleted_at=0)")
 	}
 
 	return wheres, params

@@ -123,6 +123,23 @@ func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context
 	if content.Org != user.OrgID {
 		//若org_id不相等，则无权限
 		log.Info(ctx, "view content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
+		//check if it is shared content
+		condition := entity.SearchAuthedContentRequest{
+			OrgIDs:     []string{user.OrgID, constant.ShareToAll},
+			ContentIDs: []string{content.ID},
+		}
+		records, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), condition, user)
+		if err != nil {
+			log.Warn(ctx, "get authed record failed",
+				log.String("id", cid),
+				log.Err(err),
+				log.Any("condition", condition))
+			return false, err
+		}
+		if len(records) > 0 {
+			return true, nil
+		}
+
 		return false, nil
 	}
 	//若是自己的content，则可以获取
@@ -168,7 +185,7 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 	//不是自己的，查看lock_by和修改权限
 	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't update content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, nil
+		return false, NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 	if content.LockedBy == user.UserID {
 		log.Info(ctx, "locked by user", log.String("cid", cid), log.String("user_id", user.UserID))
@@ -201,7 +218,7 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 	}
 	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
 		log.Info(ctx, "can't lock content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, nil
+		return false, NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
 	//排除其他机构
 	if content.Org != user.OrgID {
@@ -477,7 +494,7 @@ func (s *ContentPermissionModel) createPermissionName(ctx context.Context, conte
 	switch contentType {
 	case entity.ContentTypeMaterial:
 		return []external.PermissionName{external.CreateContentPage201, external.CreateLessonMaterial220}
-	case entity.ContentTypeLesson:
+	case entity.ContentTypePlan:
 		return []external.PermissionName{external.CreateContentPage201, external.CreateLessonPlan221}
 	case entity.ContentTypeAssets:
 		return []external.PermissionName{external.CreateContentPage201, external.CreateAsset320}
@@ -489,7 +506,7 @@ func (s *ContentPermissionModel) editPermissionName(ctx context.Context, content
 	switch contentType {
 	case entity.ContentTypeMaterial:
 		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonMaterialMetadataAndContent236}
-	case entity.ContentTypeLesson:
+	case entity.ContentTypePlan:
 		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonPlanContent238, external.EditLessonPlanMetadata237}
 	}
 	return []external.PermissionName{external.EditOrgPublishedContent235}

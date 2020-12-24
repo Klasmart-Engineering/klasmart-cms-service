@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -223,8 +224,10 @@ func (m *programModel) Update(ctx context.Context, op *entity.Operator, data *en
 	}
 	old.Name = data.Name
 	old.Number = data.Number
+	old.OrgType = data.OrgType
 	old.UpdateID = op.UserID
 	old.UpdateAt = time.Now().Unix()
+	old.GroupName = data.GroupName
 	_, err = da.GetProgramDA().Update(ctx, old)
 	if err != nil {
 		log.Error(ctx, "update error", log.Err(err), log.Any("data", data))
@@ -234,6 +237,18 @@ func (m *programModel) Update(ctx context.Context, op *entity.Operator, data *en
 }
 
 func (m *programModel) Query(ctx context.Context, condition *da.ProgramCondition) ([]*entity.Program, error) {
+	if condition.OrgID.Valid {
+		orgProperty, err := GetOrganizationPropertyModel().GetOrDefault(ctx, condition.OrgID.String)
+		if err != nil {
+			log.Error(ctx, "Query:GetOrganizationPropertyModel.GetOrDefault error", log.Err(err), log.Any("condition", condition))
+			return nil, err
+		}
+		condition.OrgType = sql.NullString{
+			String: string(orgProperty.Type),
+			Valid:  true,
+		}
+	}
+
 	var result []*entity.Program
 	err := da.GetProgramDA().Query(ctx, condition, &result)
 	if err != nil {

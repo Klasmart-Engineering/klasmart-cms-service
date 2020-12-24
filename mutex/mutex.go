@@ -20,6 +20,10 @@ func NewLock(ctx context.Context, key string, params ...interface{}) (sync.Locke
 	for i := range params {
 		lockKey = fmt.Sprintf("%v:%v", lockKey, params[i])
 	}
+	if config.Get().RedisConfig.Host == "" {
+		//if redis hasn't config
+		return &sync.Mutex{}, nil
+	}
 
 	return locker.NewDistributedLock(locker.DistributedLockConfig{
 		Driver:  "redis",

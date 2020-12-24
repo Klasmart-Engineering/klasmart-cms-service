@@ -20,7 +20,7 @@ const (
 	ContentStatusArchive    = "archive"
 
 	ContentTypeMaterial = 1
-	ContentTypeLesson   = 2
+	ContentTypePlan     = 2
 	ContentTypeAssets   = 3
 
 	AliasContentTypeFolder = 10
@@ -43,6 +43,9 @@ const (
 	DrawActivityFalse = 2
 	//LessonTypeTest    = "1"
 	//LessonTypeNotTest = "2"
+
+	ContentAuthed ContentAuth = 1
+	ContentUnauthed ContentAuth = 2
 )
 
 var (
@@ -57,6 +60,8 @@ type ContentPublishStatus string
 type ContentType int
 
 type FileType int
+
+type ContentAuth int
 
 func NewFileType(fileType int) FileType {
 	switch fileType {
@@ -95,8 +100,8 @@ func NewContentType(contentType int) ContentType {
 	switch contentType {
 	case ContentTypeMaterial:
 		return ContentTypeMaterial
-	case ContentTypeLesson:
-		return ContentTypeLesson
+	case ContentTypePlan:
+		return ContentTypePlan
 	case ContentTypeAssets:
 		return ContentTypeAssets
 	case AliasContentTypeFolder:
@@ -110,7 +115,7 @@ func (c ContentType) Validate() error {
 	switch c {
 	case ContentTypeMaterial:
 		return nil
-	case ContentTypeLesson:
+	case ContentTypePlan:
 		return nil
 	case ContentTypeAssets:
 		return nil
@@ -128,8 +133,8 @@ func (c ContentType) IsAsset() bool {
 
 func (c ContentType) ContentTypeInt() []int {
 	switch c {
-	case ContentTypeLesson:
-		return []int{ContentTypeLesson}
+	case ContentTypePlan:
+		return []int{ContentTypePlan}
 	case ContentTypeMaterial:
 		return []int{ContentTypeMaterial}
 	case ContentTypeAssets:
@@ -137,24 +142,24 @@ func (c ContentType) ContentTypeInt() []int {
 	case AliasContentTypeFolder:
 		return []int{AliasContentTypeFolder}
 	}
-	return []int{ContentTypeLesson}
+	return []int{ContentTypePlan}
 }
 
 func (c ContentType) ContentType() []ContentType {
 	switch c {
-	case ContentTypeLesson:
-		return []ContentType{ContentTypeLesson}
+	case ContentTypePlan:
+		return []ContentType{ContentTypePlan}
 	case ContentTypeMaterial:
 		return []ContentType{ContentTypeMaterial}
 	case ContentTypeAssets:
 		return []ContentType{ContentTypeAssets}
 	}
-	return []ContentType{ContentTypeLesson}
+	return []ContentType{ContentTypePlan}
 }
 
 func (c ContentType) Name() string {
 	switch c {
-	case ContentTypeLesson:
+	case ContentTypePlan:
 		return "Plan"
 	case ContentTypeMaterial:
 		return "Material"
@@ -230,8 +235,10 @@ type Content struct {
 	Remark       string `gorm:"type:varchar(255);NOT NULL;column:remark"`
 	Version      int64  `gorm:"type:int;NOT NULL;column:version"`
 	LockedBy     string `gorm:"type:varchar(50);NOT NULL;column:locked_by"`
-	SourceID     string `gorm:"type:varchar(255);NOT NULL;column:source_id"`
-	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id"`
+	SourceID     string `gorm:"type:varchar(50);NOT NULL;column:source_id"`
+	LatestID     string `gorm:"type:varchar(50);NOT NULL;column:latest_id"`
+
+	CopySourceID string `gorm:"type:varchar(50);column:copy_source_id"`
 
 	DirPath string `gorm:"type:varchar(2048);column:dir_path"`
 
@@ -299,6 +306,11 @@ func (b BoolTinyInt) Bool() TinyIntBool {
 		return true
 	}
 	return false
+}
+
+type CopyContentRequest struct {
+	ContentID string `json:"content_id"`
+	Deep      bool   `json:"deep"`
 }
 
 type CreateContentRequest struct {
@@ -477,9 +489,12 @@ type ContentData interface {
 	Marshal(ctx context.Context) (string, error)
 
 	Validate(ctx context.Context, contentType ContentType) error
-	PrepareResult(ctx context.Context, operator *Operator) error
+	PrepareResult(ctx context.Context, content *ContentInfo, operator *Operator) error
 	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
-	SubContentIds(ctx context.Context) []string
+	PrepareVersion(ctx context.Context) error
+	SubContentIDs(ctx context.Context) []string
+
+	ReplaceContentIDs(ctx context.Context, IDMap map[string]string)
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {

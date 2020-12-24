@@ -17,6 +17,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param schedule_id path string true "schedule id"
+// @Param live_token_type query string true "live token type" enums(preview, live)
 // @Tags schedule
 // @Success 200 {object} entity.LiveTokenView
 // @Failure 400 {object} BadRequestResponse
@@ -27,7 +28,13 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	scheduleID := c.Param("id")
-	token, err := model.GetLiveTokenModel().MakeLiveToken(ctx, op, scheduleID)
+	tokenType := entity.LiveTokenType(c.Query("live_token_type"))
+	if !tokenType.Valid() {
+		log.Info(ctx, "token type is invalid", log.String("tokenType", string(tokenType)))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	token, err := model.GetLiveTokenModel().MakeScheduleLiveToken(ctx, op, scheduleID, tokenType)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.LiveTokenView{Token: token})
@@ -43,6 +50,8 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 	case constant.ErrInvalidArgs:
 		log.Info(ctx, "invalid args", log.Err(err), log.String("scheduleID", scheduleID))
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	default:
 		log.Error(ctx, "make schedule live token error", log.Err(err), log.String("scheduleID", scheduleID))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -55,7 +64,6 @@ func (s *Server) getScheduleLiveToken(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param content_id path string true "content id"
-// @Param class_id path string true "class id"
 // @Tags content
 // @Success 200 {object} entity.LiveTokenView
 // @Failure 400 {object} BadRequestResponse
@@ -66,15 +74,15 @@ func (s *Server) getContentLiveToken(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	contentID := c.Param("content_id")
-	classID := c.Param("class_id")
-	token, err := model.GetLiveTokenModel().MakeLivePreviewToken(ctx, op, contentID, classID)
+	token, err := model.GetLiveTokenModel().MakeContentLiveToken(ctx, op, contentID)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.LiveTokenView{Token: token})
 	case constant.ErrRecordNotFound:
 		log.Info(ctx, "content not found", log.Err(err), log.String("contentID", contentID))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	default:
 		log.Error(ctx, "make content live token error", log.Err(err), log.String("contentID", contentID))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))

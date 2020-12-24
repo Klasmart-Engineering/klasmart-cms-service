@@ -23,14 +23,17 @@ const (
 	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
 
 	// schedule
-	ScheduleMsgEditOverlap     ResponseLabel = "schedule_msg_edit_overlap"
-	ScheduleMsgDeleteOverlap   ResponseLabel = "schedule_msg_delete_overlap"
-	ScheduleMsgOverlap         ResponseLabel = "schedule_msg_overlap"
-	ScheduleMsgNoPermission    ResponseLabel = "schedule_msg_no_permission"
-	ScheduleMsgDeleteMissTime  ResponseLabel = "schedule_msg_delete_minutes"
-	ScheduleMsgEditMissTime    ResponseLabel = "schedule_msg_edit_minutes"
-	ScheduleMsgGoLiveTimeNotUp ResponseLabel = "schedule_msg_start_minutes"
-	ScheduleMsgTimeExpired     ResponseLabel = "schedule_msg_time_expired"
+	ScheduleMsgEditOverlap           ResponseLabel = "schedule_msg_edit_overlap"
+	ScheduleMsgDeleteOverlap         ResponseLabel = "schedule_msg_delete_overlap"
+	ScheduleMsgOverlap               ResponseLabel = "schedule_msg_overlap"
+	ScheduleMsgNoPermission          ResponseLabel = "schedule_msg_no_permission"
+	ScheduleMsgDeleteMissTime        ResponseLabel = "schedule_msg_delete_minutes"
+	ScheduleMsgEditMissTime          ResponseLabel = "schedule_msg_edit_minutes"
+	ScheduleMsgGoLiveTimeNotUp       ResponseLabel = "schedule_msg_start_minutes"
+	ScheduleMsgTimeExpired           ResponseLabel = "schedule_msg_time_expired"
+	ScheduleMsgLessonPlanInvalid     ResponseLabel = "schedule_msg_recall_lesson_plan"
+	ScheduleMsgDueDateEarlierEndDate ResponseLabel = "schedule_msg_due_date_earlier"
+	ScheduleMsgDueDateEarlierToDay   ResponseLabel = "schedule_msg_earlier_today"
 )
 
 // L create response object with label
