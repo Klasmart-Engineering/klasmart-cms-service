@@ -983,7 +983,7 @@ func (s *scheduleModel) VerifyLessonPlanAuthed(ctx context.Context, operator *en
 	item, ok := contentMap[lessonPlanID]
 	if !ok {
 		log.Error(ctx, "verifyLessonPlanAuthed:lesson plan not found", log.Any("operator", operator), log.String("lessonPlanID", lessonPlanID))
-		return constant.ErrRecordNotFound
+		return ErrScheduleLessonPlanUnAuthed
 	}
 	if item == entity.ContentUnauthed {
 		log.Info(ctx, "verifyLessonPlanAuthed:lesson plan unAuthed", log.Any("operator", operator),
@@ -1250,8 +1250,22 @@ func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entit
 	if schedule.ClassType != entity.ScheduleClassTypeTask {
 		// lesson plan real time info
 		err = s.VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
-		if err == nil {
+		switch err {
+		case nil:
 			result.LessonPlanIsAuth = true
+		case ErrScheduleLessonPlanUnAuthed:
+			log.Info(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
+				log.String("LessonPlanID", schedule.LessonPlanID),
+				log.Any("op", op),
+			)
+			result.LessonPlanIsAuth = false
+		default:
+			log.Error(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
+				log.String("LessonPlanID", schedule.LessonPlanID),
+				log.Any("op", op),
+				log.Err(err),
+			)
+			return nil, err
 		}
 	}
 
