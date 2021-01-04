@@ -864,6 +864,10 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 			Strings: lessonPlanPastIDs,
 			Valid:   true,
 		},
+		EndAtGe: sql.NullInt64{
+			Int64: time.Now().Unix(),
+			Valid: true,
+		},
 	}
 	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
 	if err != nil {
