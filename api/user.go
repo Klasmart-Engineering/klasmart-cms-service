@@ -93,10 +93,10 @@ func (s *Server) login(c *gin.Context) {
 }
 
 type RegisterRequest struct {
-	Account  string `json:"account" form:"account"`     // 当前是电话号码
-	AuthCode string `json:"auth_code" form:"auth_code"` // 验证码
-	Password string `json:"password" form:"password"`   // 密码
-	ActType  string `json:"act_type" form:"act_type"`   // 注册类型
+	Account  string `json:"account" form:"account"`     // phone number for now 当前是电话号码
+	AuthCode string `json:"auth_code" form:"auth_code"` // verification code 验证码
+	Password string `json:"password" form:"password"`   // password 密码
+	ActType  string `json:"act_type" form:"act_type"`   // register manner 注册类型
 }
 
 // @ID userRegister
