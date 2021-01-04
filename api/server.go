@@ -5,7 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -38,6 +41,8 @@ func NewServer() *Server {
 			MaxAge:           12 * time.Hour,
 		}))
 	}
+
+	pprof.Register(server.engine, "/v1/pprof")
 
 	server.registeRoute()
 
