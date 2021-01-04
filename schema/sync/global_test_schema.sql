@@ -399,7 +399,7 @@ CREATE TABLE `migrate_record` (
   KEY `idx_migrate_record_dist` (`dist`),
   KEY `idx_migrate_record_source_id` (`source_id`),
   KEY `idx_migrate_record_target_id` (`target_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3531 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4152 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -695,4 +695,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-03 17:00:30
+-- Dump completed on 2021-01-04 17:00:32
