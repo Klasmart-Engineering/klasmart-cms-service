@@ -55,7 +55,7 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 			Organizations []*Organization `json:"organizations"`
 		}{Organizations: payload},
 	}
-	_, err := GetChlorine().Run(ctx, req, &res)
+	_, err := GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -127,7 +127,7 @@ func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context,
 		Data: &payload,
 	}
 
-	_, err = GetChlorine().Run(ctx, req, &res)
+	_, err = GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -189,7 +189,7 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get has permission organizations failed",
 			log.Err(err),
@@ -240,7 +240,7 @@ func (s AmsOrganizationService) GetOrganizationsAssociatedWithUserID(ctx context
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get orgs by user failed",
 			log.Err(err),
