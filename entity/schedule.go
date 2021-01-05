@@ -391,7 +391,11 @@ type ScheduleDetailsView struct {
 	Repeat      RepeatOptions     `json:"repeat"`
 	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ScheduleBasic
-	RealTimeStatus ScheduleRealTimeView `json:"real_time_status"`
+	RealTimeStatus       ScheduleRealTimeView `json:"real_time_status"`
+	ClassRosterTeachers  []ScheduleShortInfo  `json:"class_roster_teacher"`
+	ClassRosterStudents  []ScheduleShortInfo  `json:"class_roster_student"`
+	ParticipantsTeachers []ScheduleShortInfo  `json:"participants_teacher"`
+	ParticipantsStudents []ScheduleShortInfo  `json:"participants_student"`
 }
 
 type ScheduleSearchView struct {
@@ -413,7 +417,6 @@ type ScheduleBasic struct {
 	Class          *ScheduleShortInfo   `json:"class"`
 	Subject        *ScheduleShortInfo   `json:"subject"`
 	Program        *ScheduleShortInfo   `json:"program"`
-	Members        []*ScheduleShortInfo `json:"teachers"`
 	MemberTeachers []*ScheduleShortInfo `json:"member_teachers"`
 	StudentCount   int                  `json:"student_count"`
 	LessonPlan     *ScheduleShortInfo   `json:"lesson_plan"`

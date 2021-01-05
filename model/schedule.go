@@ -606,16 +606,9 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 				}
 			}
 		}
-		scheduleBasic.Members = scheduleBasic.MemberTeachers
 
 		if v, ok := classStudents[item.ClassID]; ok {
 			scheduleBasic.StudentCount = len(v)
-			for _, t := range v {
-				scheduleBasic.Members = append(scheduleBasic.Members, &entity.ScheduleShortInfo{
-					ID:   t.ID,
-					Name: t.Name,
-				})
-			}
 		}
 
 		scheduleBasicMap[item.ID] = scheduleBasic
