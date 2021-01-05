@@ -140,7 +140,6 @@ func (Server) getTimeLocation(c *gin.Context) *time.Location {
 
 func (s Server) logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
 		start := time.Now()
 		requstURL := c.Request.URL.String()
 
@@ -153,7 +152,7 @@ func (s Server) logger() gin.HandlerFunc {
 			log.String("viewer_timezone", c.GetHeader("CloudFront-Viewer-Time-Zone")),
 		}
 
-		log.Info(ctx, fmt.Sprintf("[START] %s %s", c.Request.Method, requstURL), fields...)
+		log.Info(c.Request.Context(), fmt.Sprintf("[START] %s %s", c.Request.Method, requstURL), fields...)
 
 		// Process request
 		c.Next()
@@ -164,13 +163,12 @@ func (s Server) logger() gin.HandlerFunc {
 		duration := time.Since(start)
 		fields = append(fields,
 			log.Any("operator", s.getOperator(c)),
-			log.String("session", c.GetHeader("Session")),
 			log.Int("size", c.Writer.Size()),
 			log.Int("status", c.Writer.Status()),
 			log.Int64("duration", duration.Milliseconds()))
 
 		// type durations
-		durations := ctx.Value(constant.ContextDurationsKey)
+		durations := c.Request.Context().Value(constant.ContextDurationsKey)
 		if durations != nil {
 			durationMap, ok := durations.(map[string]int64)
 			if ok {
@@ -187,7 +185,7 @@ func (s Server) logger() gin.HandlerFunc {
 			fn = log.Error
 		}
 
-		fn(ctx, fmt.Sprintf("[END] %s %s (%d) in %s", c.Request.Method, requstURL, c.Writer.Status(), duration.String()), fields...)
+		fn(c.Request.Context(), fmt.Sprintf("[END] %s %s (%d) in %s", c.Request.Method, requstURL, c.Writer.Status(), duration.String()), fields...)
 	}
 }
 
