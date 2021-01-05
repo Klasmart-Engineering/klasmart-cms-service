@@ -111,7 +111,7 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, operator *enti
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get teachers by org failed",
 			log.Err(err),
@@ -154,7 +154,7 @@ func (s AmsTeacherService) GetByOrganizations(ctx context.Context, operator *ent
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by organization ids failed", log.Err(err), log.Strings("ids", organizationIDs))
 		return nil, err
@@ -205,7 +205,7 @@ func (s AmsTeacherService) GetBySchool(ctx context.Context, operator *entity.Ope
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get teachers by school failed",
 			log.Err(err),
@@ -248,7 +248,7 @@ func (s AmsTeacherService) GetBySchools(ctx context.Context, operator *entity.Op
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by school ids failed", log.Err(err), log.Strings("ids", schoolIDs))
 		return nil, err
@@ -294,7 +294,7 @@ func (s AmsTeacherService) GetByClasses(ctx context.Context, operator *entity.Op
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by class ids failed", log.Err(err), log.Strings("ids", classIDs))
 		return nil, err

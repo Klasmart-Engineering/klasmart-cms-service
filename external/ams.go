@@ -1,20 +1,54 @@
 package external
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
 var (
-	_chlorineClient *chlorine.Client
-	_chlorineOnce   sync.Once
+	_amsClient     *AmsClient
+	_amsClientOnce sync.Once
 )
 
-func GetChlorine() *chlorine.Client {
-	_chlorineOnce.Do(func() {
-		_chlorineClient = chlorine.NewClient(config.Get().AMS.EndPoint)
+func GetAmsClient() *AmsClient {
+	_amsClientOnce.Do(func() {
+		_amsClient = &AmsClient{
+			Client: chlorine.NewClient(config.Get().AMS.EndPoint),
+		}
+
 	})
-	return _chlorineClient
+	return _amsClient
+}
+
+type AmsClient struct {
+	*chlorine.Client
+}
+
+func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorine.Response) (int, error) {
+	log.Debug(ctx, "run query start", log.Any("request", req))
+
+	start := time.Now()
+	statusCode, err := c.Client.Run(ctx, req, resp)
+	duration := time.Since(start)
+
+	log.Debug(ctx, "run query end",
+		log.Duration("duration", duration),
+		log.Any("request", req),
+		log.Any("response", resp))
+
+	durations := ctx.Value(constant.ContextDurationsKey)
+	if durations != nil {
+		durationMap, ok := durations.(map[string]int64)
+		if ok {
+			durationMap[string(constant.ExternalDuration)] = duration.Milliseconds()
+		}
+	}
+
+	return statusCode, err
 }

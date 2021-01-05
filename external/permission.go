@@ -67,7 +67,7 @@ func (s AmsPermissionService) HasOrganizationPermission(ctx context.Context, ope
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "check user org permission failed",
 			log.Err(err),
@@ -113,7 +113,7 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator 
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "check user school permission failed",
 			log.Err(err),
@@ -170,7 +170,7 @@ query($user_id: ID! $organization_id: ID!) {
 		}{Membership: payload}},
 	}
 
-	_, err = GetChlorine().Run(ctx, req, &res)
+	_, err = GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
 		return nil, err
