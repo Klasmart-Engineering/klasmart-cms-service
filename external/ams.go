@@ -3,12 +3,12 @@ package external
 import (
 	"context"
 	"sync"
-	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 var (
@@ -33,25 +33,27 @@ type AmsClient struct {
 func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorine.Response) (int, error) {
 	log.Debug(ctx, "run query start", log.Any("request", req))
 
-	start := time.Now()
-	statusCode, err := c.Client.Run(ctx, req, resp)
-	duration := time.Since(start)
-
-	log.Debug(ctx, "run query end",
-		log.Duration("duration", duration),
-		log.Any("request", req),
-		log.Any("response", resp))
-
-	durations := ctx.Value(constant.ContextDurationsKey)
-	if durations != nil {
-		durationMap, ok := durations.(map[string]int64)
+	var externalStopwatch *utils.Stopwatch
+	stopwatches := ctx.Value(constant.ContextStopwatchKey)
+	if stopwatches != nil {
+		durationMap, ok := stopwatches.(map[string]*utils.Stopwatch)
 		if ok {
-			externalDuration := durationMap[string(constant.ExternalDuration)]
-			externalDuration += duration.Milliseconds()
-			durationMap[string(constant.ExternalDuration)] = externalDuration
-			log.Debug(ctx, "set external duration success", log.Int64("externalDuration", externalDuration))
+			externalStopwatch := durationMap[string(constant.ExternalStopwatch)]
+			if externalStopwatch != nil {
+				externalStopwatch.Start()
+			}
 		}
 	}
+
+	statusCode, err := c.Client.Run(ctx, req, resp)
+	if externalStopwatch != nil {
+		externalStopwatch.Stop()
+	}
+
+	log.Debug(ctx, "run query end",
+		log.Duration("duration", externalStopwatch.Duration()),
+		log.Any("request", req),
+		log.Any("response", resp))
 
 	return statusCode, err
 }
