@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -167,12 +168,17 @@ func (s Server) logger() gin.HandlerFunc {
 			log.Int("status", c.Writer.Status()),
 			log.Int64("duration", duration.Milliseconds()))
 
-		// type durations
-		durations := c.Request.Context().Value(constant.ContextDurationsKey)
-		if durations != nil {
-			durationMap, ok := durations.(map[string]int64)
+		// stopwatch durations
+		stopwatches := c.Request.Context().Value(constant.ContextStopwatchKey)
+		if stopwatches != nil {
+			stopwatchMap, ok := stopwatches.(map[string]*utils.Stopwatch)
 			if ok {
-				fields = append(fields, log.Any("durations", durationMap))
+				durations := make(map[string]int64, len(stopwatchMap))
+				for key, stopwatch := range stopwatchMap {
+					durations[key] = stopwatch.Duration().Milliseconds()
+				}
+
+				fields = append(fields, log.Any("durations", durations))
 			}
 		}
 
@@ -232,8 +238,11 @@ func (s Server) recovery() gin.HandlerFunc {
 
 func (s Server) durationContext() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// include external duration at least
-		ctx := context.WithValue(c.Request.Context(), constant.ContextDurationsKey, make(map[string]int64, 1))
+		stopwatches := map[string]*utils.Stopwatch{
+			string(constant.ExternalStopwatch): new(utils.Stopwatch),
+		}
+
+		ctx := context.WithValue(c.Request.Context(), constant.ContextStopwatchKey, stopwatches)
 		c.Request = c.Request.WithContext(ctx)
 
 		c.Next()
