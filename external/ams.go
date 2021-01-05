@@ -36,24 +36,27 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 	var externalStopwatch *utils.Stopwatch
 	stopwatches := ctx.Value(constant.ContextStopwatchKey)
 	if stopwatches != nil {
-		durationMap, ok := stopwatches.(map[string]*utils.Stopwatch)
+		stopwatchMap, ok := stopwatches.(map[string]*utils.Stopwatch)
 		if ok {
-			externalStopwatch := durationMap[string(constant.ExternalStopwatch)]
+			externalStopwatch := stopwatchMap[string(constant.ExternalStopwatch)]
 			if externalStopwatch != nil {
 				externalStopwatch.Start()
 			}
 		}
 	}
 
+	fields := []log.Field{
+		log.Any("request", req),
+		log.Any("response", resp),
+	}
+
 	statusCode, err := c.Client.Run(ctx, req, resp)
 	if externalStopwatch != nil {
 		externalStopwatch.Stop()
+		fields = append(fields, log.Duration("duration", externalStopwatch.Duration()))
 	}
 
-	log.Debug(ctx, "run query end",
-		log.Duration("duration", externalStopwatch.Duration()),
-		log.Any("request", req),
-		log.Any("response", resp))
+	log.Debug(ctx, "run query end", fields...)
 
 	return statusCode, err
 }
