@@ -46,8 +46,10 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 	if durations != nil {
 		durationMap, ok := durations.(map[string]int64)
 		if ok {
-			durationMap[string(constant.ExternalDuration)] = duration.Milliseconds()
-			log.Debug(ctx, "set external duration success", log.Any("durations", durationMap))
+			externalDuration := durationMap[string(constant.ExternalDuration)]
+			externalDuration += duration.Milliseconds()
+			durationMap[string(constant.ExternalDuration)] = externalDuration
+			log.Debug(ctx, "set external duration success", log.Int64("externalDuration", externalDuration))
 		}
 	}
 
