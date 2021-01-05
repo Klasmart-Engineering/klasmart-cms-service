@@ -82,7 +82,7 @@ func (s *Server) getSkillByID(c *gin.Context) {
 // @Produce json
 // @Param skill body entity.Skill true "skill"
 // @Tags skill
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills [post]
 func (s *Server) addSkill(c *gin.Context) {
@@ -99,7 +99,7 @@ func (s *Server) addSkill(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	c.JSON(http.StatusOK, IDResponse{ID: id})
 }
 
 // @Summary updateSkill
@@ -110,7 +110,7 @@ func (s *Server) addSkill(c *gin.Context) {
 // @Param id path string true "skill id"
 // @Param skill body entity.Skill true "skill"
 // @Tags skill
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills/{id} [put]
@@ -129,7 +129,7 @@ func (s *Server) updateSkill(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -142,7 +142,7 @@ func (s *Server) updateSkill(c *gin.Context) {
 // @Produce json
 // @Param id path string true "skill id"
 // @Tags skill
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills/{id} [delete]
 func (s *Server) deleteSkill(c *gin.Context) {
@@ -152,7 +152,7 @@ func (s *Server) deleteSkill(c *gin.Context) {
 	err := model.GetSkillModel().Delete(ctx, op, id)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

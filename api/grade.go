@@ -70,7 +70,7 @@ func (s *Server) getGradeByID(c *gin.Context) {
 // @Produce json
 // @Param grade body entity.Grade true "Grade"
 // @Tags grade
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades [post]
 func (s *Server) addGrade(c *gin.Context) {
@@ -87,7 +87,7 @@ func (s *Server) addGrade(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	c.JSON(http.StatusOK, IDResponse{ID: id})
 }
 
 // @Summary updateGrade
@@ -98,7 +98,7 @@ func (s *Server) addGrade(c *gin.Context) {
 // @Param id path string true "grade id"
 // @Param grade body entity.Grade true "grade"
 // @Tags grade
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades/{id} [put]
@@ -117,7 +117,7 @@ func (s *Server) updateGrade(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -130,7 +130,7 @@ func (s *Server) updateGrade(c *gin.Context) {
 // @Produce json
 // @Param id path string true "grade id"
 // @Tags grade
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades/{id} [delete]
 func (s *Server) deleteGrade(c *gin.Context) {
@@ -140,7 +140,7 @@ func (s *Server) deleteGrade(c *gin.Context) {
 	err := model.GetGradeModel().Delete(ctx, op, id)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
