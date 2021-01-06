@@ -80,13 +80,12 @@ CREATE TABLE IF NOT EXISTS `schedules` (
 CREATE TABLE IF NOT EXISTS `schedules_relations` (
     `id` varchar(256) NOT NULL COMMENT  'id',
     `schedule_id` varchar(100) NOT NULL COMMENT  'schedule_id',
-    `record_id` varchar(100) NOT NULL COMMENT  'record_id',
-    `record_type` varchar(100) DEFAULT NULL COMMENT  'record_type',
-    `group_name` varchar(100) DEFAULT NULL COMMENT  'group_name',
+    `relation_id` varchar(100) NOT NULL COMMENT  'relation_id',
+    `relation_type` varchar(100) DEFAULT NULL COMMENT  'record_type',
     PRIMARY KEY (`id`),
     KEY `idx_schedule_id` (`schedule_id`),
-    KEY `idx_record_id` (`record_id`)
-    KEY `idx_schedule_id_record_type_group_name` (`schedule_id`,`record_type`,`group_name`)
+    KEY `idx_relation_id` (`relation_id`)
+    KEY `idx_schedule_id_relation_type` (`schedule_id`,`relation_type`)
 ) COMMENT 'schedules_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 

@@ -3,11 +3,10 @@ package entity
 import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 type ScheduleRelation struct {
-	ID         string             `json:"id" gorm:"column:id;PRIMARY_KEY"`
-	ScheduleID string             `json:"schedule_id" gorm:"column:schedule_id;type:varchar(100)"`
-	RecordID   string             `json:"record_id" gorm:"column:record_id;type:varchar(100)"`
-	RecordType ScheduleRecordType `json:"record_type" gorm:"column:record_type;type:varchar(100)"`
-	GroupName  ScheduleGroupName  `json:"group_name" gorm:"column:group_name;type:varchar(100)"`
+	ID           string               `json:"id" gorm:"column:id;PRIMARY_KEY"`
+	ScheduleID   string               `json:"schedule_id" gorm:"column:schedule_id;type:varchar(100)"`
+	RelationID   string               `json:"relation_id" gorm:"column:relation_id;type:varchar(100)"`
+	RelationType ScheduleRelationType `json:"relation_type" gorm:"column:relation_type;type:varchar(100)"`
 }
 
 func (e ScheduleRelation) TableName() string {
@@ -18,20 +17,14 @@ func (e ScheduleRelation) GetID() interface{} {
 	return e.ID
 }
 
-type ScheduleRecordType string
+type ScheduleRelationType string
 
 const (
-	ScheduleRecordTypeOrg     ScheduleRecordType = "org"
-	ScheduleRecordTypeSchool  ScheduleRecordType = "school"
-	ScheduleRecordTypeClass   ScheduleRecordType = "class"
-	ScheduleRecordTypeTeacher ScheduleRecordType = "teacher"
-	ScheduleRecordTypeStudent ScheduleRecordType = "student"
-)
-
-type ScheduleGroupName string
-
-const (
-	ScheduleGroupNameNone        ScheduleGroupName = "none"
-	ScheduleGroupNameClassRoster ScheduleGroupName = "class_roster"
-	ScheduleGroupNameParticipant ScheduleGroupName = "participant"
+	ScheduleRelationTypeOrg                ScheduleRelationType = "org"
+	ScheduleRelationTypeSchool             ScheduleRelationType = "school"
+	ScheduleRelationTypeClass              ScheduleRelationType = "class"
+	ScheduleRelationTypeClassRosterTeacher ScheduleRelationType = "class_roster_teacher"
+	ScheduleRelationTypeClassRosterStudent ScheduleRelationType = "class_roster_student"
+	ScheduleRelationTypeParticipantTeacher ScheduleRelationType = "participant_teacher"
+	ScheduleRelationTypeParticipantStudent ScheduleRelationType = "participant_student"
 )
