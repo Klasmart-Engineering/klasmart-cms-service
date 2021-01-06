@@ -375,6 +375,19 @@ CREATE TABLE `subjects` (
     KEY `idx_id_delete` (`id`,`delete_at`)
 ) COMMENT 'subjects' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
+CREATE TABLE `skills` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'skills' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 CREATE TABLE `visibility_settings` (
     `id` varchar(256) NOT NULL COMMENT  'id',
