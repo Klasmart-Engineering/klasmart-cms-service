@@ -65,3 +65,7 @@ type InternalServerErrorResponse ErrorResponse
 type ConflictResponse ErrorResponse
 
 type UnAuthorizedResponse ErrorResponse
+
+type IDResponse struct {
+	ID string `json:"id"`
+}

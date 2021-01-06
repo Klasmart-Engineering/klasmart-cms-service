@@ -103,7 +103,7 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Op
 			Students *[]*Student `json:"students"`
 		}{Students: &payload}},
 	}
-	_, err := GetChlorine().Run(ctx, req, &res)
+	_, err := GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -141,7 +141,7 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.O
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by class ids failed", log.Err(err), log.Strings("ids", classIDs))
 		return nil, err

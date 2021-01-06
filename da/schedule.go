@@ -188,6 +188,7 @@ type ScheduleCondition struct {
 	StartLt   sql.NullInt64
 	EndAtLe   sql.NullInt64
 	EndAtLt   sql.NullInt64
+	EndAtGe   sql.NullInt64
 	//TeacherID                sql.NullString
 	//TeacherIDs               entity.NullStrings
 	StartAndEndRange         []sql.NullInt64
@@ -246,6 +247,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.EndAtLt.Valid {
 		wheres = append(wheres, "end_at < ?")
 		params = append(params, c.EndAtLt.Int64)
+	}
+	if c.EndAtGe.Valid {
+		wheres = append(wheres, "end_at >= ?")
+		params = append(params, c.EndAtGe.Int64)
 	}
 	if c.StartLt.Valid {
 		wheres = append(wheres, "start_at < ?")

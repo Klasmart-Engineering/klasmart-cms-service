@@ -27,17 +27,14 @@ import (
 // @Param schedule_id path string true "schedule id"
 // @Param scheduleData body entity.ScheduleUpdateView true "schedule data to update"
 // @Tags schedule
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
-// @Failure 409 {object} ConflictResponse
+// @Failure 409 {object} entity.ScheduleConflictView
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
 	op := s.getOperator(c)
-	if !s.hasScheduleRWPermission(c, op, external.ScheduleEditEvent) {
-		return
-	}
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	data := entity.ScheduleUpdateView{}
@@ -46,6 +43,16 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(c, op, data.ClassID)
+	if err == constant.ErrUnAuthorized {
+		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
 	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
 	log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", data.TimeZoneOffset))
 	data.ID = id
@@ -96,6 +103,32 @@ func (s *Server) updateSchedule(c *gin.Context) {
 
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
+	if !data.IsForce {
+		conflictInput := &entity.ScheduleConflictInput{
+			ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
+			ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
+			ParticipantsTeacherIDs: data.ParticipantsTeacherIDs,
+			ParticipantsStudentIDs: data.ParticipantsStudentIDs,
+			StartAt:                data.StartAt,
+			EndAt:                  data.EndAt,
+			RepeatOptions:          data.Repeat,
+			Location:               loc,
+			IgnoreScheduleID:       data.ID,
+		}
+		if data.IsRepeat && data.EditType == entity.ScheduleEditWithFollowing {
+			conflictInput.IsRepeat = true
+		}
+		conflictData, err := model.GetScheduleModel().ConflictDetection(ctx, op, conflictInput)
+		if err == constant.ErrConflict {
+			c.JSON(http.StatusBadRequest, conflictData)
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+	}
+
 	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
 	switch err {
 	case constant.ErrInvalidArgs:
@@ -109,7 +142,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	case model.ErrScheduleEditMissTime:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissTime))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: newID})
+		c.JSON(http.StatusOK, IDResponse{ID: newID})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -130,7 +163,13 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
 	op := s.getOperator(c)
-	if !s.hasScheduleRWPermission(c, op, external.ScheduleDeleteEvent) {
+	err := model.GetSchedulePermissionModel().HasScheduleOrgPermission(c, op, external.ScheduleDeleteEvent)
+	if err == constant.ErrForbidden {
+		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	ctx := c.Request.Context()
@@ -143,7 +182,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		return
 	}
 
-	err := model.GetScheduleModel().Delete(ctx, op, id, editType)
+	err = model.GetScheduleModel().Delete(ctx, op, id, editType)
 	switch err {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -169,22 +208,28 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Produce json
 // @Param scheduleData body entity.ScheduleAddView true "schedule data to add"
 // @Tags schedule
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 409 {object} ConflictResponse
+// @Failure 409 {object} entity.ScheduleConflictView
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [post]
 func (s *Server) addSchedule(c *gin.Context) {
 	op := s.getOperator(c)
-	if !s.hasScheduleRWPermission(c, op, external.ScheduleCreateEvent) {
-		return
-	}
 	ctx := c.Request.Context()
 	data := new(entity.ScheduleAddView)
 	if err := c.ShouldBind(data); err != nil {
 		log.Info(ctx, "add schedule: should bind body failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(c, op, data.ClassID)
+	if err == constant.ErrUnAuthorized {
+		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
@@ -217,12 +262,33 @@ func (s *Server) addSchedule(c *gin.Context) {
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
 	data.Location = loc
+	if !data.IsForce {
+		conflictInput := &entity.ScheduleConflictInput{
+			ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
+			ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
+			ParticipantsTeacherIDs: data.ParticipantsTeacherIDs,
+			ParticipantsStudentIDs: data.ParticipantsStudentIDs,
+			StartAt:                data.StartAt,
+			EndAt:                  data.EndAt,
+			RepeatOptions:          data.Repeat,
+			Location:               loc,
+			IsRepeat:               data.IsRepeat,
+		}
+		conflictData, err := model.GetScheduleModel().ConflictDetection(ctx, op, conflictInput)
+		if err == constant.ErrConflict {
+			c.JSON(http.StatusBadRequest, conflictData)
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+	}
+
 	id, err := model.GetScheduleModel().Add(ctx, op, data)
 	switch err {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case constant.ErrConflict:
-		c.JSON(http.StatusConflict, L(ScheduleMsgOverlap))
 	case constant.ErrFileNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case constant.ErrRecordNotFound:
@@ -230,7 +296,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	case model.ErrScheduleLessonPlanUnAuthed:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -348,7 +414,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 		}
 	}
 
-	filterClassIDs, err := s.getClassIDs(ctx, op)
+	filterClassIDs, err := model.GetSchedulePermissionModel().GetClassIDs(ctx, op)
 	if err != nil {
 		log.Error(ctx, "querySchedule:getClassIDs error",
 			log.Err(err),
@@ -574,7 +640,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondi
 	schoolIDs := entity.SplitStringToNullStrings(c.Query("school_ids"))
 	teacherIDs := entity.SplitStringToNullStrings(c.Query("teacher_ids"))
 
-	filterClassIDs, err := s.getClassIDs(ctx, op)
+	filterClassIDs, err := model.GetSchedulePermissionModel().GetClassIDs(ctx, op)
 	if err != nil {
 		log.Error(ctx, "getScheduleTimeView:getClassIDs error",
 			log.Err(err),
@@ -662,7 +728,7 @@ func (s *Server) GetClassIDsBySchoolIDs(ctx context.Context, op *entity.Operator
 // @Param schedule_id path string true "schedule id"
 // @Param status query string true "schedule status" enums(NotStart, Started, Closed)
 // @Tags schedule
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -684,7 +750,7 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
@@ -756,156 +822,6 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	}
 }
 
-func (s *Server) getClassIDs(ctx context.Context, op *entity.Operator) ([]string, error) {
-	schoolClassIDs, err := s.getClassIDsBySchoolPermission(ctx, op, external.ScheduleViewSchoolCalendar)
-	if err != nil {
-		log.Error(ctx, "getClassIDsByPermission:getClassIDsBySchoolPermission error",
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	orgClassIDs, err := s.getClassIDsByOrgPermission(ctx, op, external.ScheduleViewOrgCalendar)
-	if err != nil {
-		log.Error(ctx, "getClassIDsByPermission:getClassIDsByOrgPermission error",
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return nil, err
-	}
-
-	myClassIDs := make([]string, 0)
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ScheduleViewMyCalendar)
-	if err != nil {
-		log.Error(ctx, "getScheduleTimeView:GetPermissionServiceProvider.HasOrganizationPermission error",
-			log.Err(err),
-			log.String("PermissionName", external.ScheduleViewMyCalendar.String()),
-			log.Any("op", op),
-		)
-		return nil, err
-	}
-	if hasPermission {
-		myClassIDs, err = model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, op, []string{op.UserID}, op.OrgID)
-		if err != nil {
-			log.Error(ctx, "getScheduleTimeView:GetScheduleModel.GetMyOrgClassIDs error",
-				log.Err(err),
-				log.Any("op", op),
-			)
-			return nil, err
-		}
-	}
-
-	log.Info(ctx, "getClassIDs", log.Any("Operator", op),
-		log.Strings("schoolClassIDs", schoolClassIDs),
-		log.Strings("orgClassIDs", orgClassIDs),
-		log.Strings("myClassIDs", myClassIDs),
-	)
-	classIDs := make([]string, 0, len(schoolClassIDs)+len(orgClassIDs)+len(myClassIDs))
-	classIDs = append(classIDs, schoolClassIDs...)
-	classIDs = append(classIDs, orgClassIDs...)
-	classIDs = append(classIDs, myClassIDs...)
-
-	classIDs = utils.SliceDeduplication(classIDs)
-
-	return classIDs, nil
-}
-
-func (s *Server) getClassIDsBySchoolPermission(ctx context.Context, op *entity.Operator, permissionName external.PermissionName) ([]string, error) {
-	classIDs := make([]string, 0)
-	schoolInfoList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permissionName)
-	if err != nil {
-		log.Error(ctx, "check permission error",
-			log.String("permission", permissionName.String()),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return nil, err
-	}
-	schoolIDs := make([]string, len(schoolInfoList))
-	for i, item := range schoolInfoList {
-		schoolIDs[i] = item.ID
-	}
-	classMap, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, op, schoolIDs)
-	if err != nil {
-		log.Error(ctx, "getClassIDsBySchoolPermission:GetClassServiceProvider GetBySchoolIDs error",
-			log.String("permission", permissionName.String()),
-			log.Strings("schoolIDs", schoolIDs),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return nil, err
-	}
-	if classList, ok := classMap[op.OrgID]; ok {
-		for _, item := range classList {
-			classIDs = append(classIDs, item.ID)
-		}
-	}
-	return classIDs, nil
-}
-
-func (s *Server) getClassIDsByOrgPermission(ctx context.Context, op *entity.Operator, permissionName external.PermissionName) ([]string, error) {
-	//external.ScheduleViewOrgCalendar
-	orgInfoList, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permissionName)
-	if err != nil {
-		log.Error(ctx, "getClassIDsByOrgPermission：check permission error",
-			log.String("permission", permissionName.String()),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return nil, err
-	}
-	orgIDs := make([]string, len(orgInfoList))
-	for i, item := range orgInfoList {
-		orgIDs[i] = item.ID
-	}
-	log.Info(ctx, "getClassIDsByOrgPermission", log.Any("orgInfoList", orgInfoList))
-	classMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, op, orgIDs)
-	if err != nil {
-		log.Error(ctx, "getClassIDsByOrgPermission:GetClassServiceProvider GetByOrganizationIDs error",
-			log.String("permission", permissionName.String()),
-			log.Strings("orgIDs", orgIDs),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return nil, err
-	}
-	log.Info(ctx, "getClassIDsByOrgPermission", log.Any("op", op), log.Any("classMap", classMap), log.Any("classMap[op.OrgID]", classMap[op.OrgID]))
-	var classIDs []string
-	if classList, ok := classMap[op.OrgID]; ok {
-		log.Info(ctx, "getClassIDsByOrgPermission", log.Any("classList", classList))
-		classIDs = make([]string, len(classList))
-		for i, item := range classList {
-			classIDs[i] = item.ID
-		}
-	}
-	log.Info(ctx, "getClassIDsByOrgPermission", log.Strings("classIDs", classIDs), log.String("permissionName", permissionName.String()))
-	return classIDs, nil
-}
-
-func (s *Server) hasScheduleRWPermission(c *gin.Context, op *entity.Operator, permissionName external.PermissionName) bool {
-	ctx := c.Request.Context()
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissionName)
-	if err != nil {
-		log.Error(ctx, "check permission error",
-			log.String("permission", string(permissionName)),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return false
-	}
-	if !hasPermission {
-		log.Info(ctx, "no permission",
-			log.String("permission", string(permissionName)),
-			log.Any("Operator", op),
-		)
-		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
-		return false
-	}
-	return true
-}
-
 // @Summary get schedule real-time status
 // @Description get schedule real-time status
 // @Tags schedule
@@ -931,35 +847,3 @@ func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
-
-//func (s Server) getScheduleReadPermission(c *gin.Context, op *entity.Operator) map[external.PermissionName]bool {
-//	ctx := c.Request.Context()
-//	result := make(map[external.PermissionName]bool)
-//	viewOrg, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewOrgCalendar)
-//	if err != nil {
-//		log.Error(ctx, "check permission error",
-//			log.String("permission", string(external.ScheduleViewOrgCalendar)),
-//			log.Any("operator", op),
-//			log.Err(err),
-//		)
-//		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-//		return result
-//	}
-//	viewMy, err := external.GetPermissionServiceProvider().HasPermission(ctx, op, external.ScheduleViewMyCalendar)
-//	if err != nil {
-//		log.Error(ctx, "check permission error",
-//			log.String("permission", string(external.ScheduleViewMyCalendar)),
-//			log.Any("operator", op),
-//			log.Err(err),
-//		)
-//		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-//		return result
-//	}
-//	if viewOrg || viewMy {
-//		result[external.ScheduleViewOrgCalendar] = viewOrg
-//		result[external.ScheduleViewMyCalendar] = viewMy
-//		return result
-//	}
-//	c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
-//	return result
-//}

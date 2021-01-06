@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS `cms_contents` (
     KEY `content_latest_id` (`latest_id`),
     FULLTEXT INDEX `content_name_description_keywords_author_index` (`content_name`, `keywords`, `description`)
 ) COMMENT '内容表' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `schedules` (
     `id` varchar(50) NOT NULL COMMENT 'id',
     `title` varchar(100) NOT NULL COMMENT 'title',
@@ -75,6 +76,18 @@ CREATE TABLE IF NOT EXISTS `schedules` (
     KEY `schedules_end_at` (`end_at`),
     KEY `schedules_deleted_at` (`delete_at`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'schedules';
+
+CREATE TABLE IF NOT EXISTS `schedules_relations` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `schedule_id` varchar(100) NOT NULL COMMENT  'schedule_id',
+    `relation_id` varchar(100) NOT NULL COMMENT  'relation_id',
+    `relation_type` varchar(100) DEFAULT NULL COMMENT  'record_type',
+    PRIMARY KEY (`id`),
+    KEY `idx_schedule_id` (`schedule_id`),
+    KEY `idx_relation_id` (`relation_id`)
+    KEY `idx_schedule_id_relation_type` (`schedule_id`,`relation_type`)
+) COMMENT 'schedules_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
 
 CREATE TABLE `learning_outcomes` (
     `id` VARCHAR(50) NOT NULL COMMENT 'outcome_id',
@@ -136,6 +149,7 @@ create table `assessments` (
     key `assessments_schedule_id` (schedule_id),
     key `assessments_complete_time` (complete_time)
 ) comment 'assessment' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 create table assessments_attendances (
     `id` varchar(64) not null comment 'id',
     `assessment_id` varchar(64) not null comment 'assessment id',
@@ -145,6 +159,7 @@ create table assessments_attendances (
     key `assessments_attendances_assessment_id` (`assessment_id`),
     key `assessments_attendances_attendance_id` (`attendance_id`)
 ) comment 'assessment and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 create table assessments_outcomes (
     `id` varchar(64) not null comment 'id',
     `assessment_id` varchar(64) not null comment 'assessment id',
@@ -155,6 +170,7 @@ create table assessments_outcomes (
     key `assessments_outcomes_assessment_id` (`assessment_id`),
     key `assessments_outcomes_outcome_id` (`outcome_id`)
 ) comment 'assessment and outcome map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 create table outcomes_attendances (
     `id` varchar(64) not null comment 'id',
     `assessment_id` varchar(64) not null comment 'assessment id',
@@ -165,6 +181,7 @@ create table outcomes_attendances (
     key `outcomes_attendances_outcome_id` (`outcome_id`),
     key `outcomes_attendances_attendance_id` (`attendance_id`)
 ) comment 'outcome and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE `cms_folder_items` (
     `id` varchar(50) comment 'id',
     `owner_type` int NOT NULL comment 'folder item owner type',
@@ -186,23 +203,23 @@ CREATE TABLE `cms_folder_items` (
 ) comment 'cms folder' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS  `users` (
-  `user_id` varchar(64) NOT NULL,
-  `user_name` varchar(30) DEFAULT NULL,
-  `phone` varchar(24) DEFAULT NULL,
-  `email` varchar(80) DEFAULT NULL,
-  `secret` varchar(128) DEFAULT NULL,
-  `salt` varchar(128) DEFAULT NULL,
-  `gender` varchar(8) DEFAULT NULL,
-  `birthday` bigint(20) DEFAULT NULL,
-  `avatar` text DEFAULT NULL,
-  `create_at` bigint(20) DEFAULT '0',
-  `update_at` bigint(20) DEFAULT '0',
-  `delete_at` bigint(20) DEFAULT '0',
-  `create_id` varchar(64) DEFAULT NULL,
-  `update_id` varchar(64) DEFAULT NULL,
-  `delete_id` varchar(64) DEFAULT NULL,
-  `ams_id` varchar(64) DEFAULT NULL,
-  PRIMARY KEY (`user_id`),
+    `user_id` varchar(64) NOT NULL,
+    `user_name` varchar(30) DEFAULT NULL,
+    `phone` varchar(24) DEFAULT NULL,
+    `email` varchar(80) DEFAULT NULL,
+    `secret` varchar(128) DEFAULT NULL,
+    `salt` varchar(128) DEFAULT NULL,
+    `gender` varchar(8) DEFAULT NULL,
+    `birthday` bigint(20) DEFAULT NULL,
+    `avatar` text DEFAULT NULL,
+    `create_at` bigint(20) DEFAULT '0',
+    `update_at` bigint(20) DEFAULT '0',
+    `delete_at` bigint(20) DEFAULT '0',
+    `create_id` varchar(64) DEFAULT NULL,
+    `update_id` varchar(64) DEFAULT NULL,
+    `delete_id` varchar(64) DEFAULT NULL,
+    `ams_id` varchar(64) DEFAULT NULL,
+    PRIMARY KEY (`user_id`),
   UNIQUE KEY `uix_user_phone` (`phone`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
@@ -213,12 +230,7 @@ CREATE TABLE IF NOT EXISTS `user_settings` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `unique_user_id` (`user_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'user_settings';
-INSERT INTO `user_settings` (`id`, `user_id`, `setting_json`)
-VALUES (
-        "default_setting_0",
-        "default_setting_0",
-        '{"cms_page_size":20}'
-    );
+
 CREATE TABLE IF NOT EXISTS `cms_authed_contents` (
     `id` VARCHAR(50) NOT NULL COMMENT 'record_id',
     `org_id` VARCHAR(50) NOT NULL COMMENT 'org_id',
@@ -260,5 +272,180 @@ CREATE TABLE IF NOT EXISTS `organizations_properties` (
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'organizations_properties';
 
--- Badanamu HQ
-insert into organizations_properties(id, type) values('10f38ce9-5152-4049-b4e7-6d2e2ba884e6', 'headquarters');
+CREATE TABLE `ages` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'ages' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `lesson_types` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'lesson_types' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `grades` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'grades' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `developmentals` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'developmentals' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `class_types` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'class_types' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `programs` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `org_type` varchar(100) DEFAULT NULL COMMENT  'org_type',
+    `group_name` varchar(100) DEFAULT NULL COMMENT  'group_name',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`),
+    KEY `idx_org_type_delete_at` (`org_type`,`delete_at`)
+    KEY `idx_group_name_delete_at` (`group_name`,`delete_at`)
+) COMMENT 'programs' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `subjects` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'subjects' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `skills` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'skills' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE `visibility_settings` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `name` varchar(255) DEFAULT NULL COMMENT  'name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
+    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
+    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_id_delete` (`id`,`delete_at`)
+) COMMENT 'visibility_settings' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE IF NOT EXISTS `programs_ages` (
+    `id` varchar(50) NOT NULL COMMENT 'id',
+    `program_id` varchar(100) NOT NULL COMMENT 'program_id',
+    `age_id` varchar(100) NOT NULL COMMENT 'age_id',
+    PRIMARY KEY (`id`),
+    KEY `idx_program_id` (`program_id`),
+    KEY `idx_age_id` (`age_id`)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='programs_ages';
+
+CREATE TABLE IF NOT EXISTS `programs_developments` (
+    `id` varchar(50) NOT NULL COMMENT 'id',
+    `program_id` varchar(100) NOT NULL COMMENT 'program_id',
+    `development_id` varchar(100) NOT NULL COMMENT 'development_id',
+    PRIMARY KEY (`id`),
+    KEY `idx_program_id` (`program_id`),
+    KEY `idx_development_id` (`development_id`)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='programs_developments';
+
+CREATE TABLE IF NOT EXISTS `programs_grades` (
+    `id` varchar(50) NOT NULL COMMENT 'id',
+    `program_id` varchar(100) NOT NULL COMMENT 'program_id',
+    `grade_id` varchar(100) NOT NULL COMMENT 'grade_id',
+    PRIMARY KEY (`id`),
+    KEY `idx_program_id` (`program_id`),
+    KEY `idx_grade_id` (`grade_id`)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='programs_grades';
+
+CREATE TABLE IF NOT EXISTS `developments_skills` (
+    `id` varchar(50) NOT NULL COMMENT 'id',
+    `program_id` varchar(100) NOT NULL COMMENT 'program_id',
+    `development_id` varchar(100) NOT NULL COMMENT 'development_id',
+    `skill_id` varchar(100) NOT NULL COMMENT 'skill_id',
+    PRIMARY KEY (`id`),
+    KEY `idx_program_id` (`program_id`),
+    KEY `idx_development_id` (`development_id`),
+    KEY `idx_skill_id` (`skill_id`),
+    Key `idx_program_develop_skill` (`program_id`,`development_id`,`skill_id`)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='developments_skills';
+
+CREATE TABLE IF NOT EXISTS `programs_subjects` (
+    `id` varchar(50) NOT NULL COMMENT 'id',
+    `program_id` varchar(100) NOT NULL COMMENT 'program_id',
+    `subject_id` varchar(100) NOT NULL COMMENT 'subject_id',
+    PRIMARY KEY (`id`),
+    KEY `idx_program_id` (`program_id`),
+    KEY `idx_subject_id` (`subject_id`)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='programs_subjects';

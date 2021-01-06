@@ -70,7 +70,7 @@ func (s *Server) getSubjectByID(c *gin.Context) {
 // @Produce json
 // @Param subject body entity.Subject true "subject"
 // @Tags subject
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects [post]
 func (s *Server) addSubject(c *gin.Context) {
@@ -87,7 +87,7 @@ func (s *Server) addSubject(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	c.JSON(http.StatusOK, IDResponse{ID: id})
 }
 
 // @Summary updateSubject
@@ -98,7 +98,7 @@ func (s *Server) addSubject(c *gin.Context) {
 // @Param id path string true "subject id"
 // @Param subject body entity.Subject true "subject"
 // @Tags subject
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects/{id} [put]
@@ -117,7 +117,7 @@ func (s *Server) updateSubject(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -130,7 +130,7 @@ func (s *Server) updateSubject(c *gin.Context) {
 // @Produce json
 // @Param id path string true "subject id"
 // @Tags subject
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects/{id} [delete]
 func (s *Server) deleteSubject(c *gin.Context) {
@@ -140,7 +140,7 @@ func (s *Server) deleteSubject(c *gin.Context) {
 	err := model.GetSubjectModel().Delete(ctx, op, id)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

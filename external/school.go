@@ -79,7 +79,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get schools by ids failed",
 			log.Err(err),
@@ -128,7 +128,7 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "query schools by organization failed",
 			log.Err(err),
@@ -190,7 +190,7 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get schools by permission failed",
 			log.Err(err),
@@ -255,7 +255,7 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get schools by operator failed",
 			log.Err(err),

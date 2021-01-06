@@ -39,25 +39,27 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 
-	now := time.Now().Unix()
-	diff := utils.TimeStampDiff(schedule.StartAt, now)
-	if diff >= constant.ScheduleAllowGoLiveTime {
-		log.Warn(ctx, "MakeScheduleLiveToken: go live time not up",
-			log.Any("op", op),
-			log.String("scheduleID", scheduleID),
-			log.Int64("schedule.StartAt", schedule.StartAt),
-			log.Int64("time.Now", now),
-		)
-		return "", ErrGoLiveTimeNotUp
-	}
-	if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
-		log.Warn(ctx, "MakeScheduleLiveToken:go live not allow",
-			log.Any("op", op),
-			log.Any("schedule", schedule),
-			log.Int64("schedule.StartAt", schedule.StartAt),
-			log.Int64("time.Now", now),
-		)
-		return "", ErrGoLiveNotAllow
+	if tokenType == entity.LiveTokenTypeLive && schedule.ClassType != entity.ScheduleClassTypeHomework {
+		now := time.Now().Unix()
+		diff := utils.TimeStampDiff(schedule.StartAt, now)
+		if diff >= constant.ScheduleAllowGoLiveTime {
+			log.Warn(ctx, "MakeScheduleLiveToken: go live time not up",
+				log.Any("op", op),
+				log.String("scheduleID", scheduleID),
+				log.Int64("schedule.StartAt", schedule.StartAt),
+				log.Int64("time.Now", now),
+			)
+			return "", ErrGoLiveTimeNotUp
+		}
+		if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
+			log.Warn(ctx, "MakeScheduleLiveToken:go live not allow",
+				log.Any("op", op),
+				log.Any("schedule", schedule),
+				log.Int64("schedule.StartAt", schedule.StartAt),
+				log.Int64("time.Now", now),
+			)
+			return "", ErrGoLiveNotAllow
+		}
 	}
 	classType := schedule.ClassType.ConvertToLiveClassType()
 	if classType == entity.LiveClassTypeInvalid {
@@ -265,7 +267,7 @@ func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.O
 }
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, contentID string) ([]*entity.LiveMaterial, error) {
-	contentList, err := GetContentModel().  GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID, op)
+	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID, op)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "getMaterials:get content sub by id not found",
@@ -279,42 +281,19 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			log.String("contentID", contentID))
 		return nil, err
 	}
-	ids := make([]string, 0, len(contentList))
-	for _, item := range contentList {
-		if item == nil {
-			continue
-		}
-		ids = append(ids, item.ID)
-	}
-	contentMap, err := GetAuthedContentRecordsModel().GetContentAuthByIDList(ctx, ids, op)
-	if err != nil {
-		log.Error(ctx, "getMaterials:GetAuthedContentRecordsModel.GetContentAuthByIDList error",
-			log.Err(err),
-			log.Strings("lessonPlanIDs", ids),
-			log.Any("operator", op),
-		)
-		return nil, err
-	}
+
 	materials := make([]*entity.LiveMaterial, 0, len(contentList))
 	for _, item := range contentList {
 		if item == nil {
 			continue
 		}
-		authInfo, ok := contentMap[item.ID]
-		if !ok || authInfo == entity.ContentUnauthed {
-			log.Info(ctx, "material data error",
-				log.Any("item", item),
-				log.Int("authInfo", int(authInfo)),
-				log.String("lessonPlanID", contentID),
-			)
-			continue
-		}
+
 		materialItem := &entity.LiveMaterial{
 			Name: item.Name,
 		}
 		mData, ok := item.Data.(*MaterialData)
 		if !ok {
-			log.Debug(ctx, "content data convert materialdata error", log.Any("item", item))
+			log.Debug(ctx, "content data convert material data error", log.Any("item", item))
 			continue
 		}
 		// material type
