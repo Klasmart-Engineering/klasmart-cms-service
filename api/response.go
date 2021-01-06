@@ -11,6 +11,7 @@ const (
 	GeneralUnAuthorized        ResponseLabel = "general_error_unauthorized"
 	GeneralUnAuthorizedNoOrgID ResponseLabel = "general_error_no_organization"
 
+
 	// Assessment
 	AssessMsgOneStudent   ResponseLabel = "assess_msg_one_student"
 	AssessMsgNoPermission ResponseLabel = "assess_msg_no_permission"
@@ -21,6 +22,8 @@ const (
 	//Library
 	LibraryMsgContentLocked      ResponseLabel = "library_error_content_locked"
 	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
+	LibraryContentLockedByMe ResponseLabel = "library_error_content_locked_by_me"
+
 
 	// schedule
 	ScheduleMsgEditOverlap           ResponseLabel = "schedule_msg_edit_overlap"
