@@ -334,8 +334,8 @@ github.com/xdg/stringprep v1.0.0/go.mod h1:Jhud4/sHMO4oL310DaZAKk9ZaJ08SJfe+sJh0
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-gitlab.badanamu.com.cn/calmisland/chlorine v0.1.3 h1:whwpGQerlEycBfqZISeIhBDyx6vdu3xkzqLycu+bd8o=
-gitlab.badanamu.com.cn/calmisland/chlorine v0.1.3/go.mod h1:6rNVLbNtdOIdgImrAJpXKa3ixdHdgruw37GfARLqswA=
+gitlab.badanamu.com.cn/calmisland/chlorine v0.1.4 h1:U5yEk8QM6KivH6CY9A3LIcXKl7TmgiaEDTN5xbmIhT8=
+gitlab.badanamu.com.cn/calmisland/chlorine v0.1.4/go.mod h1:6rNVLbNtdOIdgImrAJpXKa3ixdHdgruw37GfARLqswA=
 gitlab.badanamu.com.cn/calmisland/common-cn v0.14.0/go.mod h1:1tH7r2tNYKG1dXamFx8VPF7qwoLcStAD5BrHtG2eW7k=
 gitlab.badanamu.com.cn/calmisland/common-cn v0.15.0/go.mod h1:f2lNnpYAKDWxbnS/G0pHVwTs6DwO+fIor9cX5ITsEe8=
 gitlab.badanamu.com.cn/calmisland/common-cn v0.16.0 h1:FLTx/3OOdPAcG1anhvwIUQC7mB/EBWLWUjRF2UI9b4Q=
