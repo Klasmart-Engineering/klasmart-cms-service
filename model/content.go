@@ -139,6 +139,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	sourceContent.PublishStatus = entity.ContentStatusHidden
 	sourceContent.LatestID = contentID
 	//解锁source content
+	//Unlock source content
 	sourceContent.LockedBy = constant.LockedByNoBody
 	err = da.GetContentDA().UpdateContent(ctx, tx, sourceID, *sourceContent)
 	if err != nil {
@@ -153,6 +154,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	}
 
 	//更新所有latestID为sourceContent的Content
+	//Update all sourceContent latestID fields
 	_, oldContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		LatestID: sourceContent.ID,
 	})
@@ -236,6 +238,7 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) (*entity.Content, error) {
 
 	//若为asset，直接发布
+	//if the content is assets, publish it immediate
 	if content.ContentType.IsAsset() {
 		log.Info(ctx, "asset no need to check", log.String("cid", content.ID))
 		return content, nil
@@ -253,6 +256,7 @@ func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext
 
 func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//若content为已发布状态或发布中状态，则创建新content
+	//
 	if content.PublishStatus != entity.ContentStatusDraft && content.PublishStatus != entity.ContentStatusRejected &&
 		content.PublishStatus != entity.ContentStatusArchive {
 		//报错

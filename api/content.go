@@ -460,7 +460,7 @@ func (s *Server) lockContent(c *gin.Context) {
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidLockedContentPublishStatus:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(LibraryContentLockedByMe))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": ncid,
