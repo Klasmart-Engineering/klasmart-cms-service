@@ -11,6 +11,7 @@ import (
 	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type OrganizationServiceProvider interface {
@@ -47,8 +48,11 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
     	name: organization_name
   	}
 }`
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
 	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
-	req.Var("orgIDs", ids)
+	req.Var("orgIDs", _ids)
 	payload := make([]*Organization, len(ids))
 	res := cl.Response{
 		Data: &struct {
@@ -64,12 +68,12 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	nullableOrganizations := make([]*NullableOrganization, len(payload))
-	for i := range payload {
-		if payload[i] == nil {
-			nullableOrganizations[i] = &NullableOrganization{Valid: false}
+	nullableOrganizations := make([]*NullableOrganization, len(ids))
+	for index := range ids {
+		if payload[indexMapping[index]] == nil {
+			nullableOrganizations[index] = &NullableOrganization{Valid: false}
 		} else {
-			nullableOrganizations[i] = &NullableOrganization{*payload[i], true}
+			nullableOrganizations[index] = &NullableOrganization{*payload[indexMapping[index]], true}
 		}
 	}
 

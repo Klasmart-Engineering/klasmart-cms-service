@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -64,9 +65,11 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 		return []*NullableSchool{}, nil
 	}
 
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
-	for index, id := range ids {
+	for index, id := range _ids {
 		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {id:school_id name:school_name}\n", index, id)
 	}
 	sb.WriteString("}")
@@ -89,7 +92,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 
 	schools := make([]*NullableSchool, 0, len(data))
 	for index := range ids {
-		school := data[fmt.Sprintf("q%d", index)]
+		school := data[fmt.Sprintf("q%d", indexMapping[index])]
 		schools = append(schools, &NullableSchool{
 			Valid:  school != nil,
 			School: school,

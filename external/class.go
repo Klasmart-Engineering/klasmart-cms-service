@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"go.uber.org/zap/buffer"
 )
@@ -56,8 +57,11 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
 		return nil, err
 	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
 	buf := buffer.Buffer{}
-	err = temp.Execute(&buf, ids)
+	err = temp.Execute(&buf, _ids)
 	if err != nil {
 		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
 		return nil, err
@@ -78,11 +82,12 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 		return nil, res.Errors
 	}
 	var classes []*NullableClass
-	for _, v := range payload {
-		if v == nil {
+	for index := range ids {
+		class := payload[fmt.Sprintf("index_%d", indexMapping[index])]
+		if class == nil {
 			classes = append(classes, &NullableClass{Valid: false})
 		} else {
-			classes = append(classes, &NullableClass{*v, true})
+			classes = append(classes, &NullableClass{*class, true})
 		}
 	}
 
