@@ -77,6 +77,19 @@ CREATE TABLE IF NOT EXISTS `schedules` (
     KEY `schedules_deleted_at` (`delete_at`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'schedules';
 
+CREATE TABLE IF NOT EXISTS `schedules_relations` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `schedule_id` varchar(100) NOT NULL COMMENT  'schedule_id',
+    `record_id` varchar(100) NOT NULL COMMENT  'record_id',
+    `record_type` varchar(100) DEFAULT NULL COMMENT  'record_type',
+    `group_name` varchar(100) DEFAULT NULL COMMENT  'group_name',
+    PRIMARY KEY (`id`),
+    KEY `idx_schedule_id` (`schedule_id`),
+    KEY `idx_record_id` (`record_id`)
+    KEY `idx_schedule_id_record_type_group_name` (`schedule_id`,`record_type`,`group_name`)
+) COMMENT 'schedules_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+
 CREATE TABLE `learning_outcomes` (
     `id` VARCHAR(50) NOT NULL COMMENT 'outcome_id',
     `ancestor_id` VARCHAR(50) NOT NULL COMMENT 'ancestor_id',
@@ -362,19 +375,6 @@ CREATE TABLE `subjects` (
     KEY `idx_id_delete` (`id`,`delete_at`)
 ) COMMENT 'subjects' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
-CREATE TABLE `skills` (
-    `id` varchar(256) NOT NULL COMMENT  'id',
-    `name` varchar(255) DEFAULT NULL COMMENT  'name',
-    `number` int DEFAULT 0 COMMENT  'number',
-    `create_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
-    `update_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
-    `delete_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
-    `create_at` bigint(20) DEFAULT 0 COMMENT 'created_at',
-    `update_at` bigint(20) DEFAULT 0 COMMENT 'updated_at',
-    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
-    PRIMARY KEY (`id`),
-    KEY `idx_id_delete` (`id`,`delete_at`)
-) COMMENT 'skills' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 CREATE TABLE `visibility_settings` (
     `id` varchar(256) NOT NULL COMMENT  'id',
