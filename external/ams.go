@@ -31,18 +31,11 @@ type AmsClient struct {
 }
 
 func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorine.Response) (int, error) {
-	log.Debug(ctx, "run query start", log.Any("request", req))
+	log.Debug(ctx, "execute query start", log.Any("request", req))
 
-	var externalStopwatch *utils.Stopwatch
-	stopwatches := ctx.Value(constant.ContextStopwatchKey)
-	if stopwatches != nil {
-		stopwatchMap, ok := stopwatches.(map[string]*utils.Stopwatch)
-		if ok {
-			externalStopwatch := stopwatchMap[string(constant.ExternalStopwatch)]
-			if externalStopwatch != nil {
-				externalStopwatch.Start()
-			}
-		}
+	externalStopwatch, foundStopwatch := utils.GetStopwatch(ctx, constant.ExternalStopwatch)
+	if foundStopwatch {
+		externalStopwatch.Start()
 	}
 
 	fields := []log.Field{
@@ -51,12 +44,13 @@ func (c AmsClient) Run(ctx context.Context, req *chlorine.Request, resp *chlorin
 	}
 
 	statusCode, err := c.Client.Run(ctx, req, resp)
-	if externalStopwatch != nil {
+
+	if foundStopwatch {
 		externalStopwatch.Stop()
 		fields = append(fields, log.Duration("duration", externalStopwatch.Duration()))
 	}
 
-	log.Debug(ctx, "run query end", fields...)
+	log.Debug(ctx, "execute query end", fields...)
 
 	return statusCode, err
 }
