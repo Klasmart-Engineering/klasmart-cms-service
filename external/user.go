@@ -10,6 +10,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type UserServiceProvider interface {
@@ -66,9 +67,11 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 		return []*NullableUser{}, nil
 	}
 
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
-	for index, id := range ids {
+	for index, id := range _ids {
 		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {id:user_id name:user_name given_name family_name email avatar}\n", index, id)
 	}
 	sb.WriteString("}")
@@ -88,7 +91,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 
 	users := make([]*NullableUser, 0, len(data))
 	for index := range ids {
-		user := data[fmt.Sprintf("q%d", index)]
+		user := data[fmt.Sprintf("q%d", indexMapping[index])]
 		users = append(users, &NullableUser{
 			Valid: user != nil,
 			User:  user,
