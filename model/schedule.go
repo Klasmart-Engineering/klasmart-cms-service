@@ -36,7 +36,7 @@ type IScheduleModel interface {
 	QueryScheduledDates(ctx context.Context, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
 	Page(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
 	GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error)
-	IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error)
+	ConflictDetection(ctx context.Context, op *entity.Operator, input *entity.ScheduleConflictInput) (*entity.ScheduleConflictView, error)
 	GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error)
 	GetTeacherByName(ctx context.Context, operator *entity.Operator, OrgID, name string) ([]*external.Teacher, error)
 	ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool
@@ -96,32 +96,32 @@ func (s *scheduleModel) GetOrgClassIDsByUserIDs(ctx context.Context, operator *e
 	return result, nil
 }
 
-func (s *scheduleModel) IsScheduleConflict(ctx context.Context, op *entity.Operator, startAt int64, endAt int64) (bool, error) {
-	var scheduleList []*entity.Schedule
-	StartAndEndRange := make([]sql.NullInt64, 2)
-	StartAndEndRange[0] = sql.NullInt64{
-		Valid: startAt <= 0,
-		Int64: startAt,
-	}
-	StartAndEndRange[1] = sql.NullInt64{
-		Valid: endAt <= 0,
-		Int64: endAt,
-	}
-	err := da.GetScheduleDA().Query(ctx, &da.ScheduleCondition{
-		OrgID: sql.NullString{
-			String: op.OrgID,
-			Valid:  op.OrgID != "",
-		},
-		StartAndEndRange: StartAndEndRange,
-	}, &scheduleList)
-	if err != nil {
-		return false, err
-	}
-	if len(scheduleList) > 0 {
-		log.Debug(ctx, "conflict schedule data", log.Any("scheduleList", scheduleList))
-		return true, nil
-	}
-	return false, nil
+func (s *scheduleModel) ConflictDetection(ctx context.Context, op *entity.Operator, input *entity.ScheduleConflictInput) (*entity.ScheduleConflictView, error) {
+	//var scheduleList []*entity.Schedule
+	//StartAndEndRange := make([]sql.NullInt64, 2)
+	//StartAndEndRange[0] = sql.NullInt64{
+	//	Valid: startAt <= 0,
+	//	Int64: startAt,
+	//}
+	//StartAndEndRange[1] = sql.NullInt64{
+	//	Valid: endAt <= 0,
+	//	Int64: endAt,
+	//}
+	//err := da.GetScheduleDA().Query(ctx, &da.ScheduleCondition{
+	//	OrgID: sql.NullString{
+	//		String: op.OrgID,
+	//		Valid:  op.OrgID != "",
+	//	},
+	//	StartAndEndRange: StartAndEndRange,
+	//}, &scheduleList)
+	//if err != nil {
+	//	return false, err
+	//}
+	//if len(scheduleList) > 0 {
+	//	log.Debug(ctx, "conflict schedule data", log.Any("scheduleList", scheduleList))
+	//	return true, nil
+	//}
+	return nil, nil
 }
 
 func (s *scheduleModel) ExistScheduleAttachmentFile(ctx context.Context, attachmentPath string) bool {
@@ -171,24 +171,6 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		viewData.SubjectID = ""
 	}
 
-	// not force add need conflict detection
-	if !viewData.IsForce {
-		conflict, err := GetScheduleModel().IsScheduleConflict(ctx, op, viewData.StartAt, viewData.EndAt)
-		if err != nil {
-			log.Error(ctx, "add schedule: check conflict failed",
-				log.Int64("start_at", viewData.StartAt),
-				log.Int64("end_at", viewData.EndAt),
-			)
-			return "", err
-		}
-		if conflict {
-			log.Warn(ctx, "add schedule: time conflict",
-				log.Int64("start_at", viewData.StartAt),
-				log.Int64("end_at", viewData.EndAt),
-			)
-			return "", constant.ErrConflict
-		}
-	}
 	schedule, err := viewData.ToSchedule(ctx)
 	schedule.CreatedID = op.UserID
 	scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location)
@@ -292,27 +274,6 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		viewData.LessonPlanID = ""
 		viewData.ProgramID = ""
 		viewData.SubjectID = ""
-	}
-
-	// not force add need conflict detection
-	if !viewData.IsForce {
-		conflict, err := s.IsScheduleConflict(ctx, operator, viewData.StartAt, viewData.EndAt)
-		if err != nil {
-			log.Error(ctx, "update schedule: check time conflict failed",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.Any("viewData", viewData),
-			)
-			return "", err
-		}
-
-		if conflict {
-			log.Info(ctx, "update schedule: time conflict",
-				log.Any("operator", operator),
-				log.Any("viewData", viewData),
-			)
-			return "", constant.ErrConflict
-		}
 	}
 
 	// update schedule
@@ -645,16 +606,9 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 				}
 			}
 		}
-		scheduleBasic.Members = scheduleBasic.MemberTeachers
 
 		if v, ok := classStudents[item.ClassID]; ok {
 			scheduleBasic.StudentCount = len(v)
-			for _, t := range v {
-				scheduleBasic.Members = append(scheduleBasic.Members, &entity.ScheduleShortInfo{
-					ID:   t.ID,
-					Name: t.Name,
-				})
-			}
 		}
 
 		scheduleBasicMap[item.ID] = scheduleBasic

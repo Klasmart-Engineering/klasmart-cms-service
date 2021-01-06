@@ -286,28 +286,30 @@ func (s Schedule) Clone() Schedule {
 }
 
 type ScheduleAddView struct {
-	Title        string `json:"title" binding:"required"`
-	ClassID      string `json:"class_id" binding:"required"`
-	LessonPlanID string `json:"lesson_plan_id"`
-	// Abandoned
-	TeacherIDs     []string          `json:"teacher_ids" binding:"required,min=1"`
-	OrgID          string            `json:"org_id"`
-	StartAt        int64             `json:"start_at" binding:"required"`
-	EndAt          int64             `json:"end_at" binding:"required"`
-	SubjectID      string            `json:"subject_id"`
-	ProgramID      string            `json:"program_id"`
-	ClassType      ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	DueAt          int64             `json:"due_at"`
-	Description    string            `json:"description"`
-	Attachment     ScheduleShortInfo `json:"attachment"`
-	Version        int64             `json:"version"`
-	RepeatID       string            `json:"-"`
-	Repeat         RepeatOptions     `json:"repeat"`
-	IsAllDay       bool              `json:"is_all_day"`
-	IsRepeat       bool              `json:"is_repeat"`
-	IsForce        bool              `json:"is_force"`
-	TimeZoneOffset int               `json:"time_zone_offset"`
-	Location       *time.Location    `json:"-"`
+	Title                  string            `json:"title" binding:"required"`
+	ClassID                string            `json:"class_id" binding:"required"`
+	LessonPlanID           string            `json:"lesson_plan_id"`
+	ClassRosterTeacherIDs  []string          `json:"class_roster_teacher_ids"`
+	ClassRosterStudentIDs  []string          `json:"class_roster_student_ids"`
+	ParticipantsTeacherIDs []string          `json:"participants_teacher_ids"`
+	ParticipantsStudentIDs []string          `json:"participants_student_ids"`
+	OrgID                  string            `json:"org_id"`
+	StartAt                int64             `json:"start_at" binding:"required"`
+	EndAt                  int64             `json:"end_at" binding:"required"`
+	SubjectID              string            `json:"subject_id"`
+	ProgramID              string            `json:"program_id"`
+	ClassType              ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	DueAt                  int64             `json:"due_at"`
+	Description            string            `json:"description"`
+	Attachment             ScheduleShortInfo `json:"attachment"`
+	Version                int64             `json:"version"`
+	RepeatID               string            `json:"-"`
+	Repeat                 RepeatOptions     `json:"repeat"`
+	IsAllDay               bool              `json:"is_all_day"`
+	IsRepeat               bool              `json:"is_repeat"`
+	IsForce                bool              `json:"is_force"`
+	TimeZoneOffset         int               `json:"time_zone_offset"`
+	Location               *time.Location    `json:"-"`
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -389,7 +391,11 @@ type ScheduleDetailsView struct {
 	Repeat      RepeatOptions     `json:"repeat"`
 	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ScheduleBasic
-	RealTimeStatus ScheduleRealTimeView `json:"real_time_status"`
+	RealTimeStatus       ScheduleRealTimeView `json:"real_time_status"`
+	ClassRosterTeachers  []ScheduleShortInfo  `json:"class_roster_teacher"`
+	ClassRosterStudents  []ScheduleShortInfo  `json:"class_roster_student"`
+	ParticipantsTeachers []ScheduleShortInfo  `json:"participants_teacher"`
+	ParticipantsStudents []ScheduleShortInfo  `json:"participants_student"`
 }
 
 type ScheduleSearchView struct {
@@ -411,7 +417,6 @@ type ScheduleBasic struct {
 	Class          *ScheduleShortInfo   `json:"class"`
 	Subject        *ScheduleShortInfo   `json:"subject"`
 	Program        *ScheduleShortInfo   `json:"program"`
-	Members        []*ScheduleShortInfo `json:"teachers"`
 	MemberTeachers []*ScheduleShortInfo `json:"member_teachers"`
 	StudentCount   int                  `json:"student_count"`
 	LessonPlan     *ScheduleShortInfo   `json:"lesson_plan"`
@@ -469,4 +474,24 @@ func (s ScheduleViewType) String() string {
 type ScheduleRealTimeView struct {
 	ID               string `json:"id"`
 	LessonPlanIsAuth bool   `json:"lesson_plan_is_auth"`
+}
+
+type ScheduleConflictView struct {
+	ClassRosterTeachers  []ScheduleShortInfo `json:"class_roster_teacher"`
+	ClassRosterStudents  []ScheduleShortInfo `json:"class_roster_student"`
+	ParticipantsTeachers []ScheduleShortInfo `json:"participants_teacher"`
+	ParticipantsStudents []ScheduleShortInfo `json:"participants_student"`
+}
+
+type ScheduleConflictInput struct {
+	ClassRosterTeacherIDs  []string
+	ClassRosterStudentIDs  []string
+	ParticipantsTeacherIDs []string
+	ParticipantsStudentIDs []string
+	IgnoreScheduleID       string
+	StartAt                int64
+	EndAt                  int64
+	IsRepeat               bool
+	RepeatOptions          RepeatOptions
+	Location               *time.Location
 }

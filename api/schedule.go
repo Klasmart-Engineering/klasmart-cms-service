@@ -27,10 +27,10 @@ import (
 // @Param schedule_id path string true "schedule id"
 // @Param scheduleData body entity.ScheduleUpdateView true "schedule data to update"
 // @Tags schedule
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
-// @Failure 409 {object} ConflictResponse
+// @Failure 409 {object} entity.ScheduleConflictView
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
@@ -103,6 +103,32 @@ func (s *Server) updateSchedule(c *gin.Context) {
 
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
+	if !data.IsForce {
+		conflictInput := &entity.ScheduleConflictInput{
+			ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
+			ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
+			ParticipantsTeacherIDs: data.ParticipantsTeacherIDs,
+			ParticipantsStudentIDs: data.ParticipantsStudentIDs,
+			StartAt:                data.StartAt,
+			EndAt:                  data.EndAt,
+			RepeatOptions:          data.Repeat,
+			Location:               loc,
+			IgnoreScheduleID:       data.ID,
+		}
+		if data.IsRepeat && data.EditType == entity.ScheduleEditWithFollowing {
+			conflictInput.IsRepeat = true
+		}
+		conflictData, err := model.GetScheduleModel().ConflictDetection(ctx, op, conflictInput)
+		if err == constant.ErrConflict {
+			c.JSON(http.StatusBadRequest, conflictData)
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+	}
+
 	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
 	switch err {
 	case constant.ErrInvalidArgs:
@@ -116,7 +142,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	case model.ErrScheduleEditMissTime:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissTime))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: newID})
+		c.JSON(http.StatusOK, IDResponse{ID: newID})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -182,9 +208,9 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Produce json
 // @Param scheduleData body entity.ScheduleAddView true "schedule data to add"
 // @Tags schedule
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 409 {object} ConflictResponse
+// @Failure 409 {object} entity.ScheduleConflictView
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [post]
@@ -236,12 +262,33 @@ func (s *Server) addSchedule(c *gin.Context) {
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
 	data.Location = loc
+	if !data.IsForce {
+		conflictInput := &entity.ScheduleConflictInput{
+			ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
+			ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
+			ParticipantsTeacherIDs: data.ParticipantsTeacherIDs,
+			ParticipantsStudentIDs: data.ParticipantsStudentIDs,
+			StartAt:                data.StartAt,
+			EndAt:                  data.EndAt,
+			RepeatOptions:          data.Repeat,
+			Location:               loc,
+			IsRepeat:               data.IsRepeat,
+		}
+		conflictData, err := model.GetScheduleModel().ConflictDetection(ctx, op, conflictInput)
+		if err == constant.ErrConflict {
+			c.JSON(http.StatusBadRequest, conflictData)
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+	}
+
 	id, err := model.GetScheduleModel().Add(ctx, op, data)
 	switch err {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	case constant.ErrConflict:
-		c.JSON(http.StatusConflict, L(ScheduleMsgOverlap))
 	case constant.ErrFileNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case constant.ErrRecordNotFound:
@@ -249,7 +296,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 	case model.ErrScheduleLessonPlanUnAuthed:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -681,7 +728,7 @@ func (s *Server) GetClassIDsBySchoolIDs(ctx context.Context, op *entity.Operator
 // @Param schedule_id path string true "schedule id"
 // @Param status query string true "schedule status" enums(NotStart, Started, Closed)
 // @Tags schedule
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -703,7 +750,7 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}

@@ -48,6 +48,3 @@ type NullInt64 struct {
 	Int64 int64
 	Valid bool
 }
-type IDResponse struct {
-	ID string `json:"id"`
-}

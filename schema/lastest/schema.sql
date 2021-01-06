@@ -77,6 +77,18 @@ CREATE TABLE IF NOT EXISTS `schedules` (
     KEY `schedules_deleted_at` (`delete_at`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'schedules';
 
+CREATE TABLE IF NOT EXISTS `schedules_relations` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `schedule_id` varchar(100) NOT NULL COMMENT  'schedule_id',
+    `relation_id` varchar(100) NOT NULL COMMENT  'relation_id',
+    `relation_type` varchar(100) DEFAULT NULL COMMENT  'record_type',
+    PRIMARY KEY (`id`),
+    KEY `idx_schedule_id` (`schedule_id`),
+    KEY `idx_relation_id` (`relation_id`)
+    KEY `idx_schedule_id_relation_type` (`schedule_id`,`relation_type`)
+) COMMENT 'schedules_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+
 CREATE TABLE `learning_outcomes` (
     `id` VARCHAR(50) NOT NULL COMMENT 'outcome_id',
     `ancestor_id` VARCHAR(50) NOT NULL COMMENT 'ancestor_id',
