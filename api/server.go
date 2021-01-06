@@ -28,7 +28,7 @@ func NewServer() *Server {
 
 	log.Debug(context.TODO(), "init gin success")
 
-	server.engine.Use(server.logger(), server.recovery())
+	server.engine.Use(server.logger(), server.recovery(), server.durationContext())
 
 	// CORS
 	if len(config.Get().CORS.AllowOrigins) > 0 {

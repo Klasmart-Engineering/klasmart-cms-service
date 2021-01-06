@@ -80,7 +80,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by ids failed", log.Err(err), log.Strings("ids", ids))
 		return nil, err
@@ -136,7 +136,7 @@ func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, or
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "query users by keyword failed",
 			log.Err(err),
@@ -177,7 +177,7 @@ func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, 
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "query users by keyword failed",
 			log.Err(err),

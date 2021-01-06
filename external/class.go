@@ -68,7 +68,7 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 		Data: &payload,
 	}
 
-	_, err = GetChlorine().Run(ctx, req, &res)
+	_, err = GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -116,7 +116,7 @@ func (s AmsClassService) GetByUserID(ctx context.Context, operator *entity.Opera
 		} `json:"user"`
 	}{}
 
-	_, err := GetChlorine().Run(ctx, request, &chlorine.Response{Data: data})
+	_, err := GetAmsClient().Run(ctx, request, &chlorine.Response{Data: data})
 	if err != nil {
 		log.Error(ctx, "query classes by user id failed", log.Err(err), log.String("userID", userID))
 		return nil, err
@@ -154,7 +154,7 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get classes by users failed", log.Err(err), log.Strings("ids", userIDs))
 		return nil, err
@@ -205,7 +205,7 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, operator *ent
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get classes by org ids failed", log.Err(err), log.Strings("ids", organizationIDs))
 		return nil, err
@@ -253,7 +253,7 @@ func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Op
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get classes by schools failed", log.Err(err), log.Strings("ids", schoolIDs))
 		return nil, err

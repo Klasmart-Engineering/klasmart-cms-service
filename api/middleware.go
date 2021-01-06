@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -162,10 +164,23 @@ func (s Server) logger() gin.HandlerFunc {
 		duration := time.Since(start)
 		fields = append(fields,
 			log.Any("operator", s.getOperator(c)),
-			log.String("session", c.GetHeader("Session")),
 			log.Int("size", c.Writer.Size()),
 			log.Int("status", c.Writer.Status()),
-			log.Duration("duration", duration))
+			log.Int64("duration", duration.Milliseconds()))
+
+		// stopwatch durations
+		stopwatches := c.Request.Context().Value(constant.ContextStopwatchKey)
+		if stopwatches != nil {
+			stopwatchMap, ok := stopwatches.(map[string]*utils.Stopwatch)
+			if ok {
+				durations := make(map[string]int64, len(stopwatchMap))
+				for key, stopwatch := range stopwatchMap {
+					durations[key] = stopwatch.Duration().Milliseconds()
+				}
+
+				fields = append(fields, log.Any("durations", durations))
+			}
+		}
 
 		fn := log.Info
 		if duration > constant.FunctionExpirationLimit {
@@ -217,6 +232,19 @@ func (s Server) recovery() gin.HandlerFunc {
 				}
 			}
 		}()
+		c.Next()
+	}
+}
+
+func (s Server) durationContext() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		stopwatches := map[string]*utils.Stopwatch{
+			string(constant.ExternalStopwatch): new(utils.Stopwatch),
+		}
+
+		ctx := context.WithValue(c.Request.Context(), constant.ContextStopwatchKey, stopwatches)
+		c.Request = c.Request.WithContext(ctx)
+
 		c.Next()
 	}
 }
