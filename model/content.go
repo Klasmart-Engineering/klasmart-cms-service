@@ -1060,6 +1060,11 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
 		}
+		err = v.PrepareVersion(ctx)
+		if err != nil {
+			log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
+			return nil, err
+		}
 		err = v.PrepareResult(ctx, content, user)
 		if err != nil {
 			log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
