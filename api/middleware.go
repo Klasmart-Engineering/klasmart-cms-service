@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -158,8 +157,6 @@ func (s Server) logger() gin.HandlerFunc {
 		// Process request
 		c.Next()
 
-		// login info is not exists before c.Next()
-
 		// add response fields
 		duration := time.Since(start)
 		fields = append(fields,
@@ -168,18 +165,15 @@ func (s Server) logger() gin.HandlerFunc {
 			log.Int("status", c.Writer.Status()),
 			log.Int64("duration", duration.Milliseconds()))
 
-		// stopwatch durations
-		stopwatches := c.Request.Context().Value(constant.ContextStopwatchKey)
-		if stopwatches != nil {
-			stopwatchMap, ok := stopwatches.(map[string]*utils.Stopwatch)
-			if ok {
-				durations := make(map[string]int64, len(stopwatchMap))
-				for key, stopwatch := range stopwatchMap {
-					durations[key] = stopwatch.Duration().Milliseconds()
-				}
-
-				fields = append(fields, log.Any("durations", durations))
+		// log stopwatch durations
+		stopwatchMap, found := utils.GetStopwatches(c.Request.Context())
+		if found {
+			durations := make(map[string]int64, len(stopwatchMap))
+			for key, stopwatch := range stopwatchMap {
+				durations[key] = stopwatch.Duration().Milliseconds()
 			}
+
+			fields = append(fields, log.Any("durations", durations))
 		}
 
 		fn := log.Info
@@ -236,13 +230,9 @@ func (s Server) recovery() gin.HandlerFunc {
 	}
 }
 
-func (s Server) durationContext() gin.HandlerFunc {
+func (s Server) contextStopwatch() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		stopwatches := map[string]*utils.Stopwatch{
-			string(constant.ExternalStopwatch): new(utils.Stopwatch),
-		}
-
-		ctx := context.WithValue(c.Request.Context(), constant.ContextStopwatchKey, stopwatches)
+		ctx := utils.SetupStopwatch(c.Request.Context())
 		c.Request = c.Request.WithContext(ctx)
 
 		c.Next()
