@@ -20,6 +20,7 @@ type SchoolServiceProvider interface {
 	GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
 	GetByOperator(ctx context.Context, operator *entity.Operator) ([]*School, error)
+	GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string) (map[string][]*School, error)
 }
 
 type School struct {
@@ -281,6 +282,80 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 
 	log.Info(ctx, "get schools by operator success",
 		log.Any("operator", operator))
+
+	return schools, nil
+}
+
+func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string) (map[string][]*School, error) {
+	if len(userIDs) == 0 {
+		return map[string][]*School{}, nil
+	}
+
+	_userIDs, indexMapping := utils.SliceDeduplicationMap(userIDs)
+
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range _userIDs {
+		fmt.Fprintf(sb, `q%d: user(user_id: "%s") {school_memberships {school {school_id school_name organization {organization_id}}}}`, index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+
+	data := map[string]*struct {
+		SchoolMemberships []struct {
+			School struct {
+				SchoolID     string `json:"school_id"`
+				SchoolName   string `json:"school_name"`
+				Organization struct {
+					OrganizationID string `json:"organization_id"`
+				} `json:"organization"`
+			} `json:"school"`
+		} `json:"school_memberships"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get user school mapping by org and user ids failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("orgID", orgID),
+			log.Strings("userIDs", userIDs))
+		return nil, err
+	}
+
+	schools := make(map[string][]*School, len(userIDs))
+	for index, userID := range userIDs {
+		user := data[fmt.Sprintf("q%d", indexMapping[index])]
+		schools[userID] = make([]*School, 0)
+
+		if user == nil {
+			continue
+		}
+
+		for _, membership := range user.SchoolMemberships {
+			// filtering by operator's org id
+			if membership.School.Organization.OrganizationID != orgID {
+				continue
+			}
+
+			schools[userID] = append(schools[userID], &School{
+				ID:   membership.School.SchoolID,
+				Name: membership.School.SchoolName,
+			})
+		}
+
+	}
+
+	log.Info(ctx, "get user school mapping by org and user ids success",
+		log.Any("operator", operator),
+		log.String("orgID", orgID),
+		log.Strings("userIDs", userIDs),
+		log.Any("schools", schools))
 
 	return schools, nil
 }
