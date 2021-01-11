@@ -295,7 +295,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 
 // @Summary getContent
 // @ID getContentById
-// @Description get a content by id
+// @Description get a content by id (Inherent & unchangeable)
 // @Accept json
 // @Produce json
 // @Param content_id path string true "get content id"
@@ -601,7 +601,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 
 // @Summary queryContent
 // @ID searchContents
-// @Description query content by condition
+// @Description query content by condition (Inherent & unchangeable)
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
@@ -922,14 +922,14 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	if programGroup != "" {
 		programs, err := model.GetProgramModel().Query(c.Request.Context(), &da.ProgramCondition{
 			GroupName: sql.NullString{
-				Valid: true,
+				Valid:  true,
 				String: programGroup,
 			},
 		})
-		if err != nil{
+		if err != nil {
 			log.Error(c.Request.Context(), "get program by groups failed", log.Err(err),
 				log.String("group", programGroup))
-		}else if len(programs) > 0{
+		} else if len(programs) > 0 {
 			programIDs := make([]string, len(programs))
 			for i := range programs {
 				programIDs[i] = programs[i].ID

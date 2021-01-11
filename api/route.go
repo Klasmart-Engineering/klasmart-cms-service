@@ -46,7 +46,11 @@ func (s Server) registeRoute() {
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
 		content.POST("/contents/copy", s.mustLogin, s.copyContent)
+		//Inherent & unchangeable
 		content.GET("/contents/:content_id", s.mustLogin, s.getContent)
+		//Inherent & unchangeable
+		content.GET("/contents", s.mustLogin, s.queryContent)
+
 		content.PUT("/contents/:content_id", s.mustLogin, s.updateContent)
 		content.PUT("/contents/:content_id/lock", s.mustLogin, s.lockContent)
 		content.PUT("/contents/:content_id/publish", s.mustLogin, s.publishContent)
@@ -57,7 +61,6 @@ func (s Server) registeRoute() {
 		content.PUT("/contents_review/reject", s.mustLogin, s.rejectBulk)
 
 		content.DELETE("/contents/:content_id", s.mustLogin, s.deleteContent)
-		content.GET("/contents", s.mustLogin, s.queryContent)
 		content.GET("/contents/:content_id/statistics", s.mustLogin, s.contentDataCount)
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
