@@ -2,7 +2,9 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"go.uber.org/zap/buffer"
@@ -16,7 +18,7 @@ import (
 
 type OrganizationServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error)
-	BatchGetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error)
+	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error)
 	GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error)
 	GetParents(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
 	GetChildren(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
@@ -85,9 +87,55 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 	return nullableOrganizations, nil
 }
 
-func (s AmsOrganizationService) BatchGetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error) {
-	// TODO: add impl
-	return nil, nil
+func (s AmsOrganizationService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error) {
+	if len(classIDs) == 0 {
+		return map[string]*Organization{}, nil
+	}
+
+	_classIDs, indexMapping := utils.SliceDeduplicationMap(classIDs)
+
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range _classIDs {
+		fmt.Fprintf(sb, `q%d: class(class_id: "%s") {organization{id:organization_id name:organization_name}}`, index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+
+	data := map[string]*struct {
+		Organization Organization `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get organizations by classes failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Strings("classIDs", classIDs))
+		return nil, err
+	}
+
+	orgs := make(map[string]*Organization, len(classIDs))
+	for index, classID := range classIDs {
+		class := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if class == nil {
+			continue
+		}
+
+		orgs[classID] = &class.Organization
+	}
+
+	log.Info(ctx, "get organizations by classes success",
+		log.Any("operator", operator),
+		log.Strings("classIDs", classIDs),
+		log.Any("orgs", orgs))
+
+	return orgs, nil
 }
 
 func (s AmsOrganizationService) GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error) {
