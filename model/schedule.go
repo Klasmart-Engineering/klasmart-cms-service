@@ -597,6 +597,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		if v, ok := lessonPlanMap[item.LessonPlanID]; ok {
 			scheduleBasic.LessonPlan = v
 		}
+
 		if v, ok := classTeachers[item.ClassID]; ok {
 			scheduleBasic.MemberTeachers = make([]*entity.ScheduleShortInfo, len(v))
 			for i, t := range v {
@@ -606,9 +607,16 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 				}
 			}
 		}
+		scheduleBasic.Members = scheduleBasic.MemberTeachers
 
 		if v, ok := classStudents[item.ClassID]; ok {
 			scheduleBasic.StudentCount = len(v)
+			for _, t := range v {
+				scheduleBasic.Members = append(scheduleBasic.Members, &entity.ScheduleShortInfo{
+					ID:   t.ID,
+					Name: t.Name,
+				})
+			}
 		}
 
 		scheduleBasicMap[item.ID] = scheduleBasic
