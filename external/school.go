@@ -109,8 +109,54 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 }
 
 func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*School, error) {
-	// TODO: add impl
-	return nil, nil
+	if len(classIDs) == 0 {
+		return map[string][]*School{}, nil
+	}
+
+	_classIDs, indexMapping := utils.SliceDeduplicationMap(classIDs)
+
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range _classIDs {
+		fmt.Fprintf(sb, `q%d: class(class_id: "%s") {schools{id:school_id name:school_name}}`, index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+
+	data := map[string]*struct {
+		Schools []*School `json:"schools"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get schools by classes failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Strings("classIDs", classIDs))
+		return nil, err
+	}
+
+	schools := make(map[string][]*School, len(classIDs))
+	for index, classID := range classIDs {
+		class := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if class == nil {
+			continue
+		}
+
+		schools[classID] = class.Schools
+	}
+
+	log.Info(ctx, "get schools by classes success",
+		log.Any("operator", operator),
+		log.Strings("classIDs", classIDs),
+		log.Any("schools", schools))
+
+	return schools, nil
 }
 
 func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error) {

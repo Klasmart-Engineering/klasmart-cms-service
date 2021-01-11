@@ -122,12 +122,12 @@ func (s AmsOrganizationService) GetByClasses(ctx context.Context, operator *enti
 
 	orgs := make(map[string]*Organization, len(classIDs))
 	for index, classID := range classIDs {
-		org := data[fmt.Sprintf("q%d", indexMapping[index])]
-		if org == nil {
+		class := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if class == nil {
 			continue
 		}
 
-		orgs[classID] = &org.Organization
+		orgs[classID] = &class.Organization
 	}
 
 	log.Info(ctx, "get organizations by classes success",
