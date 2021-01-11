@@ -3,6 +3,7 @@ module gitlab.badanamu.com.cn/calmisland/kidsloop2
 go 1.14
 
 require (
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/aws/aws-sdk-go v1.35.23
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.3.1
@@ -21,6 +22,7 @@ require (
 	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
+	github.com/swaggo/swag v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.62
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9 // indirect
@@ -38,7 +40,6 @@ require (
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb
 	golang.org/x/sys v0.0.0-20201231184435-2d18734c6014 // indirect
-	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/tools v0.0.0-20201204051555-214da9f3da71 // indirect
 	google.golang.org/genproto v0.0.0-20200814021100-8c09557e8a18 // indirect
 	google.golang.org/grpc v1.33.2 // indirect
