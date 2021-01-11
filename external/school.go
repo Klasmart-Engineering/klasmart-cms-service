@@ -17,6 +17,7 @@ import (
 type SchoolServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
+	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*School, error)
 	GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
 	GetByOperator(ctx context.Context, operator *entity.Operator) ([]*School, error)
@@ -105,6 +106,11 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 		log.Any("schools", schools))
 
 	return schools, nil
+}
+
+func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*School, error) {
+	// TODO: add impl
+	return nil, nil
 }
 
 func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error) {
