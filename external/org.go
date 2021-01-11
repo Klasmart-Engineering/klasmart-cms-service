@@ -16,6 +16,7 @@ import (
 
 type OrganizationServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error)
+	BatchGetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error)
 	GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error)
 	GetParents(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
 	GetChildren(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
@@ -82,6 +83,11 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 		log.Any("orgs", nullableOrganizations))
 
 	return nullableOrganizations, nil
+}
+
+func (s AmsOrganizationService) BatchGetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error) {
+	// TODO: add impl
+	return nil, nil
 }
 
 func (s AmsOrganizationService) GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error) {
