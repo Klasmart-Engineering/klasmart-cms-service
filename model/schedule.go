@@ -233,15 +233,20 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*en
 		)
 		return nil, constant.ErrOperateNotAllowed
 	}
-	diff := utils.TimeStampDiff(schedule.StartAt, time.Now().Unix())
-	if diff <= constant.ScheduleAllowEditTime {
-		log.Warn(ctx, "checkScheduleStatus: GetDiffToMinutesByTimeStamp warn",
-			log.Any("schedule", schedule),
-			log.Int64("schedule.StartAt", schedule.StartAt),
-			log.Any("diff", diff),
-			log.Any("ScheduleAllowEditTime", constant.ScheduleAllowEditTime),
-		)
-		return nil, ErrScheduleEditMissTime
+	switch schedule.ClassType {
+	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
+
+	case entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass:
+		diff := utils.TimeStampDiff(schedule.StartAt, time.Now().Unix())
+		if diff <= constant.ScheduleAllowEditTime {
+			log.Warn(ctx, "checkScheduleStatus: GetDiffToMinutesByTimeStamp warn",
+				log.Any("schedule", schedule),
+				log.Int64("schedule.StartAt", schedule.StartAt),
+				log.Any("diff", diff),
+				log.Any("ScheduleAllowEditTime", constant.ScheduleAllowEditTime),
+			)
+			return nil, ErrScheduleEditMissTime
+		}
 	}
 
 	return schedule, nil
