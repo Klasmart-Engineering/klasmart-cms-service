@@ -96,7 +96,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
-		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
+		data.StartAt = time.Now().Unix()
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
@@ -255,7 +255,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 
 	if data.IsAllDay {
 		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
-		data.StartAt = timeUtil.BeginOfDayByTimeStamp().Unix()
+		data.StartAt = time.Now().Unix()
 		timeUtil.TimeStamp = data.EndAt
 		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
 	}
