@@ -16,7 +16,7 @@ import (
 // @Produce json
 // @Param userSetting body entity.UserSettingJsonContent true "user setting json content"
 // @Tags userSetting
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /user_settings [post]
@@ -40,7 +40,7 @@ func (s *Server) setUserSetting(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	c.JSON(http.StatusOK, IDResponse{ID: id})
 }
 
 // @Summary getUserSettingByOperator

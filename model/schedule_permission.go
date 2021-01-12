@@ -100,7 +100,7 @@ func (s *schedulePermissionModel) GetClassIDsBySchoolPermission(ctx context.Cont
 		)
 		return nil, err
 	}
-	if classList, ok := classMap[op.OrgID]; ok {
+	for _, classList := range classMap {
 		for _, item := range classList {
 			classIDs = append(classIDs, item.ID)
 		}

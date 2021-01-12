@@ -81,8 +81,8 @@ func TestAmsOrganizationService_GetOrganizationsAssociatedWithUserID(t *testing.
 
 func TestAmsOrganizationService_GetSchoolsAssociatedWithUserID(t *testing.T) {
 	config.LoadEnvConfig()
-	id := "a161e13f-f620-5284-8ab5-93445d8064bf"
-	orgs, err := GetSchoolServiceProvider().GetByOperator(context.Background(), fakeOperator(), id)
+	// id := "a161e13f-f620-5284-8ab5-93445d8064bf"
+	orgs, err := GetSchoolServiceProvider().GetByOperator(context.Background(), fakeOperator())
 	if err != nil {
 		t.Fatal(err)
 	}

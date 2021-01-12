@@ -70,7 +70,7 @@ func (s *Server) getDevelopmentalByID(c *gin.Context) {
 // @Produce json
 // @Param developmental body entity.Developmental true "developmental"
 // @Tags developmental
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /developmentals [post]
 func (s *Server) addDevelopmental(c *gin.Context) {
@@ -87,7 +87,7 @@ func (s *Server) addDevelopmental(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+	c.JSON(http.StatusOK, IDResponse{ID: id})
 }
 
 // @Summary updateDevelopmental
@@ -98,7 +98,7 @@ func (s *Server) addDevelopmental(c *gin.Context) {
 // @Param id path string true "developmental id"
 // @Param developmental body entity.Developmental true "developmental"
 // @Tags developmental
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /developmentals/{id} [put]
@@ -117,7 +117,7 @@ func (s *Server) updateDevelopmental(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -130,7 +130,7 @@ func (s *Server) updateDevelopmental(c *gin.Context) {
 // @Produce json
 // @Param id path string true "developmental id"
 // @Tags developmental
-// @Success 200 {object} entity.IDResponse
+// @Success 200 {object} IDResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /developmentals/{id} [delete]
 func (s *Server) deleteDevelopmental(c *gin.Context) {
@@ -140,7 +140,7 @@ func (s *Server) deleteDevelopmental(c *gin.Context) {
 	err := model.GetDevelopmentalModel().Delete(ctx, op, id)
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, entity.IDResponse{ID: id})
+		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

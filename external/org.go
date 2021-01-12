@@ -2,7 +2,9 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"go.uber.org/zap/buffer"
@@ -11,10 +13,12 @@ import (
 	cl "gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type OrganizationServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error)
+	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error)
 	GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error)
 	GetParents(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
 	GetChildren(ctx context.Context, operator *entity.Operator, orgID string) ([]*Organization, error)
@@ -47,15 +51,18 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
     	name: organization_name
   	}
 }`
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
 	req := cl.NewRequest(q, chlorine.ReqToken(operator.Token))
-	req.Var("orgIDs", ids)
+	req.Var("orgIDs", _ids)
 	payload := make([]*Organization, len(ids))
 	res := cl.Response{
 		Data: &struct {
 			Organizations []*Organization `json:"organizations"`
 		}{Organizations: payload},
 	}
-	_, err := GetChlorine().Run(ctx, req, &res)
+	_, err := GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -64,12 +71,12 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 		log.Error(ctx, "Res error", log.String("q", q), log.Any("res", res), log.Err(res.Errors))
 		return nil, res.Errors
 	}
-	nullableOrganizations := make([]*NullableOrganization, len(payload))
-	for i := range payload {
-		if payload[i] == nil {
-			nullableOrganizations[i] = &NullableOrganization{Valid: false}
+	nullableOrganizations := make([]*NullableOrganization, len(ids))
+	for index := range ids {
+		if payload[indexMapping[index]] == nil {
+			nullableOrganizations[index] = &NullableOrganization{Valid: false}
 		} else {
-			nullableOrganizations[i] = &NullableOrganization{*payload[i], true}
+			nullableOrganizations[index] = &NullableOrganization{*payload[indexMapping[index]], true}
 		}
 	}
 
@@ -78,6 +85,57 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 		log.Any("orgs", nullableOrganizations))
 
 	return nullableOrganizations, nil
+}
+
+func (s AmsOrganizationService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*Organization, error) {
+	if len(classIDs) == 0 {
+		return map[string]*Organization{}, nil
+	}
+
+	_classIDs, indexMapping := utils.SliceDeduplicationMap(classIDs)
+
+	sb := new(strings.Builder)
+	sb.WriteString("query {")
+	for index, id := range _classIDs {
+		fmt.Fprintf(sb, `q%d: class(class_id: "%s") {organization{id:organization_id name:organization_name}}`, index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+
+	data := map[string]*struct {
+		Organization Organization `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "get organizations by classes failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Strings("classIDs", classIDs))
+		return nil, err
+	}
+
+	orgs := make(map[string]*Organization, len(classIDs))
+	for index, classID := range classIDs {
+		class := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if class == nil {
+			continue
+		}
+
+		orgs[classID] = &class.Organization
+	}
+
+	log.Info(ctx, "get organizations by classes success",
+		log.Any("operator", operator),
+		log.Strings("classIDs", classIDs),
+		log.Any("orgs", orgs))
+
+	return orgs, nil
 }
 
 func (s AmsOrganizationService) GetMine(ctx context.Context, operator *entity.Operator, userID string) ([]*Organization, error) {
@@ -127,7 +185,7 @@ func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context,
 		Data: &payload,
 	}
 
-	_, err = GetChlorine().Run(ctx, req, &res)
+	_, err = GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -189,7 +247,7 @@ func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *e
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get has permission organizations failed",
 			log.Err(err),
@@ -240,7 +298,7 @@ func (s AmsOrganizationService) GetOrganizationsAssociatedWithUserID(ctx context
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get orgs by user failed",
 			log.Err(err),

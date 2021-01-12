@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	KidsloopCN               = "CN"
-	TableNameSchedule        = "schedules"
-	TableNameScheduleTeacher = "schedules_teachers"
+	KidsloopCN                = "CN"
+	TableNameSchedule         = "schedules"
+	TableNameScheduleTeacher  = "schedules_teachers"
+	TableNameScheduleRelation = "schedules_relations"
 
 	TableNameAge               = "ages"
 	TableNameClassType         = "class_types"
@@ -93,9 +94,9 @@ const (
 	NoSearchItem = "{nothing}"
 	Self         = "{self}"
 
-	ShareToAll   = "{share_all}"
+	ShareToAll = "{share_all}"
 
-	TeacherManualSeparator = "-"
+	TeacherManualSeparator  = "-"
 	FolderItemLinkSeparator = "-"
 )
 

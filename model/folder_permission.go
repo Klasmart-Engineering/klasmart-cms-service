@@ -2,18 +2,19 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"sync"
 )
+
 type IFolderPermissionModel interface {
 	CheckFolderOperatorPermission(ctx context.Context, op *entity.Operator) (bool, error)
 	CheckShareFolderOperatorPermission(ctx context.Context, op *entity.Operator) (bool, error)
 }
 
 type FolderPermissionModel struct {
-
 }
 
 //PublishFeaturedContentForAllHub
@@ -39,6 +40,7 @@ func (s *FolderPermissionModel) CheckShareFolderOperatorPermission(ctx context.C
 		return false, err
 	}
 	//有permission，直接返回
+	//has permission
 	if hasPermission {
 		return true, nil
 	}
@@ -53,6 +55,7 @@ func (s *FolderPermissionModel) CheckFolderOperatorPermission(ctx context.Contex
 		return false, err
 	}
 	//有permission，直接返回
+	//has permission
 	if hasPermission {
 		return true, nil
 	}

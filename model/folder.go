@@ -3,10 +3,11 @@ package model
 import (
 	"context"
 	"errors"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"strings"
 	"sync"
 	"time"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -50,32 +51,42 @@ type DescendantItemsAndLinkItems struct {
 
 type IFolderModel interface {
 	//创建Folder
+	//Create a folder
 	CreateFolder(ctx context.Context, req entity.CreateFolderRequest, operator *entity.Operator) (string, error)
 	//添加一个item
+	//Add a new item
 	AddItem(ctx context.Context, req entity.CreateFolderItemRequest, operator *entity.Operator) (string, error)
 	//删除一批item
+	//Delete a folder item
 	RemoveItem(ctx context.Context, fid string, operator *entity.Operator) error
 
 	//批量删除item
+	//Batch delete folder items
 	RemoveItemBulk(ctx context.Context, fids []string, operator *entity.Operator) error
 
 	//修改Folder
+	//Update folder
 	UpdateFolder(ctx context.Context, folderID string, d entity.UpdateFolderRequest, operator *entity.Operator) error
 
 	//移动item
+	//Move folder items
 	MoveItem(ctx context.Context, req entity.MoveFolderRequest, operator *entity.Operator) error
 
 	//移动item
+	//Move folder items
 	MoveItemBulk(ctx context.Context, req entity.MoveFolderIDBulkRequest, operator *entity.Operator) error
 
 	//列出Folder下的所有item
+	//List all folder items belongs to the folder
 	ListItems(ctx context.Context, folderID string, itemType entity.ItemType, operator *entity.Operator) ([]*entity.FolderItem, error)
 	//查询Folder
+	//Query folders
 	SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error)
 	SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error)
 	SearchOrgFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error)
 
 	//获取Folder
+	//Get Folder
 	GetFolderByID(ctx context.Context, folderID string, operator *entity.Operator) (*entity.FolderItemInfo, error)
 
 	//Share folder
@@ -84,7 +95,9 @@ type IFolderModel interface {
 	GetFoldersSharedRecords(ctx context.Context, fids []string, operator *entity.Operator) (*entity.FolderShareRecords, error)
 
 	//内部API，修改Folder的Visibility Settings
+	//internal API, for updating folder's visibility settings
 	//查看路径是否存在
+	//check path existing
 	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, itemType entity.ItemType, path string, partition entity.FolderPartition, operator *entity.Operator) (string, error)
 	AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBContext, partition entity.FolderPartition, path, link string, operator *entity.Operator) error
 	RemoveItemByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, owner string, link string) error
@@ -138,7 +151,7 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 		for i := range ids {
 			org := orgMap[ids[i]]
 			name := ""
-			if org != nil{
+			if org != nil {
 				name = org.Name
 			}
 			orgs[i] = &entity.OrganizationInfo{
@@ -158,10 +171,10 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 	//1.Get folder & check folder exists
 	folderIDs := utils.SliceDeduplication(req.FolderIDs)
 	orgIDs := utils.SliceDeduplication(req.OrgIDs)
-	for i := range folderIDs{
+	for i := range folderIDs {
 		//lock all folders for share folders
 		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixFolderShare, folderIDs[i])
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		locker.Lock()
@@ -250,7 +263,7 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		//5.Remove folder share records & Remove content auth records & Get contents from folders
 		allContentIDs, err := f.removeSharedFolderAndAuthedContent(ctx, tx,
 			sharedFolderPendingOrgsMap, folders, operator)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		log.Info(ctx, "allContentIDs",
@@ -258,7 +271,7 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 		//6.Add folder share records & authed contents
 		err = f.addSharedFolderAndAuthedContent(ctx, tx, sharedFolderPendingOrgsMap,
 			folders, allContentIDs, operator)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		return nil
@@ -267,7 +280,7 @@ func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersR
 
 func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *dbo.DBContext,
 	sharedFolderPendingOrgsMap map[string]*entity.ShareFoldersDeleteAddOrgList, folders []*entity.FolderItem,
-	allContentIDs map[string][]string, operator *entity.Operator) error{
+	allContentIDs map[string][]string, operator *entity.Operator) error {
 	recordsData := make([]*entity.SharedFolderRecord, 0)
 	log.Info(ctx, "building recordsData",
 		log.Any("folders", folders),
@@ -330,7 +343,7 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 
 func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx *dbo.DBContext,
 	sharedFolderPendingOrgsMap map[string]*entity.ShareFoldersDeleteAddOrgList,
-	folders []*entity.FolderItem, operator *entity.Operator) (map[string][]string, error){
+	folders []*entity.FolderItem, operator *entity.Operator) (map[string][]string, error) {
 	//allItems := make([]*entity.FolderItem, 0)
 	allContentIDs := make(map[string][]string, 0)
 	for folderID, pendingOrgList := range sharedFolderPendingOrgsMap {
@@ -372,7 +385,7 @@ func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx
 		if len(sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs) > 0 && len(contentIDs) > 0 {
 			err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 				OrgIDs:     sharedFolderPendingOrgsMap[folders[i].ID].DeleteOrgs,
-				FolderIDs: []string{folders[i].ID},
+				FolderIDs:  []string{folders[i].ID},
 				ContentIDs: contentIDs,
 			}, operator)
 			if err != nil {
@@ -384,7 +397,6 @@ func (f *FolderModel) removeSharedFolderAndAuthedContent(ctx context.Context, tx
 				return nil, err
 			}
 		}
-
 
 		//allItems = append(allItems, items...)
 		allContentIDs[folders[i].ID] = contentIDs
@@ -451,7 +463,7 @@ func (f *FolderModel) getFolderPendingOrgs(ctx context.Context,
 	return sharedFolderPendingOrgsMap
 }
 
-func (f *FolderModel) checkOrgs(ctx context.Context, orgIDs []string, operator *entity.Operator) (map[string]bool, error){
+func (f *FolderModel) checkOrgs(ctx context.Context, orgIDs []string, operator *entity.Operator) (map[string]bool, error) {
 	//Get orgs by ids
 	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
 	if err != nil {
@@ -540,6 +552,7 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 		return ErrUpdateFolderFailed
 	}
 	//若存在link，则无需修改
+	//When link is exists, no need to update
 	if hasLink {
 		log.Info(ctx, "already has item", log.Err(err), log.String("link", link))
 		return nil
@@ -552,6 +565,8 @@ func (f *FolderModel) AddOrUpdateOrgFolderItem(ctx context.Context, tx *dbo.DBCo
 	}
 	//若不存在，则创建
 	//新发布的content
+	//not exists, create
+	//in the case of publish a new content
 	_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
 		Partition:      partition,
 		ParentFolderID: parentFolder,
@@ -840,6 +855,7 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 	}
 	if len(folderItems) < 1 {
 		//若该文件不存在，执行添加操作
+		//folder is not exists, do insert operation
 		log.Warn(ctx, "search folder failed", log.Err(err), log.Any("condition", condition))
 		_, err = f.addItemInternal(ctx, tx, entity.CreateFolderItemRequest{
 			ParentFolderID: distFolder.ID,
@@ -854,10 +870,12 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 	}
 
 	//若该文件已存在，执行移动操作
+	//folder is exists, do move operation
 	if len(folderItems) != 1 {
 		log.Warn(ctx, "folder item is more than 1", log.Any("condition", condition), log.Any("items", folderItems))
 	}
 	//取folder，应该只有一个
+	//get the folder, assert it is only one folder
 	folderItem := folderItems[0]
 	path := distFolder.ChildrenPath()
 
@@ -879,6 +897,7 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 		log.Any("parentFolder", parentFolder))
 
 	//更新子目录link文件
+	//Update links in the descendant folders
 	err = f.updateLinkedItemPath(ctx, tx,
 		[]string{folderItem.Link},
 		string(distFolder.ChildrenPath()),
@@ -897,6 +916,7 @@ func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBCon
 		return err
 	}
 	//更新文件数量
+	//Update file count
 	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, 1)
 	if err != nil {
 		return err
@@ -915,22 +935,27 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 		return ErrInvalidFolderItemType
 	}
 	//检查参数是否有问题
+	//check params
 	err = f.checkMoveItem(ctx, folder, distFolder)
 	if err != nil {
 		return err
 	}
 
 	//获取目录下的所有文件（所有子文件一起移动）
+	//get all items from the folder
 	info, err := f.getDescendantItemsAndLinkItems(ctx, folder)
 	if err != nil {
 		return err
 	}
 
 	//更新子目录link文件
+	//Update links in the descendant folders
 	linkOriginPath := folder.ChildrenPath()
 	linkPath := constant.FolderPathSeparator + folder.ID
 	//若distFolder为root，则直接移动到"/{current_folder}"
 	//否则移动到"/{dist_folder}/{current_folder}"
+	//if distFolder is the root folder, move it into "/{current_folder}"
+	//otherwise move it into "/{dist_folder}/{current_folder}"
 	if distFolder.ID != constant.FolderRootPath {
 		linkPath = string(distFolder.ChildrenPath()) + constant.FolderPathSeparator + folder.ID
 	}
@@ -942,6 +967,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//更新当前目录
+	//update current folder
 	originPath := folder.DirPath
 	originParentID := folder.ParentID
 	path := distFolder.ChildrenPath()
@@ -980,6 +1006,7 @@ func (f *FolderModel) handleMoveFolder(ctx context.Context, tx *dbo.DBContext, o
 	}
 
 	//更新文件数量
+	//update item count
 	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, 1)
 	if err != nil {
 		return err
@@ -997,6 +1024,7 @@ func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContex
 		return ErrInvalidFolderItemType
 	}
 	//检查参数是否有问题
+	//check params
 	err = f.checkMoveItem(ctx, folder, distFolder)
 	if err != nil {
 		return err
@@ -1004,6 +1032,7 @@ func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContex
 
 	path := distFolder.ChildrenPath()
 	//更新子目录link文件
+	//Update links in the descendant folders
 	err = f.updateLinkedItemPath(ctx, tx, []string{folder.Link}, string(path), folder, distFolder, operator)
 	if err != nil {
 		log.Warn(ctx, "update notify move item path failed", log.Err(err), log.Any("folder", folder), log.String("link", folder.Link), log.String("path", string(path)))
@@ -1011,6 +1040,7 @@ func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContex
 	}
 
 	//更新当前目录
+	//update current folder
 	originParentID := folder.ParentID
 	folder.DirPath = path
 	folder.ParentID = distFolder.ID
@@ -1021,6 +1051,7 @@ func (f *FolderModel) handleMoveFolderItem(ctx context.Context, tx *dbo.DBContex
 	}
 
 	//更新文件数量
+	//update items count
 	err = f.updateMoveFolderItemCount(ctx, tx, originParentID, distFolder.ID, 1)
 	if err != nil {
 		return err
@@ -1053,12 +1084,15 @@ func (f *FolderModel) moveItem(ctx context.Context, tx *dbo.DBContext, ownerType
 	switch folderFileType {
 	case entity.FolderFileTypeFolder:
 		//若文件为Folder
+		//folder case
 		return f.handleMoveFolder(ctx, tx, ownerType, fid, partition, distFolder, operator)
 	case entity.FolderFileTypeContent:
 		//若文件为content
+		//content case
 		return f.handleMoveContentByLink(ctx, tx, ownerType, fid, partition, distFolder, operator)
 	case entity.FolderFileTypeFolderItem:
 		//若文件为文件夹文件
+		//direction case
 		return f.handleMoveFolderItem(ctx, tx, ownerType, fid, partition, distFolder, operator)
 	}
 	log.Warn(ctx, "invalid folder file type", log.String("file_type", string(folderFileType)), log.Any("operator", operator))
@@ -1204,6 +1238,7 @@ func (f *FolderModel) createFolder(ctx context.Context, tx *dbo.DBContext, req e
 		return "", err
 	}
 	//更新parent folder文件数量
+	//Update parent folder items count
 	//parentFolder.ItemsCount = parentFolder.ItemsCount + 1
 	//err = da.GetFolderDA().UpdateFolder(ctx, tx, parentFolder.ID, parentFolder)
 	if req.ParentID != "" && req.ParentID != constant.FolderRootPath {
@@ -1223,12 +1258,14 @@ func (f *FolderModel) removeItemInternal(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	//检查文件夹是否为空
+	//check folder empty
 	err = f.checkFolderEmpty(ctx, folderItem)
 	if err != nil {
 		return err
 	}
 
 	//若为空Folder，删除
+	//if the folder is empty, delete it
 	err = da.GetFolderDA().DeleteFolder(ctx, dbo.MustGetDB(ctx), fid)
 	if err != nil {
 		log.Error(ctx, "delete folder item failed", log.Err(err), log.Any("fid", fid))
@@ -1236,6 +1273,8 @@ func (f *FolderModel) removeItemInternal(ctx context.Context, tx *dbo.DBContext,
 	}
 	//获取parent folder
 	//更新parent folder文件数量
+	//get parent folder
+	//update parent folder items count
 	err = da.GetFolderDA().AddFolderItemsCount(ctx, tx, folderItem.ParentID, -1)
 	if err != nil {
 		log.Error(ctx, "update parent folder items count failed", log.Err(err), log.String("folderItem.ParentID", folderItem.ParentID))
@@ -1395,6 +1434,7 @@ func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.
 	}
 
 	//组织下,不能有重复file,检查是否重复
+	//One organization can't exists two file with the same item link, check duplication
 	if parentFolder.OwnerType == entity.OwnerTypeOrganization {
 		hasItem, err := f.hasFolderFileItem(ctx, dbo.MustGetDB(ctx), parentFolder.OwnerType, req.Partition, parentFolder.Owner, req.Link)
 		if err != nil {
@@ -1405,7 +1445,9 @@ func (f *FolderModel) checkAddItemParentRequest(ctx context.Context, req entity.
 			return ErrDuplicateItem
 		}
 	} else {
-		//个人下查重名，check items duplicate
+		//个人下查重名
+		//check items duplicate
+		//user private folder, can't exists two file with the same name
 		items, err := f.getItemsFromFolders(ctx, req.ParentFolderID)
 		if err != nil {
 			return err
@@ -1487,6 +1529,7 @@ func (f *FolderModel) checkCreateRequestEntity(ctx context.Context, req entity.C
 
 func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.FolderItem) error {
 	//若不是folder，返回
+	//if it is not folder ,return
 	if !folderItem.ItemType.IsFolder() {
 		log.Info(ctx, "item is not folder", log.Any("folderItem", folderItem), log.String("path", string(folderItem.DirPath)))
 		return nil
@@ -1501,6 +1544,7 @@ func (f *FolderModel) checkFolderEmpty(ctx context.Context, folderItem *entity.F
 func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType entity.OwnerType, partition entity.FolderPartition, name string, parentFolder *entity.FolderItem, operator *entity.Operator) error {
 	//check get all sub folders from parent parentFolder
 	//folder下folder名唯一
+	//folder name duplicate checking
 	condition := da.FolderCondition{
 		IDs:       nil,
 		ItemType:  int(entity.FolderItemTypeFolder),
@@ -1525,6 +1569,7 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, name string, folder *entity.FolderItem, operator *entity.Operator) error {
 	//check get all sub folders from parent folder
 	//folder下folder名唯一
+	//folder name duplicate checking
 	condition := da.FolderCondition{
 		IDs:       nil,
 		ItemType:  int(entity.FolderItemTypeFolder),
@@ -1566,6 +1611,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 
 func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBContext, fromID, toID string, total int) error {
 	//根目录无需修改ItemCount
+	//root direction, no need to update items count
 	if fromID != constant.FolderRootPath && fromID != "" {
 		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, fromID, -total)
 		if err != nil {
@@ -1577,6 +1623,7 @@ func (f *FolderModel) updateMoveFolderItemCount(ctx context.Context, tx *dbo.DBC
 	}
 
 	//根目录无需修改ItemCount
+	//root direction, no need to update items count
 	if toID != constant.FolderRootPath && toID != "" {
 		err := da.GetFolderDA().AddFolderItemsCount(ctx, tx, toID, total)
 		if err != nil {
@@ -1599,11 +1646,13 @@ func (f *FolderModel) getDescendantItemsAndLinkItems(ctx context.Context, folder
 	index := 0
 	for i := range subItems {
 		//更新子文件时排除自己
+		//exclude the folder itself when update sub items
 		if subItems[i].ID != folder.ID {
 			ids[index] = subItems[i].ID
 			index++
 		}
 		//更新关联文件时，只更新带link的文件
+		//update related file with link
 		if !subItems[i].ItemType.IsFolder() {
 			links = append(links, subItems[i].Link)
 		}
@@ -1616,6 +1665,7 @@ func (f *FolderModel) getDescendantItemsAndLinkItems(ctx context.Context, folder
 }
 func (f *FolderModel) getDescendantItems(ctx context.Context, folder *entity.FolderItem) ([]*entity.FolderItem, error) {
 	//若为文件，则直接返回
+	//check folder type, folder case return
 	if !folder.ItemType.IsFolder() {
 		return []*entity.FolderItem{folder}, nil
 	}
@@ -1742,7 +1792,7 @@ func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context
 		//delete content
 		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 			OrgIDs:     oids,
-			FolderIDs: []string{fromRootFolder.ID},
+			FolderIDs:  []string{fromRootFolder.ID},
 			ContentIDs: contentLinks,
 		}, operator)
 		if err != nil {
@@ -1863,7 +1913,7 @@ func (f *FolderModel) handleMoveSharedContent(ctx context.Context, tx *dbo.DBCon
 	if len(fromOrgs) != 0 {
 		err = GetAuthedContentRecordsModel().BatchDelete(ctx, tx, entity.BatchDeleteAuthedContentByOrgsRequest{
 			OrgIDs:     fromOrgs,
-			FolderIDs: []string{fromFolder.ID},
+			FolderIDs:  []string{fromFolder.ID},
 			ContentIDs: sharedContentIDs,
 		}, operator)
 		if err != nil {

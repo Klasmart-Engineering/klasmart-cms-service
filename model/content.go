@@ -139,6 +139,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	sourceContent.PublishStatus = entity.ContentStatusHidden
 	sourceContent.LatestID = contentID
 	//解锁source content
+	//Unlock source content
 	sourceContent.LockedBy = constant.LockedByNoBody
 	err = da.GetContentDA().UpdateContent(ctx, tx, sourceID, *sourceContent)
 	if err != nil {
@@ -153,6 +154,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	}
 
 	//更新所有latestID为sourceContent的Content
+	//Update all sourceContent latestID fields
 	_, oldContents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 		LatestID: sourceContent.ID,
 	})
@@ -236,6 +238,7 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) (*entity.Content, error) {
 
 	//若为asset，直接发布
+	//if the content is assets, publish it immediate
 	if content.ContentType.IsAsset() {
 		log.Info(ctx, "asset no need to check", log.String("cid", content.ID))
 		return content, nil
@@ -253,9 +256,11 @@ func (cm ContentModel) checkUpdateContent(ctx context.Context, tx *dbo.DBContext
 
 func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//若content为已发布状态或发布中状态，则创建新content
+	//if content is published or pending, create a new content
 	if content.PublishStatus != entity.ContentStatusDraft && content.PublishStatus != entity.ContentStatusRejected &&
 		content.PublishStatus != entity.ContentStatusArchive {
 		//报错
+		//error
 		log.Warn(ctx, "invalid content status", log.Any("content", content))
 		return ErrInvalidContentStatusToPublish
 	}
@@ -337,6 +342,7 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
 	//检查数据信息是否正确
+	//valid the data
 	c.Trim()
 
 	log.Info(ctx, "create content")
@@ -352,6 +358,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	}
 
 	//组装要创建的内容
+	//construct the new content structure
 	obj, err := cm.prepareCreateContentParams(ctx, c, operator)
 	if err != nil {
 		log.Warn(ctx, "prepare content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
@@ -359,6 +366,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	}
 
 	//添加内容
+	//do insert content into database
 	now := time.Now()
 	obj.UpdateAt = now.Unix()
 	obj.CreateAt = now.Unix()
@@ -369,6 +377,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	}
 
 	//Asset添加Folder
+	//assets add to folder
 	if c.ContentType.IsAsset() {
 		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionAssets, constant.FolderRootPath, entity.ContentLink(pid), operator)
 		if err != nil {
@@ -419,6 +428,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	}
 
 	//更新数据库
+	//do update data into database
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *obj)
 	if err != nil {
 		log.Error(ctx, "update contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
@@ -489,6 +499,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return ErrUpdateContentFailed
 	}
 	//更新Folder信息
+	//update folder info
 	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), operator)
 	if err != nil {
 		return err
@@ -496,6 +507,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 
 	if status == entity.ContentStatusPublished && content.SourceID != "" {
 		//处理source content
+		//handle with source content
 		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
 		if err != nil {
 			return err
@@ -547,6 +559,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	}
 
 	//被自己锁住，则返回锁定id
+	//if it is locked by current user, return cloned content id
 	if content.LockedBy == user.UserID {
 		_, data, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
 			SourceID: cid,
@@ -557,6 +570,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		}
 		if len(data) < 1 {
 			//被自己锁定且找不到content
+			//if locked by current user, but content is not found, panic
 			log.Info(ctx, "no content in source content", log.String("cid", cid))
 			return "", ErrNoContent
 		}
@@ -565,10 +579,12 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 			return "", ErrInvalidLockedContentPublishStatus
 		}
 		//找到data
+		//find the data
 		return data[0].ID, nil
 	}
 
 	//更新锁定状态
+	//update lock status
 	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody {
 		return "", NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
 	}
@@ -579,6 +595,7 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 		return "", err
 	}
 	//克隆Content
+	//clone content
 	ccid, err := cm.CloneContent(ctx, tx, content.ID, user)
 	if err != nil {
 		return "", err
@@ -696,6 +713,7 @@ func (cm *ContentModel) copyContentList(ctx context.Context, tx *dbo.DBContext, 
 }
 func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, op *entity.Operator) (string, error) {
 	//检查是否有克隆权限
+	//check if user have copy permission
 	err := cm.CheckContentAuthorization(ctx, tx, &entity.Content{
 		ID:            content.ID,
 		PublishScope:  content.PublishScope,
@@ -742,6 +760,7 @@ func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	//发布
+	//do publish
 	if scope != "" {
 		content.PublishScope = scope
 	}
@@ -779,6 +798,7 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 
 func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//创建data对象
+	//create content data object
 	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
@@ -793,6 +813,7 @@ func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBC
 	}
 
 	//创建assets data对象，并解析
+	//create assets data object, and parse it
 	assetsData := new(AssetsData)
 	assetsData.Source = materialData.Source
 	assetsDataJSON, err := assetsData.Marshal(ctx)
@@ -823,6 +844,7 @@ func (cm *ContentModel) prepareForPublishAssets(ctx context.Context, tx *dbo.DBC
 	}
 
 	//更新content状态
+	//update content status
 	materialData.InputSource = entity.MaterialInputSourceDisk
 	d, err := materialData.Marshal(ctx)
 	if err != nil {
@@ -850,17 +872,20 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 	}
 
 	//修改发布状态
+	//update publish status
 	if scope != "" {
 		content.PublishScope = scope
 	}
 
 	//准备发布（1.创建assets，2.修改contentdata）
+	//preparing to publish (1.create assets 2.update content data)
 	err = cm.prepareForPublishAssets(ctx, tx, content, user)
 	if err != nil {
 		return err
 	}
 
 	//发布
+	//do publish
 	err = cm.doPublishContent(ctx, tx, content, user)
 	if err != nil {
 		return err
@@ -983,6 +1008,7 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 	}
 
 	//检查是否有克隆权限
+	//check permission
 	err = cm.CheckContentAuthorization(ctx, tx, &entity.Content{
 		ID:            content.ID,
 		PublishScope:  content.PublishScope,
@@ -1034,6 +1060,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		return nil, err
 	}
 	//获取最新数据
+	//fetch newest data
 	if obj.LatestID != "" {
 		obj, err = da.GetContentDA().GetContentByID(ctx, tx, obj.LatestID)
 		if err != nil {
@@ -1051,10 +1078,16 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	switch v := cd.(type) {
 	case *LessonData:
 		//存在子内容，则返回子内容
+		//if the content contains sub contents, return sub contents
 		content, err := ConvertContentObj(ctx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
+		}
+		err = v.PrepareVersion(ctx)
+		if err != nil {
+			log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
+			return nil, err
 		}
 		err = v.PrepareResult(ctx, content, user)
 		if err != nil {
@@ -1082,6 +1115,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		return ret, nil
 	case *MaterialData:
 		//若不存在子内容，则返回当前内容
+		//if sub contents is not exists, return current content
 		ret := []*entity.SubContentsWithName{
 			{
 				ID:   cid,
@@ -1092,6 +1126,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		return ret, nil
 	case *AssetsData:
 		//若不存在子内容，则返回当前内容
+		//if sub contents is not exists, return current content
 		ret := []*entity.SubContentsWithName{
 			{
 				ID:   cid,
@@ -1161,6 +1196,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 	}
 
 	//补全相关内容
+	//fill related data
 	contentData, err := CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		return nil, err
@@ -1299,6 +1335,7 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 
 	nid, cachedContent := da.GetContentRedis().GetContentCacheByIDList(ctx, cids)
 	//全在缓存中
+	//all cached
 	if len(nid) < 1 {
 		contentWithDetails, err := cm.buildContentWithDetails(ctx, cachedContent, true, user)
 		if err != nil {
@@ -1336,6 +1373,7 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 
 func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
 	//构造个人查询条件
+	//construct query condition for private search
 	condition.Author = user.UserID
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	scope, err := cm.listAllScopes(ctx, user)
@@ -1488,7 +1526,7 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
-func (cm *ContentModel) getVisibleContentOutcomeByIDs(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error){
+func (cm *ContentModel) getVisibleContentOutcomeByIDs(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
 	//get latest content ids
 	newCids, err := cm.GetLatestContentIDByIDList(ctx, tx, cids)
 	if err != nil {
@@ -1536,7 +1574,7 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 	//if content is a plan, collect outcomes from materials
 	if content.ContentType == entity.ContentTypePlan {
 		contentData, err := CreateContentData(ctx, entity.ContentTypePlan, content.Data)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "can't parse content data",
 				log.Err(err),
 				log.String("cid", cid),
@@ -1545,7 +1583,7 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 		}
 		contentIDList := contentData.(*LessonData).SubContentIDs(ctx)
 		outcomes, err := cm.getVisibleContentOutcomeByIDs(ctx, tx, contentIDList)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "can't get outcomes from materials",
 				log.Err(err),
 				log.Strings("contentIDList", contentIDList))

@@ -21,6 +21,10 @@ const (
 	//Library
 	LibraryMsgContentLocked      ResponseLabel = "library_error_content_locked"
 	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
+	LibraryContentLockedByMe     ResponseLabel = "library_error_content_locked_by_me"
+
+	//Folder
+	FolderDeleteNoEmptyFolder ResponseLabel = "library_error_delete_folder"
 
 	// schedule
 	ScheduleMsgEditOverlap           ResponseLabel = "schedule_msg_edit_overlap"
@@ -62,3 +66,7 @@ type InternalServerErrorResponse ErrorResponse
 type ConflictResponse ErrorResponse
 
 type UnAuthorizedResponse ErrorResponse
+
+type IDResponse struct {
+	ID string `json:"id"`
+}
