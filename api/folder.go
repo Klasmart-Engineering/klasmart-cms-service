@@ -129,6 +129,8 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrFolderIsNotEmpty:
+		c.JSON(http.StatusNotAcceptable, L(FolderDeleteNoEmptyFolder))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -170,6 +172,8 @@ func (s *Server) removeFolderItemBulk(c *gin.Context) {
 	err = model.GetFolderModel().RemoveItemBulk(ctx, data.FolderIDs, op)
 
 	switch err {
+	case model.ErrFolderIsNotEmpty:
+		c.JSON(http.StatusNotAcceptable, L(FolderDeleteNoEmptyFolder))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
