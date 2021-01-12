@@ -88,7 +88,6 @@ func (r *ContentRedis) GetContentCacheByID(ctx context.Context, id string) *enti
 	return nil
 }
 
-
 func (r *ContentRedis) GetContentCacheByIDList(ctx context.Context, ids []string) ([]string, []*entity.ContentInfo) {
 	if !config.Get().RedisConfig.OpenCache {
 		return ids, nil
@@ -102,7 +101,7 @@ func (r *ContentRedis) GetContentCacheByIDList(ctx context.Context, ids []string
 		log.Info(ctx, "Can't get content list from cache", log.Err(err), log.Strings("keys", keys), log.Strings("ids", ids))
 		return ids, nil
 	}
-
+	//Parse cachedContents
 	//解析cachedContents
 	cachedContents := make([]*entity.ContentInfo, 0)
 	for i := range res {

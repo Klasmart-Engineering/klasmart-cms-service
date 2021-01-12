@@ -122,7 +122,8 @@ func (s *Server) copyContent(c *gin.Context) {
 	// 	return
 	// }
 	// //有permission，直接返回
-	// if hasPermission {
+	// //if user has no permission return
+	// if !hasPermission {
 	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	// 	return
 	// }
@@ -174,6 +175,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 	//	return
 	//}
 	////不是作者，则检查权限
+	////if not author, check the permission
 	//if !isAuthor {
 	//
 	//}
