@@ -571,7 +571,6 @@ CREATE TABLE `skills` (
   `create_at` bigint DEFAULT '0' COMMENT 'created_at',
   `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
   `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
-  `developmental_id` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'development_id',
   `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
@@ -647,4 +646,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-11 17:00:28
+-- Dump completed on 2021-01-12 17:00:36
