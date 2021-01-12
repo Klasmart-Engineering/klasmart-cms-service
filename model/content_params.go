@@ -95,6 +95,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	}
 
 	//若为asset，直接发布
+	//if the content is assets, publish immediately
 	if c.ContentType == entity.ContentTypeAssets {
 		publishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 		c.SelfStudy = false
@@ -199,6 +200,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 
 	//Asset修改后直接发布
+	//if the content is assets, publish immediately after update
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 	}
@@ -279,9 +281,11 @@ func (cm ContentModel) prepareCopyContentParams(ctx context.Context, content *en
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
 	//删除的时候不去掉路径信息
+	//delete the dir path info
 	// content.DirPath = constant.FolderRootPath
 
 	//assets则隐藏
+	//if content is assets, hide it
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.ContentStatusHidden
 		return content
@@ -320,12 +324,14 @@ func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.D
 		return err
 	}
 	//若路径不存在，则放到根目录
+	//if dir path is not exists, put it into root path
 	content.DirPath = contentPath
 	return nil
 }
 
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//若content为archive，则直接发布
+	//if content is archived, publish it immediately
 	if content.PublishStatus == entity.ContentStatusArchive {
 		content.PublishStatus = entity.ContentStatusPublished
 		content.UpdateAt = time.Now().Unix()

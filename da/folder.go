@@ -84,6 +84,7 @@ func (fda *FolderDA) BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBConte
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(fids) < 1 {
 		//若fids为空，则不更新
+		//if fids is nil, no need to update
 		return nil
 	}
 	fidsSQLParts := make([]string, len(fids))
@@ -117,6 +118,7 @@ func (fda *FolderDA) BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DB
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(fids) < 1 {
 		//若fids为空，则不更新
+		//if fids is nil, no need to update
 		return nil
 	}
 
@@ -357,7 +359,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		subCondition := make([]string, len(s.DirDescendantList))
 		for i := range s.DirDescendantList {
 			subCondition[i] = "dir_path like ?"
-			params = append(params, s.DirDescendantList[i] + "%")
+			params = append(params, s.DirDescendantList[i]+"%")
 		}
 		condition := "(" + strings.Join(subCondition, " or ") + ")"
 		conditions = append(conditions, condition)

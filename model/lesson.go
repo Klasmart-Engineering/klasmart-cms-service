@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -51,6 +52,9 @@ func (l *LessonData) lessonDataIterator(ctx context.Context, handleLessonData fu
 	return arr
 }
 
+func (l *LessonData) LessonDataIteratorLoop(ctx context.Context, handleLessonData func(ctx context.Context, l *LessonData)) {
+	l.lessonDataIteratorLoop(ctx, handleLessonData)
+}
 func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonData func(ctx context.Context, l *LessonData)) {
 	lessonDataList := make([]*LessonData, 0)
 	lessonDataList = append(lessonDataList, l)
@@ -170,7 +174,7 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	return nil
 }
 
-func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error){
+func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error) {
 	orgInfo, err := GetOrganizationPropertyModel().GetOrDefault(ctx, orgID)
 	if err != nil {
 		log.Warn(ctx, "parse get folder shared records params failed",
@@ -198,7 +202,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 		return err
 	}
 
-	isHeadQuarter, err :=  l.isOrganizationHeadquarters(ctx, content.Org)
+	isHeadQuarter, err := l.isOrganizationHeadquarters(ctx, content.Org)
 	if err != nil {
 		return err
 	}
@@ -208,17 +212,16 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 		if err != nil {
 			return err
 		}
-	}else{
+	} else {
 		//if is head quarter, remove unpublished materials
 		newContentList := make([]*entity.Content, 0)
-		for i := range contentList{
+		for i := range contentList {
 			if contentList[i].PublishStatus == entity.ContentStatusPublished {
 				newContentList = append(newContentList, contentList[i])
 			}
 		}
 		contentList = newContentList
 	}
-
 
 	contentMap := make(map[string]*entity.Content)
 	for i := range contentList {
@@ -241,7 +244,7 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 	for i := range contentList {
 		if contentList[i].Org == operator.OrgID {
 			result = append(result, contentList[i])
-		}else{
+		} else {
 			pendingCheckAuthContents = append(pendingCheckAuthContents, contentList[i])
 			pendingCheckAuthIDs = append(pendingCheckAuthIDs, contentList[i].ID)
 		}
@@ -249,11 +252,11 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 	//if contains materials is not from org, check auth
 	if len(pendingCheckAuthContents) > 0 {
 		condition := da.AuthedContentCondition{
-			OrgIDs: []string{operator.OrgID, constant.ShareToAll},
+			OrgIDs:     []string{operator.OrgID, constant.ShareToAll},
 			ContentIDs: pendingCheckAuthIDs,
 		}
 		authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "search auth content failed",
 				log.Err(err),
 				log.Any("condition", condition))
@@ -262,7 +265,7 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 		for i := range pendingCheckAuthContents {
 			for j := range authRecords {
 				if pendingCheckAuthContents[i].ID == authRecords[j].ContentID &&
-					pendingCheckAuthContents[i].PublishStatus == entity.ContentStatusPublished{
+					pendingCheckAuthContents[i].PublishStatus == entity.ContentStatusPublished {
 					result = append(result, pendingCheckAuthContents[i])
 					break
 				}

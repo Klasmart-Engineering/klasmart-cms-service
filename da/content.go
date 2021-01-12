@@ -82,16 +82,16 @@ type ContentCondition struct {
 	PublishStatus []string `json:"publish_status"`
 	Author        string   `json:"author"`
 	Org           string   `json:"org"`
-	Program       []string   `json:"program"`
+	Program       []string `json:"program"`
 	SourceID      string   `json:"source_id"`
 	LatestID      string   `json:"latest_id"`
 	SourceType    string   `json:"source_type"`
 	DirPath       string   `json:"dir_path"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
-	AuthedOrgID       entity.NullStrings       `json:"authed_org_ids"`
-	OrderBy           ContentOrderBy `json:"order_by"`
-	Pager             utils.Pager
+	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
+	OrderBy     ContentOrderBy     `json:"order_by"`
+	Pager       utils.Pager
 
 	JoinUserIDList []string `json:"join_user_id_list"`
 }
@@ -342,6 +342,7 @@ func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBCo
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(cids) < 1 {
 		//若fids为空，则不更新
+		//if fids is nil, no need to update
 		return nil
 	}
 	fidsSQLParts := make([]string, len(cids))
@@ -391,6 +392,7 @@ func (cd *DBContentDA) CountFolderContentUnsafe(ctx context.Context, tx *dbo.DBC
 	var total TotalContentResponse
 	var err error
 	//获取数量
+	//get folder total
 	query := cd.countFolderContentSQL(query1, query2)
 	err = tx.Raw(query, params1...).Scan(&total).Error
 	if err != nil {
@@ -410,6 +412,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	var total TotalContentResponse
 	var err error
 	//获取数量
+	//get folder total
 	query := cd.countFolderContentSQL(query1, query2)
 	err = tx.Raw(query, params1...).Scan(&total).Error
 	if err != nil {
@@ -420,6 +423,7 @@ func (cd *DBContentDA) doSearchFolderContent(ctx context.Context, tx *dbo.DBCont
 	}
 
 	//查询
+	//Query
 	folderContents := make([]*entity.FolderContent, 0)
 	db := tx.Raw(cd.searchFolderContentSQL(ctx, query1, query2), params1...)
 	orderBy := condition1.GetOrderBy()

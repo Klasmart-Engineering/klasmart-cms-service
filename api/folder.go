@@ -113,8 +113,6 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	fid := c.Param("item_id")
-	err := model.GetFolderModel().RemoveItem(ctx, fid, op)
-
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
@@ -125,6 +123,8 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
+
+	err = model.GetFolderModel().RemoveItem(ctx, fid, op)
 
 	switch err {
 	case nil:
@@ -425,7 +425,6 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 	}
 }
 
-
 // @Summary shareFolders
 // @ID shareFolders
 // @Description share folders to org
@@ -451,7 +450,6 @@ func (s *Server) shareFolders(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-
 
 	var data entity.ShareFoldersRequest
 	err = c.ShouldBind(&data)
@@ -514,7 +512,6 @@ func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
-
 
 func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondition {
 	ctx := c.Request.Context()

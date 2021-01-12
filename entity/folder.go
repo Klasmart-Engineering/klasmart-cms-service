@@ -158,8 +158,8 @@ type ShareFoldersRequest struct {
 }
 
 type FolderShareRecord struct {
-	FolderID string `json:"folder_id"`
-	Orgs []*OrganizationInfo `json:"orgs"`
+	FolderID string              `json:"folder_id"`
+	Orgs     []*OrganizationInfo `json:"orgs"`
 }
 type FolderShareRecords struct {
 	Data []*FolderShareRecord `json:"data"`
@@ -260,6 +260,7 @@ func (f FolderItem) TableName() string {
 
 func (f FolderItem) ChildrenPath() Path {
 	//根目录情况
+	//Root path case
 	if f.ID == constant.FolderRootPath {
 		return NewPath(constant.FolderRootPath)
 	}
