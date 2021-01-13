@@ -76,7 +76,7 @@ CREATE TABLE `assessments_attendances` (
   `id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
   `assessment_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'assessment id',
   `attendance_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'attendance id',
-  `checked` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'checked',
+  `checked` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'checked',
   PRIMARY KEY (`id`),
   KEY `assessments_attendances_assessment_id` (`assessment_id`),
   KEY `assessments_attendances_attendance_id` (`attendance_id`)
@@ -695,4 +695,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-12 17:01:05
+-- Dump completed on 2021-01-13 17:01:00
