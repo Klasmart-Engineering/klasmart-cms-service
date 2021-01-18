@@ -78,8 +78,10 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, tx *dbo.DBCon
 		log.Error(ctx, "CreateLearningOutcome: CreateOutcome failed",
 			log.String("op", operator.UserID),
 			log.Any("outcome", outcome))
+		return
 	}
-	return err
+	da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	return
 }
 
 func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, tx *dbo.DBContext, outcomeID string, operator *entity.Operator) (*entity.Outcome, error) {
@@ -176,6 +178,9 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 		return err
 	})
 
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 
@@ -316,6 +321,9 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, outcomeID st
 		}
 		return nil
 	})
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 
@@ -373,6 +381,9 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, tx *dbo.DBCo
 		}
 		return nil
 	})
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 
@@ -417,6 +428,9 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, tx *dbo.DBCo
 		}
 		return nil
 	})
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 

@@ -203,6 +203,7 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	_, err = o.InsertTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "CreateOutcome: InsertTx failed", log.Err(err), log.Any("outcome", outcome))
+		return
 	}
 	if outcome.SourceID != "" && outcome.SourceID != constant.LockedByNoBody && outcome.SourceID != outcome.ID {
 		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID, outcome.SourceID})
