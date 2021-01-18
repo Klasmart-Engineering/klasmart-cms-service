@@ -239,14 +239,19 @@ func (r *OutcomeRedis) CleanOutcomeConditionCache(ctx context.Context, condition
 		var err error
 		keys, err = ro.MustGetRedis(ctx).Keys(RedisKeyPrefixOutcomeCondition + "*").Result()
 		if err != nil {
-			log.Error(ctx, "CleanOutcomeConditionCache", log.Err(err), log.Strings("keys", keys))
+			log.Error(ctx, "CleanOutcomeConditionCache: keys failed", log.Err(err), log.Strings("keys", keys))
 			return
 		}
 	}
 
+	if len(keys) == 0 {
+		log.Debug(ctx, "CleanOutcomeConditionCache: empty", log.Any("condition", condition))
+		return
+	}
+
 	err := ro.MustGetRedis(ctx).Del(keys...).Err()
 	if err != nil {
-		log.Error(ctx, "CleanOutcomeConditionCache", log.Err(err), log.Strings("keys", keys))
+		log.Error(ctx, "CleanOutcomeConditionCache: del failed", log.Err(err), log.Strings("keys", keys))
 	}
 }
 
