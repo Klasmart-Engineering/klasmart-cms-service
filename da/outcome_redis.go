@@ -25,6 +25,7 @@ type IOutcomeRedis interface {
 	GetOutcomeCacheByID(ctx context.Context, ID string) *entity.Outcome
 
 	CleanOutcomeCache(ctx context.Context, IDs []string)
+	CleanOutcomeConditionCache(ctx context.Context, condition dbo.Conditions)
 
 	SetExpiration(t time.Duration)
 }
@@ -223,6 +224,30 @@ func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, IDs []string) {
 	//	log.Error(ctx, "Can't clean outcome again from cache", log.Err(err), log.Strings("keys", keys))
 	//}
 	// }()
+}
+
+func (r *OutcomeRedis) CleanOutcomeConditionCache(ctx context.Context, condition dbo.Conditions) {
+	if !config.Get().RedisConfig.OpenCache {
+		return
+	}
+
+	var keys []string
+	if condition != nil {
+		key := r.outcomeConditionKey(condition)
+		keys = append(keys, key)
+	} else {
+		var err error
+		keys, err = ro.MustGetRedis(ctx).Keys(RedisKeyPrefixOutcomeCondition + "*").Result()
+		if err != nil {
+			log.Error(ctx, "CleanOutcomeConditionCache", log.Err(err), log.Strings("keys", keys))
+			return
+		}
+	}
+
+	err := ro.MustGetRedis(ctx).Del(keys...).Err()
+	if err != nil {
+		log.Error(ctx, "CleanOutcomeConditionCache", log.Err(err), log.Strings("keys", keys))
+	}
 }
 
 func (r *OutcomeRedis) SetExpiration(t time.Duration) {

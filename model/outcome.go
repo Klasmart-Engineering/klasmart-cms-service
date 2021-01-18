@@ -535,6 +535,9 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, outcomeID st
 		}
 		return nil
 	})
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 
@@ -580,6 +583,9 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, tx *dbo.DBCon
 		}
 		return nil
 	})
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 
@@ -645,6 +651,9 @@ func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, outcomeI
 		}
 		return nil
 	})
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, outcomeIDs []string, reason string, operator *entity.Operator) error {
@@ -693,6 +702,9 @@ func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, outcomeID
 		}
 		return nil
 	})
+	if err == nil {
+		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, nil)
+	}
 	return err
 }
 
