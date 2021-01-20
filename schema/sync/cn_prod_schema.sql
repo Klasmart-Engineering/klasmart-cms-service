@@ -319,6 +319,35 @@ CREATE TABLE `grades` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `h5p_events`
+--
+
+DROP TABLE IF EXISTS `h5p_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `h5p_events` (
+  `id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `verb_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'verb_id',
+  `schedule_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
+  `lesson_plan_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'lesson_plan_id',
+  `material_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'material_id',
+  `play_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'play_id',
+  `user_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'user_id',
+  `local_content_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'local_content_id',
+  `local_library_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'local_library_name',
+  `event_time` bigint DEFAULT '0' COMMENT 'event_time',
+  `local_library_version` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'local_library_version',
+  `extends` json DEFAULT NULL COMMENT 'extends',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  PRIMARY KEY (`id`),
+  KEY `idx_verb_id` (`verb_id`),
+  KEY `idx_lesson_plan_id` (`lesson_plan_id`),
+  KEY `idx_local_library_name` (`local_library_name`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='h5p_events';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `learning_outcomes`
 --
 
@@ -677,4 +706,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-19 17:00:36
+-- Dump completed on 2021-01-20 17:00:36
