@@ -719,7 +719,6 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondi
 
 	log.Debug(ctx, "condition info",
 		log.String("viewType", viewType),
-		log.String("timeAtStr", timeAtStr),
 		log.Any("condition", condition),
 		log.Any("teacherIDs", teacherIDs),
 		log.Any("classIDs", classIDs),
