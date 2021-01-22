@@ -525,11 +525,9 @@ func (s *Server) querySchedule(c *gin.Context) {
 func (s *Server) getScheduleTimeView(c *gin.Context) {
 	ctx := c.Request.Context()
 	offsetStr := c.Query("time_zone_offset")
-	offset, err := strconv.Atoi(offsetStr)
-	if err != nil {
-		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
-	}
+	offset, _ := strconv.Atoi(offsetStr)
 	loc := utils.GetTimeLocationByOffset(offset)
+	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.String("time_zone_offset", offsetStr), log.Any("loc", loc))
 
 	condition, err := s.getScheduleTimeViewCondition(c)
 	if err != nil {
@@ -569,12 +567,9 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 func (s *Server) getScheduledDates(c *gin.Context) {
 	ctx := c.Request.Context()
 	offsetStr := c.Query("time_zone_offset")
-	offset, err := strconv.Atoi(offsetStr)
-	if err != nil {
-		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	}
+	offset, _ := strconv.Atoi(offsetStr)
 	loc := utils.GetTimeLocationByOffset(offset)
+	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.String("time_zone_offset", offsetStr), log.Any("loc", loc))
 
 	condition, err := s.getScheduleTimeViewCondition(c)
 	if err != nil {
