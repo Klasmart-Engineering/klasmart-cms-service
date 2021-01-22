@@ -202,6 +202,8 @@ type ScheduleCondition struct {
 	ProgramIDs               entity.NullStrings
 	OrgIDs                   entity.NullStrings
 	ClassID                  sql.NullString
+	ClassTypes               entity.NullStrings
+	DueToEq                  sql.NullInt64
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -305,6 +307,15 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.ClassID.Valid {
 		wheres = append(wheres, "class_id = ?")
 		params = append(params, c.ClassID.String)
+	}
+
+	if c.ClassTypes.Valid {
+		wheres = append(wheres, "class_type in (?)")
+		params = append(params, c.ClassTypes.Strings)
+	}
+	if c.DueToEq.Valid {
+		wheres = append(wheres, "due_at = ?")
+		params = append(params, c.DueToEq.Int64)
 	}
 
 	if c.DeleteAt.Valid {

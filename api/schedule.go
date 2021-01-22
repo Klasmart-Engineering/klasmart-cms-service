@@ -86,20 +86,20 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 	}
-	start, end, ok := s.processScheduleDueDate(c, data.StartAt, data.EndAt, data.DueAt, data.ClassType, loc)
+	processResult, ok := s.processScheduleDueDate(c, &entity.ProcessScheduleDueAtInput{
+		StartAt:   data.StartAt,
+		EndAt:     data.EndAt,
+		DueAt:     data.DueAt,
+		ClassType: data.ClassType,
+		Location:  loc,
+	})
 	if !ok {
 		log.Info(ctx, "process schedule due date failure")
 		return
 	}
-	data.StartAt = start
-	data.EndAt = end
-
-	if data.IsAllDay {
-		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
-		data.StartAt = time.Now().Unix()
-		timeUtil.TimeStamp = data.EndAt
-		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
-	}
+	data.StartAt = processResult.StartAt
+	data.EndAt = processResult.EndAt
+	data.DueAt = processResult.DueAt
 
 	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
@@ -245,20 +245,21 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	start, end, ok := s.processScheduleDueDate(c, data.StartAt, data.EndAt, data.DueAt, data.ClassType, loc)
+	processResult, ok := s.processScheduleDueDate(c, &entity.ProcessScheduleDueAtInput{
+		StartAt:   data.StartAt,
+		EndAt:     data.EndAt,
+		DueAt:     data.DueAt,
+		ClassType: data.ClassType,
+		Location:  loc,
+	})
 	if !ok {
 		log.Info(ctx, "process schedule due date failure")
 		return
 	}
-	data.StartAt = start
-	data.EndAt = end
+	data.StartAt = processResult.StartAt
+	data.EndAt = processResult.EndAt
+	data.DueAt = processResult.DueAt
 
-	if data.IsAllDay {
-		timeUtil := utils.NewTimeUtil(data.StartAt, loc)
-		data.StartAt = time.Now().Unix()
-		timeUtil.TimeStamp = data.EndAt
-		data.EndAt = timeUtil.EndOfDayByTimeStamp().Unix()
-	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
 	data.Location = loc
@@ -301,37 +302,44 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
-
-func (s *Server) processScheduleDueDate(c *gin.Context, startSrc int64, endSrc int64, dueAt int64, classType entity.ScheduleClassType, loc *time.Location) (int64, int64, bool) {
-	if dueAt <= 0 {
-		return startSrc, endSrc, true
-	}
+func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessScheduleDueAtInput) (*entity.ProcessScheduleDueAtView, bool) {
 	now := time.Now().Unix()
 	ctx := c.Request.Context()
-	lable := GeneralUnknown
 	var day int64
-	switch classType {
+	var result = new(entity.ProcessScheduleDueAtView)
+	switch input.ClassType {
 	case entity.ScheduleClassTypeTask:
-		day = utils.GetTimeDiffToDayByTimeStamp(endSrc, dueAt, loc)
-		lable = ScheduleMsgDueDateEarlierEndDate
+		result.StartAt = input.StartAt
+		result.EndAt = input.EndAt
+		if input.DueAt <= 0 {
+			result.DueAt = 0
+			return result, true
+		}
+		day = utils.GetTimeDiffToDayByTimeStamp(input.EndAt, input.DueAt, input.Location)
+		if day < 0 {
+			log.Info(ctx, "schedule dueAt is invalid", log.Int64("now", now), log.Any("input", input))
+			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
+			return nil, false
+		}
+		result.DueAt = utils.TodayZeroByTimeStamp(input.DueAt, input.Location).Unix()
 	case entity.ScheduleClassTypeHomework:
-		day = utils.GetTimeDiffToDayByTimeStamp(now, dueAt, loc)
-		startSrc = utils.StartOfDayByTimeStamp(dueAt, loc)
-		endSrc = utils.EndOfDayByTimeStamp(dueAt, loc)
-		lable = ScheduleMsgDueDateEarlierToDay
+		if input.DueAt <= 0 {
+			result.DueAt = 0
+			return result, true
+		}
+		day = utils.GetTimeDiffToDayByTimeStamp(now, input.DueAt, input.Location)
+		if day < 0 {
+			log.Info(ctx, "schedule dueAt is invalid", log.Int64("now", now), log.Any("input", input))
+			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierToDay))
+			return nil, false
+		}
+		result.DueAt = utils.TodayZeroByTimeStamp(input.DueAt, input.Location).Unix()
+	default:
+		result.StartAt = input.StartAt
+		result.EndAt = input.EndAt
+		result.DueAt = 0
 	}
-	if day < 0 {
-		log.Info(ctx, "schedule dueAt is invalid",
-			log.Int64("StartAt", startSrc),
-			log.Int64("EndAt", endSrc),
-			log.Int64("now", now),
-			log.Int64("DueAt", dueAt),
-			log.Any("classType", classType))
-		c.JSON(http.StatusBadRequest, L(lable))
-		return 0, 0, false
-	}
-
-	return startSrc, endSrc, true
+	return result, true
 }
 
 // @Summary getScheduleByID
@@ -498,14 +506,16 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Description get schedule time view
 // @Accept json
 // @Produce json
-// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month,year)
-// @Param time_at query integer true "search schedules by time_at"
-// @Param time_zone_offset query integer true "time zone offset"
+// @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month,year,full_view)
+// @Param time_at query integer false "search schedules by time_at"
+// @Param time_zone_offset query integer false "time zone offset"
 // @Param school_ids query string false "school ids,separated by comma"
 // @Param teacher_ids query string false "teacher id,separated by comma"
 // @Param class_ids query string false "class id,separated by comma"
 // @Param subject_ids query string false "subject id,separated by comma"
 // @Param program_ids query string false "program id,separated by comma"
+// @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
+// @Param due_at_eq query integer false "get schedules equal to due_at"
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleListView
 // @Failure 400 {object} BadRequestResponse
@@ -584,62 +594,79 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondi
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	viewType := c.Query("view_type")
-	timeAtStr := c.Query("time_at")
-	timeAt, err := strconv.ParseInt(timeAtStr, 10, 64)
-	if err != nil {
-		log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("time_at", timeAtStr))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return nil, err
-	}
-	offsetStr := c.Query("time_zone_offset")
-	offset, err := strconv.Atoi(offsetStr)
-	if err != nil {
-		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return nil, err
-	}
-	loc := utils.GetTimeLocationByOffset(offset)
-	log.Debug(ctx, "time location", log.Any("op", op), log.Any("location", loc), log.Int("offset", offset))
-	timeUtil := utils.NewTimeUtil(timeAt, loc)
-
-	var (
-		start int64
-		end   int64
-	)
-	switch entity.ScheduleViewType(viewType) {
-	case entity.ScheduleViewTypeDay:
-		start = timeUtil.BeginOfDayByTimeStamp().Unix()
-		end = timeUtil.EndOfDayByTimeStamp().Unix()
-	case entity.ScheduleViewTypeWorkweek:
-		start, end = timeUtil.FindWorkWeekTimeRange()
-	case entity.ScheduleViewTypeWeek:
-		start, end = timeUtil.FindWeekTimeRange()
-	case entity.ScheduleViewTypeMonth:
-		start, end = timeUtil.FindMonthRange()
-	case entity.ScheduleViewTypeYear:
-		start = utils.StartOfYearByTimeStamp(timeAt, loc).Unix()
-		end = utils.EndOfYearByTimeStamp(timeAt, loc).Unix()
-	default:
-		log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return nil, constant.ErrInvalidArgs
-	}
-	startAndEndTimeViewRange := make([]sql.NullInt64, 2)
-	startAndEndTimeViewRange[0] = sql.NullInt64{
-		Valid: start <= 0,
-		Int64: start,
-	}
-	startAndEndTimeViewRange[1] = sql.NullInt64{
-		Valid: end <= 0,
-		Int64: end,
-	}
 	condition := new(da.ScheduleCondition)
-	condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
+	if viewType != entity.ScheduleViewTypeFullView.String() {
+		timeAtStr := c.Query("time_at")
+		timeAt, err := strconv.ParseInt(timeAtStr, 10, 64)
+		if err != nil {
+			log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("time_at", timeAtStr))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return nil, err
+		}
+		offsetStr := c.Query("time_zone_offset")
+		offset, err := strconv.Atoi(offsetStr)
+		if err != nil {
+			log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return nil, err
+		}
+		loc := utils.GetTimeLocationByOffset(offset)
+		log.Debug(ctx, "time location", log.Any("op", op), log.Any("location", loc), log.Int("offset", offset))
+		timeUtil := utils.NewTimeUtil(timeAt, loc)
+
+		var (
+			start int64
+			end   int64
+		)
+		switch entity.ScheduleViewType(viewType) {
+		case entity.ScheduleViewTypeDay:
+			start = timeUtil.BeginOfDayByTimeStamp().Unix()
+			end = timeUtil.EndOfDayByTimeStamp().Unix()
+		case entity.ScheduleViewTypeWorkweek:
+			start, end = timeUtil.FindWorkWeekTimeRange()
+		case entity.ScheduleViewTypeWeek:
+			start, end = timeUtil.FindWeekTimeRange()
+		case entity.ScheduleViewTypeMonth:
+			start, end = timeUtil.FindMonthRange()
+		case entity.ScheduleViewTypeYear:
+			start = utils.StartOfYearByTimeStamp(timeAt, loc).Unix()
+			end = utils.EndOfYearByTimeStamp(timeAt, loc).Unix()
+		default:
+			log.Info(ctx, "getScheduleTimeView:view_type is empty or invalid", log.String("view_type", viewType))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return nil, constant.ErrInvalidArgs
+		}
+		startAndEndTimeViewRange := make([]sql.NullInt64, 2)
+		startAndEndTimeViewRange[0] = sql.NullInt64{
+			Valid: start <= 0,
+			Int64: start,
+		}
+		startAndEndTimeViewRange[1] = sql.NullInt64{
+			Valid: end <= 0,
+			Int64: end,
+		}
+
+		condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
+	}
+
 	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
 	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
+	condition.ClassTypes = entity.SplitStringToNullStrings(c.Query("class_types"))
 	schoolIDs := entity.SplitStringToNullStrings(c.Query("school_ids"))
 	teacherIDs := entity.SplitStringToNullStrings(c.Query("teacher_ids"))
-
+	dueAtStr := c.Query("due_at_eq")
+	if dueAtStr != "" {
+		dueAt, err := strconv.ParseInt(dueAtStr, 10, 64)
+		if err != nil {
+			log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("dueAt", dueAtStr))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return nil, err
+		}
+		condition.DueToEq = sql.NullInt64{
+			Int64: dueAt,
+			Valid: true,
+		}
+	}
 	filterClassIDs, err := model.GetSchedulePermissionModel().GetClassIDs(ctx, op)
 	if err != nil {
 		log.Error(ctx, "getScheduleTimeView:getClassIDs error",
