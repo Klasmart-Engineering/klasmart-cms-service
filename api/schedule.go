@@ -528,7 +528,6 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
 		log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	}
 	loc := utils.GetTimeLocationByOffset(offset)
 
