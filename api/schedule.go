@@ -321,7 +321,7 @@ func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessSch
 			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
 			return nil, false
 		}
-		result.DueAt = utils.TodayZeroByTimeStamp(input.DueAt, input.Location).Unix()
+		result.DueAt = utils.TodayEndByTimeStamp(input.DueAt, input.Location).Unix()
 	case entity.ScheduleClassTypeHomework:
 		if input.DueAt <= 0 {
 			result.DueAt = 0
@@ -333,7 +333,7 @@ func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessSch
 			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierToDay))
 			return nil, false
 		}
-		result.DueAt = utils.TodayZeroByTimeStamp(input.DueAt, input.Location).Unix()
+		result.DueAt = utils.TodayEndByTimeStamp(input.DueAt, input.Location).Unix()
 	default:
 		result.StartAt = input.StartAt
 		result.EndAt = input.EndAt
