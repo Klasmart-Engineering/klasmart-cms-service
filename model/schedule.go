@@ -770,6 +770,9 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		Status:         schedule.Status.GetScheduleStatus(schedule.EndAt),
 		RealTimeStatus: *realTimeData,
 	}
+	if result.ClassType == entity.ScheduleClassTypeHomework {
+		result.Status = entity.ScheduleStatusNotStart
+	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
 		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
