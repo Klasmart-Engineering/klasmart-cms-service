@@ -369,6 +369,7 @@ type ScheduleListView struct {
 	ClassType    ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	Status       ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ClassID      string            `json:"class_id"`
+	DueAt        int64             `json:"due_at"`
 }
 
 type ScheduleDateView struct {
@@ -466,6 +467,7 @@ const (
 	ScheduleViewTypeWeek     ScheduleViewType = "week"
 	ScheduleViewTypeMonth    ScheduleViewType = "month"
 	ScheduleViewTypeYear     ScheduleViewType = "year"
+	ScheduleViewTypeFullView ScheduleViewType = "full_view"
 )
 
 func (s ScheduleViewType) String() string {
@@ -495,4 +497,17 @@ type ScheduleConflictInput struct {
 	IsRepeat               bool
 	RepeatOptions          RepeatOptions
 	Location               *time.Location
+}
+
+type ProcessScheduleDueAtInput struct {
+	StartAt   int64
+	EndAt     int64
+	DueAt     int64
+	ClassType ScheduleClassType
+	Location  *time.Location
+}
+type ProcessScheduleDueAtView struct {
+	StartAt int64
+	EndAt   int64
+	DueAt   int64
 }

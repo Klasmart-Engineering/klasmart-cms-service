@@ -249,3 +249,16 @@ func GetTimeDiffToDayByTimeStamp(start, end int64, loc *time.Location) int64 {
 
 	return GetTimeDiffToDayByTime(t1, t2, loc)
 }
+
+func TodayEnd(t time.Time) time.Time {
+	return TodayZero(t).AddDate(0, 0, 1).Add(-1 * time.Second)
+}
+
+func TodayZeroByTimeStamp(ts int64, loc *time.Location) time.Time {
+	t := time.Unix(ts, 0).In(loc)
+	return TodayZero(t)
+}
+func TodayEndByTimeStamp(ts int64, loc *time.Location) time.Time {
+	t := time.Unix(ts, 0).In(loc)
+	return TodayEnd(t)
+}
