@@ -506,10 +506,10 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 	}
 	result := make([]*entity.ScheduleListView, 0, len(scheduleList))
 	for _, item := range scheduleList {
-		//if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt > 0 {
-		//	item.StartAt = utils.TodayZeroByTimeStamp(item.DueAt, loc).Unix()
-		//	item.EndAt = utils.TodayEndByTimeStamp(item.DueAt, loc).Unix()
-		//}
+		if item.ClassType == entity.ScheduleClassTypeHomework && item.DueAt > 0 {
+			item.StartAt = utils.TodayZeroByTimeStamp(item.DueAt, loc).Unix()
+			item.EndAt = utils.TodayEndByTimeStamp(item.DueAt, loc).Unix()
+		}
 		temp := &entity.ScheduleListView{
 			ID:           item.ID,
 			Title:        item.Title,
