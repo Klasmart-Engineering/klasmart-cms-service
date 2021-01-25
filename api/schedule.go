@@ -141,6 +141,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
 	case model.ErrScheduleEditMissTime:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissTime))
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	case nil:
 		c.JSON(http.StatusOK, IDResponse{ID: newID})
 	default:
@@ -192,8 +194,6 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
 	case model.ErrScheduleEditMissTime:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissTime))
-	case model.ErrScheduleLessonPlanUnAuthed:
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:

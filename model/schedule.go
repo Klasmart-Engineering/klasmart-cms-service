@@ -163,7 +163,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		log.Error(ctx, "add schedule: verify data error",
 			log.Err(err),
 			log.Any("viewData", viewData))
-		return "", constant.ErrInvalidArgs
+		return "", err
 	}
 	if viewData.ClassType == entity.ScheduleClassTypeTask {
 		viewData.LessonPlanID = ""
@@ -272,7 +272,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		log.Error(ctx, "update schedule: verify data error",
 			log.Err(err),
 			log.Any("viewData", viewData))
-		return "", constant.ErrInvalidArgs
+		return "", err
 	}
 
 	if viewData.ClassType == entity.ScheduleClassTypeTask {
