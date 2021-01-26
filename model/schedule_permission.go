@@ -162,7 +162,6 @@ func (s *schedulePermissionModel) HasScheduleEditPermission(ctx context.Context,
 		log.Info(ctx, "hasScheduleEditPermission:class not found org",
 			log.Any("operator", op),
 			log.String("classID", classID),
-			log.Err(err),
 		)
 		return constant.ErrUnAuthorized
 	}
@@ -171,7 +170,6 @@ func (s *schedulePermissionModel) HasScheduleEditPermission(ctx context.Context,
 			log.Any("operator", op),
 			log.Any("orgInfo", orgInfo),
 			log.String("classID", classID),
-			log.Err(err),
 		)
 		return constant.ErrUnAuthorized
 	}
