@@ -148,8 +148,35 @@ func (s *schedulePermissionModel) GetClassIDsByOrgPermission(ctx context.Context
 }
 
 func (s *schedulePermissionModel) HasScheduleEditPermission(ctx context.Context, op *entity.Operator, classID string) error {
+	classOrgMap, err := external.GetOrganizationServiceProvider().GetByClasses(ctx, op, []string{classID})
+	if err != nil {
+		log.Error(ctx, "hasScheduleEditPermission:GetOrganizationServiceProvider.GetByClasses error",
+			log.Any("operator", op),
+			log.String("classID", classID),
+			log.Err(err),
+		)
+		return err
+	}
+	orgInfo, ok := classOrgMap[classID]
+	if !ok {
+		log.Info(ctx, "hasScheduleEditPermission:class not found org",
+			log.Any("operator", op),
+			log.String("classID", classID),
+			log.Err(err),
+		)
+		return constant.ErrUnAuthorized
+	}
+	if orgInfo.ID != op.OrgID {
+		log.Info(ctx, "hasScheduleEditPermission:class org not equal operator org",
+			log.Any("operator", op),
+			log.Any("orgInfo", orgInfo),
+			log.String("classID", classID),
+			log.Err(err),
+		)
+		return constant.ErrUnAuthorized
+	}
 	permissionName := external.ScheduleCreateEvent
-	ok, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissionName)
+	ok, err = external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissionName)
 	if err != nil {
 		return err
 	}

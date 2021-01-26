@@ -520,6 +520,7 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			ClassType:    item.ClassType,
 			ClassID:      item.ClassID,
 			DueAt:        item.DueAt,
+			Status:       item.Status,
 		}
 		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.DueAt > 0 {
 			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, loc).Unix()
