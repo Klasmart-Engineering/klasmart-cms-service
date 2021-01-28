@@ -94,3 +94,16 @@ func TestGetTimeDiffToDayByTimeStamp(t *testing.T) {
 	t.Log(end)
 	t.Log(r)
 }
+
+func TestTemp(t *testing.T) {
+	loc, _ := time.LoadLocation("America/New_York")
+	now := time.Now().Add(7 * time.Hour)
+	t2 := now.In(loc)
+	t.Log(t2)
+
+	end := TodayEndByTimeStamp(t2.Unix(), time.Local)
+	t.Log(end)
+	end2 := TodayEndByTimeStamp(now.Unix(), time.Local)
+	t.Log(end2)
+	t.Log(loc)
+}

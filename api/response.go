@@ -38,6 +38,8 @@ const (
 	ScheduleMsgLessonPlanInvalid     ResponseLabel = "schedule_msg_recall_lesson_plan"
 	ScheduleMsgDueDateEarlierEndDate ResponseLabel = "schedule_msg_due_date_earlier"
 	ScheduleMsgDueDateEarlierToDay   ResponseLabel = "schedule_msg_earlier_today"
+	ScheduleMsgDeleteMissDueDate     ResponseLabel = "schedule_msg_delete_due_date"
+	ScheduleMsgEditMissDueDate       ResponseLabel = "schedule_msg_edit_due_date"
 )
 
 // L create response object with label

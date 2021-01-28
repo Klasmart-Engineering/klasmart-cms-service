@@ -22,8 +22,9 @@ import (
 )
 
 var (
-	ErrScheduleEditMissTime       = errors.New("editable time has expired")
-	ErrScheduleLessonPlanUnAuthed = errors.New("schedule content data unAuthed")
+	ErrScheduleEditMissTime         = errors.New("editable time has expired")
+	ErrScheduleLessonPlanUnAuthed   = errors.New("schedule content data unAuthed")
+	ErrScheduleEditMissTimeForDueAt = errors.New("editable time has expired for due at")
 )
 
 type IScheduleModel interface {
@@ -235,7 +236,18 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*en
 	}
 	switch schedule.ClassType {
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
-
+		if schedule.DueAt > 0 {
+			now := time.Now().Unix()
+			dueAtEnd := utils.TodayEndByTimeStamp(schedule.DueAt, time.Local).Unix()
+			if dueAtEnd < now {
+				log.Warn(ctx, "checkScheduleStatus: the due_at time has expired",
+					log.Any("schedule", schedule),
+					log.Any("now", now),
+					log.Any("dueAtEnd", dueAtEnd),
+				)
+				return nil, ErrScheduleEditMissTimeForDueAt
+			}
+		}
 	case entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass:
 		diff := utils.TimeStampDiff(schedule.StartAt, time.Now().Unix())
 		if diff <= constant.ScheduleAllowEditTime {
@@ -494,9 +506,13 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			log.Any("cacheData", cacheData),
 		)
 		for _, item := range cacheData {
-			if item.ClassType == entity.ScheduleClassTypeHomework {
-				item.Status = item.Status.GetScheduleStatus(item.DueAt)
-			} else {
+			switch item.ClassType {
+			case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
+				if item.DueAt > 0 {
+					endAt := utils.TodayEndByTimeStamp(item.DueAt, time.Local).Unix()
+					item.Status = item.Status.GetScheduleStatus(endAt)
+				}
+			case entity.ScheduleClassTypeOfflineClass, entity.ScheduleClassTypeOnlineClass:
 				item.Status = item.Status.GetScheduleStatus(item.EndAt)
 			}
 		}
@@ -522,11 +538,19 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			DueAt:        item.DueAt,
 			Status:       item.Status,
 		}
-		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.DueAt > 0 {
-			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, loc).Unix()
-			temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, loc).Unix()
-			temp.Status = temp.Status.GetScheduleStatus(item.DueAt)
-		} else {
+		switch temp.ClassType {
+		case entity.ScheduleClassTypeHomework:
+			if temp.DueAt > 0 {
+				temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, time.Local).Unix()
+				temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, time.Local).Unix()
+				temp.Status = temp.Status.GetScheduleStatus(temp.EndAt)
+			}
+		case entity.ScheduleClassTypeTask:
+			if temp.DueAt > 0 {
+				endAt := utils.TodayEndByTimeStamp(temp.DueAt, time.Local).Unix()
+				temp.Status = temp.Status.GetScheduleStatus(endAt)
+			}
+		case entity.ScheduleClassTypeOfflineClass, entity.ScheduleClassTypeOnlineClass:
 			temp.Status = temp.Status.GetScheduleStatus(item.EndAt)
 		}
 		result = append(result, temp)
@@ -745,9 +769,13 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 			log.Any("cacheData", cacheData),
 		)
 		data := cacheData[0]
-		if data.ClassType == entity.ScheduleClassTypeHomework {
-			data.Status = data.Status.GetScheduleStatus(data.DueAt)
-		} else {
+		switch data.ClassType {
+		case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
+			if data.DueAt > 0 {
+				endAt := utils.TodayEndByTimeStamp(data.DueAt, time.Local).Unix()
+				data.Status = data.Status.GetScheduleStatus(endAt)
+			}
+		case entity.ScheduleClassTypeOfflineClass, entity.ScheduleClassTypeOnlineClass:
 			data.Status = data.Status.GetScheduleStatus(data.EndAt)
 		}
 		data.RealTimeStatus = *realTimeData
@@ -779,11 +807,16 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		Version:        schedule.ScheduleVersion,
 		IsRepeat:       schedule.RepeatID != "",
 		RealTimeStatus: *realTimeData,
+		Status:         schedule.Status,
 	}
-	if result.ClassType == entity.ScheduleClassTypeHomework {
-		result.Status = schedule.Status.GetScheduleStatus(schedule.DueAt)
-	} else {
-		result.Status = schedule.Status.GetScheduleStatus(schedule.EndAt)
+	switch result.ClassType {
+	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
+		if result.DueAt > 0 {
+			endAt := utils.TodayEndByTimeStamp(result.DueAt, time.Local).Unix()
+			result.Status = result.Status.GetScheduleStatus(endAt)
+		}
+	case entity.ScheduleClassTypeOfflineClass, entity.ScheduleClassTypeOnlineClass:
+		result.Status = result.Status.GetScheduleStatus(result.EndAt)
 	}
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
