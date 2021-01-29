@@ -51,7 +51,11 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 			)
 			return "", ErrGoLiveTimeNotUp
 		}
-		if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
+		if schedule.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     schedule.EndAt,
+			DueAt:     schedule.DueAt,
+			ClassType: schedule.ClassType,
+		}) == entity.ScheduleStatusClosed {
 			log.Warn(ctx, "MakeScheduleLiveToken:go live not allow",
 				log.Any("op", op),
 				log.Any("schedule", schedule),
