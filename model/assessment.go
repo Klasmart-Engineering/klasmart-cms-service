@@ -643,7 +643,11 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 	}
 
 	// filter attendance ids
-	cmd.AttendanceIDs = utils.FilterStrings(cmd.AttendanceIDs, studentIDs, teacherIDs)
+	if schedule.ClassType == entity.ScheduleClassTypeOfflineClass {
+		cmd.AttendanceIDs = studentIDs
+	} else {
+		cmd.AttendanceIDs = utils.FilterStrings(cmd.AttendanceIDs, studentIDs, teacherIDs)
+	}
 
 	if len(outcomeIDs) == 0 {
 		newItem.Status = entity.AssessmentStatusComplete
