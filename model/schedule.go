@@ -540,8 +540,8 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			ClassType: temp.ClassType,
 		})
 		if temp.ClassType == entity.ScheduleClassTypeHomework {
-			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, time.Local).Unix()
-			temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, time.Local).Unix()
+			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, loc).Unix()
+			temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, loc).Unix()
 		}
 		result = append(result, temp)
 	}
