@@ -51,6 +51,7 @@ type IScheduleModel interface {
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error
 	GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error)
+	GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -878,9 +879,9 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 
 func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool, error) {
 	condition := &da.ScheduleCondition{
-		ID: sql.NullString{
-			String: id,
-			Valid:  true,
+		IDs: entity.NullStrings{
+			Strings: []string{id},
+			Valid:   true,
 		},
 	}
 	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
@@ -1271,6 +1272,26 @@ func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entit
 		}
 	}
 
+	return result, nil
+}
+
+func (s *scheduleModel) GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error) {
+	var scheduleList []*entity.Schedule
+	condition := &da.ScheduleCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
+	}
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "get by ids error", log.Strings("ids", ids))
+		return nil, err
+	}
+	result := make([]*entity.SchedulePlain, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = &entity.SchedulePlain{Schedule: item}
+	}
 	return result, nil
 }
 
