@@ -25,7 +25,8 @@ func NewMaterialData() *MaterialData {
 type MaterialData struct {
 	InputSource int             `json:"input_source"`
 	FileType    entity.FileType `json:"file_type"`
-	Source      SourceID        `json:"source"`
+	Source      SourceID        `json:"source,omitempty"`
+	Content     string          `json:"content,omitempty"`
 }
 
 func (this *MaterialData) Unmarshal(ctx context.Context, data string) error {
@@ -52,8 +53,10 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 	if contentType != entity.ContentTypeMaterial {
 		return ErrInvalidContentType
 	}
-	if this.Source.IsNil() {
-		log.Error(ctx, "marshal material failed", log.String("source", string(this.Source)))
+	if this.Source.IsNil() && this.Content == "" {
+		log.Error(ctx, "marshal material failed",
+			log.String("source", string(this.Source)),
+			log.Any("content", this.Content))
 		return ErrContentDataRequestSource
 	}
 
@@ -75,7 +78,13 @@ func (this *MaterialData) Validate(ctx context.Context, contentType entity.Conte
 
 func (h *MaterialData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	if h.InputSource == entity.MaterialInputSourceH5p {
-		h.FileType = entity.FileTypeH5p
+		if h.Source == "" && h.Content != "" {
+			h.FileType = entity.FileTypeH5pExtend
+		} else if h.Source != "" && h.Content == "" {
+			h.FileType = entity.FileTypeH5p
+		} else {
+			return ErrInvalidSourceOrContent
+		}
 		return nil
 	}
 	fileType, err := ExtensionToFileType(ctx, h.Source)

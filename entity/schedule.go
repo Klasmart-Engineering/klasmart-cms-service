@@ -263,11 +263,28 @@ func (s ScheduleStatus) Valid() bool {
 	}
 }
 
-func (s ScheduleStatus) GetScheduleStatus(scheduleEndAt int64) ScheduleStatus {
-	if scheduleEndAt > 0 && scheduleEndAt < time.Now().Unix() {
-		return ScheduleStatusClosed
+func (s ScheduleStatus) GetScheduleStatus(input ScheduleStatusInput) ScheduleStatus {
+	status := s
+	switch input.ClassType {
+	case ScheduleClassTypeHomework, ScheduleClassTypeTask:
+		if input.DueAt > 0 {
+			endAt := utils.TodayEndByTimeStamp(input.DueAt, time.Local).Unix()
+			if endAt < time.Now().Unix() {
+				status = ScheduleStatusClosed
+			}
+		}
+	case ScheduleClassTypeOfflineClass, ScheduleClassTypeOnlineClass:
+		if input.EndAt > 0 && input.EndAt < time.Now().Unix() {
+			status = ScheduleStatusClosed
+		}
 	}
-	return s
+	return status
+}
+
+type ScheduleStatusInput struct {
+	EndAt     int64
+	DueAt     int64
+	ClassType ScheduleClassType
 }
 
 const (

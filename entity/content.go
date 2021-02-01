@@ -29,11 +29,12 @@ const (
 	MaterialInputSourceDisk   = 2
 	MaterialInputSourceAssets = 3
 
-	FileTypeImage    = 1
-	FileTypeVideo    = 2
-	FileTypeAudio    = 3
-	FileTypeDocument = 4
-	FileTypeH5p      = 5
+	FileTypeImage     = 1
+	FileTypeVideo     = 2
+	FileTypeAudio     = 3
+	FileTypeDocument  = 4
+	FileTypeH5p       = 5
+	FileTypeH5pExtend = 6
 
 	FileTypeAssetsTypeOffset = 9
 
@@ -44,7 +45,7 @@ const (
 	//LessonTypeTest    = "1"
 	//LessonTypeNotTest = "2"
 
-	ContentAuthed ContentAuth = 1
+	ContentAuthed   ContentAuth = 1
 	ContentUnauthed ContentAuth = 2
 )
 
@@ -75,6 +76,8 @@ func NewFileType(fileType int) FileType {
 		return FileTypeDocument
 	case FileTypeH5p:
 		return FileTypeH5p
+	case FileTypeH5pExtend:
+		return FileTypeH5pExtend
 	default:
 		return FileTypeH5p
 	}
@@ -91,8 +94,10 @@ func (f FileType) String() string {
 		return "document"
 	case FileTypeH5p:
 		return "h5p"
+	case FileTypeH5pExtend:
+		return "extend h5p"
 	default:
-		return "h5p"
+		return "unknown"
 	}
 }
 

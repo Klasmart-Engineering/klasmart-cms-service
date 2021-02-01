@@ -51,7 +51,11 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 			)
 			return "", ErrGoLiveTimeNotUp
 		}
-		if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
+		if schedule.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     schedule.EndAt,
+			DueAt:     schedule.DueAt,
+			ClassType: schedule.ClassType,
+		}) == entity.ScheduleStatusClosed {
 			log.Warn(ctx, "MakeScheduleLiveToken:go live not allow",
 				log.Any("op", op),
 				log.Any("schedule", schedule),
@@ -107,7 +111,12 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				log.Any("schedule", schedule))
 			return "", err
 		}
-		liveTokenInfo.Materials, err = s.getMaterials(ctx, op, schedule.LessonPlanID)
+		materialInput := &entity.MaterialInput{
+			ScheduleID: scheduleID,
+			TokenType:  tokenType,
+			ContentID:  schedule.LessonPlanID,
+		}
+		liveTokenInfo.Materials, err = s.getMaterials(ctx, op, materialInput)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:get material error",
 				log.Err(err),
@@ -163,7 +172,11 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	liveTokenInfo.Materials, err = s.getMaterials(ctx, op, contentID)
+	materialInput := &entity.MaterialInput{
+		ContentID: contentID,
+		TokenType: entity.LiveTokenTypePreview,
+	}
+	liveTokenInfo.Materials, err = s.getMaterials(ctx, op, materialInput)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:get material error",
 			log.Err(err),
@@ -266,19 +279,19 @@ func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.O
 	return hasPermission, nil
 }
 
-func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, contentID string) ([]*entity.LiveMaterial, error) {
-	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID, op)
+func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput) ([]*entity.LiveMaterial, error) {
+	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), input.ContentID, op)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "getMaterials:get content sub by id not found",
 			log.Err(err),
-			log.String("contentID", contentID))
+			log.Any("input", input))
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
 		log.Error(ctx, "getMaterials:get content sub by id error",
 			log.Err(err),
-			log.String("contentID", contentID))
+			log.Any("input", input))
 		return nil, err
 	}
 
@@ -304,7 +317,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeAudio
 		case entity.FileTypeVideo:
 			materialItem.TypeName = entity.MaterialTypeVideo
-		case entity.FileTypeH5p:
+		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
@@ -318,12 +331,14 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			if err != nil {
 				log.Error(ctx, "getMaterials:get resource path error",
 					log.Err(err),
-					log.String("contentID", contentID),
+					log.Any("input", input),
 					log.Any("mData", mData))
 				return nil, err
 			}
 		}
-
+		if mData.FileType == entity.FileTypeH5pExtend {
+			materialItem.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p", op.OrgID, item.ID, input.ScheduleID, input.TokenType)
+		}
 		materials = append(materials, materialItem)
 	}
 	return materials, nil

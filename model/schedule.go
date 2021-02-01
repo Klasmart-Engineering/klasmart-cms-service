@@ -22,8 +22,9 @@ import (
 )
 
 var (
-	ErrScheduleEditMissTime       = errors.New("editable time has expired")
-	ErrScheduleLessonPlanUnAuthed = errors.New("schedule content data unAuthed")
+	ErrScheduleEditMissTime         = errors.New("editable time has expired")
+	ErrScheduleLessonPlanUnAuthed   = errors.New("schedule content data unAuthed")
+	ErrScheduleEditMissTimeForDueAt = errors.New("editable time has expired for due at")
 )
 
 type IScheduleModel interface {
@@ -50,6 +51,7 @@ type IScheduleModel interface {
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error
 	GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error)
+	GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -235,7 +237,18 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*en
 	}
 	switch schedule.ClassType {
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
-
+		if schedule.DueAt > 0 {
+			now := time.Now().Unix()
+			dueAtEnd := utils.TodayEndByTimeStamp(schedule.DueAt, time.Local).Unix()
+			if dueAtEnd < now {
+				log.Warn(ctx, "checkScheduleStatus: the due_at time has expired",
+					log.Any("schedule", schedule),
+					log.Any("now", now),
+					log.Any("dueAtEnd", dueAtEnd),
+				)
+				return nil, ErrScheduleEditMissTimeForDueAt
+			}
+		}
 	case entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass:
 		diff := utils.TimeStampDiff(schedule.StartAt, time.Now().Unix())
 		if diff <= constant.ScheduleAllowEditTime {
@@ -494,11 +507,11 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			log.Any("cacheData", cacheData),
 		)
 		for _, item := range cacheData {
-			if item.ClassType == entity.ScheduleClassTypeHomework {
-				item.Status = item.Status.GetScheduleStatus(item.DueAt)
-			} else {
-				item.Status = item.Status.GetScheduleStatus(item.EndAt)
-			}
+			item.Status = item.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+				EndAt:     item.EndAt,
+				DueAt:     item.DueAt,
+				ClassType: item.ClassType,
+			})
 		}
 		return cacheData, nil
 	}
@@ -522,12 +535,14 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			DueAt:        item.DueAt,
 			Status:       item.Status,
 		}
-		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.DueAt > 0 {
+		temp.Status = temp.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     temp.EndAt,
+			DueAt:     temp.DueAt,
+			ClassType: temp.ClassType,
+		})
+		if temp.ClassType == entity.ScheduleClassTypeHomework {
 			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, loc).Unix()
 			temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, loc).Unix()
-			temp.Status = temp.Status.GetScheduleStatus(item.DueAt)
-		} else {
-			temp.Status = temp.Status.GetScheduleStatus(item.EndAt)
 		}
 		result = append(result, temp)
 	}
@@ -745,11 +760,11 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 			log.Any("cacheData", cacheData),
 		)
 		data := cacheData[0]
-		if data.ClassType == entity.ScheduleClassTypeHomework {
-			data.Status = data.Status.GetScheduleStatus(data.DueAt)
-		} else {
-			data.Status = data.Status.GetScheduleStatus(data.EndAt)
-		}
+		data.Status = data.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     data.EndAt,
+			DueAt:     data.DueAt,
+			ClassType: data.ClassType,
+		})
 		data.RealTimeStatus = *realTimeData
 		return data, nil
 	}
@@ -779,12 +794,13 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		Version:        schedule.ScheduleVersion,
 		IsRepeat:       schedule.RepeatID != "",
 		RealTimeStatus: *realTimeData,
+		Status:         schedule.Status,
 	}
-	if result.ClassType == entity.ScheduleClassTypeHomework {
-		result.Status = schedule.Status.GetScheduleStatus(schedule.DueAt)
-	} else {
-		result.Status = schedule.Status.GetScheduleStatus(schedule.EndAt)
-	}
+	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+		EndAt:     result.EndAt,
+		DueAt:     result.DueAt,
+		ClassType: result.ClassType,
+	})
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
 		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
@@ -863,9 +879,9 @@ func (s *scheduleModel) ExistScheduleByLessonPlanID(ctx context.Context, lessonP
 
 func (s *scheduleModel) ExistScheduleByID(ctx context.Context, id string) (bool, error) {
 	condition := &da.ScheduleCondition{
-		ID: sql.NullString{
-			String: id,
-			Valid:  true,
+		IDs: entity.NullStrings{
+			Strings: []string{id},
+			Valid:   true,
 		},
 	}
 	count, err := da.GetScheduleDA().Count(ctx, condition, &entity.Schedule{})
@@ -1256,6 +1272,26 @@ func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entit
 		}
 	}
 
+	return result, nil
+}
+
+func (s *scheduleModel) GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error) {
+	var scheduleList []*entity.Schedule
+	condition := &da.ScheduleCondition{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
+	}
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "get by ids error", log.Strings("ids", ids))
+		return nil, err
+	}
+	result := make([]*entity.SchedulePlain, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = &entity.SchedulePlain{Schedule: item}
+	}
 	return result, nil
 }
 

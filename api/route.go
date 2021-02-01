@@ -74,6 +74,11 @@ func (s Server) registeRoute() {
 		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 	}
+	h5pEvents := s.engine.Group("/v1")
+	{
+		h5pEvents.POST("/h5p/events", s.mustLogin, s.createH5PEvent)
+	}
+
 	authedContents := s.engine.Group("/v1")
 	{
 		authedContents.POST("/contents_auth", s.mustLogin, s.addAuthedContent)
@@ -93,7 +98,6 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_time_view", s.mustLogin, s.getScheduleTimeView)
 		schedules.GET("/schedules/:id/live/token", s.mustLogin, s.getScheduleLiveToken)
 		schedules.PUT("/schedules/:id/status", s.mustLogin, s.updateScheduleStatus)
-		schedules.GET("/schedules_participate/class", s.mustLogin, s.getParticipateClass)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
 		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
 		schedules.GET("/schedules/:id/real_time", s.mustLogin, s.getScheduleRealTimeStatus)
@@ -110,9 +114,15 @@ func (s Server) registeRoute() {
 
 	reports := s.engine.Group("/v1")
 	{
-		reports.GET("/reports/students", s.mustLogin, s.listStudentsReport)
-		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentReport)
+		reports.GET("/reports/students", s.mustLogin, s.listStudentsAchievementReport)
+		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentAchievementReport)
 		reports.GET("/reports/teachers/:id", s.mustLogin, s.getTeacherReport)
+
+		reports.GET("/reports/performance/students", s.mustLogin, s.listStudentsPerformanceReport)
+		reports.GET("/reports/performance/students/:id", s.mustLogin, s.getStudentPerformanceReport)
+
+		reports.GET("/reports/performance/h5p/students", s.mustLogin, s.listStudentsPerformanceH5PReport)
+		reports.GET("/reports/performance/h5p/students/:id", s.mustLogin, s.getStudentPerformanceH5PReport)
 	}
 
 	outcomes := s.engine.Group("/v1")
