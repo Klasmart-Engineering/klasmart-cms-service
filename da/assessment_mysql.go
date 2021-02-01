@@ -21,6 +21,7 @@ type IAssessmentDA interface {
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
 	BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]*entity.Assessment, error)
 	FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, ids []string) ([]string, error)
+	FilterCompletedAssessments(ctx context.Context, tx *dbo.DBContext, ids []string) ([]*entity.Assessment, error)
 }
 
 var (
@@ -278,6 +279,23 @@ func (a *assessmentDA) FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo
 	result := make([]string, 0, len(items))
 	for _, item := range items {
 		result = append(result, item.ID)
+	}
+	return result, nil
+}
+
+func (a *assessmentDA) FilterCompletedAssessments(ctx context.Context, tx *dbo.DBContext, ids []string) ([]*entity.Assessment, error) {
+	var result []*entity.Assessment
+	if err := tx.Model(entity.Assessment{}).
+		Where("id in (?) and status = ?", ids, entity.AssessmentStatusComplete).
+		Find(&result).Error; err != nil {
+		log.Error(ctx, "call FilterCompletedAssessments failed",
+			log.Err(err),
+			log.Strings("ids", ids),
+		)
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, constant.ErrRecordNotFound
+		}
+		return nil, err
 	}
 	return result, nil
 }

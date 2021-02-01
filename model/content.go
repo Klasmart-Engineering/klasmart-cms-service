@@ -44,7 +44,8 @@ var (
 
 	ErrSuggestTimeTooSmall = errors.New("suggest time is less than sub contents")
 
-	ErrInvalidMaterialType = errors.New("invalid material type")
+	ErrInvalidMaterialType    = errors.New("invalid material type")
+	ErrInvalidSourceOrContent = errors.New("invalid content data source or content")
 
 	ErrBadRequest         = errors.New("bad request")
 	ErrResourceNotFound   = errors.New("resource not found")
