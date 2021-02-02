@@ -101,7 +101,8 @@ type IContentModel interface {
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error)
-
+	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error)
+	
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
@@ -1052,6 +1053,87 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 		return ErrGetUnpublishedContent
 	}
 	return nil
+}
+
+func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error) {
+	objs, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
+	if err != nil {
+		log.Error(ctx, "can't read content", log.Err(err), log.Strings("cids", cids))
+		return nil, err
+	}
+	contentInfoMap := make(map[string][]*entity.SubContentsWithName)
+	for _, obj := range objs {
+		cd, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+		if err != nil {
+			log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
+			return nil, err
+		}
+
+		switch v := cd.(type) {
+		case *LessonData:
+			//存在子内容，则返回子内容
+			//if the content contains sub contents, return sub contents
+			content, err := ConvertContentObj(ctx, obj, user)
+			if err != nil {
+				log.Error(ctx, "can't parse contentdata", log.Err(err))
+				return nil, ErrParseContentDataFailed
+			}
+			err = v.PrepareVersion(ctx)
+			if err != nil {
+				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
+				return nil, err
+			}
+			err = v.PrepareResult(ctx, content, user)
+			if err != nil {
+				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
+				return nil, err
+			}
+			ret := make([]*entity.SubContentsWithName, 0)
+			v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
+				if l.Material != nil {
+					cd0, err := CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+					if err != nil {
+						log.Error(ctx, "can't parse sub content data",
+							log.Err(err),
+							log.Any("lesson", l),
+							log.Any("subContent", l.Material))
+						return
+					}
+					ret = append(ret, &entity.SubContentsWithName{
+						ID:   l.Material.ID,
+						Name: l.Material.Name,
+						Data: cd0,
+					})
+				}
+			})
+			contentInfoMap[obj.ID] = ret
+		case *MaterialData:
+			//若不存在子内容，则返回当前内容
+			//if sub contents is not exists, return current content
+			ret := []*entity.SubContentsWithName{
+				{
+					ID:   obj.ID,
+					Name: obj.Name,
+					Data: v,
+				},
+			}
+			contentInfoMap[obj.ID] = ret
+		case *AssetsData:
+			//若不存在子内容，则返回当前内容
+			//if sub contents is not exists, return current content
+			ret := []*entity.SubContentsWithName{
+				{
+					ID:   obj.ID,
+					Name: obj.Name,
+					Data: v,
+				},
+			}
+			contentInfoMap[obj.ID] = ret
+		}
+	}
+
+
+	return contentInfoMap, nil
 }
 
 func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error) {
