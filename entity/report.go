@@ -1,11 +1,13 @@
 package entity
 
-type StudentsReport struct {
-	Items         []*StudentReportItem `json:"items"`
-	AssessmentIDs []string             `json:"assessment_ids"`
+import "strings"
+
+type StudentsAchievementReportResponse struct {
+	Items         []*StudentAchievementReportItem `json:"items"`
+	AssessmentIDs []string                        `json:"assessment_ids"`
 }
 
-type StudentReportItem struct {
+type StudentAchievementReportItem struct {
 	StudentID         string `json:"student_id"`
 	StudentName       string `json:"student_name"`
 	Attend            bool   `json:"attend"`
@@ -14,14 +16,14 @@ type StudentReportItem struct {
 	NotAttemptedCount int    `json:"not_attempted_count"`
 }
 
-type StudentReport struct {
-	StudentName   string                   `json:"student_name"`
-	Attend        bool                     `json:"attend"`
-	Categories    []*StudentReportCategory `json:"categories"`
-	AssessmentIDs []string                 `json:"assessment_ids"`
+type StudentAchievementReportResponse struct {
+	StudentName   string                                  `json:"student_name"`
+	Attend        bool                                    `json:"attend"`
+	Categories    []*StudentAchievementReportCategoryItem `json:"categories"`
+	AssessmentIDs []string                                `json:"assessment_ids"`
 }
 
-type StudentReportCategory struct {
+type StudentAchievementReportCategoryItem struct {
 	Name              string   `json:"name"`
 	AchievedItems     []string `json:"achieved_items"`
 	NotAchievedItems  []string `json:"not_achieved_items"`
@@ -33,7 +35,7 @@ type ReportLessonPlanInfo struct {
 	Name string `json:"name"`
 }
 
-type ListStudentsReportCommand struct {
+type ListStudentsAchievementReportRequest struct {
 	TeacherID    string                    `json:"teacher_id"`
 	ClassID      string                    `json:"class_id"`
 	LessonPlanID string                    `json:"lesson_plan_id"`
@@ -42,7 +44,7 @@ type ListStudentsReportCommand struct {
 	Operator     *Operator                 `json:"-"`
 }
 
-type GetStudentReportCommand struct {
+type GetStudentAchievementReportRequest struct {
 	StudentID    string    `json:"student_id"`
 	TeacherID    string    `json:"teacher_id"`
 	ClassID      string    `json:"class_id"`
@@ -111,11 +113,11 @@ type AssessmentOutcomeKey struct {
 }
 
 type SortingStudentReportItems struct {
-	Items  []*StudentReportItem
+	Items  []*StudentAchievementReportItem
 	Status ReportOutcomeStatusOption
 }
 
-func NewSortingStudentReportItems(items []*StudentReportItem, status ReportOutcomeStatusOption) *SortingStudentReportItems {
+func NewSortingStudentReportItems(items []*StudentAchievementReportItem, status ReportOutcomeStatusOption) *SortingStudentReportItems {
 	return &SortingStudentReportItems{Items: items, Status: status}
 }
 
@@ -179,3 +181,171 @@ func (t *TeacherReportSortByCount) Less(i, j int) bool {
 func (t *TeacherReportSortByCount) Swap(i, j int) {
 	t.Categories[i], t.Categories[j] = t.Categories[j], t.Categories[i]
 }
+
+type ListStudentsPerformanceReportRequest struct {
+	TeacherID    string    `json:"teacher_id"`
+	ClassID      string    `json:"class_id"`
+	LessonPlanID string    `json:"lesson_plan_id"`
+	Operator     *Operator `json:"-"`
+}
+
+type ListStudentsPerformanceReportResponse struct {
+	Items         []*StudentsPerformanceReportItem `json:"items"`
+	AssessmentIDs []string                         `json:"assessment_ids"`
+}
+
+type StudentsPerformanceReportItem struct {
+	StudentID         string   `json:"student_id"`
+	StudentName       string   `json:"student_name"`
+	Attend            bool     `json:"attend"`
+	AchievedNames     []string `json:"achieved_names"`
+	NotAchievedNames  []string `json:"not_achieved_names"`
+	NotAttemptedNames []string `json:"not_attempted_names"`
+}
+
+type GetStudentPerformanceReportRequest struct {
+	StudentID    string    `json:"student_id"`
+	TeacherID    string    `json:"teacher_id"`
+	ClassID      string    `json:"class_id"`
+	LessonPlanID string    `json:"lesson_plan_id"`
+	Operator     *Operator `json:"-"`
+}
+
+type GetStudentPerformanceReportResponse struct {
+	Items         []*StudentPerformanceReportItem `json:"items"`
+	AssessmentIDs []string                        `json:"assessment_ids"`
+}
+
+type StudentPerformanceReportItem struct {
+	StudentID         string   `json:"student_id"`
+	StudentName       string   `json:"student_name"`
+	Attend            bool     `json:"attend"`
+	AchievedNames     []string `json:"achieved_names"`
+	NotAchievedNames  []string `json:"not_achieved_names"`
+	NotAttemptedNames []string `json:"not_attempted_names"`
+	ScheduleID        string   `json:"schedule_id"`
+	ScheduleStartTime int64    `json:"schedule_start_time"`
+}
+
+type ListStudentsPerformanceH5PReportRequest struct {
+	StudentID    string    `json:"student_id"`
+	TeacherID    string    `json:"teacher_id"`
+	ClassID      string    `json:"class_id"`
+	LessonPlanID string    `json:"lesson_plan_id"`
+	Operator     *Operator `json:"-"`
+}
+
+type ListStudentsPerformanceH5PReportResponse struct {
+	Items []*StudentsPerformanceH5PReportItem `json:"items"`
+}
+
+type StudentsPerformanceH5PReportItem struct {
+	StudentID   string `json:"student_id"`
+	StudentName string `json:"student_name"`
+	Attend      bool   `json:"attend"`
+	SpentTime   int64  `json:"spent_time"`
+}
+
+type GetStudentPerformanceH5PReportRequest struct {
+	StudentID    string    `json:"student_id"`
+	TeacherID    string    `json:"teacher_id"`
+	ClassID      string    `json:"class_id"`
+	LessonPlanID string    `json:"lesson_plan_id"`
+	Operator     *Operator `json:"-"`
+}
+
+type GetStudentPerformanceH5PReportResponse struct {
+	Items []*StudentPerformanceH5PReportItem `json:"items"`
+}
+
+type StudentPerformanceH5PReportItem struct {
+	MaterialID              string                   `json:"material_id"`
+	MaterialName            string                   `json:"material_name"`
+	TotalSpentTime          int64                    `json:"total_spent_time"`
+	AvgSpentTime            int64                    `json:"avg_spent_time"`
+	ActivityType            ActivityType             `json:"activity_type" enums:"H5P.ImageSequencing,H5P.MemoryGame,H5P.ImagePair,H5P.Flashcards"`
+	ActivityImageSequencing *ActivityImageSequencing `json:"activity_image_sequencing,omitempty"`
+	ActivityMemoryGame      *ActivityMemoryGame      `json:"activity_memory_game,omitempty"`
+	ActivityImagePair       *ActivityImagePair       `json:"activity_image_pair,omitempty"`
+	ActivityFlashCards      *ActivityFlashCards      `json:"activity_flash_cards,omitempty"`
+}
+
+// region activities
+
+type ActivityType string
+
+const (
+	ActivityTypeImageSequencing ActivityType = "H5P.ImageSequencing"
+	ActivityTypeMemoryGame      ActivityType = "H5P.MemoryGame"
+	ActivityTypeImagePair       ActivityType = "H5P.ImagePair"
+	ActivityTypeFlashCards      ActivityType = "H5P.Flashcards"
+)
+
+func ParseActivityType(s string) ActivityType {
+	return ActivityType(strings.Split(s, " ")[0])
+}
+
+func (t ActivityType) Valid() bool {
+	switch t {
+	case ActivityTypeImageSequencing,
+		ActivityTypeMemoryGame,
+		ActivityTypeImagePair,
+		ActivityTypeFlashCards:
+		return true
+	default:
+		return false
+	}
+}
+
+type ActivityImageSequencing struct {
+	CardsNumber int                                  `json:"cards_number"`
+	PlayRecords []*ActivityImageSequencingPlayRecord `json:"play_records"`
+	PlayTimes   int                                  `json:"play_times"`
+}
+
+type ActivityImageSequencingPlayRecord struct {
+	StartTime         int64 `json:"start_time"`
+	EndTime           int64 `json:"end_time"`
+	Duration          int64 `json:"duration"`
+	CorrectCardsCount int   `json:"correct_cards_count"`
+}
+
+type ActivityMemoryGame struct {
+	PairsNumber int                             `json:"pairs_number"`
+	PlayRecords []*ActivityMemoryGamePlayRecord `json:"play_records"`
+	PlayTimes   int                             `json:"play_times"`
+}
+
+type ActivityMemoryGamePlayRecord struct {
+	StartTime   int64 `json:"start_time"`
+	EndTime     int64 `json:"end_time"`
+	Duration    int64 `json:"duration"`
+	ClicksCount int   `json:"clicks_count"`
+}
+
+type ActivityImagePair struct {
+	ParisNumber int                            `json:"paris_number"`
+	PlayRecords []*ActivityImagePairPlayRecord `json:"play_records"`
+	PlayTimes   int                            `json:"play_times"`
+}
+
+type ActivityImagePairPlayRecord struct {
+	StartTime         int64 `json:"start_time"`
+	EndTime           int64 `json:"end_time"`
+	Duration          int64 `json:"duration"`
+	CorrectPairsCount int   `json:"correct_pairs_count"`
+}
+
+type ActivityFlashCards struct {
+	CardsNumber int                             `json:"cards_number"`
+	PlayRecords []*ActivityFlashCardsPlayRecord `json:"play_records"`
+}
+
+type ActivityFlashCardsPlayRecord struct {
+	StartTime         int64 `json:"start_time"`
+	EndTime           int64 `json:"end_time"`
+	Duration          int64 `json:"duration"`
+	CorrectCardsCount int   `json:"correct_cards_count"`
+}
+
+// endregion activities

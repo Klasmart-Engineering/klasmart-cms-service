@@ -803,7 +803,7 @@ func (s *Server) getParticipateClass(c *gin.Context) {
 
 // @Summary get lessonPlans by teacher and class
 // @Description get lessonPlans by teacher and class
-// @Tags reports
+// @Tags schedule
 // @ID getLessonPlans
 // @Accept json
 // @Produce json

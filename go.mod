@@ -26,6 +26,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go v1.0.62
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.7 // indirect
 	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9 // indirect
+	github.com/tidwall/gjson v1.6.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ugorji/go v1.2.2 // indirect
 	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.6

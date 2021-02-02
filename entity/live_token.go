@@ -73,3 +73,9 @@ type LiveTokenClaims struct {
 type LiveTokenView struct {
 	Token string `json:"token"`
 }
+
+type MaterialInput struct {
+	ContentID  string
+	ScheduleID string
+	TokenType  LiveTokenType
+}
