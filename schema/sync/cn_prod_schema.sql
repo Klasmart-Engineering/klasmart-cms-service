@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 5.7.32, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 5.7.33, for Linux (x86_64)
 --
 -- Host: 127.0.0.1    Database: kidsloop2
 -- ------------------------------------------------------
@@ -706,4 +706,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-02-01 17:00:30
+-- Dump completed on 2021-02-02 17:00:29
