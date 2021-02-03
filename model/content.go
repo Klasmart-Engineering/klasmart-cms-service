@@ -2262,12 +2262,16 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 	if isAssets {
 		partition = entity.FolderPartitionAssets
 	}
+	name := condition.Name
+	if name == "" {
+		name = condition.ContentName
+	}
 
 	folderCondition := &da.FolderCondition{
 		OwnerType:    int(entity.OwnerTypeOrganization),
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
-		NameLike:     condition.Name,
+		NameLike:     name,
 		ExactDirPath: dirPath,
 		Editors:      searchUserIDs,
 		Partition:    partition,
