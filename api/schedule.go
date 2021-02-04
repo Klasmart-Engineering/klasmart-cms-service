@@ -43,7 +43,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(c, op, data.ClassID)
+	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(ctx, op, data.ClassID)
 	if err == constant.ErrUnAuthorized {
 		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
 		return
@@ -167,7 +167,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
 	op := s.getOperator(c)
-	err := model.GetSchedulePermissionModel().HasScheduleOrgPermission(c, op, external.ScheduleDeleteEvent)
+	ctx := c.Request.Context()
+	err := model.GetSchedulePermissionModel().HasScheduleOrgPermission(ctx, op, external.ScheduleDeleteEvent)
 	if err == constant.ErrForbidden {
 		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
 		return
@@ -176,7 +177,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	ctx := c.Request.Context()
+
 	id := c.Param("id")
 	editType := entity.ScheduleEditType(c.Query("repeat_edit_options"))
 	if !editType.Valid() {
@@ -227,7 +228,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(c, op, data.ClassID)
+	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(ctx, op, data.ClassID)
 	if err == constant.ErrUnAuthorized {
 		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
 		return
