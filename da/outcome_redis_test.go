@@ -54,3 +54,15 @@ func TestOutcomeRedis_GetConditions(t *testing.T) {
 	}
 	c.GetConditions()
 }
+
+func TestOutcomeRedis_CleanOutcomeConditionCache(t *testing.T) {
+	config.LoadEnvConfig()
+	ro.SetConfig(&redis.Options{
+		Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
+		Password: config.Get().RedisConfig.Password,
+	})
+	condition := OutcomeCondition{
+		IDs: dbo.NullStrings{Strings: []string{"123"}, Valid: true},
+	}
+	GetOutcomeRedis().CleanOutcomeConditionCache(context.Background(), &condition)
+}
