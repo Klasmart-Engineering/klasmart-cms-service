@@ -2268,8 +2268,9 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
 		NameLike:     condition.Name,
+		Name: condition.ContentName,
 		ExactDirPath: dirPath,
-		Editors:      searchUserIDs,
+		//Editors:      searchUserIDs,
 		Partition:    partition,
 		Disable:      disableFolder,
 	}

@@ -48,7 +48,7 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.FuzzyKey.Valid && c.FuzzyAuthors.Valid {
-		wheres = append(wheres, fmt.Sprintf("((match(name, keywords, description, shortcode) against(? in boolean mode)) or (id in (%s)))", c.FuzzyAuthors.SQLPlaceHolder()))
+		wheres = append(wheres, fmt.Sprintf("((match(name, keywords, description, shortcode) against(? in boolean mode)) or (author_id in (%s)))", c.FuzzyAuthors.SQLPlaceHolder()))
 		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
 		params = append(params, c.FuzzyAuthors.ToInterfaceSlice()...)
 
@@ -203,6 +203,7 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	_, err = o.InsertTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "CreateOutcome: InsertTx failed", log.Err(err), log.Any("outcome", outcome))
+		return
 	}
 	if outcome.SourceID != "" && outcome.SourceID != constant.LockedByNoBody && outcome.SourceID != outcome.ID {
 		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID, outcome.SourceID})

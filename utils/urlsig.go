@@ -110,9 +110,6 @@ func createJWT(claims jwt.Claims) (signedToken string, err error) {
 		return
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
-	if err != nil {
-		return
-	}
 
 	return token.SignedString(privateKey)
 }

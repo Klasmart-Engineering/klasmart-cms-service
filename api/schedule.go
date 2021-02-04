@@ -166,8 +166,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
-	op := s.getOperator(c)
 	ctx := c.Request.Context()
+	op := s.getOperator(c)
 	err := model.GetSchedulePermissionModel().HasScheduleOrgPermission(ctx, op, external.ScheduleDeleteEvent)
 	if err == constant.ErrForbidden {
 		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))

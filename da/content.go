@@ -87,6 +87,7 @@ type ContentCondition struct {
 	LatestID      string   `json:"latest_id"`
 	SourceType    string   `json:"source_type"`
 	DirPath       string   `json:"dir_path"`
+	ContentName string `json:"content_name"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
@@ -118,6 +119,10 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 			conditions = append(conditions, condition)
 			params = append(params, s.Name)
 		}
+	}
+	if s.ContentName != "" {
+		conditions = append(conditions, "content_name LIKE ?")
+		params = append(params, s.ContentName)
 	}
 
 	if len(s.Program) > 0 {
