@@ -1384,12 +1384,26 @@ func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx 
 		}
 	}
 
-	materialIDs, err := rm.getLessonPlanH5PMaterialIDs(ctx, tx, operator, req.LessonPlanID)
+	pastLessonPlanIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, req.LessonPlanID)
+	if err != nil {
+		log.Error(ctx, "ListStudentsPerformanceH5PReport: call getLessonPlanH5PMaterials failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("req", req),
+			log.String("lesson_plan_id", req.LessonPlanID),
+		)
+		return nil, err
+	}
+	finalLessonPlainIDs := make([]string, 0, len(pastLessonPlanIDs)+1)
+	finalLessonPlainIDs = append(finalLessonPlainIDs, req.LessonPlanID)
+	finalLessonPlainIDs = append(finalLessonPlainIDs, pastLessonPlanIDs...)
+
+	materialIDs, err := rm.getLessonPlanH5PMaterialIDs(ctx, tx, operator, finalLessonPlainIDs)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceH5PReport: call getLessonPlanH5PMaterialIDs failed",
 			log.Err(err),
 			log.Any("req", req),
-			log.String("lesson_plan_id", req.LessonPlanID),
+			log.Strings("lesson_plan_ids", finalLessonPlainIDs),
 		)
 		return nil, err
 	}
@@ -1422,19 +1436,6 @@ func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx 
 		return nil, err
 	}
 
-	pastLessonPlanIDs, err := GetContentModel().GetPastContentIDByID(ctx, dbo.MustGetDB(ctx), req.LessonPlanID)
-	if err != nil {
-		log.Error(ctx, "ListStudentsPerformanceH5PReport: call getLessonPlanH5PMaterials failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("req", req),
-			log.String("lesson_plan_id", req.LessonPlanID),
-		)
-		return nil, err
-	}
-	finalLessonPlainIDs := make([]string, 0, len(pastLessonPlanIDs)+1)
-	finalLessonPlainIDs = append(finalLessonPlainIDs, req.LessonPlanID)
-	finalLessonPlainIDs = append(finalLessonPlainIDs, pastLessonPlanIDs...)
 	h5pEventCond := da.H5PEventCondition{
 		LessonPlanIDs: finalLessonPlainIDs,
 		MaterialIDs:   materialIDs,
@@ -1502,21 +1503,7 @@ func (rm *reportModel) GetStudentPerformanceH5PReport(ctx context.Context, tx *d
 		}
 	}
 
-	materials, err := rm.getLessonPlanH5PMaterials(ctx, tx, operator, req.LessonPlanID)
-	if err != nil {
-		log.Error(ctx, "GetStudentPerformanceH5PReport: call getLessonPlanH5PMaterials failed",
-			log.Err(err),
-			log.Any("req", req),
-			log.String("lesson_plan_id", req.LessonPlanID),
-		)
-		return nil, err
-	}
-	var materialIDs []string
-	for _, m := range materials {
-		materialIDs = append(materialIDs, m.ID)
-	}
-
-	pastLessonPlanIDs, err := GetContentModel().GetPastContentIDByID(ctx, dbo.MustGetDB(ctx), req.LessonPlanID)
+	pastLessonPlanIDs, err := GetContentModel().GetPastContentIDByID(ctx, tx, req.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "GetStudentPerformanceH5PReport: call getLessonPlanH5PMaterials failed",
 			log.Err(err),
@@ -1529,6 +1516,21 @@ func (rm *reportModel) GetStudentPerformanceH5PReport(ctx context.Context, tx *d
 	finalLessonPlainIDs := make([]string, 0, len(pastLessonPlanIDs)+1)
 	finalLessonPlainIDs = append(finalLessonPlainIDs, req.LessonPlanID)
 	finalLessonPlainIDs = append(finalLessonPlainIDs, pastLessonPlanIDs...)
+
+	materials, err := rm.getLessonPlanH5PMaterials(ctx, tx, operator, finalLessonPlainIDs)
+	if err != nil {
+		log.Error(ctx, "GetStudentPerformanceH5PReport: call getLessonPlanH5PMaterials failed",
+			log.Err(err),
+			log.Any("req", req),
+			log.Strings("lesson_plan_ids", finalLessonPlainIDs),
+		)
+		return nil, err
+	}
+	var materialIDs []string
+	for _, m := range materials {
+		materialIDs = append(materialIDs, m.ID)
+	}
+
 	h5pEventCond := da.H5PEventCondition{
 		LessonPlanIDs: finalLessonPlainIDs,
 		MaterialIDs:   materialIDs,
@@ -1729,24 +1731,39 @@ func (rm *reportModel) getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx cont
 	return rm.getAttendanceIDsExistMap(assessmentAttendances), nil
 }
 
-func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanID string) ([]*entity.SubContentsWithName, error) {
-	materials, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), lessonPlanID, operator)
-	log.Debug(ctx, "getLessonPlanH5PMaterials: call GetContentSubContentsByID result", log.Any("materials", materials))
+func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]*entity.SubContentsWithName, error) {
+	materialsMap, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, tx, lessonPlanIDs, operator)
 	switch {
 	case err == dbo.ErrRecordNotFound:
-		log.Error(ctx, "getLessonPlanH5PMaterialIDs: call GetContentSubContentsByID no record",
+		log.Error(ctx, "getLessonPlanH5PMaterialIDs: call GetContentsSubContentsMapByIDList no record",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.Any("lesson_plan_id", lessonPlanID),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
 		)
 		return nil, constant.ErrRecordNotFound
 	case err != nil:
-		log.Error(ctx, "getLessonPlanH5PMaterials: call GetContentSubContentsByID failed",
+		log.Error(ctx, "getLessonPlanH5PMaterials: call GetContentsSubContentsMapByIDList failed",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.Any("lesson_plan_id", lessonPlanID),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
 		)
+		return nil, err
 	}
+	var (
+		materials           []*entity.SubContentsWithName
+		materialIDsExistMap = map[string]bool{}
+	)
+	for _, items := range materialsMap {
+		for _, item := range items {
+			if materialIDsExistMap[item.ID] {
+				continue
+			} else {
+				materialIDsExistMap[item.ID] = true
+			}
+			materials = append(materials, item)
+		}
+	}
+	log.Debug(ctx, "getLessonPlanH5PMaterials: print materials", log.Any("materials", materials))
 	var result []*entity.SubContentsWithName
 	for _, m := range materials {
 		if m == nil {
@@ -1760,13 +1777,13 @@ func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DB
 	return result, nil
 }
 
-func (rm *reportModel) getLessonPlanH5PMaterialIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanID string) ([]string, error) {
-	materials, err := rm.getLessonPlanH5PMaterials(ctx, tx, operator, lessonPlanID)
+func (rm *reportModel) getLessonPlanH5PMaterialIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]string, error) {
+	materials, err := rm.getLessonPlanH5PMaterials(ctx, tx, operator, lessonPlanIDs)
 	if err != nil {
 		log.Error(ctx, "getLessonPlanH5PMaterialIDs: call GetContentSubContentsByID failed",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.Any("lesson_plan_id", lessonPlanID),
+			log.Any("lesson_plan_id", lessonPlanIDs),
 		)
 		return nil, err
 	}

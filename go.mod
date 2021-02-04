@@ -29,7 +29,7 @@ require (
 	github.com/tidwall/gjson v1.6.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ugorji/go v1.2.2 // indirect
-	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.4
+	gitlab.badanamu.com.cn/calmisland/chlorine v0.1.6
 	gitlab.badanamu.com.cn/calmisland/common-cn v0.16.0
 	gitlab.badanamu.com.cn/calmisland/common-log v0.1.4
 	gitlab.badanamu.com.cn/calmisland/dbo v0.1.7
@@ -43,7 +43,7 @@ require (
 	golang.org/x/sys v0.0.0-20201231184435-2d18734c6014 // indirect
 	golang.org/x/tools v0.0.0-20201204051555-214da9f3da71 // indirect
 	google.golang.org/genproto v0.0.0-20200814021100-8c09557e8a18 // indirect
-	google.golang.org/grpc v1.33.2 // indirect
+	google.golang.org/grpc v1.35.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
