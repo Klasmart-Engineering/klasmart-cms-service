@@ -200,7 +200,7 @@ CREATE TABLE `cms_contents` (
   KEY `content_latest_id` (`latest_id`),
   KEY `idx_cms_contents_publish_scope` (`publish_scope`),
   KEY `idx_cms_contents_publish_status` (`publish_status`),
-  FULLTEXT KEY `content_name_description_keywords_author_index` (`content_name`,`keywords`,`description`)
+  FULLTEXT KEY `content_name_description_keywords_index` (`content_name`,`keywords`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='内容表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -706,4 +706,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-02-03 17:00:44
+-- Dump completed on 2021-02-04 17:00:30
