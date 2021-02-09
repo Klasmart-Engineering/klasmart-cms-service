@@ -40,6 +40,10 @@ func GetClassServiceProvider() ClassServiceProvider {
 type AmsClassService struct{}
 
 func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableClass, error) {
+	if len(ids) == 0 {
+		return []*NullableClass{}, nil
+	}
+
 	raw := `query{
 	{{range $i, $e := .}}
 	index_{{$i}}: class(class_id: "{{$e}}"){
@@ -139,6 +143,10 @@ func (s AmsClassService) GetByUserID(ctx context.Context, operator *entity.Opera
 }
 
 func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string) (map[string][]*Class, error) {
+	if len(userIDs) == 0 {
+		return map[string][]*Class{}, nil
+	}
+
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range userIDs {
@@ -193,6 +201,10 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 }
 
 func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, organizationIDs []string) (map[string][]*Class, error) {
+	if len(organizationIDs) == 0 {
+		return map[string][]*Class{}, nil
+	}
+
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range organizationIDs {
@@ -241,6 +253,10 @@ func (s AmsClassService) GetByOrganizationIDs(ctx context.Context, operator *ent
 }
 
 func (s AmsClassService) GetBySchoolIDs(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Class, error) {
+	if len(schoolIDs) == 0 {
+		return map[string][]*Class{}, nil
+	}
+
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range schoolIDs {
