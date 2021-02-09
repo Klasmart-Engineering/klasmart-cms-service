@@ -45,6 +45,10 @@ func GetOrganizationServiceProvider() OrganizationServiceProvider {
 type AmsOrganizationService struct{}
 
 func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error) {
+	if len(ids) == 0 {
+		return []*NullableOrganization{}, nil
+	}
+
 	q := `query orgs($orgIDs: [ID!]){
 	organizations(organization_ids: $orgIDs){
     	id: organization_id
@@ -152,6 +156,10 @@ func (s AmsOrganizationService) GetChildren(ctx context.Context, operator *entit
 }
 
 func (s AmsOrganizationService) GetOrganizationOrSchoolName(ctx context.Context, operator *entity.Operator, ids []string) ([]string, error) {
+	if len(ids) == 0 {
+		return []string{}, nil
+	}
+
 	raw := `query{
 	{{range $i, $e := .}}
 	org_{{$i}}: organization(organization_id: "{{$e}}"){
