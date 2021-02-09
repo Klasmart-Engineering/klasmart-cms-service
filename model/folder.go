@@ -128,7 +128,8 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 	folderOrgsMap := make(map[string][]string)
 	for i := range records {
 		folderOrgsMap[records[i].FolderID] = append(folderOrgsMap[records[i].FolderID], records[i].OrgID)
-		orgIDs = append(orgIDs, records[i].OrgID)
+		//TODO:fix share_all to all orgInfo
+		//orgIDs = append(orgIDs, records[i].OrgID)
 	}
 	orgIDs = utils.SliceDeduplication(orgIDs)
 	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, orgIDs)
