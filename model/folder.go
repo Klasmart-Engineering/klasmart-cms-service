@@ -468,11 +468,9 @@ func (f *FolderModel) getFolderPendingOrgs(ctx context.Context,
 func (f *FolderModel) checkOrgs(ctx context.Context, orgIDs []string, operator *entity.Operator) (map[string]bool, error) {
 	//Get orgs by ids
 	validOrgs := make([]string, 0, len(orgIDs))
-	index := 0
 	for i := range orgIDs {
 		if orgIDs[i] != constant.ShareToAll {
-			validOrgs[index] = orgIDs[i]
-			index ++
+			validOrgs = append(validOrgs, orgIDs[i])
 		}
 	}
 	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, operator, validOrgs)
