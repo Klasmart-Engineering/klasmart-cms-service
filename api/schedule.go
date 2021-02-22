@@ -911,22 +911,18 @@ func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
 	}
 }
 
-// @Summary queryPlainInfo
-// @ID queryPlainInfo
-// @Description query schedule plain info
+// @Summary get schedule filter schools
+// @Description get get schedule filter schools
+// @Tags schedule
+// @ID getScheduleFilterSchool
 // @Accept json
 // @Produce json
-// @Param class_ids query string false "class id,separated by comma"
-// @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
-// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
-// @Param page query integer false "page index, not paging if page <=0"
-// @Param page_size query integer false "records per page, not paging if page_size <= 0"
-// @Tags schedule
-// @Success 200 {object} entity.SchedulePageView
-// @Failure 400 {object} BadRequestResponse
+// @Success 200 {object} entity.ScheduleRealTimeView
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules [get]
-//func (s Server) queryPlainInfo(c *gin.Context) {
-//
-//}
+// @Router /schedules/{schedule_id}/real_time [get]
+func (s Server) getScheduleFilterSchool(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	model.GetSchedulePermissionModel().GetSchoolsByOperator(ctx, op)
+}
