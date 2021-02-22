@@ -14,10 +14,45 @@ type ISchedulePermissionModel interface {
 	GetClassIDs(ctx context.Context, op *entity.Operator) ([]string, error)
 	HasScheduleEditPermission(ctx context.Context, op *entity.Operator, classID string) error
 	HasScheduleOrgPermission(ctx context.Context, op *entity.Operator, permissionName external.PermissionName) error
+	HasScheduleOrgPermissions(ctx context.Context, op *entity.Operator, permissionNames []external.PermissionName) (map[external.PermissionName]bool, error)
+	HasClassesPermission(ctx context.Context, op *entity.Operator, classIDs []string) error
 }
 
 type schedulePermissionModel struct {
 	testSchedulePermissionRepeatFlag bool
+}
+
+func (s *schedulePermissionModel) HasClassesPermission(ctx context.Context, op *entity.Operator, classIDs []string) error {
+	classOrgMap, err := external.GetOrganizationServiceProvider().GetByClasses(ctx, op, classIDs)
+	if err != nil {
+		log.Error(ctx, "hasScheduleEditPermission:GetOrganizationServiceProvider.GetByClasses error",
+			log.Any("operator", op),
+			log.Strings("classIDs", classIDs),
+			log.Err(err),
+		)
+		return err
+	}
+	for _, classID := range classIDs {
+		orgInfo, ok := classOrgMap[classID]
+		if !ok {
+			log.Info(ctx, "hasScheduleEditPermission:class not found org",
+				log.Any("operator", op),
+				log.Strings("classIDs", classIDs),
+				log.String("err classID", classID),
+			)
+			return constant.ErrForbidden
+		}
+		if orgInfo.ID != op.OrgID {
+			log.Info(ctx, "hasScheduleEditPermission:class org not equal operator org",
+				log.Any("operator", op),
+				log.Any("orgInfo", orgInfo),
+				log.Strings("classIDs", classIDs),
+				log.String("err classID", classID),
+			)
+			return constant.ErrForbidden
+		}
+	}
+	return nil
 }
 
 func (s *schedulePermissionModel) GetClassIDs(ctx context.Context, op *entity.Operator) ([]string, error) {
@@ -148,33 +183,17 @@ func (s *schedulePermissionModel) GetClassIDsByOrgPermission(ctx context.Context
 }
 
 func (s *schedulePermissionModel) HasScheduleEditPermission(ctx context.Context, op *entity.Operator, classID string) error {
-	classOrgMap, err := external.GetOrganizationServiceProvider().GetByClasses(ctx, op, []string{classID})
+	err := s.HasClassesPermission(ctx, op, []string{classID})
 	if err != nil {
-		log.Error(ctx, "hasScheduleEditPermission:GetOrganizationServiceProvider.GetByClasses error",
-			log.Any("operator", op),
+		log.Error(ctx, "hasScheduleEditPermission:HasClassesPermission error",
 			log.String("classID", classID),
+			log.Any("operator", op),
 			log.Err(err),
 		)
 		return err
 	}
-	orgInfo, ok := classOrgMap[classID]
-	if !ok {
-		log.Info(ctx, "hasScheduleEditPermission:class not found org",
-			log.Any("operator", op),
-			log.String("classID", classID),
-		)
-		return constant.ErrUnAuthorized
-	}
-	if orgInfo.ID != op.OrgID {
-		log.Info(ctx, "hasScheduleEditPermission:class org not equal operator org",
-			log.Any("operator", op),
-			log.Any("orgInfo", orgInfo),
-			log.String("classID", classID),
-		)
-		return constant.ErrUnAuthorized
-	}
 	permissionName := external.ScheduleCreateEvent
-	ok, err = external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissionName)
+	ok, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissionName)
 	if err != nil {
 		return err
 	}
@@ -290,6 +309,40 @@ func (s *schedulePermissionModel) HasScheduleOrgPermission(ctx context.Context, 
 		return constant.ErrForbidden
 	}
 	return nil
+}
+
+func (s *schedulePermissionModel) HasScheduleOrgPermissions(ctx context.Context, op *entity.Operator, permissionNames []external.PermissionName) (map[external.PermissionName]bool, error) {
+	permissionMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, permissionNames)
+	if err != nil {
+		log.Error(ctx, "check permission error",
+			log.Any("permission", permissionNames),
+			log.Any("operator", op),
+			log.Err(err),
+		)
+
+		return permissionMap, constant.ErrInternalServer
+	}
+	hasOne := false
+	for _, val := range permissionMap {
+		if val {
+			hasOne = true
+			break
+		}
+	}
+	if !hasOne {
+		log.Info(ctx, "no permission",
+			log.Any("permission", permissionNames),
+			log.Any("Operator", op),
+		)
+
+		return permissionMap, constant.ErrForbidden
+	}
+	log.Info(ctx, "no permission",
+		log.Any("permission", permissionNames),
+		log.Any("Operator", op),
+		log.Any("permissionMap", permissionMap),
+	)
+	return permissionMap, nil
 }
 
 var (

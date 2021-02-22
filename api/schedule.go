@@ -27,10 +27,11 @@ import (
 // @Param schedule_id path string true "schedule id"
 // @Param scheduleData body entity.ScheduleUpdateView true "schedule data to update"
 // @Tags schedule
-// @Success 200 {object} IDResponse
+// @Success 200 {object} SuccessRequestResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
-// @Failure 409 {object} entity.ScheduleConflictView
+// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [put]
 func (s *Server) updateSchedule(c *gin.Context) {
@@ -43,9 +44,23 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(ctx, op, data.ClassID)
-	if err == constant.ErrUnAuthorized {
-		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
+	err := model.GetSchedulePermissionModel().HasClassesPermission(ctx, op, []string{data.ClassID})
+	if err == constant.ErrForbidden {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	_, err = model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleCreateEvent,
+		external.ScheduleCreateMySchoolEvent,
+		external.ScheduleCreateMyEvent,
+	})
+	if err == constant.ErrForbidden {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
 	if err != nil {
@@ -59,6 +74,11 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	if !data.EditType.Valid() {
 		errMsg := "update schedule: invalid edit type"
 		log.Info(ctx, errMsg, log.String("edit_type", string(data.EditType)))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if !data.ClassType.Valid() {
+		log.Info(ctx, "update schedule: invalid class type", log.String("class_type", string(data.ClassType)))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -86,6 +106,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 	}
+
 	processResult, ok := s.processScheduleDueDate(c, &entity.ProcessScheduleDueAtInput{
 		StartAt:   data.StartAt,
 		EndAt:     data.EndAt,
@@ -101,9 +122,10 @@ func (s *Server) updateSchedule(c *gin.Context) {
 	data.EndAt = processResult.EndAt
 	data.DueAt = processResult.DueAt
 
-	log.Debug(ctx, "request data", log.Any("operator", operator), log.Any("requestData", data))
 	data.Location = loc
-	if !data.IsForce {
+	if !data.IsForce &&
+		(data.ClassType == entity.ScheduleClassTypeOnlineClass ||
+			data.ClassType == entity.ScheduleClassTypeOfflineClass) {
 		conflictInput := &entity.ScheduleConflictInput{
 			ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
 			ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
@@ -114,13 +136,15 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			RepeatOptions:          data.Repeat,
 			Location:               loc,
 			IgnoreScheduleID:       data.ID,
+			ClassID:                data.ClassID,
+			IsRepeat:               data.IsRepeat && data.EditType == entity.ScheduleEditWithFollowing,
 		}
 		if data.IsRepeat && data.EditType == entity.ScheduleEditWithFollowing {
 			conflictInput.IsRepeat = true
 		}
 		conflictData, err := model.GetScheduleModel().ConflictDetection(ctx, op, conflictInput)
 		if err == constant.ErrConflict {
-			c.JSON(http.StatusBadRequest, conflictData)
+			c.JSON(http.StatusOK, LD(ScheduleMessageUsersConflict, conflictData))
 			return
 		}
 		if err != nil {
@@ -128,25 +152,25 @@ func (s *Server) updateSchedule(c *gin.Context) {
 			return
 		}
 	}
-
+	log.Debug(ctx, "process request data", log.Any("operator", op), log.Any("requestData", data))
 	newID, err := model.GetScheduleModel().Update(ctx, operator, &data)
 	switch err {
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case constant.ErrConflict:
-		c.JSON(http.StatusConflict, L(ScheduleMsgOverlap))
+		c.JSON(http.StatusConflict, L(ScheduleMessageOverlap))
 	case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageEditOverlap))
 	case model.ErrScheduleEditMissTime:
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissTime))
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageEditMissTime))
 	case model.ErrScheduleLessonPlanUnAuthed:
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case model.ErrScheduleEditMissTimeForDueAt:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissDueDate))
 	case nil:
-		c.JSON(http.StatusOK, IDResponse{ID: newID})
+		c.JSON(http.StatusOK, D(IDResponse{ID: newID}))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -162,15 +186,16 @@ func (s *Server) updateSchedule(c *gin.Context) {
 // @Tags schedule
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id} [delete]
 func (s *Server) deleteSchedule(c *gin.Context) {
-	ctx := c.Request.Context()
 	op := s.getOperator(c)
+	ctx := c.Request.Context()
 	err := model.GetSchedulePermissionModel().HasScheduleOrgPermission(ctx, op, external.ScheduleDeleteEvent)
 	if err == constant.ErrForbidden {
-		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
 	if err != nil {
@@ -194,9 +219,9 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	case dbo.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditOverlap))
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageEditOverlap))
 	case model.ErrScheduleEditMissTime:
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissTime))
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageDeleteMissTime))
 	case model.ErrScheduleEditMissTimeForDueAt:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissDueDate))
 	case nil:
@@ -213,9 +238,10 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 // @Produce json
 // @Param scheduleData body entity.ScheduleAddView true "schedule data to add"
 // @Tags schedule
-// @Success 200 {object} IDResponse
+// @Success 200 {object} SuccessRequestResponse
 // @Failure 400 {object} BadRequestResponse
-// @Failure 409 {object} entity.ScheduleConflictView
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 409 {object} ConflictResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules [post]
@@ -228,9 +254,36 @@ func (s *Server) addSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err := model.GetSchedulePermissionModel().HasScheduleEditPermission(ctx, op, data.ClassID)
-	if err == constant.ErrUnAuthorized {
-		c.JSON(http.StatusForbidden, L(ScheduleMsgNoPermission))
+	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
+	if (len(data.ClassRosterTeacherIDs) == 0 &&
+		len(data.ParticipantsTeacherIDs) == 0) ||
+		(len(data.ClassRosterStudentIDs) == 0 &&
+			len(data.ParticipantsStudentIDs) == 0) {
+		log.Info(ctx, "add schedule: data is Invalid", log.Any("data", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if !data.ClassType.Valid() {
+		log.Info(ctx, "add schedule: invalid class type", log.String("class_type", string(data.ClassType)))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	err := model.GetSchedulePermissionModel().HasClassesPermission(ctx, op, []string{data.ClassID})
+	if err == constant.ErrForbidden {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	_, err = model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleCreateEvent,
+		external.ScheduleCreateMySchoolEvent,
+		external.ScheduleCreateMyEvent,
+	})
+	if err == constant.ErrForbidden {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
 	}
 	if err != nil {
@@ -265,10 +318,11 @@ func (s *Server) addSchedule(c *gin.Context) {
 	data.EndAt = processResult.EndAt
 	data.DueAt = processResult.DueAt
 
-	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
 	// add schedule
 	data.Location = loc
-	if !data.IsForce {
+	if !data.IsForce &&
+		(data.ClassType == entity.ScheduleClassTypeOnlineClass ||
+			data.ClassType == entity.ScheduleClassTypeOfflineClass) {
 		conflictInput := &entity.ScheduleConflictInput{
 			ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
 			ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
@@ -279,10 +333,11 @@ func (s *Server) addSchedule(c *gin.Context) {
 			RepeatOptions:          data.Repeat,
 			Location:               loc,
 			IsRepeat:               data.IsRepeat,
+			ClassID:                data.ClassID,
 		}
 		conflictData, err := model.GetScheduleModel().ConflictDetection(ctx, op, conflictInput)
 		if err == constant.ErrConflict {
-			c.JSON(http.StatusBadRequest, conflictData)
+			c.JSON(http.StatusOK, LD(ScheduleMessageUsersConflict, conflictData))
 			return
 		}
 		if err != nil {
@@ -290,7 +345,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 			return
 		}
 	}
-
+	log.Debug(ctx, "process request data", log.Any("operator", op), log.Any("requestData", data))
 	id, err := model.GetScheduleModel().Add(ctx, op, data)
 	switch err {
 	case constant.ErrInvalidArgs:
@@ -300,13 +355,14 @@ func (s *Server) addSchedule(c *gin.Context) {
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrScheduleLessonPlanUnAuthed:
-		c.JSON(http.StatusBadRequest, L(ScheduleMsgLessonPlanInvalid))
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case nil:
-		c.JSON(http.StatusOK, IDResponse{ID: id})
+		c.JSON(http.StatusOK, D(IDResponse{ID: id}))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
 func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessScheduleDueAtInput) (*entity.ProcessScheduleDueAtView, bool) {
 	now := time.Now().Unix()
 	ctx := c.Request.Context()
@@ -323,7 +379,7 @@ func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessSch
 		day = utils.GetTimeDiffToDayByTimeStamp(input.EndAt, input.DueAt, input.Location)
 		if day < 0 {
 			log.Info(ctx, "schedule dueAt is invalid", log.Int64("now", now), log.Any("input", input))
-			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierEndDate))
+			c.JSON(http.StatusBadRequest, L(ScheduleMessageDueDateEarlierEndDate))
 			return nil, false
 		}
 		result.DueAt = utils.TodayEndByTimeStamp(input.DueAt, input.Location).Unix()
@@ -335,7 +391,7 @@ func (s *Server) processScheduleDueDate(c *gin.Context, input *entity.ProcessSch
 		day = utils.GetTimeDiffToDayByTimeStamp(now, input.DueAt, input.Location)
 		if day < 0 {
 			log.Info(ctx, "schedule dueAt is invalid", log.Int64("now", now), log.Any("input", input))
-			c.JSON(http.StatusBadRequest, L(ScheduleMsgDueDateEarlierToDay))
+			c.JSON(http.StatusBadRequest, L(ScheduleMessageDueDateEarlierToDay))
 			return nil, false
 		}
 		result.DueAt = utils.TodayEndByTimeStamp(input.DueAt, input.Location).Unix()
@@ -370,7 +426,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		return
 	}
 	if err == constant.ErrRecordNotFound {
-		c.JSON(http.StatusNotFound, L(ScheduleMsgDeleteOverlap))
+		c.JSON(http.StatusNotFound, L(ScheduleMessageDeleteOverlap))
 		return
 	}
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
@@ -419,30 +475,11 @@ func (s *Server) querySchedule(c *gin.Context) {
 		}
 		loc := utils.GetTimeLocationByOffset(offset)
 		log.Debug(ctx, "time location", log.Any("location", loc), log.Int("offset", offset))
-		timeUtil := utils.NewTimeUtil(startAt, loc)
-		startAt = timeUtil.BeginOfDayByTimeStamp().Unix()
+		startAt = utils.TodayZeroByTimeStamp(startAt, loc).Unix()
 		condition.StartAtGe = sql.NullInt64{
 			Int64: startAt,
 			Valid: startAt > 0,
 		}
-	}
-
-	filterClassIDs, err := model.GetSchedulePermissionModel().GetClassIDs(ctx, op)
-	if err != nil {
-		log.Error(ctx, "querySchedule:getClassIDs error",
-			log.Err(err),
-			log.Any("op", op),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	if len(filterClassIDs) == 0 {
-		log.Info(ctx, "querySchedule:filterClassIDs is empty", log.Any("operator", op))
-		c.JSON(http.StatusOK, entity.SchedulePageView{
-			Total: 0,
-			Data:  []*entity.ScheduleSearchView{},
-		})
-		return
 	}
 
 	teacherName := c.Query("teacher_name")
@@ -472,27 +509,17 @@ func (s *Server) querySchedule(c *gin.Context) {
 		for i, item := range teachers {
 			teacherIDs[i] = item.ID
 		}
-		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, op, teacherIDs, op.OrgID)
-		if err != nil {
-			log.Error(ctx, "querySchedule:GetScheduleModel.GetOrgClassIDsByUserIDs error",
-				log.Err(err),
-				log.Any("op", op),
-				log.Strings("teacherIDs", teacherIDs),
-			)
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
-		}
+
 		log.Debug(ctx, "querySchedule:debug",
 			log.Strings("teacherIDs", teacherIDs),
 			log.Any("operator", op),
-			log.Strings("teacherClassIDs", teacherClassIDs),
 		)
-		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, teacherClassIDs)
+		condition.RelationIDs = entity.NullStrings{
+			Strings: teacherIDs,
+			Valid:   len(teacherIDs) > 0,
+		}
 	}
-	condition.ClassIDs = entity.NullStrings{
-		Strings: filterClassIDs,
-		Valid:   true,
-	}
+
 	log.Info(ctx, "querySchedule", log.Any("condition", condition))
 	total, result, err := model.GetScheduleModel().Page(ctx, op, condition)
 	if err != nil {
@@ -514,13 +541,15 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Param view_type query string true "search schedules by view_type" enums(day, work_week, week, month,year,full_view)
 // @Param time_at query integer false "search schedules by time_at"
 // @Param time_zone_offset query integer false "time zone offset"
-// @Param school_ids query string false "school ids,separated by comma"
+// @Param school_ids query string false "school id,separated by comma"
 // @Param teacher_ids query string false "teacher id,separated by comma"
 // @Param class_ids query string false "class id,separated by comma"
 // @Param subject_ids query string false "subject id,separated by comma"
 // @Param program_ids query string false "program id,separated by comma"
 // @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
 // @Param due_at_eq query integer false "get schedules equal to due_at"
+// @Param start_at_ge query integer false "get schedules greater than or equal to start_at"
+// @Param end_at_le query integer false "get schedules less than or equal to end_at"
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleListView
 // @Failure 400 {object} BadRequestResponse
@@ -533,8 +562,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	offset, _ := strconv.Atoi(offsetStr)
 	loc := utils.GetTimeLocationByOffset(offset)
 	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.String("time_zone_offset", offsetStr), log.Any("loc", loc))
-
-	condition, err := s.getScheduleTimeViewCondition(c)
+	condition, err := s.getScheduleTimeViewCondition(c, loc)
 	if err != nil {
 		return
 	}
@@ -548,6 +576,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 		return
 	}
+	log.Debug(ctx, "getScheduleTimeView error", log.Err(err), log.Any("condition", condition), log.Any("condition", condition), log.String("offsetStr", offsetStr))
 	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 }
 
@@ -567,6 +596,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 // @Tags schedule
 // @Success 200 {array}  string
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view/dates [get]
 func (s *Server) getScheduledDates(c *gin.Context) {
@@ -576,7 +606,7 @@ func (s *Server) getScheduledDates(c *gin.Context) {
 	loc := utils.GetTimeLocationByOffset(offset)
 	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.String("time_zone_offset", offsetStr), log.Any("loc", loc))
 
-	condition, err := s.getScheduleTimeViewCondition(c)
+	condition, err := s.getScheduleTimeViewCondition(c, loc)
 	if err != nil {
 		return
 	}
@@ -589,9 +619,24 @@ func (s *Server) getScheduledDates(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondition, error) {
+func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location) (*da.ScheduleCondition, error) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
+
+	permissionMap, err := model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewSchoolCalendar,
+		external.ScheduleViewMyCalendar,
+	})
+	if err == constant.ErrForbidden {
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return nil, constant.ErrForbidden
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return nil, constant.ErrInternalServer
+	}
+
 	viewType := c.Query("view_type")
 	condition := new(da.ScheduleCondition)
 	if viewType != entity.ScheduleViewTypeFullView.String() {
@@ -602,31 +647,20 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondi
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return nil, err
 		}
-		offsetStr := c.Query("time_zone_offset")
-		offset, err := strconv.Atoi(offsetStr)
-		if err != nil {
-			log.Info(ctx, "getScheduleTimeView: time_zone_offset invalid", log.String("time_zone_offset", offsetStr))
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return nil, err
-		}
-		loc := utils.GetTimeLocationByOffset(offset)
-		log.Debug(ctx, "time location", log.Any("op", op), log.Any("location", loc), log.Int("offset", offset))
-		timeUtil := utils.NewTimeUtil(timeAt, loc)
-
 		var (
 			start int64
 			end   int64
 		)
 		switch entity.ScheduleViewType(viewType) {
 		case entity.ScheduleViewTypeDay:
-			start = timeUtil.BeginOfDayByTimeStamp().Unix()
-			end = timeUtil.EndOfDayByTimeStamp().Unix()
+			start = utils.TodayZeroByTimeStamp(timeAt, loc).Unix()
+			end = utils.TodayEndByTimeStamp(timeAt, loc).Unix()
 		case entity.ScheduleViewTypeWorkweek:
-			start, end = timeUtil.FindWorkWeekTimeRange()
+			start, end = utils.FindWorkWeekTimeRange(timeAt, loc)
 		case entity.ScheduleViewTypeWeek:
-			start, end = timeUtil.FindWeekTimeRange()
+			start, end = utils.FindWeekTimeRange(timeAt, loc)
 		case entity.ScheduleViewTypeMonth:
-			start, end = timeUtil.FindMonthRange()
+			start, end = utils.FindMonthRange(timeAt, loc)
 		case entity.ScheduleViewTypeYear:
 			start = utils.StartOfYearByTimeStamp(timeAt, loc).Unix()
 			end = utils.EndOfYearByTimeStamp(timeAt, loc).Unix()
@@ -637,93 +671,118 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context) (*da.ScheduleCondi
 		}
 		startAndEndTimeViewRange := make([]sql.NullInt64, 2)
 		startAndEndTimeViewRange[0] = sql.NullInt64{
-			Valid: start <= 0,
+			Valid: start >= 0,
 			Int64: start,
 		}
 		startAndEndTimeViewRange[1] = sql.NullInt64{
-			Valid: end <= 0,
+			Valid: end >= 0,
 			Int64: end,
 		}
-
 		condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
 	}
 
+	relationIDs := make([]string, 0)
 	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
 	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
 	condition.ClassTypes = entity.SplitStringToNullStrings(c.Query("class_types"))
+	err = s.processTimeQuery(c, condition)
+	if err != nil {
+		return nil, err
+	}
+	condition.OrgID = sql.NullString{
+		String: op.OrgID,
+		Valid:  true,
+	}
 	schoolIDs := entity.SplitStringToNullStrings(c.Query("school_ids"))
-	teacherIDs := entity.SplitStringToNullStrings(c.Query("teacher_ids"))
+	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
+	relationIDs = append(relationIDs, schoolIDs.Strings...)
+	relationIDs = append(relationIDs, classIDs.Strings...)
+
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   len(relationIDs) > 0,
+		}
+	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
+		if len(relationIDs) == 0 {
+			schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
+			if err != nil {
+				log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("permission", external.ScheduleViewSchoolCalendar.String()),
+				)
+				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				return nil, constant.ErrInternalServer
+			}
+			for _, item := range schoolList {
+				relationIDs = append(relationIDs, item.ID)
+			}
+		}
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   true,
+		}
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		if len(relationIDs) == 0 {
+			relationIDs = append(relationIDs, op.UserID)
+		}
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   true,
+		}
+	}
+
+	log.Debug(ctx, "condition info",
+		log.String("viewType", viewType),
+		log.Any("condition", condition),
+	)
+	return condition, nil
+}
+
+func (s *Server) processTimeQuery(c *gin.Context, condition *da.ScheduleCondition) error {
+	ctx := c.Request.Context()
 	dueAtStr := c.Query("due_at_eq")
 	if dueAtStr != "" {
 		dueAt, err := strconv.ParseInt(dueAtStr, 10, 64)
 		if err != nil {
 			log.Info(ctx, "getScheduleTimeView: time_at is empty or invalid", log.String("dueAt", dueAtStr))
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return nil, err
+			return err
 		}
 		condition.DueToEq = sql.NullInt64{
 			Int64: dueAt,
 			Valid: true,
 		}
 	}
-	filterClassIDs, err := model.GetSchedulePermissionModel().GetClassIDs(ctx, op)
-	if err != nil {
-		log.Error(ctx, "getScheduleTimeView:getClassIDs error",
-			log.Err(err),
-			log.Any("op", op),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return nil, err
-	}
-	if len(filterClassIDs) == 0 {
-		log.Info(ctx, "getScheduleTimeView:filterClassIDs is empty", log.Any("operator", op))
-		c.JSON(http.StatusOK, []*entity.ScheduleListView{})
-		return nil, constant.ErrRecordNotFound
-	}
-	if schoolIDs.Valid {
-		schoolClassIDs, err := s.GetClassIDsBySchoolIDs(ctx, op, schoolIDs.Strings)
+	startAtGeStr := c.Query("start_at_ge")
+	if startAtGeStr != "" {
+		startAt, err := strconv.ParseInt(startAtGeStr, 10, 64)
 		if err != nil {
-			log.Error(ctx, "getScheduleTimeView:GetClassIDsBySchoolIDs error",
-				log.Err(err),
-				log.Any("op", op),
-				log.Any("schoolIDs", schoolIDs),
-			)
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return nil, err
+			log.Info(ctx, "getScheduleTimeView: start_at_ge is empty or invalid", log.String("startAtGeStr", startAtGeStr))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return err
 		}
-		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, schoolClassIDs)
-	}
-	if teacherIDs.Valid {
-		teacherClassIDs, err := model.GetScheduleModel().GetOrgClassIDsByUserIDs(ctx, op, teacherIDs.Strings, op.OrgID)
-		if err != nil {
-			log.Error(ctx, "getScheduleTimeView:GetScheduleModel.GetClassIDsBySchoolIDs error",
-				log.Err(err),
-				log.Any("op", op),
-				log.Any("teacherIDs", teacherIDs),
-			)
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return nil, err
+		condition.StartAtGe = sql.NullInt64{
+			Int64: startAt,
+			Valid: true,
 		}
-		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, teacherClassIDs)
-	}
-	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
-	if classIDs.Valid {
-		filterClassIDs = utils.IntersectAndDeduplicateStrSlice(filterClassIDs, classIDs.Strings)
 	}
 
-	condition.ClassIDs = entity.NullStrings{
-		Strings: filterClassIDs,
-		Valid:   true,
+	endAtLeStr := c.Query("end_at_le")
+	if endAtLeStr != "" {
+		endAt, err := strconv.ParseInt(endAtLeStr, 10, 64)
+		if err != nil {
+			log.Info(ctx, "getScheduleTimeView: end_at_le is empty or invalid", log.String("endAtLeStr", endAtLeStr))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return err
+		}
+		condition.EndAtLe = sql.NullInt64{
+			Int64: endAt,
+			Valid: true,
+		}
 	}
-
-	log.Debug(ctx, "condition info",
-		log.String("viewType", viewType),
-		log.Any("condition", condition),
-		log.Any("teacherIDs", teacherIDs),
-		log.Any("classIDs", classIDs),
-		log.Any("schoolIDs", schoolIDs),
-	)
-	return condition, nil
+	return nil
 }
 
 func (s *Server) GetClassIDsBySchoolIDs(ctx context.Context, op *entity.Operator, schoolIDs []string) ([]string, error) {
@@ -773,33 +832,12 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 	log.Info(ctx, "schedule status error", log.String("id", id), log.String("status", status))
 	switch err {
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	case nil:
 		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, err.Error())
 	}
-}
-
-// @Summary getParticipateClass
-// @ID getParticipateClass
-// @Description get participate Class
-// @Accept json
-// @Produce json
-// @Tags schedule
-// @Success 200 {array}  external.Class
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules_participate/class [get]
-func (s *Server) getParticipateClass(c *gin.Context) {
-	op := s.getOperator(c)
-	ctx := c.Request.Context()
-	result, err := model.GetScheduleModel().GetParticipateClass(ctx, op)
-	if err != nil {
-		log.Error(ctx, "get participate  class error", log.Err(err), log.Any("op", op))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	c.JSON(http.StatusOK, result)
 }
 
 // @Summary get lessonPlans by teacher and class
@@ -827,11 +865,11 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 		return
 	}
 	condition := &da.ScheduleCondition{
-		StartLt: sql.NullInt64{
+		StartAtLt: sql.NullInt64{
 			Int64: time.Now().Add(constant.ScheduleAllowGoLiveTime).Unix(),
 			Valid: true,
 		},
-		ClassID: sql.NullString{
+		RelationID: sql.NullString{
 			String: classID,
 			Valid:  true,
 		},
@@ -865,10 +903,30 @@ func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
 	result, err := model.GetScheduleModel().GetScheduleRealTimeStatus(ctx, op, id)
 	switch err {
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(ScheduleMsgEditOverlap))
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary queryPlainInfo
+// @ID queryPlainInfo
+// @Description query schedule plain info
+// @Accept json
+// @Produce json
+// @Param class_ids query string false "class id,separated by comma"
+// @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
+// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
+// @Param page query integer false "page index, not paging if page <=0"
+// @Param page_size query integer false "records per page, not paging if page_size <= 0"
+// @Tags schedule
+// @Success 200 {object} entity.SchedulePageView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules [get]
+//func (s Server) queryPlainInfo(c *gin.Context) {
+//
+//}

@@ -206,6 +206,15 @@ const (
 	ScheduleClassTypeTask         ScheduleClassType = "Task"
 )
 
+func (s ScheduleClassType) Valid() bool {
+	switch s {
+	case ScheduleClassTypeOnlineClass, ScheduleClassTypeOfflineClass, ScheduleClassTypeHomework, ScheduleClassTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
 //Live (online class)
 //Class (offline class)
 //Study (homework)
@@ -304,15 +313,15 @@ func (s Schedule) Clone() Schedule {
 
 type ScheduleAddView struct {
 	Title                  string            `json:"title" binding:"required"`
-	ClassID                string            `json:"class_id" binding:"required"`
+	ClassID                string            `json:"class_id"`
 	LessonPlanID           string            `json:"lesson_plan_id"`
 	ClassRosterTeacherIDs  []string          `json:"class_roster_teacher_ids"`
 	ClassRosterStudentIDs  []string          `json:"class_roster_student_ids"`
 	ParticipantsTeacherIDs []string          `json:"participants_teacher_ids"`
 	ParticipantsStudentIDs []string          `json:"participants_student_ids"`
 	OrgID                  string            `json:"org_id"`
-	StartAt                int64             `json:"start_at"`
-	EndAt                  int64             `json:"end_at"`
+	StartAt                int64             `json:"start_at" binding:"required"`
+	EndAt                  int64             `json:"end_at" binding:"required"`
 	SubjectID              string            `json:"subject_id"`
 	ProgramID              string            `json:"program_id"`
 	ClassType              ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
@@ -409,11 +418,38 @@ type ScheduleDetailsView struct {
 	Repeat      RepeatOptions     `json:"repeat"`
 	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ScheduleBasic
-	RealTimeStatus       ScheduleRealTimeView `json:"real_time_status"`
-	ClassRosterTeachers  []ScheduleShortInfo  `json:"class_roster_teacher"`
-	ClassRosterStudents  []ScheduleShortInfo  `json:"class_roster_student"`
-	ParticipantsTeachers []ScheduleShortInfo  `json:"participants_teacher"`
-	ParticipantsStudents []ScheduleShortInfo  `json:"participants_student"`
+	RealTimeStatus       ScheduleRealTimeView          `json:"real_time_status"`
+	ClassRosterTeachers  []*ScheduleAccessibleUserView `json:"class_roster_teachers"`
+	ClassRosterStudents  []*ScheduleAccessibleUserView `json:"class_roster_students"`
+	ParticipantsTeachers []*ScheduleAccessibleUserView `json:"participants_teachers"`
+	ParticipantsStudents []*ScheduleAccessibleUserView `json:"participants_students"`
+}
+
+type ScheduleAccessibleUserView struct {
+	ID     string               `json:"id"`
+	Name   string               `json:"name"`
+	Type   ScheduleRelationType `json:"type"`
+	Enable bool                 `json:"enable"`
+}
+
+type ScheduleAccessibleUserInput struct {
+	ClassRosterClassID     string
+	ClassRosterTeacherIDs  []string
+	ClassRosterStudentIDs  []string
+	ParticipantsTeacherIDs []string
+	ParticipantsStudentIDs []string
+}
+
+type ScheduleBasicDataInput struct {
+	ScheduleID   string
+	ClassID      string
+	ProgramID    string
+	LessonPlanID string
+	SubjectID    string
+}
+type ScheduleUserInput struct {
+	ID   string               `json:"id"`
+	Type ScheduleRelationType `json:"type"`
 }
 
 type ScheduleSearchView struct {
@@ -497,10 +533,14 @@ type ScheduleRealTimeView struct {
 }
 
 type ScheduleConflictView struct {
-	ClassRosterTeachers  []ScheduleShortInfo `json:"class_roster_teacher"`
-	ClassRosterStudents  []ScheduleShortInfo `json:"class_roster_student"`
-	ParticipantsTeachers []ScheduleShortInfo `json:"participants_teacher"`
-	ParticipantsStudents []ScheduleShortInfo `json:"participants_student"`
+	ClassRosterTeachers  []ScheduleConflictUserView `json:"class_roster_teachers"`
+	ClassRosterStudents  []ScheduleConflictUserView `json:"class_roster_students"`
+	ParticipantsTeachers []ScheduleConflictUserView `json:"participants_teachers"`
+	ParticipantsStudents []ScheduleConflictUserView `json:"participants_students"`
+}
+type ScheduleConflictUserView struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type ScheduleConflictInput struct {
@@ -508,12 +548,22 @@ type ScheduleConflictInput struct {
 	ClassRosterStudentIDs  []string
 	ParticipantsTeacherIDs []string
 	ParticipantsStudentIDs []string
+	ClassID                string
 	IgnoreScheduleID       string
 	StartAt                int64
 	EndAt                  int64
 	IsRepeat               bool
 	RepeatOptions          RepeatOptions
 	Location               *time.Location
+}
+
+type ScheduleRelationInput struct {
+	ScheduleID             string
+	ClassRosterClassID     string
+	ClassRosterTeacherIDs  []string
+	ClassRosterStudentIDs  []string
+	ParticipantsTeacherIDs []string
+	ParticipantsStudentIDs []string
 }
 
 type ProcessScheduleDueAtInput struct {

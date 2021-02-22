@@ -123,3 +123,10 @@ const (
 	ScheduleAllowEditTime   = 15 * time.Minute
 	ScheduleAllowGoLiveTime = 15 * time.Minute
 )
+
+const (
+	// 150 * 3000
+	ScheduleRelationBatchInsertCount = 3000
+	// 750 * 800
+	ScheduleBatchInsertCount = 800
+)
