@@ -21,97 +21,65 @@ func (ts TimeLayout) String() string {
 	return string(ts)
 }
 
-type TimeUtil struct {
-	TimeStamp int64
-	Location  *time.Location
-}
-
-func NewTimeUtil(timeStamp int64, la *time.Location) *TimeUtil {
-	return &TimeUtil{
-		TimeStamp: timeStamp,
-		Location:  la,
-	}
-}
-
-func (t *TimeUtil) FindWeekTimeRange() (startDay, endDay int64) {
-	tt := time.Unix(t.TimeStamp, 0).In(t.Location)
+func FindWeekTimeRange(ts int64, loc *time.Location) (startDay, endDay int64) {
+	tt := time.Unix(ts, 0).In(loc)
 	offset := int(time.Sunday - tt.Weekday())
-	lastoffset := int(time.Saturday - tt.Weekday())
+	lastOffset := int(time.Saturday - tt.Weekday())
 
-	firstOfWeek := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, t.Location).AddDate(0, 0, offset)
-	lastOfWeeK := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, t.Location).AddDate(0, 0, lastoffset)
-	startDay = BeginOfDayByTime(firstOfWeek, t.Location).Unix()
-	endDay = EndOfDayByTime(lastOfWeeK, t.Location).Unix()
+	firstOfWeek := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, offset)
+	lastOfWeeK := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, lastOffset)
+	startDay = BeginOfDayByTime(firstOfWeek, loc).Unix()
+	endDay = EndOfDayByTime(lastOfWeeK, loc).Unix()
 	return
 }
-func (t *TimeUtil) FindWeekTimeRangeFormat(layout string) (start, end string) {
-	s, e := t.FindWeekTimeRange()
-	start = time.Unix(s, 0).Format(layout)
-	end = time.Unix(e, 0).Format(layout)
-	return
-}
-
-func (t *TimeUtil) FindWorkWeekTimeRange() (startDay, endDay int64) {
-	tt := time.Unix(t.TimeStamp, 0).In(t.Location)
+func FindWorkWeekTimeRange(ts int64, loc *time.Location) (startDay, endDay int64) {
+	tt := time.Unix(ts, 0).In(loc)
 	offset := int(time.Monday - tt.Weekday())
-	lastoffset := int(time.Friday - tt.Weekday())
+	lastOffset := int(time.Friday - tt.Weekday())
 
 	firstOfWeek := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, offset)
-	lastOfWeeK := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, lastoffset)
-	startDay = BeginOfDayByTime(firstOfWeek, t.Location).Unix()
-	endDay = EndOfDayByTime(lastOfWeeK, t.Location).Unix()
+	lastOfWeeK := time.Date(tt.Year(), tt.Month(), tt.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, lastOffset)
+	startDay = BeginOfDayByTime(firstOfWeek, loc).Unix()
+	endDay = EndOfDayByTime(lastOfWeeK, loc).Unix()
 	return startDay, endDay
 }
 
-func (t *TimeUtil) FindWorkWeekTimeRangeFormat(layout string) (start, end string) {
-	s, e := t.FindWorkWeekTimeRange()
-	start = time.Unix(s, 0).Format(layout)
-	end = time.Unix(e, 0).Format(layout)
-	return
-}
-
-func (t *TimeUtil) FindMonthRange() (startDay, endDay int64) {
-	tt := time.Unix(t.TimeStamp, 0).In(t.Location)
+func FindMonthRange(ts int64, loc *time.Location) (startDay, endDay int64) {
+	tt := time.Unix(ts, 0).In(loc)
 	currentYear, currentMonth, _ := tt.Date()
 	currentLocation := tt.Location()
 
 	firstOfMonth := time.Date(currentYear, currentMonth, 1, 0, 0, 0, 0, currentLocation)
 	lastOfMonth := firstOfMonth.AddDate(0, 1, -1)
-	startDay = BeginOfDayByTime(firstOfMonth, t.Location).Unix()
-	endDay = EndOfDayByTime(lastOfMonth, t.Location).Unix()
+	startDay = BeginOfDayByTime(firstOfMonth, loc).Unix()
+	endDay = EndOfDayByTime(lastOfMonth, loc).Unix()
 	return
-}
-func (t *TimeUtil) FindMonthRangeFormat(layout string) (start, end string) {
-	s, e := t.FindMonthRange()
-	start = time.Unix(s, 0).Format(layout)
-	end = time.Unix(e, 0).Format(layout)
-	return
-}
-
-func (t *TimeUtil) String(layout string) string {
-	return time.Unix(t.TimeStamp, 0).In(t.Location).Format(layout)
 }
 
 func BeginOfDayByTime(t time.Time, la *time.Location) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, la)
 }
-func (t *TimeUtil) BeginOfDayByTimeStamp() time.Time {
-	t2 := time.Unix(t.TimeStamp, 0).In(t.Location)
-	return time.Date(t2.Year(), t2.Month(), t2.Day(), 0, 0, 0, 0, t.Location)
-}
 
 func EndOfDayByTime(t time.Time, la *time.Location) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, la)
 }
-func (t *TimeUtil) EndOfDayByTimeStamp() time.Time {
-	t2 := time.Unix(t.TimeStamp, 0).In(t.Location)
-	return time.Date(t2.Year(), t2.Month(), t2.Day(), 23, 59, 59, 999999999, t.Location)
+
+func TodayZero(t time.Time) time.Time {
+	_, offset := t.Zone()
+	duration := time.Second * time.Duration(offset)
+	return t.Add(duration).Truncate(time.Hour * 24).Add(-duration)
+}
+func TodayEnd(t time.Time) time.Time {
+	return TodayZero(t).AddDate(0, 0, 1).Add(-1 * time.Second)
 }
 
-func TodayZero(now time.Time) time.Time {
-	_, offset := now.Zone()
-	duration := time.Second * time.Duration(offset)
-	return now.Add(duration).Truncate(time.Hour * 24).Add(-duration)
+func TodayZeroByTimeStamp(ts int64, loc *time.Location) time.Time {
+	t := time.Unix(ts, 0).In(loc)
+	return TodayZero(t)
+}
+func TodayEndByTimeStamp(ts int64, loc *time.Location) time.Time {
+	t := time.Unix(ts, 0).In(loc)
+	return TodayEnd(t)
 }
 
 // offset:Second
@@ -248,17 +216,4 @@ func GetTimeDiffToDayByTimeStamp(start, end int64, loc *time.Location) int64 {
 	t2 := time.Unix(end, 0).In(loc)
 
 	return GetTimeDiffToDayByTime(t1, t2, loc)
-}
-
-func TodayEnd(t time.Time) time.Time {
-	return TodayZero(t).AddDate(0, 0, 1).Add(-1 * time.Second)
-}
-
-func TodayZeroByTimeStamp(ts int64, loc *time.Location) time.Time {
-	t := time.Unix(ts, 0).In(loc)
-	return TodayZero(t)
-}
-func TodayEndByTimeStamp(ts int64, loc *time.Location) time.Time {
-	t := time.Unix(ts, 0).In(loc)
-	return TodayEnd(t)
 }

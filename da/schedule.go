@@ -17,10 +17,10 @@ import (
 
 type IScheduleDA interface {
 	dbo.DataAccesser
-	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int, error)
+	BatchInsert(context.Context, *dbo.DBContext, []*entity.Schedule) (int64, error)
+	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, schedules []*entity.Schedule) (int64, error)
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
-	GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error)
 	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 }
 
@@ -28,7 +28,28 @@ type scheduleDA struct {
 	dbo.BaseDA
 }
 
-func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.Schedule) (int, error) {
+func (s *scheduleDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, schedules []*entity.Schedule) (int64, error) {
+	total := len(schedules)
+	pageSize := constant.ScheduleBatchInsertCount
+	pageCount := (total + pageSize - 1) / pageSize
+	var rowsAffected int64
+	for i := 0; i < pageCount; i++ {
+		start := i * pageSize
+		end := (i + 1) * pageSize
+		if end >= total {
+			end = total
+		}
+		data := schedules[start:end]
+		row, err := s.BatchInsert(ctx, tx, data)
+		if err != nil {
+			return rowsAffected, err
+		}
+		rowsAffected += row
+	}
+	return rowsAffected, nil
+}
+
+func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, schedules []*entity.Schedule) (int64, error) {
 	var data [][]interface{}
 	for _, item := range schedules {
 		data = append(data, []interface{}{
@@ -89,8 +110,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
 		return 0, execResult.Error
 	}
-	total := int(execResult.RowsAffected)
-	return total, nil
+	return execResult.RowsAffected, nil
 }
 
 func (s *scheduleDA) DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error {
@@ -124,26 +144,6 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 		return err
 	}
 	return nil
-}
-
-func (s *scheduleDA) GetParticipateClass(ctx context.Context, tx *dbo.DBContext, teacherID string) ([]string, error) {
-	sql := fmt.Sprintf("exists(select 1 from %s where teacher_id = ? and (delete_at=0) and %s.id = %s.schedule_id)",
-		constant.TableNameScheduleTeacher, constant.TableNameSchedule, constant.TableNameScheduleTeacher)
-	var scheduleList []*entity.Schedule
-	err := tx.Table(constant.TableNameSchedule).Select("distinct class_id").Where(sql, teacherID).Find(&scheduleList).Error
-	if gorm.IsRecordNotFoundError(err) {
-		return nil, constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "GetParticipateClass:get participate  class from db error", log.Err(err), log.String("teacherID", teacherID))
-		return nil, err
-	}
-	var result = make([]string, len(scheduleList))
-	for i, item := range scheduleList {
-		result[i] = item.ClassID
-	}
-	log.Debug(ctx, "classIDs", log.Strings("classIDs", result))
-	return result, nil
 }
 
 func (s *scheduleDA) GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
@@ -182,26 +182,23 @@ func GetScheduleDA() IScheduleDA {
 }
 
 type ScheduleCondition struct {
-	IDs       entity.NullStrings
-	OrgID     sql.NullString
-	StartAtGe sql.NullInt64
-	StartLt   sql.NullInt64
-	EndAtLe   sql.NullInt64
-	EndAtLt   sql.NullInt64
-	EndAtGe   sql.NullInt64
-	//TeacherID                sql.NullString
-	//TeacherIDs               entity.NullStrings
+	IDs                      entity.NullStrings
+	OrgID                    sql.NullString
+	StartAtGe                sql.NullInt64
+	StartAtLt                sql.NullInt64
+	EndAtLe                  sql.NullInt64
+	EndAtLt                  sql.NullInt64
+	EndAtGe                  sql.NullInt64
 	StartAndEndRange         []sql.NullInt64
 	StartAndEndTimeViewRange []sql.NullInt64
 	LessonPlanID             sql.NullString
 	LessonPlanIDs            entity.NullStrings
 	RepeatID                 sql.NullString
 	Status                   sql.NullString
-	ClassIDs                 entity.NullStrings
 	SubjectIDs               entity.NullStrings
 	ProgramIDs               entity.NullStrings
-	OrgIDs                   entity.NullStrings
-	ClassID                  sql.NullString
+	RelationID               sql.NullString
+	RelationIDs              entity.NullStrings
 	ClassTypes               entity.NullStrings
 	DueToEq                  sql.NullInt64
 
@@ -220,10 +217,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.IDs.Strings)
 	}
 
-	if c.OrgID.Valid {
-		wheres = append(wheres, "org_id = ?")
-		params = append(params, c.OrgID.String)
-	}
+	//if c.OrgID.Valid {
+	//	wheres = append(wheres, "org_id = ?")
+	//	params = append(params, c.OrgID.String)
+	//}
 
 	if c.StartAtGe.Valid {
 		wheres = append(wheres, "start_at >= ?")
@@ -233,7 +230,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if len(c.StartAndEndRange) == 2 {
 		startRange := c.StartAndEndRange[0]
 		endRange := c.StartAndEndRange[1]
-		wheres = append(wheres, "((start_at <= ? and end_at >= ?) or (start_at <= ? and end_at >= ?))")
+		wheres = append(wheres, "((start_at <= ? and end_at > ?) or (start_at <= ? and end_at > ?))")
 		params = append(params, startRange.Int64, startRange.Int64, endRange.Int64, endRange.Int64)
 	}
 	if len(c.StartAndEndTimeViewRange) == 2 {
@@ -254,9 +251,9 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "end_at >= ?")
 		params = append(params, c.EndAtGe.Int64)
 	}
-	if c.StartLt.Valid {
+	if c.StartAtLt.Valid {
 		wheres = append(wheres, "start_at < ?")
-		params = append(params, c.StartLt.Int64)
+		params = append(params, c.StartAtLt.Int64)
 	}
 
 	//if c.TeacherID.Valid {
@@ -288,14 +285,6 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Status.String)
 	}
 
-	if c.OrgIDs.Valid {
-		wheres = append(wheres, fmt.Sprintf("org_id in (%s)", c.OrgIDs.SQLPlaceHolder()))
-		params = append(params, c.OrgIDs.ToInterfaceSlice()...)
-	}
-	if c.ClassIDs.Valid {
-		wheres = append(wheres, fmt.Sprintf("class_id in (%s)", c.ClassIDs.SQLPlaceHolder()))
-		params = append(params, c.ClassIDs.ToInterfaceSlice()...)
-	}
 	if c.SubjectIDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("subject_id in (%s)", c.SubjectIDs.SQLPlaceHolder()))
 		params = append(params, c.SubjectIDs.ToInterfaceSlice()...)
@@ -304,11 +293,23 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, fmt.Sprintf("program_id in (%s)", c.ProgramIDs.SQLPlaceHolder()))
 		params = append(params, c.ProgramIDs.ToInterfaceSlice()...)
 	}
-	if c.ClassID.Valid {
-		wheres = append(wheres, "class_id = ?")
-		params = append(params, c.ClassID.String)
-	}
 
+	if c.RelationID.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id = ? and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationID.String)
+	}
+	if c.RelationIDs.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationIDs.Strings)
+	}
+	if c.OrgID.Valid {
+		wheres = append(wheres, "org_id = ?")
+		params = append(params, c.OrgID.String)
+	}
 	if c.ClassTypes.Valid {
 		wheres = append(wheres, "class_type in (?)")
 		params = append(params, c.ClassTypes.Strings)
