@@ -543,7 +543,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Param time_zone_offset query integer false "time zone offset"
 // @Param school_ids query string false "school id,separated by comma"
 // @Param teacher_ids query string false "teacher id,separated by comma"
-// @Param class_ids query string false "class id,separated by comma"
+// @Param class_ids query string false "class id,separated by comma,special classes id is 'Undefined',this class members only under org"
 // @Param subject_ids query string false "subject id,separated by comma"
 // @Param program_ids query string false "program id,separated by comma"
 // @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
@@ -698,6 +698,27 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
 	relationIDs = append(relationIDs, schoolIDs.Strings...)
 	relationIDs = append(relationIDs, classIDs.Strings...)
+	hasUndefinedClass := false
+	for _, classID := range classIDs.Strings {
+		if classID == entity.ScheduleFilterUndefinedClass {
+			hasUndefinedClass = true
+			break
+		}
+	}
+	if hasUndefinedClass {
+		userInfo, err := model.GetSchedulePermissionModel().GetOnlyUnderOrgUsers(ctx, op)
+		if err != nil {
+			log.Error(ctx, "GetSchedulePermissionModel.GetOnlyUnderOrgUsers error",
+				log.Err(err),
+				log.Any("op", op),
+			)
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return nil, constant.ErrInternalServer
+		}
+		for _, item := range userInfo {
+			relationIDs = append(relationIDs, item.ID)
+		}
+	}
 
 	if permissionMap[external.ScheduleViewOrgCalendar] {
 		condition.RelationIDs = entity.NullStrings{
@@ -934,7 +955,7 @@ func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/schools [get]
-func (s Server) getScheduleFilterSchool(c *gin.Context) {
+func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	result, err := model.GetSchedulePermissionModel().GetSchoolsByOperator(ctx, op)
@@ -954,12 +975,13 @@ func (s Server) getScheduleFilterSchool(c *gin.Context) {
 // @ID getScheduleFilterClasses
 // @Accept json
 // @Produce json
-// @Param school_id query string false "school id,if empty,return to classes under organization only"
+// @Param school_id query string false "school id,if "-1",return classes without school"
 // @Success 200 {array} entity.ScheduleFilterClass
+// @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/classes [get]
-func (s Server) getScheduleFilterClasses(c *gin.Context) {
+func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	schoolID := c.Query("school_id")
@@ -967,6 +989,8 @@ func (s Server) getScheduleFilterClasses(c *gin.Context) {
 	switch err {
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:

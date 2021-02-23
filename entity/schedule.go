@@ -579,6 +579,9 @@ type ProcessScheduleDueAtView struct {
 	DueAt   int64
 }
 
+const ScheduleFilterInvalidValue = "-1"
+const ScheduleFilterUndefinedClass = "Undefined"
+
 type ScheduleFilterClass struct {
 	ID             string `json:"id"`
 	Name           string `json:"name"`
