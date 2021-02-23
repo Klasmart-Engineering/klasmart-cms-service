@@ -199,6 +199,7 @@ type ScheduleCondition struct {
 	ProgramIDs               entity.NullStrings
 	RelationID               sql.NullString
 	RelationIDs              entity.NullStrings
+	RelationSchoolIDs        entity.NullStrings
 	ClassTypes               entity.NullStrings
 	DueToEq                  sql.NullInt64
 	AnyTime                  sql.NullBool
@@ -306,6 +307,12 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
 		wheres = append(wheres, sql)
 		params = append(params, c.RelationIDs.Strings)
+	}
+	if c.RelationSchoolIDs.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RelationSchoolIDs.Strings)
 	}
 	if c.OrgID.Valid {
 		wheres = append(wheres, "org_id = ?")

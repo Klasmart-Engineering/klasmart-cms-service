@@ -766,6 +766,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 			Strings: []string{op.UserID},
 			Valid:   true,
 		}
+		condition.RelationSchoolIDs = schoolIDs
 	}
 	log.Debug(ctx, "condition info",
 		log.String("viewType", viewType),
