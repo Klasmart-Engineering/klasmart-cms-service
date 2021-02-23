@@ -121,30 +121,31 @@ func (s *schedulePermissionModel) GetSchoolsByOperator(ctx context.Context, op *
 		return nil, err
 	}
 	if permissionMap[external.ScheduleViewOrgCalendar] {
-		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewOrgCalendar)
-		if err != nil {
-			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error", log.Any("op", op), log.String("permissionName", external.ScheduleViewOrgCalendar.String()))
-			return nil, err
-		}
-		return schoolList, nil
+		return s.getScheduleFilterSchools(ctx, op, external.ScheduleViewOrgCalendar)
 	}
 	if permissionMap[external.ScheduleViewSchoolCalendar] {
-		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
-		if err != nil {
-			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error", log.Any("op", op), log.String("permissionName", external.ScheduleViewSchoolCalendar.String()))
-			return nil, err
-		}
-		return schoolList, nil
+		return s.getScheduleFilterSchools(ctx, op, external.ScheduleViewSchoolCalendar)
 	}
 	if permissionMap[external.ScheduleViewMyCalendar] {
-		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewMyCalendar)
-		if err != nil {
-			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error", log.Any("op", op), log.String("permissionName", external.ScheduleViewMyCalendar.String()))
-			return nil, err
-		}
-		return schoolList, nil
+		return s.getScheduleFilterSchools(ctx, op, external.ScheduleViewMyCalendar)
 	}
 	return nil, constant.ErrForbidden
+}
+
+func (s *schedulePermissionModel) getScheduleFilterSchools(ctx context.Context, op *entity.Operator, permission external.PermissionName) ([]*entity.ScheduleFilterSchool, error) {
+	schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
+	if err != nil {
+		log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error", log.Any("op", op), log.String("permissionName", permission.String()))
+		return nil, err
+	}
+	result := make([]*entity.ScheduleFilterSchool, len(schoolList))
+	for i, item := range schoolList {
+		result[i] = &entity.ScheduleFilterSchool{
+			ID:   item.ID,
+			Name: item.Name,
+		}
+	}
+	return result, nil
 }
 
 func (s *schedulePermissionModel) HasClassesPermission(ctx context.Context, op *entity.Operator, classIDs []string) error {

@@ -201,6 +201,7 @@ type ScheduleCondition struct {
 	RelationIDs              entity.NullStrings
 	ClassTypes               entity.NullStrings
 	DueToEq                  sql.NullInt64
+	AnyTime                  sql.NullBool
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -317,6 +318,9 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	if c.DueToEq.Valid {
 		wheres = append(wheres, "due_at = ?")
 		params = append(params, c.DueToEq.Int64)
+	}
+	if c.AnyTime.Valid {
+		wheres = append(wheres, "due_at=0 and start_at=0 and end_at=0")
 	}
 
 	if c.DeleteAt.Valid {
