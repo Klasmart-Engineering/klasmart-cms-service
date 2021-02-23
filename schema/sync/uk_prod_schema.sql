@@ -2,7 +2,7 @@
 --
 -- Host: 127.0.0.1    Database: kidsloop2
 -- ------------------------------------------------------
--- Server version	8.0.17
+-- Server version	8.0.21
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -28,10 +28,10 @@ CREATE TABLE `ages` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ages';
@@ -51,13 +51,13 @@ CREATE TABLE `assessments` (
   `program_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'program id',
   `subject_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'subject id',
   `teacher_ids` json NOT NULL COMMENT 'teacher id',
-  `class_length` int(11) NOT NULL COMMENT 'class length (util: minute)',
-  `class_end_time` bigint(20) NOT NULL COMMENT 'class end time (unix seconds)',
-  `complete_time` bigint(20) NOT NULL COMMENT 'complete time (unix seconds)',
+  `class_length` int NOT NULL COMMENT 'class length (util: minute)',
+  `class_end_time` bigint NOT NULL COMMENT 'class end time (unix seconds)',
+  `complete_time` bigint NOT NULL COMMENT 'complete time (unix seconds)',
   `status` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'status (enum: in_progress, complete)',
-  `create_at` bigint(20) NOT NULL COMMENT 'create time (unix seconds)',
-  `update_at` bigint(20) NOT NULL COMMENT 'update time (unix seconds)',
-  `delete_at` bigint(20) NOT NULL COMMENT 'delete time (unix seconds)',
+  `create_at` bigint NOT NULL COMMENT 'create time (unix seconds)',
+  `update_at` bigint NOT NULL COMMENT 'update time (unix seconds)',
+  `delete_at` bigint NOT NULL COMMENT 'delete time (unix seconds)',
   PRIMARY KEY (`id`),
   KEY `assessments_status` (`status`),
   KEY `assessments_schedule_id` (`schedule_id`),
@@ -115,10 +115,10 @@ CREATE TABLE `class_types` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='class_types';
@@ -137,9 +137,9 @@ CREATE TABLE `cms_authed_contents` (
   `from_folder_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'from_folder_id',
   `content_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content_id',
   `creator` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'creator',
-  `duration` int(11) NOT NULL DEFAULT '0' COMMENT 'duration',
-  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'deleted_at',
+  `duration` int NOT NULL DEFAULT '0' COMMENT 'duration',
+  `create_at` bigint NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   KEY `org_id` (`org_id`),
   KEY `content_id` (`content_id`),
@@ -156,7 +156,7 @@ DROP TABLE IF EXISTS `cms_contents`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `cms_contents` (
   `id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'content_id',
-  `content_type` int(11) NOT NULL COMMENT '数据类型',
+  `content_type` int NOT NULL COMMENT '数据类型',
   `content_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '内容名称',
   `program` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'program',
   `subject` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'subject',
@@ -172,7 +172,7 @@ CREATE TABLE `cms_contents` (
   `extra` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '附加数据',
   `outcomes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'Learning outcomes',
   `dir_path` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'Content路径',
-  `suggest_time` int(11) NOT NULL COMMENT '建议时间',
+  `suggest_time` int NOT NULL COMMENT '建议时间',
   `author` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '作者id',
   `creator` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '创建者id',
   `org` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '所属机构',
@@ -180,16 +180,16 @@ CREATE TABLE `cms_contents` (
   `publish_status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '状态',
   `reject_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '拒绝理由',
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '拒绝理由备注',
-  `version` int(11) NOT NULL DEFAULT '0' COMMENT '版本',
+  `version` int NOT NULL DEFAULT '0' COMMENT '版本',
   `locked_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '封锁人',
   `source_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'source_id',
   `latest_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'latest_id',
   `lesson_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'lesson_type',
-  `create_at` bigint(20) NOT NULL COMMENT 'created_at',
-  `update_at` bigint(20) NOT NULL COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
-  `self_study` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否支持自学',
-  `draw_activity` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否支持绘画',
+  `create_at` bigint NOT NULL COMMENT 'created_at',
+  `update_at` bigint NOT NULL COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT NULL COMMENT 'deleted_at',
+  `self_study` tinyint NOT NULL DEFAULT '0' COMMENT '是否支持自学',
+  `draw_activity` tinyint NOT NULL DEFAULT '0' COMMENT '是否支持绘画',
   `copy_source_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'copy_source_id',
   PRIMARY KEY (`id`),
   KEY `content_type` (`content_type`),
@@ -211,21 +211,21 @@ DROP TABLE IF EXISTS `cms_folder_items`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `cms_folder_items` (
   `id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `owner_type` int(11) NOT NULL COMMENT 'folder item owner type',
+  `owner_type` int NOT NULL COMMENT 'folder item owner type',
   `owner` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'folder item owner',
   `parent_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'folder item parent folder id',
   `link` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'folder item link',
-  `item_type` int(11) NOT NULL COMMENT 'folder item type',
+  `item_type` int NOT NULL COMMENT 'folder item type',
   `dir_path` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'folder item path',
   `editor` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'folder item editor',
-  `items_count` int(11) NOT NULL COMMENT 'folder item count',
+  `items_count` int NOT NULL COMMENT 'folder item count',
   `name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'folder item name',
   `partition` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'folder item partition',
   `thumbnail` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'folder item thumbnail',
   `creator` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'folder item creator',
-  `create_at` bigint(20) NOT NULL COMMENT 'create time (unix seconds)',
-  `update_at` bigint(20) NOT NULL COMMENT 'update time (unix seconds)',
-  `delete_at` bigint(20) DEFAULT NULL COMMENT 'delete time (unix seconds)',
+  `create_at` bigint NOT NULL COMMENT 'create time (unix seconds)',
+  `update_at` bigint NOT NULL COMMENT 'update time (unix seconds)',
+  `delete_at` bigint DEFAULT NULL COMMENT 'delete time (unix seconds)',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms folder';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -242,9 +242,9 @@ CREATE TABLE `cms_shared_folders` (
   `folder_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'folder_id',
   `org_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'org_id',
   `creator` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'creator',
-  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'deleted_at',
+  `create_at` bigint NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   KEY `org_id` (`org_id`),
   KEY `folder_id` (`folder_id`),
@@ -265,10 +265,10 @@ CREATE TABLE `developmentals` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='developmentals';
@@ -307,10 +307,10 @@ CREATE TABLE `grades` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='grades';
@@ -336,21 +336,21 @@ CREATE TABLE `learning_outcomes` (
   `grade` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'grade',
   `keywords` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'keywords',
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'description',
-  `estimated_time` int(11) NOT NULL COMMENT 'estimated_time',
+  `estimated_time` int NOT NULL COMMENT 'estimated_time',
   `author_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'author_id',
   `author_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'author_name',
   `organization_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'organization_id',
   `publish_scope` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'publish_scope, default as the organization_id',
   `publish_status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'publish_status',
   `reject_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'reject_reason',
-  `version` int(11) NOT NULL DEFAULT '0' COMMENT 'version',
-  `assumed` tinyint(4) NOT NULL DEFAULT '0' COMMENT 'assumed',
+  `version` int NOT NULL DEFAULT '0' COMMENT 'version',
+  `assumed` tinyint NOT NULL DEFAULT '0' COMMENT 'assumed',
   `locked_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'locked by who',
   `source_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'source_id',
   `latest_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'latest_id',
-  `create_at` bigint(20) NOT NULL COMMENT 'created_at',
-  `update_at` bigint(20) NOT NULL COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
+  `create_at` bigint NOT NULL COMMENT 'created_at',
+  `update_at` bigint NOT NULL COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   KEY `index_ancestor_id` (`ancestor_id`),
   KEY `index_latest_id` (`latest_id`),
@@ -373,34 +373,13 @@ CREATE TABLE `lesson_types` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='lesson_types';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `migrate_record`
---
-
-DROP TABLE IF EXISTS `migrate_record`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `migrate_record` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `origin` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `dist` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `source_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `target_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_migrate_record_origin` (`origin`),
-  KEY `idx_migrate_record_dist` (`dist`),
-  KEY `idx_migrate_record_source_id` (`source_id`),
-  KEY `idx_migrate_record_target_id` (`target_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3958 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -416,9 +395,9 @@ CREATE TABLE `organizations_properties` (
   `created_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `updated_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `deleted_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `created_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `updated_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
+  `created_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `updated_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organizations_properties';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -455,10 +434,10 @@ CREATE TABLE `programs` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   `org_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'org_type',
   `group_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'group_name',
   PRIMARY KEY (`id`),
@@ -552,47 +531,28 @@ CREATE TABLE `schedules` (
   `subject_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'subject_id',
   `program_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'program_id',
   `class_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'class_type',
-  `start_at` bigint(20) NOT NULL COMMENT 'start_at',
-  `end_at` bigint(20) NOT NULL COMMENT 'end_at',
-  `due_at` bigint(20) DEFAULT NULL COMMENT 'due_at',
+  `start_at` bigint NOT NULL COMMENT 'start_at',
+  `end_at` bigint NOT NULL COMMENT 'end_at',
+  `due_at` bigint DEFAULT NULL COMMENT 'due_at',
   `status` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'status',
   `is_all_day` tinyint(1) DEFAULT '0' COMMENT 'is_all_day',
   `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'description',
   `attachment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'attachment',
-  `version` bigint(20) DEFAULT '0' COMMENT 'version',
+  `version` bigint DEFAULT '0' COMMENT 'version',
   `repeat_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'repeat_id',
   `repeat` json DEFAULT NULL COMMENT 'repeat',
   `created_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `updated_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `deleted_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `created_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `updated_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
+  `created_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `updated_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
   PRIMARY KEY (`id`),
   KEY `schedules_org_id` (`org_id`),
   KEY `schedules_start_at` (`start_at`),
   KEY `schedules_end_at` (`end_at`),
   KEY `schedules_deleted_at` (`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='schedules';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `schedules_relations`
---
-
-DROP TABLE IF EXISTS `schedules_relations`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `schedules_relations` (
-  `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `schedule_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
-  `relation_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'relation_id',
-  `relation_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'relation_type',
-  PRIMARY KEY (`id`),
-  KEY `idx_schedule_id` (`schedule_id`),
-  KEY `idx_relation_id` (`relation_id`),
-  KEY `idx_schedule_id_relation_type` (`schedule_id`,`relation_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='schedules_relations';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -608,10 +568,10 @@ CREATE TABLE `skills` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='skills';
@@ -630,10 +590,10 @@ CREATE TABLE `subjects` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='subjects';
@@ -668,10 +628,10 @@ CREATE TABLE `visibility_settings` (
   `create_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created_id',
   `update_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated_id',
   `delete_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `number` int(11) DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `number` int DEFAULT '0' COMMENT 'number',
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='visibility_settings';
@@ -686,4 +646,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-02-23  7:42:58
+-- Dump completed on 2021-02-23  7:44:55
