@@ -543,13 +543,14 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Param time_zone_offset query integer false "time zone offset"
 // @Param school_ids query string false "school id,separated by comma"
 // @Param teacher_ids query string false "teacher id,separated by comma"
-// @Param class_ids query string false "class id,separated by comma"
+// @Param class_ids query string false "class id,separated by comma,special classes id is 'Undefined',this class members only under org"
 // @Param subject_ids query string false "subject id,separated by comma"
 // @Param program_ids query string false "program id,separated by comma"
 // @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
 // @Param due_at_eq query integer false "get schedules equal to due_at"
 // @Param start_at_ge query integer false "get schedules greater than or equal to start_at"
 // @Param end_at_le query integer false "get schedules less than or equal to end_at"
+// @Param filter_option query string false "get schedules by filter option" enums(any_time,only_mine)
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleListView
 // @Failure 400 {object} BadRequestResponse
@@ -697,6 +698,27 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 	classIDs := entity.SplitStringToNullStrings(c.Query("class_ids"))
 	relationIDs = append(relationIDs, schoolIDs.Strings...)
 	relationIDs = append(relationIDs, classIDs.Strings...)
+	hasUndefinedClass := false
+	for _, classID := range classIDs.Strings {
+		if classID == entity.ScheduleFilterUndefinedClass {
+			hasUndefinedClass = true
+			break
+		}
+	}
+	if hasUndefinedClass {
+		userInfo, err := model.GetSchedulePermissionModel().GetOnlyUnderOrgUsers(ctx, op)
+		if err != nil {
+			log.Error(ctx, "GetSchedulePermissionModel.GetOnlyUnderOrgUsers error",
+				log.Err(err),
+				log.Any("op", op),
+			)
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return nil, constant.ErrInternalServer
+		}
+		for _, item := range userInfo {
+			relationIDs = append(relationIDs, item.ID)
+		}
+	}
 
 	if permissionMap[external.ScheduleViewOrgCalendar] {
 		condition.RelationIDs = entity.NullStrings{
@@ -732,7 +754,19 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 			Valid:   true,
 		}
 	}
-
+	filterOption := c.Query("filter_option")
+	switch entity.ScheduleFilterOption(filterOption) {
+	case entity.ScheduleFilterAnyTime:
+		condition.AnyTime = sql.NullBool{
+			Bool:  true,
+			Valid: true,
+		}
+	case entity.ScheduleFilterOnlyMine:
+		condition.RelationIDs = entity.NullStrings{
+			Strings: []string{op.UserID},
+			Valid:   true,
+		}
+	}
 	log.Debug(ctx, "condition info",
 		log.String("viewType", viewType),
 		log.Any("condition", condition),
@@ -911,22 +945,55 @@ func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
 	}
 }
 
-// @Summary queryPlainInfo
-// @ID queryPlainInfo
-// @Description query schedule plain info
+// @Summary get schedule filter schools
+// @Description get get schedule filter schools
+// @Tags schedule
+// @ID getScheduleFilterSchool
 // @Accept json
 // @Produce json
-// @Param class_ids query string false "class id,separated by comma"
-// @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
-// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
-// @Param page query integer false "page index, not paging if page <=0"
-// @Param page_size query integer false "records per page, not paging if page_size <= 0"
-// @Tags schedule
-// @Success 200 {object} entity.SchedulePageView
-// @Failure 400 {object} BadRequestResponse
-// @Failure 404 {object} NotFoundResponse
+// @Success 200 {array} entity.ScheduleFilterSchool
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules [get]
-//func (s Server) queryPlainInfo(c *gin.Context) {
-//
-//}
+// @Router /schedules_filter/schools [get]
+func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	result, err := model.GetSchedulePermissionModel().GetSchoolsByOperator(ctx, op)
+	switch err {
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary get schedule filter classes
+// @Description get schedule filter classes
+// @Tags schedule
+// @ID getScheduleFilterClasses
+// @Accept json
+// @Produce json
+// @Param school_id query string false "school id,if "-1",return classes without school"
+// @Success 200 {array} entity.ScheduleFilterClass
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_filter/classes [get]
+func (s Server) getClassesInScheduleFilter(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	schoolID := c.Query("school_id")
+	result, err := model.GetSchedulePermissionModel().GetClassesByOperator(ctx, op, schoolID)
+	switch err {
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}

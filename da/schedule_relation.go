@@ -17,6 +17,7 @@ type IScheduleRelationDA interface {
 	Delete(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) error
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
 	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
+	//GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
 }
 
 type scheduleRelationDA struct {

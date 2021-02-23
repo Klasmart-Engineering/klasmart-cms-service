@@ -578,3 +578,24 @@ type ProcessScheduleDueAtView struct {
 	EndAt   int64
 	DueAt   int64
 }
+
+const ScheduleFilterInvalidValue = "-1"
+const ScheduleFilterUndefinedClass = "Undefined"
+
+type ScheduleFilterClass struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	HasStudentFlag bool   `json:"has_student_flag"`
+}
+
+type ScheduleFilterSchool struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type ScheduleFilterOption string
+
+const (
+	ScheduleFilterAnyTime  ScheduleFilterOption = "any_time"
+	ScheduleFilterOnlyMine ScheduleFilterOption = "only_mine"
+)
