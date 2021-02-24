@@ -62,12 +62,12 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgUsers(ctx context.Context, op *
 	}
 	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, op, op.OrgID, userIDs)
 	if err != nil {
-		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error", log.Any("op", op))
+		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error", log.Any("op", op), log.Strings("userIDs", userIDs))
 		return nil, err
 	}
 	userClassMap, err := external.GetClassServiceProvider().GetByUserIDs(ctx, op, userIDs)
 	if err != nil {
-		log.Error(ctx, "GetClassServiceProvider.GetByUserIDs error", log.Any("op", op))
+		log.Error(ctx, "GetClassServiceProvider.GetByUserIDs error", log.Any("op", op), log.Strings("userIDs", userIDs))
 		return nil, err
 	}
 	result := make([]*external.User, 0)
