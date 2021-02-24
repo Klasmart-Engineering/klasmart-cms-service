@@ -51,7 +51,38 @@ func (s *schedulePermissionModel) GetClassesByOperator(ctx context.Context, op *
 }
 
 func (s *schedulePermissionModel) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator) ([]*external.User, error) {
-	return []*external.User{}, nil
+	userInfos, err := external.GetUserServiceProvider().GetByOrganization(ctx, op, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "GetUserServiceProvider.GetByOrganization error", log.Any("op", op))
+		return nil, err
+	}
+	userIDs := make([]string, len(userInfos))
+	userMap := make(map[string]*external.User, len(userInfos))
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+		userMap[item.ID] = item
+	}
+	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, op, op.OrgID, userIDs)
+	if err != nil {
+		log.Error(ctx, "GetSchoolServiceProvider.GetByUsers error", log.Any("op", op))
+		return nil, err
+	}
+	userClassMap, err := external.GetClassServiceProvider().GetByUserIDs(ctx, op, userIDs)
+	if err != nil {
+		log.Error(ctx, "GetClassServiceProvider.GetByUserIDs error", log.Any("op", op))
+		return nil, err
+	}
+	result := make([]*external.User, 0)
+	for _, item := range userInfos {
+		if len(userSchoolMap[item.ID]) > 0 {
+			continue
+		}
+		if len(userClassMap[item.ID]) > 0 {
+			continue
+		}
+		result = append(result, item)
+	}
+	return result, nil
 }
 
 func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleFilterClass, error) {
