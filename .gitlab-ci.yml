@@ -7,18 +7,45 @@ include:
     file: 'gitlab-ci-kidsloopr/.gitlab-ci-api.yml'
 
 stages:
-  - deploy_swagger
+  - deploy_swagger_cn
+  - deploy_swagger_global
   - build_cdk
   - deploy_cdk
   - deploy_cdk_release
 
-DEPLOY_SWAGGER_JOB:
+.DEPLOY_SWAGGER_JOB:
+  before_script:
+    - echo "Download the warehouse file and synchronize to the Swagger node"
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" > deploy.key
+    - chmod 600 deploy.key
+    - ssh-add deploy.key
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+DEPLOY_SWAGGER_JOB_CN:
+  stage: deploy_swagger_cn
+  tags:
+    - kidsloop2
   extends:
-    - .DEPLOY_SWAGGER_API
-  only:
-    - /^test.*$/
-  except:
-    - triggers
+    - .DEPLOY_SWAGGER_JOB
+    - .DEPLOY_SWAGGER_API_CN
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "cn/test"'
+      when: on_success
+  resource_group: $CI_JOB_NAME
+
+DEPLOY_SWAGGER_JOB_Global:
+  stage: deploy_swagger_global
+  tags:
+    - kidsloop2
+  extends:
+    - .DEPLOY_SWAGGER_JOB
+    - .DEPLOY_SWAGGER_API_Global
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "global/test"'
+      when: on_success
+  resource_group: $CI_JOB_NAME
 
 Build_Go_Push:
   stage: build_cdk
