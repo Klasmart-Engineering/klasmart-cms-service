@@ -220,28 +220,22 @@ func (s *scheduleModel) ConflictDetection(ctx context.Context, op *entity.Operat
 	condition := &da.ScheduleRelationCondition{
 		ConflictCondition: conflictCondition,
 	}
-	var scheduleRelations []*entity.ScheduleRelation
-	err = da.GetScheduleRelationDA().Query(ctx, condition, &scheduleRelations)
+	userIDs, err := da.GetScheduleRelationDA().GetRelationIDsByCondition(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
-		log.Error(ctx, "ConflictDetection:GetScheduleRelationDA Query error",
+		log.Error(ctx, "ConflictDetection:GetScheduleRelationDA GetRelationIDsByCondition error",
 			log.Any("input", input),
 			log.Any("op", op),
+			log.Any("condition", condition),
 			log.Err(err),
 		)
 		return nil, err
 	}
 
-	if len(scheduleRelations) <= 0 {
+	if len(userIDs) <= 0 {
 		log.Info(ctx, "not conflict", log.Any("input", input), log.Any("op", op))
 		return nil, nil
 	}
 
-	userIDs := make([]string, len(scheduleRelations))
-	relationMap := make(map[string]*entity.ScheduleRelation)
-	for i, item := range scheduleRelations {
-		userIDs[i] = item.RelationID
-		relationMap[item.RelationID] = item
-	}
 	userInfos, err := external.GetUserServiceProvider().BatchGet(ctx, op, userIDs)
 	if err != nil {
 		log.Error(ctx, "ConflictDetection:GetScheduleRelationDA Query error",
@@ -252,40 +246,57 @@ func (s *scheduleModel) ConflictDetection(ctx context.Context, op *entity.Operat
 		)
 		return nil, err
 	}
+
+	// user map
+	var partTeachersMap = make(map[string]bool, len(input.ParticipantsTeacherIDs))
+	for _, item := range input.ParticipantsTeacherIDs {
+		partTeachersMap[item] = true
+	}
+	var partStudentsMap = make(map[string]bool, len(input.ParticipantsStudentIDs))
+	for _, item := range input.ParticipantsStudentIDs {
+		partStudentsMap[item] = true
+	}
+	var classTeachersMap = make(map[string]bool, len(input.ClassRosterTeacherIDs))
+	for _, item := range input.ClassRosterTeacherIDs {
+		classTeachersMap[item] = true
+	}
+	var classStudentsMap = make(map[string]bool, len(input.ClassRosterStudentIDs))
+	for _, item := range input.ClassRosterStudentIDs {
+		classStudentsMap[item] = true
+	}
+
 	for _, item := range userInfos {
 		if !item.Valid {
 			log.Info(ctx, "user is invalid", log.Any("user", item), log.Any("op", op))
 			return nil, constant.ErrInvalidArgs
 		}
-		relation, ok := relationMap[item.ID]
-		if !ok {
-			log.Info(ctx, "not found user from relation map", log.Any("user", item), log.Any("op", op), log.Any("relationMap", relationMap))
-			return nil, constant.ErrInvalidArgs
-		}
-		switch relation.RelationType {
-		case entity.ScheduleRelationTypeClassRosterTeacher:
+		if _, ok := classTeachersMap[item.ID]; ok {
 			result.ClassRosterTeachers = append(result.ClassRosterTeachers, entity.ScheduleConflictUserView{
 				ID:   item.ID,
 				Name: item.Name,
 			})
-		case entity.ScheduleRelationTypeClassRosterStudent:
+			continue
+		}
+		if _, ok := classStudentsMap[item.ID]; ok {
 			result.ClassRosterStudents = append(result.ClassRosterStudents, entity.ScheduleConflictUserView{
 				ID:   item.ID,
 				Name: item.Name,
 			})
-		case entity.ScheduleRelationTypeParticipantTeacher:
+			continue
+		}
+		if _, ok := partTeachersMap[item.ID]; ok {
 			result.ParticipantsTeachers = append(result.ParticipantsTeachers, entity.ScheduleConflictUserView{
 				ID:   item.ID,
 				Name: item.Name,
 			})
-		case entity.ScheduleRelationTypeParticipantStudent:
+			continue
+		}
+		if _, ok := partStudentsMap[item.ID]; ok {
 			result.ParticipantsStudents = append(result.ParticipantsStudents, entity.ScheduleConflictUserView{
 				ID:   item.ID,
 				Name: item.Name,
 			})
-		default:
-			log.Info(ctx, "relation relation type invalid", log.Any("user", item), log.Any("op", op), log.Any("relation", relation))
-			return nil, constant.ErrInvalidArgs
+			continue
 		}
 	}
 	return result, constant.ErrConflict

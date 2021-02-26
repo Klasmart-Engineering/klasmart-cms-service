@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -18,10 +19,34 @@ type IScheduleRelationDA interface {
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
 	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
 	//GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
+	GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
 }
 
 type scheduleRelationDA struct {
 	dbo.BaseDA
+}
+
+func (s *scheduleRelationDA) GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error) {
+	wheres, parameters := condition.GetConditions()
+	whereSql := strings.Join(wheres, " and ")
+	var relationList []*entity.ScheduleRelation
+	err := tx.Table(constant.TableNameScheduleRelation).Select("distinct relation_id").Where(whereSql, parameters...).Find(&relationList).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "GetRelationIDsByCondition:get from db error",
+			log.Err(err),
+			log.Any("condition", condition),
+		)
+		return nil, err
+	}
+	var result = make([]string, len(relationList))
+	for i, item := range relationList {
+		result[i] = item.RelationID
+	}
+	log.Debug(ctx, "RelationIDs", log.Strings("RelationIDs", result))
+	return result, nil
 }
 
 func (s *scheduleRelationDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error) {
