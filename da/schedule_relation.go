@@ -122,10 +122,11 @@ func GetScheduleRelationDA() IScheduleRelationDA {
 }
 
 type ConflictCondition struct {
-	IgnoreScheduleID sql.NullString
-	IgnoreRepeatID   sql.NullString
-	RelationIDs      []string
-	ConflictTime     []*ConflictTime
+	IgnoreScheduleID   sql.NullString
+	IgnoreRepeatID     sql.NullString
+	RelationIDs        []string
+	ConflictTime       []*ConflictTime
+	ScheduleClassTypes entity.NullStrings
 }
 
 type ConflictTime struct {
@@ -181,6 +182,11 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 			sql.WriteString(" repeat_id <> ? ")
 			params = append(params, c.ConflictCondition.IgnoreRepeatID.String)
 		}
+		if c.ConflictCondition.ScheduleClassTypes.Valid {
+			sql.WriteString(" class_type in (?) ")
+			params = append(params, c.ConflictCondition.ScheduleClassTypes.Strings)
+		}
+
 		sql.WriteString(fmt.Sprintf(" and %s.id = %s.schedule_id)", constant.TableNameSchedule, constant.TableNameScheduleRelation))
 		wheres = append(wheres, sql.String())
 	}

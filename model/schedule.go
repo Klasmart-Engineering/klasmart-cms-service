@@ -206,6 +206,10 @@ func (s *scheduleModel) buildConflictCondition(ctx context.Context, op *entity.O
 			Valid:  schedule.RepeatID != "",
 		}
 	}
+	conflictCondition.ScheduleClassTypes = entity.NullStrings{
+		Strings: []string{string(entity.ScheduleClassTypeOfflineClass), string(entity.ScheduleClassTypeOnlineClass)},
+		Valid:   true,
+	}
 	return conflictCondition, nil
 }
 
