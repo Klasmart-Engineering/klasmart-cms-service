@@ -265,7 +265,7 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return constant.ErrInvalidArgs
+			return err
 		}
 	}
 	return nil
