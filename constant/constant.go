@@ -8,7 +8,7 @@ import (
 const (
 	KidsloopCN                = "CN"
 	TableNameSchedule         = "schedules"
-	TableNameScheduleTeacher  = "schedules_teachers"
+	TableNameScheduleFeedback = "schedules_feedbacks"
 	TableNameScheduleRelation = "schedules_relations"
 
 	TableNameAge               = "ages"
