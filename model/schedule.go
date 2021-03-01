@@ -368,9 +368,9 @@ func (s *scheduleModel) prepareScheduleRelationAddData(ctx context.Context, op *
 		RelationType: entity.ScheduleRelationTypeOrg,
 	})
 
-	rosterLen := len(input.ClassRosterTeacherIDs) + len(input.ClassRosterStudentIDs)
+	//rosterLen := len(input.ClassRosterTeacherIDs) + len(input.ClassRosterStudentIDs)
 	schoolIDs := make([]string, 0)
-	if input.ClassRosterClassID != "" && rosterLen != 0 {
+	if input.ClassRosterClassID != "" {
 		// class relation
 		scheduleRelations = append(scheduleRelations, &entity.ScheduleRelation{
 			RelationID:   input.ClassRosterClassID,
