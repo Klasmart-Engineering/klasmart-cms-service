@@ -320,8 +320,8 @@ type ScheduleAddView struct {
 	ParticipantsTeacherIDs []string          `json:"participants_teacher_ids"`
 	ParticipantsStudentIDs []string          `json:"participants_student_ids"`
 	OrgID                  string            `json:"org_id"`
-	StartAt                int64             `json:"start_at" binding:"required"`
-	EndAt                  int64             `json:"end_at" binding:"required"`
+	StartAt                int64             `json:"start_at"`
+	EndAt                  int64             `json:"end_at"`
 	SubjectID              string            `json:"subject_id"`
 	ProgramID              string            `json:"program_id"`
 	ClassType              ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
@@ -336,6 +336,15 @@ type ScheduleAddView struct {
 	IsForce                bool              `json:"is_force"`
 	TimeZoneOffset         int               `json:"time_zone_offset"`
 	Location               *time.Location    `json:"-"`
+}
+
+type ScheduleEditValidation struct {
+	ClassRosterTeacherIDs  []string
+	ClassRosterStudentIDs  []string
+	ParticipantsTeacherIDs []string
+	ParticipantsStudentIDs []string
+	ClassID                string
+	ClassType              ScheduleClassType
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {

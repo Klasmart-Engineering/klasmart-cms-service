@@ -77,17 +77,18 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	if !data.ClassType.Valid() {
-		log.Info(ctx, "update schedule: invalid class type", log.String("class_type", string(data.ClassType)))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	err = s.verifyScheduleData(c, &entity.ScheduleEditValidation{
+		ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
+		ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
+		ParticipantsTeacherIDs: data.ParticipantsTeacherIDs,
+		ParticipantsStudentIDs: data.ParticipantsStudentIDs,
+		ClassID:                data.ClassID,
+		ClassType:              data.ClassType,
+	})
+	if err != nil {
+		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
 		return
 	}
-	//if strings.TrimSpace(data.Attachment) != "" {
-	//	if !model.GetScheduleModel().ExistScheduleAttachmentFile(ctx, data.Attachment) {
-	//		c.JSON(http.StatusBadRequest, "schedule attachment file not found")
-	//		return
-	//	}
-	//}
 
 	operator := s.getOperator(c)
 	data.OrgID = operator.OrgID
@@ -231,6 +232,45 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 	}
 }
 
+func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditValidation) error {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	// Students and teachers must exist
+	if (len(input.ClassRosterTeacherIDs) == 0 &&
+		len(input.ParticipantsTeacherIDs) == 0) ||
+		(len(input.ClassRosterStudentIDs) == 0 &&
+			len(input.ParticipantsStudentIDs) == 0) {
+		log.Info(ctx, "add schedule: data is Invalid", log.Any("input", input), log.Any("op", op))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return constant.ErrInvalidArgs
+	}
+	if !input.ClassType.Valid() {
+		log.Info(ctx, "add schedule: invalid class type", log.Any("input", input))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return constant.ErrInvalidArgs
+	}
+	// if classID is not empty,must choose a class member
+	if input.ClassID != "" {
+		if len(input.ClassRosterTeacherIDs) == 0 && len(input.ClassRosterStudentIDs) == 0 {
+			log.Info(ctx, "add schedule: classRoster data is Invalid", log.Any("data", input))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return constant.ErrInvalidArgs
+		}
+		// has permission to access the class
+		err := model.GetSchedulePermissionModel().HasClassesPermission(ctx, op, []string{input.ClassID})
+		if err == constant.ErrForbidden {
+			c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+			return constant.ErrForbidden
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return constant.ErrInvalidArgs
+		}
+	}
+	return nil
+}
+
 // @Summary addSchedule
 // @ID addSchedule
 // @Description add a schedule data
@@ -255,26 +295,16 @@ func (s *Server) addSchedule(c *gin.Context) {
 		return
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
-	if (len(data.ClassRosterTeacherIDs) == 0 &&
-		len(data.ParticipantsTeacherIDs) == 0) ||
-		(len(data.ClassRosterStudentIDs) == 0 &&
-			len(data.ParticipantsStudentIDs) == 0) {
-		log.Info(ctx, "add schedule: data is Invalid", log.Any("data", data))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	if !data.ClassType.Valid() {
-		log.Info(ctx, "add schedule: invalid class type", log.String("class_type", string(data.ClassType)))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	err := model.GetSchedulePermissionModel().HasClassesPermission(ctx, op, []string{data.ClassID})
-	if err == constant.ErrForbidden {
-		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-		return
-	}
+	err := s.verifyScheduleData(c, &entity.ScheduleEditValidation{
+		ClassRosterTeacherIDs:  data.ClassRosterTeacherIDs,
+		ClassRosterStudentIDs:  data.ClassRosterStudentIDs,
+		ParticipantsTeacherIDs: data.ParticipantsTeacherIDs,
+		ParticipantsStudentIDs: data.ParticipantsStudentIDs,
+		ClassID:                data.ClassID,
+		ClassType:              data.ClassType,
+	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
 		return
 	}
 	_, err = model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
