@@ -127,6 +127,7 @@ type ConflictCondition struct {
 	RelationIDs        []string
 	ConflictTime       []*ConflictTime
 	ScheduleClassTypes entity.NullStrings
+	OrgID              sql.NullString
 }
 
 type ConflictTime struct {
@@ -170,6 +171,8 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 
 		sql := new(strings.Builder)
 		sql.WriteString(fmt.Sprintf("exists(select 1 from %s where ", constant.TableNameSchedule))
+
+		sql.WriteString("(")
 		var timeWheres []string
 		for _, item := range c.ConflictCondition.ConflictTime {
 			timeWheres = append(timeWheres, fmt.Sprintf("((%s.start_at <= ? and %s.end_at > ?) or (%s.start_at <= ? and %s.end_at > ?))",
@@ -178,6 +181,8 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 			params = append(params, item.StartAt, item.StartAt, item.EndAt, item.EndAt)
 		}
 		sql.WriteString(strings.Join(timeWheres, " or "))
+		sql.WriteString(")")
+
 		if c.ConflictCondition.IgnoreRepeatID.Valid {
 			sql.WriteString(" and repeat_id <> ? ")
 			params = append(params, c.ConflictCondition.IgnoreRepeatID.String)
@@ -185,6 +190,10 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 		if c.ConflictCondition.ScheduleClassTypes.Valid {
 			sql.WriteString(" and class_type in (?) ")
 			params = append(params, c.ConflictCondition.ScheduleClassTypes.Strings)
+		}
+		if c.ConflictCondition.OrgID.Valid {
+			sql.WriteString(" and org_id = ? ")
+			params = append(params, c.ConflictCondition.OrgID.String)
 		}
 
 		sql.WriteString(fmt.Sprintf(" and %s.id = %s.schedule_id)", constant.TableNameSchedule, constant.TableNameScheduleRelation))
