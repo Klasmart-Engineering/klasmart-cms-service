@@ -210,6 +210,10 @@ func (s *scheduleModel) buildConflictCondition(ctx context.Context, op *entity.O
 		Strings: []string{string(entity.ScheduleClassTypeOfflineClass), string(entity.ScheduleClassTypeOnlineClass)},
 		Valid:   true,
 	}
+	conflictCondition.OrgID = sql.NullString{
+		String: op.OrgID,
+		Valid:  true,
+	}
 	return conflictCondition, nil
 }
 
