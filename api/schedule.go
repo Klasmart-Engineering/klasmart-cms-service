@@ -45,16 +45,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		return
 	}
 	log.Debug(ctx, "request data", log.Any("operator", op), log.Any("requestData", data))
-	err := model.GetSchedulePermissionModel().HasClassesPermission(ctx, op, []string{data.ClassID})
-	if err == constant.ErrForbidden {
-		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	_, err = model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+	_, err := model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
 		external.ScheduleCreateEvent,
 		external.ScheduleCreateMySchoolEvent,
 		external.ScheduleCreateMyEvent,
