@@ -179,11 +179,11 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 		}
 		sql.WriteString(strings.Join(timeWheres, " or "))
 		if c.ConflictCondition.IgnoreRepeatID.Valid {
-			sql.WriteString(" repeat_id <> ? ")
+			sql.WriteString(" and repeat_id <> ? ")
 			params = append(params, c.ConflictCondition.IgnoreRepeatID.String)
 		}
 		if c.ConflictCondition.ScheduleClassTypes.Valid {
-			sql.WriteString(" class_type in (?) ")
+			sql.WriteString(" and class_type in (?) ")
 			params = append(params, c.ConflictCondition.ScheduleClassTypes.Strings)
 		}
 

@@ -250,13 +250,13 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
 	}
-	// if classID is not empty,must choose a class member
+	// if classID is not empty,verify has permission
 	if input.ClassID != "" {
-		if len(input.ClassRosterTeacherIDs) == 0 && len(input.ClassRosterStudentIDs) == 0 {
-			log.Info(ctx, "add schedule: classRoster data is Invalid", log.Any("data", input))
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return constant.ErrInvalidArgs
-		}
+		//if len(input.ClassRosterTeacherIDs) == 0 && len(input.ClassRosterStudentIDs) == 0 {
+		//	log.Info(ctx, "add schedule: classRoster data is Invalid", log.Any("data", input))
+		//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		//	return constant.ErrInvalidArgs
+		//}
 		// has permission to access the class
 		err := model.GetSchedulePermissionModel().HasClassesPermission(ctx, op, []string{input.ClassID})
 		if err == constant.ErrForbidden {
