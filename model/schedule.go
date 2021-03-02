@@ -521,15 +521,18 @@ func (s *scheduleModel) prepareScheduleRelationUpdateData(ctx context.Context, o
 	if len(classRelations) > 0 {
 		classID = classRelations[0].RelationID
 	}
-	isClassAccessible, err := s.AccessibleClass(ctx, op, classID)
-	if err != nil {
-		return nil, err
+	if classID != "" {
+		isClassAccessible, err := s.AccessibleClass(ctx, op, classID)
+		if err != nil {
+			return nil, err
+		}
+		if !isClassAccessible {
+			input.ClassRosterClassID = classID
+			input.ClassRosterTeacherIDs = utils.SliceDeduplication(oldClassRosterTeacherIDs)
+			input.ClassRosterStudentIDs = utils.SliceDeduplication(oldClassRosterStudentIDs)
+		}
 	}
-	if !isClassAccessible {
-		input.ClassRosterClassID = classID
-		input.ClassRosterTeacherIDs = utils.SliceDeduplication(oldClassRosterTeacherIDs)
-		input.ClassRosterStudentIDs = utils.SliceDeduplication(oldClassRosterStudentIDs)
-	}
+
 	partUserAccessible, err := s.AccessibleParticipantUser(ctx, op, oldPartUsers)
 	if err != nil {
 		return nil, err
