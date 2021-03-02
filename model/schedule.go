@@ -43,7 +43,7 @@ type IScheduleModel interface {
 	ExistScheduleByLessonPlanID(ctx context.Context, lessonPlanID string) (bool, error)
 	ExistScheduleByID(ctx context.Context, id string) (bool, error)
 	GetPlainByID(ctx context.Context, id string) (*entity.SchedulePlain, error)
-	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error
+	UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string, status entity.ScheduleStatus) error
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
@@ -560,7 +560,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		)
 		return "", err
 	}
-	err = da.GetScheduleRedisDA().Clean(ctx, nil)
+	err = da.GetScheduleRedisDA().Clean(ctx, op, nil)
 	if err != nil {
 		log.Info(ctx, "Add:GetScheduleRedisDA.Clean error", log.Err(err))
 	}
@@ -847,7 +847,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		log.Error(ctx, "update schedule: tx failed", log.Err(err))
 		return "", err
 	}
-	err = da.GetScheduleRedisDA().Clean(ctx, []string{viewData.ID})
+	err = da.GetScheduleRedisDA().Clean(ctx, operator, []string{viewData.ID})
 	if err != nil {
 		log.Info(ctx, "Update:GetScheduleRedisDA.Clean error", log.Err(err))
 	}
@@ -902,7 +902,7 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 		)
 		return err
 	}
-	err = da.GetScheduleRedisDA().Clean(ctx, []string{id})
+	err = da.GetScheduleRedisDA().Clean(ctx, op, []string{id})
 	if err != nil {
 		log.Info(ctx, "Delete:GetScheduleRedisDA.Clean error", log.Err(err))
 	}
@@ -1288,7 +1288,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		)
 		return nil, err
 	}
-	cacheData, err := da.GetScheduleRedisDA().GetByIDs(ctx, []string{id})
+	cacheData, err := da.GetScheduleRedisDA().GetByIDs(ctx, operator, []string{id})
 	if err == nil && len(cacheData) > 0 {
 		log.Debug(ctx, "GetByID:using cache",
 			log.Any("id", id),
@@ -1487,7 +1487,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		}
 	}
 
-	err = da.GetScheduleRedisDA().BatchAdd(ctx, []*entity.ScheduleDetailsView{result})
+	err = da.GetScheduleRedisDA().BatchAdd(ctx, operator, []*entity.ScheduleDetailsView{result})
 	if err != nil {
 		log.Info(ctx, "GetByID:GetScheduleRedisDA.BatchAdd error", log.Err(err))
 	}
@@ -1795,7 +1795,7 @@ func (s *scheduleModel) VerifyLessonPlanAuthed(ctx context.Context, operator *en
 	return nil
 }
 
-func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.ScheduleStatus) error {
+func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string, status entity.ScheduleStatus) error {
 	var schedule = new(entity.Schedule)
 	err := da.GetScheduleDA().GetTx(ctx, tx, id, schedule)
 	if err == dbo.ErrRecordNotFound {
@@ -1824,7 +1824,7 @@ func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBCont
 		)
 		return err
 	}
-	err = da.GetScheduleRedisDA().Clean(ctx, []string{id})
+	err = da.GetScheduleRedisDA().Clean(ctx, operator, []string{id})
 	if err != nil {
 		log.Info(ctx, "UpdateScheduleStatus:GetScheduleRedisDA.Clean error", log.Err(err))
 	}
