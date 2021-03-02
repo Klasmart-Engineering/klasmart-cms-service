@@ -877,6 +877,7 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 	id := c.Param("id")
 	status := c.Query("status")
 	ctx := c.Request.Context()
+	op := s.getOperator(c)
 	scheduleStatus := entity.ScheduleStatus(status)
 	if !scheduleStatus.Valid() {
 		log.Warn(ctx, "schedule status error", log.String("id", id), log.String("status", status))
@@ -884,7 +885,7 @@ func (s *Server) updateScheduleStatus(c *gin.Context) {
 		return
 	}
 
-	err := model.GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), id, scheduleStatus)
+	err := model.GetScheduleModel().UpdateScheduleStatus(ctx, dbo.MustGetDB(ctx), op, id, scheduleStatus)
 	log.Info(ctx, "schedule status error", log.String("id", id), log.String("status", status))
 	switch err {
 	case constant.ErrRecordNotFound:
