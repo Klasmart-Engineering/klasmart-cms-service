@@ -477,13 +477,13 @@ type SchedulePlain struct {
 }
 
 type ScheduleBasic struct {
-	Class          *ScheduleShortInfo   `json:"class"`
-	Subject        *ScheduleShortInfo   `json:"subject"`
-	Program        *ScheduleShortInfo   `json:"program"`
-	Members        []*ScheduleShortInfo `json:"teachers"`
-	MemberTeachers []*ScheduleShortInfo `json:"member_teachers"`
-	StudentCount   int                  `json:"student_count"`
-	LessonPlan     *ScheduleShortInfo   `json:"lesson_plan"`
+	Class          *ScheduleAccessibleUserView `json:"class"`
+	Subject        *ScheduleShortInfo          `json:"subject"`
+	Program        *ScheduleShortInfo          `json:"program"`
+	Members        []*ScheduleShortInfo        `json:"teachers"`
+	MemberTeachers []*ScheduleShortInfo        `json:"member_teachers"`
+	StudentCount   int                         `json:"student_count"`
+	LessonPlan     *ScheduleShortInfo          `json:"lesson_plan"`
 }
 type ScheduleVerify struct {
 	ClassID      string
