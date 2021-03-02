@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /ages [post]
+// @Router /schedules_feedback [post]
 func (s *Server) addScheduleFeedback(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()

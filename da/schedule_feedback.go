@@ -27,6 +27,9 @@ func GetScheduleFeedbackDA() IScheduleFeedbackDA {
 }
 
 type ScheduleFeedbackCondition struct {
+	ScheduleID sql.NullString
+	UserID     sql.NullString
+
 	OrderBy ScheduleFeedbackOrderBy
 	Pager   dbo.Pager
 
@@ -36,6 +39,11 @@ type ScheduleFeedbackCondition struct {
 func (c ScheduleFeedbackCondition) GetConditions() ([]string, []interface{}) {
 	var wheres []string
 	var params []interface{}
+
+	if c.ScheduleID.Valid {
+		wheres = append(wheres, "schedule_id = ?")
+		params = append(params, c.ScheduleID.String)
+	}
 
 	if c.DeleteAt.Valid {
 		wheres = append(wheres, "delete_at>0")

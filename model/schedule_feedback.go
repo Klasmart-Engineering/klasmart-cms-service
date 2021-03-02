@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -14,14 +15,25 @@ import (
 
 type IScheduleFeedbackModel interface {
 	Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error)
-	ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string)
+	ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
 }
 
 type scheduleFeedbackModel struct {
 }
 
-func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) {
-	panic("implement me")
+func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error) {
+	condition := &da.ScheduleFeedbackCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+	}
+	count, err := da.GetScheduleFeedbackDA().Count(ctx, condition, &entity.ScheduleFeedback{})
+	if err != nil {
+		log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error) {
