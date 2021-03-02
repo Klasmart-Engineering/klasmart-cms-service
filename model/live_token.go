@@ -252,37 +252,6 @@ func (s *liveTokenModel) isTeacherByScheduleID(ctx context.Context, op *entity.O
 	return isTeacher, nil
 }
 
-//func (s *liveTokenModel) isTeacherByClass(ctx context.Context, op *entity.Operator, classID string) (bool, error) {
-//	classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, []string{classID})
-//	if err != nil {
-//		log.Error(ctx, "isTeacherByClass:GetTeacherServiceProvider.GetByClasses error",
-//			log.Err(err),
-//			log.String("classID", classID),
-//			log.Any("op", op),
-//		)
-//		return false, err
-//	}
-//	teachers, ok := classTeacherMap[classID]
-//	if !ok {
-//		log.Info(ctx, "isTeacherByClass:No teacher under the class",
-//			log.String("classID", classID),
-//			log.Any("op", op),
-//		)
-//		return false, nil
-//	}
-//	log.Debug(ctx, "isTeacherByClass:classTeacherMap info",
-//		log.String("classID", classID),
-//		log.Any("op", op),
-//		log.Any("classTeacherMap", classTeacherMap),
-//	)
-//	for _, t := range teachers {
-//		if t.ID == op.UserID {
-//			return true, nil
-//		}
-//	}
-//	return false, nil
-//}
-
 func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {
 	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
 		external.LiveClassTeacher,
