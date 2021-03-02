@@ -4,7 +4,6 @@ import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 type ScheduleFeedback struct {
 	ID            string `json:"id" gorm:"column:id;PRIMARY_KEY"`
-	ParentID      string `json:"parent_id" gorm:"column:parent_id;type:varchar(100)"`
 	ScheduleID    string `json:"schedule_id" gorm:"column:schedule_id;type:varchar(100)"`
 	UserID        string `json:"user_id" gorm:"column:user_id;type:varchar(100)"`
 	AssignmentUrl string `json:"assignment_url" gorm:"column:assignment_url;type:text"`
@@ -24,5 +23,7 @@ func (e ScheduleFeedback) GetID() interface{} {
 }
 
 type ScheduleFeedbackAddInput struct {
-	ScheduleFeedback
+	ScheduleID    string `json:"schedule_id"`
+	Comment       string `json:"comment"`
+	AssignmentUrl string `json:"assignment_url"`
 }

@@ -2,8 +2,14 @@ package model
 
 import (
 	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"strings"
 	"sync"
+	"time"
 )
 
 type IScheduleFeedbackModel interface {
@@ -19,7 +25,45 @@ func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entit
 }
 
 func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error) {
-	panic("implement me")
+	err := s.verifyScheduleFeedback(ctx, op, input)
+	if err != nil {
+		return "", err
+	}
+
+	data := &entity.ScheduleFeedback{
+		ID:            utils.NewID(),
+		ScheduleID:    input.ScheduleID,
+		UserID:        op.UserID,
+		AssignmentUrl: input.AssignmentUrl,
+		Comment:       input.Comment,
+		CreateAt:      time.Now().Unix(),
+		UpdateAt:      0,
+		DeleteAt:      0,
+	}
+	_, err = da.GetScheduleFeedbackDA().Insert(ctx, data)
+	if err != nil {
+		log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
+		return "", err
+	}
+	return data.ID, nil
+}
+
+func (s *scheduleFeedbackModel) verifyScheduleFeedback(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) error {
+	if strings.TrimSpace(input.ScheduleID) == "" ||
+		strings.TrimSpace(input.AssignmentUrl) == "" {
+		log.Info(ctx, "invalid args", log.Any("op", op), log.Any("input", input))
+		return constant.ErrInvalidArgs
+	}
+	exist, err := GetScheduleModel().ExistScheduleByID(ctx, input.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "GetScheduleModel.ExistScheduleByID error", log.Err(err), log.Any("input", input))
+		return err
+	}
+	if !exist {
+		log.Info(ctx, "schedule id not found", log.Any("op", op), log.Any("input", input))
+		return constant.ErrRecordNotFound
+	}
+	return nil
 }
 
 var (
