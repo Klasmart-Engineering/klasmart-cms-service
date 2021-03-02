@@ -1095,7 +1095,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 	}
 	var (
 		classIDs      []string
-		classMap      map[string]*entity.ScheduleShortInfo
+		classMap      map[string]*entity.ScheduleAccessibleUserView
 		subjectIDs    []string
 		subjectMap    map[string]*entity.ScheduleShortInfo
 		programIDs    []string
@@ -1210,8 +1210,8 @@ func (s *scheduleModel) getLessonPlanMapByLessonPlanIDs(ctx context.Context, tx 
 	return lessonPlanMap, nil
 }
 
-func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
-	var classMap = make(map[string]*entity.ScheduleShortInfo)
+func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]*entity.ScheduleAccessibleUserView, error) {
+	var classMap = make(map[string]*entity.ScheduleAccessibleUserView)
 	if len(classIDs) != 0 {
 		classService := external.GetClassServiceProvider()
 		classInfos, err := classService.BatchGet(ctx, operator, classIDs)
@@ -1221,7 +1221,7 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator 
 		}
 		for _, item := range classInfos {
 			if item != nil {
-				classMap[item.ID] = &entity.ScheduleShortInfo{
+				classMap[item.ID] = &entity.ScheduleAccessibleUserView{
 					ID:   item.ID,
 					Name: item.Name,
 				}
@@ -1442,6 +1442,10 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 			)
 			return nil, err
 		}
+		if result.ScheduleBasic.Class != nil {
+			result.ScheduleBasic.Class.Enable = isClassAccessible
+		}
+
 		userInfos, err := external.GetUserServiceProvider().BatchGet(ctx, operator, classRosterUserIDs)
 		if err != nil {
 			return nil, err
@@ -1494,6 +1498,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 	if err != nil {
 		log.Info(ctx, "GetByID:GetScheduleRedisDA.BatchAdd error", log.Err(err))
 	}
+
 	return result, nil
 }
 
