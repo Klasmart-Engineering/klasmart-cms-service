@@ -15,13 +15,13 @@ import (
 	"time"
 )
 
-func (r *ScheduleRedisDA) BatchAdd(ctx context.Context, schedules []*entity.ScheduleDetailsView) error {
+func (r *ScheduleRedisDA) BatchAdd(ctx context.Context, op *entity.Operator, schedules []*entity.ScheduleDetailsView) error {
 	if !config.Get().RedisConfig.OpenCache {
 		log.Info(ctx, "redis disabled")
 		return nil
 	}
 	for _, item := range schedules {
-		key := r.scheduleKey(item.ID)
+		key := r.scheduleKey(fmt.Sprintf("%s_%s", op.UserID, item.ID))
 		b, err := json.Marshal(item)
 		if err != nil {
 			log.Error(ctx, "Can't parse schedule into json",
@@ -80,13 +80,13 @@ func (r *ScheduleRedisDA) Add(ctx context.Context, condition dbo.Conditions, dat
 	return nil
 }
 
-func (r *ScheduleRedisDA) GetByIDs(ctx context.Context, ids []string) ([]*entity.ScheduleDetailsView, error) {
+func (r *ScheduleRedisDA) GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.ScheduleDetailsView, error) {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil, errors.New("not open cache")
 	}
 	keys := make([]string, len(ids))
-	for i := range ids {
-		keys[i] = r.scheduleKey(ids[i])
+	for i, id := range ids {
+		keys[i] = r.scheduleKey(fmt.Sprintf("%s_%s", op.UserID, id))
 	}
 	res, err := ro.MustGetRedis(ctx).MGet(keys...).Result()
 	if err != nil {
@@ -179,13 +179,13 @@ func (r *ScheduleRedisDA) scheduleConditionKey(condition dbo.Conditions) string 
 	md5Hash := r.conditionHash(condition)
 	return fmt.Sprintf("%v:%v", RedisKeyPrefixScheduleCondition, md5Hash)
 }
-func (r *ScheduleRedisDA) Clean(ctx context.Context, ids []string) error {
+func (r *ScheduleRedisDA) Clean(ctx context.Context, op *entity.Operator, ids []string) error {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
 	keys := make([]string, len(ids))
 	for i, id := range ids {
-		keys[i] = r.scheduleKey(id)
+		keys[i] = r.scheduleKey(fmt.Sprintf("%s_%s", op.UserID, id))
 	}
 
 	keys = append(keys, RedisKeyPrefixScheduleCondition)
