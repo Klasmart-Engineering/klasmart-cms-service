@@ -161,6 +161,10 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case model.ErrScheduleEditMissTimeForDueAt:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissDueDate))
+	case model.ErrScheduleAlreadyHidden:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
+	case model.ErrScheduleAlreadyAssignments:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgAssignmentNew))
 	case nil:
 		c.JSON(http.StatusOK, D(IDResponse{ID: newID}))
 	default:
@@ -216,6 +220,10 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageDeleteMissTime))
 	case model.ErrScheduleEditMissTimeForDueAt:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissDueDate))
+	case model.ErrScheduleAlreadyHidden:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
+	case model.ErrScheduleAlreadyAssignments:
+		c.JSON(http.StatusBadRequest, L(scheduleMsgHide))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
@@ -1016,6 +1024,77 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary hiddenSchedule
+// @ID hiddenSchedule
+// @Description hidden schedule status
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Param hidden query string false "hidden properties" enums(hidden,visible)
+// @Tags schedule
+// @Success 200 {object} IDResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id}/hidden [put]
+func (s *Server) UpdateScheduleHidden(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	id := c.Param("id")
+	hidden := c.Query("hidden")
+	id, err := model.GetScheduleModel().UpdateScheduleShowOption(ctx, op, id, entity.ScheduleShowOption(hidden))
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, IDResponse{ID: id})
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary getScheduleNewestFeedbackByOperator
+// @ID getScheduleNewestFeedbackByOperator
+// @Description get schedule newest feedback by operator
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Tags schedule
+// @Success 200 {object} IDResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id}/my_newest_feedback [get]
+func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+	scheduleID := c.Query("schedule_id")
+	condition := &da.ScheduleFeedbackCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+		UserID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+	}
+	result, err := model.GetScheduleFeedbackModel().GetNewest(ctx, op, condition)
+
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

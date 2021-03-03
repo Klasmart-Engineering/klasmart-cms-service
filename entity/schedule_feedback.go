@@ -3,11 +3,10 @@ package entity
 import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 type ScheduleFeedback struct {
-	ID            string `json:"id" gorm:"column:id;PRIMARY_KEY"`
-	ScheduleID    string `json:"schedule_id" gorm:"column:schedule_id;type:varchar(100)"`
-	UserID        string `json:"user_id" gorm:"column:user_id;type:varchar(100)"`
-	AssignmentUrl string `json:"assignment_url" gorm:"column:assignment_url;type:text"`
-	Comment       string `json:"comment" gorm:"column:comment;type:text"`
+	ID         string `json:"id" gorm:"column:id;PRIMARY_KEY"`
+	ScheduleID string `json:"schedule_id" gorm:"column:schedule_id;type:varchar(100)"`
+	UserID     string `json:"user_id" gorm:"column:user_id;type:varchar(100)"`
+	Comment    string `json:"comment" gorm:"column:comment;type:text"`
 
 	CreateAt int64 `json:"create_at" gorm:"column:create_at;type:bigint"`
 	UpdateAt int64 `json:"-" gorm:"column:update_at;type:bigint"`
@@ -23,10 +22,16 @@ func (e ScheduleFeedback) GetID() interface{} {
 }
 
 type ScheduleFeedbackAddInput struct {
-	ScheduleID    string `json:"schedule_id"`
-	Comment       string `json:"comment"`
-	AssignmentUrl string `json:"assignment_url"`
+	ScheduleID  string                    `json:"schedule_id"`
+	Comment     string                    `json:"comment"`
+	Assignments []*FeedbackAssignmentInfo `json:"assignments"`
+}
+
+type FeedbackAssignmentInfo struct {
+	Url  string `json:"url"`
+	Name string `json:"name"`
 }
 type ScheduleFeedbackView struct {
 	ScheduleFeedback
+	Assignments []*FeedbackAssignmentInfo `json:"assignments"`
 }

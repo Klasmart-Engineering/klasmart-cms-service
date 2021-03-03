@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
 	"sync"
 	"time"
 )
@@ -24,17 +24,41 @@ type scheduleFeedbackModel struct {
 }
 
 func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error) {
-	//var dataList []*entity.ScheduleFeedback
-	//err := da.GetScheduleFeedbackDA().Query(ctx, condition, dataList)
-	//if err != nil {
-	//	log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
-	//	return nil, err
-	//}
-	//if len(dataList) <= 0 {
-	//	log.Warn(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
-	//	return nil, constant.ErrRecordNotFound
-	//}
-	return nil, nil
+	condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
+
+	var dataList []*entity.ScheduleFeedback
+	err := da.GetScheduleFeedbackDA().Query(ctx, condition, dataList)
+	if err != nil {
+		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return nil, err
+	}
+	if len(dataList) <= 0 {
+		log.Warn(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
+		return nil, constant.ErrRecordNotFound
+	}
+	feedback := dataList[0]
+	result := &entity.ScheduleFeedbackView{
+		ScheduleFeedback: entity.ScheduleFeedback{
+			ID:         feedback.ID,
+			ScheduleID: feedback.ScheduleID,
+			UserID:     feedback.UserID,
+			Comment:    feedback.Comment,
+			CreateAt:   feedback.CreateAt,
+		},
+	}
+	assignmentCondition := &da.FeedbackAssignmentCondition{
+		FeedBackID: sql.NullString{
+			String: result.ID,
+			Valid:  true,
+		},
+	}
+	assignments, err := GetFeedbackAssignmentModel().Query(ctx, op, assignmentCondition)
+	if err != nil {
+		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("assignmentCondition", assignmentCondition))
+		return nil, err
+	}
+	result.Assignments = assignments
+	return result, nil
 }
 
 func (s *scheduleFeedbackModel) Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error) {
@@ -72,28 +96,50 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		return "", err
 	}
 
-	data := &entity.ScheduleFeedback{
-		ID:            utils.NewID(),
-		ScheduleID:    input.ScheduleID,
-		UserID:        op.UserID,
-		AssignmentUrl: input.AssignmentUrl,
-		Comment:       input.Comment,
-		CreateAt:      time.Now().Unix(),
-		UpdateAt:      0,
-		DeleteAt:      0,
-	}
-	_, err = da.GetScheduleFeedbackDA().Insert(ctx, data)
+	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		feedback := &entity.ScheduleFeedback{
+			ID:         utils.NewID(),
+			ScheduleID: input.ScheduleID,
+			UserID:     op.UserID,
+			Comment:    input.Comment,
+			CreateAt:   time.Now().Unix(),
+			UpdateAt:   0,
+			DeleteAt:   0,
+		}
+		_, err = da.GetScheduleFeedbackDA().InsertTx(ctx, tx, feedback)
+		if err != nil {
+			log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
+			return "", err
+		}
+		assignments := make([]*entity.FeedbackAssignment, len(input.Assignments))
+		for i, item := range input.Assignments {
+			assignments[i] = &entity.FeedbackAssignment{
+				ID:             utils.NewID(),
+				FeedbackID:     feedback.ID,
+				AssignmentUrl:  item.Url,
+				AssignmentName: item.Name,
+				CreateAt:       time.Now().Unix(),
+				UpdateAt:       0,
+				DeleteAt:       0,
+			}
+		}
+		_, err = da.GetFeedbackAssignmentDA().BatchInsert(ctx, tx, assignments)
+		if err != nil {
+			log.Error(ctx, "feedback assignment insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
+			return "", err
+		}
+		return feedback.ID, nil
+	})
 	if err != nil {
-		log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
+		log.Error(ctx, "feedback insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
 		return "", err
 	}
-	return data.ID, nil
+	return id.(string), nil
 }
 
 func (s *scheduleFeedbackModel) verifyScheduleFeedback(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) error {
-	if strings.TrimSpace(input.ScheduleID) == "" ||
-		strings.TrimSpace(input.AssignmentUrl) == "" {
-		log.Info(ctx, "invalid args", log.Any("op", op), log.Any("input", input))
+	if len(input.Assignments) <= 0 {
+		log.Info(ctx, "assignments empty", log.Any("op", op), log.Any("input", input))
 		return constant.ErrInvalidArgs
 	}
 	exist, err := GetScheduleModel().ExistScheduleByID(ctx, input.ScheduleID)

@@ -11,7 +11,7 @@ import (
 
 type ISchedulePermissionModel interface {
 	//GetClassIDs(ctx context.Context, op *entity.Operator) ([]string, error)
-	HasScheduleEditPermission(ctx context.Context, op *entity.Operator, classID string) error
+	//HasScheduleEditPermission(ctx context.Context, op *entity.Operator, classID string) error
 	HasScheduleOrgPermission(ctx context.Context, op *entity.Operator, permissionName external.PermissionName) error
 	HasScheduleOrgPermissions(ctx context.Context, op *entity.Operator, permissionNames []external.PermissionName) (map[external.PermissionName]bool, error)
 	HasClassesPermission(ctx context.Context, op *entity.Operator, classIDs []string) error

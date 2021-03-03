@@ -244,12 +244,12 @@ func (s *liveTokenModel) isTeacherByScheduleID(ctx context.Context, op *entity.O
 		log.Info(ctx, "has no teacher permission", log.Err(err), log.Any("op", op))
 		return false, nil
 	}
-	isTeacher, err := GetScheduleRelationModel().IsTeacher(ctx, op, scheduleID)
+	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, op, scheduleID)
 	if err != nil {
 		log.Error(ctx, "GetScheduleRelationModel.IsTeacher error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
 		return false, err
 	}
-	return isTeacher, nil
+	return roleType == entity.ScheduleRoleTypeTeacher, nil
 }
 
 func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {

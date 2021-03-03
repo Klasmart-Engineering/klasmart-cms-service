@@ -1,0 +1,44 @@
+package model
+
+import (
+	"context"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"sync"
+)
+
+type IFeedbackAssignmentModel interface {
+	Query(ctx context.Context, op *entity.Operator, condition *da.FeedbackAssignmentCondition) ([]*entity.FeedbackAssignmentInfo, error)
+}
+
+type feedbackAssignmentModel struct{}
+
+func (f *feedbackAssignmentModel) Query(ctx context.Context, op *entity.Operator, condition *da.FeedbackAssignmentCondition) ([]*entity.FeedbackAssignmentInfo, error) {
+	var assignments []*entity.FeedbackAssignment
+	err := da.GetFeedbackAssignmentDA().Query(ctx, condition, assignments)
+	if err != nil {
+		log.Error(ctx, "query error", log.Any("op", op), log.Any("condition", condition))
+		return nil, err
+	}
+	result := make([]*entity.FeedbackAssignmentInfo, len(assignments))
+	for i, item := range assignments {
+		result[i] = &entity.FeedbackAssignmentInfo{
+			Url:  item.AssignmentUrl,
+			Name: item.AssignmentName,
+		}
+	}
+	return result, nil
+}
+
+var (
+	_feedbackAssignmentOnce  sync.Once
+	_feedbackAssignmentModel IFeedbackAssignmentModel
+)
+
+func GetFeedbackAssignmentModel() IFeedbackAssignmentModel {
+	_feedbackAssignmentOnce.Do(func() {
+		_feedbackAssignmentModel = &feedbackAssignmentModel{}
+	})
+	return _feedbackAssignmentModel
+}

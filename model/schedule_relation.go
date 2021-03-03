@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
@@ -11,12 +12,12 @@ import (
 
 type IScheduleRelationModel interface {
 	Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]*entity.ScheduleRelation, error)
-	IsTeacher(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
+	GetRelationTypeByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (entity.ScheduleRoleType, error)
 }
 type scheduleRelationModel struct {
 }
 
-func (s *scheduleRelationModel) IsTeacher(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error) {
+func (s *scheduleRelationModel) GetRelationTypeByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (entity.ScheduleRoleType, error) {
 	condition := &da.ScheduleRelationCondition{
 		RelationID: sql.NullString{
 			String: op.UserID,
@@ -26,17 +27,26 @@ func (s *scheduleRelationModel) IsTeacher(ctx context.Context, op *entity.Operat
 			String: scheduleID,
 			Valid:  true,
 		},
-		RelationTypes: entity.NullStrings{
-			Strings: []string{string(entity.ScheduleRelationTypeClassRosterTeacher), string(entity.ScheduleRelationTypeParticipantTeacher)},
-			Valid:   true,
-		},
 	}
-	count, err := da.GetScheduleRelationDA().Count(ctx, condition, &entity.ScheduleRelation{})
+	var relations []*entity.ScheduleRelation
+	err := da.GetScheduleRelationDA().Query(ctx, condition, relations)
 	if err != nil {
 		log.Error(ctx, "get relation count error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
-		return false, err
+		return "", err
 	}
-	return count > 0, nil
+	if len(relations) <= 0 {
+		log.Info(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
+		return "", constant.ErrRecordNotFound
+	}
+	relation := relations[0]
+	switch relation.RelationType {
+	case entity.ScheduleRelationTypeParticipantTeacher, entity.ScheduleRelationTypeClassRosterTeacher:
+		return entity.ScheduleRoleTypeTeacher, nil
+	case entity.ScheduleRelationTypeParticipantStudent, entity.ScheduleRelationTypeClassRosterStudent:
+		return entity.ScheduleRoleTypeStudent, nil
+	default:
+		return entity.ScheduleRoleTypeUnknown, nil
+	}
 }
 
 func (s *scheduleRelationModel) Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]*entity.ScheduleRelation, error) {

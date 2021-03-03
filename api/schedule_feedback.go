@@ -15,7 +15,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param feedback body entity.ScheduleFeedbackAddInput true "feedback data"
-// @Tags age
+// @Tags scheduleFeedback
 // @Success 200 {object} SuccessRequestResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse

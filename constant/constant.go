@@ -6,10 +6,11 @@ import (
 )
 
 const (
-	KidsloopCN                = "CN"
-	TableNameSchedule         = "schedules"
-	TableNameScheduleFeedback = "schedules_feedbacks"
-	TableNameScheduleRelation = "schedules_relations"
+	KidsloopCN                  = "CN"
+	TableNameSchedule           = "schedules"
+	TableNameScheduleFeedback   = "schedules_feedbacks"
+	TableNameScheduleRelation   = "schedules_relations"
+	TableNameFeedbackAssignment = "feedbacks_assignments"
 
 	TableNameAge               = "ages"
 	TableNameClassType         = "class_types"
