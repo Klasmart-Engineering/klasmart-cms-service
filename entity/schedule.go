@@ -253,6 +253,8 @@ type Schedule struct {
 	ScheduleVersion int64             `gorm:"column:version;type:bigint"`
 	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)"`
 	RepeatJson      string            `gorm:"column:repeat;type:json;"`
+	IsHidden        bool              `gorm:"column:is_hidden;default:false"`
+	IsHomeFun       bool              `gorm:"column:is_home_fun;default:false"`
 	CreatedID       string            `gorm:"column:created_id;type:varchar(100)"`
 	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)"`
 	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)"`

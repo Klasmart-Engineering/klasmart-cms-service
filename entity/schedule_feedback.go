@@ -27,3 +27,6 @@ type ScheduleFeedbackAddInput struct {
 	Comment       string `json:"comment"`
 	AssignmentUrl string `json:"assignment_url"`
 }
+type ScheduleFeedbackView struct {
+	ScheduleFeedback
+}

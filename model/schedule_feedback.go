@@ -16,9 +16,39 @@ import (
 type IScheduleFeedbackModel interface {
 	Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error)
 	ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
+	Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error)
+	GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error)
 }
 
 type scheduleFeedbackModel struct {
+}
+
+func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error) {
+	//var dataList []*entity.ScheduleFeedback
+	//err := da.GetScheduleFeedbackDA().Query(ctx, condition, dataList)
+	//if err != nil {
+	//	log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+	//	return nil, err
+	//}
+	//if len(dataList) <= 0 {
+	//	log.Warn(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
+	//	return nil, constant.ErrRecordNotFound
+	//}
+	return nil, nil
+}
+
+func (s *scheduleFeedbackModel) Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error) {
+	var dataList []*entity.ScheduleFeedback
+	err := da.GetScheduleFeedbackDA().Query(ctx, condition, dataList)
+	if err != nil {
+		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return nil, err
+	}
+	result := make([]*entity.ScheduleFeedbackView, len(dataList))
+	for i, item := range dataList {
+		result[i] = &entity.ScheduleFeedbackView{ScheduleFeedback: *item}
+	}
+	return result, nil
 }
 
 func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error) {
