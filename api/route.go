@@ -104,7 +104,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/schools", s.mustLogin, s.getSchoolInScheduleFilter)
 		schedules.GET("/schedules_filter/classes", s.mustLogin, s.getClassesInScheduleFilter)
 		schedules.PUT("/schedules/:id/hidden", s.mustLogin, s.UpdateScheduleHidden)
-		schedules.GET("/schedules/:id/my_newest_feedback", s.mustLogin, s.getScheduleNewestFeedbackByOperator)
+		schedules.GET("/schedules/:id/operator/newest_feedback", s.mustLogin, s.getScheduleNewestFeedbackByOperator)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedule_feedbacks")
 	{

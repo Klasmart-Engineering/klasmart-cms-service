@@ -1073,7 +1073,7 @@ func (s *Server) UpdateScheduleHidden(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/{schedule_id}/my_newest_feedback [get]
+// @Router /schedules/{schedule_id}/operator/newest_feedback [get]
 func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
