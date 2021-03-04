@@ -1070,7 +1070,6 @@ func (s *Server) updateScheduleShowOption(c *gin.Context) {
 // @Param schedule_id path string true "schedule id"
 // @Tags schedule
 // @Success 200 {object} IDResponse
-// @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id}/operator/newest_feedback [get]

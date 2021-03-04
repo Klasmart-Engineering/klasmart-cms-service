@@ -26,7 +26,7 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 	ctx := c.Request.Context()
 	data := &entity.ScheduleFeedbackAddInput{}
 	if err := c.ShouldBind(data); err != nil {
-		log.Info(ctx, "update schedule: should bind body failed", log.Err(err))
+		log.Info(ctx, "should bind body failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
