@@ -1029,25 +1029,25 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 	}
 }
 
-// @Summary hiddenSchedule
-// @ID hiddenSchedule
-// @Description hidden schedule status
+// @Summary UpdateScheduleShowOption
+// @ID UpdateScheduleShowOption
+// @Description Update schedule show option
 // @Accept json
 // @Produce json
 // @Param schedule_id path string true "schedule id"
-// @Param hidden query string false "hidden properties" enums(hidden,visible)
+// @Param show_option query string false "hidden properties" enums(hidden,visible)
 // @Tags schedule
 // @Success 200 {object} IDResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/{schedule_id}/hidden [put]
-func (s *Server) UpdateScheduleHidden(c *gin.Context) {
+// @Router /schedules/{schedule_id}/show_option [put]
+func (s *Server) UpdateScheduleShowOption(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	id := c.Param("id")
-	hidden := c.Query("hidden")
-	id, err := model.GetScheduleModel().UpdateScheduleShowOption(ctx, op, id, entity.ScheduleShowOption(hidden))
+	option := c.Query("show_option")
+	id, err := model.GetScheduleModel().UpdateScheduleShowOption(ctx, op, id, entity.ScheduleShowOption(option))
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, IDResponse{ID: id})
