@@ -1029,9 +1029,9 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 	}
 }
 
-// @Summary UpdateScheduleShowOption
-// @ID UpdateScheduleShowOption
-// @Description Update schedule show option
+// @Summary updateScheduleShowOption
+// @ID updateScheduleShowOption
+// @Description update schedule show option
 // @Accept json
 // @Produce json
 // @Param schedule_id path string true "schedule id"
@@ -1042,7 +1042,7 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id}/show_option [put]
-func (s *Server) UpdateScheduleShowOption(c *gin.Context) {
+func (s *Server) updateScheduleShowOption(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	id := c.Param("id")
