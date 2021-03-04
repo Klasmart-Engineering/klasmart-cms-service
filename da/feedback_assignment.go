@@ -104,6 +104,6 @@ type FeedbackAssignmentOrderBy int
 func (c FeedbackAssignmentOrderBy) ToSQL() string {
 	switch c {
 	default:
-		return "create_at desc"
+		return "number asc"
 	}
 }
