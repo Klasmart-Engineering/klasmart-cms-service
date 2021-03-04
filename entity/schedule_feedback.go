@@ -24,15 +24,15 @@ func (e ScheduleFeedback) GetID() interface{} {
 type ScheduleFeedbackAddInput struct {
 	ScheduleID  string                    `json:"schedule_id"`
 	Comment     string                    `json:"comment"`
-	Assignments []*FeedbackAssignmentInfo `json:"assignments"`
+	Assignments []*FeedbackAssignmentView `json:"assignments"`
 }
 
-type FeedbackAssignmentInfo struct {
+type FeedbackAssignmentView struct {
 	Url    string `json:"url"`
 	Name   string `json:"name"`
 	Number int    `json:"number"`
 }
 type ScheduleFeedbackView struct {
 	ScheduleFeedback
-	Assignments []*FeedbackAssignmentInfo `json:"assignments"`
+	Assignments []*FeedbackAssignmentView `json:"assignments"`
 }
