@@ -24,8 +24,9 @@ func (f *feedbackAssignmentModel) Query(ctx context.Context, op *entity.Operator
 	result := make([]*entity.FeedbackAssignmentInfo, len(assignments))
 	for i, item := range assignments {
 		result[i] = &entity.FeedbackAssignmentInfo{
-			Url:  item.AssignmentUrl,
-			Name: item.AssignmentName,
+			Url:    item.AssignmentUrl,
+			Name:   item.AssignmentName,
+			Number: item.Number,
 		}
 	}
 	return result, nil

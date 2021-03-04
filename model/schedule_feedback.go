@@ -118,6 +118,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 				FeedbackID:     feedback.ID,
 				AssignmentUrl:  item.Url,
 				AssignmentName: item.Name,
+				Number:         item.Number,
 				CreateAt:       time.Now().Unix(),
 				UpdateAt:       0,
 				DeleteAt:       0,

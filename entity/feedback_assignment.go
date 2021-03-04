@@ -7,6 +7,7 @@ type FeedbackAssignment struct {
 	FeedbackID     string `json:"feedback_id" gorm:"column:feedback_id;type:varchar(100)"`
 	AssignmentUrl  string `json:"assignment_url" gorm:"column:assignment_url;type:varchar(500)"`
 	AssignmentName string `json:"assignment_name" gorm:"column:assignment_name;type:varchar(100)"`
+	Number         int    `json:"number" gorm:"column:number;type:int"`
 
 	CreateAt int64 `json:"create_at" gorm:"column:create_at;type:bigint"`
 	UpdateAt int64 `json:"-" gorm:"column:update_at;type:bigint"`

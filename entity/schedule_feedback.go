@@ -28,8 +28,9 @@ type ScheduleFeedbackAddInput struct {
 }
 
 type FeedbackAssignmentInfo struct {
-	Url  string `json:"url"`
-	Name string `json:"name"`
+	Url    string `json:"url"`
+	Name   string `json:"name"`
+	Number int    `json:"number"`
 }
 type ScheduleFeedbackView struct {
 	ScheduleFeedback
