@@ -40,6 +40,11 @@ func (c ScheduleFeedbackCondition) GetConditions() ([]string, []interface{}) {
 	var wheres []string
 	var params []interface{}
 
+	if c.UserID.Valid {
+		wheres = append(wheres, "user_id = ?")
+		params = append(params, c.UserID.String)
+	}
+
 	if c.ScheduleID.Valid {
 		wheres = append(wheres, "schedule_id = ?")
 		params = append(params, c.ScheduleID.String)

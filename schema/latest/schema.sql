@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS `schedules` (
     `version` bigint(20) DEFAULT 0 COMMENT 'version',
     `repeat_id` varchar(100) DEFAULT NULL COMMENT 'repeat_id',
     `repeat` JSON DEFAULT NULL COMMENT 'repeat',
+    `is_hidden` BOOLEAN DEFAULT FALSE COMMENT 'is_hidden',
+    `is_home_fun` BOOLEAN DEFAULT FALSE COMMENT 'is_home_fun',
     `created_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
     `updated_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
     `deleted_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
@@ -449,3 +451,28 @@ CREATE TABLE IF NOT EXISTS `programs_subjects` (
     KEY `idx_program_id` (`program_id`),
     KEY `idx_subject_id` (`subject_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='programs_subjects';
+
+CREATE TABLE IF NOT EXISTS `schedules_feedbacks` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `schedule_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'schedule_id',
+    `user_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'user_id',
+    `Comment` varchar(100) DEFAULT NULL COMMENT  'Comment',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'create_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'update_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_schedule_id` (`schedule_id`),
+    KEY `idx_user_id` (`user_id`)
+) COMMENT 'schedules_feedbacks' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE IF NOT EXISTS `feedbacks_assignments` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `feedback_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'feedback_id',
+    `assignment_url` varchar(500) NOT NULL DEFAULT "" COMMENT  'assignment_url',
+    `assignment_name` varchar(500) DEFAULT NULL COMMENT  'assignment_name',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'create_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'update_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_feedback_id` (`feedback_id`)
+) COMMENT 'feedbacks_assignments' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;

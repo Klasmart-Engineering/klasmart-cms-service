@@ -1084,7 +1084,7 @@ func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 			Valid:  true,
 		},
 		UserID: sql.NullString{
-			String: scheduleID,
+			String: op.UserID,
 			Valid:  true,
 		},
 	}
