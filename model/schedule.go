@@ -1434,7 +1434,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 	accessibleUserList := make([]*entity.ScheduleAccessibleUserView, 0)
 	if classID != "" {
 		isClassAccessible, err := s.AccessibleClass(ctx, operator, classID)
-		if err != nil {
+		if err != nil && err != constant.ErrForbidden {
 			log.Error(ctx, "GetByID:AccessibleClassRosterUser error",
 				log.Err(err),
 				log.Any("operator", operator),
