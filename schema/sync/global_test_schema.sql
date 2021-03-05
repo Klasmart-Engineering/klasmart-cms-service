@@ -589,6 +589,8 @@ CREATE TABLE `schedules` (
   `created_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
   `updated_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
   `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
+  `is_hidden` tinyint(1) DEFAULT '0' COMMENT 'is hidden',
+  `is_home_fun` tinyint(1) DEFAULT '0' COMMENT 'is home fun',
   PRIMARY KEY (`id`),
   KEY `schedules_org_id` (`org_id`),
   KEY `schedules_start_at` (`start_at`),
@@ -728,4 +730,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-04 17:00:41
+-- Dump completed on 2021-03-05 17:00:31
