@@ -29,7 +29,7 @@ func (s *scheduleRelationModel) GetRelationTypeByScheduleID(ctx context.Context,
 		},
 	}
 	var relations []*entity.ScheduleRelation
-	err := da.GetScheduleRelationDA().Query(ctx, condition, relations)
+	err := da.GetScheduleRelationDA().Query(ctx, condition, &relations)
 	if err != nil {
 		log.Error(ctx, "get relation count error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
 		return "", err
