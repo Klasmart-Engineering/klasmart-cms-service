@@ -1605,7 +1605,7 @@ func (s *scheduleModel) AccessibleParticipantUser(ctx context.Context, operator 
 		external.ScheduleCreateMyEvent,
 	})
 	if err == constant.ErrForbidden {
-		log.Info(ctx, "no permission to edit class", log.Any("operator", operator), log.Any("permissionMap", permissionMap))
+		log.Info(ctx, "no permission to edit participant user", log.Any("operator", operator), log.Any("permissionMap", permissionMap))
 		return result, nil
 	}
 	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, operator, operator.OrgID, userIDs)
