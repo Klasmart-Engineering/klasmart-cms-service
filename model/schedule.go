@@ -1434,7 +1434,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 	accessibleUserList := make([]*entity.ScheduleAccessibleUserView, 0)
 	if classID != "" {
 		isClassAccessible, err := s.AccessibleClass(ctx, operator, classID)
-		if err != nil && err != constant.ErrForbidden {
+		if err != nil {
 			log.Error(ctx, "GetByID:AccessibleClassRosterUser error",
 				log.Err(err),
 				log.Any("operator", operator),
@@ -1508,6 +1508,10 @@ func (s *scheduleModel) AccessibleClass(ctx context.Context, operator *entity.Op
 		external.ScheduleCreateMySchoolEvent,
 		external.ScheduleCreateMyEvent,
 	})
+	if err == constant.ErrForbidden {
+		log.Info(ctx, "no permission to edit class", log.String("classID", classID), log.Any("operator", operator), log.Any("permissionMap", permissionMap))
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -1600,6 +1604,10 @@ func (s *scheduleModel) AccessibleParticipantUser(ctx context.Context, operator 
 		external.ScheduleCreateMySchoolEvent,
 		external.ScheduleCreateMyEvent,
 	})
+	if err == constant.ErrForbidden {
+		log.Info(ctx, "no permission to edit class", log.Any("operator", operator), log.Any("permissionMap", permissionMap))
+		return result, nil
+	}
 	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, operator, operator.OrgID, userIDs)
 	if err != nil {
 		return nil, err
