@@ -27,7 +27,7 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 	condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
 
 	var dataList []*entity.ScheduleFeedback
-	err := da.GetScheduleFeedbackDA().Query(ctx, condition, dataList)
+	err := da.GetScheduleFeedbackDA().Query(ctx, condition, &dataList)
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
 		return nil, err
@@ -63,7 +63,7 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 
 func (s *scheduleFeedbackModel) Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error) {
 	var dataList []*entity.ScheduleFeedback
-	err := da.GetScheduleFeedbackDA().Query(ctx, condition, dataList)
+	err := da.GetScheduleFeedbackDA().Query(ctx, condition, &dataList)
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
 		return nil, err
