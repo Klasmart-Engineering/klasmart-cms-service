@@ -78,7 +78,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
+	result, err := model.GetAssessmentModel().ListAssessments(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -133,7 +133,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd), log.String("token", body.Token))
-	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
+	newID, err := model.GetAssessmentModel().AddAssessment(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		log.Debug(ctx, "add assessment jwt success",
@@ -173,7 +173,7 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		return
 	}
 
-	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
+	newID, err := model.GetAssessmentModel().AddAssessment(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
@@ -209,7 +209,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
+	item, err := model.GetAssessmentModel().GetAssessment(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
@@ -268,7 +268,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		}
 	}
 
-	err := model.GetAssessmentModel().Update(ctx, s.getOperator(c), cmd)
+	err := model.GetAssessmentModel().UpdateAssessment(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
@@ -278,4 +278,58 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		log.Info(ctx, "update assessment: update failed")
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
+}
+
+// @Summary list home fun studies
+// @Description list home fun studies
+// @Tags assessments
+// @ID listHomeFunStudies
+// @Accept json
+// @Produce json
+// @Param query query string false "fuzzy query teacher name and student name"
+// @Param status query string false "query status" enums(all,in_progress,complete)
+// @Param order_by query string false "list order by" enums(latest_submit_time,-latest_submit_time,complete_time,-complete_time) default(-class_end_time)
+// @Param page query int false "page number" default(1)
+// @Param page_size query integer false "page size" format(int) default(10)
+// @Success 200 {object} entity.ListHomeFunStudiesResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments/home_fun_studies [get]
+func (s *Server) listHomeFunStudies(c *gin.Context) {
+	panic("not implemented")
+}
+
+// @Summary get home fun study
+// @Description get home fun study detail
+// @Tags assessments
+// @ID getHomeFunStudy
+// @Accept json
+// @Produce json
+// @Param id path string true "home fun study id"
+// @Success 200 {object} entity.ListHomeFunStudiesResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments/home_fun_studies/{id} [get]
+func (s *Server) getHomeFunStudy(c *gin.Context) {
+	panic("not implemented")
+}
+
+// @Summary update home fun study
+// @Description update home fun study
+// @Tags assessments
+// @ID updateHomeFunStudy
+// @Accept json
+// @Produce json
+// @Param id path string true "home fun study id"
+// @Param update_home_fun_study_args body entity.UpdateHomeFunStudyArgs true "update home fun study args"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments/home_fun_studies/{id} [put]
+func (s *Server) updateHomeFunStudy(c *gin.Context) {
+	panic("not implemented")
 }
