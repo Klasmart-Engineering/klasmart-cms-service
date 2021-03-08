@@ -241,7 +241,7 @@ type HomeFunStudy struct {
 	LatestSubmitID   string           `gorm:"column:latest_submit_id;type:varchar(64)" json:"latest_submit_id"`
 	LatestSubmitTime int64            `gorm:"column:latest_submit_time;type:bigint" json:"latest_submit_time"`
 	AssessSubmitID   string           `gorm:"column:assess_submit_id;type:varchar(64)" json:"assess_submit_id"`
-	AssessScore      int              `gorm:"column:assess_score;type:varchar(1024)" json:"assess_score"`
+	AssessScore      int              `gorm:"column:assess_score;type:int" json:"assess_score"`
 	AssessComment    string           `gorm:"column:assess_comment;type:text" json:"assess_comment"`
 	CreateAt         int64            `gorm:"column:create_at;type:bigint;not null" json:"create_at"`
 	UpdateAt         int64            `gorm:"column:update_at;type:bigint;not null" json:"update_at"`
