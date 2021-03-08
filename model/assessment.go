@@ -22,7 +22,7 @@ type IAssessmentModel interface {
 	ListAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error)
 	AddAssessment(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error)
 	UpdateAssessment(ctx context.Context, operator *entity.Operator, cmd entity.UpdateAssessmentCommand) error
-	SaveHomeFunStudy(ctx context.Context, operator *entity.Operator, cmd entity.AssessHomeFunStudyArgs) error
+	SaveHomeFunStudy(ctx context.Context, operator *entity.Operator, cmd entity.SaveHomeFunStudyArgs) error
 }
 
 var (
