@@ -1610,6 +1610,7 @@ func (s *scheduleModel) AccessibleParticipantUser(ctx context.Context, operator 
 	}
 	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, operator, operator.OrgID, userIDs)
 	if err != nil {
+		log.Error(ctx, "get user error", log.Any("operator", operator), log.Strings("userIDs", userIDs))
 		return nil, err
 	}
 
