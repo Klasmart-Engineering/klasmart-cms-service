@@ -1249,6 +1249,6 @@ func checkAndFilterListWithSelf(ctx context.Context, operator *entity.Operator, 
 	return true, nil
 }
 
-func (a *assessmentModel) SaveHomeFunStudy(ctx context.Context, operator *entity.Operator, cmd entity.AssessHomeFunStudyArgs) error {
+func (a *assessmentModel) SaveHomeFunStudy(ctx context.Context, operator *entity.Operator, cmd entity.SaveHomeFunStudyArgs) error {
 	panic("implement me")
 }
