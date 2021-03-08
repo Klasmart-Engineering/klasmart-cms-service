@@ -487,7 +487,7 @@ create table if not exists `home_fun_studies` (
     `status` varchar(128) not null default '' comment 'status (enum: in_progress, complete)',
     `due_at` bigint not null default 0 comment 'due at',
     `complete_at` bigint not null default 0 comment 'complete at (unix seconds)',
-    `latest_feedback_id` varchar(64) not null default '' comment 'latest submit id',
+    `latest_feedback_id` varchar(64) not null default '' comment 'latest feedback id',
     `latest_feedback_at` bigint not null default 0 comment 'latest feedback at (unix seconds)',
     `assess_feedback_id` varchar(64) not null default '' comment 'assess feedback id',
     `assess_score` int not null default 0 comment 'score',
