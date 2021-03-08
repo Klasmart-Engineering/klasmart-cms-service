@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
@@ -36,7 +35,7 @@ func (s *scheduleRelationModel) GetRelationTypeByScheduleID(ctx context.Context,
 	}
 	if len(relations) <= 0 {
 		log.Info(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
-		return "", constant.ErrRecordNotFound
+		return entity.ScheduleRoleTypeUnknown, nil
 	}
 	relation := relations[0]
 	switch relation.RelationType {
