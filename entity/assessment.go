@@ -243,8 +243,6 @@ type HomeFunStudy struct {
 	AssessSubmitID   string           `gorm:"column:assess_submit_id;type:varchar(64)" json:"assess_submit_id"`
 	AssessScore      int              `gorm:"column:assess_score;type:varchar(1024)" json:"assess_score"`
 	AssessComment    string           `gorm:"column:assess_comment;type:text" json:"assess_comment"`
-	Score            int              `gorm:"column:score;type:varchar(1024)" json:"score"`
-	Comment          string           `gorm:"column:comment;type:text" json:"comment"`
 	CreateAt         int64            `gorm:"column:create_at;type:bigint;not null" json:"create_at"`
 	UpdateAt         int64            `gorm:"column:update_at;type:bigint;not null" json:"update_at"`
 	DeleteAt         int64            `gorm:"column:delete_at;type:bigint;not null" json:"delete_at"`
