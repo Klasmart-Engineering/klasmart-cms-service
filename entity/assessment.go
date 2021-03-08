@@ -235,7 +235,7 @@ type HomeFunStudy struct {
 	Title            string           `gorm:"column:title;type:varchar(1024)" json:"title"`
 	TeacherIDs       string           `gorm:"column:teacher_ids;type:json" json:"teacher_ids"`
 	StudentID        string           `gorm:"column:student_id;type:varchar(64)" json:"student_id"`
-	Status           AssessmentStatus `gorm:"column:status;type:varchar(1024)" json:"status"`
+	Status           AssessmentStatus `gorm:"column:status;type:varchar(128)" json:"status"`
 	DueDate          int64            `gorm:"column:due_date;type:bigint" json:"due_date"`
 	CompleteTime     int64            `gorm:"column:complete_time;type:bigint" json:"complete_time"`
 	LatestSubmitID   string           `gorm:"column:latest_submit_id;type:varchar(64)" json:"latest_submit_id"`

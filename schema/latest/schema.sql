@@ -478,26 +478,26 @@ CREATE TABLE IF NOT EXISTS `feedbacks_assignments` (
     KEY `idx_feedback_id` (`feedback_id`)
 ) COMMENT 'feedbacks_assignments' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
-create table `home_fun_studies` (
-    `id` varchar(64) not null comment 'id',
-    `schedule_id` varchar(64) not null comment 'schedule id',
-    `title` varchar(1024) not null comment 'title',
-    `teacher_ids` json not null comment 'teacher id',
-    `student_id` varchar(64) not null comment 'student_id',
-    `status` varchar(1024) not null comment 'status (enum: in_progress, complete)',
-    `due_date` bigint not null comment 'due date',
-    `complete_time` bigint not null comment 'complete time (unix seconds)',
-    `latest_submit_id` varchar(64) not null comment 'latest submit id',
-    `latest_submit_time` bigint not null comment 'latest submit time (unix seconds)',
-    `assess_submit_id` varchar(64) not null comment 'assess submit id',
-    `assess_score` int not null comment 'score',
-    `assess_comment` text not null comment 'text',
-    `create_at` bigint not null comment 'create time (unix seconds)',
-    `update_at` bigint not null comment 'update time (unix seconds)',
-    `delete_at` bigint not null comment 'delete time (unix seconds)',
+create table if not exists `home_fun_studies` (
+    `id` varchar(64) not null default '' comment 'id',
+    `schedule_id` varchar(64) not null default '' comment 'schedule id',
+    `title` varchar(1024) not null default  '' comment 'title',
+    `teacher_ids` json not null default '' comment 'teacher id',
+    `student_id` varchar(64) not null default '' comment 'student_id',
+    `status` varchar(128) not null default '' comment 'status (enum: in_progress, complete)',
+    `due_date` bigint not null default 0 comment 'due date',
+    `complete_time` bigint not null default 0 comment 'complete time (unix seconds)',
+    `latest_submit_id` varchar(64) not null default '' comment 'latest submit id',
+    `latest_submit_time` bigint not null default 0 comment 'latest submit time (unix seconds)',
+    `assess_submit_id` varchar(64) not null default '' comment 'assess submit id',
+    `assess_score` int not null default 0 comment 'score',
+    `assess_comment` text not null default '' comment 'text',
+    `create_at` bigint not null default 0 comment 'create time (unix seconds)',
+    `update_at` bigint not null default 0 comment 'update time (unix seconds)',
+    `delete_at` bigint not null default 0 comment 'delete time (unix seconds)',
     primary key (`id`),
     key `home_fun_study_id` (schedule_id),
     key `home_fun_study_status` (status),
-    key `home_fun_study_latest_submit_time` (latest_submit_time)
+    key `home_fun_study_latest_submit_time` (latest_submit_time),
     key `home_fun_study_complete_time` (complete_time)
 ) comment 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
