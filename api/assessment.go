@@ -329,7 +329,7 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /assessments/home_fun_studies/{id} [put]
+// @Router /assessments/home_fun_studies/{id}/assess [put]
 func (s *Server) assessHomeFunStudy(c *gin.Context) {
 	panic("not implemented")
 }
