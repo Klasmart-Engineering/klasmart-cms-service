@@ -317,19 +317,19 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 	panic("not implemented")
 }
 
-// @Summary update home fun study
-// @Description update home fun study
+// @Summary assess home fun study
+// @Description assess home fun study
 // @Tags assessments
-// @ID updateHomeFunStudy
+// @ID assessHomeFunStudy
 // @Accept json
 // @Produce json
 // @Param id path string true "home fun study id"
-// @Param update_home_fun_study_args body entity.UpdateHomeFunStudyArgs true "update home fun study args"
+// @Param assess_home_fun_study_args body entity.AssessHomeFunStudyArgs true "assess home fun study args"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /assessments/home_fun_studies/{id} [put]
-func (s *Server) updateHomeFunStudy(c *gin.Context) {
+func (s *Server) assessHomeFunStudy(c *gin.Context) {
 	panic("not implemented")
 }

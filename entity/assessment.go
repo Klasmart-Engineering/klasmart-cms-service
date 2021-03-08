@@ -392,7 +392,7 @@ type HomeFunStudySubmitUpload struct {
 	URL  string `json:"url"`
 }
 
-type UpdateHomeFunStudyArgs struct {
+type AssessHomeFunStudyArgs struct {
 	Action        UpdateHomeFunStudyAction `json:"action" enums:"save,complete"`
 	ID            string                   `json:"id"`
 	AssessScore   HomeFunStudyAssessScore  `json:"score" enums:"1,2,3,4,5"`
