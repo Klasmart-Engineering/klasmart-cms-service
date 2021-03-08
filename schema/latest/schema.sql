@@ -500,4 +500,4 @@ create table `home_fun_studies` (
     key `home_fun_study_status` (status),
     key `home_fun_study_latest_submit_time` (latest_submit_time)
     key `home_fun_study_complete_time` (complete_time)
-) comment 'home_fun_study' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+) comment 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
