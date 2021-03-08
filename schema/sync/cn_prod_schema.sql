@@ -297,6 +297,35 @@ CREATE TABLE `developments_skills` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ecards`
+--
+
+DROP TABLE IF EXISTS `ecards`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ecards` (
+  `card_id` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'card id',
+  `password` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'card password',
+  `card_type` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'card type',
+  `duration` int DEFAULT NULL COMMENT 'duration',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'description',
+  `status` int NOT NULL DEFAULT '0' COMMENT 'cart status',
+  `active_at` bigint DEFAULT NULL COMMENT 'active_at',
+  `active_user_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'activated by user',
+  `active_org_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'activated in org',
+  `expire_at` bigint DEFAULT NULL COMMENT 'expired at',
+  `create_at` bigint DEFAULT NULL COMMENT 'created_at',
+  `update_at` bigint DEFAULT NULL COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT NULL COMMENT 'deleted_at',
+  `create_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created by user',
+  `update_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated by user',
+  `delete_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted by user',
+  PRIMARY KEY (`card_id`),
+  UNIQUE KEY `unique_password` (`password`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ecards table';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `grades`
 --
 
@@ -706,4 +735,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-07 17:00:29
+-- Dump completed on 2021-03-08 17:00:31
