@@ -128,6 +128,7 @@ type ConflictCondition struct {
 	ConflictTime       []*ConflictTime
 	ScheduleClassTypes entity.NullStrings
 	OrgID              sql.NullString
+	DeleteAt           sql.NullInt64
 }
 
 type ConflictTime struct {
@@ -195,7 +196,12 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 			sql.WriteString(" and org_id = ? ")
 			params = append(params, c.ConflictCondition.OrgID.String)
 		}
-		sql.WriteString(" and (delete_at=0) ")
+		if c.ConflictCondition.DeleteAt.Valid {
+			sql.WriteString(" and (delete_at>0) ")
+		} else {
+			sql.WriteString(" and (delete_at=0) ")
+		}
+
 		sql.WriteString(fmt.Sprintf(" and %s.id = %s.schedule_id)", constant.TableNameSchedule, constant.TableNameScheduleRelation))
 		wheres = append(wheres, sql.String())
 	}
