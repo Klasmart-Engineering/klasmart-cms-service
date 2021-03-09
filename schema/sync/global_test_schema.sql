@@ -338,6 +338,38 @@ CREATE TABLE `grades` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `home_fun_studies`
+--
+
+DROP TABLE IF EXISTS `home_fun_studies`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `home_fun_studies` (
+  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'id',
+  `schedule_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule id',
+  `title` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'title',
+  `teacher_ids` json NOT NULL DEFAULT 'null' COMMENT 'teacher id',
+  `student_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'student_id',
+  `status` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'status (enum: in_progress, complete)',
+  `due_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'due at',
+  `complete_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'complete at (unix seconds)',
+  `latest_feedback_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'latest feedback id',
+  `latest_feedback_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'latest feedback at (unix seconds)',
+  `assess_feedback_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assess feedback id',
+  `assess_score` int(11) NOT NULL DEFAULT '0' COMMENT 'score',
+  `assess_comment` text COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'text',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'create at (unix seconds)',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'update at (unix seconds)',
+  `delete_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'delete at (unix seconds)',
+  PRIMARY KEY (`id`),
+  KEY `home_fun_study_id` (`schedule_id`),
+  KEY `home_fun_study_status` (`status`),
+  KEY `home_fun_study_latest_feedback_at` (`latest_feedback_at`),
+  KEY `home_fun_study_complete_at` (`complete_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='home_fun_studies';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `learning_outcomes`
 --
 
@@ -730,4 +762,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-08 17:00:32
+-- Dump completed on 2021-03-09 17:00:32
