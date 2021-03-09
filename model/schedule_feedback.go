@@ -117,6 +117,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 	}
 
 	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		// insert feedback
 		feedback := &entity.ScheduleFeedback{
 			ID:         utils.NewID(),
 			ScheduleID: input.ScheduleID,
@@ -131,6 +132,8 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
 			return "", err
 		}
+
+		// insert feedback assignments
 		assignments := make([]*entity.FeedbackAssignment, len(input.Assignments))
 		for i, item := range input.Assignments {
 			assignments[i] = &entity.FeedbackAssignment{
@@ -148,6 +151,35 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		if err != nil {
 			log.Error(ctx, "feedback assignment insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
 			return "", err
+		}
+
+		// insert homeFunStudy
+		teacherIDs, err := GetScheduleRelationModel().GetTeacherIDs(ctx, op, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		scheduleInfo, err := GetScheduleModel().GetPlainByID(ctx, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, input.ScheduleID)
+		if err != nil {
+			return nil, err
+		}
+		homeFun := entity.SaveHomeFunStudyArgs{
+			ScheduleID:     input.ScheduleID,
+			ClassID:        classID,
+			LessonName:     scheduleInfo.Title,
+			TeacherIDs:     teacherIDs,
+			StudentID:      op.UserID,
+			DueAt:          scheduleInfo.DueAt,
+			LatestSubmitID: feedback.ID,
+			LatestSubmitAt: feedback.CreateAt,
+		}
+		err = GetHomeFunStudyModel().SaveHomeFunStudy(ctx, op, homeFun)
+		if err != nil {
+			log.Error(ctx, "insert homeFunStudy error", log.Err(err), log.Any("op", op), log.Any("homeFun", homeFun), log.Any("input", input))
+			return nil, err
 		}
 		return feedback.ID, nil
 	})

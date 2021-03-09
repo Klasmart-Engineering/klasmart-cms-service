@@ -29,3 +29,7 @@ const (
 	ScheduleRelationTypeParticipantTeacher ScheduleRelationType = "participant_teacher"
 	ScheduleRelationTypeParticipantStudent ScheduleRelationType = "participant_student"
 )
+
+func (s ScheduleRelationType) String() string {
+	return string(s)
+}
