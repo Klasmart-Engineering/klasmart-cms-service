@@ -68,9 +68,29 @@ func (s *scheduleFeedbackModel) Query(ctx context.Context, op *entity.Operator, 
 		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
 		return nil, err
 	}
+	if len(dataList) <= 0 {
+		log.Info(ctx, "query not found", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return []*entity.ScheduleFeedbackView{}, nil
+	}
+	feedbackIDs := make([]string, len(dataList))
 	result := make([]*entity.ScheduleFeedbackView, len(dataList))
 	for i, item := range dataList {
 		result[i] = &entity.ScheduleFeedbackView{ScheduleFeedback: *item}
+		feedbackIDs[i] = item.ID
+	}
+	assignmentCondition := &da.FeedbackAssignmentCondition{
+		FeedBackIDs: entity.NullStrings{
+			Strings: feedbackIDs,
+			Valid:   true,
+		},
+	}
+	assignmentMap, err := GetFeedbackAssignmentModel().QueryMap(ctx, op, assignmentCondition)
+	if err != nil {
+		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("assignmentCondition", assignmentCondition))
+		return nil, err
+	}
+	for _, item := range result {
+		item.Assignments = assignmentMap[item.ID]
 	}
 	return result, nil
 }

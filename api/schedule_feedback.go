@@ -1,9 +1,11 @@
 package api
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
@@ -56,5 +58,25 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedule_feedbacks [get]
 func (s *Server) queryFeedback(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
 
+	scheduleID := c.Query("schedule_id")
+	userID := c.Query("user_id")
+	result, err := model.GetScheduleFeedbackModel().Query(ctx, op, &da.ScheduleFeedbackCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  scheduleID != "",
+		},
+		UserID: sql.NullString{
+			String: userID,
+			Valid:  userID != "",
+		},
+	})
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
