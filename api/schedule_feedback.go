@@ -41,6 +41,8 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrCannotSubmitFeedback:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
