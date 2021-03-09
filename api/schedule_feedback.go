@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules_feedback [post]
+// @Router /schedule_feedbacks [post]
 func (s *Server) addScheduleFeedback(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
@@ -42,4 +42,19 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
+}
+
+// @Summary queryFeedback
+// @ID queryFeedback
+// @Description query feedback list
+// @Accept json
+// @Produce json
+// @Param schedule_id query string false "schedule id"
+// @Param user_id query string false "user id"
+// @Tags scheduleFeedback
+// @Success 200 {array} entity.ScheduleFeedbackView
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedule_feedbacks [get]
+func (s *Server) queryFeedback(c *gin.Context) {
+
 }
