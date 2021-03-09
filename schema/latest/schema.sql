@@ -477,3 +477,27 @@ CREATE TABLE IF NOT EXISTS `feedbacks_assignments` (
     PRIMARY KEY (`id`),
     KEY `idx_feedback_id` (`feedback_id`)
 ) COMMENT 'feedbacks_assignments' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+create table if not exists `home_fun_studies` (
+    `id` varchar(64) not null default '' comment 'id',
+    `schedule_id` varchar(64) not null default '' comment 'schedule id',
+    `title` varchar(1024) not null default  '' comment 'title',
+    `teacher_ids` json not null default '' comment 'teacher id',
+    `student_id` varchar(64) not null default '' comment 'student_id',
+    `status` varchar(128) not null default '' comment 'status (enum: in_progress, complete)',
+    `due_at` bigint not null default 0 comment 'due at',
+    `complete_at` bigint not null default 0 comment 'complete at (unix seconds)',
+    `latest_feedback_id` varchar(64) not null default '' comment 'latest feedback id',
+    `latest_feedback_at` bigint not null default 0 comment 'latest feedback at (unix seconds)',
+    `assess_feedback_id` varchar(64) not null default '' comment 'assess feedback id',
+    `assess_score` int not null default 0 comment 'score',
+    `assess_comment` text not null default '' comment 'text',
+    `create_at` bigint not null default 0 comment 'create at (unix seconds)',
+    `update_at` bigint not null default 0 comment 'update at (unix seconds)',
+    `delete_at` bigint not null default 0 comment 'delete at (unix seconds)',
+    primary key (`id`),
+    key `home_fun_study_id` (schedule_id),
+    key `home_fun_study_status` (status),
+    key `home_fun_study_latest_feedback_at` (latest_feedback_at),
+    key `home_fun_study_complete_at` (complete_at)
+) comment 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

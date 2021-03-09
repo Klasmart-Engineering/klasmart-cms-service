@@ -18,10 +18,10 @@ import (
 )
 
 type IAssessmentModel interface {
-	Detail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetailView, error)
-	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error)
-	Add(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error)
-	Update(ctx context.Context, operator *entity.Operator, cmd entity.UpdateAssessmentCommand) error
+	GetAssessment(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetailView, error)
+	ListAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error)
+	AddAssessment(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error)
+	UpdateAssessment(ctx context.Context, operator *entity.Operator, cmd entity.UpdateAssessmentCommand) error
 }
 
 var (
@@ -58,7 +58,7 @@ func (s outcomeSliceSortByAssumedAndName) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetailView, error) {
+func (a *assessmentModel) GetAssessment(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetailView, error) {
 	var result entity.AssessmentDetailView
 
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
@@ -256,7 +256,7 @@ func (a *assessmentModel) Detail(ctx context.Context, tx *dbo.DBContext, operato
 	return &result, nil
 }
 
-func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error) {
+func (a *assessmentModel) ListAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error) {
 	allowed, err := a.checkAndFilterListByPermissions(ctx, operator, &cmd)
 	if err != nil {
 		log.Error(ctx, "list assessments: check and filter failed by permissions",
@@ -493,7 +493,7 @@ func (a *assessmentModel) getClassNameMap(ctx context.Context, operator *entity.
 	return classNameMap, nil
 }
 
-func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error) {
+func (a *assessmentModel) AddAssessment(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error) {
 	var (
 		outcomeIDs []string
 		schedule   *entity.SchedulePlain
@@ -774,7 +774,7 @@ func (a *assessmentModel) title(classEndTime int64, className string, lessonName
 	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, lessonName)
 }
 
-func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator, cmd entity.UpdateAssessmentCommand) error {
+func (a *assessmentModel) UpdateAssessment(ctx context.Context, operator *entity.Operator, cmd entity.UpdateAssessmentCommand) error {
 	// prepend check
 	if !cmd.Action.Valid() {
 		log.Error(ctx, "update assessment: invalid action", log.Any("cmd", cmd))
