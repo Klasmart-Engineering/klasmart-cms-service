@@ -15,15 +15,3 @@ func TestInt64_Sort(t *testing.T) {
 	sort.Sort(testData)
 	t.Log(testData)
 }
-
-type temp struct {
-	Name string
-}
-
-func TestTemp2(t *testing.T) {
-	strs := []*temp{&temp{Name: "sdf"}}
-	strs = append(strs, &temp{Name: "2222"})
-	for _, item := range strs {
-		t.Log(item.Name)
-	}
-}
