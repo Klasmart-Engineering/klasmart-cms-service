@@ -195,7 +195,7 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 			sql.WriteString(" and org_id = ? ")
 			params = append(params, c.ConflictCondition.OrgID.String)
 		}
-
+		sql.WriteString(" and (delete_at=0) ")
 		sql.WriteString(fmt.Sprintf(" and %s.id = %s.schedule_id)", constant.TableNameSchedule, constant.TableNameScheduleRelation))
 		wheres = append(wheres, sql.String())
 	}
