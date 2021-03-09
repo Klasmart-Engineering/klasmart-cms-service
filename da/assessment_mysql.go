@@ -113,64 +113,16 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 }
 
 type QueryAssessmentsCondition struct {
-	Status                         *entity.AssessmentStatus                `json:"status"`
-	ScheduleIDs                    []string                                `json:"schedule_ids"`
-	TeacherIDs                     []string                                `json:"teacher_ids"`
-	TeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter `json:"teacher_assessment_status_filters"`
-	OrderBy                        *entity.ListAssessmentsOrderBy          `json:"order_by"`
-	Page                           int                                     `json:"page"`
-	PageSize                       int                                     `json:"page_size"`
-}
-
-func (c *QueryAssessmentsCondition) Simple() {
-	c.TeacherIDs = utils.SliceDeduplication(c.TeacherIDs)
-	var newTeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter
-	{
-		statusMap := map[string]*struct {
-			HasStatusInProgress bool
-			HasStatusComplete   bool
-		}{}
-		for _, item := range c.TeacherAssessmentStatusFilters {
-			if statusMap[item.TeacherID] == nil {
-				statusMap[item.TeacherID] = &struct {
-					HasStatusInProgress bool
-					HasStatusComplete   bool
-				}{}
-			}
-			switch item.Status {
-			case entity.AssessmentStatusComplete:
-				statusMap[item.TeacherID].HasStatusComplete = true
-			case entity.AssessmentStatusInProgress:
-				statusMap[item.TeacherID].HasStatusInProgress = true
-			}
-		}
-		for teacherID, status := range statusMap {
-			if status.HasStatusInProgress && status.HasStatusComplete {
-				continue
-			}
-			if !status.HasStatusInProgress && !status.HasStatusComplete {
-				continue
-			}
-			if status.HasStatusComplete {
-				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
-			}
-			if status.HasStatusInProgress {
-				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
-			}
-		}
-	}
-	c.TeacherAssessmentStatusFilters = newTeacherAssessmentStatusFilters
+	Status                          *entity.AssessmentStatus                 `json:"status"`
+	ScheduleIDs                     []string                                 `json:"schedule_ids"`
+	TeacherIDs                      []string                                 `json:"teacher_ids"`
+	AssessmentTeacherAndStatusPairs []*entity.AssessmentTeacherAndStatusPair `json:"assessment_teacher_and_status_pairs"`
+	OrderBy                         *entity.ListAssessmentsOrderBy           `json:"order_by"`
+	Page                            int                                      `json:"page"`
+	PageSize                        int                                      `json:"page_size"`
 }
 
 func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
-	c.Simple()
-
 	var (
 		formats []string
 		values  []interface{}
@@ -184,6 +136,7 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.TeacherIDs != nil {
+		c.TeacherIDs = utils.SliceDeduplication(c.TeacherIDs)
 		if len(c.TeacherIDs) == 0 {
 			return []string{"1 = 2"}, nil
 		}
@@ -199,12 +152,12 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 		values = append(values, partValues...)
 	}
 
-	if len(c.TeacherAssessmentStatusFilters) > 0 {
+	if len(c.AssessmentTeacherAndStatusPairs) > 0 {
 		var (
-			partFormats = make([]string, 0, len(c.TeacherAssessmentStatusFilters))
-			partValues  = make([]interface{}, 0, len(c.TeacherAssessmentStatusFilters)*2)
+			partFormats = make([]string, 0, len(c.AssessmentTeacherAndStatusPairs))
+			partValues  = make([]interface{}, 0, len(c.AssessmentTeacherAndStatusPairs)*2)
 		)
-		for _, item := range c.TeacherAssessmentStatusFilters {
+		for _, item := range c.AssessmentTeacherAndStatusPairs {
 			partFormats = append(partFormats, fmt.Sprintf("(not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?)"))
 			partValues = append(partValues, item.TeacherID, item.TeacherID, string(item.Status))
 		}

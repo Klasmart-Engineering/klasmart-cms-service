@@ -257,7 +257,8 @@ func (a *assessmentModel) GetAssessment(ctx context.Context, tx *dbo.DBContext, 
 }
 
 func (a *assessmentModel) ListAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error) {
-	allowed, err := a.checkAndFilterListByPermissions(ctx, operator, &cmd)
+	filter := NewAssessmentTeacherAndStatusFilter(operator)
+	allowed, err := filter.FilterAll(ctx)
 	if err != nil {
 		log.Error(ctx, "list assessments: check and filter failed by permissions",
 			log.Any("operator", operator),
@@ -268,14 +269,19 @@ func (a *assessmentModel) ListAssessments(ctx context.Context, tx *dbo.DBContext
 	if !allowed {
 		return nil, constant.ErrForbidden
 	}
+	if !filter.CheckStatus(cmd.Status) {
+		return nil, constant.ErrForbidden
+	}
+	cmd.TeacherIDs = append(cmd.TeacherIDs, filter.AllowTeacherIDs()...)
+	cmd.AssessmentTeacherAndStatusPairs = append(cmd.AssessmentTeacherAndStatusPairs, filter.AllowPairs()...)
 
 	cond := da.QueryAssessmentsCondition{
-		Status:                         cmd.Status,
-		TeacherIDs:                     cmd.TeacherIDs,
-		TeacherAssessmentStatusFilters: cmd.TeacherAssessmentStatusFilters,
-		OrderBy:                        cmd.OrderBy,
-		Page:                           cmd.Page,
-		PageSize:                       cmd.PageSize,
+		Status:                          cmd.Status,
+		TeacherIDs:                      cmd.TeacherIDs,
+		AssessmentTeacherAndStatusPairs: cmd.AssessmentTeacherAndStatusPairs,
+		OrderBy:                         cmd.OrderBy,
+		Page:                            cmd.Page,
+		PageSize:                        cmd.PageSize,
 	}
 	{
 		if cmd.TeacherName != nil {
@@ -1025,18 +1031,24 @@ func (a *assessmentModel) existsProgramByID(ctx context.Context, id string) (boo
 	return true, nil
 }
 
-// checkAndFilterListByPermissions check status and filter teacher id list
-func (a *assessmentModel) checkAndFilterListByPermissions(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery) (bool, error) {
-	var (
-		hasStatusComplete   = false
-		hasStatusInProgress = false
-	)
+type AssessmentTeacherAndStatusFilter struct {
+	operator              *entity.Operator
+	allowStatusComplete   bool
+	allowStatusInProgress bool
+	allowTeacherIDs       []string
+	allowPairs            []*entity.AssessmentTeacherAndStatusPair
+}
 
-	ok, err := checkAndFilterListWithOrg(ctx, operator, cmd, &hasStatusComplete, &hasStatusInProgress)
+func NewAssessmentTeacherAndStatusFilter(operator *entity.Operator) *AssessmentTeacherAndStatusFilter {
+	return &AssessmentTeacherAndStatusFilter{operator: operator}
+}
+
+func (f *AssessmentTeacherAndStatusFilter) FilterAll(ctx context.Context) (bool, error) {
+	ok, err := f.FilterOrg(ctx)
 	if err != nil {
-		log.Error(ctx, "check and filter list by permissions: check org permission failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
+		log.Error(ctx, "FilterAll: FilterOrg: check org permission failed",
+			log.Err(err),
+			log.Any("f", f),
 		)
 		return false, err
 	}
@@ -1044,11 +1056,11 @@ func (a *assessmentModel) checkAndFilterListByPermissions(ctx context.Context, o
 		return false, nil
 	}
 
-	ok, err = checkAndFilterListWithSchool(ctx, operator, cmd, &hasStatusComplete, &hasStatusInProgress)
+	ok, err = f.FilterSchool(ctx)
 	if err != nil {
-		log.Error(ctx, "check and filter list by permissions: check school permission ailed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
+		log.Error(ctx, "FilterAll: FilterOrg: check school permission failed",
+			log.Err(err),
+			log.Any("f", f),
 		)
 		return false, err
 	}
@@ -1056,11 +1068,11 @@ func (a *assessmentModel) checkAndFilterListByPermissions(ctx context.Context, o
 		return false, nil
 	}
 
-	ok, err = checkAndFilterListWithSelf(ctx, operator, cmd, &hasStatusComplete, &hasStatusInProgress)
+	ok, err = f.FilterSelf(ctx)
 	if err != nil {
-		log.Error(ctx, "check and filter list by permissions: check self permission failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
+		log.Error(ctx, "FilterAll: FilterSelf: check self permission failed",
+			log.Err(err),
+			log.Any("f", f),
 		)
 		return false, err
 	}
@@ -1068,182 +1080,251 @@ func (a *assessmentModel) checkAndFilterListByPermissions(ctx context.Context, o
 		return false, nil
 	}
 
-	// check user input status filter
-	switch {
-	case hasStatusComplete && !hasStatusInProgress:
-		if cmd.Status != nil && *cmd.Status != entity.AssessmentStatusComplete {
-			return false, nil
+	return true, nil
+}
+
+func (f *AssessmentTeacherAndStatusFilter) FilterOrg(ctx context.Context) (bool, error) {
+	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, f.operator, external.AssessmentViewOrgCompletedAssessments424)
+	if err != nil {
+		log.Error(ctx, "FilterOrg: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 424 failed",
+			log.Err(err),
+			log.Any("f", f),
+		)
+		return false, err
+	}
+
+	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, f.operator, external.AssessmentViewOrgInProgressAssessments425)
+	if err != nil {
+		log.Error(ctx, "FilterOrg: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 425 failed",
+			log.Err(err),
+			log.Any("f", f),
+		)
+		return false, err
+	}
+
+	if hasP424 || hasP425 {
+		teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, f.operator, f.operator.OrgID)
+		if err != nil {
+			log.Error(ctx, "FilterOrg: external.GetTeacherServiceProvider().GetByOrganization: get teachers failed",
+				log.Err(err),
+				log.Any("f", f),
+			)
+			return false, err
 		}
-	case !hasStatusComplete && hasStatusInProgress:
-		if cmd.Status != nil && *cmd.Status != entity.AssessmentStatusInProgress {
-			return false, nil
+		var teacherIDs []string
+		for _, teacher := range teachers {
+			teacherIDs = append(teacherIDs, teacher.ID)
+		}
+		f.allowTeacherIDs = append(f.allowTeacherIDs, teacherIDs...)
+
+		if hasP424 {
+			f.allowStatusComplete = true
+			for _, teacherID := range teacherIDs {
+				f.allowPairs = append(f.allowPairs, &entity.AssessmentTeacherAndStatusPair{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusComplete,
+				})
+			}
+		}
+
+		if hasP425 {
+			f.allowStatusInProgress = true
+			for _, teacherID := range teacherIDs {
+				f.allowPairs = append(f.allowPairs, &entity.AssessmentTeacherAndStatusPair{
+					TeacherID: teacherID,
+					Status:    entity.AssessmentStatusInProgress,
+				})
+			}
 		}
 	}
 
 	return true, nil
 }
 
-func checkAndFilterListWithOrg(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
-	hasP424, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgCompletedAssessments424)
+func (f *AssessmentTeacherAndStatusFilter) FilterSchool(ctx context.Context) (bool, error) {
+	hasP426, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, f.operator, external.AssessmentViewSchoolCompletedAssessments426)
 	if err != nil {
-		log.Error(ctx, "check and filter list with school: check permission 424 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
+		log.Error(ctx, "FilterSchool: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 426 failed",
+			log.Err(err),
+			log.Any("f", f),
 		)
 		return false, err
 	}
-	hasP425, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewOrgInProgressAssessments425)
+
+	hasP427, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, f.operator, external.AssessmentViewSchoolInProgressAssessments427)
 	if err != nil {
-		log.Error(ctx, "check and filter list with school: check permission 425 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
+		log.Error(ctx, "FilterSchool: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 427 failed",
+			log.Err(err),
+			log.Any("f", f),
 		)
 		return false, err
 	}
-	if hasP424 || hasP425 {
+
+	if hasP426 || hasP427 {
+		schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, f.operator)
+		if err != nil {
+			log.Error(ctx, "FilterSchool: external.GetSchoolServiceProvider().GetByOperator: get schools failed",
+				log.Err(err),
+				log.Any("f", f),
+			)
+			return false, err
+		}
+		var schoolIDs []string
+		for _, school := range schools {
+			schoolIDs = append(schoolIDs, school.ID)
+		}
+		schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, f.operator, schoolIDs)
+		if err != nil {
+			log.Error(ctx, "FilterSchool: external.GetTeacherServiceProvider().GetBySchools: get teachers failed",
+				log.Err(err),
+				log.Any("f", f),
+				log.Any("school_ids", schoolIDs),
+			)
+			return false, err
+		}
+
 		var teacherIDs []string
-		{
-			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
-			if err != nil {
-				log.Error(ctx, "check and filter list with school: get teachers failed",
-					log.Any("operator", operator),
-					log.Any("cmd", cmd),
-				)
-				return false, err
-			}
+		for _, teachers := range schoolID2TeachersMap {
 			for _, teacher := range teachers {
 				teacherIDs = append(teacherIDs, teacher.ID)
 			}
 		}
-		cmd.TeacherIDs = append(cmd.TeacherIDs, teacherIDs...)
-
-		if hasP424 {
-			*hasStatusComplete = true
-			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
-			}
-		}
-		if hasP425 {
-			*hasStatusInProgress = true
-			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
-			}
-		}
-	}
-
-	return true, nil
-}
-
-func checkAndFilterListWithSchool(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
-	hasP426, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewSchoolCompletedAssessments426)
-	if err != nil {
-		log.Error(ctx, "heck and filter list with org: check permission 426 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
-		)
-		return false, err
-	}
-	hasP427, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewSchoolInProgressAssessments427)
-	if err != nil {
-		log.Error(ctx, "heck and filter list with org: check permission 427 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
-		)
-		return false, err
-	}
-	if hasP426 || hasP427 {
-		var teacherIDs []string
-		{
-			var schoolIDs []string
-			schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
-			if err != nil {
-				log.Error(ctx, "check and filter list with org: get schools failed",
-					log.Any("operator", operator),
-					log.Any("cmd", cmd),
-				)
-				return false, err
-			}
-			for _, school := range schools {
-				schoolIDs = append(schoolIDs, school.ID)
-			}
-			schoolID2TeachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
-			if err != nil {
-				log.Error(ctx, "check and filter list with org: get teachers failed",
-					log.Any("operator", operator),
-					log.Any("cmd", cmd),
-				)
-				return false, err
-			}
-			for _, teachers := range schoolID2TeachersMap {
-				for _, teacher := range teachers {
-					teacherIDs = append(teacherIDs, teacher.ID)
-				}
-			}
-		}
-		cmd.TeacherIDs = append(cmd.TeacherIDs, teacherIDs...)
+		f.allowTeacherIDs = append(f.allowTeacherIDs, teacherIDs...)
 
 		if hasP426 {
-			*hasStatusComplete = true
-			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+			f.allowStatusComplete = true
+			for _, teacherID := range f.allowTeacherIDs {
+				f.allowPairs = append(f.allowPairs, &entity.AssessmentTeacherAndStatusPair{
 					TeacherID: teacherID,
 					Status:    entity.AssessmentStatusComplete,
 				})
 			}
 		}
+
 		if hasP427 {
-			*hasStatusInProgress = true
+			f.allowStatusInProgress = true
 			for _, teacherID := range teacherIDs {
-				cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
+				f.allowPairs = append(f.allowPairs, &entity.AssessmentTeacherAndStatusPair{
 					TeacherID: teacherID,
 					Status:    entity.AssessmentStatusInProgress,
 				})
 			}
 		}
 	}
+
 	return true, nil
 }
 
-func checkAndFilterListWithSelf(ctx context.Context, operator *entity.Operator, cmd *entity.ListAssessmentsQuery, hasStatusComplete, hasStatusInProgress *bool) (bool, error) {
-	hasP414, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewCompletedAssessments414)
+func (f *AssessmentTeacherAndStatusFilter) FilterSelf(ctx context.Context) (bool, error) {
+	hasP414, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, f.operator, external.AssessmentViewCompletedAssessments414)
 	if err != nil {
-		log.Error(ctx, "check and filter list with self: check permission 414 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
+		log.Error(ctx, "FilterSelf: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 414 failed",
+			log.Err(err),
+			log.Any("f", f),
 		)
 		return false, err
 	}
-	hasP415, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.AssessmentViewInProgressAssessments415)
+	hasP415, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, f.operator, external.AssessmentViewInProgressAssessments415)
 	if err != nil {
-		log.Error(ctx, "check and filter list with self: check permission 415 failed",
-			log.Any("operator", operator),
-			log.Any("cmd", cmd),
+		log.Error(ctx, "FilterSelf: external.GetPermissionServiceProvider().HasOrganizationPermission: check permission 415 failed",
+			log.Err(err),
+			log.Any("f", f),
 		)
 		return false, err
 	}
+
 	if hasP414 || hasP415 {
 		if hasP414 {
-			*hasStatusComplete = true
-			cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-				TeacherID: operator.UserID,
+			f.allowStatusComplete = true
+			f.allowPairs = append(f.allowPairs, &entity.AssessmentTeacherAndStatusPair{
+				TeacherID: f.operator.UserID,
 				Status:    entity.AssessmentStatusComplete,
 			})
 		}
 		if hasP415 {
-			*hasStatusInProgress = true
-			cmd.TeacherAssessmentStatusFilters = append(cmd.TeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-				TeacherID: operator.UserID,
+			f.allowStatusInProgress = true
+			f.allowPairs = append(f.allowPairs, &entity.AssessmentTeacherAndStatusPair{
+				TeacherID: f.operator.UserID,
 				Status:    entity.AssessmentStatusInProgress,
 			})
 		}
-		cmd.TeacherIDs = append(cmd.TeacherIDs, operator.UserID)
+		f.allowTeacherIDs = append(f.allowTeacherIDs, f.operator.UserID)
 	}
 
 	return true, nil
+}
+
+func (f *AssessmentTeacherAndStatusFilter) AllowTeacherIDs() []string {
+	return f.allowTeacherIDs
+}
+
+func (f *AssessmentTeacherAndStatusFilter) AllowPairs() []*entity.AssessmentTeacherAndStatusPair {
+	var result []*entity.AssessmentTeacherAndStatusPair
+
+	m := map[string]*struct {
+		allowStatusInProgress bool
+		allowStatusComplete   bool
+	}{}
+	for _, pair := range f.allowPairs {
+		if m[pair.TeacherID] == nil {
+			m[pair.TeacherID] = &struct {
+				allowStatusInProgress bool
+				allowStatusComplete   bool
+			}{}
+		}
+		switch pair.Status {
+		case entity.AssessmentStatusComplete:
+			m[pair.TeacherID].allowStatusComplete = true
+		case entity.AssessmentStatusInProgress:
+			m[pair.TeacherID].allowStatusInProgress = true
+		}
+	}
+
+	for teacherID, statuses := range m {
+		if statuses.allowStatusInProgress && statuses.allowStatusComplete {
+			continue
+		}
+		if !statuses.allowStatusInProgress && !statuses.allowStatusComplete {
+			continue
+		}
+		if statuses.allowStatusComplete {
+			result = append(result, &entity.AssessmentTeacherAndStatusPair{
+				TeacherID: teacherID,
+				Status:    entity.AssessmentStatusComplete,
+			})
+		}
+		if statuses.allowStatusInProgress {
+			result = append(result, &entity.AssessmentTeacherAndStatusPair{
+				TeacherID: teacherID,
+				Status:    entity.AssessmentStatusInProgress,
+			})
+		}
+	}
+
+	return result
+}
+
+func (f *AssessmentTeacherAndStatusFilter) AllowStatuses() []entity.AssessmentStatus {
+	var result []entity.AssessmentStatus
+	if f.allowStatusInProgress {
+		result = append(result, entity.AssessmentStatusInProgress)
+	}
+	if f.allowStatusComplete {
+		result = append(result, entity.AssessmentStatusComplete)
+	}
+	return result
+}
+
+func (f *AssessmentTeacherAndStatusFilter) CheckStatus(t *entity.AssessmentStatus) bool {
+	// if t equal nil that says user give up check.
+	if t == nil {
+		return true
+	}
+	ss := f.AllowStatuses()
+	for _, s := range ss {
+		if s == *t {
+			return true
+		}
+	}
+	return false
 }
