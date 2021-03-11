@@ -343,8 +343,9 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Link)
 	}
 	if s.NameLike != "" {
-		conditions = append(conditions, "name like ?")
-		params = append(params, s.NameLike+"%")
+		condition := "match(name, description, keywords) against(? in boolean mode)"
+		conditions = append(conditions, condition)
+		params = append(params, s.NameLike)
 	}
 	if s.Name != "" {
 		conditions = append(conditions, "name = ?")

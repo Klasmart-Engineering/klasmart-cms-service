@@ -135,6 +135,8 @@ type CreateFolderRequest struct {
 	ParentID  string          `json:"parent_id"`
 	Name      string          `json:"name"`
 	Partition FolderPartition `json:"partition"`
+	Description string `json:"description"`
+	Keywords []string `json:"keywords"`
 
 	Thumbnail string `json:"thumbnail"`
 }
@@ -150,6 +152,8 @@ type MoveFolderRequest struct {
 type UpdateFolderRequest struct {
 	Name      string `json:"name"`
 	Thumbnail string `json:"thumbnail"`
+	Description string `json:"description"`
+	Keywords []string `json:"keywords"`
 }
 
 type ShareFoldersRequest struct {
@@ -241,6 +245,9 @@ type FolderItem struct {
 	DirPath   Path            `gorm:"type:varchar(2048);NOT NULL;INDEX" json:"dir_path"`
 	Partition FolderPartition `gorm:"type:varchar(256);NOT NULL" json:"partition"`
 	Name      string          `gorm:"type:varchar(256);NOT NULL" json:"name"`
+
+	Description string 	`gorm:"type:text;NOT NULL" json:"description"`
+	Keywords string `gorm:"type:text;NOT NULL" json:"keywords"`
 
 	Thumbnail string `gorm:"type:text" json:"thumbnail"`
 	Creator   string `gorm:"type:varchar(50)" json:"creator"`
