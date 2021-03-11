@@ -834,6 +834,7 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 		return ErrMarshalContentDataFailed
 	}
 	//创建assets
+	//Create assets
 	req := entity.CreateContentRequest{
 		ContentType:   entity.ContentTypeAssets,
 		Name:          content.Name,
@@ -878,6 +879,7 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 		return ErrInvalidContentData
 	}
 	//解析data的fileType
+	//parse data for fileType
 	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{})
 	lessonData, ok := cd.(*LessonData)
 	if !ok {

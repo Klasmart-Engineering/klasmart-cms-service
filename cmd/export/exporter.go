@@ -218,7 +218,7 @@ func (c *ContentExporter) parseResource(ctx context.Context, resource string) (s
 		fmt.Printf("Invalid resource id, resource: %v\n", resourcePairs)
 		return "", "", entity.ErrInvalidResourceId
 	}
-	partition, err := storage.NewStoragePartition(resourcePairs[0], resourcePairs[1])
+	partition, err := storage.NewStoragePartition(ctx, resourcePairs[0], resourcePairs[1])
 	if err != nil {
 		fmt.Printf("Invalid partition name, resource: %v\n", resourcePairs)
 		return "", "", err
