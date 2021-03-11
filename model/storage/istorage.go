@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"io"
 	"mime/multipart"
 	"os"
@@ -16,6 +18,7 @@ import (
 var (
 	ErrInvalidUploadPartition = errors.New("unknown storage partition")
 	ErrInvalidPrivateKeyFile  = errors.New("invalid private key file")
+	ErrInvalidExtensionInPartitionFile  = errors.New("invalid extension in partition")
 )
 
 const (
@@ -39,15 +42,27 @@ func (s StoragePartition) SizeLimit() int64 {
 	return 0
 }
 
-func NewStoragePartition(partition string) (StoragePartition, error) {
+func NewStoragePartition(partition, extension string) (StoragePartition, error) {
 	switch partition {
 	case string(AssetStoragePartition):
+		ret := utils.CheckInStringArray(extension, constant.MaterialsExtension)
+		if !ret {
+			return "", ErrInvalidExtensionInPartitionFile
+		}
 		return AssetStoragePartition, nil
 	case string(ThumbnailStoragePartition):
+		ret := utils.CheckInStringArray(extension, constant.AssetsImageExtension)
+		if !ret {
+			return "", ErrInvalidExtensionInPartitionFile
+		}
 		return ThumbnailStoragePartition, nil
 	case string(ScheduleAttachmentStoragePartition):
 		return ScheduleAttachmentStoragePartition, nil
 	case string(TeacherManualStoragePartition):
+		ret := utils.CheckInStringArray(extension, constant.TeacherManualExtension)
+		if !ret {
+			return "", ErrInvalidExtensionInPartitionFile
+		}
 		return TeacherManualStoragePartition, nil
 	}
 	return "", ErrInvalidUploadPartition
