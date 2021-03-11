@@ -344,8 +344,10 @@ type CreateContentRequest struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
-	TeacherManual     string `json:"teacher_manual"`
-	TeacherManualName string `json:"teacher_manual_name"`
+	//TeacherManual     string `json:"teacher_manual"`
+	//TeacherManualName string `json:"teacher_manual_name"`
+	TeacherManualBatch      []string `json:"teacher_manual_batch"`
+	TeacherManualBatchNames []string `json:"teacher_manual_batch_names"`
 }
 
 func (c *CreateContentRequest) Trim() {
@@ -470,8 +472,8 @@ type ContentInfo struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
-	TeacherManual     string `json:"teacher_manual"`
-	TeacherManualName string `json:"teacher_manual_name"`
+	TeacherManual     []string `json:"teacher_manual"`
+	TeacherManualName []string `json:"teacher_manual_name"`
 
 	Author  string `json:"author"`
 	Creator string `json:"creator"`
@@ -485,8 +487,8 @@ type ContentInfo struct {
 }
 
 type ExtraDataInRequest struct {
-	TeacherManual     string `json:"teacher_manual"`
-	TeacherManualName string `json:"teacher_manual_name"`
+	TeacherManual     []string `json:"teacher_manual"`
+	TeacherManualName []string `json:"teacher_manual_name"`
 }
 
 type ContentData interface {
