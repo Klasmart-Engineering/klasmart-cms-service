@@ -195,13 +195,18 @@ CREATE TABLE `cms_folder_items` (
     `editor` varchar(50) NOT NULL comment 'folder item editor',
     `items_count` int NOT NULL comment 'folder item count',
     `name` varchar(256) NOT NULL comment 'folder item name',
+    `keywords` TEXT NULL COMMENT '关键字',
+    `description` TEXT NULL COMMENT '描述',
     `partition` varchar(256) NOT NULL comment 'folder item partition',
     `thumbnail` text comment 'folder item thumbnail',
     `creator` varchar(50) comment 'folder item creator',
     `create_at` bigint NOT NULL comment 'create time (unix seconds)',
     `update_at` bigint NOT NULL comment 'update time (unix seconds)',
     `delete_at` bigint comment 'delete time (unix seconds)',
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    key `folder_name_index` (`name`),
+    FULLTEXT INDEX `folder_name_description_keywords_author_index` (`name`, `keywords`, `description`)
+
 ) comment 'cms folder' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS  `users` (
