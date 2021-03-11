@@ -116,6 +116,7 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /home_fun_studies/{id}/assess [put]
 func (s *Server) assessHomeFunStudy(c *gin.Context) {
