@@ -33,18 +33,14 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 
 	args := entity.ListHomeFunStudiesArgs{}
 
-	if status := c.Query("status"); status != "" {
-		if status := entity.AssessmentStatus(status); status.Valid() {
-			args.Status = &status
-		}
+	if status := entity.AssessmentStatus(c.Query("status")); status.Valid() {
+		args.Status = &status
 	}
 
 	args.Query = c.Query("query")
 
-	if orderBy := c.Query("order_by"); orderBy != "" {
-		if orderBy := entity.ListHomeFunStudiesOrderBy(orderBy); orderBy.Valid() {
-			args.OrderBy = &orderBy
-		}
+	if orderBy := entity.ListHomeFunStudiesOrderBy(c.Query("order_by")); orderBy.Valid() {
+		args.OrderBy = &orderBy
 	}
 
 	pager := utils.GetDboPager(c.Query("page"), c.Query("page_size"))
