@@ -1435,23 +1435,9 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		}
 		result.Repeat = repeat
 	}
-	conditionGetClass := &da.ScheduleRelationCondition{
-		ScheduleID: sql.NullString{
-			String: schedule.ID,
-			Valid:  true,
-		},
-		RelationType: sql.NullString{
-			String: string(entity.ScheduleRelationTypeClassRosterClass),
-			Valid:  true,
-		},
-	}
-	classRelations, err := GetScheduleRelationModel().Query(ctx, operator, conditionGetClass)
+	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, operator, schedule.ID)
 	if err != nil {
 		return nil, err
-	}
-	var classID string
-	if len(classRelations) > 0 {
-		classID = classRelations[0].RelationID
 	}
 	basicInfo, err := s.getBasicInfo(ctx, operator, []*entity.ScheduleBasicDataInput{
 		&entity.ScheduleBasicDataInput{

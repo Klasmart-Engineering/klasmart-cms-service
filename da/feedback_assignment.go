@@ -65,7 +65,8 @@ func GetFeedbackAssignmentDA() IFeedbackAssignmentDA {
 }
 
 type FeedbackAssignmentCondition struct {
-	FeedBackID sql.NullString
+	FeedBackID  sql.NullString
+	FeedBackIDs entity.NullStrings
 
 	OrderBy FeedbackAssignmentOrderBy
 	Pager   dbo.Pager
@@ -80,6 +81,11 @@ func (c FeedbackAssignmentCondition) GetConditions() ([]string, []interface{}) {
 	if c.FeedBackID.Valid {
 		wheres = append(wheres, "feedback_id = ?")
 		params = append(params, c.FeedBackID.String)
+	}
+
+	if c.FeedBackIDs.Valid {
+		wheres = append(wheres, "feedback_id in (?)")
+		params = append(params, c.FeedBackIDs.Strings)
 	}
 
 	if c.DeleteAt.Valid {

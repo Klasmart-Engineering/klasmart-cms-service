@@ -68,9 +68,29 @@ func (s *scheduleFeedbackModel) Query(ctx context.Context, op *entity.Operator, 
 		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
 		return nil, err
 	}
+	if len(dataList) <= 0 {
+		log.Info(ctx, "query not found", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return []*entity.ScheduleFeedbackView{}, nil
+	}
+	feedbackIDs := make([]string, len(dataList))
 	result := make([]*entity.ScheduleFeedbackView, len(dataList))
 	for i, item := range dataList {
 		result[i] = &entity.ScheduleFeedbackView{ScheduleFeedback: *item}
+		feedbackIDs[i] = item.ID
+	}
+	assignmentCondition := &da.FeedbackAssignmentCondition{
+		FeedBackIDs: entity.NullStrings{
+			Strings: feedbackIDs,
+			Valid:   true,
+		},
+	}
+	assignmentMap, err := GetFeedbackAssignmentModel().QueryMap(ctx, op, assignmentCondition)
+	if err != nil {
+		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("assignmentCondition", assignmentCondition))
+		return nil, err
+	}
+	for _, item := range result {
+		item.Assignments = assignmentMap[item.ID]
 	}
 	return result, nil
 }
@@ -97,6 +117,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 	}
 
 	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		// insert feedback
 		feedback := &entity.ScheduleFeedback{
 			ID:         utils.NewID(),
 			ScheduleID: input.ScheduleID,
@@ -111,6 +132,8 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
 			return "", err
 		}
+
+		// insert feedback assignments
 		assignments := make([]*entity.FeedbackAssignment, len(input.Assignments))
 		for i, item := range input.Assignments {
 			assignments[i] = &entity.FeedbackAssignment{
@@ -129,6 +152,35 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			log.Error(ctx, "feedback assignment insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
 			return "", err
 		}
+
+		// insert homeFunStudy
+		//teacherIDs, err := GetScheduleRelationModel().GetTeacherIDs(ctx, op, input.ScheduleID)
+		//if err != nil {
+		//	return "", err
+		//}
+		//scheduleInfo, err := GetScheduleModel().GetPlainByID(ctx, input.ScheduleID)
+		//if err != nil {
+		//	return "", err
+		//}
+		//classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, input.ScheduleID)
+		//if err != nil {
+		//	return nil, err
+		//}
+		//homeFun := entity.SaveHomeFunStudyArgs{
+		//	ScheduleID:     input.ScheduleID,
+		//	ClassID:        classID,
+		//	LessonName:     scheduleInfo.Title,
+		//	TeacherIDs:     teacherIDs,
+		//	StudentID:      op.UserID,
+		//	DueAt:          scheduleInfo.DueAt,
+		//	LatestSubmitID: feedback.ID,
+		//	LatestSubmitAt: feedback.CreateAt,
+		//}
+		//err = GetHomeFunStudyModel().SaveHomeFunStudy(ctx, op, homeFun)
+		//if err != nil {
+		//	log.Error(ctx, "insert homeFunStudy error", log.Err(err), log.Any("op", op), log.Any("homeFun", homeFun), log.Any("input", input))
+		//	return nil, err
+		//}
 		return feedback.ID, nil
 	})
 	if err != nil {
