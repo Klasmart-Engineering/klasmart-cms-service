@@ -1208,7 +1208,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		return nil, err
 	}
 
-	programMap, err = s.getProgramInfoMapByProgramIDs(ctx, programIDs)
+	programMap, err = s.getProgramInfoMapByProgramIDs(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Strings("programIDs", programIDs))
 		return nil, err
@@ -1326,16 +1326,11 @@ func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjec
 	return subjectMap, nil
 }
 
-func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var programMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(programIDs) != 0 {
 		programIDs = utils.SliceDeduplication(programIDs)
-		programInfos, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
-			IDs: entity.NullStrings{
-				Strings: programIDs,
-				Valid:   len(programIDs) != 0,
-			},
-		})
+		programInfos, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Strings("programIDs", programIDs))
 			return nil, err
@@ -1825,12 +1820,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 	}
 	// program
 	programIDs := []string{v.ProgramID}
-	_, err = GetProgramModel().Query(ctx, &da.ProgramCondition{
-		IDs: entity.NullStrings{
-			Strings: programIDs,
-			Valid:   len(programIDs) != 0,
-		},
-	})
+	_, err = external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "verifyData:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err

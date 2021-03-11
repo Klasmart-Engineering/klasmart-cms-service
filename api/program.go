@@ -1,15 +1,14 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
@@ -25,12 +24,7 @@ import (
 func (s *Server) getProgram(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	result, err := model.GetProgramModel().Query(ctx, &da.ProgramCondition{
-		OrgID: sql.NullString{
-			String: op.OrgID,
-			Valid:  len(op.OrgID) != 0,
-		},
-	})
+	result, err := external.GetProgramServiceProvider().GetByOrganization(ctx, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return

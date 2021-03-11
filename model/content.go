@@ -102,7 +102,7 @@ type IContentModel interface {
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error)
 	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error)
-	
+
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
@@ -1132,7 +1132,6 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		}
 	}
 
-
 	return contentInfoMap, nil
 }
 
@@ -2024,14 +2023,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programs, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
-		IDs: entity.NullStrings{
-			Strings: programIDs,
-			Valid:   len(programIDs) != 0,
-		},
-	})
+	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, user, programIDs)
 	if err != nil {
-		log.Error(ctx, "can't get org info", log.Err(err))
+		log.Error(ctx, "can't get programs", log.Err(err), log.Strings("ids", programIDs))
 	} else {
 		for i := range programs {
 			programNameMap[programs[i].ID] = programs[i].Name
@@ -2268,11 +2262,11 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
 		NameLike:     condition.Name,
-		Name: condition.ContentName,
+		Name:         condition.ContentName,
 		ExactDirPath: dirPath,
 		//Editors:      searchUserIDs,
-		Partition:    partition,
-		Disable:      disableFolder,
+		Partition: partition,
+		Disable:   disableFolder,
 	}
 	return folderCondition
 }

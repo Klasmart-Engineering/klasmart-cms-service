@@ -357,7 +357,7 @@ func (a *assessmentModel) ListAssessments(ctx context.Context, tx *dbo.DBContext
 		return nil, err
 	}
 
-	programNameMap, err := a.getProgramNameMap(ctx, programIDs)
+	programNameMap, err := a.getProgramNameMap(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get program name map failed",
 			log.Err(err),
@@ -413,14 +413,9 @@ func (a *assessmentModel) ListAssessments(ctx context.Context, tx *dbo.DBContext
 	return &result, err
 }
 
-func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []string) (map[string]string, error) {
+func (a *assessmentModel) getProgramNameMap(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]string, error) {
 	programNameMap := map[string]string{}
-	items, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
-		IDs: entity.NullStrings{
-			Strings: programIDs,
-			Valid:   len(programIDs) != 0,
-		},
-	})
+	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get program failed",
 			log.Err(err),
@@ -428,8 +423,8 @@ func (a *assessmentModel) getProgramNameMap(ctx context.Context, programIDs []st
 		)
 		return nil, err
 	}
-	for _, item := range items {
-		programNameMap[item.ID] = item.Name
+	for _, program := range programs {
+		programNameMap[program.ID] = program.Name
 	}
 	return programNameMap, nil
 }
@@ -998,14 +993,9 @@ func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (boo
 	return true, nil
 }
 
-func (a *assessmentModel) existsProgramByID(ctx context.Context, id string) (bool, error) {
+func (a *assessmentModel) existsProgramByID(ctx context.Context, operator *entity.Operator, id string) (bool, error) {
 	ids := []string{id}
-	_, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+	_, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		switch err {
 		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
