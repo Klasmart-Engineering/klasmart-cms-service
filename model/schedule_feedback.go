@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrCannotSubmitFeedback = errors.New("not a student cannot submit feedback")
+	ErrOnlyStudentCanSubmitFeedback = errors.New("only student can submit feedback")
 )
 
 type IScheduleFeedbackModel interface {
@@ -216,7 +216,7 @@ func (s *scheduleFeedbackModel) verifyScheduleFeedback(ctx context.Context, op *
 	}
 	if roleType != entity.ScheduleRoleTypeStudent {
 		log.Info(ctx, "not student", log.String("roleType", string(roleType)), log.Any("op", op), log.Any("input", input))
-		return ErrCannotSubmitFeedback
+		return ErrOnlyStudentCanSubmitFeedback
 	}
 	return nil
 }
