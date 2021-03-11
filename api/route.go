@@ -227,16 +227,6 @@ func (s Server) registeRoute() {
 	programs := s.engine.Group("/v1/programs")
 	{
 		programs.GET("", s.mustLoginWithoutOrgID, s.getProgram)
-		programs.GET("/:id", s.mustLoginWithoutOrgID, s.getProgramByID)
-		programs.POST("", s.mustLoginWithoutOrgID, s.addProgram)
-		programs.PUT("/:id", s.mustLoginWithoutOrgID, s.updateProgram)
-		programs.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteProgram)
-
-		programs.PUT("/:id/ages", s.mustLoginWithoutOrgID, s.SetAge)
-		programs.PUT("/:id/grades", s.mustLoginWithoutOrgID, s.SetGrade)
-		programs.PUT("/:id/subjects", s.mustLoginWithoutOrgID, s.SetSubject)
-		programs.PUT("/:id/developments", s.mustLoginWithoutOrgID, s.SetDevelopmental)
-		programs.PUT("/:id/skills", s.mustLoginWithoutOrgID, s.SetSkill)
 	}
 	skills := s.engine.Group("/v1/skills")
 	{
