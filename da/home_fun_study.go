@@ -30,7 +30,7 @@ type homeFunStudyDA struct {
 type QueryHomeFunStudyCondition struct {
 	OrgID           *string                                  `json:"org_id"`
 	ScheduleID      *string                                  `json:"schedule_id"`
-	TeacherIDs      []string                                 `json:"teacher_ids"`
+	TeacherIDs      utils.SQLJSONStringArray                 `json:"teacher_ids"`
 	StudentIDs      []string                                 `json:"student_ids"`
 	Status          *entity.AssessmentStatus                 `json:"status"`
 	OrderBy         *entity.ListHomeFunStudiesOrderBy        `json:"order_by"`
@@ -78,17 +78,12 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 
 	if len(c.AllowTeacherIDs) > 0 {
 		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
-		if len(allowTeacherIDs) == 0 {
-			return utils.FalsePredicateBuilder().Raw()
-		}
 		pb.Append("json_contains(teacher_ids, json_array(?))", allowTeacherIDs)
 	}
 
-	if len(c.AllowPairs) > 0 {
-		for _, pair := range c.AllowPairs {
-			pb.Append("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
-				pair.TeacherID, pair.TeacherID, string(pair.Status))
-		}
+	for _, pair := range c.AllowPairs {
+		pb.Append("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
+			pair.TeacherID, pair.TeacherID, string(pair.Status))
 	}
 
 	return pb.Raw()
