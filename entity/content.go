@@ -344,7 +344,13 @@ type CreateContentRequest struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
-	TeacherManual     string `json:"teacher_manual"`
+	//TeacherManual     string `json:"teacher_manual"`
+	//TeacherManualName string `json:"teacher_manual_name"`
+	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
+}
+
+type TeacherManualFile struct {
+	TeacherManualSource     string `json:"teacher_manual_source"`
 	TeacherManualName string `json:"teacher_manual_name"`
 }
 
@@ -470,8 +476,9 @@ type ContentInfo struct {
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
 
-	TeacherManual     string `json:"teacher_manual"`
-	TeacherManualName string `json:"teacher_manual_name"`
+	//TeacherManual     []string `json:"teacher_manual"`
+	//TeacherManualName []string `json:"teacher_manual_name"`
+	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
 
 	Author  string `json:"author"`
 	Creator string `json:"creator"`
@@ -485,8 +492,7 @@ type ContentInfo struct {
 }
 
 type ExtraDataInRequest struct {
-	TeacherManual     string `json:"teacher_manual"`
-	TeacherManualName string `json:"teacher_manual_name"`
+	TeacherManualBatch     []*TeacherManualFile `json:"teacher_manual_batch"`
 }
 
 type ContentData interface {
