@@ -9,3 +9,7 @@ type OrganizationRegion struct {
 	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at"`
 	DeleteAt int64 `gorm:"type:bigint;column:delete_at"`
 }
+
+func (OrganizationRegion) TableName() string{
+	return "organization_regions"
+}
