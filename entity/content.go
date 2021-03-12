@@ -479,7 +479,6 @@ type ContentInfo struct {
 	//TeacherManual     []string `json:"teacher_manual"`
 	//TeacherManualName []string `json:"teacher_manual_name"`
 	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
-
 	Author  string `json:"author"`
 	Creator string `json:"creator"`
 	Org     string `json:"org"`

@@ -71,7 +71,8 @@ func (s Server) registeRoute() {
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)
 
 		content.GET("/contents_resources", s.mustLogin, s.getUploadPath)
-		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getPath)
+		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
+		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 	}
 	h5pEvents := s.engine.Group("/v1")
