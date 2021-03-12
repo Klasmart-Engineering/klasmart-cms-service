@@ -40,6 +40,8 @@ var (
 	ErrMoveToSameFolder       = errors.New("move to same folder")
 	ErrItemNotFound           = errors.New("item not found")
 
+	ErrShareToUnsupportedRegion = errors.New("share to unsupported region")
+
 	ErrSearchSharedFolderFailed = errors.New("search shared folder failed")
 )
 
@@ -169,7 +171,34 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 	}
 	return result, nil
 }
+
+func (f *FolderModel) checkHeadquarterRegionOrganizations(ctx context.Context, orgIDs []string, operator *entity.Operator) error{
+	regionOrgIDs, err := GetOrganizationRegionModel().GetOrganizationByHeadquarter(ctx, dbo.MustGetDB(ctx), operator.OrgID)
+	if err != nil{
+		return err
+	}
+	regionOrgMap := make(map[string]bool)
+	for i := range regionOrgIDs {
+		regionOrgMap[regionOrgIDs[i]] = true
+	}
+	for i := range orgIDs {
+		_, ok := regionOrgMap[orgIDs[i]]
+		if !ok {
+			log.Error(ctx, "Share to unsupported region",
+				log.Err(err),
+				log.Strings("orgIDs", orgIDs),
+				log.Strings("regionOrgIDs", regionOrgIDs),
+				log.Any("operator", operator))
+			return ErrShareToUnsupportedRegion
+		}
+	}
+
+	return nil
+}
 func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error {
+	//0.check headquarter region
+	//f.checkHeadquarterRegionOrganizations(ctx, req.OrgIDs, operator)
+
 	//1.Get folder & check folder exists
 	folderIDs := utils.SliceDeduplication(req.FolderIDs)
 	orgIDs := utils.SliceDeduplication(req.OrgIDs)
