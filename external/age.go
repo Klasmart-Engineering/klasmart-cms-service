@@ -37,7 +37,7 @@ func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, 
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: age(id: \"%s\") {id name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: age_range(id: \"%s\") {id name}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -73,7 +73,7 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
-			ages {
+			age_ranges {
 				id
 				name
 			}			
@@ -83,7 +83,7 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 
 	data := &struct {
 		Program struct {
-			Ages []*Age `json:"ages"`
+			Ages []*Age `json:"age_ranges"`
 		} `json:"program"`
 	}{}
 
