@@ -11,7 +11,9 @@ type UploadPathResponse struct {
 	Path string `json:"path"`
 	ResourceId string `json:"resource_id"`
 }
-
+type DownloadPathResource struct {
+	Path string `json:"path"`
+}
 // @Summary getContentResourceUploadPath
 // @ID getContentResourceUploadPath
 // @Description get path to upload resource
