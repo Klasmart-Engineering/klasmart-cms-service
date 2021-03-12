@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,6 +12,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 	"time"
+)
+
+var (
+	ErrOnlyStudentCanSubmitFeedback = errors.New("only student can submit feedback")
 )
 
 type IScheduleFeedbackModel interface {
@@ -203,6 +208,15 @@ func (s *scheduleFeedbackModel) verifyScheduleFeedback(ctx context.Context, op *
 	if !exist {
 		log.Info(ctx, "schedule id not found", log.Any("op", op), log.Any("input", input))
 		return constant.ErrRecordNotFound
+	}
+	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, op, input.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "get relation type error", log.Any("op", op), log.Any("input", input), log.Err(err))
+		return err
+	}
+	if roleType != entity.ScheduleRoleTypeStudent {
+		log.Info(ctx, "not student", log.String("roleType", string(roleType)), log.Any("op", op), log.Any("input", input))
+		return ErrOnlyStudentCanSubmitFeedback
 	}
 	return nil
 }

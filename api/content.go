@@ -283,8 +283,10 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return model.GetContentModel().PublishContentWithAssets(ctx, tx, cid, data.Scope, op)
+	})
 
-	err = model.GetContentModel().PublishContentWithAssets(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
