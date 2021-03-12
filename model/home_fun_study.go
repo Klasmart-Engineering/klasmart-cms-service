@@ -223,6 +223,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 
 	return &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
+		ScheduleID:       study.ScheduleID,
 		Title:            study.Title,
 		TeacherNames:     teacherNames,
 		StudentName:      studentName,

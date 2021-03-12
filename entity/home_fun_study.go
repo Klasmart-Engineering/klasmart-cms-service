@@ -106,6 +106,7 @@ type ListHomeFunStudiesResultItem struct {
 
 type GetHomeFunStudyResult struct {
 	ID               string                  `json:"id"`
+	ScheduleID       string                  `json:"schedule_id"`
 	Title            string                  `json:"title"`
 	TeacherNames     []string                `json:"teacher_names"`
 	StudentName      string                  `json:"student_name"`
