@@ -7,14 +7,14 @@ import (
 )
 
 type Mapper interface {
-	Program(ctx context.Context, organizationID, programID string, operator *entity.Operator) (string, error)
-	Subject(ctx context.Context, organizationID, programID, subjectID string, operator *entity.Operator) (string, error)
+	Program(ctx context.Context, organizationID, programID string) (string, error)
+	Subject(ctx context.Context, organizationID, programID, subjectID string) (string, error)
 	// developmental
-	Category(ctx context.Context, organizationID, programID, categoryID string, operator *entity.Operator) (string, error)
+	Category(ctx context.Context, organizationID, programID, categoryID string) (string, error)
 	// skills
-	SubCategory(ctx context.Context, organizationID, programID, categoryID, subCategoryID string, operator *entity.Operator) (string, error)
-	Age(ctx context.Context, organizationID, programID, AgeID string, operator *entity.Operator) (string, error)
-	Grade(ctx context.Context, organizationID, programID, gradeID string, operator *entity.Operator) (string, error)
+	SubCategory(ctx context.Context, organizationID, programID, categoryID, subCategoryID string) (string, error)
+	Age(ctx context.Context, organizationID, programID, AgeID string) (string, error)
+	Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error)
 }
 
 func NewMapper(operator *entity.Operator) Mapper {
@@ -24,32 +24,32 @@ func NewMapper(operator *entity.Operator) Mapper {
 
 type MapperImpl struct{}
 
-func (s MapperImpl) Program(ctx context.Context, organizationID, programID string, operator *entity.Operator) (string, error) {
+func (s MapperImpl) Program(ctx context.Context, organizationID, programID string) (string, error) {
 	// TODO
 	return "", nil
 }
 
-func (s MapperImpl) Subject(ctx context.Context, organizationID, programID, subjectID string, operator *entity.Operator) (string, error) {
+func (s MapperImpl) Subject(ctx context.Context, organizationID, programID, subjectID string) (string, error) {
 	// TODO
 	return "", nil
 }
 
-func (s MapperImpl) Category(ctx context.Context, organizationID, programID, categoryID string, operator *entity.Operator) (string, error) {
+func (s MapperImpl) Category(ctx context.Context, organizationID, programID, categoryID string) (string, error) {
 	// TODO
 	return "", nil
 }
 
-func (s MapperImpl) SubCategory(ctx context.Context, organizationID, programID, categoryID, subCategoryID string, operator *entity.Operator) (string, error) {
+func (s MapperImpl) SubCategory(ctx context.Context, organizationID, programID, categoryID, subCategoryID string) (string, error) {
 	// TODO
 	return "", nil
 }
 
-func (s MapperImpl) Age(ctx context.Context, organizationID, programID, AgeID string, operator *entity.Operator) (string, error) {
+func (s MapperImpl) Age(ctx context.Context, organizationID, programID, AgeID string) (string, error) {
 	// TODO
 	return "", nil
 }
 
-func (s MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string, operator *entity.Operator) (string, error) {
+func (s MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
 	// TODO
 	return "", nil
 }
