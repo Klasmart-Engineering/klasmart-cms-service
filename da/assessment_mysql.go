@@ -2,10 +2,8 @@ package da
 
 import (
 	"context"
-	"fmt"
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"strings"
 	"sync"
 	"time"
 
@@ -113,114 +111,55 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 }
 
 type QueryAssessmentsCondition struct {
-	Status                         *entity.AssessmentStatus                `json:"status"`
-	ScheduleIDs                    []string                                `json:"schedule_ids"`
-	TeacherIDs                     []string                                `json:"teacher_ids"`
-	TeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter `json:"teacher_assessment_status_filters"`
-	OrderBy                        *entity.ListAssessmentsOrderBy          `json:"order_by"`
-	Page                           int                                     `json:"page"`
-	PageSize                       int                                     `json:"page_size"`
-}
-
-func (c *QueryAssessmentsCondition) Simple() {
-	c.TeacherIDs = utils.SliceDeduplication(c.TeacherIDs)
-	var newTeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter
-	{
-		statusMap := map[string]*struct {
-			HasStatusInProgress bool
-			HasStatusComplete   bool
-		}{}
-		for _, item := range c.TeacherAssessmentStatusFilters {
-			if statusMap[item.TeacherID] == nil {
-				statusMap[item.TeacherID] = &struct {
-					HasStatusInProgress bool
-					HasStatusComplete   bool
-				}{}
-			}
-			switch item.Status {
-			case entity.AssessmentStatusComplete:
-				statusMap[item.TeacherID].HasStatusComplete = true
-			case entity.AssessmentStatusInProgress:
-				statusMap[item.TeacherID].HasStatusInProgress = true
-			}
-		}
-		for teacherID, status := range statusMap {
-			if status.HasStatusInProgress && status.HasStatusComplete {
-				continue
-			}
-			if !status.HasStatusInProgress && !status.HasStatusComplete {
-				continue
-			}
-			if status.HasStatusComplete {
-				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
-			}
-			if status.HasStatusInProgress {
-				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
-			}
-		}
-	}
-	c.TeacherAssessmentStatusFilters = newTeacherAssessmentStatusFilters
+	OrgID                           *string                                  `json:"org_id"`
+	Status                          *entity.AssessmentStatus                 `json:"status"`
+	ScheduleIDs                     []string                                 `json:"schedule_ids"`
+	TeacherIDs                      []string                                 `json:"teacher_ids"`
+	AssessmentTeacherAndStatusPairs []*entity.AssessmentTeacherAndStatusPair `json:"assessment_teacher_and_status_pairs"`
+	OrderBy                         *entity.ListAssessmentsOrderBy           `json:"order_by"`
+	Page                            int                                      `json:"page"`
+	PageSize                        int                                      `json:"page_size"`
 }
 
 func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
-	c.Simple()
+	pb := utils.NewPredicateBuilder().Append("delete_at = 0")
 
-	var (
-		formats []string
-		values  []interface{}
-	)
-
-	formats = append(formats, "delete_at = 0")
+	if c.OrgID != nil {
+		pb.Append("exists (select 1 from schedules"+
+			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
+	}
 
 	if c.Status != nil {
-		formats = append(formats, "status = ?")
-		values = append(values, *c.Status)
+		pb.Append("status = ?", *c.Status)
 	}
 
 	if c.TeacherIDs != nil {
+		c.TeacherIDs = utils.SliceDeduplication(c.TeacherIDs)
 		if len(c.TeacherIDs) == 0 {
-			return []string{"1 = 2"}, nil
+			return utils.FalsePredicateBuilder().Raw()
 		}
-		var (
-			partFormats = make([]string, 0, len(c.TeacherIDs))
-			partValues  = make([]interface{}, 0, len(c.TeacherIDs))
-		)
+		tmpPB := utils.NewPredicateBuilder()
 		for _, teacherID := range c.TeacherIDs {
-			partFormats = append(partFormats, fmt.Sprintf("json_contains(teacher_ids, json_array(?))"))
-			partValues = append(partValues, teacherID)
+			tmpPB.Append("json_contains(teacher_ids, json_array(?))", teacherID)
 		}
-		formats = append(formats, "("+strings.Join(partFormats, " or ")+")")
-		values = append(values, partValues...)
+		pb.Merge(tmpPB.Or())
 	}
 
-	if len(c.TeacherAssessmentStatusFilters) > 0 {
-		var (
-			partFormats = make([]string, 0, len(c.TeacherAssessmentStatusFilters))
-			partValues  = make([]interface{}, 0, len(c.TeacherAssessmentStatusFilters)*2)
-		)
-		for _, item := range c.TeacherAssessmentStatusFilters {
-			partFormats = append(partFormats, fmt.Sprintf("(not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?)"))
-			partValues = append(partValues, item.TeacherID, item.TeacherID, string(item.Status))
+	if len(c.AssessmentTeacherAndStatusPairs) > 0 {
+		for _, item := range c.AssessmentTeacherAndStatusPairs {
+			pb.Append("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
+				item.TeacherID, item.TeacherID, string(item.Status))
 		}
-		formats = append(formats, "("+strings.Join(partFormats, " and ")+")")
-		values = append(values, partValues...)
 	}
 
 	if c.ScheduleIDs != nil {
 		if len(c.ScheduleIDs) == 0 {
-			return []string{"1 = 2"}, nil
+			return utils.FalsePredicateBuilder().Raw()
 		}
-		formats = append(formats, "schedule_id in (?)")
-		values = append(values, c.ScheduleIDs)
+		pb.Append("schedule_id in (?)", c.ScheduleIDs)
 	}
 
-	return formats, values
+	return pb.Raw()
 }
 
 func (c *QueryAssessmentsCondition) GetPager() *dbo.Pager {

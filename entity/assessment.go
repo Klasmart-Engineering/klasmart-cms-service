@@ -122,16 +122,16 @@ type AssessmentTeacher struct {
 }
 
 type ListAssessmentsQuery struct {
-	Status                         *AssessmentStatus                `json:"status"`
-	TeacherIDs                     []string                         `json:"teacher_ids"`
-	TeacherName                    *string                          `json:"teacher_name"`
-	OrderBy                        *ListAssessmentsOrderBy          `json:"order_by"`
-	Page                           int                              `json:"page"`
-	PageSize                       int                              `json:"page_size"`
-	TeacherAssessmentStatusFilters []*TeacherAssessmentStatusFilter `json:"teacher_assessment_status_filters"`
+	Status                          *AssessmentStatus                 `json:"status"`
+	TeacherIDs                      []string                          `json:"teacher_ids"`
+	TeacherName                     *string                           `json:"teacher_name"`
+	OrderBy                         *ListAssessmentsOrderBy           `json:"order_by"`
+	Page                            int                               `json:"page"`
+	PageSize                        int                               `json:"page_size"`
+	AssessmentTeacherAndStatusPairs []*AssessmentTeacherAndStatusPair `json:"assessment_teacher_and_status_pairs"`
 }
 
-type TeacherAssessmentStatusFilter struct {
+type AssessmentTeacherAndStatusPair struct {
 	TeacherID string           `json:"teacher_id"`
 	Status    AssessmentStatus `json:"status"`
 }
