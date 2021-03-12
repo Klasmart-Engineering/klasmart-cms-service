@@ -159,33 +159,33 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		}
 
 		// insert homeFunStudy
-		//teacherIDs, err := GetScheduleRelationModel().GetTeacherIDs(ctx, op, input.ScheduleID)
-		//if err != nil {
-		//	return "", err
-		//}
-		//scheduleInfo, err := GetScheduleModel().GetPlainByID(ctx, input.ScheduleID)
-		//if err != nil {
-		//	return "", err
-		//}
-		//classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, input.ScheduleID)
-		//if err != nil {
-		//	return nil, err
-		//}
-		//homeFun := entity.SaveHomeFunStudyArgs{
-		//	ScheduleID:     input.ScheduleID,
-		//	ClassID:        classID,
-		//	LessonName:     scheduleInfo.Title,
-		//	TeacherIDs:     teacherIDs,
-		//	StudentID:      op.UserID,
-		//	DueAt:          scheduleInfo.DueAt,
-		//	LatestSubmitID: feedback.ID,
-		//	LatestSubmitAt: feedback.CreateAt,
-		//}
-		//err = GetHomeFunStudyModel().SaveHomeFunStudy(ctx, op, homeFun)
-		//if err != nil {
-		//	log.Error(ctx, "insert homeFunStudy error", log.Err(err), log.Any("op", op), log.Any("homeFun", homeFun), log.Any("input", input))
-		//	return nil, err
-		//}
+		teacherIDs, err := GetScheduleRelationModel().GetTeacherIDs(ctx, op, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		scheduleInfo, err := GetScheduleModel().GetPlainByID(ctx, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		homeFun := entity.SaveHomeFunStudyArgs{
+			ScheduleID:       input.ScheduleID,
+			ClassID:          classID,
+			LessonName:       scheduleInfo.Title,
+			TeacherIDs:       teacherIDs,
+			StudentID:        op.UserID,
+			DueAt:            scheduleInfo.DueAt,
+			LatestFeedbackID: feedback.ID,
+			LatestFeedbackAt: feedback.CreateAt,
+		}
+		err = GetHomeFunStudyModel().Save(ctx, tx, op, homeFun)
+		if err != nil {
+			log.Error(ctx, "insert homeFunStudy error", log.Err(err), log.Any("op", op), log.Any("homeFun", homeFun), log.Any("input", input))
+			return "", err
+		}
 		return feedback.ID, nil
 	})
 	if err != nil {
