@@ -508,6 +508,7 @@ type ScheduleVerify struct {
 	ProgramID    string
 	LessonPlanID string
 	ClassType    ScheduleClassType
+	IsHomeFun    bool
 }
 
 // ScheduleEditType include delete and edit

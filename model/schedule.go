@@ -625,6 +625,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		ProgramID:    viewData.ProgramID,
 		LessonPlanID: viewData.LessonPlanID,
 		ClassType:    viewData.ClassType,
+		IsHomeFun:    viewData.IsHomeFun,
 	})
 	if err != nil {
 		log.Error(ctx, "add schedule: verify data error",
@@ -798,6 +799,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		ProgramID:    viewData.ProgramID,
 		LessonPlanID: viewData.LessonPlanID,
 		ClassType:    viewData.ClassType,
+		IsHomeFun:    viewData.IsHomeFun,
 	})
 	if err != nil {
 		log.Error(ctx, "update schedule: verify data error",
@@ -1835,7 +1837,9 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		log.Error(ctx, "verifyData:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-
+	if v.IsHomeFun {
+		return nil
+	}
 	// verify lessPlan type
 	lessonPlanInfo, err := GetContentModel().GetContentNameByID(ctx, dbo.MustGetDB(ctx), v.LessonPlanID)
 	if err != nil {
