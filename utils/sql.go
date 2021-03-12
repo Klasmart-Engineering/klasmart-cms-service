@@ -7,11 +7,11 @@ import (
 
 type SQLJSONStringArray []string
 
-func (a *SQLJSONStringArray) Value() (driver.Value, error) {
+func (a SQLJSONStringArray) Value() (driver.Value, error) {
 	if a == nil {
 		return []byte("[]"), nil
 	}
-	return json.Marshal(*a)
+	return json.Marshal(a)
 }
 
 func (a *SQLJSONStringArray) Scan(src interface{}) error {
