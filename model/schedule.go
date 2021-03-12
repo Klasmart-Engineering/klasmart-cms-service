@@ -2134,7 +2134,7 @@ func (s *scheduleModel) GetByIDs(ctx context.Context, op *entity.Operator, ids [
 	}
 	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
 	if err != nil {
-		log.Error(ctx, "get by ids error", log.Strings("ids", ids))
+		log.Error(ctx, "get by ids error!", log.Strings("ids", ids))
 		return nil, err
 	}
 	result := make([]*entity.SchedulePlain, len(scheduleList))
