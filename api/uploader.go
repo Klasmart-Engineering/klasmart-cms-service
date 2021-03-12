@@ -59,7 +59,7 @@ func (s *Server) getUploadPath(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Failure 400 {object} BadRequestResponse
 // @Router /contents_resources/{resource_id} [get]
-func (s *Server) getPath(c *gin.Context) {
+func (s *Server) getContentResourcePath(c *gin.Context) {
 	ctx := c.Request.Context()
 	resourceId := c.Param("resource_id")
 
@@ -75,6 +75,41 @@ func (s *Server) getPath(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.Redirect(http.StatusFound, path)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+
+// @Summary getDownloadPath
+// @ID getDownloadPath
+// @Description get the path of a resource url
+// @Accept json
+// @Produce json
+// @Param resource_id path string true "Resource id"
+// @Tags content
+// @Success 200 {object} DownloadPathResource
+// @Failure 500 {object} InternalServerErrorResponse
+// @Failure 400 {object} BadRequestResponse
+// @Router /contents_resources/{resource_id}/download [get]
+func (s *Server) getDownloadPath(c *gin.Context) {
+	ctx := c.Request.Context()
+	resourceId := c.Param("resource_id")
+
+	if resourceId == "" {
+		c.JSON(http.StatusBadRequest, responseMsg("resourceId is required"))
+		return
+	}
+	path, err := model.GetResourceUploaderModel().GetResourcePath(ctx, resourceId)
+	switch err {
+	case model.ErrInvalidResourceID:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidUploadPartition:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, DownloadPathResource{
+			Path: path,
+		})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
