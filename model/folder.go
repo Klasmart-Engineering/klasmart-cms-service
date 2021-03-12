@@ -43,6 +43,9 @@ var (
 	ErrShareToUnsupportedRegion = errors.New("share to unsupported region")
 
 	ErrSearchSharedFolderFailed = errors.New("search shared folder failed")
+
+	ErrNotHeadquartersShare     = errors.New("not headquarters share folder")
+	ErrUnknownHeadquarterRegion = errors.New("unknown headquarter region")
 )
 
 type DescendantItemsAndLinkItems struct {
@@ -172,9 +175,36 @@ func (f *FolderModel) GetFoldersSharedRecords(ctx context.Context, fids []string
 	return result, nil
 }
 
-func (f *FolderModel) checkHeadquarterRegionOrganizations(ctx context.Context, orgIDs []string, operator *entity.Operator) error{
+func (f *FolderModel) checkHeadquarterRegionOrganizations(ctx context.Context, orgIDs []string, operator *entity.Operator) error {
+	orgProperty, err := GetOrganizationPropertyModel().MustGet(ctx, operator.OrgID)
+	if err != nil {
+		log.Error(ctx, "Get organization properties failed",
+			log.Err(err),
+			log.Strings("orgIDs", orgIDs),
+			log.Any("operator", operator))
+		return err
+	}
+	if orgProperty.Type != entity.OrganizationTypeHeadquarters {
+		log.Warn(ctx, "Org is not headquarters",
+			log.Strings("orgIDs", orgIDs),
+			log.Any("orgProperty", orgProperty),
+			log.Any("operator", operator))
+		return ErrNotHeadquartersShare
+	}
+	if orgProperty.Region == entity.UnknownRegion {
+		//unknown org order
+		log.Warn(ctx, "unknown region",
+			log.Strings("orgIDs", orgIDs),
+			log.Any("orgProperty", orgProperty),
+			log.Any("operator", operator))
+		return ErrUnknownHeadquarterRegion
+	} else if orgProperty.Region == entity.Global {
+		//global headquarters can share to any org
+		return nil
+	}
+
 	regionOrgIDs, err := GetOrganizationRegionModel().GetOrganizationByHeadquarter(ctx, dbo.MustGetDB(ctx), operator.OrgID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	regionOrgMap := make(map[string]bool)
@@ -197,7 +227,10 @@ func (f *FolderModel) checkHeadquarterRegionOrganizations(ctx context.Context, o
 }
 func (f *FolderModel) ShareFolders(ctx context.Context, req entity.ShareFoldersRequest, operator *entity.Operator) error {
 	//0.check headquarter region
-	//f.checkHeadquarterRegionOrganizations(ctx, req.OrgIDs, operator)
+	err := f.checkHeadquarterRegionOrganizations(ctx, req.OrgIDs, operator)
+	if err != nil {
+		return err
+	}
 
 	//1.Get folder & check folder exists
 	folderIDs := utils.SliceDeduplication(req.FolderIDs)
@@ -501,7 +534,7 @@ func (f *FolderModel) checkOrgs(ctx context.Context, orgIDs []string, operator *
 	for i := range orgIDs {
 		if orgIDs[i] != constant.ShareToAll {
 			validOrgs = append(validOrgs, orgIDs[i])
-		}else{
+		} else {
 			hasShareAll = true
 		}
 	}
@@ -515,7 +548,7 @@ func (f *FolderModel) checkOrgs(ctx context.Context, orgIDs []string, operator *
 	}
 	//check if all orgs are exist
 	orgsMap := make(map[string]bool)
-	if hasShareAll{
+	if hasShareAll {
 		orgsMap[constant.ShareToAll] = true
 	}
 	for i := range orgs {
