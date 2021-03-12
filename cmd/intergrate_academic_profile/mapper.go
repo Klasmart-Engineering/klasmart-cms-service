@@ -2,7 +2,6 @@ package intergrate_academic_profile
 
 import (
 	"context"
-
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -30,11 +29,6 @@ func (s MapperImpl) Program(ctx context.Context, organizationID, programID strin
 }
 
 func (s MapperImpl) Subject(ctx context.Context, organizationID, programID, subjectID string) (string, error) {
-	// TODO
-	return "", nil
-}
-
-func (s MapperImpl) Category(ctx context.Context, organizationID, programID, categoryID string) (string, error) {
 	// TODO
 	return "", nil
 }
