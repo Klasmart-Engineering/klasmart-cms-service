@@ -9,15 +9,12 @@ import (
 )
 
 type OrganizationRegionInfoResponse struct {
-	Orgs []*entity.OrganizationInfo `json:"orgs"`
+	Orgs []*entity.RegionOrganizationInfo `json:"orgs"`
 }
 
 // @Summary getOrganizationByHeadquarterForDetails
 // @ID getOrganizationByHeadquarterForDetails
 // @Description get organization region by user org
-// @Accept json
-// @Produce json
-// @Param id path string true "organization id"
 // @Tags organizationProperty
 // @Success 200 {object} OrganizationRegionInfoResponse
 // @Failure 500 {object} InternalServerErrorResponse

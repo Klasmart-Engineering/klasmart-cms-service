@@ -12,7 +12,7 @@ import (
 
 type IOrganizationRegion interface{
 	GetOrganizationByHeadquarter(ctx context.Context, db *dbo.DBContext, headquarterID string) ([]string, error)
-	GetOrganizationByHeadquarterForDetails(ctx context.Context, db *dbo.DBContext, operator *entity.Operator) ([]*entity.OrganizationInfo, error)
+	GetOrganizationByHeadquarterForDetails(ctx context.Context, db *dbo.DBContext, operator *entity.Operator) ([]*entity.RegionOrganizationInfo, error)
 }
 
 type OrganizationRegion struct {
@@ -31,7 +31,7 @@ func (o *OrganizationRegion) GetOrganizationByHeadquarter(ctx context.Context, d
 	}
 	return orgIDs, nil
 }
-func (o *OrganizationRegion) GetOrganizationByHeadquarterForDetails(ctx context.Context, db *dbo.DBContext, operator *entity.Operator) ([]*entity.OrganizationInfo, error) {
+func (o *OrganizationRegion) GetOrganizationByHeadquarterForDetails(ctx context.Context, db *dbo.DBContext, operator *entity.Operator) ([]*entity.RegionOrganizationInfo, error) {
 	oids, err := o.GetOrganizationByHeadquarter(ctx, db, operator.OrgID)
 	if err != nil{
 		return nil, err
@@ -43,9 +43,9 @@ func (o *OrganizationRegion) GetOrganizationByHeadquarterForDetails(ctx context.
 			log.Strings("oids", oids))
 		return nil, err
 	}
-	list := make([]*entity.OrganizationInfo, len(orgs))
+	list := make([]*entity.RegionOrganizationInfo, len(orgs))
 	for i := range orgs {
-		list[i] = &entity.OrganizationInfo{
+		list[i] = &entity.RegionOrganizationInfo{
 			ID:   orgs[i].ID,
 			Name: orgs[i].Name,
 		}

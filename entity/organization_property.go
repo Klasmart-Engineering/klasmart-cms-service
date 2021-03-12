@@ -17,6 +17,11 @@ func (OrganizationProperty) TableName() string {
 	return constant.TableNameOrganizationProperty
 }
 
+type RegionOrganizationInfo struct {
+	ID   string `json:"organization_id"`
+	Name string `json:"organization_name"`
+}
+
 type OrganizationType string
 
 const (
