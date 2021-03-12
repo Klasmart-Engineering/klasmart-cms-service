@@ -1069,7 +1069,7 @@ func (s *Server) updateScheduleShowOption(c *gin.Context) {
 // @Produce json
 // @Param schedule_id path string true "schedule id"
 // @Tags schedule
-// @Success 200 {object} IDResponse
+// @Success 200 {object} entity.ScheduleFeedbackView
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules/{schedule_id}/operator/newest_feedback [get]

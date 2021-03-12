@@ -109,7 +109,7 @@ func (s Server) registeRoute() {
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
-		scheduleFeedback.POST("/", s.mustLogin, s.addScheduleFeedback)
+		scheduleFeedback.POST("", s.mustLogin, s.addScheduleFeedback)
 	}
 
 	assessments := s.engine.Group("/v1")

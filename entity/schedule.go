@@ -440,7 +440,7 @@ type ScheduleDetailsView struct {
 	ParticipantsStudents []*ScheduleAccessibleUserView `json:"participants_students"`
 	IsHidden             bool                          `json:"is_hidden"`
 	IsHomeFun            bool                          `json:"is_home_fun"`
-	RoleType             ScheduleRoleType              `json:"role_type"`
+	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
 }
 
 type ScheduleRoleType string
