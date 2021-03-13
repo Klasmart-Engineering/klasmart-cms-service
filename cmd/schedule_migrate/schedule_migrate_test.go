@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"testing"
 )
 
 func TestAMS(t *testing.T) {
@@ -36,7 +37,7 @@ func TestAMS(t *testing.T) {
 }
 
 func TestDB(t *testing.T) {
-	dsn := "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
 	option := dbo.WithConnectionString(dsn)
 	newDBO, err := dbo.NewWithConfig(option)
 	if err != nil {
