@@ -28,7 +28,12 @@ func NewMapper(operator *entity.Operator) Mapper {
 
 	err := impl.initProgramMapper(ctx)
 	if err != nil {
-		log.Fatal(ctx, "init program mapping failed", log.Err(err))
+		log.Panic(ctx, "init program mapping failed", log.Err(err))
+	}
+
+	err = impl.initSubjectMapper(ctx)
+	if err != nil {
+		log.Panic(ctx, "init subject mapping failed", log.Err(err))
 	}
 
 	return impl
@@ -37,7 +42,7 @@ func NewMapper(operator *entity.Operator) Mapper {
 type MapperImpl struct {
 	operator *entity.Operator
 
-	amsProgramMutex sync.Mutex
+	programMutex sync.Mutex
 	// key: ams program name
 	amsPrograms map[string]*external.Program
 	// key: our program id
@@ -46,8 +51,18 @@ type MapperImpl struct {
 	// value: ams program id
 	programMapping map[string]string
 
-	MapperAge   MapperAge
-	MapperGrade MapperGrade
+	MapperAge      MapperAge
+	MapperGrade    MapperGrade
+	MapperCategory MapperCategory
+
+	subjectMutex sync.Mutex
+	// key: {ams program id}:{ams subject name}
+	amsSubjects map[string]*external.Subject
+	// key: our subject id
+	ourSubjects map[string]*entity.Subject
+	// key:  {our program id}:{our subject id}
+	// value: ams subject id
+	subjectMapping map[string]string
 }
 type MapperAge struct {
 	amsAgeMutex sync.Mutex
@@ -67,17 +82,26 @@ type MapperGrade struct {
 	amsGradeMutex sync.Mutex
 
 	// key:program id
-	// val:age map(name:Age)
+	// val:grade map(name:grade)
 	amsGrades map[string]map[string]*external.Grade
-	// key: our age id
+	// key: our grade id
 	ourGrades map[string]*entity.Grade
 
-	// key: our age id
-	// value: ams age id
+	// key: our grade id
+	// value: ams grade id
 	gradeMapping map[string]string
 }
 
-func (s MapperImpl) Subject(ctx context.Context, organizationID, programID, subjectID string) (string, error) {
-	// TODO
-	return "", nil
+type MapperCategory struct {
+	amsCategoryMutex sync.Mutex
+
+	// key:program id
+	// val:category map(name:category)
+	amsCategorys map[string]map[string]*external.Category
+	// key: our category id
+	ourCategorys map[string]*entity.Developmental
+
+	// key: our category id
+	// value: ams category id
+	categoryMapping map[string]string
 }
