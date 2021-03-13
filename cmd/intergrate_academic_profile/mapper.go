@@ -46,15 +46,35 @@ type MapperImpl struct {
 	// value: ams program id
 	programMapping map[string]string
 
-	MapperAge MapperAge
+	MapperAge   MapperAge
+	MapperGrade MapperGrade
 }
 type MapperAge struct {
 	amsAgeMutex sync.Mutex
 
-	amsAges map[string]*external.Age
+	// key:program id
+	// val:age map(name:Age)
+	amsAges map[string]map[string]*external.Age
+	// key: our age id
 	ourAges map[string]*entity.Age
 
+	// key: our age id
+	// value: ams age id
 	ageMapping map[string]string
+}
+
+type MapperGrade struct {
+	amsGradeMutex sync.Mutex
+
+	// key:program id
+	// val:age map(name:Age)
+	amsGrades map[string]map[string]*external.Grade
+	// key: our age id
+	ourGrades map[string]*entity.Grade
+
+	// key: our age id
+	// value: ams age id
+	gradeMapping map[string]string
 }
 
 func (s MapperImpl) Subject(ctx context.Context, organizationID, programID, subjectID string) (string, error) {
