@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"testing"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 func TestAMS(t *testing.T) {
@@ -36,7 +38,7 @@ func TestAMS(t *testing.T) {
 }
 
 func TestDB(t *testing.T) {
-	dsn := "root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "admin:LH1MCuL3V0Ib3254@tcp(kl2-migration-test.copqnkcbdsts.ap-northeast-2.rds.amazonaws.com:28344)/kidsloop2?parseTime=true&charset=utf8mb4" //"admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
 	option := dbo.WithConnectionString(dsn)
 	newDBO, err := dbo.NewWithConfig(option)
 	if err != nil {
@@ -45,13 +47,19 @@ func TestDB(t *testing.T) {
 	}
 	dbo.ReplaceGlobal(newDBO)
 
-	var scheduleList []*entity.Schedule
-	err = da.GetScheduleDA().Query(context.Background(), &da.ScheduleCondition{}, &scheduleList)
+	// var scheduleList []*entity.Schedule
+	// err = da.GetScheduleDA().Query(context.Background(), &da.ScheduleCondition{}, &scheduleList)
+	// if err != nil {
+	// 	t.Log(err)
+	// 	return
+	// }
+	ourAges, err := model.GetAgeModel().Query(context.Background(), &da.AgeCondition{})
 	if err != nil {
 		t.Log(err)
 		return
 	}
-	t.Log(scheduleList)
+
+	t.Log(ourAges)
 }
 
 func TestGetAboutOrgInfo(t *testing.T) {

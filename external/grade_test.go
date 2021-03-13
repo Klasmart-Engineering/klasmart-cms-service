@@ -45,3 +45,23 @@ func TestAmsGradeService_GetByProgram(t *testing.T) {
 		}
 	}
 }
+
+func TestAmsGradeService_GetByOrganization(t *testing.T) {
+	grades, err := GetGradeServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	if err != nil {
+		t.Errorf("GetGradeServiceProvider().GetByOrganization() error = %v", err)
+		return
+	}
+
+	if len(grades) == 0 {
+		t.Error("GetGradeServiceProvider().GetByOrganization() get empty slice")
+		return
+	}
+
+	for _, grade := range grades {
+		if grade == nil {
+			t.Error("GetGradeServiceProvider().GetByOrganization() get null")
+			return
+		}
+	}
+}

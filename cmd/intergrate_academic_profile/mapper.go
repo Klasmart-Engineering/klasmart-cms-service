@@ -35,7 +35,22 @@ func NewMapper(operator *entity.Operator) Mapper {
 	if err != nil {
 		log.Panic(ctx, "init subject mapping failed", log.Err(err))
 	}
-
+	err = impl.initAgeMapper(ctx)
+	if err != nil {
+		log.Panic(ctx, "init age mapping failed", log.Err(err))
+	}
+	err = impl.initGradeMapper(ctx)
+	if err != nil {
+		log.Panic(ctx, "init grade mapping failed", log.Err(err))
+	}
+	err = impl.initCategoryMapper(ctx)
+	if err != nil {
+		log.Panic(ctx, "init category mapping failed", log.Err(err))
+	}
+	err = impl.initSubCategoryMapper(ctx)
+	if err != nil {
+		log.Panic(ctx, "init sub category mapping failed", log.Err(err))
+	}
 	return impl
 }
 
@@ -51,6 +66,11 @@ type MapperImpl struct {
 	// value: ams program id
 	programMapping map[string]string
 
+	MapperAge         MapperAge
+	MapperGrade       MapperGrade
+	MapperCategory    MapperCategory
+	MapperSubCategory MapperSubCategory
+
 	subjectMutex sync.Mutex
 	// key: {ams program id}:{ams subject name}
 	amsSubjects map[string]*external.Subject
@@ -60,18 +80,61 @@ type MapperImpl struct {
 	// value: ams subject id
 	subjectMapping map[string]string
 }
+type MapperAge struct {
+	amsAgeMutex sync.Mutex
 
-func (s MapperImpl) SubCategory(ctx context.Context, organizationID, programID, categoryID, subCategoryID string) (string, error) {
-	// TODO
-	return "", nil
+	// key:program id
+	// val:age map(name:Age)
+	amsAges map[string]map[string]*external.Age
+	// key: our age id
+	ourAges map[string]*entity.Age
+
+	// key: our age id
+	// value: ams age id
+	ageMapping map[string]string
 }
 
-func (s MapperImpl) Age(ctx context.Context, organizationID, programID, AgeID string) (string, error) {
-	// TODO
-	return "", nil
+type MapperGrade struct {
+	amsGradeMutex sync.Mutex
+
+	// key:program id
+	// val:grade map(name:grade)
+	amsGrades map[string]map[string]*external.Grade
+	// key: our grade id
+	ourGrades map[string]*entity.Grade
+
+	// key: our grade id
+	// value: ams grade id
+	gradeMapping map[string]string
 }
 
-func (s MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
-	// TODO
-	return "", nil
+type MapperCategory struct {
+	amsCategoryMutex sync.Mutex
+
+	// key:program id
+	// val:category map(name:category)
+	amsCategorys map[string]map[string]*external.Category
+	// key:category id
+	// val:category
+	amsCategoryIDMap map[string]*external.Category
+	// key: our category id
+	ourCategorys map[string]*entity.Developmental
+
+	// key: our category id
+	// value: ams category id
+	categoryMapping map[string]string
+}
+
+type MapperSubCategory struct {
+	amsSubCategoryMutex sync.Mutex
+
+	// key:program id
+	// val:map(categoryID+subCategoryName:subCategory)
+	amsSubCategorys map[string]map[string]*external.SubCategory
+	// key: our subCategory id
+	ourSubCategorys map[string]*entity.Skill
+
+	// key: our subCategory id
+	// value: ams subCategory id
+	subCategoryMapping map[string]string
 }

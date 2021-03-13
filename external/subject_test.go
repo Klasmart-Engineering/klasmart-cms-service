@@ -45,3 +45,23 @@ func TestAmsSubjectService_GetByProgram(t *testing.T) {
 		}
 	}
 }
+
+func TestAmsSubjectService_GetByOrganization(t *testing.T) {
+	subjects, err := GetSubjectServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	if err != nil {
+		t.Errorf("GetSubjectServiceProvider().GetByOrganization() error = %v", err)
+		return
+	}
+
+	if len(subjects) == 0 {
+		t.Error("GetSubjectServiceProvider().GetByOrganization() get empty slice")
+		return
+	}
+
+	for _, subject := range subjects {
+		if subject == nil {
+			t.Error("GetSubjectServiceProvider().GetByOrganization() get null")
+			return
+		}
+	}
+}

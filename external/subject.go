@@ -14,6 +14,7 @@ import (
 type SubjectServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Subject, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Subject, error)
 }
 
 type Subject struct {
@@ -105,6 +106,45 @@ func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Op
 	log.Info(ctx, "get subjects by program success",
 		log.Any("operator", operator),
 		log.String("programID", programID),
+		log.Any("subjects", subjects))
+
+	return subjects, nil
+}
+
+func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Subject, error) {
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			subjects {
+				id
+				name
+			}			
+		}
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", operator.OrgID)
+
+	data := &struct {
+		Organization struct {
+			Subjects []*Subject `json:"subjects"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query subjects by operator failed",
+			log.Err(err),
+			log.Any("operator", operator))
+		return nil, err
+	}
+
+	subjects := data.Organization.Subjects
+
+	log.Info(ctx, "get subjects by operator success",
+		log.Any("operator", operator),
 		log.Any("subjects", subjects))
 
 	return subjects, nil

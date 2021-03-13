@@ -45,3 +45,23 @@ func TestAmsCategoryService_GetByProgram(t *testing.T) {
 		}
 	}
 }
+
+func TestAmsCategoryService_GetByOrganization(t *testing.T) {
+	categories, err := GetCategoryServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	if err != nil {
+		t.Errorf("GetAgeServiceProvider().GetByOrganization(() error = %v", err)
+		return
+	}
+
+	if len(categories) == 0 {
+		t.Error("GetAgeServiceProvider().GetByOrganization(() get empty slice")
+		return
+	}
+
+	for _, category := range categories {
+		if category == nil {
+			t.Error("GetAgeServiceProvider().GetByOrganization(() get null")
+			return
+		}
+	}
+}

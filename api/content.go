@@ -12,7 +12,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -928,7 +927,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		condition.Program = program
 	}
 	if programGroup != "" {
-		programs, err := external.GetProgramServiceProvider().GetByGroup(c.Request.Context(), op, programGroup)
+		programs, err := model.GetProgramModel().GetByGroup(c.Request.Context(), op, programGroup)
 		if err != nil {
 			log.Error(c.Request.Context(), "get program by groups failed", log.Err(err),
 				log.String("group", programGroup))

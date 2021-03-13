@@ -1,0 +1,84 @@
+package intergrate_academic_profile
+
+import (
+	"context"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+)
+
+func (s *MapperImpl) initGradeMapper(ctx context.Context) error {
+	s.MapperGrade.gradeMapping = make(map[string]string)
+	err := s.loadAmsGrades(ctx)
+	if err != nil {
+		return err
+	}
+
+	return s.loadOurGrades(ctx)
+}
+
+func (s *MapperImpl) loadAmsGrades(ctx context.Context) error {
+	s.MapperGrade.amsGrades = make(map[string]map[string]*external.Grade, len(s.amsPrograms))
+	for _, amsProgram := range s.amsPrograms {
+		amsGrades, err := external.GetGradeServiceProvider().GetByProgram(ctx, s.operator, amsProgram.ID)
+		if err != nil {
+			return err
+		}
+		s.MapperGrade.amsGrades[amsProgram.ID] = make(map[string]*external.Grade, len(amsGrades))
+		for _, amsGrade := range amsGrades {
+			s.MapperGrade.amsGrades[amsProgram.ID][amsGrade.Name] = amsGrade
+		}
+	}
+	return nil
+}
+
+func (s *MapperImpl) loadOurGrades(ctx context.Context) error {
+	var ourGrades []*entity.Grade
+	err := da.GetGradeDA().Query(ctx, &da.GradeCondition{}, &ourGrades)
+	if err != nil {
+		return err
+	}
+
+	s.MapperGrade.ourGrades = make(map[string]*entity.Grade, len(ourGrades))
+	for _, grade := range ourGrades {
+		s.MapperGrade.ourGrades[grade.ID] = grade
+	}
+	return nil
+}
+
+func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
+	cacheID, found := s.MapperGrade.gradeMapping[gradeID]
+	if found {
+		return cacheID, nil
+	}
+
+	s.MapperGrade.amsGradeMutex.Lock()
+	defer s.MapperGrade.amsGradeMutex.Unlock()
+
+	// our
+	ourGrades, found := s.MapperGrade.ourGrades[gradeID]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+
+	// ams
+	amsProgramID, err := s.Program(ctx, organizationID, programID)
+	if err != nil {
+		return "", err
+	}
+	amsGrades, found := s.MapperGrade.amsGrades[amsProgramID]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	amsGrade, found := amsGrades[ourGrades.Name]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+
+	// mapping
+	s.MapperGrade.gradeMapping[gradeID] = amsGrade.ID
+
+	return amsGrade.ID, nil
+}
