@@ -193,11 +193,8 @@ func (s Server) registeRoute() {
 	ages := s.engine.Group("/v1/ages")
 	{
 		ages.GET("", s.mustLoginWithoutOrgID, s.getAge)
-		ages.GET("/:id", s.mustLoginWithoutOrgID, s.getAgeByID)
-		ages.POST("", s.mustLoginWithoutOrgID, s.addAge)
-		ages.PUT("/:id", s.mustLoginWithoutOrgID, s.updateAge)
-		ages.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteAge)
 	}
+
 	classTypes := s.engine.Group("/v1/class_types")
 	{
 		classTypes.GET("", s.mustLoginWithoutOrgID, s.getClassType)

@@ -2085,12 +2085,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//age
-	ages, err := GetAgeModel().Query(ctx, &da.AgeCondition{
-		IDs: entity.NullStrings{
-			Strings: ageIDs,
-			Valid:   len(ageIDs) != 0,
-		},
-	})
+	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, user, ageIDs)
 	if err != nil {
 		log.Error(ctx, "can't get age info", log.Strings("ageIDs", ageIDs), log.Err(err))
 	} else {
