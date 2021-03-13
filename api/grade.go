@@ -14,7 +14,7 @@ import (
 // @Produce json
 // @Param program_id query string false "program id"
 // @Tags grade
-// @Success 200 {array} entity.Grade
+// @Success 200 {array} external.Grade
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /grades [get]
 func (s *Server) getGrade(c *gin.Context) {
