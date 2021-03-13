@@ -10,14 +10,14 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
-func (s MapperImpl) Category(ctx context.Context, organizationID, programID, categoryID string) (string, error) {
-	oldCategory, err := model.GetDevelopmentalModel().GetByID(ctx, categoryID)
+func (s MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
+	oldGrade, err := model.GetGradeModel().GetByID(ctx, gradeID)
 	if err != nil {
 		return "", err
 	}
 
 	newProgramID, err := s.Program(ctx, organizationID, programID)
-	newCategorys, err := external.GetCategoryServiceProvider().GetByProgram(ctx, &entity.Operator{
+	newGrades, err := external.GetAgeServiceProvider().GetByProgram(ctx, &entity.Operator{
 		OrgID: organizationID,
 	}, newProgramID)
 	if err != nil {
@@ -26,8 +26,8 @@ func (s MapperImpl) Category(ctx context.Context, organizationID, programID, cat
 
 	var result string
 	var count int
-	for _, item := range newCategorys {
-		if oldCategory.Name == item.Name {
+	for _, item := range newGrades {
+		if oldGrade.Name == item.Name {
 			count++
 			if count > 1 {
 				break
@@ -36,11 +36,11 @@ func (s MapperImpl) Category(ctx context.Context, organizationID, programID, cat
 		}
 	}
 	if count <= 0 {
-		log.Printf("category not found;orgID:%s,newProgramID:%s,categoryName:%s", organizationID, newProgramID, oldCategory.Name)
+		log.Printf("age not found;orgID:%s,newProgramID:%s,gradeName:%s", organizationID, newProgramID, oldGrade.Name)
 		return "", constant.ErrRecordNotFound
 	}
 	if count > 1 {
-		log.Printf("has many categorys;orgID:%s,newProgramID:%s,categoryName:%s", organizationID, newProgramID, oldCategory.Name)
+		log.Printf("age has many;orgID:%s,newProgramID:%s,gradeName:%s", organizationID, newProgramID, oldGrade.Name)
 		return "", constant.ErrConflict
 	}
 
