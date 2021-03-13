@@ -51,9 +51,10 @@ type MapperImpl struct {
 	// value: ams program id
 	programMapping map[string]string
 
-	MapperAge      MapperAge
-	MapperGrade    MapperGrade
-	MapperCategory MapperCategory
+	MapperAge         MapperAge
+	MapperGrade       MapperGrade
+	MapperCategory    MapperCategory
+	MapperSubCategory MapperSubCategory
 
 	subjectMutex sync.Mutex
 	// key: {ams program id}:{ams subject name}
@@ -98,10 +99,27 @@ type MapperCategory struct {
 	// key:program id
 	// val:category map(name:category)
 	amsCategorys map[string]map[string]*external.Category
+	// key:category id
+	// val:category
+	amsCategoryIDMap map[string]*external.Category
 	// key: our category id
 	ourCategorys map[string]*entity.Developmental
 
 	// key: our category id
 	// value: ams category id
 	categoryMapping map[string]string
+}
+
+type MapperSubCategory struct {
+	amsSubCategoryMutex sync.Mutex
+
+	// key:program id
+	// val:map(categoryID+subCategoryName:subCategory)
+	amsSubCategorys map[string]map[string]*external.SubCategory
+	// key: our subCategory id
+	ourSubCategorys map[string]*entity.Skill
+
+	// key: our subCategory id
+	// value: ams subCategory id
+	subCategoryMapping map[string]string
 }
