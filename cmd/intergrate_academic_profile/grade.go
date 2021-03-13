@@ -49,9 +49,9 @@ func (s *MapperImpl) loadOurGrades(ctx context.Context) error {
 }
 
 func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
-	gradeID, found := s.MapperGrade.gradeMapping[gradeID]
+	cacheID, found := s.MapperGrade.gradeMapping[gradeID]
 	if found {
-		return gradeID, nil
+		return cacheID, nil
 	}
 
 	s.MapperGrade.amsGradeMutex.Lock()

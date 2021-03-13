@@ -58,9 +58,9 @@ func (s *MapperImpl) loadOurAges(ctx context.Context) error {
 }
 
 func (s *MapperImpl) Age(ctx context.Context, organizationID, programID, ageID string) (string, error) {
-	ageID, found := s.MapperAge.ageMapping[ageID]
+	cacheID, found := s.MapperAge.ageMapping[ageID]
 	if found {
-		return ageID, nil
+		return cacheID, nil
 	}
 
 	s.MapperAge.amsAgeMutex.Lock()
