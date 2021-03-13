@@ -227,11 +227,8 @@ func (s Server) registeRoute() {
 	subjects := s.engine.Group("/v1/subjects")
 	{
 		subjects.GET("", s.mustLoginWithoutOrgID, s.getSubject)
-		subjects.GET("/:id", s.mustLoginWithoutOrgID, s.getSubjectByID)
-		subjects.POST("", s.mustLoginWithoutOrgID, s.addSubject)
-		subjects.PUT("/:id", s.mustLoginWithoutOrgID, s.updateSubject)
-		subjects.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteSubject)
 	}
+
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{
 		visibilitySettings.GET("", s.mustLogin, s.getVisibilitySetting)

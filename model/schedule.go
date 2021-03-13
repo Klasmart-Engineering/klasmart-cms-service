@@ -1202,7 +1202,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		return nil, err
 	}
 
-	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, subjectIDs)
+	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 		return nil, err
@@ -1301,16 +1301,11 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator 
 	return classMap, nil
 }
 
-func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
 		subjectIDs = utils.SliceDeduplication(subjectIDs)
-		subjectInfos, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
-			IDs: entity.NullStrings{
-				Strings: subjectIDs,
-				Valid:   len(subjectIDs) != 0,
-			},
-		})
+		subjectInfos, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 			return nil, err
@@ -1808,12 +1803,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 	}
 	// subject
 	subjectIDs := []string{v.SubjectID}
-	_, err = GetSubjectModel().Query(ctx, &da.SubjectCondition{
-		IDs: entity.NullStrings{
-			Strings: subjectIDs,
-			Valid:   len(subjectIDs) != 0,
-		},
-	})
+	_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "verifyData:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err

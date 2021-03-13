@@ -1,14 +1,13 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
@@ -19,23 +18,30 @@ import (
 // @Produce json
 // @Param program_id query string false "program id"
 // @Tags subject
-// @Success 200 {array} entity.Subject
+// @Success 200 {array} external.Subject
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /subjects [get]
 func (s *Server) getSubject(c *gin.Context) {
 	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+
+	var result []*external.Subject
+	var err error
+
 	programID := c.Query("program_id")
-	result, err := model.GetSubjectModel().Query(ctx, &da.SubjectCondition{
-		ProgramID: sql.NullString{
-			String: programID,
-			Valid:  len(programID) != 0,
-		},
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
+
+	if programID != "" {
+		result, err = external.GetSubjectServiceProvider().GetByOrganization(ctx, operator)
+	} else {
+		result, err = external.GetSubjectServiceProvider().GetByProgram(ctx, operator, programID)
 	}
-	c.JSON(http.StatusOK, result)
+
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
 
 // @Summary getSubjectByID
