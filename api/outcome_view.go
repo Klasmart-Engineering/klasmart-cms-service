@@ -247,7 +247,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Subject[k].SubjectName = sNames[id]
 	}
 	dIDs := strings.Split(outcome.Developmental, ",")
-	dNames := getDevelopmentalsName(ctx, dIDs)
+	dNames := getDevelopmentalsName(ctx, operator, dIDs)
 	view.Developmental = make([]Developmental, len(dIDs))
 	for k, id := range dIDs {
 		view.Developmental[k].DevelopmentalID = id
@@ -327,14 +327,8 @@ func getSubjectsName(ctx context.Context, ids []string) (names map[string]string
 	return
 }
 
-func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]string) {
-	developmentals, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
-
+func getDevelopmentalsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
+	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "getDevelopmentalsName: BatchGet failed",
 			log.Err(err),

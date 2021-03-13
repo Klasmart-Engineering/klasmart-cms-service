@@ -2048,13 +2048,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//developmental
-	developmentals, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
-		IDs: entity.NullStrings{
-			Strings: developmentalIDs,
-			Valid:   len(developmentalIDs) != 0,
-		},
-	})
-
+	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, user, developmentalIDs)
 	if err != nil {
 		log.Error(ctx, "can't get developmentals info", log.Err(err))
 	} else {

@@ -200,14 +200,12 @@ func (s Server) registeRoute() {
 		classTypes.GET("", s.mustLoginWithoutOrgID, s.getClassType)
 		classTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getClassTypeByID)
 	}
+
 	developmental := s.engine.Group("/v1/developmentals")
 	{
 		developmental.GET("", s.mustLoginWithoutOrgID, s.getDevelopmental)
-		developmental.GET("/:id", s.mustLoginWithoutOrgID, s.getDevelopmentalByID)
-		developmental.POST("", s.mustLoginWithoutOrgID, s.addDevelopmental)
-		developmental.PUT("/:id", s.mustLoginWithoutOrgID, s.updateDevelopmental)
-		developmental.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteDevelopmental)
 	}
+
 	grade := s.engine.Group("/v1/grades")
 	{
 		grade.GET("", s.mustLoginWithoutOrgID, s.getGrade)
