@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 // @Summary getProgram
@@ -19,7 +19,7 @@ import (
 func (s *Server) getProgram(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	result, err := external.GetProgramServiceProvider().GetByOrganization(ctx, op)
+	result, err := model.GetProgramModel().GetByOrganization(ctx, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return

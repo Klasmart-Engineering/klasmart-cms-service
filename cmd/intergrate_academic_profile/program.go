@@ -67,9 +67,9 @@ func (s *MapperImpl) loadAmsPrograms(ctx context.Context) error {
 func (s *MapperImpl) loadOurPrograms(ctx context.Context) error {
 	s.ourPrograms = map[string]*entity.Program{
 		"5fd9ddface9660cbc5f667d8": {
-			ID: "5fd9ddface9660cbc5f667d8",
-			// Name: "None Specified",
-			Name: "Non specified",
+			ID:   "5fd9ddface9660cbc5f667d8",
+			Name: "None Specified",
+			// Name: "Non specified",
 		},
 		"5fdac06ea878718a554ff00d": {
 			ID:   "5fdac06ea878718a554ff00d",
@@ -84,9 +84,9 @@ func (s *MapperImpl) loadOurPrograms(ctx context.Context) error {
 			Name: "Science",
 		},
 		"program0": {
-			ID: "program0",
-			// Name: "None Specified",
-			Name: "Non specified",
+			ID:   "program0",
+			Name: "None Specified",
+			// Name: "Non specified",
 		},
 		"program1": {
 			ID:   "program1",

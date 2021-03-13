@@ -1,15 +1,10 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 // @Summary getDevelopmental
@@ -24,123 +19,22 @@ import (
 // @Router /developmentals [get]
 func (s *Server) getDevelopmental(c *gin.Context) {
 	ctx := c.Request.Context()
-	programID := c.Query("program_id")
-	result, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
-		ProgramID: sql.NullString{
-			String: programID,
-			Valid:  len(programID) != 0,
-		},
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	c.JSON(http.StatusOK, result)
-}
+	operator := s.getOperator(c)
 
-// @Summary getDevelopmentalByID
-// @ID getDevelopmentalByID
-// @Description get developmental by id
-// @Accept json
-// @Produce json
-// @Param id path string true "developmental id"
-// @Tags developmental
-// @Success 200 {object} entity.Developmental
-// @Failure 404 {object} NotFoundResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /developmentals/{id} [get]
-func (s *Server) getDevelopmentalByID(c *gin.Context) {
-	ctx := c.Request.Context()
-	id := c.Param("id")
-	result, err := model.GetDevelopmentalModel().GetByID(ctx, id)
+	var result []*external.Category
+	var err error
+
+	programID := c.Query("program_id")
+
+	if programID != "" {
+		result, err = external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+	} else {
+		result, err = external.GetCategoryServiceProvider().GetByProgram(ctx, operator, programID)
+	}
+
 	switch err {
-	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
-	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	}
-}
-
-// @Summary addDevelopmental
-// @ID addDevelopmental
-// @Description addDevelopmental
-// @Accept json
-// @Produce json
-// @Param developmental body entity.Developmental true "developmental"
-// @Tags developmental
-// @Success 200 {object} IDResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /developmentals [post]
-func (s *Server) addDevelopmental(c *gin.Context) {
-	op := s.getOperator(c)
-	ctx := c.Request.Context()
-	data := new(entity.Developmental)
-	if err := c.ShouldBind(data); err != nil {
-		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	id, err := model.GetDevelopmentalModel().Add(ctx, op, data)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	c.JSON(http.StatusOK, IDResponse{ID: id})
-}
-
-// @Summary updateDevelopmental
-// @ID updateDevelopmental
-// @Description updateDevelopmental
-// @Accept json
-// @Produce json
-// @Param id path string true "developmental id"
-// @Param developmental body entity.Developmental true "developmental"
-// @Tags developmental
-// @Success 200 {object} IDResponse
-// @Failure 404 {object} NotFoundResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /developmentals/{id} [put]
-func (s *Server) updateDevelopmental(c *gin.Context) {
-	op := s.getOperator(c)
-	ctx := c.Request.Context()
-	data := new(entity.Developmental)
-	if err := c.ShouldBind(data); err != nil {
-		log.Info(ctx, "invalid data", log.Err(err), log.Any("data", data))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	data.ID = c.Param("id")
-	id, err := model.GetDevelopmentalModel().Update(ctx, op, data)
-	switch err {
-	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case nil:
-		c.JSON(http.StatusOK, IDResponse{ID: id})
-	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	}
-}
-
-// @Summary deleteDevelopmental
-// @ID deleteDevelopmental
-// @Description deleteDevelopmental
-// @Accept json
-// @Produce json
-// @Param id path string true "developmental id"
-// @Tags developmental
-// @Success 200 {object} IDResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /developmentals/{id} [delete]
-func (s *Server) deleteDevelopmental(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	id := c.Param("id")
-	err := model.GetDevelopmentalModel().Delete(ctx, op, id)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, IDResponse{ID: id})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

@@ -7,10 +7,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
+	s.MapperCategory.categoryMapping = make(map[string]string)
+
 	err := s.loadAmsCategorys(ctx)
 	if err != nil {
 		return err
@@ -38,7 +39,8 @@ func (s *MapperImpl) loadAmsCategorys(ctx context.Context) error {
 }
 
 func (s *MapperImpl) loadOurCategorys(ctx context.Context) error {
-	ourCategorys, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{})
+	var ourCategorys []*entity.Developmental
+	err := da.GetDevelopmentalDA().Query(ctx, &da.DevelopmentalCondition{}, &ourCategorys)
 	if err != nil {
 		return err
 	}

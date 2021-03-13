@@ -247,21 +247,21 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Subject[k].SubjectName = sNames[id]
 	}
 	dIDs := strings.Split(outcome.Developmental, ",")
-	dNames := getDevelopmentalsName(ctx, dIDs)
+	dNames := getDevelopmentalsName(ctx, operator, dIDs)
 	view.Developmental = make([]Developmental, len(dIDs))
 	for k, id := range dIDs {
 		view.Developmental[k].DevelopmentalID = id
 		view.Developmental[k].DevelopmentalName = dNames[id]
 	}
 	skIDs := strings.Split(outcome.Skills, ",")
-	skNames := getSkillsName(ctx, skIDs)
+	skNames := getSkillsName(ctx, operator, skIDs)
 	view.Skills = make([]Skill, len(skIDs))
 	for k, id := range skIDs {
 		view.Skills[k].SkillID = id
 		view.Skills[k].SkillName = skNames[id]
 	}
 	aIDs := strings.Split(outcome.Age, ",")
-	aNames := getAgesName(ctx, aIDs)
+	aNames := getAgesName(ctx, operator, aIDs)
 	view.Age = make([]Age, len(aIDs))
 	for k, id := range aIDs {
 		view.Age[k].AgeID = id
@@ -327,14 +327,8 @@ func getSubjectsName(ctx context.Context, ids []string) (names map[string]string
 	return
 }
 
-func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]string) {
-	developmentals, err := model.GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
-
+func getDevelopmentalsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
+	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "getDevelopmentalsName: BatchGet failed",
 			log.Err(err),
@@ -348,13 +342,8 @@ func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]
 	return
 }
 
-func getSkillsName(ctx context.Context, ids []string) (names map[string]string) {
-	skills, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+func getSkillsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
+	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "getSkillsName: BatchGet failed",
 			log.Err(err),
@@ -368,13 +357,8 @@ func getSkillsName(ctx context.Context, ids []string) (names map[string]string) 
 	return
 }
 
-func getAgesName(ctx context.Context, ids []string) (names map[string]string) {
-	ages, err := model.GetAgeModel().Query(ctx, &da.AgeCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+func getAgesName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
+	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "BatchGet:error", log.Err(err), log.Strings("ids", ids))
 		return

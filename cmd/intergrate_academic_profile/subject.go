@@ -70,9 +70,9 @@ func (s *MapperImpl) initSubjectMapper(ctx context.Context) error {
 func (s *MapperImpl) loadOurSubjects(ctx context.Context) error {
 	s.ourSubjects = map[string]*entity.Subject{
 		"subject0": {
-			ID: "subject0",
-			// Name: "None Specified",
-			Name: "Non specified",
+			ID:   "subject0",
+			Name: "None Specified",
+			// Name: "Non specified",
 		},
 		"subject1": {
 			ID:   "subject1",

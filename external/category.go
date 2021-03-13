@@ -14,6 +14,7 @@ import (
 type CategoryServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Category, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Category, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Category, error)
 }
 
 type Category struct {
@@ -112,6 +113,45 @@ func (s AmsCategoryService) GetByProgram(ctx context.Context, operator *entity.O
 	log.Info(ctx, "get categories by program success",
 		log.Any("operator", operator),
 		log.String("programID", programID),
+		log.Any("categories", categories))
+
+	return categories, nil
+}
+
+func (s AmsCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Category, error) {
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			categories {
+				id
+				name
+			}			
+		}
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", operator.OrgID)
+
+	data := &struct {
+		Organization struct {
+			Categories []*Category `json:"categories"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query categories by operator failed",
+			log.Err(err),
+			log.Any("operator", operator))
+		return nil, err
+	}
+
+	categories := data.Organization.Categories
+
+	log.Info(ctx, "get categories by operator success",
+		log.Any("operator", operator),
 		log.Any("categories", categories))
 
 	return categories, nil

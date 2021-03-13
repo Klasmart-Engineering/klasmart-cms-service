@@ -7,7 +7,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 var AgeNameMapper = map[string]string{
@@ -19,6 +18,8 @@ var AgeNameMapper = map[string]string{
 }
 
 func (s *MapperImpl) initAgeMapper(ctx context.Context) error {
+	s.MapperAge.ageMapping = make(map[string]string)
+
 	err := s.loadAmsAges(ctx)
 	if err != nil {
 		return err
@@ -43,7 +44,8 @@ func (s *MapperImpl) loadAmsAges(ctx context.Context) error {
 }
 
 func (s *MapperImpl) loadOurAges(ctx context.Context) error {
-	ourAges, err := model.GetAgeModel().Query(ctx, &da.AgeCondition{})
+	var ourAges []*entity.Age
+	err := da.GetAgeDA().Query(ctx, &da.AgeCondition{}, &ourAges)
 	if err != nil {
 		return err
 	}

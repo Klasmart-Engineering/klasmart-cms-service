@@ -2048,13 +2048,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//developmental
-	developmentals, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
-		IDs: entity.NullStrings{
-			Strings: developmentalIDs,
-			Valid:   len(developmentalIDs) != 0,
-		},
-	})
-
+	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, user, developmentalIDs)
 	if err != nil {
 		log.Error(ctx, "can't get developmentals info", log.Err(err))
 	} else {
@@ -2075,12 +2069,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//skill
-	skills, err := GetSkillModel().Query(ctx, &da.SkillCondition{
-		IDs: entity.NullStrings{
-			Strings: skillsIDs,
-			Valid:   len(skillsIDs) != 0,
-		},
-	})
+	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, user, skillsIDs)
 	if err != nil {
 		log.Error(ctx, "can't get skills info", log.Strings("skillsIDs", skillsIDs), log.Err(err))
 	} else {
@@ -2090,12 +2079,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//age
-	ages, err := GetAgeModel().Query(ctx, &da.AgeCondition{
-		IDs: entity.NullStrings{
-			Strings: ageIDs,
-			Valid:   len(ageIDs) != 0,
-		},
-	})
+	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, user, ageIDs)
 	if err != nil {
 		log.Error(ctx, "can't get age info", log.Strings("ageIDs", ageIDs), log.Err(err))
 	} else {
