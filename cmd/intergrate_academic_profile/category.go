@@ -11,6 +11,8 @@ import (
 )
 
 func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
+	s.MapperCategory.categoryMapping = make(map[string]string)
+
 	err := s.loadAmsCategorys(ctx)
 	if err != nil {
 		return err

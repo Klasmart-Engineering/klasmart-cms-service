@@ -11,6 +11,7 @@ import (
 )
 
 func (s *MapperImpl) initGradeMapper(ctx context.Context) error {
+	s.MapperGrade.gradeMapping = make(map[string]string)
 	err := s.loadAmsGrades(ctx)
 	if err != nil {
 		return err

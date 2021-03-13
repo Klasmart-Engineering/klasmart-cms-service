@@ -19,6 +19,8 @@ var AgeNameMapper = map[string]string{
 }
 
 func (s *MapperImpl) initAgeMapper(ctx context.Context) error {
+	s.MapperAge.ageMapping = make(map[string]string)
+
 	err := s.loadAmsAges(ctx)
 	if err != nil {
 		return err

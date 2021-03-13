@@ -11,6 +11,8 @@ import (
 )
 
 func (s *MapperImpl) initSubCategoryMapper(ctx context.Context) error {
+	s.MapperSubCategory.subCategoryMapping = make(map[string]string)
+
 	err := s.loadAmsSubCategorys(ctx)
 	if err != nil {
 		return err
