@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
@@ -21,13 +20,13 @@ func (s *MapperImpl) Program(ctx context.Context, organizationID, programID stri
 	ourProgram, found := s.ourPrograms[programID]
 	if !found {
 		log.Error(ctx, "unknown program id", log.String("programID", programID), log.String("organizationID", organizationID))
-		return "", constant.ErrRecordNotFound
+		return s.defaultProgram()
 	}
 
 	amsProgram, found := s.amsPrograms[ourProgram.Name]
 	if !found {
 		log.Error(ctx, "unknown program id", log.Any("program", ourProgram), log.String("organizationID", organizationID))
-		return "", constant.ErrRecordNotFound
+		return s.defaultProgram()
 	}
 
 	s.programMapping[ourProgram.ID] = amsProgram.ID
@@ -131,4 +130,8 @@ func (s *MapperImpl) loadOurPrograms(ctx context.Context) error {
 	// }
 
 	return nil
+}
+
+func (s MapperImpl) defaultProgram() (string, error) {
+	return "7565ae11-8130-4b7d-ac24-1d9dd6f792f2", nil
 }
