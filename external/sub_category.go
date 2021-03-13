@@ -14,6 +14,7 @@ import (
 type SubCategoryServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*SubCategory, error)
 	GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string) ([]*SubCategory, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*SubCategory, error)
 }
 
 type SubCategory struct {
@@ -106,6 +107,45 @@ func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *enti
 		log.Any("operator", operator),
 		log.String("categoryID", categoryID),
 		log.Any("subCategories", subCategories))
+
+	return subCategories, nil
+}
+
+func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*SubCategory, error) {
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			subcategories {
+				id
+				name
+			}			
+		}
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", operator.OrgID)
+
+	data := &struct {
+		Organization struct {
+			SubCategories []*SubCategory `json:"subcategories"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query sub categories by operator failed",
+			log.Err(err),
+			log.Any("operator", operator))
+		return nil, err
+	}
+
+	subCategories := data.Organization.SubCategories
+
+	log.Info(ctx, "get sub categories by operator success",
+		log.Any("operator", operator),
+		log.Any("subcategories", subCategories))
 
 	return subCategories, nil
 }
