@@ -18,6 +18,18 @@ func TestMapperImpl_Grade(t *testing.T) {
 		{
 			// PreK-3
 			ProgramID:  "5fdac0f61f066722a1351adb",
+			GradeID:    "grade1",
+			AmsGradeID: "98461ca1-06a1-432a-97d0-4e1dff33e1a5",
+		},
+		{
+			// PreK-3
+			ProgramID:  "5fdac0f61f066722a1351adb1",
+			GradeID:    "grade7",
+			AmsGradeID: "98461ca1-06a1-432a-97d0-4e1dff33e1a5",
+		},
+		{
+			// PreK-3
+			ProgramID:  "5fdac0f61f066722a1351adb",
 			GradeID:    "grade7",
 			AmsGradeID: "b20eaf10-3e40-4ef7-9d74-93a13782d38f",
 		},

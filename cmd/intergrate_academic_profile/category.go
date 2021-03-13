@@ -64,25 +64,41 @@ func (s *MapperImpl) Category(ctx context.Context, organizationID, programID, ca
 	// our
 	ourCategorys, found := s.MapperCategory.ourCategorys[categoryID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultCategoryID()
 	}
 
 	// ams
 	amsProgramID, err := s.Program(ctx, organizationID, programID)
 	if err != nil {
-		return "", err
+		return s.defaultCategoryID()
 	}
 	amsCategorys, found := s.MapperCategory.amsCategorys[amsProgramID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultCategoryID()
 	}
 	amsCategory, found := amsCategorys[ourCategorys.Name]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		for _, item := range amsCategorys {
+			return item.ID, nil
+		}
+		return s.defaultCategoryID()
 	}
 
 	// mapping
 	s.MapperCategory.categoryMapping[categoryID] = amsCategory.ID
 
 	return amsCategory.ID, nil
+}
+
+func (s *MapperImpl) defaultCategoryID() (string, error) {
+	noneName := "None Specified"
+	program, found := s.amsPrograms[noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	category, found := s.MapperCategory.amsCategorys[program.ID][noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	return category.ID, nil
 }

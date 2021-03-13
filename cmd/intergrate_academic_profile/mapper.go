@@ -31,18 +31,18 @@ func NewMapper(operator *entity.Operator) Mapper {
 		log.Panic(ctx, "init program mapping failed", log.Err(err))
 	}
 
-	err = impl.initSubjectMapper(ctx)
-	if err != nil {
-		log.Panic(ctx, "init subject mapping failed", log.Err(err))
-	}
-	err = impl.initAgeMapper(ctx)
-	if err != nil {
-		log.Panic(ctx, "init age mapping failed", log.Err(err))
-	}
-	err = impl.initGradeMapper(ctx)
-	if err != nil {
-		log.Panic(ctx, "init grade mapping failed", log.Err(err))
-	}
+	// err = impl.initSubjectMapper(ctx)
+	// if err != nil {
+	// 	log.Panic(ctx, "init subject mapping failed", log.Err(err))
+	// }
+	// err = impl.initAgeMapper(ctx)
+	// if err != nil {
+	// 	log.Panic(ctx, "init age mapping failed", log.Err(err))
+	// }
+	// err = impl.initGradeMapper(ctx)
+	// if err != nil {
+	// 	log.Panic(ctx, "init grade mapping failed", log.Err(err))
+	// }
 	err = impl.initCategoryMapper(ctx)
 	if err != nil {
 		log.Panic(ctx, "init category mapping failed", log.Err(err))

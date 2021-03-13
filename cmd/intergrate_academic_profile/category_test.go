@@ -16,6 +16,12 @@ type categoryTestCase struct {
 func TestMapperImpl_Category(t *testing.T) {
 	tests := []categoryTestCase{
 		{
+			// none developmental10
+			ProgramID:     "5fdac0f61f066722a1351adb",
+			CategoryID:    "developmental10",
+			AmsCategoryID: "1080d319-8ce7-4378-9c71-a5019d6b9386",
+		},
+		{
 			// Speech & Language Skills
 			ProgramID:     "5fdac0f61f066722a1351adb",
 			CategoryID:    "developmental1",

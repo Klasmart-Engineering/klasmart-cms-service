@@ -16,6 +16,18 @@ type ageTestCase struct {
 func TestMapperImpl_Age(t *testing.T) {
 	tests := []ageTestCase{
 		{
+			// none program
+			ProgramID: "5fdac0f61f066722a1351adb11",
+			AgeID:     "age1",
+			AmsAgeID:  "023eeeb1-5f72-4fa3-a2a7-63603607ac2b",
+		},
+		{
+			// none age
+			ProgramID: "program7",
+			AgeID:     "age5",
+			AmsAgeID:  "023eeeb1-5f72-4fa3-a2a7-63603607ac2b",
+		},
+		{
 			// 3-4
 			ProgramID: "5fdac0f61f066722a1351adb",
 			AgeID:     "age1",

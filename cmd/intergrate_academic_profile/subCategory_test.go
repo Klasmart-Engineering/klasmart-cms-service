@@ -17,6 +17,13 @@ type subCategoryTestCase struct {
 func TestMapperImpl_SubCategory(t *testing.T) {
 	tests := []subCategoryTestCase{
 		{
+			// program none
+			ProgramID:        "5fdac0f61f066722a1351adb",
+			CategoryID:       "developmental1",
+			SubCategoryID:    "skills43",
+			AmsSubCategoryID: "40a232cd-d6e8-4ec1-97ec-4e4df7d00a78",
+		},
+		{
 			// Numbers
 			ProgramID:        "5fdac0f61f066722a1351adb",
 			CategoryID:       "developmental1",

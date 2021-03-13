@@ -60,7 +60,7 @@ func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, grade
 	// our
 	ourGrades, found := s.MapperGrade.ourGrades[gradeID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultGradeID()
 	}
 
 	// ams
@@ -70,15 +70,31 @@ func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, grade
 	}
 	amsGrades, found := s.MapperGrade.amsGrades[amsProgramID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultGradeID()
 	}
 	amsGrade, found := amsGrades[ourGrades.Name]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		for _, item := range amsGrades {
+			return item.ID, nil
+		}
+		return s.defaultGradeID()
 	}
 
 	// mapping
 	s.MapperGrade.gradeMapping[gradeID] = amsGrade.ID
 
 	return amsGrade.ID, nil
+}
+
+func (s *MapperImpl) defaultGradeID() (string, error) {
+	noneName := "None Specified"
+	program, found := s.amsPrograms[noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	grade, found := s.MapperGrade.amsGrades[program.ID][noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	return grade.ID, nil
 }
