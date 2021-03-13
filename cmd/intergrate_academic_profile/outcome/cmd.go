@@ -9,11 +9,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"os"
+	"regexp"
 	"strings"
 )
 
-//var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYyODkwMiwiaXNzIjoia2lkc2xvb3AifQ.LLm5XChWOZml-Sc_toDGxb2ALoyusbBU1-HR42fOBtrTp-Xuh5Loh7-7wQz3xXf0_JB3ANVQlszF4nASAfBNViWNgIico-TaFcxRGKzn8n5m9FpnWioPx1qTQLnkkoK3vjZPY7ZJcs8qbGidP8Mv3w7G6y8eTETzmYY1O5vi_ACdEkVROjvYQHFk7WOjYMw1Kf2psQtLJ4Zksg9kuEpBjBK0c3sr-hJWII_pnDK1gFK0GvNsln9U-N8ooi0qUisB5chIPifC6i6xVHjfaHhca1NuLZQk8sgd2ux8Uv0FhcmV3AUO9hef_uAHTt7pSfzjSiqmLhROuB_WnPRzM3uuZw"
-var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTY0MTEyMCwiaXNzIjoia2lkc2xvb3AifQ.vWazRiqo-U7tfUssnyqMR8j8lDdtcZ1mVDmbMA5Ib0ejrnmLz1CXFSpERWtGi6ggL61q449h_zMQHj-mJLXOnZ38ZNQYL78KwxBM5O3Guv0AckFbc8RM0z3x1_DWiW6s9x_LvPlsgJ6H5aM4v_jNqI669P9vSnuq4r8wNx724XCQ1J34PAqYTcIjvbvBd_PVqqmNtl5sWMba1JlGaCqWmJM7qAzGRo-wwwfpKmCvs3advhjy6oylbl_ZEKKE8qQNf56BRUzVbMAtIJx0BfIifP0tYFZzgaoGmZOfOxv9NVzyjBoRXSCevk52emANeZwOjdseOi45IPnkkFcZrOsZvA"
+var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTY0ODMyMywiaXNzIjoia2lkc2xvb3AifQ.hZay3YuWm-7msMvYj9G-lWqzYmxQXo_d3ZkqLUPZzil_tyZ17CPOGaWFEwS0pIPNBJsHfARetB83eOCq61fyCgog9VQ7C7CychXS1q9Rno9_327DaIw0dI1PpWNJp2VmEewojy-0i4jzKi3mMyqlBsUgegLRN5AlKvIUN6NN2FNCbhhSwlDxsk5X3tWl9tyOj8fbLaheiI37bn4WyNhKb9u8uTNFBJbm-Phbe1uTb66VvYmWpOjK61aJQeho5GeUyrh9kICsKKCQy0e97fmGJxG1D1HbmYmXsYxLP2O27BDYG1fEhIMEwLNBHD6K7B-K1P6b3mUXAN2Q7o0n-48IKw"
 func isRecordNotFoundErr(err error) bool {
 	if err.Error() == "record not found" {
 		return true
@@ -25,6 +25,8 @@ func main() {
 	setupConfig()
 	ctx := context.TODO()
 	tx := dbo.MustGetDB(ctx)
+	validID := regexp.MustCompile(`^([a-z]|[0-9])+-([a-z]|[0-9])+-([a-z]|[0-9])+-([a-z]|[0-9])+-([a-z]|[0-9])+$`)
+	//valid := validID.MatchString("5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71")
 	mapper := intergrate_academic_profile.NewMapper(&entity.Operator{
 		Token: token,
 		UserID: "14494c07-0d4f-5141-9db2-15799993f448",
@@ -53,23 +55,25 @@ func main() {
 		grades := strings.Split(outcomes[i].Grade, ",")
 		outcomes[i].Program = ""
 		for p := range programs {
-			if programs[p] == "" {
+			if programs[p] == "" || validID.MatchString(programs[p]){
+				log.Warn(ctx, "migrate:valid:program",
+					log.String("outcome", outcomes[i].ID),
+					log.String("program", programs[p]))
 				continue
 			}
 			org := orgID
 			pid, err := mapper.Program(ctx, org, programs[p])
 			if err != nil && !isRecordNotFoundErr(err) {
 				log.Error(ctx, "map program failed",
-					log.Any("outcome", outcomes[i]),
+					log.String("outcome", outcomes[i].ID),
 					log.String("old program", programs[p]),
 					log.Err(err))
 				return
 			}
 			if pid == "" {
 				log.Warn(ctx, "migrate:warn:program",
-					log.Any("outcome", outcomes[i]),
-					log.String("old program", programs[p]),
-					log.Err(err))
+					log.String("outcome", outcomes[i].ID),
+					log.String("old program", programs[p]))
 				//fmt.Printf("Migrate: can't match program %s\n", programs[p])
 				continue
 			}
@@ -87,7 +91,7 @@ func main() {
 				sid, err := mapper.Subject(ctx, org, programs[p], subjects[s])
 				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map subject failed",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old subject", subjects[s]),
@@ -96,7 +100,7 @@ func main() {
 				}
 				if sid == "" {
 					log.Warn(ctx, "migrate:warn:subject",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old subject", subjects[s]))
@@ -111,7 +115,7 @@ func main() {
 					log.String("new subject", sid))
 				outcomes[i].Subject = outcomes[i].Subject + sid + ","
 			}
-			strings.TrimSuffix(outcomes[i].Subject, ",")
+			outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
 
 			outcomes[i].Developmental = ""
 			outcomes[i].Skills = ""
@@ -122,7 +126,7 @@ func main() {
 				cid , err := mapper.Category(ctx, org, programs[p], categories[c])
 				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map category failed",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old category", categories[c]),
@@ -131,7 +135,7 @@ func main() {
 				}
 				if cid == "" {
 					log.Warn(ctx, "migrate:warn:category",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old category", categories[c]))
@@ -153,7 +157,7 @@ func main() {
 					scid, err := mapper.SubCategory(ctx, org, programs[p], categories[c], subCategories[sc])
 					if err != nil && !isRecordNotFoundErr(err){
 						log.Error(ctx, "map sub category failed",
-							log.Any("outcome", outcomes[i]),
+							log.String("outcome", outcomes[i].ID),
 							log.String("old program", programs[p]),
 							log.String("new program", pid),
 							log.String("old category", categories[c]),
@@ -163,11 +167,12 @@ func main() {
 					}
 					if scid == "" {
 						log.Warn(ctx, "migrate:warn:sub-category",
-							log.Any("outcome", outcomes[i]),
+							log.String("outcome", outcomes[i].ID),
 							log.String("old program", programs[p]),
 							log.String("new program", pid),
 							log.String("old category", categories[c]),
-							log.String("new category", cid))
+							log.String("new category", cid),
+							log.String("old sub-category", subCategories[sc]))
 						//fmt.Printf("Migrate: program %s category %s can't match subCategory %s\n",
 						//	programs[p], categories[c], subCategories[sc])
 						continue
@@ -181,8 +186,8 @@ func main() {
 					outcomes[i].Skills = outcomes[i].Skills + scid + ","
 				}
 			}
-			strings.TrimSuffix(outcomes[i].Skills, ",")
-			strings.TrimSuffix(outcomes[i].Developmental, ",")
+			outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
+			outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
 
 			outcomes[i].Age = ""
 			for a := range ages {
@@ -192,7 +197,7 @@ func main() {
 				aid, err := mapper.Age(ctx, org, programs[p], ages[a])
 				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map age failed",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old age", ages[a]),
@@ -201,7 +206,7 @@ func main() {
 				}
 				if aid == "" {
 					log.Warn(ctx, "migrate:warn:age",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old age", ages[a]))
@@ -216,7 +221,7 @@ func main() {
 					log.String("new age", aid))
 				outcomes[i].Age = outcomes[i].Age + aid + ","
 			}
-			strings.TrimSuffix(outcomes[i].Age, ",")
+			outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
 
 			outcomes[i].Grade = ""
 			for g := range grades {
@@ -226,7 +231,7 @@ func main() {
 				gid, err := mapper.Grade(ctx, org, programs[p], grades[g])
 				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map grade failed",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old grade", grades[g]),
@@ -235,7 +240,7 @@ func main() {
 				}
 				if gid == "" {
 					log.Warn(ctx, "migrate:warn:grade",
-						log.Any("outcome", outcomes[i]),
+						log.String("outcome", outcomes[i].ID),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old grade", grades[g]))
@@ -250,18 +255,16 @@ func main() {
 					log.String("new grade", gid))
 				outcomes[i].Grade = outcomes[i].Grade + gid + ","
 			}
-			strings.TrimSuffix(outcomes[i].Grade, ",")
+			outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
 		}
-		strings.TrimSuffix(outcomes[i].Program, ",")
+		outcomes[i].Program = strings.TrimSuffix(outcomes[i].Program, ",")
 
-
-		// TODO
-		//err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcomes[i])
-		//if err != nil {
-		//	log.Error(ctx, "update program failed",
-		//		log.Any("outcome", outcomes[i]),
-		//		log.Err(err))
-		//}
+		err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcomes[i])
+		if err != nil {
+			log.Error(ctx, "update program failed",
+				log.Any("outcome", outcomes[i]),
+				log.Err(err))
+		}
 	}
 }
 
