@@ -25,14 +25,15 @@ func (s *MapperImpl) loadAmsSubCategorys(ctx context.Context) error {
 	for _, amsProgram := range s.amsPrograms {
 		categoryMap, found := s.MapperCategory.amsCategorys[amsProgram.ID]
 		if !found {
-			return constant.ErrFileNotFound
+			return constant.ErrRecordNotFound
 		}
+		s.MapperSubCategory.amsSubCategorys[amsProgram.ID] = make(map[string]*external.SubCategory)
 		for _, amsCategory := range categoryMap {
 			subCatetorys, err := external.GetSubCategoryServiceProvider().GetByCategory(ctx, s.operator, amsCategory.ID)
 			if err != nil {
 				return err
 			}
-			s.MapperSubCategory.amsSubCategorys[amsProgram.ID] = make(map[string]*external.SubCategory, len(subCatetorys))
+
 			for _, sub := range subCatetorys {
 				s.MapperSubCategory.amsSubCategorys[amsProgram.ID][amsCategory.ID+":"+sub.Name] = sub
 			}
@@ -75,11 +76,16 @@ func (s *MapperImpl) SubCategory(ctx context.Context, organizationID, programID,
 	if err != nil {
 		return "", err
 	}
+	amsCategory, err := s.Category(ctx, organizationID, programID, categoryID)
+	if err != nil {
+		return "", err
+	}
 	amsSubCategorys, found := s.MapperSubCategory.amsSubCategorys[amsProgramID]
 	if !found {
 		return "", constant.ErrRecordNotFound
 	}
-	amsSubCategory, found := amsSubCategorys[categoryID+":"+ourSub.Name]
+
+	amsSubCategory, found := amsSubCategorys[amsCategory+":"+ourSub.Name]
 	if !found {
 		return "", constant.ErrRecordNotFound
 	}
