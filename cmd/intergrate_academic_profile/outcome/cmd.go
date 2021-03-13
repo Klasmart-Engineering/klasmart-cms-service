@@ -12,11 +12,17 @@ import (
 	"strings"
 )
 
+//var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYyODkwMiwiaXNzIjoia2lkc2xvb3AifQ.LLm5XChWOZml-Sc_toDGxb2ALoyusbBU1-HR42fOBtrTp-Xuh5Loh7-7wQz3xXf0_JB3ANVQlszF4nASAfBNViWNgIico-TaFcxRGKzn8n5m9FpnWioPx1qTQLnkkoK3vjZPY7ZJcs8qbGidP8Mv3w7G6y8eTETzmYY1O5vi_ACdEkVROjvYQHFk7WOjYMw1Kf2psQtLJ4Zksg9kuEpBjBK0c3sr-hJWII_pnDK1gFK0GvNsln9U-N8ooi0qUisB5chIPifC6i6xVHjfaHhca1NuLZQk8sgd2ux8Uv0FhcmV3AUO9hef_uAHTt7pSfzjSiqmLhROuB_WnPRzM3uuZw"
+var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYzMDAwMiwiaXNzIjoia2lkc2xvb3AifQ.YN-0bpTYmHFX80-TruRvcTfl9Nr1TAogEBvw9s_Vwg_HDKGdubhXaLbNYmWJ6CSTT4jyb_gYAritSsZwG7RV9qhOqBTfom7SPKzy0Z564D_cPZLEztQjy8DHyXs_q1Fkiy66j9PGO0bmQuXHcpX5_RaA4rJFlNI7aGeNWRUnp8OuOcFDOoe10H46jovEACMpv8pWqqgPMf6uZf8-OpaiMzINz91L52ySO-i0bOUM_7a8Ot9eSHTrBMFjKxWT1ntluvCKHLaUz99A1UwjUJQF1g-BakarKYgcx4mCWcsfJMxZfO4zLn5rROekGkNBvaBYJqVeGFRFXxaguHuisX64NA"
 func main() {
 	setupConfig()
 	ctx := context.TODO()
 	tx := dbo.MustGetDB(ctx)
-	mapper := intergrate_academic_profile.NewMapper(&entity.Operator{Token: ""})
+	mapper := intergrate_academic_profile.NewMapper(&entity.Operator{
+		Token: token,
+		UserID: "14494c07-0d4f-5141-9db2-15799993f448",
+		OrgID: "10f38ce9-5152-4049-b4e7-6d2e2ba884e6",
+	})
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &da.OutcomeCondition{
 		Pager: dbo.Pager{
 			Page: 1,
