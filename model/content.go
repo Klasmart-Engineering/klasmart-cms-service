@@ -2089,12 +2089,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//grade
-	grades, err := GetGradeModel().Query(ctx, &da.GradeCondition{
-		IDs: entity.NullStrings{
-			Strings: gradeIDs,
-			Valid:   len(gradeIDs) != 0,
-		},
-	})
+	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, user, gradeIDs)
 	if err != nil {
 		log.Error(ctx, "can't get grade info", log.Strings("gradeIDs", gradeIDs), log.Err(err))
 	} else {

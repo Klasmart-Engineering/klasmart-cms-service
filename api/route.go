@@ -209,11 +209,8 @@ func (s Server) registeRoute() {
 	grade := s.engine.Group("/v1/grades")
 	{
 		grade.GET("", s.mustLoginWithoutOrgID, s.getGrade)
-		grade.GET("/:id", s.mustLoginWithoutOrgID, s.getGradeByID)
-		grade.POST("", s.mustLoginWithoutOrgID, s.addGrade)
-		grade.PUT("/:id", s.mustLoginWithoutOrgID, s.updateGrade)
-		grade.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteGrade)
 	}
+
 	lessonTypes := s.engine.Group("/v1/lesson_types")
 	{
 		lessonTypes.GET("", s.mustLoginWithoutOrgID, s.getLessonType)
