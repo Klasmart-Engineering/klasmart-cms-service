@@ -254,7 +254,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Developmental[k].DevelopmentalName = dNames[id]
 	}
 	skIDs := strings.Split(outcome.Skills, ",")
-	skNames := getSkillsName(ctx, skIDs)
+	skNames := getSkillsName(ctx, operator, skIDs)
 	view.Skills = make([]Skill, len(skIDs))
 	for k, id := range skIDs {
 		view.Skills[k].SkillID = id
@@ -348,13 +348,8 @@ func getDevelopmentalsName(ctx context.Context, ids []string) (names map[string]
 	return
 }
 
-func getSkillsName(ctx context.Context, ids []string) (names map[string]string) {
-	skills, err := model.GetSkillModel().Query(ctx, &da.SkillCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+func getSkillsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
+	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "getSkillsName: BatchGet failed",
 			log.Err(err),
