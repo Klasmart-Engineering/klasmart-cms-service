@@ -14,6 +14,7 @@ import (
 type AgeServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Age, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Age, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Age, error)
 }
 
 type Age struct {
@@ -105,6 +106,45 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 	log.Info(ctx, "get ages by program success",
 		log.Any("operator", operator),
 		log.String("programID", programID),
+		log.Any("ages", ages))
+
+	return ages, nil
+}
+
+func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Age, error) {
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			ageRanges {
+				id
+				name
+			}			
+		}
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", operator.OrgID)
+
+	data := &struct {
+		Organization struct {
+			Ages []*Age `json:"ageRanges"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query ages by operator failed",
+			log.Err(err),
+			log.Any("operator", operator))
+		return nil, err
+	}
+
+	ages := data.Organization.Ages
+
+	log.Info(ctx, "get ages by operator success",
+		log.Any("operator", operator),
 		log.Any("ages", ages))
 
 	return ages, nil
