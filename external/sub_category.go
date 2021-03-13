@@ -13,7 +13,7 @@ import (
 
 type SubCategoryServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*SubCategory, error)
-	GetByProgramAndCategory(ctx context.Context, operator *entity.Operator, programID, categoryID string) ([]*SubCategory, error)
+	GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string) ([]*SubCategory, error)
 }
 
 type SubCategory struct {
@@ -37,7 +37,7 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: subCategory(id: \"%s\") {id name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: subcategory(id: \"%s\") {id name}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -50,41 +50,41 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 
 	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get subCategorys by ids failed",
+		log.Error(ctx, "get subCategories by ids failed",
 			log.Err(err),
 			log.Strings("ids", ids))
 		return nil, err
 	}
 
-	subCategorys := make([]*SubCategory, 0, len(data))
+	subCategories := make([]*SubCategory, 0, len(data))
 	for index := range ids {
 		subCategory := data[fmt.Sprintf("q%d", indexMapping[index])]
-		subCategorys = append(subCategorys, subCategory)
+		subCategories = append(subCategories, subCategory)
 	}
 
-	log.Info(ctx, "get subCategorys by ids success",
+	log.Info(ctx, "get subCategories by ids success",
 		log.Strings("ids", ids),
-		log.Any("subCategorys", subCategorys))
+		log.Any("subCategories", subCategories))
 
-	return subCategorys, nil
+	return subCategories, nil
 }
 
-func (s AmsSubCategoryService) GetByProgramAndCategory(ctx context.Context, operator *entity.Operator, programID, categoryID string) ([]*SubCategory, error) {
+func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string) ([]*SubCategory, error) {
 	request := chlorine.NewRequest(`
-	query($program_id: ID!) {
-		program(id: $program_id) {
-			subCategorys {
+	query($category_id: ID!) {
+		category(id: $category_id) {
+			subcategories {
 				id
 				name
-			}			
+			}
 		}
 	}`, chlorine.ReqToken(operator.Token))
-	request.Var("program_id", programID)
+	request.Var("category_id", categoryID)
 
 	data := &struct {
-		Program struct {
-			SubCategorys []*SubCategory `json:"subCategorys"`
-		} `json:"program"`
+		Category struct {
+			SubCategories []*SubCategory `json:"subcategories"`
+		} `json:"category"`
 	}{}
 
 	response := &chlorine.Response{
@@ -93,19 +93,19 @@ func (s AmsSubCategoryService) GetByProgramAndCategory(ctx context.Context, oper
 
 	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "query subCategorys by operator failed",
+		log.Error(ctx, "query subCategories by operator failed",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.String("programID", programID))
+			log.String("categoryID", categoryID))
 		return nil, err
 	}
 
-	subCategorys := data.Program.SubCategorys
+	subCategories := data.Category.SubCategories
 
-	log.Info(ctx, "get subCategorys by program success",
+	log.Info(ctx, "get subCategories by program success",
 		log.Any("operator", operator),
-		log.String("programID", programID),
-		log.Any("subCategorys", subCategorys))
+		log.String("categoryID", categoryID),
+		log.Any("subCategories", subCategories))
 
-	return subCategorys, nil
+	return subCategories, nil
 }

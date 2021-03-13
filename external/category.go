@@ -73,17 +73,21 @@ func (s AmsCategoryService) GetByProgram(ctx context.Context, operator *entity.O
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
-			categories {
-				id
-				name
-			}			
+			subjects {
+				categories {
+					id
+					name
+				}
+			}				
 		}
 	}`, chlorine.ReqToken(operator.Token))
 	request.Var("program_id", programID)
 
 	data := &struct {
 		Program struct {
-			Categorys []*Category `json:"categories"`
+			Subjects []struct {
+				Categories []*Category `json:"categories"`
+			} `json:"subjects"`
 		} `json:"program"`
 	}{}
 
@@ -100,7 +104,10 @@ func (s AmsCategoryService) GetByProgram(ctx context.Context, operator *entity.O
 		return nil, err
 	}
 
-	categories := data.Program.Categorys
+	categories := make([]*Category, 0)
+	for _, subject := range data.Program.Subjects {
+		categories = append(categories, subject.Categories...)
+	}
 
 	log.Info(ctx, "get categories by program success",
 		log.Any("operator", operator),
