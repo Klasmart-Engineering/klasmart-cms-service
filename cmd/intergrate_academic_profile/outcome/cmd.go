@@ -13,7 +13,14 @@ import (
 )
 
 //var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYyODkwMiwiaXNzIjoia2lkc2xvb3AifQ.LLm5XChWOZml-Sc_toDGxb2ALoyusbBU1-HR42fOBtrTp-Xuh5Loh7-7wQz3xXf0_JB3ANVQlszF4nASAfBNViWNgIico-TaFcxRGKzn8n5m9FpnWioPx1qTQLnkkoK3vjZPY7ZJcs8qbGidP8Mv3w7G6y8eTETzmYY1O5vi_ACdEkVROjvYQHFk7WOjYMw1Kf2psQtLJ4Zksg9kuEpBjBK0c3sr-hJWII_pnDK1gFK0GvNsln9U-N8ooi0qUisB5chIPifC6i6xVHjfaHhca1NuLZQk8sgd2ux8Uv0FhcmV3AUO9hef_uAHTt7pSfzjSiqmLhROuB_WnPRzM3uuZw"
-var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYzMDAwMiwiaXNzIjoia2lkc2xvb3AifQ.YN-0bpTYmHFX80-TruRvcTfl9Nr1TAogEBvw9s_Vwg_HDKGdubhXaLbNYmWJ6CSTT4jyb_gYAritSsZwG7RV9qhOqBTfom7SPKzy0Z564D_cPZLEztQjy8DHyXs_q1Fkiy66j9PGO0bmQuXHcpX5_RaA4rJFlNI7aGeNWRUnp8OuOcFDOoe10H46jovEACMpv8pWqqgPMf6uZf8-OpaiMzINz91L52ySO-i0bOUM_7a8Ot9eSHTrBMFjKxWT1ntluvCKHLaUz99A1UwjUJQF1g-BakarKYgcx4mCWcsfJMxZfO4zLn5rROekGkNBvaBYJqVeGFRFXxaguHuisX64NA"
+var token="eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYzOTMyMCwiaXNzIjoia2lkc2xvb3AifQ.VGFMOo9aRM23n7hekJ2zmWhnwFGN1eBtIfbDRFGBLUH3jgLAKTKtVbRbXcsZYG50lmey3hrsUQu82jvNa2J7v98E8R80fnCci_QAOfBLI2tpxADah82qcrTQVD3fIuOB6ZLi940gJ5JY36AEO8fHx0i9X5W4v-4UzOPuwjRMTHEQzMZ4zSY-EfBKYPn_22A382GVd4aBpbYBpBXDHRHUeLA24maH2b87maGsUu9DjQEklS5CXzh6kA-FU9pj_AVSI-koYpCutyqQO0EWrfUTUt1v2JvqZKu7q0sbjlxPOFe49bO5ww0J9SaENEeUFTgC0r_hBUcobsu9KTJQ2rmaCw"
+func isRecordNotFoundErr(err error) bool {
+	if err.Error() == "record not found" {
+		return true
+	}
+	return false
+}
+var orgID = "10f38ce9-5152-4049-b4e7-6d2e2ba884e6"
 func main() {
 	setupConfig()
 	ctx := context.TODO()
@@ -24,11 +31,11 @@ func main() {
 		OrgID: "10f38ce9-5152-4049-b4e7-6d2e2ba884e6",
 	})
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &da.OutcomeCondition{
-		Pager: dbo.Pager{
-			Page: 1,
-			PageSize: 100,
-		},
-		OrderBy: da.OrderByCreatedAt,
+		//Pager: dbo.Pager{
+		//	Page: 1,
+		//	PageSize: 100,
+		//},
+		//OrderBy: da.OrderByCreatedAt,
 		IncludeDeleted: true,
 	})
 	if err != nil {
@@ -49,8 +56,9 @@ func main() {
 			if programs[p] == "" {
 				continue
 			}
-			pid, err := mapper.Program(ctx, outcomes[i].OrganizationID, programs[p])
-			if err != nil {
+			org := orgID
+			pid, err := mapper.Program(ctx, org, programs[p])
+			if err != nil && !isRecordNotFoundErr(err) {
 				log.Error(ctx, "map program failed",
 					log.Any("outcome", outcomes[i]),
 					log.String("old program", programs[p]),
@@ -58,13 +66,14 @@ func main() {
 				return
 			}
 			if pid == "" {
-				log.Warn(ctx, "program warn",
+				log.Warn(ctx, "migrate:warn:program",
 					log.Any("outcome", outcomes[i]),
 					log.String("old program", programs[p]),
 					log.Err(err))
+				//fmt.Printf("Migrate: can't match program %s\n", programs[p])
 				continue
 			}
-			log.Info(ctx, "program",
+			log.Info(ctx, "migrate:info:program",
 				log.String("id", outcomes[i].ID),
 				log.String("old program", programs[p]),
 				log.String("new program", pid))
@@ -75,8 +84,8 @@ func main() {
 				if subjects[s] == "" {
 					continue
 				}
-				sid, err := mapper.Subject(ctx, outcomes[i].OrganizationID, programs[p], subjects[s])
-				if err != nil {
+				sid, err := mapper.Subject(ctx, org, programs[p], subjects[s])
+				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map subject failed",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
@@ -86,14 +95,16 @@ func main() {
 					return
 				}
 				if sid == "" {
-					log.Warn(ctx, "subject warn",
+					log.Warn(ctx, "migrate:warn:subject",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old subject", subjects[s]))
+					//fmt.Printf("Migrate: program %s can't match subject %s\n",
+					//	programs[p], subjects[s])
 					continue
 				}
-				log.Info(ctx, "subject",
+				log.Info(ctx, "migrate:info:subject",
 					log.String("id", outcomes[i].ID),
 					log.String("program", programs[p]),
 					log.String("old subject", subjects[s]),
@@ -108,8 +119,8 @@ func main() {
 				if categories[c] == "" {
 					continue
 				}
-				cid , err := mapper.Category(ctx, outcomes[i].OrganizationID, programs[p], categories[c])
-				if err != nil {
+				cid , err := mapper.Category(ctx, org, programs[p], categories[c])
+				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map category failed",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
@@ -119,14 +130,16 @@ func main() {
 					return
 				}
 				if cid == "" {
-					log.Warn(ctx, "category warn",
+					log.Warn(ctx, "migrate:warn:category",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old category", categories[c]))
+					//fmt.Printf("Migrate: program %s can't match category %s\n",
+					//	programs[p], categories[c])
 					continue
 				}
-				log.Info(ctx, "category",
+				log.Info(ctx, "migrate:info:category",
 					log.String("id", outcomes[i].ID),
 					log.String("program", programs[p]),
 					log.String("old category", categories[c]),
@@ -137,8 +150,8 @@ func main() {
 					if subCategories[sc] == "" {
 						continue
 					}
-					scid, err := mapper.SubCategory(ctx, outcomes[i].OrganizationID, programs[p], categories[c], subCategories[sc])
-					if err != nil {
+					scid, err := mapper.SubCategory(ctx, org, programs[p], categories[c], subCategories[sc])
+					if err != nil && !isRecordNotFoundErr(err){
 						log.Error(ctx, "map sub category failed",
 							log.Any("outcome", outcomes[i]),
 							log.String("old program", programs[p]),
@@ -149,15 +162,17 @@ func main() {
 						return
 					}
 					if scid == "" {
-						log.Warn(ctx, "sub category warn",
+						log.Warn(ctx, "migrate:warn:sub-category",
 							log.Any("outcome", outcomes[i]),
 							log.String("old program", programs[p]),
 							log.String("new program", pid),
 							log.String("old category", categories[c]),
 							log.String("new category", cid))
+						//fmt.Printf("Migrate: program %s category %s can't match subCategory %s\n",
+						//	programs[p], categories[c], subCategories[sc])
 						continue
 					}
-					log.Info(ctx, "sub category",
+					log.Info(ctx, "migrate:info:sub-category",
 						log.String("id", outcomes[i].ID),
 						log.String("program", programs[p]),
 						log.String("category", categories[c]),
@@ -174,8 +189,8 @@ func main() {
 				if ages[a] == "" {
 					continue
 				}
-				aid, err := mapper.Age(ctx, outcomes[i].OrganizationID, programs[p], ages[a])
-				if err != nil {
+				aid, err := mapper.Age(ctx, org, programs[p], ages[a])
+				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map age failed",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
@@ -185,14 +200,16 @@ func main() {
 					return
 				}
 				if aid == "" {
-					log.Warn(ctx, "age warn",
+					log.Warn(ctx, "migrate:warn:age",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old age", ages[a]))
+					//fmt.Printf("Migrate: program %s can't match age %s\n",
+					//	programs[p], ages[a])
 					continue
 				}
-				log.Info(ctx, "age",
+				log.Info(ctx, "migrate:info:age",
 					log.String("id", outcomes[i].ID),
 					log.String("program", programs[p]),
 					log.String("old age", ages[a]),
@@ -206,8 +223,8 @@ func main() {
 				if grades[g] == "" {
 					continue
 				}
-				gid, err := mapper.Grade(ctx, outcomes[i].OrganizationID, programs[p], grades[g])
-				if err != nil {
+				gid, err := mapper.Grade(ctx, org, programs[p], grades[g])
+				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map grade failed",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
@@ -217,14 +234,16 @@ func main() {
 					return
 				}
 				if gid == "" {
-					log.Warn(ctx, "age warn",
+					log.Warn(ctx, "migrate:warn:grade",
 						log.Any("outcome", outcomes[i]),
 						log.String("old program", programs[p]),
 						log.String("new program", pid),
 						log.String("old grade", grades[g]))
+					//fmt.Printf("Migrate: program %s can't match grade %s\n",
+					//	programs[p], grades[g])
 					continue
 				}
-				log.Info(ctx, "grade",
+				log.Info(ctx, "migrate:info:grade",
 					log.String("id", outcomes[i].ID),
 					log.String("program", programs[p]),
 					log.String("old grade", grades[g]),
