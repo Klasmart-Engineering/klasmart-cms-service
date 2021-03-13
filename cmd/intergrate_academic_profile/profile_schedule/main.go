@@ -15,7 +15,7 @@ import (
 
 var (
 	mapper   intergrate_academic_profile.Mapper
-	token    = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYyNzg3MiwiaXNzIjoia2lkc2xvb3AifQ.EnJ8b_PRo10_GVbOyV3GlF0YNGF2RFDRcS9Lb9aijpnfoHGcye_Dya8gAeZgiSyYczyUJs37mB4buq8Oe5OlcXyBoZj7lEJ1bvjZqJ4GxkZA0DPHUlXSFiZI8aD64J0DiR_fOjiWkeqYCwpaJ9yod9GTF0UAp9SE90GTosaUWqkgSPlHMXjlmgR8opLoOpP9ZgrtuXo1CcZA9MO_78RnkJKO4D3iUB7ewCK3A_kCUIPhbOMHRFAzFtvuSIzkGfkACcrlOQGRRj0A4YCXVWOu7Psj4i-xox0c8TosOWhHukvE98Jchy6_smiPPJUkKWBLbPmJ3z9opBK8uRumwmgJBA"
+	token    = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYzMjM4NCwiaXNzIjoia2lkc2xvb3AifQ.iOglxJSKo9f8IW14UTZahj2xVlYwu1XBsx-w7um639Bw-pTvfOBDyn2Hfip0x2nb8qC8z8lRiRiPB1bXoXy7bI6WcRynyldJY-RivLLjyc4IGBVysSo1T6VBNT9fc3ynk4iHwQ6CwwJPF_nH0AR6G8hqaWQ05P3qzDeoYVHYN0XosxP63zKAiZ0MHaudwXSoVO-C2VNMSrISPggxzjfHoEm_mSIqVuHzJAHFCyH68Ql03Odcu39P91vqSLcJpp77ga1FIJ-o8SGIeARyXoQrugknnLksdkay_B82eJA1p9OKK9yBYDO0OYRnyjYrVklBXnJSEKrCiHSba-eOwIVcEQ"
 	operator = &entity.Operator{
 		UserID: "14494c07-0d4f-5141-9db2-15799993f448", // PJ
 		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6", // Badanamu HQ
@@ -77,25 +77,30 @@ func initArgs() {
 func loadSchedule() {
 	ctx := context.Background()
 	condition := &da.ScheduleCondition{}
-	condition.Pager = dbo.Pager{Page: 1, PageSize: 10}
+	//condition.Pager = dbo.Pager{Page: 1, PageSize: 10}
 	var schedules []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &schedules)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	programIDs := make([]string, len(schedules))
-	for i, item := range schedules {
-		programIDs[i] = item.ProgramID
+	//
+	programIDMap := make(map[string]bool)
+	for _, item := range schedules {
+		programIDMap[item.ProgramID] = true
 	}
-	subjectIDs := make([]string, len(schedules))
-	for i, item := range schedules {
-		subjectIDs[i] = item.SubjectID
+	subjectIDMap := make(map[string]bool)
+	for _, item := range schedules {
+		subjectIDMap[item.SubjectID] = true
 	}
-	id, err := mapper.Program(ctx, operator.OrgID, programIDs[0])
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(id)
+	fmt.Println(len(programIDMap), len(subjectIDMap))
+
+	// scheduleProgramMap := make(map[string]string)
+	// for _, item := range programIDs {
+	// 	amsProgramID, err := mapper.Program(ctx, operator.OrgID, item)
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 		return
+	// 	}
+	// }
 }
