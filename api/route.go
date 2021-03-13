@@ -231,10 +231,6 @@ func (s Server) registeRoute() {
 	skills := s.engine.Group("/v1/skills")
 	{
 		skills.GET("", s.mustLoginWithoutOrgID, s.getSkill)
-		skills.GET("/:id", s.mustLoginWithoutOrgID, s.getSkillByID)
-		skills.POST("", s.mustLoginWithoutOrgID, s.addSkill)
-		skills.PUT("/:id", s.mustLoginWithoutOrgID, s.updateSkill)
-		skills.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteSkill)
 	}
 	subjects := s.engine.Group("/v1/subjects")
 	{

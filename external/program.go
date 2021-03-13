@@ -14,12 +14,12 @@ import (
 type ProgramServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Program, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Program, error)
-	GetByGroup(ctx context.Context, operator *entity.Operator, groupName string) ([]*Program, error)
 }
 
 type Program struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	GroupName string `json:"group_name"`
 }
 
 func GetProgramServiceProvider() ProgramServiceProvider {
@@ -107,9 +107,4 @@ func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *enti
 		log.Any("programs", programs))
 
 	return programs, nil
-}
-
-func (s AmsProgramService) GetByGroup(ctx context.Context, operator *entity.Operator, groupName string) ([]*Program, error) {
-	// TODO
-	return nil, nil
 }

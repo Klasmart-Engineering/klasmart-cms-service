@@ -14,6 +14,7 @@ import (
 type GradeServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Grade, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Grade, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Grade, error)
 }
 
 type Grade struct {
@@ -105,6 +106,45 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 	log.Info(ctx, "get grades by program success",
 		log.Any("operator", operator),
 		log.String("programID", programID),
+		log.Any("grades", grades))
+
+	return grades, nil
+}
+
+func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Grade, error) {
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+			grades {
+				id
+				name
+			}			
+		}
+	}`, chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", operator.OrgID)
+
+	data := &struct {
+		Organization struct {
+			Grades []*Grade `json:"grades"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query grades by operator failed",
+			log.Err(err),
+			log.Any("operator", operator))
+		return nil, err
+	}
+
+	grades := data.Organization.Grades
+
+	log.Info(ctx, "get grades by operator success",
+		log.Any("operator", operator),
 		log.Any("grades", grades))
 
 	return grades, nil
