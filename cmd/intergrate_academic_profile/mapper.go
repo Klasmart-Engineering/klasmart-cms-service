@@ -2,8 +2,12 @@ package intergrate_academic_profile
 
 import (
 	"context"
+	"sync"
+
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
 
 type Mapper interface {
@@ -18,33 +22,42 @@ type Mapper interface {
 }
 
 func NewMapper(operator *entity.Operator) Mapper {
-	// TODO
-	return &MapperImpl{}
+	ctx := context.TODO()
+
+	impl := &MapperImpl{operator: operator}
+
+	err := impl.initProgramMapper(ctx)
+	if err != nil {
+		log.Fatal(ctx, "init program mapping failed", log.Err(err))
+	}
+
+	return impl
 }
 
-type MapperImpl struct{}
+type MapperImpl struct {
+	operator *entity.Operator
 
-func (s MapperImpl) Program(ctx context.Context, organizationID, programID string) (string, error) {
-	// TODO
-	return "", nil
+	amsProgramMutex sync.Mutex
+	// key: ams program name
+	amsPrograms map[string]*external.Program
+	// key: our program id
+	ourPrograms map[string]*entity.Program
+	// key: our program id
+	// value: ams program id
+	programMapping map[string]string
+
+	MapperAge MapperAge
+}
+type MapperAge struct {
+	amsAgeMutex sync.Mutex
+
+	amsAges map[string]*external.Age
+	ourAges map[string]*entity.Age
+
+	ageMapping map[string]string
 }
 
 func (s MapperImpl) Subject(ctx context.Context, organizationID, programID, subjectID string) (string, error) {
 	// TODO
 	return "", nil
 }
-
-// func (s MapperImpl) SubCategory(ctx context.Context, organizationID, programID, categoryID, subCategoryID string) (string, error) {
-// 	// TODO
-// 	return "", nil
-// }
-
-// func (s MapperImpl) Age(ctx context.Context, organizationID, programID, AgeID string) (string, error) {
-// 	// TODO
-// 	return "", nil
-// }
-
-// func (s MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
-// 	// TODO
-// 	return "", nil
-// }
