@@ -15,7 +15,7 @@ import (
 // @Param program_id query string false "program id"
 // @Param developmental_id query string false "developmental id"
 // @Tags skill
-// @Success 200 {array} entity.Skill
+// @Success 200 {array} external.SubCategory
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /skills [get]
 func (s *Server) getSkill(c *gin.Context) {

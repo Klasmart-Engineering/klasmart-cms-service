@@ -13,7 +13,7 @@ import (
 // @Accept json
 // @Produce json
 // @Tags program
-// @Success 200 {array} entity.Program
+// @Success 200 {array} external.Program
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /programs [get]
 func (s *Server) getProgram(c *gin.Context) {

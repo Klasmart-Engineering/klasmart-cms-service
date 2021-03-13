@@ -14,7 +14,7 @@ import (
 // @Produce json
 // @Param program_id query string false "program id"
 // @Tags age
-// @Success 200 {array} entity.Age
+// @Success 200 {array} external.Age
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /ages [get]
 func (s *Server) getAge(c *gin.Context) {

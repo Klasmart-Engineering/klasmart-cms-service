@@ -209,11 +209,8 @@ func (s Server) registeRoute() {
 	grade := s.engine.Group("/v1/grades")
 	{
 		grade.GET("", s.mustLoginWithoutOrgID, s.getGrade)
-		grade.GET("/:id", s.mustLoginWithoutOrgID, s.getGradeByID)
-		grade.POST("", s.mustLoginWithoutOrgID, s.addGrade)
-		grade.PUT("/:id", s.mustLoginWithoutOrgID, s.updateGrade)
-		grade.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteGrade)
 	}
+
 	lessonTypes := s.engine.Group("/v1/lesson_types")
 	{
 		lessonTypes.GET("", s.mustLoginWithoutOrgID, s.getLessonType)
@@ -230,11 +227,8 @@ func (s Server) registeRoute() {
 	subjects := s.engine.Group("/v1/subjects")
 	{
 		subjects.GET("", s.mustLoginWithoutOrgID, s.getSubject)
-		subjects.GET("/:id", s.mustLoginWithoutOrgID, s.getSubjectByID)
-		subjects.POST("", s.mustLoginWithoutOrgID, s.addSubject)
-		subjects.PUT("/:id", s.mustLoginWithoutOrgID, s.updateSubject)
-		subjects.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteSubject)
 	}
+
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{
 		visibilitySettings.GET("", s.mustLogin, s.getVisibilitySetting)

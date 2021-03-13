@@ -122,7 +122,7 @@ func (a *assessmentModel) GetAssessment(ctx context.Context, tx *dbo.DBContext, 
 
 	// fill subject
 	{
-		nameMap, err := a.getSubjectNameMap(ctx, []string{assessment.SubjectID})
+		nameMap, err := a.getSubjectNameMap(ctx, operator, []string{assessment.SubjectID})
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get subject name map failed",
 				log.Err(err),
@@ -348,7 +348,7 @@ func (a *assessmentModel) ListAssessments(ctx context.Context, tx *dbo.DBContext
 		teacherIDs = append(teacherIDs, itemTeacherIDs...)
 	}
 
-	subjectNameMap, err := a.getSubjectNameMap(ctx, subjectIDs)
+	subjectNameMap, err := a.getSubjectNameMap(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get subject name map failed",
 			log.Err(err),
@@ -429,14 +429,9 @@ func (a *assessmentModel) getProgramNameMap(ctx context.Context, operator *entit
 	return programNameMap, nil
 }
 
-func (a *assessmentModel) getSubjectNameMap(ctx context.Context, subjectIDs []string) (map[string]string, error) {
+func (a *assessmentModel) getSubjectNameMap(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]string, error) {
 	subjectNameMap := map[string]string{}
-	items, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
-		IDs: entity.NullStrings{
-			Strings: subjectIDs,
-			Valid:   len(subjectIDs) != 0,
-		},
-	})
+	items, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get subject failed",
 			log.Err(err),
@@ -966,29 +961,15 @@ func (a *assessmentModel) existsTeachersByIDs(ctx context.Context, ids []string,
 	return true, nil
 }
 
-func (a *assessmentModel) existsSubjectByID(ctx context.Context, id string) (bool, error) {
+func (a *assessmentModel) existsSubjectByID(ctx context.Context, operator *entity.Operator, id string) (bool, error) {
 	ids := []string{id}
-	_, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+	_, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
-		switch err {
-		case dbo.ErrRecordNotFound, constant.ErrRecordNotFound:
-			log.Info(ctx, "check subject exists: not found subjects",
-				log.Err(err),
-				log.String("id", id),
-			)
-			return false, nil
-		default:
-			log.Error(ctx, "check subject exists: batch get subjects failed",
-				log.Err(err),
-				log.String("id", id),
-			)
-			return false, err
-		}
+		log.Error(ctx, "check subject exists: batch get subjects failed",
+			log.Err(err),
+			log.String("id", id),
+		)
+		return false, err
 	}
 	return true, nil
 }

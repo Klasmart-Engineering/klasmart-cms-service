@@ -7,7 +7,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 func (s *MapperImpl) initGradeMapper(ctx context.Context) error {
@@ -36,7 +35,8 @@ func (s *MapperImpl) loadAmsGrades(ctx context.Context) error {
 }
 
 func (s *MapperImpl) loadOurGrades(ctx context.Context) error {
-	ourGrades, err := model.GetGradeModel().Query(ctx, &da.GradeCondition{})
+	var ourGrades []*entity.Grade
+	err := da.GetGradeDA().Query(ctx, &da.GradeCondition{}, &ourGrades)
 	if err != nil {
 		return err
 	}
@@ -49,9 +49,9 @@ func (s *MapperImpl) loadOurGrades(ctx context.Context) error {
 }
 
 func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
-	gradeID, found := s.MapperGrade.gradeMapping[gradeID]
+	cacheID, found := s.MapperGrade.gradeMapping[gradeID]
 	if found {
-		return gradeID, nil
+		return cacheID, nil
 	}
 
 	s.MapperGrade.amsGradeMutex.Lock()

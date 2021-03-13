@@ -5,9 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -240,7 +238,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Program[k].ProgramName = pNames[id]
 	}
 	sIDs := strings.Split(outcome.Subject, ",")
-	sNames := getSubjectsName(ctx, sIDs)
+	sNames := getSubjectsName(ctx, operator, sIDs)
 	view.Subject = make([]Subject, len(sIDs))
 	for k, id := range sIDs {
 		view.Subject[k].SubjectID = id
@@ -268,7 +266,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Age[k].AgeName = aNames[id]
 	}
 	gIDs := strings.Split(outcome.Grade, ",")
-	gNames := getGradeName(ctx, gIDs)
+	gNames := getGradeName(ctx, operator, gIDs)
 	view.Grade = make([]Grade, len(gIDs))
 	for k, id := range gIDs {
 		view.Grade[k].GradeID = id
@@ -307,13 +305,8 @@ func getProgramsName(ctx context.Context, operator *entity.Operator, ids []strin
 	return
 }
 
-func getSubjectsName(ctx context.Context, ids []string) (names map[string]string) {
-	subjects, err := model.GetSubjectModel().Query(ctx, &da.SubjectCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+func getSubjectsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
+	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "getSubjectsName: BatchGet failed",
 			log.Err(err),
@@ -370,13 +363,8 @@ func getAgesName(ctx context.Context, operator *entity.Operator, ids []string) (
 	return
 }
 
-func getGradeName(ctx context.Context, ids []string) (names map[string]string) {
-	grades, err := model.GetGradeModel().Query(ctx, &da.GradeCondition{
-		IDs: entity.NullStrings{
-			Strings: ids,
-			Valid:   len(ids) != 0,
-		},
-	})
+func getGradeName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
+	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {
 		log.Error(ctx, "getGradeName: BatchGet failed",
 			log.Err(err),

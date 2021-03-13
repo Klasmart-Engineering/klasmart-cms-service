@@ -14,7 +14,7 @@ import (
 // @Produce json
 // @Param program_id query string false "program id"
 // @Tags developmental
-// @Success 200 {array} entity.Developmental
+// @Success 200 {array} external.Category
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /developmentals [get]
 func (s *Server) getDevelopmental(c *gin.Context) {

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
@@ -21,7 +20,7 @@ func (s *MapperImpl) Subject(ctx context.Context, organizationID, programID, sub
 	ourSubject, found := s.ourSubjects[subjectID]
 	if !found {
 		log.Error(ctx, "unknown subject id", log.String("subjectID", subjectID), log.String("organizationID", organizationID))
-		return "", constant.ErrRecordNotFound
+		return s.defaultSubject(programID)
 	}
 
 	amsProgramID, err := s.Program(ctx, organizationID, programID)
@@ -53,7 +52,7 @@ func (s *MapperImpl) Subject(ctx context.Context, organizationID, programID, sub
 			log.String("programID", programID),
 			log.Any("subject", ourSubject))
 
-		return "", constant.ErrRecordNotFound
+		return s.defaultSubject(programID)
 	}
 
 	s.subjectMapping[programID+":"+ourSubject.ID] = amsSubject.ID
@@ -101,4 +100,35 @@ func (s *MapperImpl) loadOurSubjects(ctx context.Context) error {
 	// }
 
 	return nil
+}
+
+func (s MapperImpl) defaultSubject(programID string) (string, error) {
+	switch programID {
+	case "5fd9ddface9660cbc5f667d8":
+		return "5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", nil
+	case "5fdac06ea878718a554ff00d":
+		return "20d6ca2f-13df-4a7a-8dcb-955908db7baa", nil
+	case "5fdac0f61f066722a1351adb":
+		return "7cf8d3a3-5493-46c9-93eb-12f220d101d0", nil
+	case "5fdac0fe1f066722a1351ade":
+		return "fab745e8-9e31-4d0c-b780-c40120c98b27", nil
+	case "program0":
+		return "5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", nil
+	case "program1":
+		return "f037ee92-212c-4592-a171-ed32fb892162", nil
+	case "program2":
+		return "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a", nil
+	case "program3":
+		return "29d24801-0089-4b8e-85d3-77688e961efb", nil
+	case "program4":
+		return "66a453b0-d38f-472e-b055-7a94a94d66c4", nil
+	case "program5":
+		return "b997e0d1-2dd7-40d8-847a-b8670247e96b", nil
+	case "program6":
+		return "b19f511e-a46b-488d-9212-22c0369c8afd", nil
+	case "program7":
+		return "49c8d5ee-472b-47a6-8c57-58daf863c2e1", nil
+	default:
+		return "5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", nil
+	}
 }
