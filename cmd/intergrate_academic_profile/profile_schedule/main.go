@@ -15,7 +15,7 @@ import (
 
 var (
 	mapper   intergrate_academic_profile.Mapper
-	token    = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTYzMjM4NCwiaXNzIjoia2lkc2xvb3AifQ.iOglxJSKo9f8IW14UTZahj2xVlYwu1XBsx-w7um639Bw-pTvfOBDyn2Hfip0x2nb8qC8z8lRiRiPB1bXoXy7bI6WcRynyldJY-RivLLjyc4IGBVysSo1T6VBNT9fc3ynk4iHwQ6CwwJPF_nH0AR6G8hqaWQ05P3qzDeoYVHYN0XosxP63zKAiZ0MHaudwXSoVO-C2VNMSrISPggxzjfHoEm_mSIqVuHzJAHFCyH68Ql03Odcu39P91vqSLcJpp77ga1FIJ-o8SGIeARyXoQrugknnLksdkay_B82eJA1p9OKK9yBYDO0OYRnyjYrVklBXnJSEKrCiHSba-eOwIVcEQ"
+	token    = "yJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTY5MTUxOCwiaXNzIjoia2lkc2xvb3AifQ.ZocoKugAdJy9nePic1FshT6vz7SFkglf7dZNhYP9Gz8Su1vELmqADSNxHX5zDxWQ_nnigfINBZlEKOJkXlDI5cSa9WPtZiPRPOu-shyS97BTNdO3M37vNcXcXB5NM8dFb44qBaYU_MbjoM1wxIneoTafBkbIApinTMVqFJ8U7MZVsVvT8cCoZgSEtEba5O3u5gSElPP8q22Tyq5flqOyZjvB9cijURra9e5CTXNM7SxJ8re-ePfbuIcypaWhDBKc9wPPiD8BC2bllvQIZJxSMsYlLareI9UmL642hNJfa1rn0sZaj7XHAPCvDECQndFQ1pjwLQME6pnxp3dMFwJiEg"
 	operator = &entity.Operator{
 		UserID: "14494c07-0d4f-5141-9db2-15799993f448", // PJ
 		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6", // Badanamu HQ
@@ -30,7 +30,7 @@ func main() {
 
 func initArgs() {
 	dsn := "admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
-	point := "https://api.beta.kidsloop.net/user/"
+	point := "https://api.kidsloop.net/user/"
 
 	cfg := &config.Config{
 		DBConfig: config.DBConfig{
@@ -84,23 +84,33 @@ func loadSchedule() {
 		log.Println(err)
 		return
 	}
-	//
-	programIDMap := make(map[string]bool)
-	for _, item := range schedules {
-		programIDMap[item.ProgramID] = true
+
+	programIDMap := make(map[string][]*entity.Schedule)
+	subjectIDMap := make(map[string][]*entity.Schedule)
+
+	for _, scheduleItem := range schedules {
+		if _, ok := programIDMap[scheduleItem.ProgramID]; !ok {
+			programIDMap[scheduleItem.ProgramID] = make([]*entity.Schedule, 0)
+		}
+		programIDMap[scheduleItem.ProgramID] = append(programIDMap[scheduleItem.ProgramID], scheduleItem)
+
+		if _, ok := subjectIDMap[scheduleItem.SubjectID]; !ok {
+			subjectIDMap[scheduleItem.SubjectID] = make([]*entity.Schedule, 0)
+		}
+		subjectIDMap[scheduleItem.SubjectID] = append(subjectIDMap[scheduleItem.SubjectID], scheduleItem)
 	}
-	subjectIDMap := make(map[string]bool)
-	for _, item := range schedules {
-		subjectIDMap[item.SubjectID] = true
-	}
+
 	fmt.Println(len(programIDMap), len(subjectIDMap))
 
-	// scheduleProgramMap := make(map[string]string)
-	// for _, item := range programIDs {
-	// 	amsProgramID, err := mapper.Program(ctx, operator.OrgID, item)
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		return
-	// 	}
-	// }
+	for key, scheduleList := range programIDMap {
+		amsProgramID, err := mapper.Program(ctx, operator.OrgID, key)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		for _, item := range scheduleList {
+			log.Printf("ourProgramID:%s, amsProgramID:%s, scheduleID:%s \n", key, amsProgramID, item.ID)
+		}
+		log.Println("..............")
+	}
 }
