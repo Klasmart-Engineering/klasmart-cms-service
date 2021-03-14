@@ -7,6 +7,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -60,6 +61,10 @@ func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Opera
 	categories := make([]*Category, 0, len(data))
 	for index := range ids {
 		category := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if category == nil {
+			log.Error(ctx, "category not found", log.String("id", ids[index]))
+			return nil, constant.ErrRecordNotFound
+		}
 		categories = append(categories, category)
 	}
 
