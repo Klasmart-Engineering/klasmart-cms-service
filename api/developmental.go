@@ -26,7 +26,7 @@ func (s *Server) getDevelopmental(c *gin.Context) {
 
 	programID := c.Query("program_id")
 
-	if programID != "" {
+	if programID == "" {
 		result, err = external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
 	} else {
 		result, err = external.GetCategoryServiceProvider().GetByProgram(ctx, operator, programID)
