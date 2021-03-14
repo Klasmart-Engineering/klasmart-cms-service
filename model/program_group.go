@@ -41,8 +41,8 @@ func (s programGroupModel) GetByProgramID(ctx context.Context, id string, operat
 }
 
 func (s programGroupModel) QueryMap(ctx context.Context, condition *da.ProgramGroupQueryCondition) (map[string]*entity.ProgramGroup, error) {
-	var programGroups []*entity.ProgramGroup
-	err := da.GetProgramGroupDA().Query(ctx, condition, programGroups)
+	programGroups := []*entity.ProgramGroup{}
+	err := da.GetProgramGroupDA().Query(ctx, condition, &programGroups)
 	if err != nil {
 		return nil, err
 	}
