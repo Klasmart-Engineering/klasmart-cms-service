@@ -58,6 +58,14 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get grades by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
 	grades := make([]*Grade, 0, len(data))
 	for index := range ids {
 		grade := data[fmt.Sprintf("q%d", indexMapping[index])]
@@ -106,6 +114,14 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get grades by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.String("programID", programID))
+		return nil, response.Errors
+	}
+
 	grades := data.Program.Grades
 
 	log.Info(ctx, "get grades by program success",
@@ -144,6 +160,13 @@ func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity
 			log.Err(err),
 			log.Any("operator", operator))
 		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "query grades by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator))
+		return nil, response.Errors
 	}
 
 	grades := data.Organization.Grades
