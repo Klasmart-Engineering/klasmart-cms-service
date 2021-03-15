@@ -375,7 +375,7 @@ func main() {
 						log.Any("outcome", outcomes[i]),
 						log.Err(err))
 				}
-			} else if outcomes[i].Program != "" {
+			} else if outcomes[i].Program == "" {
 				pid, err := mapper.Program(ctx, outcomes[i].OrganizationID, "")
 				if err != nil {
 					panic(err)
