@@ -23,8 +23,8 @@ type IScheduleDA interface {
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
 	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
-	UpdateProgram(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldProgramID string, newProgramID string) error
-	UpdateSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldSubjectID string, newSubjectID string) error
+	UpdateProgram(ctx context.Context, tx *sql.Tx, operator *entity.Operator, oldProgramID string, newProgramID string) error
+	UpdateSubject(ctx context.Context, tx *sql.Tx, operator *entity.Operator, oldSubjectID string, oldProgramID string, newSubjectID string) error
 }
 
 type scheduleDA struct {
@@ -149,8 +149,8 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 	return nil
 }
 
-func (s *scheduleDA) UpdateProgram(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldProgramID string, newProgramID string) error {
-	_, err := tx.DB.DB().
+func (s *scheduleDA) UpdateProgram(ctx context.Context, tx *sql.Tx, operator *entity.Operator, oldProgramID string, newProgramID string) error {
+	_, err := tx.
 		Exec(fmt.Sprintf("UPDATE `%s` SET `program_id` = ?, `updated_at` = ?  WHERE (program_id = ?)", constant.TableNameSchedule), newProgramID, time.Now().Unix(), oldProgramID)
 
 	if err != nil {
@@ -165,9 +165,9 @@ func (s *scheduleDA) UpdateProgram(ctx context.Context, tx *dbo.DBContext, opera
 	return nil
 }
 
-func (s *scheduleDA) UpdateSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldSubjectID string, newSubjectID string) error {
-	_, err := tx.DB.DB().
-		Exec(fmt.Sprintf("UPDATE `%s` SET `subject_id` = ?, `updated_at` = ?  WHERE (subject_id = ?)", constant.TableNameSchedule), newSubjectID, time.Now().Unix(), oldSubjectID)
+func (s *scheduleDA) UpdateSubject(ctx context.Context, tx *sql.Tx, operator *entity.Operator, oldSubjectID string, oldProgramID string, newSubjectID string) error {
+	_, err := tx.
+		Exec(fmt.Sprintf("UPDATE `%s` SET `subject_id` = ?, `updated_at` = ?  WHERE (subject_id = ? and program_id = ?)", constant.TableNameSchedule), newSubjectID, time.Now().Unix(), oldSubjectID, oldProgramID)
 
 	if err != nil {
 		log.Error(ctx, "update schedule subject: update failed",

@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/cmd/intergrate_academic_profile"
@@ -10,7 +12,9 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -27,20 +31,8 @@ var (
 )
 
 func main() {
-	//args := os.Args[1:]
-	//if len(args) > 1 {
-	//	if args[0] == "-exec" {
-	//		isExec = true
-	//	}
-	//}
-	//defer func() {
-	//	if err := recover(); err != nil {
-	//
-	//	}
-	//}()
-	//for {
-	//
-	//}
+	//operator.Token = requestToken()
+
 	initArgs()
 	err := loadSchedule()
 	if err != nil {
@@ -57,6 +49,27 @@ func main() {
 	//fmt.Println("Enter to continue mapper....")
 	//inputReader := bufio.NewReader(os.Stdin)
 	//inputReader.ReadString('\n')
+}
+func requestToken() string {
+	res, err := http.Get("http://192.168.1.233:10210/ll?email=pj.williams@calmid.com")
+	if err != nil {
+		panic(err)
+	}
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+	access := struct {
+		Hit struct {
+			Access string `json:"access"`
+		} `json:"hit"`
+	}{}
+	err = json.Unmarshal(data, &access)
+	if err != nil {
+		panic(err)
+	}
+	return access.Hit.Access
 }
 
 func initArgs() {
@@ -121,12 +134,7 @@ func getSubjectMapKey(programID, subjectID string) string {
 
 func loadSchedule() error {
 	ctx := context.Background()
-	condition := &da.ScheduleCondition{
-		//OrgID: sql.NullString{
-		//	String: operator.OrgID,
-		//	Valid:  true,
-		//},
-	}
+	condition := &da.ScheduleCondition{}
 	//condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
 	var schedules []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &schedules)
@@ -134,6 +142,20 @@ func loadSchedule() error {
 		log.Println("get data from db error", err)
 		return err
 	}
+	fmt.Println("schedule count", len(schedules))
+	condition = &da.ScheduleCondition{
+		DeleteAt: sql.NullInt64{
+			Int64: 1,
+			Valid: true,
+		},
+	}
+	var schedulesDelete []*entity.Schedule
+	err = da.GetScheduleDA().Query(ctx, condition, &schedulesDelete)
+	if err != nil {
+		log.Println("get data from db error", err)
+		return err
+	}
+	schedules = append(schedules, schedulesDelete...)
 
 	// programID->schedule array
 	programIDMap := make(map[string][]*entity.Schedule)
@@ -141,7 +163,7 @@ func loadSchedule() error {
 	subjectIDMap := make(map[string]string)
 
 	for _, scheduleItem := range schedules {
-		if scheduleItem.ProgramID == "" {
+		if scheduleItem.ProgramID == "" && scheduleItem.SubjectID == "" {
 			continue
 		}
 		if _, ok := programIDMap[scheduleItem.ProgramID]; !ok {
@@ -149,9 +171,9 @@ func loadSchedule() error {
 		}
 		programIDMap[scheduleItem.ProgramID] = append(programIDMap[scheduleItem.ProgramID], scheduleItem)
 
-		if scheduleItem.SubjectID == "" {
-			continue
-		}
+		//if scheduleItem.SubjectID == "" {
+		//	continue
+		//}
 		subjectKey := getSubjectMapKey(scheduleItem.ProgramID, scheduleItem.SubjectID)
 		if _, ok := subjectIDMap[subjectKey]; !ok {
 			subjectIDMap[subjectKey] = scheduleItem.SubjectID
@@ -192,32 +214,53 @@ func loadSchedule() error {
 		oldProgramID := keyArr[0]
 		oldSubjectID := keyArr[1]
 		newSubjectID, err := mapper.Subject(ctx, operator.OrgID, oldProgramID, oldSubjectID)
+		newProgramID, err := mapper.Program(ctx, operator.OrgID, oldProgramID)
 		if err != nil {
 			log.Printf("mapper program error,  orgID:%s,newSubjectID:%s, key：%s, error:%v \n", operator.OrgID, newSubjectID, key, err)
 			return err
 		}
 		log.Printf("orgID:%s,newSubjectID:%s, key：%s \n", operator.OrgID, newSubjectID, key)
-		subjectMapper[oldSubjectID] = newSubjectID
+		newKey := getSubjectMapKey(newProgramID, oldSubjectID)
+		subjectMapper[newKey] = newSubjectID
 	}
-	log.Println("subjectMapper:", programMapper)
-	log.Println("subjectMapper", subjectMapper)
-
-	fmt.Println("Enter to continue....")
+	fmt.Println("Enter to continue start update database....")
 	inputReader := bufio.NewReader(os.Stdin)
 	inputReader.ReadString('\n')
+	for key, val := range subjectMapper {
+		fmt.Println(key, val)
+	}
+
 	if isExec {
+		tx, err := dbo.MustGetDB(ctx).DB.DB().Begin()
 		for key, val := range programMapper {
-			err = da.GetScheduleDA().UpdateProgram(ctx, dbo.MustGetDB(ctx), operator, key, val)
+			err = da.GetScheduleDA().UpdateProgram(ctx, tx, operator, key, val)
 			if err != nil {
+				tx.Rollback()
 				return err
 			}
 		}
 		for key, val := range subjectMapper {
-			err = da.GetScheduleDA().UpdateSubject(ctx, dbo.MustGetDB(ctx), operator, key, val)
+			keyArr := strings.Split(key, ":")
+			if len(keyArr) < 2 {
+				log.Println("keyArr:", keyArr)
+				return constant.ErrInvalidArgs
+			}
+			newProgramID := keyArr[0]
+			oldSubjectID := keyArr[1]
+			err = da.GetScheduleDA().UpdateSubject(ctx, tx, operator, oldSubjectID, newProgramID, val)
 			if err != nil {
+				tx.Rollback()
 				return err
 			}
 		}
+		//err = constant.ErrInvalidArgs
+		//if err != nil {
+		//	tx.Rollback()
+		//	return err
+		//}
+
+		err = tx.Commit()
+		return err
 		//dbo.MustGetDB(ctx).DB.DB().Begin()
 		//err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		//	for key, val := range programMapper {
