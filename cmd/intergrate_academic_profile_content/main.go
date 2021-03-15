@@ -308,7 +308,7 @@ func main() {
 		log.Error(ctx, "Can't open database", log.Err(err))
 		return
 	}
-	operator.Token = requestToken()
+	//operator.Token = requestToken()
 
 	//读取contents记录
 	contentList, err := loadContents(ctx)
