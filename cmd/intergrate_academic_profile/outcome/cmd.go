@@ -55,14 +55,14 @@ func main() {
 	withPage := flag.Bool("page", false, "true: page")
 	tokenPtr := flag.String("token", "", "token")
 	flag.Parse()
-	if tokenPtr == nil || *tokenPtr == "" {
+	if tokenPtr == nil {
 		panic("need token")
 	}
 	token := *tokenPtr
 	if token == "" {
 		token = requestToken()
 	}
-	works := make(chan struct{}, 20)
+	works := make(chan struct{}, 50)
 	var wg sync.WaitGroup
 	ctx := context.TODO()
 	tx := dbo.MustGetDB(ctx)
@@ -123,23 +123,23 @@ func main() {
 			}()
 			ctx := context.TODO()
 			var programs, subjects, categories, subCategories, ages, grades []string
-			if outcomes[i].Program != "" {
-				programs = strings.Split(outcomes[i].Program, ",")
+			if outcomes[i].Program != "" && strings.Trim(outcomes[i].Program, ",") != "" {
+				programs = strings.Split(strings.Trim(outcomes[i].Program, ","), ",")
 			}
-			if outcomes[i].Subject != "" {
-				subjects = strings.Split(outcomes[i].Subject, ",")
+			if outcomes[i].Subject != "" && strings.Trim(outcomes[i].Subject, ",") != "" {
+				subjects = strings.Split(strings.Trim(outcomes[i].Subject, ","), ",")
 			}
-			if outcomes[i].Developmental != "" {
-				categories = strings.Split(outcomes[i].Developmental, ",")
+			if outcomes[i].Developmental != "" && strings.Trim(outcomes[i].Developmental, ",") != "" {
+				categories = strings.Split(strings.Trim(outcomes[i].Developmental, ","), ",")
 			}
-			if outcomes[i].Skills != "" {
-				subCategories = strings.Split(outcomes[i].Skills, ",")
+			if outcomes[i].Skills != "" && strings.Trim(outcomes[i].Skills, ",") != "" {
+				subCategories = strings.Split(strings.Trim(outcomes[i].Skills, ","), ",")
 			}
-			if outcomes[i].Age != "" {
-				ages = strings.Split(outcomes[i].Age, ",")
+			if outcomes[i].Age != "" && strings.Trim(outcomes[i].Age, ",") != "" {
+				ages = strings.Split(strings.Trim(outcomes[i].Age, ","), ",")
 			}
-			if outcomes[i].Grade != "" {
-				grades = strings.Split(outcomes[i].Grade, ",")
+			if outcomes[i].Grade != "" && strings.Trim(outcomes[i].Grade, ",") != "" {
+				grades = strings.Split(strings.Trim(outcomes[i].Grade, ","), ",")
 			}
 			outcomes[i].Program = ""
 			outcomes[i].Subject = ""
@@ -179,7 +179,7 @@ func main() {
 				outcomes[i].Program = outcomes[i].Program + pid + ","
 
 				for s := range subjects {
-					if subjects[s] == "" {
+					if subjects[s] == "" || programs[p] == "" {
 						continue
 					}
 					sid, err := mapper.Subject(ctx, org, programs[p], subjects[s])
@@ -208,13 +208,11 @@ func main() {
 						log.String("old subject", subjects[s]),
 						log.String("new subject", sid))
 					outcomes[i].Subject = outcomes[i].Subject + sid + ","
+					break
 				}
-				//if outcomes[i].Subject != "" {
-				//	outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
-				//}
 
 				for c := range categories {
-					if categories[c] == "" {
+					if categories[c] == "" || programs[p] == "" {
 						continue
 					}
 					cid, err := mapper.Category(ctx, org, programs[p], categories[c])
@@ -245,7 +243,7 @@ func main() {
 					outcomes[i].Developmental = outcomes[i].Developmental + cid + ","
 
 					for sc := range subCategories {
-						if subCategories[sc] == "" {
+						if subCategories[sc] == "" || programs[p] == "" {
 							continue
 						}
 						scid, err := mapper.SubCategory(ctx, org, programs[p], categories[c], subCategories[sc])
@@ -280,15 +278,9 @@ func main() {
 						outcomes[i].Skills = outcomes[i].Skills + scid + ","
 					}
 				}
-				//if outcomes[i].Skills != "" {
-				//	outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
-				//}
-				//if outcomes[i].Developmental != "" {
-				//	outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
-				//}
 
 				for a := range ages {
-					if ages[a] == "" {
+					if ages[a] == "" || programs[p] == "" {
 						continue
 					}
 					aid, err := mapper.Age(ctx, org, programs[p], ages[a])
@@ -318,12 +310,9 @@ func main() {
 						log.String("new age", aid))
 					outcomes[i].Age = outcomes[i].Age + aid + ","
 				}
-				//if outcomes[i].Age != "" {
-				//	outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
-				//}
 
 				for g := range grades {
-					if grades[g] == "" {
+					if grades[g] == "" || programs[p] == "" {
 						continue
 					}
 					gid, err := mapper.Grade(ctx, org, programs[p], grades[g])
@@ -353,12 +342,10 @@ func main() {
 						log.String("new grade", gid))
 					outcomes[i].Grade = outcomes[i].Grade + gid + ","
 				}
-				//if outcomes[i].Grade != "" {
-				//	outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
-				//}
 			}
 
-			if needUpdate {
+			if needUpdate && outcomes[i].Program != "" {
+				outcomes[i].Program = strings.TrimSuffix(outcomes[i].Program, ",")
 				if outcomes[i].Age != "" {
 					outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
 				}
@@ -378,13 +365,53 @@ func main() {
 					outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
 				}
 
-				if outcomes[i].Program != "" {
-					outcomes[i].Program = strings.TrimSuffix(outcomes[i].Program, ",")
-				}
-
 				log.Info(ctx, "migrate:finished",
 					log.Int("index", i),
 					log.Any("outcome", outcomes[i]))
+
+				err = da.GetOutcomeDA().UpdateOutcome(ctx, dbo.MustGetDB(ctx), outcomes[i])
+				if err != nil {
+					log.Error(ctx, "update program failed",
+						log.Any("outcome", outcomes[i]),
+						log.Err(err))
+				}
+			} else if outcomes[i].Program != "" {
+				pid, err := mapper.Program(ctx, outcomes[i].OrganizationID, "")
+				if err != nil {
+					panic(err)
+				}
+				outcomes[i].Program = pid
+
+				sid, err := mapper.Subject(ctx, outcomes[i].OrganizationID, "", "")
+				if err != nil {
+					panic(err)
+				}
+				outcomes[i].Subject = sid
+
+				cid, err := mapper.Category(ctx, outcomes[i].OrganizationID, "", "")
+				if err != nil {
+					panic(err)
+				}
+				outcomes[i].Developmental = cid
+
+				scid, err := mapper.SubCategory(ctx, outcomes[i].OrganizationID, "", "", "")
+				if err != nil {
+					panic(err)
+				}
+				outcomes[i].Skills = scid
+
+				aid, err := mapper.Age(ctx, outcomes[i].Age, "", "")
+				if err != nil {
+					panic(err)
+				}
+				outcomes[i].Age = aid
+
+				gid, err := mapper.Grade(ctx, outcomes[i].Grade, "", "")
+				if err != nil {
+					panic(err)
+				}
+				outcomes[i].Grade = gid
+
 				err = da.GetOutcomeDA().UpdateOutcome(ctx, dbo.MustGetDB(ctx), outcomes[i])
 				if err != nil {
 					log.Error(ctx, "update program failed",
