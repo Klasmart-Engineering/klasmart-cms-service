@@ -18,10 +18,10 @@ import (
 
 var (
 	mapper   intergrate_academic_profile.Mapper
-	token    = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTY5MjQyMiwiaXNzIjoia2lkc2xvb3AifQ.B4J7eDGwOca2pCZj2Ch2Z20PfQkhAUAq9R37BcFvOSyjaJ-EEGgwrbSO9N9JuGc2vBFQAYCmxwIrDi9UNSJOOBovzz-JuwJmvKEaGnKPvDHqE4qYsrcDpRQTHTxmTgSvXBXr4grR8-2tWI1ZRBriXTb2Fm7yWXUBnRg-MFlLJ_90rRyoa7G-BSgokW2yOty8psqfnis3UEzPFJkztzOcn2w0RxynEpq_Sdz-_kDiWk6TuL3aNENp9hUTeZfFvfLnsuiBabakApfBjCGKLk2NidiSeeeFZo3TeNCAmjhpst37_aKxoH1LNJI582dd_Jk1nuRcIhTTKvCRQxeTWmYWYA"
+	token    = "" //"eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTY5MjQyMiwiaXNzIjoia2lkc2xvb3AifQ.B4J7eDGwOca2pCZj2Ch2Z20PfQkhAUAq9R37BcFvOSyjaJ-EEGgwrbSO9N9JuGc2vBFQAYCmxwIrDi9UNSJOOBovzz-JuwJmvKEaGnKPvDHqE4qYsrcDpRQTHTxmTgSvXBXr4grR8-2tWI1ZRBriXTb2Fm7yWXUBnRg-MFlLJ_90rRyoa7G-BSgokW2yOty8psqfnis3UEzPFJkztzOcn2w0RxynEpq_Sdz-_kDiWk6TuL3aNENp9hUTeZfFvfLnsuiBabakApfBjCGKLk2NidiSeeeFZo3TeNCAmjhpst37_aKxoH1LNJI582dd_Jk1nuRcIhTTKvCRQxeTWmYWYA"
 	operator = &entity.Operator{
-		UserID: "14494c07-0d4f-5141-9db2-15799993f448", // PJ
-		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6", // Badanamu HQ
+		UserID: "", //"14494c07-0d4f-5141-9db2-15799993f448", // PJ
+		OrgID:  "", //"10f38ce9-5152-4049-b4e7-6d2e2ba884e6", // Badanamu HQ
 		Token:  token,
 	}
 	isExec = false
@@ -30,11 +30,11 @@ var (
 func main() {
 	for {
 		initArgs()
-		// err := loadSchedule()
-		// if err != nil {
-		// 	log.Println("迁移失败", err)
-		// 	return
-		// }
+		err := loadSchedule()
+		if err != nil {
+			log.Println("迁移失败", err)
+			return
+		}
 		log.Println("迁移完成")
 	}
 }
@@ -146,6 +146,17 @@ func loadSchedule() error {
 					return err
 				}
 			}
+			//for key, item := range subjectIDMap {
+			//	newSubjectID, err := mapper.Subject(ctx, operator.OrgID,item key)
+			//	if err != nil {
+			//		log.Printf("mapper program error,  orgID:%s,newProgramID:%s, oldProgramID：%s, error:%v \n", operator.OrgID, newProgramID, key, err)
+			//		return err
+			//	}
+			//	err = da.GetScheduleDA().UpdateProgram(ctx, tx, operator, key, newProgramID)
+			//	if err != nil {
+			//		return err
+			//	}
+			//}
 			return nil
 		})
 		return err

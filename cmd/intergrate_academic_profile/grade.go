@@ -2,6 +2,7 @@ package intergrate_academic_profile
 
 import (
 	"context"
+	"log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -10,13 +11,20 @@ import (
 )
 
 func (s *MapperImpl) initGradeMapper(ctx context.Context) error {
+	log.Println("start init grade mapper")
 	s.MapperGrade.gradeMapping = make(map[string]string)
 	err := s.loadAmsGrades(ctx)
 	if err != nil {
 		return err
 	}
 
-	return s.loadOurGrades(ctx)
+	err = s.loadOurGrades(ctx)
+	if err != nil {
+		log.Println("init grade mapper error")
+		return err
+	}
+	log.Println("completed init grade mapper")
+	return nil
 }
 
 func (s *MapperImpl) loadAmsGrades(ctx context.Context) error {

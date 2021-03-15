@@ -2,6 +2,7 @@ package intergrate_academic_profile
 
 import (
 	"context"
+	"log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -10,6 +11,7 @@ import (
 )
 
 func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
+	log.Println("start init category mapper")
 	s.MapperCategory.categoryMapping = make(map[string]string)
 
 	err := s.loadAmsCategorys(ctx)
@@ -17,7 +19,13 @@ func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
 		return err
 	}
 
-	return s.loadOurCategorys(ctx)
+	err = s.loadOurCategorys(ctx)
+	if err != nil {
+		log.Println("init category mapper error")
+		return err
+	}
+	log.Println("completed init category mapper")
+	return nil
 }
 
 func (s *MapperImpl) loadAmsCategorys(ctx context.Context) error {
