@@ -9,13 +9,13 @@ import (
 )
 
 func (s *MapperImpl) Program(ctx context.Context, organizationID, programID string) (string, error) {
+	s.programMutex.Lock()
+	defer s.programMutex.Unlock()
+
 	amsProgramID, found := s.programMapping[programID]
 	if found {
 		return amsProgramID, nil
 	}
-
-	s.programMutex.Lock()
-	defer s.programMutex.Unlock()
 
 	ourProgram, found := s.ourPrograms[programID]
 	if !found {

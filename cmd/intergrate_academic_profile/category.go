@@ -61,13 +61,13 @@ func (s *MapperImpl) loadOurCategorys(ctx context.Context) error {
 }
 
 func (s *MapperImpl) Category(ctx context.Context, organizationID, programID, categoryID string) (string, error) {
+	s.MapperCategory.amsCategoryMutex.Lock()
+	defer s.MapperCategory.amsCategoryMutex.Unlock()
+
 	id, found := s.MapperCategory.categoryMapping[categoryID]
 	if found {
 		return id, nil
 	}
-
-	s.MapperCategory.amsCategoryMutex.Lock()
-	defer s.MapperCategory.amsCategoryMutex.Unlock()
 
 	// our
 	ourCategorys, found := s.MapperCategory.ourCategorys[categoryID]

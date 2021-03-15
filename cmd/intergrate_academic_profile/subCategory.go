@@ -65,13 +65,13 @@ func (s *MapperImpl) loadOurSubCategorys(ctx context.Context) error {
 }
 
 func (s *MapperImpl) SubCategory(ctx context.Context, organizationID, programID, categoryID, subCategoryID string) (string, error) {
+	s.MapperSubCategory.amsSubCategoryMutex.Lock()
+	defer s.MapperSubCategory.amsSubCategoryMutex.Unlock()
+
 	subID, found := s.MapperSubCategory.subCategoryMapping[subCategoryID]
 	if found {
 		return subID, nil
 	}
-
-	s.MapperSubCategory.amsSubCategoryMutex.Lock()
-	defer s.MapperSubCategory.amsSubCategoryMutex.Unlock()
 
 	// our
 	ourSub, found := s.MapperSubCategory.ourSubCategorys[subCategoryID]
