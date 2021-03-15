@@ -35,6 +35,9 @@ func (s *MapperImpl) Program(ctx context.Context, organizationID, programID stri
 }
 
 func (s *MapperImpl) initProgramMapper(ctx context.Context) error {
+	log.Info(ctx, "init prgram cache start")
+	defer log.Info(ctx, "init program cache end")
+
 	s.programMapping = make(map[string]string)
 
 	err := s.loadAmsPrograms(ctx)
