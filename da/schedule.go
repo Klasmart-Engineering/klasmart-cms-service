@@ -77,6 +77,8 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 			item.CreatedAt,
 			item.UpdatedAt,
 			item.DeleteAt,
+			item.IsHomeFun,
+			item.IsHidden,
 		})
 	}
 	sql := SQLBatchInsert(constant.TableNameSchedule, []string{
@@ -104,6 +106,8 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 		"`created_at`",
 		"`updated_at`",
 		"`delete_at`",
+		"`is_home_fun`",
+		"`is_hidden`",
 	}, data)
 	execResult := dbContext.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
