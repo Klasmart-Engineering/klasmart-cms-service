@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -10,13 +11,16 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 )
 
-var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc5MzAzMywiaXNzIjoia2lkc2xvb3AifQ.hXa9sQ3QzTMgBz_UtiRvoOoLfk_16reKp--iWSnZBO2qBX28fDvi_PvdNNqh2tq1AFv0XaUHzz59nQRWxbmXa_HvrwAhGjqBOdZL927yDiHKZI26enQlkkoNoJhak2n1IgUyG_q5kwvR0_5A_-DwBN6wGjQMqgvQjskI9zmFfkcsbE04X36Rhh3LQoSF7H7Trhy8R0aFO38gN7Q2Uuhnik2RJ-iEFxLdcv-5B9-QbKm4TSRgHwmenC5ocYWKohBLBM0heWFCfs2DnGERnr-uuj0_GWSBz5BtVVnF36xNGWWjuFttauEbDzCTuRtdoDg-Ft6mF43zgtOppFm8bpXwJg"
+//var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc5NTUyOCwiaXNzIjoia2lkc2xvb3AifQ.mLLPk3Qasoeow4Q5c-FWUBrhP7gURz35wlWUcq9ycjjOPTzIr8HN0lDjFwH6-3F-Tic6Skt1JSdJ-sS9jV4ZA4IsPHllIkvDXCSOGXKTXyUC0fLv_5GOS-5FHvjt5ekMtjhMRHtXKaimQ0xz_a2gPqxBWDzSs3Sy8svM4-wytshP53Cr31bUwLkGAnuG0h1StPMp8LYznIkAe9K7vjnwQJTvrCy-GbPLOA7bhXOVpkNut24-dIZEpPH_4KDjBUHsUvmzr5pHo-di1PhH0GmJBu1oBpn24Q1WG1CNcxRwJi7wuMZnfJdEBSwXhSf-YyvkdDV-jqBlS0-8rHOdR2bQcQ"
+var orgID = "10f38ce9-5152-4049-b4e7-6d2e2ba884e6"
 
 func isRecordNotFoundErr(err error) bool {
 	if err.Error() == "record not found" {
@@ -25,11 +29,30 @@ func isRecordNotFoundErr(err error) bool {
 	return false
 }
 
-var orgID = "10f38ce9-5152-4049-b4e7-6d2e2ba884e6"
-
+func requestToken() string {
+	res, err := http.Get("http://192.168.1.233:10210/ll?email=pj.williams@calmid.com")
+	if err != nil {
+		panic(err)
+	}
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+	access := struct {
+		Hit struct {
+			Access string `json:"access"`
+		} `json:"hit"`
+	}{}
+	err = json.Unmarshal(data, &access)
+	if err != nil {
+		panic(err)
+	}
+	return access.Hit.Access
+}
 func main() {
 	setupConfig()
-
+	token := requestToken()
 	works := make(chan struct{}, 20)
 	var wg sync.WaitGroup
 	ctx := context.TODO()
@@ -374,6 +397,7 @@ func setupConfig() {
 	config.Set(&config.Config{
 		DBConfig: config.DBConfig{
 			ConnectionString: os.Getenv("connection_string"),
+			//ConnectionString: os.Getenv("connection_string_local"),
 		},
 		RedisConfig: config.RedisConfig{OpenCache: false},
 		AMS: config.AMSConfig{
