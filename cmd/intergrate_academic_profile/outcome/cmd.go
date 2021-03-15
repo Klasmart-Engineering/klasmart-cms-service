@@ -52,15 +52,23 @@ func requestToken() string {
 }
 func main() {
 	setupConfig()
-	token := requestToken()
+	withPage := flag.Bool("page", false, "true: page")
+	tokenPtr := flag.String("token", "", "token")
+	flag.Parse()
+	if tokenPtr == nil || *tokenPtr == "" {
+		panic("need token")
+	}
+	token := *tokenPtr
+	if token == "" {
+		token = requestToken()
+	}
 	works := make(chan struct{}, 20)
 	var wg sync.WaitGroup
 	ctx := context.TODO()
 	tx := dbo.MustGetDB(ctx)
+
 	validID := regexp.MustCompile(`^([a-z]|[0-9])+-([a-z]|[0-9])+-([a-z]|[0-9])+-([a-z]|[0-9])+-([a-z]|[0-9])+$`)
 	//valid := validID.MatchString("5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71")
-	withPage := flag.Bool("page", false, "true: page")
-	flag.Parse()
 	var outcomes []*entity.Outcome
 	var err error
 	if !(*withPage) {
