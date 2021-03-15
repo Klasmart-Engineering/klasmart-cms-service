@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/cmd/intergrate_academic_profile"
@@ -10,7 +11,9 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -27,20 +30,8 @@ var (
 )
 
 func main() {
-	//args := os.Args[1:]
-	//if len(args) > 1 {
-	//	if args[0] == "-exec" {
-	//		isExec = true
-	//	}
-	//}
-	//defer func() {
-	//	if err := recover(); err != nil {
-	//
-	//	}
-	//}()
-	//for {
-	//
-	//}
+	operator.Token = requestToken()
+
 	initArgs()
 	err := loadSchedule()
 	if err != nil {
@@ -57,6 +48,27 @@ func main() {
 	//fmt.Println("Enter to continue mapper....")
 	//inputReader := bufio.NewReader(os.Stdin)
 	//inputReader.ReadString('\n')
+}
+func requestToken() string {
+	res, err := http.Get("http://192.168.1.233:10210/ll?email=pj.williams@calmid.com")
+	if err != nil {
+		panic(err)
+	}
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+	access := struct {
+		Hit struct {
+			Access string `json:"access"`
+		} `json:"hit"`
+	}{}
+	err = json.Unmarshal(data, &access)
+	if err != nil {
+		panic(err)
+	}
+	return access.Hit.Access
 }
 
 func initArgs() {

@@ -1,7 +1,11 @@
 package intergrate_academic_profile
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"testing"
 
@@ -19,7 +23,31 @@ var (
 	}
 )
 
+func requestToken() string {
+	res, err := http.Get("http://192.168.1.233:10210/ll?email=pj.williams@calmid.com")
+	if err != nil {
+		panic(err)
+	}
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+	access := struct {
+		Hit struct {
+			Access string `json:"access"`
+		} `json:"hit"`
+	}{}
+	err = json.Unmarshal(data, &access)
+	if err != nil {
+		panic(err)
+	}
+	return access.Hit.Access
+}
+
 func TestMain(m *testing.M) {
+	testOperator.Token = requestToken()
+	fmt.Println(testOperator.Token)
 	config.Set(&config.Config{
 		AMS: config.AMSConfig{
 			EndPoint: "https://api.beta.kidsloop.net/user/",

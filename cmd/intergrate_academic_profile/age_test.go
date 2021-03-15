@@ -17,7 +17,7 @@ func TestMapperImpl_Age(t *testing.T) {
 	tests := []ageTestCase{
 		{
 			// none program
-			ProgramID: "program0",
+			ProgramID: "program7",
 			AgeID:     "age1",
 			AmsAgeID:  "023eeeb1-5f72-4fa3-a2a7-63603607ac2b",
 		},
