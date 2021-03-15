@@ -112,6 +112,7 @@ type GetHomeFunStudyResult struct {
 	TeacherNames     []string                `json:"teacher_names"`
 	StudentID        string                  `json:"student_id"`
 	StudentName      string                  `json:"student_name"`
+	Status           AssessmentStatus        `json:"status"`
 	DueAt            int64                   `json:"due_at"`
 	CompleteAt       int64                   `json:"complete_at"`
 	AssessFeedbackID string                  `json:"assess_feedback_id"`
