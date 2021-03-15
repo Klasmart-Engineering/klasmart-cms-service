@@ -70,7 +70,7 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "home fun study id"
-// @Success 200 {object} entity.ListHomeFunStudiesResult
+// @Success 200 {object} entity.GetHomeFunStudyResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse

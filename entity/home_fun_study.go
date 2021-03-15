@@ -109,19 +109,20 @@ type GetHomeFunStudyResult struct {
 	ScheduleID       string                  `json:"schedule_id"`
 	Title            string                  `json:"title"`
 	TeacherNames     []string                `json:"teacher_names"`
+	StudentID        string                  `json:"student_id"`
 	StudentName      string                  `json:"student_name"`
 	DueAt            int64                   `json:"due_at"`
 	CompleteAt       int64                   `json:"complete_at"`
 	AssessFeedbackID string                  `json:"assess_feedback_id"`
-	AssessScore      HomeFunStudyAssessScore `json:"assess_score"`
+	AssessScore      HomeFunStudyAssessScore `json:"assess_score" enums:"1,2,3,4,5"`
 	AssessComment    string                  `json:"assess_comment"`
 }
 
 type AssessHomeFunStudyArgs struct {
 	ID               string                   `json:"id"`
 	AssessFeedbackID string                   `json:"assess_feedback_id"`
-	AssessScore      HomeFunStudyAssessScore  `json:"score" enums:"1,2,3,4,5"`
-	AssessComment    string                   `json:"comment"`
+	AssessScore      HomeFunStudyAssessScore  `json:"assess_score" enums:"1,2,3,4,5"`
+	AssessComment    string                   `json:"assess_comment"`
 	Action           UpdateHomeFunStudyAction `json:"action" enums:"save,complete"`
 }
 
