@@ -7,6 +7,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -60,6 +61,10 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 	subCategories := make([]*SubCategory, 0, len(data))
 	for index := range ids {
 		subCategory := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if subCategory == nil {
+			log.Error(ctx, "subCategory not found", log.String("id", ids[index]))
+			return nil, constant.ErrRecordNotFound
+		}
 		subCategories = append(subCategories, subCategory)
 	}
 

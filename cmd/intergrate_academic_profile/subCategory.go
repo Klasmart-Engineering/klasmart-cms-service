@@ -2,6 +2,7 @@ package intergrate_academic_profile
 
 import (
 	"context"
+	"log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -10,6 +11,7 @@ import (
 )
 
 func (s *MapperImpl) initSubCategoryMapper(ctx context.Context) error {
+	log.Println("start init subCategory mapper")
 	s.MapperSubCategory.subCategoryMapping = make(map[string]string)
 
 	err := s.loadAmsSubCategorys(ctx)
@@ -17,7 +19,13 @@ func (s *MapperImpl) initSubCategoryMapper(ctx context.Context) error {
 		return err
 	}
 
-	return s.loadOurSubCategorys(ctx)
+	err = s.loadOurSubCategorys(ctx)
+	if err != nil {
+		log.Println("init subCategory mapper error")
+		return err
+	}
+	log.Println("completed init subCategory mapper")
+	return nil
 }
 
 func (s *MapperImpl) loadAmsSubCategorys(ctx context.Context) error {
@@ -25,14 +33,15 @@ func (s *MapperImpl) loadAmsSubCategorys(ctx context.Context) error {
 	for _, amsProgram := range s.amsPrograms {
 		categoryMap, found := s.MapperCategory.amsCategorys[amsProgram.ID]
 		if !found {
-			return constant.ErrFileNotFound
+			return constant.ErrRecordNotFound
 		}
+		s.MapperSubCategory.amsSubCategorys[amsProgram.ID] = make(map[string]*external.SubCategory)
 		for _, amsCategory := range categoryMap {
 			subCatetorys, err := external.GetSubCategoryServiceProvider().GetByCategory(ctx, s.operator, amsCategory.ID)
 			if err != nil {
 				return err
 			}
-			s.MapperSubCategory.amsSubCategorys[amsProgram.ID] = make(map[string]*external.SubCategory, len(subCatetorys))
+
 			for _, sub := range subCatetorys {
 				s.MapperSubCategory.amsSubCategorys[amsProgram.ID][amsCategory.ID+":"+sub.Name] = sub
 			}
@@ -67,7 +76,7 @@ func (s *MapperImpl) SubCategory(ctx context.Context, organizationID, programID,
 	// our
 	ourSub, found := s.MapperSubCategory.ourSubCategorys[subCategoryID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultSubCategoryID()
 	}
 
 	// ams
@@ -75,17 +84,42 @@ func (s *MapperImpl) SubCategory(ctx context.Context, organizationID, programID,
 	if err != nil {
 		return "", err
 	}
+	amsCategory, err := s.Category(ctx, organizationID, programID, categoryID)
+	if err != nil {
+		return "", err
+	}
 	amsSubCategorys, found := s.MapperSubCategory.amsSubCategorys[amsProgramID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultSubCategoryID()
 	}
-	amsSubCategory, found := amsSubCategorys[categoryID+":"+ourSub.Name]
+
+	amsSubCategory, found := amsSubCategorys[amsCategory+":"+ourSub.Name]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		for _, item := range amsSubCategorys {
+			return item.ID, nil
+		}
+		return s.defaultSubCategoryID()
 	}
 
 	// mapping
 	s.MapperCategory.categoryMapping[subCategoryID] = amsSubCategory.ID
 
 	return amsSubCategory.ID, nil
+}
+
+func (s *MapperImpl) defaultSubCategoryID() (string, error) {
+	noneName := "None Specified"
+	program, found := s.amsPrograms[noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	categoryID, err := s.defaultCategoryID()
+	if err != nil {
+		return "", constant.ErrRecordNotFound
+	}
+	sub, found := s.MapperSubCategory.amsSubCategorys[program.ID][categoryID+":"+noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	return sub.ID, nil
 }

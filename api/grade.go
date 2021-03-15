@@ -26,7 +26,7 @@ func (s *Server) getGrade(c *gin.Context) {
 
 	programID := c.Query("program_id")
 
-	if programID != "" {
+	if programID == "" {
 		result, err = external.GetGradeServiceProvider().GetByOrganization(ctx, operator)
 	} else {
 		result, err = external.GetGradeServiceProvider().GetByProgram(ctx, operator, programID)

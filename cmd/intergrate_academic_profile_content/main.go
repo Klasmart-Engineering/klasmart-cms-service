@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -14,12 +15,16 @@ import (
 )
 
 const (
-	connDBStr = "root:Badanamu123456@tcp(192.168.1.234:3310)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
+	connDBStr = "admin:LH1MCuL3V0Ib3254@tcp(kl2-migration-test.copqnkcbdsts.ap-northeast-2.rds.amazonaws.com:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
 	doUpdate  = false
 )
 
 var (
-	operator *entity.Operator = &entity.Operator{}
+	operator *entity.Operator = &entity.Operator{
+		UserID: "14494c07-0d4f-5141-9db2-15799993f448", // PJ
+		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6", // Badanamu HQ
+		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTY0MDY5OSwiaXNzIjoia2lkc2xvb3AifQ.krrsEw_WM_F-FKTRu4-3OcDtzgaUB1314ABH1g99SzjPCJsXzkNMQlul9ebPiYw5SjuAyHtZVD_KEi8bqZ9YeN8Cp3IbXv5eoaI7WNIReoutHmgpoLkZ9LLGH1024fF4UPYSsKQ7g1GcY_DaUMMuM5T5zC9VUttc593MykwONeUk4xZxUly769LiBQGC_DLCU19LTrI6SlU3eNvyaQh9vCxHcu3BpuHqaasU2V6wH-iYifmC9wzagxMNbsh14m-mnhzh8p2q5Be5RdwKtieikAJdbQke_e2siklJn0bAzjRq1uAIu6lJNduS0oTwhiub-upiIjNlDxuCeZ8u8qXxRA",
+	}
 )
 
 func initDB(ctx context.Context, str string) error {
@@ -41,6 +46,9 @@ func initDB(ctx context.Context, str string) error {
 			Port:      0,
 			Password:  "",
 		},
+		AMS: config.AMSConfig{
+			EndPoint: "https://api.beta.kidsloop.net/user/",
+		},
 	})
 	dbo.ReplaceGlobal(dboHandler)
 	return nil
@@ -58,95 +66,109 @@ func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_
 	//program map
 	newProgram, err := mapper.Program(ctx, content.Org, content.Program)
 	if err != nil {
+		fmt.Println(">>>>>>>>>>>>>>: can't find program:", content.Program)
 		log.Error(ctx,
 			"Can't find program",
 			log.Err(err),
 			log.Any("Program", content.Program),
 			log.Any("Content", content))
-		return errors.New("Can't find program")
+		// return errors.New("Can't find program")
 	}
-	content.Program = newProgram
 
 	//subject map
-	newSubject, err := mapper.Subject(ctx, content.Org, content.Program, content.Subject)
-	if err != nil {
-		log.Error(ctx,
-			"Can't find subject",
-			log.Err(err),
-			log.Any("Subject", content.Subject),
-			log.Any("Content", content))
-		return errors.New("Can't find subject")
+	newSubjects := make([]string, 0)
+	if content.Subject != "" {
+		subjectsArray := strings.Split(content.Subject, ",")
+		for i := range subjectsArray {
+			newSubject, err := mapper.Subject(ctx, content.Org, content.Program, subjectsArray[i])
+			if err != nil {
+				fmt.Println(">>>>>>>>>>>>>>: can't find subject:", subjectsArray[i], ", program:", content.Program)
+				log.Error(ctx,
+					"Can't find grade",
+					log.Err(err),
+					log.Any("Grade", content.Subject),
+					log.Any("Content", content))
+				// return errors.New("Can't find subject")
+			}
+			newSubjects = append(newSubjects, newSubject)
+		}
 	}
-	content.Subject = newSubject
 
 	//developmental map
 	newDevelopmental, err := mapper.Category(ctx, content.Org, content.Program, content.Developmental)
 	if err != nil {
+		fmt.Println(">>>>>>>>>>>>>>: can't find developmental:", content.Developmental, ", program:", content.Program)
 		log.Error(ctx,
 			"Can't find developmental",
 			log.Err(err),
 			log.Any("Developmental", content.Developmental),
 			log.Any("Content", content))
-		return errors.New("Can't find developmental")
+		// return errors.New("Can't find developmental")
 	}
-	content.Developmental = newDevelopmental
 
 	//skills map
+	newSkills := make([]string, 0)
 	if content.Skills != "" {
-		newSkills := make([]string, 0)
 		skillArray := strings.Split(content.Skills, ",")
 		for i := range skillArray {
 			newSkill, err := mapper.SubCategory(ctx, content.Org, content.Program, content.Developmental, skillArray[i])
 			if err != nil {
+				fmt.Println(">>>>>>>>>>>>>>: can't find skill:", skillArray[i], ", program:", content.Program)
 				log.Error(ctx,
 					"Can't find skill",
 					log.Err(err),
 					log.Any("Skills", content.Skills),
 					log.Any("Content", content))
-				return errors.New("Can't find skill")
+				// return errors.New("Can't find skill")
 			}
 			newSkills = append(newSkills, newSkill)
 		}
-		content.Skills = strings.Join(newSkills, ",")
 	}
 
 	//ages map
+	newAges := make([]string, 0)
 	if content.Age != "" {
-		newAges := make([]string, 0)
 		ageArray := strings.Split(content.Age, ",")
 		for i := range ageArray {
 			newAge, err := mapper.Age(ctx, content.Org, content.Program, ageArray[i])
 			if err != nil {
+				fmt.Println(">>>>>>>>>>>>>>: can't find age:", ageArray[i], ", program:", content.Program)
 				log.Error(ctx,
 					"Can't find age",
 					log.Err(err),
 					log.Any("Age", content.Age),
 					log.Any("Content", content))
-				return errors.New("Can't find age")
+				// return errors.New("Can't find age")
 			}
 			newAges = append(newAges, newAge)
 		}
-		content.Age = strings.Join(newAges, ",")
 	}
 
 	//grades map
+	newGrades := make([]string, 0)
 	if content.Grade != "" {
-		newGrades := make([]string, 0)
 		gradeArray := strings.Split(content.Grade, ",")
 		for i := range gradeArray {
 			newGrade, err := mapper.Grade(ctx, content.Org, content.Program, gradeArray[i])
 			if err != nil {
+				fmt.Println(">>>>>>>>>>>>>>: can't find grade:", gradeArray[i], ", program:", content.Program)
 				log.Error(ctx,
 					"Can't find grade",
 					log.Err(err),
 					log.Any("Grade", content.Grade),
 					log.Any("Content", content))
-				return errors.New("Can't find grade")
+				// return errors.New("Can't find grade")
 			}
 			newGrades = append(newGrades, newGrade)
 		}
-		content.Grade = strings.Join(newGrades, ",")
 	}
+
+	content.Program = newProgram
+	content.Subject = strings.Join(newSubjects, ",")
+	content.Developmental = newDevelopmental
+	content.Skills = strings.Join(newSkills, ",")
+	content.Age = strings.Join(newAges, ",")
+	content.Grade = strings.Join(newGrades, ",")
 
 	return nil
 }

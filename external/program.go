@@ -7,6 +7,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -60,6 +61,10 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 	programs := make([]*Program, 0, len(data))
 	for index := range ids {
 		program := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if program == nil {
+			log.Error(ctx, "program not found", log.String("id", ids[index]))
+			return nil, constant.ErrRecordNotFound
+		}
 		programs = append(programs, program)
 	}
 

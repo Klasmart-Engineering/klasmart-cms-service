@@ -1,4 +1,4 @@
-package profile_schedule
+package main
 
 import (
 	"testing"

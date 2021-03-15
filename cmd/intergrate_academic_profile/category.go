@@ -2,6 +2,7 @@ package intergrate_academic_profile
 
 import (
 	"context"
+	"log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -10,6 +11,7 @@ import (
 )
 
 func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
+	log.Println("start init category mapper")
 	s.MapperCategory.categoryMapping = make(map[string]string)
 
 	err := s.loadAmsCategorys(ctx)
@@ -17,7 +19,13 @@ func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
 		return err
 	}
 
-	return s.loadOurCategorys(ctx)
+	err = s.loadOurCategorys(ctx)
+	if err != nil {
+		log.Println("init category mapper error")
+		return err
+	}
+	log.Println("completed init category mapper")
+	return nil
 }
 
 func (s *MapperImpl) loadAmsCategorys(ctx context.Context) error {
@@ -64,25 +72,41 @@ func (s *MapperImpl) Category(ctx context.Context, organizationID, programID, ca
 	// our
 	ourCategorys, found := s.MapperCategory.ourCategorys[categoryID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultCategoryID()
 	}
 
 	// ams
 	amsProgramID, err := s.Program(ctx, organizationID, programID)
 	if err != nil {
-		return "", err
+		return s.defaultCategoryID()
 	}
 	amsCategorys, found := s.MapperCategory.amsCategorys[amsProgramID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultCategoryID()
 	}
 	amsCategory, found := amsCategorys[ourCategorys.Name]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		for _, item := range amsCategorys {
+			return item.ID, nil
+		}
+		return s.defaultCategoryID()
 	}
 
 	// mapping
 	s.MapperCategory.categoryMapping[categoryID] = amsCategory.ID
 
 	return amsCategory.ID, nil
+}
+
+func (s *MapperImpl) defaultCategoryID() (string, error) {
+	noneName := "None Specified"
+	program, found := s.amsPrograms[noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	category, found := s.MapperCategory.amsCategorys[program.ID][noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	return category.ID, nil
 }

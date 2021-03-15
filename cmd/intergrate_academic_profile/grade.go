@@ -2,6 +2,7 @@ package intergrate_academic_profile
 
 import (
 	"context"
+	"log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -10,13 +11,20 @@ import (
 )
 
 func (s *MapperImpl) initGradeMapper(ctx context.Context) error {
+	log.Println("start init grade mapper")
 	s.MapperGrade.gradeMapping = make(map[string]string)
 	err := s.loadAmsGrades(ctx)
 	if err != nil {
 		return err
 	}
 
-	return s.loadOurGrades(ctx)
+	err = s.loadOurGrades(ctx)
+	if err != nil {
+		log.Println("init grade mapper error")
+		return err
+	}
+	log.Println("completed init grade mapper")
+	return nil
 }
 
 func (s *MapperImpl) loadAmsGrades(ctx context.Context) error {
@@ -60,7 +68,7 @@ func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, grade
 	// our
 	ourGrades, found := s.MapperGrade.ourGrades[gradeID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultGradeID()
 	}
 
 	// ams
@@ -70,15 +78,31 @@ func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, grade
 	}
 	amsGrades, found := s.MapperGrade.amsGrades[amsProgramID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultGradeID()
 	}
 	amsGrade, found := amsGrades[ourGrades.Name]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		for _, item := range amsGrades {
+			return item.ID, nil
+		}
+		return s.defaultGradeID()
 	}
 
 	// mapping
 	s.MapperGrade.gradeMapping[gradeID] = amsGrade.ID
 
 	return amsGrade.ID, nil
+}
+
+func (s *MapperImpl) defaultGradeID() (string, error) {
+	noneName := "None Specified"
+	program, found := s.amsPrograms[noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	grade, found := s.MapperGrade.amsGrades[program.ID][noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	return grade.ID, nil
 }

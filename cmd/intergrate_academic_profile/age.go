@@ -2,6 +2,7 @@ package intergrate_academic_profile
 
 import (
 	"context"
+	"log"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -18,6 +19,7 @@ var AgeNameMapper = map[string]string{
 }
 
 func (s *MapperImpl) initAgeMapper(ctx context.Context) error {
+	log.Println("start init age mapper")
 	s.MapperAge.ageMapping = make(map[string]string)
 
 	err := s.loadAmsAges(ctx)
@@ -25,7 +27,13 @@ func (s *MapperImpl) initAgeMapper(ctx context.Context) error {
 		return err
 	}
 
-	return s.loadOurAges(ctx)
+	err = s.loadOurAges(ctx)
+	if err != nil {
+		log.Println("init age mapper error")
+		return err
+	}
+	log.Println("completed init age mapper")
+	return err
 }
 
 func (s *MapperImpl) loadAmsAges(ctx context.Context) error {
@@ -69,7 +77,7 @@ func (s *MapperImpl) Age(ctx context.Context, organizationID, programID, ageID s
 	// our
 	ourAges, found := s.MapperAge.ourAges[ageID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultAgeID()
 	}
 
 	// ams
@@ -79,15 +87,31 @@ func (s *MapperImpl) Age(ctx context.Context, organizationID, programID, ageID s
 	}
 	amsAges, found := s.MapperAge.amsAges[amsProgramID]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		return s.defaultAgeID()
 	}
 	amsAge, found := amsAges[AgeNameMapper[ourAges.Name]]
 	if !found {
-		return "", constant.ErrRecordNotFound
+		for _, item := range amsAges {
+			return item.ID, nil
+		}
+		return s.defaultAgeID()
 	}
 
 	// mapping
 	s.MapperAge.ageMapping[ageID] = amsAge.ID
 
 	return amsAge.ID, nil
+}
+
+func (s *MapperImpl) defaultAgeID() (string, error) {
+	noneName := "None Specified"
+	program, found := s.amsPrograms[noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	age, found := s.MapperAge.amsAges[program.ID][noneName]
+	if !found {
+		return "", constant.ErrRecordNotFound
+	}
+	return age.ID, nil
 }

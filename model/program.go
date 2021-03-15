@@ -65,7 +65,7 @@ func (s programModel) fillGroupName(ctx context.Context, programs []*external.Pr
 
 	for _, program := range newPrograms {
 		group, found := groupMap[program.ID]
-		if found {
+		if !found {
 			continue
 		}
 
