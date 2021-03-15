@@ -221,6 +221,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		teacherNames = append(teacherNames, t.Name)
 	}
 
+	// TODO: fill subject name
 	return &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
 		ScheduleID:       study.ScheduleID,
@@ -229,6 +230,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		TeacherNames:     teacherNames,
 		StudentID:        study.StudentID,
 		StudentName:      studentName,
+		SubjectName:      "",
 		Status:           study.Status,
 		DueAt:            study.DueAt,
 		CompleteAt:       study.CompleteAt,
@@ -300,6 +302,7 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			Title:            title,
 			TeacherIDs:       args.TeacherIDs,
 			StudentID:        args.StudentID,
+			SubjectID:        args.SubjectID,
 			Status:           entity.AssessmentStatusInProgress,
 			DueAt:            args.DueAt,
 			LatestFeedbackID: args.LatestFeedbackID,
