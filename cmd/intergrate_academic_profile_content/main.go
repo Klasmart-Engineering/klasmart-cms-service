@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/cmd/intergrate_academic_profile"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -158,6 +157,7 @@ func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_
 			}
 			newSkills = append(newSkills, newSkill)
 		}
+		newSkills = utils.SliceDeduplication(newSkills)
 	}
 
 	//ages map
@@ -177,6 +177,7 @@ func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_
 			}
 			newAges = append(newAges, newAge)
 		}
+		newAges = utils.SliceDeduplication(newAges)
 	}
 
 	//grades map
@@ -196,6 +197,7 @@ func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_
 			}
 			newGrades = append(newGrades, newGrade)
 		}
+		newGrades = utils.SliceDeduplication(newGrades)
 	}
 
 	content.Program = newProgram
