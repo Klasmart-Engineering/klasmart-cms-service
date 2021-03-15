@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -30,7 +31,7 @@ var (
 )
 
 func main() {
-	operator.Token = requestToken()
+	//operator.Token = requestToken()
 
 	initArgs()
 	err := loadSchedule()
@@ -73,8 +74,8 @@ func requestToken() string {
 
 func initArgs() {
 	//root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4
-	dsn := "root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4" //"admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
-	point := "https://api.kidsloop.net/user/"
+	dsn := ""   //"root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4" //"admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
+	point := "" //"https://api.kidsloop.net/user/"
 
 	cfg := &config.Config{
 		DBConfig: config.DBConfig{
@@ -133,12 +134,7 @@ func getSubjectMapKey(programID, subjectID string) string {
 
 func loadSchedule() error {
 	ctx := context.Background()
-	condition := &da.ScheduleCondition{
-		//OrgID: sql.NullString{
-		//	String: operator.OrgID,
-		//	Valid:  true,
-		//},
-	}
+	condition := &da.ScheduleCondition{}
 	//condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
 	var schedules []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &schedules)
@@ -146,6 +142,20 @@ func loadSchedule() error {
 		log.Println("get data from db error", err)
 		return err
 	}
+	fmt.Println("schedule count", len(schedules))
+	condition = &da.ScheduleCondition{
+		DeleteAt: sql.NullInt64{
+			Int64: 1,
+			Valid: true,
+		},
+	}
+	var schedulesDelete []*entity.Schedule
+	err = da.GetScheduleDA().Query(ctx, condition, &schedulesDelete)
+	if err != nil {
+		log.Println("get data from db error", err)
+		return err
+	}
+	schedules = append(schedules, schedulesDelete...)
 
 	// programID->schedule array
 	programIDMap := make(map[string][]*entity.Schedule)
@@ -153,7 +163,7 @@ func loadSchedule() error {
 	subjectIDMap := make(map[string]string)
 
 	for _, scheduleItem := range schedules {
-		if scheduleItem.ProgramID == "" {
+		if scheduleItem.ProgramID == "" && scheduleItem.SubjectID == "" {
 			continue
 		}
 		if _, ok := programIDMap[scheduleItem.ProgramID]; !ok {
@@ -161,9 +171,9 @@ func loadSchedule() error {
 		}
 		programIDMap[scheduleItem.ProgramID] = append(programIDMap[scheduleItem.ProgramID], scheduleItem)
 
-		if scheduleItem.SubjectID == "" {
-			continue
-		}
+		//if scheduleItem.SubjectID == "" {
+		//	continue
+		//}
 		subjectKey := getSubjectMapKey(scheduleItem.ProgramID, scheduleItem.SubjectID)
 		if _, ok := subjectIDMap[subjectKey]; !ok {
 			subjectIDMap[subjectKey] = scheduleItem.SubjectID
