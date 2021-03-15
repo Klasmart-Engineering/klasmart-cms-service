@@ -25,8 +25,6 @@ var (
 	ErrScheduleEditMissTime         = errors.New("editable time has expired")
 	ErrScheduleLessonPlanUnAuthed   = errors.New("schedule content data unAuthed")
 	ErrScheduleEditMissTimeForDueAt = errors.New("editable time has expired for due at")
-	ErrScheduleAlreadyHidden        = errors.New("schedule already hidden")
-	ErrScheduleAlreadyAssignments   = errors.New("students already submitted assignments")
 )
 
 type IScheduleModel interface {
@@ -52,55 +50,9 @@ type IScheduleModel interface {
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error
 	GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error)
 	GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error)
-	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
-}
-
-func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error) {
-	if !option.IsValid() {
-		log.Info(ctx, "option is invalid", log.String("option", string(option)), log.String("scheduleID", scheduleID))
-		return "", constant.ErrInvalidArgs
-	}
-	_, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
-		external.ScheduleCreateEvent,
-		external.ScheduleCreateMySchoolEvent,
-		external.ScheduleCreateMyEvent,
-	})
-	if err != nil {
-		log.Error(ctx, "no permission", log.Any("op", op), log.Any("option", option), log.String("scheduleID", scheduleID))
-		return "", err
-	}
-	var schedule = new(entity.Schedule)
-	err = da.GetScheduleDA().Get(ctx, scheduleID, schedule)
-	if err == dbo.ErrRecordNotFound {
-		log.Error(ctx, "get schedule by id failed, schedule not found", log.Err(err), log.String("scheduleID", scheduleID))
-		return "", constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "get schedule by id failed",
-			log.Err(err),
-			log.String("id", scheduleID),
-		)
-		return "", err
-	}
-	if schedule.DeleteAt != 0 {
-		log.Error(ctx, "get schedule by id failed, schedule not found",
-			log.String("id", scheduleID),
-		)
-		return "", constant.ErrRecordNotFound
-	}
-	schedule.IsHidden = option == entity.ScheduleShowOptionHidden
-	_, err = da.GetScheduleDA().Update(ctx, schedule)
-	if err != nil {
-		log.Error(ctx, "get schedule by id failed, schedule not found",
-			log.Any("schedule", schedule),
-			log.Any("op", op),
-		)
-		return "", err
-	}
-	return schedule.ID, nil
 }
 
 func (s *scheduleModel) GetOrgClassIDsByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, orgID string) ([]string, error) {
@@ -731,26 +683,6 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		)
 		return nil, constant.ErrOperateNotAllowed
 	}
-	if schedule.ClassType == entity.ScheduleClassTypeHomework &&
-		schedule.IsHomeFun &&
-		schedule.IsHidden {
-		log.Info(ctx, "schedule already hidden", log.Any("schedule", schedule))
-		return nil, ErrScheduleAlreadyHidden
-	}
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
-		exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
-		if err != nil {
-			log.Error(ctx, "update schedule: get schedule feedback error",
-				log.Any("schedule", schedule),
-				log.Err(err),
-			)
-			return nil, err
-		}
-		if exist {
-			log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
-			return nil, ErrScheduleAlreadyAssignments
-		}
-	}
 	switch schedule.ClassType {
 	case entity.ScheduleClassTypeHomework, entity.ScheduleClassTypeTask:
 		if schedule.DueAt > 0 {
@@ -790,7 +722,6 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		)
 		return "", err
 	}
-
 	// verify data
 	err = s.verifyData(ctx, operator, &entity.ScheduleVerify{
 		ClassID:      viewData.ClassID,
@@ -1137,7 +1068,6 @@ func (s *scheduleModel) Query(ctx context.Context, condition *da.ScheduleConditi
 			ClassType:    item.ClassType,
 			ClassID:      item.ClassID,
 			DueAt:        item.DueAt,
-			IsHidden:     item.IsHidden,
 		}
 		temp.Status = temp.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 			EndAt:     temp.EndAt,
@@ -1393,15 +1323,7 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		IsRepeat:       schedule.RepeatID != "",
 		Status:         schedule.Status,
 		RealTimeStatus: *realTimeData,
-		IsHomeFun:      schedule.IsHomeFun,
-		IsHidden:       schedule.IsHidden,
 	}
-	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, operator, schedule.ID)
-	if err != nil {
-		log.Error(ctx, "get relation type error", log.Any("op", operator), log.Any("schedule", schedule), log.Err(err))
-		return nil, err
-	}
-	result.RoleType = roleType
 	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 		EndAt:     result.EndAt,
 		DueAt:     result.DueAt,
@@ -1425,9 +1347,23 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		}
 		result.Repeat = repeat
 	}
-	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, operator, schedule.ID)
+	conditionGetClass := &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+		RelationType: sql.NullString{
+			String: string(entity.ScheduleRelationTypeClassRosterClass),
+			Valid:  true,
+		},
+	}
+	classRelations, err := GetScheduleRelationModel().Query(ctx, operator, conditionGetClass)
 	if err != nil {
 		return nil, err
+	}
+	var classID string
+	if len(classRelations) > 0 {
+		classID = classRelations[0].RelationID
 	}
 	basicInfo, err := s.getBasicInfo(ctx, operator, []*entity.ScheduleBasicDataInput{
 		&entity.ScheduleBasicDataInput{
@@ -1566,7 +1502,6 @@ func (s *scheduleModel) AccessibleClass(ctx context.Context, operator *entity.Op
 		log.Info(ctx, "no permission to edit class", log.String("classID", classID), log.Any("operator", operator), log.Any("permissionMap", permissionMap))
 		return false, nil
 	}
-
 	if err != nil {
 		return false, err
 	}
@@ -1663,9 +1598,9 @@ func (s *scheduleModel) AccessibleParticipantUser(ctx context.Context, operator 
 		log.Info(ctx, "no permission to edit participant user", log.Any("operator", operator), log.Any("permissionMap", permissionMap))
 		return result, nil
 	}
-
 	userSchoolMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, operator, operator.OrgID, userIDs)
 	if err != nil {
+		log.Error(ctx, "get user error", log.Any("operator", operator), log.Strings("userIDs", userIDs))
 		return nil, err
 	}
 
