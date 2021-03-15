@@ -61,8 +61,8 @@ func main() {
 
 func initArgs() {
 	//root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4
-	dsn := ""   //"root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4" //"admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
-	point := "" //"https://api.kidsloop.net/user/"
+	dsn := "root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4" //"admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
+	point := "https://api.kidsloop.net/user/"
 
 	cfg := &config.Config{
 		DBConfig: config.DBConfig{
@@ -192,32 +192,53 @@ func loadSchedule() error {
 		oldProgramID := keyArr[0]
 		oldSubjectID := keyArr[1]
 		newSubjectID, err := mapper.Subject(ctx, operator.OrgID, oldProgramID, oldSubjectID)
+		newProgramID, err := mapper.Program(ctx, operator.OrgID, oldProgramID)
 		if err != nil {
 			log.Printf("mapper program error,  orgID:%s,newSubjectID:%s, key：%s, error:%v \n", operator.OrgID, newSubjectID, key, err)
 			return err
 		}
 		log.Printf("orgID:%s,newSubjectID:%s, key：%s \n", operator.OrgID, newSubjectID, key)
-		subjectMapper[oldSubjectID] = newSubjectID
+		newKey := getSubjectMapKey(newProgramID, oldSubjectID)
+		subjectMapper[newKey] = newSubjectID
 	}
-	log.Println("subjectMapper:", programMapper)
-	log.Println("subjectMapper", subjectMapper)
-
-	fmt.Println("Enter to continue....")
+	fmt.Println("Enter to continue start update database....")
 	inputReader := bufio.NewReader(os.Stdin)
 	inputReader.ReadString('\n')
+	for key, val := range subjectMapper {
+		fmt.Println(key, val)
+	}
+
 	if isExec {
+		tx, err := dbo.MustGetDB(ctx).DB.DB().Begin()
 		for key, val := range programMapper {
-			err = da.GetScheduleDA().UpdateProgram(ctx, dbo.MustGetDB(ctx), operator, key, val)
+			err = da.GetScheduleDA().UpdateProgram(ctx, tx, operator, key, val)
 			if err != nil {
+				tx.Rollback()
 				return err
 			}
 		}
 		for key, val := range subjectMapper {
-			err = da.GetScheduleDA().UpdateSubject(ctx, dbo.MustGetDB(ctx), operator, key, val)
+			keyArr := strings.Split(key, ":")
+			if len(keyArr) < 2 {
+				log.Println("keyArr:", keyArr)
+				return constant.ErrInvalidArgs
+			}
+			newProgramID := keyArr[0]
+			oldSubjectID := keyArr[1]
+			err = da.GetScheduleDA().UpdateSubject(ctx, tx, operator, oldSubjectID, newProgramID, val)
 			if err != nil {
+				tx.Rollback()
 				return err
 			}
 		}
+		//err = constant.ErrInvalidArgs
+		//if err != nil {
+		//	tx.Rollback()
+		//	return err
+		//}
+
+		err = tx.Commit()
+		return err
 		//dbo.MustGetDB(ctx).DB.DB().Begin()
 		//err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		//	for key, val := range programMapper {

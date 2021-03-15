@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 		},
 	})
 
-	dsn := "admin:LH1MCuL3V0Ib3254@tcp(migration-test2.c2gspglsifnp.rds.cn-north-1.amazonaws.com.cn:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
+	dsn := "root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4"
 	option := dbo.WithConnectionString(dsn)
 	newDBO, err := dbo.NewWithConfig(option)
 	if err != nil {

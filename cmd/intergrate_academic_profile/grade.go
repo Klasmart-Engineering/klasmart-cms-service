@@ -57,13 +57,13 @@ func (s *MapperImpl) loadOurGrades(ctx context.Context) error {
 }
 
 func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, gradeID string) (string, error) {
+	s.MapperGrade.amsGradeMutex.Lock()
+	defer s.MapperGrade.amsGradeMutex.Unlock()
+
 	cacheID, found := s.MapperGrade.gradeMapping[gradeID]
 	if found {
 		return cacheID, nil
 	}
-
-	s.MapperGrade.amsGradeMutex.Lock()
-	defer s.MapperGrade.amsGradeMutex.Unlock()
 
 	// our
 	ourGrades, found := s.MapperGrade.ourGrades[gradeID]
