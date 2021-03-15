@@ -150,13 +150,10 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 }
 
 func (s *scheduleDA) UpdateProgram(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldProgramID string, newProgramID string) error {
-	if err := tx.Model(&entity.Schedule{}).
-		Where("org_id = ?", operator.OrgID).
-		Where("program_id = ?", oldProgramID).
-		Updates(map[string]interface{}{
-			"program_id": newProgramID,
-			"updated_at": time.Now().Unix(),
-		}).Error; err != nil {
+	_, err := tx.DB.DB().
+		Exec(fmt.Sprintf("UPDATE `%s` SET `program_id` = ?, `updated_at` = ?  WHERE (program_id = ?)", constant.TableNameSchedule), newProgramID, time.Now().Unix(), oldProgramID)
+
+	if err != nil {
 		log.Error(ctx, "update schedule program: update failed",
 			log.Err(err),
 			log.String("oldProgramID", oldProgramID),
@@ -169,13 +166,10 @@ func (s *scheduleDA) UpdateProgram(ctx context.Context, tx *dbo.DBContext, opera
 }
 
 func (s *scheduleDA) UpdateSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldSubjectID string, newSubjectID string) error {
-	if err := tx.Model(&entity.Schedule{}).
-		Where("org_id = ?", operator.OrgID).
-		Where("subject_id = ?", oldSubjectID).
-		Updates(map[string]interface{}{
-			"subject_id": newSubjectID,
-			"updated_at": time.Now().Unix(),
-		}).Error; err != nil {
+	_, err := tx.DB.DB().
+		Exec(fmt.Sprintf("UPDATE `%s` SET `subject_id` = ?, `updated_at` = ?  WHERE (subject_id = ?)", constant.TableNameSchedule), newSubjectID, time.Now().Unix(), oldSubjectID)
+
+	if err != nil {
 		log.Error(ctx, "update schedule subject: update failed",
 			log.Err(err),
 			log.String("oldSubjectID", oldSubjectID),
