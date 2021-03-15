@@ -102,7 +102,7 @@ func (s *MapperImpl) SubCategory(ctx context.Context, organizationID, programID,
 	}
 
 	// mapping
-	s.MapperCategory.categoryMapping[subCategoryID] = amsSubCategory.ID
+	s.MapperSubCategory.subCategoryMapping[subCategoryID] = amsSubCategory.ID
 
 	return amsSubCategory.ID, nil
 }
