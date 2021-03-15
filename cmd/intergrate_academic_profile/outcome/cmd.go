@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc4ODUyOCwiaXNzIjoia2lkc2xvb3AifQ.ec_Nscz_kJDH_7L6IS4mpPd1QdymcKSRdd3DQHhZmqXyZt9_p-8VhBNQhdXjCmfj9FbZikrfJARBudSogH7wtj_Kv-orHgOUowq9CotAcNznOfcXTbxi1V_X6UoHym0UWToDkJ4JXIU_V9tQJ0tHvZkMuTtp-V9WHy5vbyyJ5hWnv0QJ2TSn-bEvhcIuXB8inDm8a94FkIrCNzHzX3APhFgJ5f2Oz-UM_1fVALZkUefGETGoSPMqsqGS804VdSIFzSJ8yOMyfJd43cCByrWPk8VGk77UXL2b3nqHfUT_oOgPw2OCJqFCIkeMv52gspLDG8dxMov9QAxXFS60rTfZEA"
+var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc5MzAzMywiaXNzIjoia2lkc2xvb3AifQ.hXa9sQ3QzTMgBz_UtiRvoOoLfk_16reKp--iWSnZBO2qBX28fDvi_PvdNNqh2tq1AFv0XaUHzz59nQRWxbmXa_HvrwAhGjqBOdZL927yDiHKZI26enQlkkoNoJhak2n1IgUyG_q5kwvR0_5A_-DwBN6wGjQMqgvQjskI9zmFfkcsbE04X36Rhh3LQoSF7H7Trhy8R0aFO38gN7Q2Uuhnik2RJ-iEFxLdcv-5B9-QbKm4TSRgHwmenC5ocYWKohBLBM0heWFCfs2DnGERnr-uuj0_GWSBz5BtVVnF36xNGWWjuFttauEbDzCTuRtdoDg-Ft6mF43zgtOppFm8bpXwJg"
 
 func isRecordNotFoundErr(err error) bool {
 	if err.Error() == "record not found" {
@@ -54,7 +54,6 @@ func main() {
 		page := 1
 		pageSize := 200
 		for n := 200; n == pageSize; page++ {
-
 			fmt.Printf("migrate:page:%d---------------------\n", page)
 			var oc []*entity.Outcome
 			_, oc, err = da.GetOutcomeDA().SearchOutcome(ctx, tx, &da.OutcomeCondition{
@@ -83,14 +82,15 @@ func main() {
 		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6",
 	})
 
+	wg.Add(len(outcomes))
 	for index := range outcomes {
-		works <- struct{}{}
-		wg.Add(1)
 		go func(i int) {
+			works <- struct{}{}
 			defer func() {
 				<-works
 				wg.Done()
 			}()
+			ctx := context.TODO()
 			var programs, subjects, categories, subCategories, ages, grades []string
 			if outcomes[i].Program != "" {
 				programs = strings.Split(outcomes[i].Program, ",")
