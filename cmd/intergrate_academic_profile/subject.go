@@ -9,13 +9,13 @@ import (
 )
 
 func (s *MapperImpl) Subject(ctx context.Context, organizationID, programID, subjectID string) (string, error) {
+	s.subjectMutex.Lock()
+	defer s.subjectMutex.Unlock()
+
 	amsSubjectID, found := s.subjectMapping[programID+":"+subjectID]
 	if found {
 		return amsSubjectID, nil
 	}
-
-	s.subjectMutex.Lock()
-	defer s.subjectMutex.Unlock()
 
 	ourSubject, found := s.ourSubjects[subjectID]
 	if !found {
