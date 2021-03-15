@@ -302,10 +302,10 @@ DROP TABLE IF EXISTS `feedbacks_assignments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `feedbacks_assignments` (
-  `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `feedback_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'feedback_id',
-  `assignment_url` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assignment_url',
-  `assignment_name` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'assignment_name',
+  `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `feedback_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'feedback_id',
+  `assignment_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assignment_url',
+  `assignment_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'assignment_name',
   `number` int(11) DEFAULT '0' COMMENT 'number',
   `create_at` bigint(20) DEFAULT '0' COMMENT 'create_at',
   `update_at` bigint(20) DEFAULT '0' COMMENT 'update_at',
@@ -335,38 +335,6 @@ CREATE TABLE `grades` (
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='grades';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `home_fun_studies`
---
-
-DROP TABLE IF EXISTS `home_fun_studies`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `home_fun_studies` (
-  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'id',
-  `schedule_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule id',
-  `title` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'title',
-  `teacher_ids` json NOT NULL DEFAULT 'null' COMMENT 'teacher id',
-  `student_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'student_id',
-  `status` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'status (enum: in_progress, complete)',
-  `due_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'due at',
-  `complete_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'complete at (unix seconds)',
-  `latest_feedback_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'latest feedback id',
-  `latest_feedback_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'latest feedback at (unix seconds)',
-  `assess_feedback_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assess feedback id',
-  `assess_score` int(11) NOT NULL DEFAULT '0' COMMENT 'score',
-  `assess_comment` text COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'text',
-  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'create at (unix seconds)',
-  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'update at (unix seconds)',
-  `delete_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'delete at (unix seconds)',
-  PRIMARY KEY (`id`),
-  KEY `home_fun_study_id` (`schedule_id`),
-  KEY `home_fun_study_status` (`status`),
-  KEY `home_fun_study_latest_feedback_at` (`latest_feedback_at`),
-  KEY `home_fun_study_complete_at` (`complete_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='home_fun_studies';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -444,10 +412,10 @@ DROP TABLE IF EXISTS `migrate_record`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `migrate_record` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `origin` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `dist` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `source_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `target_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `origin` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dist` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `source_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `target_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_migrate_record_origin` (`origin`),
   KEY `idx_migrate_record_dist` (`dist`),
@@ -472,7 +440,7 @@ CREATE TABLE `organizations_properties` (
   `created_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
   `updated_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
   `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  `region` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'region',
+  `region` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'region',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organizations_properties';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -581,8 +549,8 @@ DROP TABLE IF EXISTS `programs_groups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `programs_groups` (
-  `program_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'program id',
-  `group_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'group name',
+  `program_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'program id',
+  `group_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'group name',
   PRIMARY KEY (`program_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='programs groups';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -654,10 +622,10 @@ DROP TABLE IF EXISTS `schedules_feedbacks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `schedules_feedbacks` (
-  `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `schedule_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
-  `user_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'user_id',
-  `Comment` text COLLATE utf8mb4_unicode_ci COMMENT 'Comment',
+  `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `schedule_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
+  `user_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'user_id',
+  `Comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'Comment',
   `create_at` bigint(20) DEFAULT '0' COMMENT 'create_at',
   `update_at` bigint(20) DEFAULT '0' COMMENT 'update_at',
   `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
@@ -675,10 +643,10 @@ DROP TABLE IF EXISTS `schedules_relations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `schedules_relations` (
-  `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `schedule_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
-  `relation_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'relation_id',
-  `relation_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'relation_type',
+  `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `schedule_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
+  `relation_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'relation_id',
+  `relation_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'relation_type',
   PRIMARY KEY (`id`),
   KEY `idx_schedule_id` (`schedule_id`),
   KEY `idx_relation_id` (`relation_id`),
@@ -777,4 +745,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-15  1:47:52
+-- Dump completed on 2021-03-15 17:00:32
