@@ -58,6 +58,14 @@ func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Opera
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get categories by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
 	categories := make([]*Category, 0, len(data))
 	for index := range ids {
 		category := data[fmt.Sprintf("q%d", indexMapping[index])]
@@ -110,6 +118,14 @@ func (s AmsCategoryService) GetByProgram(ctx context.Context, operator *entity.O
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "query categories by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.String("programID", programID))
+		return nil, response.Errors
+	}
+
 	categories := make([]*Category, 0)
 	for _, subject := range data.Program.Subjects {
 		categories = append(categories, subject.Categories...)
@@ -151,6 +167,13 @@ func (s AmsCategoryService) GetByOrganization(ctx context.Context, operator *ent
 			log.Err(err),
 			log.Any("operator", operator))
 		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "query categories by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator))
+		return nil, response.Errors
 	}
 
 	categories := data.Organization.Categories

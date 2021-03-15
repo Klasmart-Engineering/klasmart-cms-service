@@ -58,6 +58,14 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get subCategories by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
 	subCategories := make([]*SubCategory, 0, len(data))
 	for index := range ids {
 		subCategory := data[fmt.Sprintf("q%d", indexMapping[index])]
@@ -106,6 +114,14 @@ func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *enti
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get subCategories by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.String("categoryID", categoryID))
+		return nil, response.Errors
+	}
+
 	subCategories := data.Category.SubCategories
 
 	log.Info(ctx, "get subCategories by program success",
@@ -144,6 +160,13 @@ func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *
 			log.Err(err),
 			log.Any("operator", operator))
 		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "query sub categories by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator))
+		return nil, response.Errors
 	}
 
 	subCategories := data.Organization.SubCategories
