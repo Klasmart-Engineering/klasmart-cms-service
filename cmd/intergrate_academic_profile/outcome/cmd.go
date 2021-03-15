@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc4MDQyMCwiaXNzIjoia2lkc2xvb3AifQ.Jw0Nl8w3JbQF1XvHDyJekn4rnU3faRZHQdYd9R0XjU73v3pqf--SIUK_M59dYd_bBO17zBKbO2paEbu54LcVAE5KhrRJcd8SZwG1wWYgWzDIBNfgqrUJFCNv4a2zJWaZSwYEfka2E4bX6aHjoix7fwObVWOs3ewbIVyIRuty_WPEAaVpXcgPowkT_L-NfRn6ZWLRdZg_YlmLhEA6x2XCViXprLa_M9GLuYQBSDffVkmqBLhLJRr-CX4uPLhjeqZBFbMcMNFfhUZ0bPJZsEqZxiroqtyCQgjZj1b34jzeyBWYs6xvSuB-RAAGMr4Oqe27M7Lh0oHaQOtdOW442zzVig"
+var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc4NDkyNSwiaXNzIjoia2lkc2xvb3AifQ.BFhOsNEwQHdB-Aviz_Dkw728LhshKWC_dzsHhZ6QlWvB5rc2mkE0heC9758DwBItbHsRWC9wywpUGgS84ECUiOlUFi8mOlAvXx6RoyqkptnCgi7aReSHLAW2SCdv77x-KLv8pqGkO3miQGzz2khtGYIE47ljmqLkYfAdldgI0ZttABYQ2Zc3lCrM13j9PUgUQds-O62uG7UynWjS-QkHE5MbJMWfOn0pccwOAPH_VGE9GTEahfog-ujKguvKIL5b6Ez_jq-oPTKXidkyV71jf3D4rxV0GJ3-taQ1Ssr64nmuEHMrecFBALqnVk5fWPEoW8WT2UgroTNOyNeKsYrq4Q"
 
 func isRecordNotFoundErr(err error) bool {
 	if err.Error() == "record not found" {
@@ -83,20 +83,33 @@ func main() {
 		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6",
 	})
 
-	for i := range outcomes {
+	for index := range outcomes {
 		works <- struct{}{}
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			defer func() {
 				<-works
 				wg.Done()
 			}()
-			programs := strings.Split(outcomes[i].Program, ",")
-			subjects := strings.Split(outcomes[i].Subject, ",")
-			categories := strings.Split(outcomes[i].Developmental, ",")
-			subCategories := strings.Split(outcomes[i].Skills, ",")
-			ages := strings.Split(outcomes[i].Age, ",")
-			grades := strings.Split(outcomes[i].Grade, ",")
+			var programs, subjects, categories, subCategories, ages, grades []string
+			if outcomes[i].Program != "" {
+				programs = strings.Split(outcomes[i].Program, ",")
+			}
+			if outcomes[i].Subject != "" {
+				subjects = strings.Split(outcomes[i].Subject, ",")
+			}
+			if outcomes[i].Developmental != "" {
+				categories = strings.Split(outcomes[i].Developmental, ",")
+			}
+			if outcomes[i].Skills != "" {
+				subCategories = strings.Split(outcomes[i].Skills, ",")
+			}
+			if outcomes[i].Age != "" {
+				ages = strings.Split(outcomes[i].Age, ",")
+			}
+			if outcomes[i].Grade != "" {
+				grades = strings.Split(outcomes[i].Grade, ",")
+			}
 			outcomes[i].Program = ""
 			outcomes[i].Subject = ""
 			outcomes[i].Developmental = ""
@@ -163,7 +176,9 @@ func main() {
 						log.String("new subject", sid))
 					outcomes[i].Subject = outcomes[i].Subject + sid + ","
 				}
-				outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
+				//if outcomes[i].Subject != "" {
+				//	outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
+				//}
 
 				for c := range categories {
 					if categories[c] == "" {
@@ -232,12 +247,12 @@ func main() {
 						outcomes[i].Skills = outcomes[i].Skills + scid + ","
 					}
 				}
-				if outcomes[i].Skills != "" {
-					outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
-				}
-				if outcomes[i].Developmental != "" {
-					outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
-				}
+				//if outcomes[i].Skills != "" {
+				//	outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
+				//}
+				//if outcomes[i].Developmental != "" {
+				//	outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
+				//}
 
 				for a := range ages {
 					if ages[a] == "" {
@@ -270,9 +285,9 @@ func main() {
 						log.String("new age", aid))
 					outcomes[i].Age = outcomes[i].Age + aid + ","
 				}
-				if outcomes[i].Age != "" {
-					outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
-				}
+				//if outcomes[i].Age != "" {
+				//	outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
+				//}
 
 				for g := range grades {
 					if grades[g] == "" {
@@ -305,22 +320,44 @@ func main() {
 						log.String("new grade", gid))
 					outcomes[i].Grade = outcomes[i].Grade + gid + ","
 				}
-				if outcomes[i].Grade != "" {
-					outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
-				}
+				//if outcomes[i].Grade != "" {
+				//	outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
+				//}
 			}
+
+			if outcomes[i].Age != "" {
+				outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
+			}
+
+			if outcomes[i].Grade != "" {
+				outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
+			}
+
+			if outcomes[i].Skills != "" {
+				outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
+			}
+			if outcomes[i].Developmental != "" {
+				outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
+			}
+
+			if outcomes[i].Subject != "" {
+				outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
+			}
+
 			if outcomes[i].Program != "" {
 				outcomes[i].Program = strings.TrimSuffix(outcomes[i].Program, ",")
 			}
 
-			fmt.Printf("migrate:finished:%d:-------------------\n", i)
-			//err = da.GetOutcomeDA().UpdateOutcome(ctx, tx, outcomes[i])
-			//if err != nil {
-			//	log.Error(ctx, "update program failed",
-			//		log.Any("outcome", outcomes[i]),
-			//		log.Err(err))
-			//}
-		}()
+			log.Info(ctx, "migrate:finished",
+				log.Int("index", i),
+				log.Any("outcome", outcomes[i]))
+			err = da.GetOutcomeDA().UpdateOutcome(ctx, dbo.MustGetDB(ctx), outcomes[i])
+			if err != nil {
+				log.Error(ctx, "update program failed",
+					log.Any("outcome", outcomes[i]),
+					log.Err(err))
+			}
+		}(index)
 	}
 	wg.Wait()
 }
