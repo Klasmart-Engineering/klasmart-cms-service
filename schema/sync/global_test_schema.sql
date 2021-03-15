@@ -472,6 +472,7 @@ CREATE TABLE `organizations_properties` (
   `created_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
   `updated_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
   `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
+  `region` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'region',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organizations_properties';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -570,6 +571,20 @@ CREATE TABLE `programs_grades` (
   KEY `idx_program_id` (`program_id`),
   KEY `idx_grade_id` (`grade_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='programs_grades';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `programs_groups`
+--
+
+DROP TABLE IF EXISTS `programs_groups`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `programs_groups` (
+  `program_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'program id',
+  `group_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'group name',
+  PRIMARY KEY (`program_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='programs groups';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -762,4 +777,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-11 17:00:32
+-- Dump completed on 2021-03-15  1:47:52
