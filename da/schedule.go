@@ -4,15 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
-	"sync"
-	"time"
 )
 
 type IScheduleDA interface {
@@ -22,6 +23,8 @@ type IScheduleDA interface {
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string, operator *entity.Operator) error
 	DeleteWithFollowing(ctx context.Context, tx *dbo.DBContext, repeatID string, startAt int64) error
 	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
+	UpdateProgram(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldProgramID string, newProgramID string) error
+	UpdateSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldSubjectID string, newSubjectID string) error
 }
 
 type scheduleDA struct {
@@ -139,6 +142,44 @@ func (s *scheduleDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id strin
 		log.Error(ctx, "soft delete schedule: update failed",
 			log.Err(err),
 			log.String("id", id),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	return nil
+}
+
+func (s *scheduleDA) UpdateProgram(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldProgramID string, newProgramID string) error {
+	if err := tx.Model(&entity.Schedule{}).
+		Where("org_id = ?", operator.OrgID).
+		Where("program_id = ?", oldProgramID).
+		Updates(map[string]interface{}{
+			"program_id": newProgramID,
+			"updated_at": time.Now().Unix(),
+		}).Error; err != nil {
+		log.Error(ctx, "update schedule program: update failed",
+			log.Err(err),
+			log.String("oldProgramID", oldProgramID),
+			log.String("newProgramID", newProgramID),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	return nil
+}
+
+func (s *scheduleDA) UpdateSubject(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, oldSubjectID string, newSubjectID string) error {
+	if err := tx.Model(&entity.Schedule{}).
+		Where("org_id = ?", operator.OrgID).
+		Where("subject_id = ?", oldSubjectID).
+		Updates(map[string]interface{}{
+			"subject_id": newSubjectID,
+			"updated_at": time.Now().Unix(),
+		}).Error; err != nil {
+		log.Error(ctx, "update schedule subject: update failed",
+			log.Err(err),
+			log.String("oldSubjectID", oldSubjectID),
+			log.String("newSubjectID", newSubjectID),
 			log.Any("operator", operator),
 		)
 		return err

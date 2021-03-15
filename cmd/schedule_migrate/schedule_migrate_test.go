@@ -7,10 +7,8 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
 func TestAMS(t *testing.T) {
@@ -53,13 +51,13 @@ func TestDB(t *testing.T) {
 	// 	t.Log(err)
 	// 	return
 	// }
-	ourAges, err := model.GetAgeModel().Query(context.Background(), &da.AgeCondition{})
-	if err != nil {
-		t.Log(err)
-		return
-	}
+	// ourAges, err := model.GetAgeModel().Query(context.Background(), &da.AgeCondition{})
+	// if err != nil {
+	// 	t.Log(err)
+	// 	return
+	// }
 
-	t.Log(ourAges)
+	//t.Log(ourAges)
 }
 
 func TestGetAboutOrgInfo(t *testing.T) {
