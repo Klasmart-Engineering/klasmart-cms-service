@@ -41,8 +41,8 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 			teacherManuals = planData.TeacherManualBatch
 		}else if planData.TeacherManual != ""{
 			teacherManuals = []*entity.TeacherManualFile{{
-				TeacherManualSource: planData.TeacherManual,
-				TeacherManualName: planData.TeacherManualName,
+				ID:   planData.TeacherManual,
+				Name: planData.TeacherManualName,
 			}}
 		}
 	}

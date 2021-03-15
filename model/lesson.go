@@ -130,7 +130,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 		if l.TeacherManualName == "" {
 			log.Warn(ctx, "teacher_manual name is nil",
 				log.String("TeacherManual", l.TeacherManual),
-				log.String("TeacherManualName", l.TeacherManualName),
+				log.String("Name", l.TeacherManualName),
 				log.Any("TeacherManualBatch", l.TeacherManualBatch))
 			return ErrTeacherManualNameNil
 		}
@@ -140,7 +140,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 		}
 	}
 	for i := range l.TeacherManualBatch {
-		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].TeacherManualSource)
+		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].ID)
 		if err != nil{
 			return err
 		}
