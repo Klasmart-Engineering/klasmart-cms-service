@@ -86,6 +86,10 @@ func initArgs() {
 	mapper = intergrate_academic_profile.NewMapper(operator)
 }
 
+func getSubjectMapKey(programID, subjectID string) string {
+	return programID + ":" + subjectID
+}
+
 func loadSchedule() error {
 	ctx := context.Background()
 	condition := &da.ScheduleCondition{
@@ -102,19 +106,22 @@ func loadSchedule() error {
 		return err
 	}
 
+	// programID->schedule array
 	programIDMap := make(map[string][]*entity.Schedule)
-	subjectIDMap := make(map[string][]*entity.Schedule)
+	// programID:subjectID->subjectID
+	subjectIDMap := make(map[string]string)
 
 	for _, scheduleItem := range schedules {
+		//if scheduleItem.ProgramID==""
 		if _, ok := programIDMap[scheduleItem.ProgramID]; !ok {
 			programIDMap[scheduleItem.ProgramID] = make([]*entity.Schedule, 0)
 		}
 		programIDMap[scheduleItem.ProgramID] = append(programIDMap[scheduleItem.ProgramID], scheduleItem)
 
-		if _, ok := subjectIDMap[scheduleItem.SubjectID]; !ok {
-			subjectIDMap[scheduleItem.SubjectID] = make([]*entity.Schedule, 0)
+		subjectKey := getSubjectMapKey(scheduleItem.ProgramID, scheduleItem.SubjectID)
+		if _, ok := subjectIDMap[subjectKey]; !ok {
+			subjectIDMap[subjectKey] = scheduleItem.SubjectID
 		}
-		subjectIDMap[scheduleItem.SubjectID] = append(subjectIDMap[scheduleItem.SubjectID], scheduleItem)
 	}
 	count := 0
 	for key, scheduleList := range programIDMap {
@@ -146,7 +153,12 @@ func loadSchedule() error {
 					return err
 				}
 			}
-			//for key, item := range subjectIDMap {
+			//for key, _ := range subjectIDMap {
+			//	keyArr:=strings.Split(key,":")
+			//	if len(keyArr)<2{
+			//		log.Println("")
+			//		return
+			//	}
 			//	newSubjectID, err := mapper.Subject(ctx, operator.OrgID,item key)
 			//	if err != nil {
 			//		log.Printf("mapper program error,  orgID:%s,newProgramID:%s, oldProgramID：%s, error:%v \n", operator.OrgID, newProgramID, key, err)
