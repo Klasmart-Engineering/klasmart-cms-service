@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc4NDkyNSwiaXNzIjoia2lkc2xvb3AifQ.BFhOsNEwQHdB-Aviz_Dkw728LhshKWC_dzsHhZ6QlWvB5rc2mkE0heC9758DwBItbHsRWC9wywpUGgS84ECUiOlUFi8mOlAvXx6RoyqkptnCgi7aReSHLAW2SCdv77x-KLv8pqGkO3miQGzz2khtGYIE47ljmqLkYfAdldgI0ZttABYQ2Zc3lCrM13j9PUgUQds-O62uG7UynWjS-QkHE5MbJMWfOn0pccwOAPH_VGE9GTEahfog-ujKguvKIL5b6Ez_jq-oPTKXidkyV71jf3D4rxV0GJ3-taQ1Ssr64nmuEHMrecFBALqnVk5fWPEoW8WT2UgroTNOyNeKsYrq4Q"
+var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc4ODUyOCwiaXNzIjoia2lkc2xvb3AifQ.ec_Nscz_kJDH_7L6IS4mpPd1QdymcKSRdd3DQHhZmqXyZt9_p-8VhBNQhdXjCmfj9FbZikrfJARBudSogH7wtj_Kv-orHgOUowq9CotAcNznOfcXTbxi1V_X6UoHym0UWToDkJ4JXIU_V9tQJ0tHvZkMuTtp-V9WHy5vbyyJ5hWnv0QJ2TSn-bEvhcIuXB8inDm8a94FkIrCNzHzX3APhFgJ5f2Oz-UM_1fVALZkUefGETGoSPMqsqGS804VdSIFzSJ8yOMyfJd43cCByrWPk8VGk77UXL2b3nqHfUT_oOgPw2OCJqFCIkeMv52gspLDG8dxMov9QAxXFS60rTfZEA"
 
 func isRecordNotFoundErr(err error) bool {
 	if err.Error() == "record not found" {
@@ -116,6 +116,7 @@ func main() {
 			outcomes[i].Skills = ""
 			outcomes[i].Age = ""
 			outcomes[i].Grade = ""
+			needUpdate := false
 			for p := range programs {
 				if programs[p] == "" || validID.MatchString(programs[p]) {
 					log.Warn(ctx, "migrate:valid:program",
@@ -132,6 +133,7 @@ func main() {
 						log.Err(err))
 					return
 				}
+				needUpdate = true
 				if pid == "" {
 					log.Warn(ctx, "migrate:warn:program",
 						log.String("outcome", outcomes[i].ID),
@@ -325,37 +327,43 @@ func main() {
 				//}
 			}
 
-			if outcomes[i].Age != "" {
-				outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
-			}
+			if needUpdate {
+				if outcomes[i].Age != "" {
+					outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
+				}
 
-			if outcomes[i].Grade != "" {
-				outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
-			}
+				if outcomes[i].Grade != "" {
+					outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
+				}
 
-			if outcomes[i].Skills != "" {
-				outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
-			}
-			if outcomes[i].Developmental != "" {
-				outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
-			}
+				if outcomes[i].Skills != "" {
+					outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
+				}
+				if outcomes[i].Developmental != "" {
+					outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
+				}
 
-			if outcomes[i].Subject != "" {
-				outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
-			}
+				if outcomes[i].Subject != "" {
+					outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
+				}
 
-			if outcomes[i].Program != "" {
-				outcomes[i].Program = strings.TrimSuffix(outcomes[i].Program, ",")
-			}
+				if outcomes[i].Program != "" {
+					outcomes[i].Program = strings.TrimSuffix(outcomes[i].Program, ",")
+				}
 
-			log.Info(ctx, "migrate:finished",
-				log.Int("index", i),
-				log.Any("outcome", outcomes[i]))
-			err = da.GetOutcomeDA().UpdateOutcome(ctx, dbo.MustGetDB(ctx), outcomes[i])
-			if err != nil {
-				log.Error(ctx, "update program failed",
-					log.Any("outcome", outcomes[i]),
-					log.Err(err))
+				log.Info(ctx, "migrate:finished",
+					log.Int("index", i),
+					log.Any("outcome", outcomes[i]))
+				err = da.GetOutcomeDA().UpdateOutcome(ctx, dbo.MustGetDB(ctx), outcomes[i])
+				if err != nil {
+					log.Error(ctx, "update program failed",
+						log.Any("outcome", outcomes[i]),
+						log.Err(err))
+				}
+			} else {
+				log.Info(ctx, "migrate:needn't",
+					log.Int("index", i),
+					log.Any("outcome", outcomes[i]))
 			}
 		}(index)
 	}
