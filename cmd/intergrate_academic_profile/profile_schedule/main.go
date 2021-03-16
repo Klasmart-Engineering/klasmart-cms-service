@@ -158,126 +158,171 @@ func loadSchedule() error {
 	schedules = append(schedules, schedulesDelete...)
 
 	// programID->schedule array
-	programIDMap := make(map[string][]*entity.Schedule)
+	//programIDMap := make(map[string][]*entity.Schedule)
 	// programID:subjectID->subjectID
-	subjectIDMap := make(map[string]string)
+	//subjectIDMap := make(map[string]string)
+	programMap := make(map[string]string)
+	subjectMap := make(map[string]string)
 
 	for _, scheduleItem := range schedules {
 		if scheduleItem.ProgramID == "" && scheduleItem.SubjectID == "" {
 			continue
 		}
-		if _, ok := programIDMap[scheduleItem.ProgramID]; !ok {
-			programIDMap[scheduleItem.ProgramID] = make([]*entity.Schedule, 0)
-		}
-		programIDMap[scheduleItem.ProgramID] = append(programIDMap[scheduleItem.ProgramID], scheduleItem)
 
-		//if scheduleItem.SubjectID == "" {
-		//	continue
-		//}
-		subjectKey := getSubjectMapKey(scheduleItem.ProgramID, scheduleItem.SubjectID)
-		if _, ok := subjectIDMap[subjectKey]; !ok {
-			subjectIDMap[subjectKey] = scheduleItem.SubjectID
-		}
-	}
-	count := 0
-	for key, scheduleList := range programIDMap {
-		amsProgramID, err := mapper.Program(ctx, operator.OrgID, key)
+		amsProgramID, err := mapper.Program(ctx, scheduleItem.OrgID, scheduleItem.ProgramID)
 		if err != nil {
-			log.Fatalf("ourProgramID:%s, amsProgramID:%s,error:%v \n", key, amsProgramID, err)
+			log.Fatalf("ourProgramID:%s, amsProgramID:%s,error:%v \n", scheduleItem.ProgramID, amsProgramID, err)
+
 			return err
 		}
-		length := len(scheduleList)
-		count += length
-		//log.Printf("ourProgramID:%s, amsProgramID:%s, scheduleLen:%d \n", key, amsProgramID, length)
-	}
-	log.Printf("orgID:%s,查询到的schedule总数:%d, 符合迁移条件的schedule总数：%d \n", operator.OrgID, len(schedules), count)
 
-	programMapper := make(map[string]string)
-
-	for key, _ := range programIDMap {
-		newProgramID, err := mapper.Program(ctx, operator.OrgID, key)
+		newSubjectID, err := mapper.Subject(ctx, scheduleItem.OrgID, scheduleItem.ProgramID, scheduleItem.SubjectID)
 		if err != nil {
-			log.Printf("mapper program error,  orgID:%s,newProgramID:%s, oldProgramID：%s, error:%v \n", operator.OrgID, newProgramID, key, err)
+			log.Fatalf("mapper Subject error,error:%v \n", scheduleItem.ProgramID, amsProgramID, err)
+
 			return err
 		}
-		log.Printf("orgID:%s,newProgramID:%s, oldProgramID：%s, \n", operator.OrgID, newProgramID, key)
-		programMapper[key] = newProgramID
-	}
-
-	subjectMapper := make(map[string]string)
-	for key, _ := range subjectIDMap {
-		keyArr := strings.Split(key, ":")
-		if len(keyArr) < 2 {
-			log.Println("")
-			return constant.ErrInvalidArgs
-		}
-		oldProgramID := keyArr[0]
-		oldSubjectID := keyArr[1]
-		newSubjectID, err := mapper.Subject(ctx, operator.OrgID, oldProgramID, oldSubjectID)
-		newProgramID, err := mapper.Program(ctx, operator.OrgID, oldProgramID)
-		if err != nil {
-			log.Printf("mapper program error,  orgID:%s,newSubjectID:%s, key：%s, error:%v \n", operator.OrgID, newSubjectID, key, err)
-			return err
-		}
-		log.Printf("orgID:%s,newSubjectID:%s, key：%s \n", operator.OrgID, newSubjectID, key)
-		newKey := getSubjectMapKey(newProgramID, oldSubjectID)
-		subjectMapper[newKey] = newSubjectID
+		programMap[scheduleItem.OrgID+":"+scheduleItem.ProgramID] = amsProgramID
+		subjectMap[scheduleItem.OrgID+":"+amsProgramID+":"+scheduleItem.SubjectID] = newSubjectID
 	}
 	fmt.Println("Enter to continue start update database....")
 	inputReader := bufio.NewReader(os.Stdin)
 	inputReader.ReadString('\n')
-	for key, val := range subjectMapper {
-		fmt.Println(key, val)
+
+	tx, err := dbo.MustGetDB(ctx).DB.DB().Begin()
+	for key, val := range programMap {
+		keyArr := strings.Split(key, ":")
+		if len(keyArr) < 2 {
+			log.Println("")
+			tx.Rollback()
+			return constant.ErrInvalidArgs
+		}
+		orgID := keyArr[0]
+		oldProgramID := keyArr[1]
+		err = da.GetScheduleDA().UpdateProgram(ctx, tx, orgID, oldProgramID, val)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	for key, val := range subjectMap {
+		keyArr := strings.Split(key, ":")
+		if len(keyArr) < 3 {
+			log.Println("")
+			tx.Rollback()
+			return constant.ErrInvalidArgs
+		}
+		oldID := keyArr[0]
+		newProgramID := keyArr[1]
+		oldSubjectID := keyArr[2]
+		err = da.GetScheduleDA().UpdateSubject(ctx, tx, oldID, oldSubjectID, newProgramID, val)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 
-	if isExec {
-		tx, err := dbo.MustGetDB(ctx).DB.DB().Begin()
-		for key, val := range programMapper {
-			err = da.GetScheduleDA().UpdateProgram(ctx, tx, operator, key, val)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-		}
-		for key, val := range subjectMapper {
-			keyArr := strings.Split(key, ":")
-			if len(keyArr) < 2 {
-				log.Println("keyArr:", keyArr)
-				return constant.ErrInvalidArgs
-			}
-			newProgramID := keyArr[0]
-			oldSubjectID := keyArr[1]
-			err = da.GetScheduleDA().UpdateSubject(ctx, tx, operator, oldSubjectID, newProgramID, val)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-		}
-		//err = constant.ErrInvalidArgs
-		//if err != nil {
-		//	tx.Rollback()
-		//	return err
-		//}
-
-		err = tx.Commit()
-		return err
-		//dbo.MustGetDB(ctx).DB.DB().Begin()
-		//err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		//	for key, val := range programMapper {
-		//		err = da.GetScheduleDA().UpdateProgram(ctx, tx, operator, key, val)
-		//		if err != nil {
-		//			return err
-		//		}
-		//	}
-		//	for key, val := range subjectMapper {
-		//		err = da.GetScheduleDA().UpdateSubject(ctx, tx, operator, key, val)
-		//		if err != nil {
-		//			return err
-		//		}
-		//	}
-		//	return nil
-		//})
-		//return err
-	}
-	return nil
+	err = tx.Commit()
+	return err
+	//count := 0
+	//for key, scheduleList := range programIDMap {
+	//	amsProgramID, err := mapper.Program(ctx, operator.OrgID, key)
+	//	if err != nil {
+	//		log.Fatalf("ourProgramID:%s, amsProgramID:%s,error:%v \n", key, amsProgramID, err)
+	//		return err
+	//	}
+	//	length := len(scheduleList)
+	//	count += length
+	//	//log.Printf("ourProgramID:%s, amsProgramID:%s, scheduleLen:%d \n", key, amsProgramID, length)
+	//}
+	//log.Printf("orgID:%s,查询到的schedule总数:%d, 符合迁移条件的schedule总数：%d \n", operator.OrgID, len(schedules), count)
+	//
+	//programMapper := make(map[string]string)
+	//
+	//for key, _ := range programIDMap {
+	//	newProgramID, err := mapper.Program(ctx, operator.OrgID, key)
+	//	if err != nil {
+	//		log.Printf("mapper program error,  orgID:%s,newProgramID:%s, oldProgramID：%s, error:%v \n", operator.OrgID, newProgramID, key, err)
+	//		return err
+	//	}
+	//	log.Printf("orgID:%s,newProgramID:%s, oldProgramID：%s, \n", operator.OrgID, newProgramID, key)
+	//	programMapper[key] = newProgramID
+	//}
+	//
+	//subjectMapper := make(map[string]string)
+	//for key, _ := range subjectIDMap {
+	//	keyArr := strings.Split(key, ":")
+	//	if len(keyArr) < 2 {
+	//		log.Println("")
+	//		return constant.ErrInvalidArgs
+	//	}
+	//	oldProgramID := keyArr[0]
+	//	oldSubjectID := keyArr[1]
+	//	newSubjectID, err := mapper.Subject(ctx, operator.OrgID, oldProgramID, oldSubjectID)
+	//	newProgramID, err := mapper.Program(ctx, operator.OrgID, oldProgramID)
+	//	if err != nil {
+	//		log.Printf("mapper program error,  orgID:%s,newSubjectID:%s, key：%s, error:%v \n", operator.OrgID, newSubjectID, key, err)
+	//		return err
+	//	}
+	//	log.Printf("orgID:%s,newSubjectID:%s, key：%s \n", operator.OrgID, newSubjectID, key)
+	//	newKey := getSubjectMapKey(newProgramID, oldSubjectID)
+	//	subjectMapper[newKey] = newSubjectID
+	//}
+	//fmt.Println("Enter to continue start update database....")
+	//inputReader := bufio.NewReader(os.Stdin)
+	//inputReader.ReadString('\n')
+	//for key, val := range subjectMapper {
+	//	fmt.Println(key, val)
+	//}
+	//
+	//if isExec {
+	//	tx, err := dbo.MustGetDB(ctx).DB.DB().Begin()
+	//	for key, val := range programMapper {
+	//		err = da.GetScheduleDA().UpdateProgram(ctx, tx, operator, key, val)
+	//		if err != nil {
+	//			tx.Rollback()
+	//			return err
+	//		}
+	//	}
+	//	for key, val := range subjectMapper {
+	//		keyArr := strings.Split(key, ":")
+	//		if len(keyArr) < 2 {
+	//			log.Println("keyArr:", keyArr)
+	//			return constant.ErrInvalidArgs
+	//		}
+	//		newProgramID := keyArr[0]
+	//		oldSubjectID := keyArr[1]
+	//		err = da.GetScheduleDA().UpdateSubject(ctx, tx, operator, oldSubjectID, newProgramID, val)
+	//		if err != nil {
+	//			tx.Rollback()
+	//			return err
+	//		}
+	//	}
+	//	//err = constant.ErrInvalidArgs
+	//	//if err != nil {
+	//	//	tx.Rollback()
+	//	//	return err
+	//	//}
+	//
+	//	err = tx.Commit()
+	//	return err
+	//	//dbo.MustGetDB(ctx).DB.DB().Begin()
+	//	//err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	//	//	for key, val := range programMapper {
+	//	//		err = da.GetScheduleDA().UpdateProgram(ctx, tx, operator, key, val)
+	//	//		if err != nil {
+	//	//			return err
+	//	//		}
+	//	//	}
+	//	//	for key, val := range subjectMapper {
+	//	//		err = da.GetScheduleDA().UpdateSubject(ctx, tx, operator, key, val)
+	//	//		if err != nil {
+	//	//			return err
+	//	//		}
+	//	//	}
+	//	//	return nil
+	//	//})
+	//	//return err
+	//}
+	//return nil
 }
