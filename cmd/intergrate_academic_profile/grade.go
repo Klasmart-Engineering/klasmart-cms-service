@@ -70,15 +70,51 @@ func (s *MapperImpl) loadOurGrades(ctx context.Context) error {
 		},
 		"grade1": {
 			ID:   "grade1",
-			Name: "Language/Literacy",
+			Name: "Not Specific",
 		},
 		"grade2": {
 			ID:   "grade2",
-			Name: "Math",
+			Name: "PreK-1",
 		},
 		"grade3": {
 			ID:   "grade3",
-			Name: "Science",
+			Name: "PreK-2",
+		},
+		"grade4": {
+			ID:   "grade4",
+			Name: "K",
+		},
+		"grade5": {
+			ID:   "grade5",
+			Name: "Grade 1",
+		},
+		"grade6": {
+			ID:   "grade6",
+			Name: "Grade 2",
+		},
+		"grade7": {
+			ID:   "grade7",
+			Name: "PreK-3",
+		},
+		"grade8": {
+			ID:   "grade8",
+			Name: "PreK-4",
+		},
+		"grade9": {
+			ID:   "grade9",
+			Name: "PreK-5",
+		},
+		"grade10": {
+			ID:   "grade10",
+			Name: "PreK-6",
+		},
+		"grade11": {
+			ID:   "grade11",
+			Name: "PreK-7",
+		},
+		"grade12": {
+			ID:   "grade12",
+			Name: "Kindergarten",
 		},
 	}
 
