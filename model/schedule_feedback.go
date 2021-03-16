@@ -180,6 +180,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			DueAt:            scheduleInfo.DueAt,
 			LatestFeedbackID: feedback.ID,
 			LatestFeedbackAt: feedback.CreateAt,
+			SubjectID:        scheduleInfo.SubjectID,
 		}
 		err = GetHomeFunStudyModel().Save(ctx, tx, op, homeFun)
 		if err != nil {
