@@ -115,9 +115,6 @@ type MapperImpl struct {
 	amsSubjects map[string]*external.Subject
 	// key: our subject id
 	ourSubjects map[string]*entity.Subject
-	// key: {org type}:{our program id}:{our subject id}
-	// value: ams subject id
-	subjectMapping map[string]string
 }
 type MapperAge struct {
 	amsAgeMutex sync.Mutex
