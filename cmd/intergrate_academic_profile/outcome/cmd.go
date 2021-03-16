@@ -160,7 +160,7 @@ func main() {
 					grades = []string{""}
 				}
 
-				org := orgID
+				org := outcomes[i].OrganizationID
 				pid, err := mapper.Program(ctx, org, programs[p])
 				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map program failed",
