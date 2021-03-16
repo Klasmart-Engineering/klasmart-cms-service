@@ -482,7 +482,7 @@ create table if not exists `home_fun_studies` (
     `id` varchar(64) not null default '' comment 'id',
     `schedule_id` varchar(64) not null default '' comment 'schedule id',
     `title` varchar(1024) not null default  '' comment 'title',
-    `teacher_ids` json not null default '' comment 'teacher id',
+    `teacher_ids` json not null comment 'teacher id',
     `student_id` varchar(64) not null default '' comment 'student_id',
     `status` varchar(128) not null default '' comment 'status (enum: in_progress, complete)',
     `due_at` bigint not null default 0 comment 'due at',
