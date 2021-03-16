@@ -106,7 +106,6 @@ type MapperImpl struct {
 	HQPrograms     map[string]bool
 
 	MapperAge         MapperAge
-	MapperGrade       MapperGrade
 	MapperCategory    MapperCategory
 	MapperSubCategory MapperSubCategory
 
@@ -115,9 +114,12 @@ type MapperImpl struct {
 	amsSubjects map[string]*external.Subject
 	// key: our subject id
 	ourSubjects map[string]*entity.Subject
-	// key: {org type}:{our program id}:{our subject id}
-	// value: ams subject id
-	subjectMapping map[string]string
+
+	gradeMutex sync.Mutex
+	// key: {ams program id}:{ams grade name}
+	amsGrades map[string]*external.Grade
+	// key: our grade id
+	ourGrades map[string]*entity.Grade
 }
 type MapperAge struct {
 	amsAgeMutex sync.Mutex
@@ -131,20 +133,6 @@ type MapperAge struct {
 	// key: our age id
 	// value: ams age id
 	ageMapping map[string]string
-}
-
-type MapperGrade struct {
-	amsGradeMutex sync.Mutex
-
-	// key:program id
-	// val:grade map(name:grade)
-	amsGrades map[string]map[string]*external.Grade
-	// key: our grade id
-	ourGrades map[string]*entity.Grade
-
-	// key: our grade id
-	// value: ams grade id
-	gradeMapping map[string]string
 }
 
 type MapperCategory struct {
