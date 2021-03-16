@@ -9,44 +9,25 @@ import (
 )
 
 func (s *MapperImpl) Program(ctx context.Context, organizationID, programID string) (string, error) {
-	s.programMutex.Lock()
-	defer s.programMutex.Unlock()
-
-	orgType := s.OrganizationType(organizationID)
-
-	amsProgramID, found := s.programMapping[orgType+programID]
-	if found {
-		return amsProgramID, nil
-	}
-
 	ourProgram, found := s.ourPrograms[programID]
 	if !found {
 		log.Error(ctx, "unknown program id", log.String("programID", programID), log.String("organizationID", organizationID))
 		return s.defaultProgram()
 	}
 
-	amsProgram, found := s.amsPrograms[ourProgram.Name]
+	orgType := s.OrganizationType(organizationID)
+	amsProgram, found := s.amsPrograms[orgType+ourProgram.Name]
 	if !found {
 		log.Error(ctx, "unknown program id", log.Any("program", ourProgram), log.String("organizationID", organizationID))
 		return s.defaultProgram()
 	}
 
-	resultID := amsProgram.ID
-	// non HQ do not allow use HQ special program
-	if !s.IsHeaderQuarter(organizationID) {
-		resultID, _ = s.defaultProgram()
-	}
-
-	s.programMapping[orgType+ourProgram.ID] = resultID
-
-	return resultID, nil
+	return amsProgram.ID, nil
 }
 
 func (s *MapperImpl) initProgramMapper(ctx context.Context) error {
 	log.Info(ctx, "init prgram cache start")
 	defer log.Info(ctx, "init program cache end")
-
-	s.programMapping = make(map[string]string)
 
 	s.HQPrograms = map[string]bool{
 		"b39edb9a-ab91-4245-94a4-eb2b5007c033": true, // Bada Genius
@@ -76,9 +57,19 @@ func (s *MapperImpl) loadAmsPrograms(ctx context.Context) error {
 		log.Panic(ctx, "get program by organization failed", log.Any("operator", s.operator))
 	}
 
-	s.amsPrograms = make(map[string]*external.Program, len(programs))
+	s.amsPrograms = make(map[string]*external.Program, len(programs)*2)
 	for _, program := range programs {
-		s.amsPrograms[program.Name] = program
+		s.amsPrograms["HQ"+program.Name] = program
+
+		if !s.HQPrograms[program.ID] {
+			s.amsPrograms["Non-HQ"+program.Name] = program
+			continue
+		}
+
+		s.amsPrograms["Non-HQ"+program.Name] = &external.Program{
+			ID:   "7565ae11-8130-4b7d-ac24-1d9dd6f792f2",
+			Name: "None Specified",
+		}
 	}
 
 	return nil
