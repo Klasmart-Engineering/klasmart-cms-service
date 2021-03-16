@@ -12,13 +12,10 @@ func (s *MapperImpl) Program(ctx context.Context, organizationID, programID stri
 	s.programMutex.Lock()
 	defer s.programMutex.Unlock()
 
-	amsProgramID, found := s.programMapping[programID]
-	if found {
-		// non HQ do not allow use HQ special program
-		if !s.IsHeaderQuarter(organizationID) {
-			return s.defaultProgram()
-		}
+	orgType := s.OrganizationType(organizationID)
 
+	amsProgramID, found := s.programMapping[orgType+programID]
+	if found {
 		return amsProgramID, nil
 	}
 
@@ -34,14 +31,15 @@ func (s *MapperImpl) Program(ctx context.Context, organizationID, programID stri
 		return s.defaultProgram()
 	}
 
-	s.programMapping[ourProgram.ID] = amsProgram.ID
-
+	resultID := amsProgram.ID
 	// non HQ do not allow use HQ special program
 	if !s.IsHeaderQuarter(organizationID) {
-		return s.defaultProgram()
+		resultID, _ = s.defaultProgram()
 	}
 
-	return amsProgram.ID, nil
+	s.programMapping[orgType+ourProgram.ID] = resultID
+
+	return resultID, nil
 }
 
 func (s *MapperImpl) initProgramMapper(ctx context.Context) error {
