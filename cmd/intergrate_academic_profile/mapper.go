@@ -143,7 +143,7 @@ type MapperCategory struct {
 	amsCategorys map[string]map[string]*external.Category
 	// key:category id
 	// val:category
-	amsCategoryIDMap map[string]*external.Category
+	//amsCategoryIDMap map[string]*external.Category
 	// key: our category id
 	ourCategorys map[string]*entity.Developmental
 

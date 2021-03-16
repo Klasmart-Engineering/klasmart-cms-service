@@ -27,7 +27,6 @@ func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
 }
 
 func (s *MapperImpl) loadAmsCategorys(ctx context.Context) error {
-	s.MapperCategory.amsCategoryIDMap = make(map[string]*external.Category)
 	s.MapperCategory.amsCategorys = make(map[string]map[string]*external.Category, len(s.amsPrograms))
 	for _, amsProgram := range s.amsPrograms {
 		amsCategorys, err := external.GetCategoryServiceProvider().GetByProgram(ctx, s.operator, amsProgram.ID)
@@ -36,7 +35,6 @@ func (s *MapperImpl) loadAmsCategorys(ctx context.Context) error {
 		}
 		s.MapperCategory.amsCategorys[amsProgram.ID] = make(map[string]*external.Category, len(amsCategorys))
 		for _, amsCategory := range amsCategorys {
-			s.MapperCategory.amsCategoryIDMap[amsCategory.ID] = amsCategory
 			s.MapperCategory.amsCategorys[amsProgram.ID][amsCategory.Name] = amsCategory
 		}
 	}
