@@ -221,6 +221,16 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		teacherNames = append(teacherNames, t.Name)
 	}
 
+	subject, err := GetSubjectModel().GetByID(ctx, study.SubjectID)
+	if err != nil {
+		log.Error(ctx, "Get: GetSubjectModel().GetByID: get subject failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("subject_id", study.SubjectID),
+		)
+		return nil, err
+	}
+
 	// TODO: fill subject name
 	return &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
@@ -230,7 +240,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		TeacherNames:     teacherNames,
 		StudentID:        study.StudentID,
 		StudentName:      studentName,
-		SubjectName:      "",
+		SubjectName:      subject.Name,
 		Status:           study.Status,
 		DueAt:            study.DueAt,
 		CompleteAt:       study.CompleteAt,
