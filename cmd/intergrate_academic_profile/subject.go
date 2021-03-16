@@ -56,7 +56,6 @@ func (s *MapperImpl) initSubjectMapper(ctx context.Context) error {
 	log.Info(ctx, "init prgram cache start")
 	defer log.Info(ctx, "init program cache end")
 
-	s.subjectMapping = make(map[string]string)
 	s.amsSubjects = make(map[string]*external.Subject)
 
 	return s.loadOurSubjects(ctx)
