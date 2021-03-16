@@ -161,7 +161,7 @@ type MapperCategory struct {
 
 	// key: our category id
 	// value: ams category id
-	categoryMapping map[string]string
+	//categoryMapping map[string]string
 }
 
 type MapperSubCategory struct {
@@ -175,5 +175,5 @@ type MapperSubCategory struct {
 
 	// key: our subCategory id
 	// value: ams subCategory id
-	subCategoryMapping map[string]string
+	//subCategoryMapping map[string]string
 }

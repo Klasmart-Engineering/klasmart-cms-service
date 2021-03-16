@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -12,7 +11,6 @@ import (
 
 func (s *MapperImpl) initCategoryMapper(ctx context.Context) error {
 	log.Println("start init category mapper")
-	s.MapperCategory.categoryMapping = make(map[string]string)
 
 	err := s.loadAmsCategorys(ctx)
 	if err != nil {
@@ -64,49 +62,38 @@ func (s *MapperImpl) Category(ctx context.Context, organizationID, programID, ca
 	s.MapperCategory.amsCategoryMutex.Lock()
 	defer s.MapperCategory.amsCategoryMutex.Unlock()
 
-	id, found := s.MapperCategory.categoryMapping[categoryID]
-	if found {
-		return id, nil
-	}
-
-	// our
-	ourCategorys, found := s.MapperCategory.ourCategorys[categoryID]
-	if !found {
-		return s.defaultCategoryID()
-	}
-
 	// ams
 	amsProgramID, err := s.Program(ctx, organizationID, programID)
 	if err != nil {
-		return s.defaultCategoryID()
+		return s.defaultCategoryID(amsProgramID)
 	}
+	// our
+	ourCategorys, found := s.MapperCategory.ourCategorys[categoryID]
+	if !found {
+		return s.defaultCategoryID(amsProgramID)
+	}
+
 	amsCategorys, found := s.MapperCategory.amsCategorys[amsProgramID]
 	if !found {
-		return s.defaultCategoryID()
+		return s.defaultCategoryID(amsProgramID)
 	}
 	amsCategory, found := amsCategorys[ourCategorys.Name]
 	if !found {
-		for _, item := range amsCategorys {
-			return item.ID, nil
-		}
-		return s.defaultCategoryID()
+		return s.defaultCategoryID(amsProgramID)
 	}
-
-	// mapping
-	s.MapperCategory.categoryMapping[categoryID] = amsCategory.ID
 
 	return amsCategory.ID, nil
 }
 
-func (s *MapperImpl) defaultCategoryID() (string, error) {
+func (s *MapperImpl) defaultCategoryID(amsProgramID string) (string, error) {
+	amsCategorys := s.MapperCategory.amsCategorys[amsProgramID]
 	noneName := "None Specified"
-	program, found := s.amsPrograms[noneName]
+	category, found := amsCategorys[noneName]
 	if !found {
-		return "", constant.ErrRecordNotFound
-	}
-	category, found := s.MapperCategory.amsCategorys[program.ID][noneName]
-	if !found {
-		return "", constant.ErrRecordNotFound
+		for _, item := range amsCategorys {
+			return item.ID, nil
+		}
+		return "", nil
 	}
 	return category.ID, nil
 }
