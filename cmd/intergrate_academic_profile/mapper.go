@@ -24,7 +24,16 @@ type Mapper interface {
 func NewMapper(operator *entity.Operator) Mapper {
 	ctx := context.TODO()
 
-	impl := &MapperImpl{operator: operator}
+	impl := &MapperImpl{
+		operator: operator,
+		headquarters: map[string]bool{
+			"10f38ce9-5152-4049-b4e7-6d2e2ba884e6": true, // Badanamu HQ
+			"98988158-a2cd-47d1-b199-5afa74639b80": true, // International Sales Team NEW
+			"740ec808-bd56-46c6-8bcb-babbe1666dc4": true, // Badanamu KR
+			"f5b80992-9b4a-4f05-8f6e-27090569b75a": true, // KidsLoop Indonesia
+			"af405e51-b65a-49fe-ab5f-2cd9dd435aee": true, // KidsloopVN
+		},
+	}
 
 	err := impl.initProgramMapper(ctx)
 	if err != nil {
@@ -83,6 +92,9 @@ func NewMapper(operator *entity.Operator) Mapper {
 type MapperImpl struct {
 	operator *entity.Operator
 
+	// key: org_id  value: isHQ
+	headquarters map[string]bool
+
 	programMutex sync.Mutex
 	// key: ams program name
 	amsPrograms map[string]*external.Program
@@ -91,6 +103,7 @@ type MapperImpl struct {
 	// key: our program id
 	// value: ams program id
 	programMapping map[string]string
+	HQPrograms     map[string]bool
 
 	MapperAge         MapperAge
 	MapperGrade       MapperGrade

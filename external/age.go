@@ -58,6 +58,14 @@ func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, 
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get ages by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
 	ages := make([]*Age, 0, len(data))
 	for index := range ids {
 		age := data[fmt.Sprintf("q%d", indexMapping[index])]
@@ -106,6 +114,14 @@ func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operat
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get ages by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.String("programID", programID))
+		return nil, response.Errors
+	}
+
 	ages := data.Program.Ages
 
 	log.Info(ctx, "get ages by program success",
@@ -144,6 +160,13 @@ func (s AmsAgeService) GetByOrganization(ctx context.Context, operator *entity.O
 			log.Err(err),
 			log.Any("operator", operator))
 		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "query ages by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator))
+		return nil, response.Errors
 	}
 
 	ages := data.Organization.Ages

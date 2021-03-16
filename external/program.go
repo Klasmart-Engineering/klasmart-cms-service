@@ -58,6 +58,14 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 		return nil, err
 	}
 
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "get programs by ids failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator),
+			log.Strings("ids", ids))
+		return nil, response.Errors
+	}
+
 	programs := make([]*Program, 0, len(data))
 	for index := range ids {
 		program := data[fmt.Sprintf("q%d", indexMapping[index])]
@@ -103,6 +111,13 @@ func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *enti
 			log.Err(err),
 			log.Any("operator", operator))
 		return nil, err
+	}
+
+	if len(response.Errors) > 0 {
+		log.Error(ctx, "query programs by operator failed",
+			log.Err(response.Errors),
+			log.Any("operator", operator))
+		return nil, response.Errors
 	}
 
 	programs := data.Organization.Programs

@@ -14,6 +14,11 @@ func (s *MapperImpl) Program(ctx context.Context, organizationID, programID stri
 
 	amsProgramID, found := s.programMapping[programID]
 	if found {
+		// non HQ do not allow use HQ special program
+		if !s.IsHeaderQuarter(organizationID) {
+			return s.defaultProgram()
+		}
+
 		return amsProgramID, nil
 	}
 
@@ -31,6 +36,11 @@ func (s *MapperImpl) Program(ctx context.Context, organizationID, programID stri
 
 	s.programMapping[ourProgram.ID] = amsProgram.ID
 
+	// non HQ do not allow use HQ special program
+	if !s.IsHeaderQuarter(organizationID) {
+		return s.defaultProgram()
+	}
+
 	return amsProgram.ID, nil
 }
 
@@ -39,6 +49,16 @@ func (s *MapperImpl) initProgramMapper(ctx context.Context) error {
 	defer log.Info(ctx, "init program cache end")
 
 	s.programMapping = make(map[string]string)
+
+	s.HQPrograms = map[string]bool{
+		"b39edb9a-ab91-4245-94a4-eb2b5007c033": true, // Bada Genius
+		"4591423a-2619-4ef8-a900-f5d924939d02": true, // Bada Math
+		"7a8c5021-142b-44b1-b60b-275c29d132fe": true, // Bada Read
+		"93f293e8-2c6a-47ad-bc46-1554caac99e4": true, // Bada Rhyme
+		"56e24fa0-e139-4c80-b365-61c9bc42cd3f": true, // Bada Sound
+		"d1bbdcc5-0d80-46b0-b98e-162e7439058f": true, // Bada STEM
+		"f6617737-5022-478d-9672-0354667e0338": true, // Bada Talk
+	}
 
 	err := s.loadAmsPrograms(ctx)
 	if err != nil {
