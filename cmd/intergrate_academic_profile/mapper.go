@@ -100,7 +100,7 @@ type MapperImpl struct {
 	amsPrograms map[string]*external.Program
 	// key: our program id
 	ourPrograms map[string]*entity.Program
-	// key: our program id
+	// key: org type and our program id
 	// value: ams program id
 	programMapping map[string]string
 	HQPrograms     map[string]bool
@@ -115,7 +115,7 @@ type MapperImpl struct {
 	amsSubjects map[string]*external.Subject
 	// key: our subject id
 	ourSubjects map[string]*entity.Subject
-	// key:  {our program id}:{our subject id}
+	// key: {org type}:{our program id}:{our subject id}
 	// value: ams subject id
 	subjectMapping map[string]string
 }

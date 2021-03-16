@@ -121,26 +121,14 @@ func main() {
 				<-works
 				wg.Done()
 			}()
-			ctx := context.TODO()
-			var programs, subjects, categories, subCategories, ages, grades []string
-			if outcomes[i].Program != "" && strings.Trim(outcomes[i].Program, ",") != "" {
-				programs = strings.Split(strings.Trim(outcomes[i].Program, ","), ",")
-			}
-			if outcomes[i].Subject != "" && strings.Trim(outcomes[i].Subject, ",") != "" {
-				subjects = strings.Split(strings.Trim(outcomes[i].Subject, ","), ",")
-			}
-			if outcomes[i].Developmental != "" && strings.Trim(outcomes[i].Developmental, ",") != "" {
-				categories = strings.Split(strings.Trim(outcomes[i].Developmental, ","), ",")
-			}
-			if outcomes[i].Skills != "" && strings.Trim(outcomes[i].Skills, ",") != "" {
-				subCategories = strings.Split(strings.Trim(outcomes[i].Skills, ","), ",")
-			}
-			if outcomes[i].Age != "" && strings.Trim(outcomes[i].Age, ",") != "" {
-				ages = strings.Split(strings.Trim(outcomes[i].Age, ","), ",")
-			}
-			if outcomes[i].Grade != "" && strings.Trim(outcomes[i].Grade, ",") != "" {
-				grades = strings.Split(strings.Trim(outcomes[i].Grade, ","), ",")
-			}
+			//ctx := context.TODO()
+			//var programs, subjects, categories, subCategories, ages, grades []string
+			programs := distinctSliceFromStr(outcomes[i].Program)
+			subjects := distinctSliceFromStr(outcomes[i].Subject)
+			categories := distinctSliceFromStr(outcomes[i].Developmental)
+			subCategories := distinctSliceFromStr(outcomes[i].Skills)
+			ages := distinctSliceFromStr(outcomes[i].Age)
+			grades := distinctSliceFromStr(outcomes[i].Grade)
 			outcomes[i].Program = ""
 			outcomes[i].Subject = ""
 			outcomes[i].Developmental = ""
@@ -148,14 +136,31 @@ func main() {
 			outcomes[i].Age = ""
 			outcomes[i].Grade = ""
 			needUpdate := false
+
+			if len(programs) == 0 {
+				programs = append(programs, "")
+			}
+			if len(subjects) == 0 {
+				subjects = append(subjects, "")
+			}
+
 			for p := range programs {
-				if programs[p] == "" || validID.MatchString(programs[p]) {
+				if validID.MatchString(programs[p]) {
 					log.Warn(ctx, "migrate:valid:program",
 						log.String("outcome", outcomes[i].ID),
 						log.String("program", programs[p]))
 					continue
 				}
-				org := orgID
+
+				if programs[p] == "" {
+					subjects = []string{""}
+					categories = []string{""}
+					subCategories = []string{""}
+					ages = []string{""}
+					grades = []string{""}
+				}
+
+				org := outcomes[i].OrganizationID
 				pid, err := mapper.Program(ctx, org, programs[p])
 				if err != nil && !isRecordNotFoundErr(err) {
 					log.Error(ctx, "map program failed",
@@ -179,9 +184,9 @@ func main() {
 				outcomes[i].Program = outcomes[i].Program + pid + ","
 
 				for s := range subjects {
-					if subjects[s] == "" || programs[p] == "" {
-						continue
-					}
+					//if subjects[s] == ""{
+					//	continue
+					//}
 					sid, err := mapper.Subject(ctx, org, programs[p], subjects[s])
 					if err != nil && !isRecordNotFoundErr(err) {
 						log.Error(ctx, "map subject failed",
@@ -198,8 +203,6 @@ func main() {
 							log.String("old program", programs[p]),
 							log.String("new program", pid),
 							log.String("old subject", subjects[s]))
-						//fmt.Printf("Migrate: program %s can't match subject %s\n",
-						//	programs[p], subjects[s])
 						continue
 					}
 					log.Info(ctx, "migrate:info:subject",
@@ -212,9 +215,9 @@ func main() {
 				}
 
 				for c := range categories {
-					if categories[c] == "" || programs[p] == "" {
-						continue
-					}
+					//if categories[c] == "" || programs[p] == "" {
+					//	continue
+					//}
 					cid, err := mapper.Category(ctx, org, programs[p], categories[c])
 					if err != nil && !isRecordNotFoundErr(err) {
 						log.Error(ctx, "map category failed",
@@ -243,9 +246,9 @@ func main() {
 					outcomes[i].Developmental = outcomes[i].Developmental + cid + ","
 
 					for sc := range subCategories {
-						if subCategories[sc] == "" || programs[p] == "" {
-							continue
-						}
+						//if subCategories[sc] == "" || programs[p] == "" {
+						//	continue
+						//}
 						scid, err := mapper.SubCategory(ctx, org, programs[p], categories[c], subCategories[sc])
 						if err != nil && !isRecordNotFoundErr(err) {
 							log.Error(ctx, "map sub category failed",
@@ -280,9 +283,9 @@ func main() {
 				}
 
 				for a := range ages {
-					if ages[a] == "" || programs[p] == "" {
-						continue
-					}
+					//if ages[a] == "" || programs[p] == "" {
+					//	continue
+					//}
 					aid, err := mapper.Age(ctx, org, programs[p], ages[a])
 					if err != nil && !isRecordNotFoundErr(err) {
 						log.Error(ctx, "map age failed",
@@ -299,8 +302,6 @@ func main() {
 							log.String("old program", programs[p]),
 							log.String("new program", pid),
 							log.String("old age", ages[a]))
-						//fmt.Printf("Migrate: program %s can't match age %s\n",
-						//	programs[p], ages[a])
 						continue
 					}
 					log.Info(ctx, "migrate:info:age",
@@ -331,8 +332,6 @@ func main() {
 							log.String("old program", programs[p]),
 							log.String("new program", pid),
 							log.String("old grade", grades[g]))
-						//fmt.Printf("Migrate: program %s can't match grade %s\n",
-						//	programs[p], grades[g])
 						continue
 					}
 					log.Info(ctx, "migrate:info:grade",
@@ -344,73 +343,17 @@ func main() {
 				}
 			}
 
-			if needUpdate && outcomes[i].Program != "" {
-				outcomes[i].Program = strings.TrimSuffix(outcomes[i].Program, ",")
-				if outcomes[i].Age != "" {
-					outcomes[i].Age = strings.TrimSuffix(outcomes[i].Age, ",")
-				}
-
-				if outcomes[i].Grade != "" {
-					outcomes[i].Grade = strings.TrimSuffix(outcomes[i].Grade, ",")
-				}
-
-				if outcomes[i].Skills != "" {
-					outcomes[i].Skills = strings.TrimSuffix(outcomes[i].Skills, ",")
-				}
-				if outcomes[i].Developmental != "" {
-					outcomes[i].Developmental = strings.TrimSuffix(outcomes[i].Developmental, ",")
-				}
-
-				if outcomes[i].Subject != "" {
-					outcomes[i].Subject = strings.TrimSuffix(outcomes[i].Subject, ",")
-				}
+			if needUpdate {
+				outcomes[i].Program = strings.Join(distinctSliceFromStr(outcomes[i].Program), ",")
+				outcomes[i].Subject = strings.Join(distinctSliceFromStr(outcomes[i].Subject), ",")
+				outcomes[i].Developmental = strings.Join(distinctSliceFromStr(outcomes[i].Developmental), ",")
+				outcomes[i].Skills = strings.Join(distinctSliceFromStr(outcomes[i].Skills), ",")
+				outcomes[i].Age = strings.Join(distinctSliceFromStr(outcomes[i].Age), ",")
+				outcomes[i].Grade = strings.Join(distinctSliceFromStr(outcomes[i].Grade), ",")
 
 				log.Info(ctx, "migrate:finished",
 					log.Int("index", i),
 					log.Any("outcome", outcomes[i]))
-
-				err = da.GetOutcomeDA().UpdateOutcome(ctx, dbo.MustGetDB(ctx), outcomes[i])
-				if err != nil {
-					log.Error(ctx, "update program failed",
-						log.Any("outcome", outcomes[i]),
-						log.Err(err))
-				}
-			} else if outcomes[i].Program == "" {
-				pid, err := mapper.Program(ctx, outcomes[i].OrganizationID, "")
-				if err != nil {
-					panic(err)
-				}
-				outcomes[i].Program = pid
-
-				sid, err := mapper.Subject(ctx, outcomes[i].OrganizationID, "", "")
-				if err != nil {
-					panic(err)
-				}
-				outcomes[i].Subject = sid
-
-				cid, err := mapper.Category(ctx, outcomes[i].OrganizationID, "", "")
-				if err != nil {
-					panic(err)
-				}
-				outcomes[i].Developmental = cid
-
-				scid, err := mapper.SubCategory(ctx, outcomes[i].OrganizationID, "", "", "")
-				if err != nil {
-					panic(err)
-				}
-				outcomes[i].Skills = scid
-
-				aid, err := mapper.Age(ctx, outcomes[i].Age, "", "")
-				if err != nil {
-					panic(err)
-				}
-				outcomes[i].Age = aid
-
-				gid, err := mapper.Grade(ctx, outcomes[i].Grade, "", "")
-				if err != nil {
-					panic(err)
-				}
-				outcomes[i].Grade = gid
 
 				err = da.GetOutcomeDA().UpdateOutcome(ctx, dbo.MustGetDB(ctx), outcomes[i])
 				if err != nil {
@@ -426,6 +369,30 @@ func main() {
 		}(index)
 	}
 	wg.Wait()
+}
+
+func distinctSliceFromStr(src string) []string {
+	var result []string
+	if src != "" && strings.Trim(src, ",") != "" {
+		result = strings.Split(strings.Trim(src, ","), ",")
+	}
+	if len(result) > 1 {
+		disMap := make(map[string]struct{})
+		for i := range result {
+			if result[i] != "" {
+				disMap[result[i]] = struct{}{}
+			}
+		}
+
+		var disResult []string
+		for i := range result {
+			if _, ok := disMap[result[i]]; ok {
+				disResult = append(disResult, result[i])
+			}
+		}
+		return disResult
+	}
+	return result
 }
 
 func setupConfig() {
