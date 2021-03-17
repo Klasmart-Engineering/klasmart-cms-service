@@ -1180,9 +1180,15 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		if item.ClassID != "" {
 			classIDs = append(classIDs, item.ClassID)
 		}
-		subjectIDs = append(subjectIDs, item.SubjectID)
-		programIDs = append(programIDs, item.ProgramID)
-		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+		if item.SubjectID != "" {
+			subjectIDs = append(subjectIDs, item.SubjectID)
+		}
+		if item.ProgramID != "" {
+			programIDs = append(programIDs, item.ProgramID)
+		}
+		if item.ScheduleID != "" {
+			scheduleIDs = append(scheduleIDs, item.ScheduleID)
+		}
 		if item.LessonPlanID != "" {
 			lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 		}
