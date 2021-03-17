@@ -37,6 +37,7 @@ type IContentDA interface {
 
 	GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error)
+	SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition ContentConditionInternal) (int, []*entity.Content, error)
 	SearchContentUnSafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions) (int, []*entity.Content, error)
 	Count(context.Context, dbo.Conditions) (int, error)
 
@@ -96,8 +97,67 @@ type ContentCondition struct {
 
 	JoinUserIDList []string `json:"join_user_id_list"`
 }
-
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
+	internalCondition := NewContentConditionByInternalCondition(*s)
+	conditions, params := internalCondition.GetConditions()
+	conditions = append(conditions, " delete_at = 0")
+	return conditions, params
+}
+
+func (s *ContentCondition) GetPager() *dbo.Pager {
+	internalCondition := NewContentConditionByInternalCondition(*s)
+	return internalCondition.GetPager()
+}
+func (s *ContentCondition) GetOrderBy() string {
+	internalCondition := NewContentConditionByInternalCondition(*s)
+	return internalCondition.GetOrderBy()
+}
+
+func NewContentConditionByInternalCondition(s ContentCondition) *ContentConditionInternal{
+	return &ContentConditionInternal{
+		IDS:            s.IDS,
+		Name:           s.Name,
+		ContentType:    s.ContentType,
+		Scope:          s.Scope,
+		PublishStatus:  s.PublishStatus,
+		Author:         s.Author,
+		Org:            s.Org,
+		Program:        s.Program,
+		SourceID:       s.SourceID,
+		LatestID:       s.LatestID,
+		SourceType:     s.SourceType,
+		DirPath:        s.DirPath,
+		ContentName:    s.ContentName,
+		AuthedOrgID:    s.AuthedOrgID,
+		OrderBy:        s.OrderBy,
+		Pager:          s.Pager,
+		JoinUserIDList: s.JoinUserIDList,
+	}
+}
+type ContentConditionInternal struct {
+	IDS           []string `json:"ids"`
+	Name          string   `json:"name"`
+	ContentType   []int    `json:"content_type"`
+	Scope         []string `json:"scope"`
+	PublishStatus []string `json:"publish_status"`
+	Author        string   `json:"author"`
+	Org           string   `json:"org"`
+	Program       []string `json:"program"`
+	SourceID      string   `json:"source_id"`
+	LatestID      string   `json:"latest_id"`
+	SourceType    string   `json:"source_type"`
+	DirPath       string   `json:"dir_path"`
+	ContentName string `json:"content_name"`
+
+	//AuthedContentFlag bool           `json:"authed_content"`
+	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
+	OrderBy     ContentOrderBy     `json:"order_by"`
+	Pager       utils.Pager
+
+	JoinUserIDList []string `json:"join_user_id_list"`
+}
+
+func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
 
@@ -197,16 +257,15 @@ func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Org)
 	}
 
-	conditions = append(conditions, " delete_at = 0")
 	return conditions, params
 }
-func (s *ContentCondition) GetPager() *dbo.Pager {
+func (s *ContentConditionInternal) GetPager() *dbo.Pager {
 	return &dbo.Pager{
 		Page:     int(s.Pager.PageIndex),
 		PageSize: int(s.Pager.PageSize),
 	}
 }
-func (s *ContentCondition) GetOrderBy() string {
+func (s *ContentConditionInternal) GetOrderBy() string {
 	return s.OrderBy.ToSQL()
 }
 
@@ -323,7 +382,15 @@ func (cd *DBContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext
 
 	return objs, nil
 }
+func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition ContentConditionInternal) (int, []*entity.Content, error){
+	objs := make([]*entity.Content, 0)
+	count, err := cd.s.PageTx(ctx, tx, &condition, &objs)
+	if err != nil {
+		return 0, nil, err
+	}
 
+	return count, objs, nil
+}
 func (cd *DBContentDA) SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error) {
 	objs := make([]*entity.Content, 0)
 	count, err := cd.s.PageTx(ctx, tx, &condition, &objs)
