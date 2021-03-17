@@ -25,9 +25,9 @@ func (f *feedbackAssignmentModel) QueryMap(ctx context.Context, op *entity.Opera
 	result := make(map[string][]*entity.FeedbackAssignmentView)
 	for _, assignmentItem := range assignments {
 		item := &entity.FeedbackAssignmentView{
-			Url:    assignmentItem.AssignmentUrl,
-			Name:   assignmentItem.AssignmentName,
-			Number: assignmentItem.Number,
+			AttachmentID:   assignmentItem.ID,
+			AttachmentName: assignmentItem.AttachmentName,
+			Number:         assignmentItem.Number,
 		}
 		if _, ok := result[assignmentItem.FeedbackID]; ok {
 			result[assignmentItem.FeedbackID] = append(result[assignmentItem.FeedbackID], item)
@@ -48,9 +48,9 @@ func (f *feedbackAssignmentModel) Query(ctx context.Context, op *entity.Operator
 	result := make([]*entity.FeedbackAssignmentView, len(assignments))
 	for i, item := range assignments {
 		result[i] = &entity.FeedbackAssignmentView{
-			Url:    item.AssignmentUrl,
-			Name:   item.AssignmentName,
-			Number: item.Number,
+			AttachmentID:   item.AttachmentID,
+			AttachmentName: item.AttachmentName,
+			Number:         item.Number,
 		}
 	}
 	return result, nil

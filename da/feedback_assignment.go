@@ -26,8 +26,8 @@ func (s *feedbackAssignmentDA) BatchInsert(ctx context.Context, dbContext *dbo.D
 		data = append(data, []interface{}{
 			item.ID,
 			item.FeedbackID,
-			item.AssignmentUrl,
-			item.AssignmentName,
+			item.AttachmentID,
+			item.AttachmentName,
 			item.Number,
 			item.CreateAt,
 			item.UpdateAt,
@@ -37,8 +37,8 @@ func (s *feedbackAssignmentDA) BatchInsert(ctx context.Context, dbContext *dbo.D
 	sql := SQLBatchInsert(constant.TableNameFeedbackAssignment, []string{
 		"`id`",
 		"`feedback_id`",
-		"`assignment_url`",
-		"`assignment_name`",
+		"`attachment_id`",
+		"`attachment_name`",
 		"`number`",
 		"`create_at`",
 		"`update_at`",

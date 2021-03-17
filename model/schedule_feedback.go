@@ -144,8 +144,8 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			assignments[i] = &entity.FeedbackAssignment{
 				ID:             utils.NewID(),
 				FeedbackID:     feedback.ID,
-				AssignmentUrl:  item.Url,
-				AssignmentName: item.Name,
+				AttachmentID:   item.AttachmentID,
+				AttachmentName: item.AttachmentName,
 				Number:         item.Number,
 				CreateAt:       time.Now().Unix(),
 				UpdateAt:       0,
