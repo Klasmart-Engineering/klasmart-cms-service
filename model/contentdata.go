@@ -34,11 +34,17 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 	if err != nil {
 		return nil, err
 	}
-	teacherManual := ""
-	teacherManualName := ""
+	teacherManuals := make([]*entity.TeacherManualFile, 0)
 	if obj.ContentType == entity.ContentTypePlan {
-		teacherManual = contentData.(*LessonData).TeacherManual
-		teacherManualName = contentData.(*LessonData).TeacherManualName
+		planData := contentData.(*LessonData)
+		if len(planData.TeacherManualBatch) > 0 {
+			teacherManuals = planData.TeacherManualBatch
+		}else if planData.TeacherManual != ""{
+			teacherManuals = []*entity.TeacherManualFile{{
+				TeacherManualSource: planData.TeacherManual,
+				TeacherManualName: planData.TeacherManualName,
+			}}
+		}
 	}
 
 	subjects := make([]string, 0)
@@ -102,8 +108,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 		Extra:         obj.Extra,
 		Outcomes:      outcomes,
 		Author:        obj.Author,
-		TeacherManual: teacherManual,
-		TeacherManualName: teacherManualName,
+		TeacherManualBatch: teacherManuals,
 		Creator:		obj.Creator,
 		SelfStudy:     obj.SelfStudy.Bool(),
 		DrawActivity:  obj.DrawActivity.Bool(),

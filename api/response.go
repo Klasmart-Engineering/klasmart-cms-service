@@ -44,6 +44,7 @@ const (
 	ScheduleMsgHidden                    ResponseLabel = "schedule_msg_hidden"
 	scheduleMsgHide                      ResponseLabel = "schedule_msg_hide"
 	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
+	ScheduleFeedbackCompleted            ResponseLabel = "schedule_msg_cannot_submit"
 )
 
 // L create response object with label

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"io"
 	"os"
 	"strings"
@@ -218,7 +219,12 @@ func (c *ContentExporter) parseResource(ctx context.Context, resource string) (s
 		fmt.Printf("Invalid resource id, resource: %v\n", resourcePairs)
 		return "", "", entity.ErrInvalidResourceId
 	}
-	partition, err := storage.NewStoragePartition(resourcePairs[0])
+	extensionPairs := strings.Split(resourcePairs[1], ".")
+	if len(extensionPairs) != 2 {
+		log.Error(ctx, "invalid extension", log.String("resourceId", resource))
+		return "", "", entity.ErrInvalidResourceId
+	}
+	partition, err := storage.NewStoragePartition(ctx, resourcePairs[0], extensionPairs[1])
 	if err != nil {
 		fmt.Printf("Invalid partition name, resource: %v\n", resourcePairs)
 		return "", "", err
