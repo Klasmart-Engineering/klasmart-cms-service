@@ -221,12 +221,35 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		teacherNames = append(teacherNames, t.Name)
 	}
 
+	subjects, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
+	if err != nil {
+		log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: get subject failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("subject_id", study.SubjectID),
+		)
+		return nil, err
+	}
+	if len(subjects) == 0 {
+		log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: not found subject",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("subject_id", study.SubjectID),
+		)
+		return nil, err
+	}
+	subject := subjects[0]
+
 	return &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
 		ScheduleID:       study.ScheduleID,
 		Title:            study.Title,
+		TeacherIDs:       study.TeacherIDs,
 		TeacherNames:     teacherNames,
+		StudentID:        study.StudentID,
 		StudentName:      studentName,
+		SubjectName:      subject.Name,
+		Status:           study.Status,
 		DueAt:            study.DueAt,
 		CompleteAt:       study.CompleteAt,
 		AssessFeedbackID: study.AssessFeedbackID,
@@ -297,6 +320,7 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			Title:            title,
 			TeacherIDs:       args.TeacherIDs,
 			StudentID:        args.StudentID,
+			SubjectID:        args.SubjectID,
 			Status:           entity.AssessmentStatusInProgress,
 			DueAt:            args.DueAt,
 			LatestFeedbackID: args.LatestFeedbackID,

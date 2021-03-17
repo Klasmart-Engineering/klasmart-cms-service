@@ -8,6 +8,7 @@ type HomeFunStudy struct {
 	Title            string                   `gorm:"column:title;type:varchar(1024)" json:"title"`
 	TeacherIDs       utils.SQLJSONStringArray `gorm:"column:teacher_ids;type:json" json:"teacher_ids"`
 	StudentID        string                   `gorm:"column:student_id;type:varchar(64)" json:"student_id"`
+	SubjectID        string                   `gorm:"column:subject_id;type:varchar(64)" json:"subject_id"`
 	Status           AssessmentStatus         `gorm:"column:status;type:varchar(128)" json:"status"`
 	DueAt            int64                    `gorm:"column:due_at;type:bigint" json:"due_at"`
 	CompleteAt       int64                    `gorm:"column:complete_at;type:bigint" json:"complete_at"`
@@ -51,8 +52,9 @@ type SaveHomeFunStudyArgs struct {
 	ScheduleID       string
 	ClassID          string
 	LessonName       string
-	TeacherIDs       []string
 	StudentID        string
+	TeacherIDs       []string
+	SubjectID        string
 	DueAt            int64
 	LatestFeedbackID string
 	LatestFeedbackAt int64
@@ -108,20 +110,24 @@ type GetHomeFunStudyResult struct {
 	ID               string                  `json:"id"`
 	ScheduleID       string                  `json:"schedule_id"`
 	Title            string                  `json:"title"`
+	TeacherIDs       []string                `json:"teacher_ids"`
 	TeacherNames     []string                `json:"teacher_names"`
+	StudentID        string                  `json:"student_id"`
 	StudentName      string                  `json:"student_name"`
+	SubjectName      string                  `json:"subject_name"`
+	Status           AssessmentStatus        `json:"status"`
 	DueAt            int64                   `json:"due_at"`
 	CompleteAt       int64                   `json:"complete_at"`
 	AssessFeedbackID string                  `json:"assess_feedback_id"`
-	AssessScore      HomeFunStudyAssessScore `json:"assess_score"`
+	AssessScore      HomeFunStudyAssessScore `json:"assess_score" enums:"1,2,3,4,5"`
 	AssessComment    string                  `json:"assess_comment"`
 }
 
 type AssessHomeFunStudyArgs struct {
 	ID               string                   `json:"id"`
 	AssessFeedbackID string                   `json:"assess_feedback_id"`
-	AssessScore      HomeFunStudyAssessScore  `json:"score" enums:"1,2,3,4,5"`
-	AssessComment    string                   `json:"comment"`
+	AssessScore      HomeFunStudyAssessScore  `json:"assess_score" enums:"1,2,3,4,5"`
+	AssessComment    string                   `json:"assess_comment"`
 	Action           UpdateHomeFunStudyAction `json:"action" enums:"save,complete"`
 }
 

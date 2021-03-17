@@ -70,7 +70,7 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "home fun study id"
-// @Success 200 {object} entity.ListHomeFunStudiesResult
+// @Success 200 {object} entity.GetHomeFunStudyResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -112,7 +112,7 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "home fun study id"
-// @Param assess_home_fun_study_args body entity.AssessHomeFunStudyArgs true "assess home fun study args"
+// @Param assess_home_fun_study_args body entity.AssessHomeFunStudyArgs true "assess home fun study args, body id don't need"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse

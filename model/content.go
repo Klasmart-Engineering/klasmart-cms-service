@@ -891,7 +891,7 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 	//create assets data object, and parse it
 	for i := range lessonData.TeacherManualBatch {
 		assetsData := new(AssetsData)
-		assetsData.Source = SourceID(lessonData.TeacherManualBatch[i].TeacherManualSource)
+		assetsData.Source = SourceID(lessonData.TeacherManualBatch[i].ID)
 		assetsDataJSON, err := assetsData.Marshal(ctx)
 		if !ok {
 			log.Warn(ctx, "marshal assets data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
