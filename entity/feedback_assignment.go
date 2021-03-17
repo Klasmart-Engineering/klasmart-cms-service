@@ -5,8 +5,8 @@ import "gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 type FeedbackAssignment struct {
 	ID             string `json:"id" gorm:"column:id;PRIMARY_KEY"`
 	FeedbackID     string `json:"feedback_id" gorm:"column:feedback_id;type:varchar(100)"`
-	AssignmentUrl  string `json:"assignment_url" gorm:"column:assignment_url;type:varchar(500)"`
-	AssignmentName string `json:"assignment_name" gorm:"column:assignment_name;type:varchar(100)"`
+	AttachmentID   string `json:"attachment_id" gorm:"column:attachment_id;type:varchar(500)"`
+	AttachmentName string `json:"attachment_name" gorm:"column:attachment_name;type:varchar(100)"`
 	Number         int    `json:"number" gorm:"column:number;type:int"`
 
 	CreateAt int64 `json:"create_at" gorm:"column:create_at;type:bigint"`
