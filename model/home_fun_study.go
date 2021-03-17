@@ -221,17 +221,25 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		teacherNames = append(teacherNames, t.Name)
 	}
 
-	subject, err := GetSubjectModel().GetByID(ctx, study.SubjectID)
+	subjects, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
 	if err != nil {
-		log.Error(ctx, "Get: GetSubjectModel().GetByID: get subject failed",
+		log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: get subject failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("subject_id", study.SubjectID),
 		)
 		return nil, err
 	}
+	if len(subjects) == 0 {
+		log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: not found subject",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("subject_id", study.SubjectID),
+		)
+		return nil, err
+	}
+	subject := subjects[0]
 
-	// TODO: fill subject name
 	return &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
 		ScheduleID:       study.ScheduleID,
