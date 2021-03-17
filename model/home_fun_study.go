@@ -32,6 +32,7 @@ var ErrHomeFunStudyHasCompleted = errors.New("home fun study has completed")
 type IHomeFunStudyModel interface {
 	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
 	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
+	GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
 	Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
 }
@@ -256,6 +257,22 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		AssessScore:      study.AssessScore,
 		AssessComment:    study.AssessComment,
 	}, nil
+}
+
+func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
+	var study entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
+		log.Error(ctx, "GetPlain: da.GetHomeFunStudyDA().Get: get failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("id", id),
+		)
+		if err == sql.ErrNoRows {
+			return nil, constant.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	return &study, nil
 }
 
 func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error {
