@@ -244,7 +244,7 @@ func (s Server) registeRoute() {
 	}
 	organizationRegions := s.engine.Group("/v1/organizations_region")
 	{
-		organizationRegions.GET("/", s.mustLoginWithoutOrgID, s.getOrganizationByHeadquarterForDetails)
+		organizationRegions.GET("", s.mustLoginWithoutOrgID, s.getOrganizationByHeadquarterForDetails)
 	}
 }
 
