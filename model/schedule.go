@@ -2089,26 +2089,28 @@ func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entit
 	}
 	result := new(entity.ScheduleRealTimeView)
 	result.ID = schedule.ID
-	if schedule.ClassType != entity.ScheduleClassTypeTask {
-		// lesson plan real time info
-		err = s.VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
-		switch err {
-		case nil:
-			result.LessonPlanIsAuth = true
-		case ErrScheduleLessonPlanUnAuthed:
-			log.Info(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
-				log.String("LessonPlanID", schedule.LessonPlanID),
-				log.Any("op", op),
-			)
-			result.LessonPlanIsAuth = false
-		default:
-			log.Error(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
-				log.String("LessonPlanID", schedule.LessonPlanID),
-				log.Any("op", op),
-				log.Err(err),
-			)
-			return nil, err
-		}
+	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
+		return result, nil
+	}
+
+	// lesson plan real time info
+	err = s.VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+	switch err {
+	case nil:
+		result.LessonPlanIsAuth = true
+	case ErrScheduleLessonPlanUnAuthed:
+		log.Info(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
+			log.String("LessonPlanID", schedule.LessonPlanID),
+			log.Any("op", op),
+		)
+		result.LessonPlanIsAuth = false
+	default:
+		log.Error(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
+			log.String("LessonPlanID", schedule.LessonPlanID),
+			log.Any("op", op),
+			log.Err(err),
+		)
+		return nil, err
 	}
 
 	return result, nil
