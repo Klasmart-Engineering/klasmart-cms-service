@@ -41,6 +41,9 @@ const (
 	ScheduleMessageUsersConflict         ResponseLabel = "schedule_msg_users_conflict"
 	ScheduleMsgDeleteMissDueDate         ResponseLabel = "schedule_msg_delete_due_date"
 	ScheduleMsgEditMissDueDate           ResponseLabel = "schedule_msg_edit_due_date"
+	ScheduleMsgHidden                    ResponseLabel = "schedule_msg_hidden"
+	scheduleMsgHide                      ResponseLabel = "schedule_msg_hide"
+	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
 )
 
 // L create response object with label

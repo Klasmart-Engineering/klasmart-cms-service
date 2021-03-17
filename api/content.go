@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -892,12 +891,12 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	path := c.Query("path")
 	programGroup := c.Query("program_group")
 	condition := da.ContentCondition{
-		Author:  parseAuthor(c, op),
-		Org:     parseOrg(c, op),
-		DirPath: path,
-		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
-		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
-		Name:    strings.TrimSpace(c.Query("name")),
+		Author:      parseAuthor(c, op),
+		Org:         parseOrg(c, op),
+		DirPath:     path,
+		OrderBy:     da.NewContentOrderBy(c.Query("order_by")),
+		Pager:       utils.GetPager(c.Query("page"), c.Query("page_size")),
+		Name:        strings.TrimSpace(c.Query("name")),
 		ContentName: strings.TrimSpace(c.Query("content_name")),
 	}
 	sourceType := c.Query("source_type")
@@ -928,12 +927,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		condition.Program = program
 	}
 	if programGroup != "" {
-		programs, err := model.GetProgramModel().Query(c.Request.Context(), &da.ProgramCondition{
-			GroupName: sql.NullString{
-				Valid:  true,
-				String: programGroup,
-			},
-		})
+		programs, err := model.GetProgramModel().GetByGroup(c.Request.Context(), op, programGroup)
 		if err != nil {
 			log.Error(c.Request.Context(), "get program by groups failed", log.Err(err),
 				log.String("group", programGroup))

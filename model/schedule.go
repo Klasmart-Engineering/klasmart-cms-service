@@ -655,7 +655,7 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 	}
 	return scheduleList[0].ID, nil
 }
-func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*entity.Schedule, error) {
+func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Operator, id string) (*entity.Schedule, error) {
 	// get old schedule by id
 	var schedule = new(entity.Schedule)
 	err := da.GetScheduleDA().Get(ctx, id, schedule)
@@ -714,7 +714,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, id string) (*en
 	return schedule, nil
 }
 func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error) {
-	schedule, err := s.checkScheduleStatus(ctx, viewData.ID)
+	schedule, err := s.checkScheduleStatus(ctx, operator, viewData.ID)
 	if err != nil {
 		log.Error(ctx, "update schedule: get schedule by id error",
 			log.Any("viewData", viewData),
@@ -857,7 +857,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	return id, nil
 }
 func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error {
-	schedule, err := s.checkScheduleStatus(ctx, id)
+	schedule, err := s.checkScheduleStatus(ctx, op, id)
 	if err == constant.ErrRecordNotFound {
 		log.Warn(ctx, "DeleteTx:schedule not found",
 			log.Err(err),
@@ -1108,9 +1108,16 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		if item.ClassID != "" {
 			classIDs = append(classIDs, item.ClassID)
 		}
-		subjectIDs = append(subjectIDs, item.SubjectID)
-		programIDs = append(programIDs, item.ProgramID)
-		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+		if item.SubjectID != "" {
+			subjectIDs = append(subjectIDs, item.SubjectID)
+		}
+		if item.ProgramID != "" {
+			programIDs = append(programIDs, item.ProgramID)
+		}
+		if item.ScheduleID != "" {
+			scheduleIDs = append(scheduleIDs, item.ScheduleID)
+		}
+
 		if item.LessonPlanID != "" {
 			lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 		}
@@ -1132,13 +1139,13 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		return nil, err
 	}
 
-	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, subjectIDs)
+	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 		return nil, err
 	}
 
-	programMap, err = s.getProgramInfoMapByProgramIDs(ctx, programIDs)
+	programMap, err = s.getProgramInfoMapByProgramIDs(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Strings("programIDs", programIDs))
 		return nil, err
@@ -1231,16 +1238,11 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator 
 	return classMap, nil
 }
 
-func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
 		subjectIDs = utils.SliceDeduplication(subjectIDs)
-		subjectInfos, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
-			IDs: entity.NullStrings{
-				Strings: subjectIDs,
-				Valid:   len(subjectIDs) != 0,
-			},
-		})
+		subjectInfos, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 			return nil, err
@@ -1256,16 +1258,11 @@ func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, subjec
 	return subjectMap, nil
 }
 
-func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var programMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(programIDs) != 0 {
 		programIDs = utils.SliceDeduplication(programIDs)
-		programInfos, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
-			IDs: entity.NullStrings{
-				Strings: programIDs,
-				Valid:   len(programIDs) != 0,
-			},
-		})
+		programInfos, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
 		if err != nil {
 			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Strings("programIDs", programIDs))
 			return nil, err
@@ -1748,24 +1745,14 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 	}
 	// subject
 	subjectIDs := []string{v.SubjectID}
-	_, err = GetSubjectModel().Query(ctx, &da.SubjectCondition{
-		IDs: entity.NullStrings{
-			Strings: subjectIDs,
-			Valid:   len(subjectIDs) != 0,
-		},
-	})
+	_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "verifyData:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
 	// program
 	programIDs := []string{v.ProgramID}
-	_, err = GetProgramModel().Query(ctx, &da.ProgramCondition{
-		IDs: entity.NullStrings{
-			Strings: programIDs,
-			Valid:   len(programIDs) != 0,
-		},
-	})
+	_, err = external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "verifyData:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err

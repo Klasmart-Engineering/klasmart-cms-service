@@ -4,6 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -12,9 +16,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"log"
-	"strings"
-	"time"
 )
 
 func main() {

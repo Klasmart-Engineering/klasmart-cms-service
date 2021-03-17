@@ -62,7 +62,7 @@ func SetupStopwatch(ctx context.Context) context.Context {
 func GetStopwatches(ctx context.Context) (map[string]*Stopwatch, bool) {
 	stopwatches := ctx.Value(constant.ContextStopwatchKey)
 	if stopwatches == nil {
-		log.Warn(ctx, "context stopwatches not found")
+		log.Debug(ctx, "context stopwatches not found")
 		return nil, false
 	}
 

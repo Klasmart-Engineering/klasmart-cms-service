@@ -78,7 +78,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
+	result, err := model.GetAssessmentModel().ListAssessments(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -133,7 +133,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd), log.String("token", body.Token))
-	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
+	newID, err := model.GetAssessmentModel().AddAssessment(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		log.Debug(ctx, "add assessment jwt success",
@@ -173,7 +173,7 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		return
 	}
 
-	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
+	newID, err := model.GetAssessmentModel().AddAssessment(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
@@ -209,7 +209,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
+	item, err := model.GetAssessmentModel().GetAssessment(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
@@ -268,7 +268,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		}
 	}
 
-	err := model.GetAssessmentModel().Update(ctx, s.getOperator(c), cmd)
+	err := model.GetAssessmentModel().UpdateAssessment(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))

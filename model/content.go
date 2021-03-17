@@ -102,7 +102,7 @@ type IContentModel interface {
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
 	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error)
 	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error)
-	
+
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
@@ -1132,7 +1132,6 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		}
 	}
 
-
 	return contentInfoMap, nil
 }
 
@@ -2024,14 +2023,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programs, err := GetProgramModel().Query(ctx, &da.ProgramCondition{
-		IDs: entity.NullStrings{
-			Strings: programIDs,
-			Valid:   len(programIDs) != 0,
-		},
-	})
+	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, user, programIDs)
 	if err != nil {
-		log.Error(ctx, "can't get org info", log.Err(err))
+		log.Error(ctx, "can't get programs", log.Err(err), log.Strings("ids", programIDs))
 	} else {
 		for i := range programs {
 			programNameMap[programs[i].ID] = programs[i].Name
@@ -2039,12 +2033,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Subjects
-	subjects, err := GetSubjectModel().Query(ctx, &da.SubjectCondition{
-		IDs: entity.NullStrings{
-			Strings: subjectIDs,
-			Valid:   len(subjectIDs) != 0,
-		},
-	})
+	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, user, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "can't get subjects info", log.Err(err))
 	} else {
@@ -2054,13 +2043,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//developmental
-	developmentals, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{
-		IDs: entity.NullStrings{
-			Strings: developmentalIDs,
-			Valid:   len(developmentalIDs) != 0,
-		},
-	})
-
+	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, user, developmentalIDs)
 	if err != nil {
 		log.Error(ctx, "can't get developmentals info", log.Err(err))
 	} else {
@@ -2081,12 +2064,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//skill
-	skills, err := GetSkillModel().Query(ctx, &da.SkillCondition{
-		IDs: entity.NullStrings{
-			Strings: skillsIDs,
-			Valid:   len(skillsIDs) != 0,
-		},
-	})
+	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, user, skillsIDs)
 	if err != nil {
 		log.Error(ctx, "can't get skills info", log.Strings("skillsIDs", skillsIDs), log.Err(err))
 	} else {
@@ -2096,12 +2074,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//age
-	ages, err := GetAgeModel().Query(ctx, &da.AgeCondition{
-		IDs: entity.NullStrings{
-			Strings: ageIDs,
-			Valid:   len(ageIDs) != 0,
-		},
-	})
+	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, user, ageIDs)
 	if err != nil {
 		log.Error(ctx, "can't get age info", log.Strings("ageIDs", ageIDs), log.Err(err))
 	} else {
@@ -2111,12 +2084,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//grade
-	grades, err := GetGradeModel().Query(ctx, &da.GradeCondition{
-		IDs: entity.NullStrings{
-			Strings: gradeIDs,
-			Valid:   len(gradeIDs) != 0,
-		},
-	})
+	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, user, gradeIDs)
 	if err != nil {
 		log.Error(ctx, "can't get grade info", log.Strings("gradeIDs", gradeIDs), log.Err(err))
 	} else {
@@ -2268,11 +2236,11 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 		ItemType:     int(entity.FolderItemTypeFolder),
 		Owner:        user.OrgID,
 		NameLike:     condition.Name,
-		Name: condition.ContentName,
+		Name:         condition.ContentName,
 		ExactDirPath: dirPath,
 		//Editors:      searchUserIDs,
-		Partition:    partition,
-		Disable:      disableFolder,
+		Partition: partition,
+		Disable:   disableFolder,
 	}
 	return folderCondition
 }
