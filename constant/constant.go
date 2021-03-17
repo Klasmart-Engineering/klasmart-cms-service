@@ -23,6 +23,7 @@ const (
 	TableNameVisibilitySetting = "visibility_settings"
 	TableNameUserSetting       = "user_settings"
 
+	TableNameProgramGroup       = "programs_groups"
 	TableNameProgramAge         = "programs_ages"
 	TableNameProgramDevelopment = "programs_developments"
 	TableNameProgramGrade       = "programs_grades"
