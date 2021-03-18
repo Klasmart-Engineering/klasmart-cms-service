@@ -141,6 +141,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		studentName := studentNamesMap[item.StudentID]
 		result.Items = append(result.Items, &entity.ListHomeFunStudiesResultItem{
 			ID:               item.ID,
+			Title:            item.Title,
 			TeacherNames:     teacherNames,
 			StudentName:      studentName,
 			Status:           item.Status,
@@ -201,7 +202,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		studentName  string
 		teacherNames []string
 	)
-	student, err := external.GetStudentServiceProvider().Get(ctx, operator, id)
+	student, err := external.GetStudentServiceProvider().Get(ctx, operator, study.StudentID)
 	if err != nil {
 		log.Error(ctx, "external.GetStudentServiceProvider().Get: get failed",
 			log.Err(err),
