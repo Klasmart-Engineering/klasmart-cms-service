@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -11,6 +12,10 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 	"time"
+)
+
+var (
+	ErrOnlyStudentCanSubmitFeedback = errors.New("only student can submit feedback")
 )
 
 type IScheduleFeedbackModel interface {
@@ -154,33 +159,33 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		}
 
 		// insert homeFunStudy
-		//teacherIDs, err := GetScheduleRelationModel().GetTeacherIDs(ctx, op, input.ScheduleID)
-		//if err != nil {
-		//	return "", err
-		//}
-		//scheduleInfo, err := GetScheduleModel().GetPlainByID(ctx, input.ScheduleID)
-		//if err != nil {
-		//	return "", err
-		//}
-		//classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, input.ScheduleID)
-		//if err != nil {
-		//	return nil, err
-		//}
-		//homeFun := entity.SaveHomeFunStudyArgs{
-		//	ScheduleID:     input.ScheduleID,
-		//	ClassID:        classID,
-		//	LessonName:     scheduleInfo.Title,
-		//	TeacherIDs:     teacherIDs,
-		//	StudentID:      op.UserID,
-		//	DueAt:          scheduleInfo.DueAt,
-		//	LatestSubmitID: feedback.ID,
-		//	LatestSubmitAt: feedback.CreateAt,
-		//}
-		//err = GetHomeFunStudyModel().SaveHomeFunStudy(ctx, op, homeFun)
-		//if err != nil {
-		//	log.Error(ctx, "insert homeFunStudy error", log.Err(err), log.Any("op", op), log.Any("homeFun", homeFun), log.Any("input", input))
-		//	return nil, err
-		//}
+		teacherIDs, err := GetScheduleRelationModel().GetTeacherIDs(ctx, op, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		scheduleInfo, err := GetScheduleModel().GetPlainByID(ctx, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, input.ScheduleID)
+		if err != nil {
+			return "", err
+		}
+		homeFun := entity.SaveHomeFunStudyArgs{
+			ScheduleID:       input.ScheduleID,
+			ClassID:          classID,
+			LessonName:       scheduleInfo.Title,
+			TeacherIDs:       teacherIDs,
+			StudentID:        op.UserID,
+			DueAt:            scheduleInfo.DueAt,
+			LatestFeedbackID: feedback.ID,
+			LatestFeedbackAt: feedback.CreateAt,
+		}
+		err = GetHomeFunStudyModel().Save(ctx, tx, op, homeFun)
+		if err != nil {
+			log.Error(ctx, "insert homeFunStudy error", log.Err(err), log.Any("op", op), log.Any("homeFun", homeFun), log.Any("input", input))
+			return "", err
+		}
 		return feedback.ID, nil
 	})
 	if err != nil {
@@ -203,6 +208,15 @@ func (s *scheduleFeedbackModel) verifyScheduleFeedback(ctx context.Context, op *
 	if !exist {
 		log.Info(ctx, "schedule id not found", log.Any("op", op), log.Any("input", input))
 		return constant.ErrRecordNotFound
+	}
+	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, op, input.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "get relation type error", log.Any("op", op), log.Any("input", input), log.Err(err))
+		return err
+	}
+	if roleType != entity.ScheduleRoleTypeStudent {
+		log.Info(ctx, "not student", log.String("roleType", string(roleType)), log.Any("op", op), log.Any("input", input))
+		return ErrOnlyStudentCanSubmitFeedback
 	}
 	return nil
 }

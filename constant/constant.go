@@ -100,6 +100,8 @@ const (
 
 	TeacherManualSeparator  = "-"
 	FolderItemLinkSeparator = "-"
+
+	TeacherManualAssetsKeyword = "Teacher Manual"
 )
 
 const (

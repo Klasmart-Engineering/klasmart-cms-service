@@ -253,6 +253,8 @@ type Schedule struct {
 	ScheduleVersion int64             `gorm:"column:version;type:bigint"`
 	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)"`
 	RepeatJson      string            `gorm:"column:repeat;type:json;"`
+	IsHidden        bool              `gorm:"column:is_hidden;default:false"`
+	IsHomeFun       bool              `gorm:"column:is_home_fun;default:false"`
 	CreatedID       string            `gorm:"column:created_id;type:varchar(100)"`
 	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)"`
 	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)"`
@@ -336,6 +338,7 @@ type ScheduleAddView struct {
 	IsForce                bool              `json:"is_force"`
 	TimeZoneOffset         int               `json:"time_zone_offset"`
 	Location               *time.Location    `json:"-"`
+	IsHomeFun              bool              `json:"is_home_fun"`
 }
 
 type ScheduleEditValidation struct {
@@ -366,6 +369,7 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		CreatedAt:       time.Now().Unix(),
 		UpdatedAt:       time.Now().Unix(),
 		IsAllDay:        s.IsAllDay,
+		IsHomeFun:       s.IsHomeFun,
 	}
 	if s.IsRepeat {
 		b, err := json.Marshal(s.Repeat)
@@ -405,6 +409,8 @@ type ScheduleListView struct {
 	Status       ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ClassID      string            `json:"class_id"`
 	DueAt        int64             `json:"due_at"`
+	IsHidden     bool              `json:"is_hidden"`
+	RoleType     ScheduleRoleType  `json:"role_type"`
 }
 
 type ScheduleDateView struct {
@@ -432,7 +438,18 @@ type ScheduleDetailsView struct {
 	ClassRosterStudents  []*ScheduleAccessibleUserView `json:"class_roster_students"`
 	ParticipantsTeachers []*ScheduleAccessibleUserView `json:"participants_teachers"`
 	ParticipantsStudents []*ScheduleAccessibleUserView `json:"participants_students"`
+	IsHidden             bool                          `json:"is_hidden"`
+	IsHomeFun            bool                          `json:"is_home_fun"`
+	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
 }
+
+type ScheduleRoleType string
+
+const (
+	ScheduleRoleTypeStudent ScheduleRoleType = "Student"
+	ScheduleRoleTypeTeacher ScheduleRoleType = "Teacher"
+	ScheduleRoleTypeUnknown ScheduleRoleType = "Unknown"
+)
 
 type ScheduleAccessibleUserView struct {
 	ID     string               `json:"id"`
@@ -491,6 +508,7 @@ type ScheduleVerify struct {
 	ProgramID    string
 	LessonPlanID string
 	ClassType    ScheduleClassType
+	IsHomeFun    bool
 }
 
 // ScheduleEditType include delete and edit
@@ -608,3 +626,19 @@ const (
 	ScheduleFilterAnyTime  ScheduleFilterOption = "any_time"
 	ScheduleFilterOnlyMine ScheduleFilterOption = "only_mine"
 )
+
+type ScheduleShowOption string
+
+const (
+	ScheduleShowOptionHidden  ScheduleShowOption = "hidden"
+	ScheduleShowOptionVisible ScheduleShowOption = "visible"
+)
+
+func (s ScheduleShowOption) IsValid() bool {
+	switch s {
+	case ScheduleShowOptionHidden, ScheduleShowOptionVisible:
+		return true
+	default:
+		return false
+	}
+}
