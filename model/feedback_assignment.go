@@ -25,7 +25,7 @@ func (f *feedbackAssignmentModel) QueryMap(ctx context.Context, op *entity.Opera
 	result := make(map[string][]*entity.FeedbackAssignmentView)
 	for _, assignmentItem := range assignments {
 		item := &entity.FeedbackAssignmentView{
-			AttachmentID:   assignmentItem.ID,
+			AttachmentID:   assignmentItem.AttachmentID,
 			AttachmentName: assignmentItem.AttachmentName,
 			Number:         assignmentItem.Number,
 		}
