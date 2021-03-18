@@ -22,6 +22,7 @@ var (
 type IScheduleFeedbackModel interface {
 	Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error)
 	ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
+	ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (bool, error)
 	Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error)
 	GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error)
 }
@@ -126,6 +127,21 @@ func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entit
 	count, err := da.GetScheduleFeedbackDA().Count(ctx, condition, &entity.ScheduleFeedback{})
 	if err != nil {
 		log.Error(ctx, "insert error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *scheduleFeedbackModel) ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (bool, error) {
+	condition := &da.ScheduleFeedbackCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+	}
+	count, err := da.GetScheduleFeedbackDA().Count(ctx, condition, &entity.ScheduleFeedback{})
+	if err != nil {
+		log.Error(ctx, "ScheduleFeedback count error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
 		return false, err
 	}
 	return count > 0, nil

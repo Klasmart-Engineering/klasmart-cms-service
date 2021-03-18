@@ -587,6 +587,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	offsetStr := c.Query("time_zone_offset")
 	offset, _ := strconv.Atoi(offsetStr)
@@ -596,7 +597,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().Query(ctx, condition, loc)
+	result, err := model.GetScheduleModel().Query(ctx, op, condition, loc)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
