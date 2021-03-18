@@ -304,8 +304,8 @@ DROP TABLE IF EXISTS `feedbacks_assignments`;
 CREATE TABLE `feedbacks_assignments` (
   `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
   `feedback_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'feedback_id',
-  `assignment_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assignment_url',
-  `assignment_name` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'assignment_name',
+  `attachment_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
+  `attachment_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '',
   `number` int(11) DEFAULT '0' COMMENT 'number',
   `create_at` bigint(20) DEFAULT '0' COMMENT 'create_at',
   `update_at` bigint(20) DEFAULT '0' COMMENT 'update_at',
@@ -458,25 +458,6 @@ CREATE TABLE `migrate_record` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `organization_regions`
---
-
-DROP TABLE IF EXISTS `organization_regions`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `organization_regions` (
-  `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
-  `headquarter` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT 'headquarter',
-  `organization_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT 'organization_id',
-  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
-  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
-  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
-  PRIMARY KEY (`id`),
-  KEY `organization_regions_headquarter_index` (`headquarter`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organization_regions';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `organizations_properties`
 --
 
@@ -495,6 +476,25 @@ CREATE TABLE `organizations_properties` (
   `region` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'region',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organizations_properties';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `organizations_regions`
+--
+
+DROP TABLE IF EXISTS `organizations_regions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `organizations_regions` (
+  `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `headquarter` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT 'headquarter',
+  `organization_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT 'organization_id',
+  `create_at` bigint(20) DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
+  PRIMARY KEY (`id`),
+  KEY `organization_regions_headquarter_index` (`headquarter`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organization_regions';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -677,7 +677,7 @@ CREATE TABLE `schedules_feedbacks` (
   `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
   `schedule_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
   `user_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'user_id',
-  `Comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'Comment',
+  `comment` text COLLATE utf8mb4_unicode_ci,
   `create_at` bigint(20) DEFAULT '0' COMMENT 'create_at',
   `update_at` bigint(20) DEFAULT '0' COMMENT 'update_at',
   `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
@@ -797,4 +797,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-17 17:00:32
+-- Dump completed on 2021-03-18 17:00:32
