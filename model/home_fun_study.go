@@ -446,7 +446,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 		study.AssessScore = args.AssessScore
 		study.AssessComment = args.AssessComment
 	}
-	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, study); err != nil {
+	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
 			log.Err(err),
 			log.Any("study", study))
