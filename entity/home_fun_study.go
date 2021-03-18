@@ -95,6 +95,7 @@ type ListHomeFunStudiesResult struct {
 
 type ListHomeFunStudiesResultItem struct {
 	ID               string                  `json:"id"`
+	Title            string                  `json:"title"`
 	TeacherNames     []string                `json:"teacher_names"`
 	StudentName      string                  `json:"student_name"`
 	Status           AssessmentStatus        `json:"status"`
