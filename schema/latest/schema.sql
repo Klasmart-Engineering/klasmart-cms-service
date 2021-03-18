@@ -456,7 +456,7 @@ CREATE TABLE IF NOT EXISTS `schedules_feedbacks` (
     `id` varchar(256) NOT NULL COMMENT  'id',
     `schedule_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'schedule_id',
     `user_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'user_id',
-    `Comment` TEXT DEFAULT NULL COMMENT  'Comment',
+    `comment` TEXT DEFAULT NULL COMMENT  'Comment',
     `create_at` bigint(20) DEFAULT 0 COMMENT 'create_at',
     `update_at` bigint(20) DEFAULT 0 COMMENT 'update_at',
     `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
