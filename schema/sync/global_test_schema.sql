@@ -697,10 +697,10 @@ CREATE TABLE `visibility_settings` (
 
 -- Dump completed on 2020-12-30  7:57:58
 
-DROP TABLE IF EXISTS `organization_regions`;
+DROP TABLE IF EXISTS `organizations_regions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `organization_regions` (
+CREATE TABLE `organizations_regions` (
      `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
      `headquarter` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'headquarter',
      `organization_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'organization_id',
@@ -708,5 +708,5 @@ CREATE TABLE `organization_regions` (
      `update_at` bigint(20) DEFAULT '0' COMMENT 'updated_at',
      `delete_at` bigint(20) DEFAULT '0' COMMENT 'delete_at',
      PRIMARY KEY (`id`),
-     KEY `organization_regions_headquarter_index` (`headquarter`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organization_regions';
+     KEY `organizations_regions_headquarter_index` (`headquarter`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organizations_regions';
