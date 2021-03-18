@@ -225,9 +225,9 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		teacherNames = append(teacherNames, t.Name)
 	}
 
-	subjects, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
+	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
 	if err != nil {
-		log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: get subject failed",
+		log.Error(ctx, "Get: external.GetSubjectServiceProvider().BatchGet: get subject failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("subject_id", study.SubjectID),
