@@ -244,7 +244,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 	}
 	subject := subjects[0]
 
-	return &entity.GetHomeFunStudyResult{
+	result := &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
 		ScheduleID:       study.ScheduleID,
 		Title:            study.Title,
@@ -259,7 +259,13 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		AssessFeedbackID: study.AssessFeedbackID,
 		AssessScore:      study.AssessScore,
 		AssessComment:    study.AssessComment,
-	}, nil
+	}
+
+	if result.AssessScore == 0 {
+		result.AssessScore = entity.HomeFunStudyAssessScoreAverage
+	}
+
+	return result, nil
 }
 
 func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
