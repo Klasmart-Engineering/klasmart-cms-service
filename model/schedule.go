@@ -1203,16 +1203,16 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 		log.Error(ctx, "getBasicInfo:get class info error", log.Err(err), log.Strings("classIDs", classIDs))
 		return nil, err
 	}
-	classTeachers, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, classIDs)
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider.GetByClasses error", log.Err(err), log.Strings("classIDs", classIDs))
-		return nil, err
-	}
-	classStudents, err := external.GetStudentServiceProvider().GetByClassIDs(ctx, operator, classIDs)
-	if err != nil {
-		log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider.GetByClasses error", log.Err(err), log.Strings("classIDs", classIDs))
-		return nil, err
-	}
+	//classTeachers, err := external.GetTeacherServiceProvider().GetByClasses(ctx, operator, classIDs)
+	//if err != nil {
+	//	log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider.GetByClasses error", log.Err(err), log.Strings("classIDs", classIDs))
+	//	return nil, err
+	//}
+	//classStudents, err := external.GetStudentServiceProvider().GetByClassIDs(ctx, operator, classIDs)
+	//if err != nil {
+	//	log.Error(ctx, "getBasicInfo:GetTeacherServiceProvider.GetByClasses error", log.Err(err), log.Strings("classIDs", classIDs))
+	//	return nil, err
+	//}
 
 	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, operator, subjectIDs)
 	if err != nil {
@@ -1246,26 +1246,26 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, operator *entity.Opera
 			scheduleBasic.LessonPlan = v
 		}
 
-		if v, ok := classTeachers[item.ClassID]; ok {
-			scheduleBasic.MemberTeachers = make([]*entity.ScheduleShortInfo, len(v))
-			for i, t := range v {
-				scheduleBasic.MemberTeachers[i] = &entity.ScheduleShortInfo{
-					ID:   t.ID,
-					Name: t.Name,
-				}
-			}
-		}
-		scheduleBasic.Members = scheduleBasic.MemberTeachers
-
-		if v, ok := classStudents[item.ClassID]; ok {
-			scheduleBasic.StudentCount = len(v)
-			for _, t := range v {
-				scheduleBasic.Members = append(scheduleBasic.Members, &entity.ScheduleShortInfo{
-					ID:   t.ID,
-					Name: t.Name,
-				})
-			}
-		}
+		//if v, ok := classTeachers[item.ClassID]; ok {
+		//	scheduleBasic.MemberTeachers = make([]*entity.ScheduleShortInfo, len(v))
+		//	for i, t := range v {
+		//		scheduleBasic.MemberTeachers[i] = &entity.ScheduleShortInfo{
+		//			ID:   t.ID,
+		//			Name: t.Name,
+		//		}
+		//	}
+		//}
+		//scheduleBasic.Members = scheduleBasic.MemberTeachers
+		//
+		//if v, ok := classStudents[item.ClassID]; ok {
+		//	scheduleBasic.StudentCount = len(v)
+		//	for _, t := range v {
+		//		scheduleBasic.Members = append(scheduleBasic.Members, &entity.ScheduleShortInfo{
+		//			ID:   t.ID,
+		//			Name: t.Name,
+		//		})
+		//	}
+		//}
 
 		scheduleBasicMap[item.ScheduleID] = scheduleBasic
 	}
@@ -1362,21 +1362,6 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 			log.Any("scheduleID", id),
 		)
 		return nil, err
-	}
-	cacheData, err := da.GetScheduleRedisDA().GetByIDs(ctx, operator, []string{id})
-	if err == nil && len(cacheData) > 0 {
-		log.Debug(ctx, "GetByID:using cache",
-			log.Any("id", id),
-			log.Any("cacheData", cacheData),
-		)
-		data := cacheData[0]
-		data.Status = data.Status.GetScheduleStatus(entity.ScheduleStatusInput{
-			EndAt:     data.EndAt,
-			DueAt:     data.DueAt,
-			ClassType: data.ClassType,
-		})
-		data.RealTimeStatus = *realTimeData
-		return data, nil
 	}
 	var schedule = new(entity.Schedule)
 	err = da.GetScheduleDA().Get(ctx, id, schedule)
@@ -1569,11 +1554,6 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		case entity.ScheduleRelationTypeClassRosterStudent:
 			result.ClassRosterStudents = append(result.ClassRosterStudents, temp)
 		}
-	}
-
-	err = da.GetScheduleRedisDA().BatchAdd(ctx, operator, []*entity.ScheduleDetailsView{result})
-	if err != nil {
-		log.Info(ctx, "GetByID:GetScheduleRedisDA.BatchAdd error", log.Err(err))
 	}
 
 	return result, nil

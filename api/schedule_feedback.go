@@ -60,7 +60,7 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 // @Tags scheduleFeedback
 // @Success 200 {array} entity.ScheduleFeedbackView
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedule_feedbacks [get]
+// @Router /schedules_feedbacks [get]
 func (s *Server) queryFeedback(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
