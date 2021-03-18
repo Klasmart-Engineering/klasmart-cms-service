@@ -1076,7 +1076,7 @@ func (s *Server) updateScheduleShowOption(c *gin.Context) {
 func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
-	scheduleID := c.Query("schedule_id")
+	scheduleID := c.Param("schedule_id")
 	condition := &da.ScheduleFeedbackCondition{
 		ScheduleID: sql.NullString{
 			String: scheduleID,
