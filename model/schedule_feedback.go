@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	ErrOnlyStudentCanSubmitFeedback = errors.New("only student can submit feedback")
+	ErrOnlyStudentCanSubmitFeedback  = errors.New("only student can submit feedback")
+	ErrFeedbackNotGenerateAssessment = errors.New("feedback not generate assessment")
 )
 
 type IScheduleFeedbackModel interface {
@@ -29,8 +30,12 @@ type scheduleFeedbackModel struct {
 }
 
 func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error) {
-	condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
+	result := &entity.ScheduleFeedbackView{
+		IsAllowSubmit: true,
+	}
 
+	// get feedback info
+	condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
 	var dataList []*entity.ScheduleFeedback
 	err := da.GetScheduleFeedbackDA().Query(ctx, condition, &dataList)
 	if err != nil {
@@ -39,18 +44,18 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 	}
 	if len(dataList) <= 0 {
 		log.Warn(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
-		return nil, constant.ErrRecordNotFound
+		return result, nil
 	}
 	feedback := dataList[0]
-	result := &entity.ScheduleFeedbackView{
-		ScheduleFeedback: entity.ScheduleFeedback{
-			ID:         feedback.ID,
-			ScheduleID: feedback.ScheduleID,
-			UserID:     feedback.UserID,
-			Comment:    feedback.Comment,
-			CreateAt:   feedback.CreateAt,
-		},
+	result.ScheduleFeedback = entity.ScheduleFeedback{
+		ID:         feedback.ID,
+		ScheduleID: feedback.ScheduleID,
+		UserID:     feedback.UserID,
+		Comment:    feedback.Comment,
+		CreateAt:   feedback.CreateAt,
 	}
+
+	// get assignment
 	assignmentCondition := &da.FeedbackAssignmentCondition{
 		FeedBackID: sql.NullString{
 			String: result.ID,
@@ -63,6 +68,17 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 		return nil, err
 	}
 	result.Assignments = assignments
+
+	homeFun, err := GetHomeFunStudyModel().GetByScheduleIDAndStudentID(ctx, op, feedback.ScheduleID, op.UserID)
+	if err == constant.ErrRecordNotFound {
+		log.Error(ctx, "not found home fun", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
+		return nil, ErrFeedbackNotGenerateAssessment
+	}
+	if err != nil {
+		log.Error(ctx, "get home fun study  error", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
+		return nil, err
+	}
+	result.IsAllowSubmit = homeFun.Status != entity.AssessmentStatusComplete
 	return result, nil
 }
 

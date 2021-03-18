@@ -34,5 +34,6 @@ type FeedbackAssignmentView struct {
 }
 type ScheduleFeedbackView struct {
 	ScheduleFeedback
-	Assignments []*FeedbackAssignmentView `json:"assignments"`
+	Assignments   []*FeedbackAssignmentView `json:"assignments"`
+	IsAllowSubmit bool                      `json:"is_allow_submit"`
 }
