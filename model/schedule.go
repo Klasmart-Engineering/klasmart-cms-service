@@ -26,7 +26,7 @@ var (
 	ErrScheduleLessonPlanUnAuthed   = errors.New("schedule content data unAuthed")
 	ErrScheduleEditMissTimeForDueAt = errors.New("editable time has expired for due at")
 	ErrScheduleAlreadyHidden        = errors.New("schedule already hidden")
-	ErrScheduleAlreadyAssignments   = errors.New("students already submitted assignments")
+	ErrScheduleAlreadyFeedback      = errors.New("students already submitted feedback")
 )
 
 type IScheduleModel interface {
@@ -749,7 +749,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		}
 		if exist {
 			log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
-			return nil, ErrScheduleAlreadyAssignments
+			return nil, ErrScheduleAlreadyFeedback
 		}
 	}
 	switch schedule.ClassType {
@@ -1404,12 +1404,23 @@ func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, 
 		IsHomeFun:      schedule.IsHomeFun,
 		IsHidden:       schedule.IsHidden,
 	}
+
+	// get role type
 	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, operator, schedule.ID)
 	if err != nil {
 		log.Error(ctx, "get relation type error", log.Any("op", operator), log.Any("schedule", schedule), log.Err(err))
 		return nil, err
 	}
 	result.RoleType = roleType
+
+	// verify is exist feedback
+	existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, operator, schedule.ID)
+	if err != nil {
+		log.Error(ctx, "exist by schedule id error", log.Any("op", operator), log.Any("schedule", schedule), log.Err(err))
+		return nil, err
+	}
+	result.ExistFeedback = existFeedback
+
 	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 		EndAt:     result.EndAt,
 		DueAt:     result.DueAt,

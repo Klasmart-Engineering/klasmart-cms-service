@@ -163,7 +163,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissDueDate))
 	case model.ErrScheduleAlreadyHidden:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
-	case model.ErrScheduleAlreadyAssignments:
+	case model.ErrScheduleAlreadyFeedback:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgAssignmentNew))
 	case nil:
 		c.JSON(http.StatusOK, D(IDResponse{ID: newID}))
@@ -222,7 +222,7 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissDueDate))
 	case model.ErrScheduleAlreadyHidden:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
-	case model.ErrScheduleAlreadyAssignments:
+	case model.ErrScheduleAlreadyFeedback:
 		c.JSON(http.StatusBadRequest, L(scheduleMsgHide))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
@@ -1076,7 +1076,7 @@ func (s *Server) updateScheduleShowOption(c *gin.Context) {
 func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
-	scheduleID := c.Query("schedule_id")
+	scheduleID := c.Param("id")
 	condition := &da.ScheduleFeedbackCondition{
 		ScheduleID: sql.NullString{
 			String: scheduleID,
@@ -1092,6 +1092,8 @@ func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
+	case model.ErrFeedbackNotGenerateAssessment:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:

@@ -441,6 +441,7 @@ type ScheduleDetailsView struct {
 	IsHidden             bool                          `json:"is_hidden"`
 	IsHomeFun            bool                          `json:"is_home_fun"`
 	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback        bool                          `json:"exist_feedback"`
 }
 
 type ScheduleRoleType string
