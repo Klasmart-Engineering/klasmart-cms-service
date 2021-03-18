@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 	"time"
 )
@@ -33,6 +34,7 @@ type IHomeFunStudyModel interface {
 	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
 	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
 	GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
+	GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error)
 	Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
 }
@@ -275,6 +277,26 @@ func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Opera
 	return &study, nil
 }
 
+func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error) {
+	cond := da.QueryHomeFunStudyCondition{
+		OrgID:      &operator.OrgID,
+		ScheduleID: &scheduleID,
+		StudentIDs: []string{studentID},
+	}
+	var studies []*entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Query(ctx, &cond, &studies); err != nil {
+		log.Error(ctx, "GetByScheduleIDAndStudentID: da.GetHomeFunStudyDA().Query: query home fun study",
+			log.Err(err),
+			log.Any("cond", cond),
+		)
+		return nil, err
+	}
+	if len(studies) == 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+	return studies[0], nil
+}
+
 func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error {
 	cond := da.QueryHomeFunStudyCondition{
 		ScheduleID: &args.ScheduleID,
@@ -333,6 +355,7 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 	} else {
 		now := time.Now().Unix()
 		study = &entity.HomeFunStudy{
+			ID:               utils.NewID(),
 			ScheduleID:       args.ScheduleID,
 			Title:            title,
 			TeacherIDs:       args.TeacherIDs,

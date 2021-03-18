@@ -500,5 +500,6 @@ create table if not exists `home_fun_studies` (
     key `home_fun_study_id` (schedule_id),
     key `home_fun_study_status` (status),
     key `home_fun_study_latest_feedback_at` (latest_feedback_at),
-    key `home_fun_study_complete_at` (complete_at)
+    key `home_fun_study_complete_at` (complete_at),
+    key `home_fun_study_schedule_id_and_student_id` (schedule_id, student_id)
 ) comment 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
