@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX uq_home_fun_studies_schedule_id_and_student_id ON home_fun_studies(schedule_id, student_id);
