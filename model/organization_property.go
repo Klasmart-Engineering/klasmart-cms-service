@@ -91,7 +91,9 @@ func (s organizationPropertyModel) GetTxOrDefault(ctx context.Context, tx *dbo.D
 
 func (s organizationPropertyModel) createDefault(id string) *entity.OrganizationProperty {
 	return &entity.OrganizationProperty{
-		ID:   id,
-		Type: entity.OrganizationTypeNormal,
+		ID:     id,
+		Type:   entity.OrganizationTypeNormal,
+		Region: entity.UnknownRegion,
 	}
+
 }
