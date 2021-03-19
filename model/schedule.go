@@ -872,6 +872,10 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		schedule.UpdatedAt = time.Now().Unix()
 		schedule.DeletedID = ""
 		schedule.DeleteAt = 0
+		schedule.IsHomeFun = viewData.IsHomeFun
+		if viewData.ClassType != entity.ScheduleClassTypeHomework {
+			schedule.IsHomeFun = false
+		}
 		// attachment
 		b, err := json.Marshal(viewData.Attachment)
 		if err != nil {
