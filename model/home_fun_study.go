@@ -276,7 +276,7 @@ func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Opera
 			log.Any("operator", operator),
 			log.String("id", id),
 		)
-		if err == sql.ErrNoRows {
+		if err == dbo.ErrRecordNotFound {
 			return nil, constant.ErrRecordNotFound
 		}
 		return nil, err
@@ -299,6 +299,10 @@ func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, ope
 		return nil, err
 	}
 	if len(studies) == 0 {
+		log.Error(ctx, "GetByScheduleIDAndStudentID: not found home fun study",
+			log.String("schedule_id", scheduleID),
+			log.String("student_id", studentID),
+		)
 		return nil, constant.ErrRecordNotFound
 	}
 	return studies[0], nil
