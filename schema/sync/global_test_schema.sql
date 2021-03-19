@@ -363,10 +363,11 @@ CREATE TABLE `home_fun_studies` (
   `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'update at (unix seconds)',
   `delete_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'delete at (unix seconds)',
   PRIMARY KEY (`id`),
-  KEY `home_fun_study_id` (`schedule_id`),
-  KEY `home_fun_study_status` (`status`),
-  KEY `home_fun_study_latest_feedback_at` (`latest_feedback_at`),
-  KEY `home_fun_study_complete_at` (`complete_at`)
+  UNIQUE KEY `uq_home_fun_studies_schedule_id_and_student_id` (`schedule_id`,`student_id`),
+  KEY `idx_home_fun_studies_schedule_id` (`schedule_id`),
+  KEY `idx_home_fun_studies_status` (`status`),
+  KEY `idx_home_fun_studies_latest_feedback_at` (`latest_feedback_at`),
+  KEY `idx_home_fun_studies_complete_at` (`complete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='home_fun_studies';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -797,4 +798,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-18 17:00:32
+-- Dump completed on 2021-03-19 17:00:32

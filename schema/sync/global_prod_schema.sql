@@ -398,8 +398,28 @@ CREATE TABLE `organizations_properties` (
   `created_at` bigint DEFAULT '0' COMMENT 'created_at',
   `updated_at` bigint DEFAULT '0' COMMENT 'updated_at',
   `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `region` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'region',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organizations_properties';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `organizations_regions`
+--
+
+DROP TABLE IF EXISTS `organizations_regions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `organizations_regions` (
+  `id` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `headquarter` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT 'headquarter',
+  `organization_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '0' COMMENT 'organization_id',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  PRIMARY KEY (`id`),
+  KEY `organization_regions_headquarter_index` (`headquarter`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='organization_regions';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -679,4 +699,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-18 17:00:31
+-- Dump completed on 2021-03-19 17:00:32
