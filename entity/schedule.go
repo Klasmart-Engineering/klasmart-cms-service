@@ -372,6 +372,9 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		IsAllDay:        s.IsAllDay,
 		IsHomeFun:       s.IsHomeFun,
 	}
+	if schedule.ClassType != ScheduleClassTypeHomework {
+		schedule.IsHomeFun = false
+	}
 	if s.IsRepeat {
 		b, err := json.Marshal(s.Repeat)
 		if err != nil {

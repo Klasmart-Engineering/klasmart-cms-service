@@ -16,18 +16,18 @@ import (
 )
 
 type ScheduleCacheCondition struct {
-	condition dbo.Conditions
-	OrgID     string
+	Condition dbo.Conditions
 	UserID    string
 }
 
 type IScheduleCacheDA interface {
-	Add(ctx context.Context, condition *ScheduleCacheCondition, data interface{})
-	SearchToListView(ctx context.Context, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error)
-	SearchToStrings(ctx context.Context, condition *ScheduleCacheCondition) ([]string, error)
+	Add(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error
+	SearchToListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error)
+	SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]string, error)
+	Clean(ctx context.Context, orgID string) error
 }
 
-func (r *ScheduleRedisDA) Add(ctx context.Context, condition *ScheduleCacheCondition, data interface{}) error {
+func (r *ScheduleRedisDA) Add(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error {
 	if !config.Get().RedisConfig.OpenCache {
 		log.Info(ctx, "redis disabled")
 		return nil
@@ -41,8 +41,9 @@ func (r *ScheduleRedisDA) Add(ctx context.Context, condition *ScheduleCacheCondi
 		)
 		return err
 	}
+	key := r.getHSetKey(orgID)
 	filed := r.conditionHash(condition)
-	err = ro.MustGetRedis(ctx).Expire(RedisKeyPrefixScheduleCondition, r.expiration).Err()
+	err = ro.MustGetRedis(ctx).Expire(key, r.expiration).Err()
 	if err != nil {
 		log.Error(ctx, "set schedule condition key expire error",
 			log.Err(err),
@@ -52,7 +53,7 @@ func (r *ScheduleRedisDA) Add(ctx context.Context, condition *ScheduleCacheCondi
 		)
 		return err
 	}
-	err = ro.MustGetRedis(ctx).HSet(RedisKeyPrefixScheduleCondition, filed, string(b)).Err()
+	err = ro.MustGetRedis(ctx).HSet(key, filed, string(b)).Err()
 	if err != nil {
 		log.Error(ctx, "Can't save schedule into cache",
 			log.Err(err),
@@ -65,12 +66,8 @@ func (r *ScheduleRedisDA) Add(ctx context.Context, condition *ScheduleCacheCondi
 	return nil
 }
 
-func (r *ScheduleRedisDA) getConditionKey(ctx context.Context, condition *ScheduleCacheCondition) string {
-
-}
-
-func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error) {
-	res, err := r.search(ctx, condition)
+func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error) {
+	res, err := r.search(ctx, orgID, condition)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +83,8 @@ func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, condition *Sched
 	}
 	return result, nil
 }
-func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, condition *ScheduleCacheCondition) ([]string, error) {
-	res, err := r.search(ctx, condition)
+func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]string, error) {
+	res, err := r.search(ctx, orgID, condition)
 	if err != nil {
 		return nil, err
 	}
@@ -104,12 +101,17 @@ func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, condition *Schedu
 	return result, nil
 }
 
-func (r *ScheduleRedisDA) search(ctx context.Context, condition *ScheduleCacheCondition) (string, error) {
+func (r *ScheduleRedisDA) getHSetKey(orgID string) string {
+	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleCondition, orgID)
+}
+
+func (r *ScheduleRedisDA) search(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (string, error) {
 	if !config.Get().RedisConfig.OpenCache {
 		return "", errors.New("not open cache ")
 	}
+	key := r.getHSetKey(orgID)
 	filed := r.conditionHash(condition)
-	res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixScheduleCondition, filed).Result()
+	res, err := ro.MustGetRedis(ctx).HGet(key, filed).Result()
 	if err != nil {
 		log.Error(ctx, "Can't get schedule condition from cache",
 			log.Err(err),
@@ -119,6 +121,29 @@ func (r *ScheduleRedisDA) search(ctx context.Context, condition *ScheduleCacheCo
 		return "", err
 	}
 	return res, nil
+}
+
+func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
+	if !config.Get().RedisConfig.OpenCache {
+		return nil
+	}
+	key := r.getHSetKey(orgID)
+	err := ro.MustGetRedis(ctx).Del(key).Err()
+	if err != nil {
+		log.Error(ctx, "redis del keys error",
+			log.Err(err),
+			log.String("key", key),
+		)
+		return err
+	}
+	return nil
+}
+
+func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) string {
+	h := md5.New()
+	h.Write([]byte(fmt.Sprintf("%v", condition)))
+	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
+	return md5Hash
 }
 
 //func (r *ScheduleRedisDA) BatchAdd(ctx context.Context, op *entity.Operator, schedules []*entity.ScheduleDetailsView) error {
@@ -185,37 +210,10 @@ func (r *ScheduleRedisDA) search(ctx context.Context, condition *ScheduleCacheCo
 //	return fmt.Sprintf("%s:%v", RedisKeyPrefixScheduleID, key)
 //}
 
-func (r *ScheduleRedisDA) Clean(ctx context.Context, op *entity.Operator, ids []string) error {
-	if !config.Get().RedisConfig.OpenCache {
-		return nil
-	}
-	//keys := make([]string, len(ids))
-	//for i, id := range ids {
-	//	keys[i] = r.scheduleKey(fmt.Sprintf("%s_%s", op.UserID, id))
-	//}
-	err := ro.MustGetRedis(ctx).Del(RedisKeyPrefixScheduleCondition).Err()
-	if err != nil {
-		log.Error(ctx, "redis del keys error",
-			log.Err(err),
-			log.Strings("ids", ids),
-			log.Any("keys", RedisKeyPrefixScheduleCondition),
-		)
-		return err
-	}
-	return nil
-}
-
-func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) string {
-	h := md5.New()
-	h.Write([]byte(fmt.Sprintf("%v", condition)))
-	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
-	return md5Hash
-}
-
-func (r *ScheduleRedisDA) scheduleConditionKey(condition *ScheduleCacheCondition) string {
-	md5Hash := r.conditionHash(condition)
-	return fmt.Sprintf("%v:%v", RedisKeyPrefixScheduleCondition, md5Hash)
-}
+//func (r *ScheduleRedisDA) scheduleConditionKey(condition *ScheduleCacheCondition) string {
+//	md5Hash := r.conditionHash(condition)
+//	return fmt.Sprintf("%v:%v", RedisKeyPrefixScheduleCondition, md5Hash)
+//}
 
 type ScheduleRedisDA struct {
 	expiration time.Duration
