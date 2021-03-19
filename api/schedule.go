@@ -75,6 +75,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		ParticipantsStudentIDs: data.ParticipantsStudentIDs,
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
+		Title:                  data.Title,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
@@ -235,6 +236,11 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 
+	if strings.TrimSpace(input.Title) == "" {
+		log.Info(ctx, "schedule title required", log.Any("input", input))
+		return constant.ErrInvalidArgs
+	}
+
 	// Students and teachers must exist
 	if (len(input.ClassRosterTeacherIDs) == 0 &&
 		len(input.ParticipantsTeacherIDs) == 0) ||
@@ -301,6 +307,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		ParticipantsStudentIDs: data.ParticipantsStudentIDs,
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
+		Title:                  data.Title,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
