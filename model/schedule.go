@@ -100,7 +100,7 @@ func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity
 		)
 		return "", err
 	}
-	err = da.GetScheduleRedisDA().Clean(ctx, op, nil)
+	err = da.GetScheduleRedisDA().Clean(ctx, op, []string{scheduleID})
 	if err != nil {
 		log.Info(ctx, "Add:GetScheduleRedisDA.Clean error", log.Err(err))
 	}
