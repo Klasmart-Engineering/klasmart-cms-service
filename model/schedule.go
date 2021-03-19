@@ -1219,6 +1219,7 @@ func (s *scheduleModel) Query(ctx context.Context, op *entity.Operator, conditio
 			ClassID:      item.ClassID,
 			DueAt:        item.DueAt,
 			IsHidden:     item.IsHidden,
+			IsHomeFun:    item.IsHomeFun,
 		}
 		temp.Status = temp.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 			EndAt:     temp.EndAt,

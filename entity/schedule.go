@@ -413,6 +413,7 @@ type ScheduleListView struct {
 	IsHidden      bool              `json:"is_hidden"`
 	RoleType      ScheduleRoleType  `json:"role_type"`
 	ExistFeedback bool              `json:"exist_feedback"`
+	IsHomeFun     bool              `json:"is_home_fun"`
 }
 
 type ScheduleDateView struct {
