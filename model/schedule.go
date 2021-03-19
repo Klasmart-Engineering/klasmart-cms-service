@@ -1888,6 +1888,10 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		return nil
 	}
 	// subject
+	if v.SubjectID == "" || v.ProgramID == "" {
+		log.Info(ctx, "programID and subjectID is required", log.Any("op", operator), log.Any("input", v))
+		return constant.ErrInvalidArgs
+	}
 	subjectIDs := []string{v.SubjectID}
 	_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
 	if err != nil {
