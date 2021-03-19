@@ -34,7 +34,7 @@ func (s *MapperImpl) Subject(ctx context.Context, organizationID, programID, sub
 		return "", err
 	}
 
-	s.amsSubjects = make(map[string]*external.Subject, len(subjects))
+	// s.amsSubjects = make(map[string]*external.Subject, len(subjects))
 	for _, subject := range subjects {
 		s.amsSubjects[amsProgramID+":"+subject.Name] = subject
 	}

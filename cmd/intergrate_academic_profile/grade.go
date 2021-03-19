@@ -34,7 +34,7 @@ func (s *MapperImpl) Grade(ctx context.Context, organizationID, programID, grade
 		return "", err
 	}
 
-	s.amsGrades = make(map[string]*external.Grade, len(grades))
+	// s.amsGrades = make(map[string]*external.Grade, len(grades))
 	for _, grade := range grades {
 		s.amsGrades[amsProgramID+":"+grade.Name] = grade
 	}
