@@ -19,6 +19,7 @@ import (
 
 type IAssessmentModel interface {
 	Get(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetailView, error)
+	GetPlain(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.Assessment, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error)
 	Add(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error)
 	Update(ctx context.Context, operator *entity.Operator, cmd entity.UpdateAssessmentCommand) error
@@ -254,6 +255,18 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		}
 	}
 	return &result, nil
+}
+
+func (a *assessmentModel) GetPlain(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.Assessment, error) {
+	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
+	if err != nil {
+		log.Error(ctx, "GetPlain: da.GetAssessmentDA().GetExcludeSoftDeleted: get assessment failed",
+			log.Err(err),
+			log.String("id", "id"),
+		)
+		return nil, err
+	}
+	return assessment, nil
 }
 
 func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, cmd entity.ListAssessmentsQuery) (*entity.ListAssessmentsResult, error) {

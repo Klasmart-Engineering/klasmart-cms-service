@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 	"time"
 )
@@ -32,6 +33,8 @@ var ErrHomeFunStudyHasCompleted = errors.New("home fun study has completed")
 type IHomeFunStudyModel interface {
 	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
 	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
+	GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
+	GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error)
 	Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
 }
@@ -138,6 +141,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		studentName := studentNamesMap[item.StudentID]
 		result.Items = append(result.Items, &entity.ListHomeFunStudiesResultItem{
 			ID:               item.ID,
+			Title:            item.Title,
 			TeacherNames:     teacherNames,
 			StudentName:      studentName,
 			Status:           item.Status,
@@ -198,7 +202,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		studentName  string
 		teacherNames []string
 	)
-	student, err := external.GetStudentServiceProvider().Get(ctx, operator, id)
+	student, err := external.GetStudentServiceProvider().Get(ctx, operator, study.StudentID)
 	if err != nil {
 		log.Error(ctx, "external.GetStudentServiceProvider().Get: get failed",
 			log.Err(err),
@@ -221,9 +225,9 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		teacherNames = append(teacherNames, t.Name)
 	}
 
-	subjects, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
+	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
 	if err != nil {
-		log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: get subject failed",
+		log.Error(ctx, "Get: external.GetSubjectServiceProvider().BatchGet: get subject failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("subject_id", study.SubjectID),
@@ -240,7 +244,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 	}
 	subject := subjects[0]
 
-	return &entity.GetHomeFunStudyResult{
+	result := &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
 		ScheduleID:       study.ScheduleID,
 		Title:            study.Title,
@@ -255,7 +259,53 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		AssessFeedbackID: study.AssessFeedbackID,
 		AssessScore:      study.AssessScore,
 		AssessComment:    study.AssessComment,
-	}, nil
+	}
+
+	if result.AssessScore == 0 {
+		result.AssessScore = entity.HomeFunStudyAssessScoreAverage
+	}
+
+	return result, nil
+}
+
+func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
+	var study entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
+		log.Error(ctx, "GetPlain: da.GetHomeFunStudyDA().Get: get failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("id", id),
+		)
+		if err == dbo.ErrRecordNotFound {
+			return nil, constant.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	return &study, nil
+}
+
+func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error) {
+	cond := da.QueryHomeFunStudyCondition{
+		OrgID:      &operator.OrgID,
+		ScheduleID: &scheduleID,
+		StudentIDs: []string{studentID},
+	}
+	var studies []*entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Query(ctx, &cond, &studies); err != nil {
+		log.Error(ctx, "GetByScheduleIDAndStudentID: da.GetHomeFunStudyDA().Query: query home fun study",
+			log.Err(err),
+			log.Any("cond", cond),
+		)
+		return nil, err
+	}
+	if len(studies) == 0 {
+		log.Error(ctx, "GetByScheduleIDAndStudentID: not found home fun study",
+			log.String("schedule_id", scheduleID),
+			log.String("student_id", studentID),
+		)
+		return nil, constant.ErrRecordNotFound
+	}
+	return studies[0], nil
 }
 
 func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error {
@@ -316,6 +366,7 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 	} else {
 		now := time.Now().Unix()
 		study = &entity.HomeFunStudy{
+			ID:               utils.NewID(),
 			ScheduleID:       args.ScheduleID,
 			Title:            title,
 			TeacherIDs:       args.TeacherIDs,
@@ -390,16 +441,13 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	if study.Status == entity.AssessmentStatusComplete {
 		return ErrHomeFunStudyHasCompleted
 	}
-	switch args.Action {
-	case entity.UpdateHomeFunStudyActionComplete:
+	if args.Action == entity.UpdateHomeFunStudyActionComplete {
 		study.Status = entity.AssessmentStatusComplete
-		fallthrough
-	case entity.UpdateHomeFunStudyActionSave:
-		study.AssessFeedbackID = args.AssessFeedbackID
-		study.AssessScore = args.AssessScore
-		study.AssessComment = args.AssessComment
 	}
-	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, study); err != nil {
+	study.AssessFeedbackID = args.AssessFeedbackID
+	study.AssessScore = args.AssessScore
+	study.AssessComment = args.AssessComment
+	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
 			log.Err(err),
 			log.Any("study", study))

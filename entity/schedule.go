@@ -314,7 +314,7 @@ func (s Schedule) Clone() Schedule {
 }
 
 type ScheduleAddView struct {
-	Title                  string            `json:"title" binding:"required"`
+	Title                  string            `json:"title"`
 	ClassID                string            `json:"class_id"`
 	LessonPlanID           string            `json:"lesson_plan_id"`
 	ClassRosterTeacherIDs  []string          `json:"class_roster_teacher_ids"`
@@ -348,6 +348,7 @@ type ScheduleEditValidation struct {
 	ParticipantsStudentIDs []string
 	ClassID                string
 	ClassType              ScheduleClassType
+	Title                  string
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -399,18 +400,19 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID           string            `json:"id"`
-	Title        string            `json:"title"`
-	StartAt      int64             `json:"start_at"`
-	EndAt        int64             `json:"end_at"`
-	IsRepeat     bool              `json:"is_repeat"`
-	LessonPlanID string            `json:"lesson_plan_id"`
-	ClassType    ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	Status       ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ClassID      string            `json:"class_id"`
-	DueAt        int64             `json:"due_at"`
-	IsHidden     bool              `json:"is_hidden"`
-	RoleType     ScheduleRoleType  `json:"role_type"`
+	ID            string            `json:"id"`
+	Title         string            `json:"title"`
+	StartAt       int64             `json:"start_at"`
+	EndAt         int64             `json:"end_at"`
+	IsRepeat      bool              `json:"is_repeat"`
+	LessonPlanID  string            `json:"lesson_plan_id"`
+	ClassType     ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status        ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID       string            `json:"class_id"`
+	DueAt         int64             `json:"due_at"`
+	IsHidden      bool              `json:"is_hidden"`
+	RoleType      ScheduleRoleType  `json:"role_type"`
+	ExistFeedback bool              `json:"exist_feedback"`
 }
 
 type ScheduleDateView struct {
@@ -441,6 +443,7 @@ type ScheduleDetailsView struct {
 	IsHidden             bool                          `json:"is_hidden"`
 	IsHomeFun            bool                          `json:"is_home_fun"`
 	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback        bool                          `json:"exist_feedback"`
 }
 
 type ScheduleRoleType string
