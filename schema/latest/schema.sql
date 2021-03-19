@@ -497,9 +497,9 @@ CREATE TABLE IF NOT EXISTS `home_fun_studies` (
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'update at (unix seconds)',
     `delete_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'delete at (unix seconds)',
     PRIMARY KEY (`id`),
-    KEY `home_fun_study_id` (schedule_id),
-    KEY `home_fun_study_status` (status),
-    KEY `home_fun_study_latest_feedback_at` (latest_feedback_at),
-    KEY `home_fun_study_complete_at` (complete_at),
-    KEY `home_fun_study_schedule_id_and_student_id` (schedule_id, student_id)
+    KEY `home_fun_studies_schedule_id` (schedule_id),
+    KEY `home_fun_studies_status` (status),
+    KEY `home_fun_studies_latest_feedback_at` (latest_feedback_at),
+    KEY `home_fun_studies_complete_at` (complete_at),
+    KEY `home_fun_studies_schedule_id_and_student_id` (schedule_id, student_id)
 ) COMMENT 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
