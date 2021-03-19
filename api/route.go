@@ -248,6 +248,10 @@ func (s Server) registeRoute() {
 	{
 		organizationProperties.GET("/:id", s.mustLoginWithoutOrgID, s.getOrganizationPropertyByID)
 	}
+	organizationRegions := s.engine.Group("/v1/organizations_region")
+	{
+		organizationRegions.GET("", s.mustLoginWithoutOrgID, s.getOrganizationByHeadquarterForDetails)
+	}
 }
 
 // Ping godoc
