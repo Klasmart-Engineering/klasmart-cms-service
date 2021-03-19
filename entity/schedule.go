@@ -645,3 +645,6 @@ func (s ScheduleShowOption) IsValid() bool {
 		return false
 	}
 }
+
+type AMSInScheduleInput struct {
+}

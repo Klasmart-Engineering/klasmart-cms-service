@@ -238,6 +238,7 @@ func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditVa
 
 	if strings.TrimSpace(input.Title) == "" {
 		log.Info(ctx, "schedule title required", log.Any("input", input))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return constant.ErrInvalidArgs
 	}
 
