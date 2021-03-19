@@ -437,15 +437,12 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	if study.Status == entity.AssessmentStatusComplete {
 		return ErrHomeFunStudyHasCompleted
 	}
-	switch args.Action {
-	case entity.UpdateHomeFunStudyActionComplete:
+	if args.Action == entity.UpdateHomeFunStudyActionComplete {
 		study.Status = entity.AssessmentStatusComplete
-		fallthrough
-	case entity.UpdateHomeFunStudyActionSave:
-		study.AssessFeedbackID = args.AssessFeedbackID
-		study.AssessScore = args.AssessScore
-		study.AssessComment = args.AssessComment
 	}
+	study.AssessFeedbackID = args.AssessFeedbackID
+	study.AssessScore = args.AssessScore
+	study.AssessComment = args.AssessComment
 	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
 			log.Err(err),
