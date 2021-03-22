@@ -23,10 +23,10 @@ type ScheduleCacheCondition struct {
 
 type IScheduleCacheDA interface {
 	Add(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error
-	SearchToListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error)
-	SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]string, error)
-	SearchToBasicData(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleBasic, error)
-	SearchToScheduleDetails(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleDetailsView, error)
+	SearchToListView(ctx context.Context, orgID string, condition *ScheduleCondition) ([]*entity.ScheduleListView, error)
+	SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error)
+	SearchToBasicData(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error)
+	SearchToScheduleDetails(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error)
 	Clean(ctx context.Context, orgID string) error
 }
 
@@ -69,8 +69,8 @@ func (r *ScheduleRedisDA) Add(ctx context.Context, orgID string, condition *Sche
 	return nil
 }
 
-func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error) {
-	res, err := r.search(ctx, orgID, condition)
+func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, orgID string, condition *ScheduleCondition) ([]*entity.ScheduleListView, error) {
+	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{Condition: condition})
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +86,8 @@ func (r *ScheduleRedisDA) SearchToListView(ctx context.Context, orgID string, co
 	}
 	return result, nil
 }
-func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]string, error) {
-	res, err := r.search(ctx, orgID, condition)
+func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error) {
+	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{Condition: condition})
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,8 @@ func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, orgID string, con
 	}
 	return result, nil
 }
-func (r *ScheduleRedisDA) SearchToBasicData(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleBasic, error) {
-	res, err := r.search(ctx, orgID, condition)
+func (r *ScheduleRedisDA) SearchToBasicData(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error) {
+	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{ScheduleID: scheduleID})
 	if err != nil {
 		return nil, err
 	}
@@ -113,15 +113,15 @@ func (r *ScheduleRedisDA) SearchToBasicData(ctx context.Context, orgID string, c
 	if err != nil {
 		log.Error(ctx, "unmarshal schedule error ",
 			log.Err(err),
-			log.Any("condition", condition),
+			log.String("scheduleID", scheduleID),
 			log.String("scheduleJson", res),
 		)
 		return nil, err
 	}
 	return result, nil
 }
-func (r *ScheduleRedisDA) SearchToScheduleDetails(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleDetailsView, error) {
-	res, err := r.search(ctx, orgID, condition)
+func (r *ScheduleRedisDA) SearchToScheduleDetails(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error) {
+	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{ScheduleID: scheduleID, UserID: userID})
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,8 @@ func (r *ScheduleRedisDA) SearchToScheduleDetails(ctx context.Context, orgID str
 	if err != nil {
 		log.Error(ctx, "unmarshal schedule error ",
 			log.Err(err),
-			log.Any("condition", condition),
+			log.String("userID", userID),
+			log.String("scheduleID", scheduleID),
 			log.String("scheduleJson", res),
 		)
 		return nil, err
