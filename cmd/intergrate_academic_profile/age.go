@@ -42,7 +42,7 @@ func (s *MapperImpl) Age(ctx context.Context, organizationID, programID, ageID s
 		return "", err
 	}
 
-	s.amsAges = make(map[string]*external.Age, len(ages))
+	// s.amsAges = make(map[string]*external.Age, len(ages))
 	for _, age := range ages {
 		s.amsAges[amsProgramID+":"+age.Name] = age
 	}
