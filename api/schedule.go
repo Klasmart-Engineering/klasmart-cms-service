@@ -1087,17 +1087,8 @@ func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	scheduleID := c.Param("id")
-	condition := &da.ScheduleFeedbackCondition{
-		ScheduleID: sql.NullString{
-			String: scheduleID,
-			Valid:  true,
-		},
-		UserID: sql.NullString{
-			String: op.UserID,
-			Valid:  true,
-		},
-	}
-	result, err := model.GetScheduleFeedbackModel().GetNewest(ctx, op, condition)
+
+	result, err := model.GetScheduleFeedbackModel().GetNewest(ctx, op, op.UserID, scheduleID)
 
 	switch err {
 	case nil:
