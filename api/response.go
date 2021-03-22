@@ -14,6 +14,7 @@ const (
 	// Assessment
 	AssessMsgOneStudent   ResponseLabel = "assess_msg_one_student"
 	AssessMsgNoPermission ResponseLabel = "assess_msg_no_permission"
+	AssessMsgNewVersion   ResponseLabel = "assess_msg_new_version"
 
 	// Report
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
