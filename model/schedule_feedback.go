@@ -174,6 +174,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		assignments := make([]*entity.FeedbackAssignment, len(input.Assignments))
 		for i, item := range input.Assignments {
 			if item.AttachmentID == "" || item.AttachmentName == "" {
+				log.Info(ctx, "feedback assignment invalid args", log.Any("input", input))
 				return "", constant.ErrInvalidArgs
 			}
 			assignments[i] = &entity.FeedbackAssignment{

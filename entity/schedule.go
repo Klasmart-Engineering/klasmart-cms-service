@@ -314,7 +314,7 @@ func (s Schedule) Clone() Schedule {
 }
 
 type ScheduleAddView struct {
-	Title                  string            `json:"title" binding:"required"`
+	Title                  string            `json:"title"`
 	ClassID                string            `json:"class_id"`
 	LessonPlanID           string            `json:"lesson_plan_id"`
 	ClassRosterTeacherIDs  []string          `json:"class_roster_teacher_ids"`
@@ -348,6 +348,7 @@ type ScheduleEditValidation struct {
 	ParticipantsStudentIDs []string
 	ClassID                string
 	ClassType              ScheduleClassType
+	Title                  string
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -412,6 +413,7 @@ type ScheduleListView struct {
 	IsHidden      bool              `json:"is_hidden"`
 	RoleType      ScheduleRoleType  `json:"role_type"`
 	ExistFeedback bool              `json:"exist_feedback"`
+	IsHomeFun     bool              `json:"is_home_fun"`
 }
 
 type ScheduleDateView struct {

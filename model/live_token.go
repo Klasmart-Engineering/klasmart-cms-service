@@ -99,7 +99,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	if schedule.ClassType == entity.ScheduleClassTypeTask {
+	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
 		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
