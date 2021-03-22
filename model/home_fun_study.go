@@ -447,6 +447,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	study.AssessFeedbackID = args.AssessFeedbackID
 	study.AssessScore = args.AssessScore
 	study.AssessComment = args.AssessComment
+	study.CompleteAt = time.Now().Unix()
 	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
 			log.Err(err),
