@@ -449,32 +449,34 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 		return ErrHomeFunStudyHasCompleted
 	}
 
-	newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, &da.ScheduleFeedbackCondition{
-		ScheduleID: sql.NullString{
-			String: study.ScheduleID,
-			Valid:  true,
-		},
-		UserID: sql.NullString{
-			String: study.StudentID,
-			Valid:  true,
-		},
-	})
-	if err != nil {
-		log.Error(ctx, "Assess: GetScheduleFeedbackModel().GetNewest: get newest feedback failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("args", args),
-			log.Any("study", study),
-		)
-		return err
-	}
-	if study.AssessFeedbackID != newest.ScheduleFeedback.ID {
-		log.Error(ctx, "Assess: study has new feedback",
-			log.Any("operator", operator),
-			log.Any("args", args),
-			log.Any("study", study),
-		)
-		return ErrHomeFunStudyHasNewFeedback
+	if study.AssessFeedbackID != "" {
+		newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, &da.ScheduleFeedbackCondition{
+			ScheduleID: sql.NullString{
+				String: study.ScheduleID,
+				Valid:  true,
+			},
+			UserID: sql.NullString{
+				String: study.StudentID,
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			log.Error(ctx, "Assess: GetScheduleFeedbackModel().GetNewest: get newest feedback failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.Any("args", args),
+				log.Any("study", study),
+			)
+			return err
+		}
+		if study.AssessFeedbackID != newest.ScheduleFeedback.ID {
+			log.Error(ctx, "Assess: study has new feedback",
+				log.Any("operator", operator),
+				log.Any("args", args),
+				log.Any("study", study),
+			)
+			return ErrHomeFunStudyHasNewFeedback
+		}
 	}
 
 	study.AssessFeedbackID = args.AssessFeedbackID
