@@ -450,16 +450,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	}
 
 	if study.AssessFeedbackID != "" {
-		newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, &da.ScheduleFeedbackCondition{
-			ScheduleID: sql.NullString{
-				String: study.ScheduleID,
-				Valid:  true,
-			},
-			UserID: sql.NullString{
-				String: study.StudentID,
-				Valid:  true,
-			},
-		})
+		newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, study.StudentID, study.ScheduleID)
 		if err != nil {
 			log.Error(ctx, "Assess: GetScheduleFeedbackModel().GetNewest: get newest feedback failed",
 				log.Err(err),

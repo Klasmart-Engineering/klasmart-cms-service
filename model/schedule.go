@@ -1646,15 +1646,17 @@ func (s *scheduleModel) getByIDFormCache(ctx context.Context, operator *entity.O
 		DueAt:     cacheData.DueAt,
 		ClassType: cacheData.ClassType,
 	})
-	lessonPlanAuthed, err := s.getLessonPlanAuthed(ctx, operator, id, cacheData.LessonPlan.ID)
-	if err != nil {
-		log.Error(ctx, "GetByID using cache:GetScheduleRealTimeStatus error",
-			log.Err(err),
-			log.Any("operator", operator),
-		)
-		return nil, err
+	if cacheData.LessonPlan != nil {
+		lessonPlanAuthed, err := s.getLessonPlanAuthed(ctx, operator, id, cacheData.LessonPlan.ID)
+		if err != nil {
+			log.Error(ctx, "GetByID using cache:GetScheduleRealTimeStatus error",
+				log.Err(err),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		cacheData.RealTimeStatus = *lessonPlanAuthed
 	}
-	cacheData.RealTimeStatus = *lessonPlanAuthed
 	return cacheData, nil
 }
 func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
