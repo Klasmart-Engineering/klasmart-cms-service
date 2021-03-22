@@ -1252,7 +1252,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 		log.Info(ctx, "get basic data:using cache",
 			log.Err(err),
 			log.Any("op", op),
-			log.Any("item", item),
+			log.Any("cacheData", cacheData),
 		)
 		scheduleBasicMap[item.ScheduleID] = cacheData
 	}
