@@ -109,6 +109,6 @@ func contentMapping(ctx context.Context, mapper iap.Mapper, content *entity.Cont
 		gradeID = strings.Join(utils.SliceDeduplication(ids), ",")
 	}
 
-	return fmt.Sprintf("update cms_contents set program='%s', subject='%s', developmental='%s', skills='%s', age='%s', grade='%s' where id='%s';",
+	return fmt.Sprintf("update cms_contents set program='%s', `subject`='%s', developmental='%s', skills='%s', age='%s', grade='%s' where id='%s';",
 		programID, subjectID, categoryID, subCategoryID, ageID, gradeID, content.ID), nil
 }

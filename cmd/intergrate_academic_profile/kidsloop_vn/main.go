@@ -78,6 +78,12 @@ func main() {
 	}
 	commands = append(commands, _commands...)
 
+	_commands, err = outcomeMigrate(ctx, operator, mapper, *specialOrgID)
+	if err != nil {
+		log.Fatal(ctx, "learning outcomes migrate failed", log.Err(err))
+	}
+	commands = append(commands, _commands...)
+
 	filename := fmt.Sprintf("kl2_migrate_%s.sql", time.Now().Format("200601021504"))
 	file, err := os.Create(filename)
 	if err != nil {
