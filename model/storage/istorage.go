@@ -11,6 +11,7 @@ import (
 	"io"
 	"mime/multipart"
 	"os"
+	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -44,6 +45,7 @@ func (s StoragePartition) SizeLimit() int64 {
 }
 
 func NewStoragePartition(ctx context.Context, partition, extension string) (StoragePartition, error) {
+	extension = strings.ToLower(extension)
 	switch partition {
 	case string(AssetStoragePartition):
 		ret := utils.CheckInStringArray(extension, constant.MaterialsExtension)
