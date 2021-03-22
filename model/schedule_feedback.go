@@ -24,17 +24,26 @@ type IScheduleFeedbackModel interface {
 	ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
 	ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (bool, error)
 	Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error)
-	GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error)
+	GetNewest(ctx context.Context, op *entity.Operator, userID string, scheduleID string) (*entity.ScheduleFeedbackView, error)
 }
 
 type scheduleFeedbackModel struct {
 }
 
-func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error) {
+func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operator, userID string, scheduleID string) (*entity.ScheduleFeedbackView, error) {
 	result := &entity.ScheduleFeedbackView{
 		IsAllowSubmit: true,
 	}
-
+	condition := &da.ScheduleFeedbackCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+		UserID: sql.NullString{
+			String: userID,
+			Valid:  true,
+		},
+	}
 	// get feedback info
 	condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
 	var dataList []*entity.ScheduleFeedback
@@ -70,7 +79,7 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 	}
 	result.Assignments = assignments
 
-	homeFun, err := GetHomeFunStudyModel().GetByScheduleIDAndStudentID(ctx, op, feedback.ScheduleID, op.UserID)
+	homeFun, err := GetHomeFunStudyModel().GetByScheduleIDAndStudentID(ctx, op, scheduleID, userID)
 	if err == constant.ErrRecordNotFound {
 		log.Error(ctx, "not found home fun", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
 		return nil, ErrFeedbackNotGenerateAssessment
