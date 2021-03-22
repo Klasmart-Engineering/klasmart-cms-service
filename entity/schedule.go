@@ -479,6 +479,8 @@ type ScheduleBasicDataInput struct {
 	ProgramID    string
 	LessonPlanID string
 	SubjectID    string
+	TeacherIDs   []string
+	StudentIDs   []string
 }
 type ScheduleUserInput struct {
 	ID   string               `json:"id"`

@@ -16,14 +16,17 @@ import (
 )
 
 type ScheduleCacheCondition struct {
-	Condition dbo.Conditions
-	UserID    string
+	Condition  dbo.Conditions
+	UserID     string
+	ScheduleID string
 }
 
 type IScheduleCacheDA interface {
 	Add(ctx context.Context, orgID string, condition *ScheduleCacheCondition, data interface{}) error
 	SearchToListView(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]*entity.ScheduleListView, error)
 	SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCacheCondition) ([]string, error)
+	SearchToBasicData(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleBasic, error)
+	SearchToScheduleDetails(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleDetailsView, error)
 	Clean(ctx context.Context, orgID string) error
 }
 
@@ -100,7 +103,40 @@ func (r *ScheduleRedisDA) SearchToStrings(ctx context.Context, orgID string, con
 	}
 	return result, nil
 }
-
+func (r *ScheduleRedisDA) SearchToBasicData(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleBasic, error) {
+	res, err := r.search(ctx, orgID, condition)
+	if err != nil {
+		return nil, err
+	}
+	var result *entity.ScheduleBasic
+	err = json.Unmarshal([]byte(res), &result)
+	if err != nil {
+		log.Error(ctx, "unmarshal schedule error ",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.String("scheduleJson", res),
+		)
+		return nil, err
+	}
+	return result, nil
+}
+func (r *ScheduleRedisDA) SearchToScheduleDetails(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (*entity.ScheduleDetailsView, error) {
+	res, err := r.search(ctx, orgID, condition)
+	if err != nil {
+		return nil, err
+	}
+	var result *entity.ScheduleDetailsView
+	err = json.Unmarshal([]byte(res), &result)
+	if err != nil {
+		log.Error(ctx, "unmarshal schedule error ",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.String("scheduleJson", res),
+		)
+		return nil, err
+	}
+	return result, nil
+}
 func (r *ScheduleRedisDA) getHSetKey(orgID string) string {
 	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleCondition, orgID)
 }
