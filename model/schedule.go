@@ -617,7 +617,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	}
 	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
 	if err != nil {
-		log.Info(ctx, "clean schedule cache error", log.Err(err))
+		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
 	return id.(string), nil
 }
@@ -931,7 +931,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	}
 	err = da.GetScheduleRedisDA().Clean(ctx, operator.OrgID)
 	if err != nil {
-		log.Info(ctx, "clean schedule cache error", log.Err(err))
+		log.Warn(ctx, "clean schedule cache error", log.String("orgID", operator.OrgID), log.Err(err))
 	}
 	return id, nil
 }
@@ -986,7 +986,7 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 	}
 	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
 	if err != nil {
-		log.Info(ctx, "clean schedule cache error", log.Err(err))
+		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
 
 	return nil

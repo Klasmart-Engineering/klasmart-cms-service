@@ -231,7 +231,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 	}
 	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
 	if err != nil {
-		log.Info(ctx, "clean schedule cache error", log.Err(err))
+		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
 	return id.(string), nil
 }
