@@ -1356,7 +1356,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 		scheduleBasic.StudentCount = len(item.StudentIDs)
 		scheduleBasicMap[item.ScheduleID] = scheduleBasic
 
-		da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{ScheduleID: item.ScheduleID}, scheduleBasicMap)
+		da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{ScheduleID: item.ScheduleID}, scheduleBasic)
 	}
 
 	return scheduleBasicMap, nil
