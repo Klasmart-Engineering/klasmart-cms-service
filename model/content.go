@@ -829,7 +829,7 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 	assetsData := new(AssetsData)
 	assetsData.Source = materialData.Source
 	assetsDataJSON, err := assetsData.Marshal(ctx)
-	if !ok {
+	if err != nil {
 		log.Warn(ctx, "marshal assets data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrMarshalContentDataFailed
 	}
@@ -939,7 +939,7 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 			return err
 		}
 	case entity.ContentTypePlan:
-		err = cm.publishPlanWithAssets(ctx, tx, content, scope, user)
+		err = cm.doPublishPlanWithAssets(ctx, tx, content, scope, user)
 		if err != nil {
 			return err
 		}
@@ -1005,6 +1005,71 @@ func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.D
 		return err
 	}
 
+	return nil
+}
+
+func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
+	err := cm.validatePublishContentWithAssets(ctx, content, user)
+	if err != nil {
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.String("scope", scope), log.String("uid", user.UserID))
+		return err
+	}
+	//Update publish status if indicates
+	if scope != "" {
+		content.PublishScope = scope
+	}
+
+	//create content data object
+	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	if err != nil {
+		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrInvalidContentData
+	}
+
+	//parse data for lesson plan
+	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{})
+	lessonData, ok := cd.(*LessonData)
+	if !ok {
+		log.Warn(ctx, "asset content data type failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrInvalidContentData
+	}
+
+	//create assets data object, and parse it
+	for i := range lessonData.TeacherManualBatch {
+		assetsData := new(AssetsData)
+		assetsData.Source = SourceID(lessonData.TeacherManualBatch[i].ID)
+		assetsDataJSON, err := assetsData.Marshal(ctx)
+		if err != nil {
+			log.Warn(ctx, "marshal assets data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+			return ErrMarshalContentDataFailed
+		}
+		//创建assets
+		req := entity.CreateContentRequest{
+			ContentType:   entity.ContentTypeAssets,
+			Name:          content.Name,
+			Program:       content.Program,
+			Subject:       utils.StringToStringArray(ctx, content.Subject),
+			Developmental: utils.StringToStringArray(ctx, content.Developmental),
+			Skills:        utils.StringToStringArray(ctx, content.Skills),
+			Age:           utils.StringToStringArray(ctx, content.Age),
+			Grade:         utils.StringToStringArray(ctx, content.Grade),
+			Keywords:      utils.StringToStringArray(ctx, content.Keywords),
+			Description:   "",
+			Thumbnail:     "",
+			SuggestTime:   0,
+			Data:          assetsDataJSON,
+		}
+		_, err = cm.CreateContent(ctx, tx, req, user)
+		if err != nil {
+			log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
+			return err
+		}
+	}
+	//do publish
+	err = cm.doPublishContent(ctx, tx, content, user)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
