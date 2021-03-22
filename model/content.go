@@ -1027,13 +1027,15 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 	}
 
 	//parse data for lesson plan
-	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{})
 	lessonData, ok := cd.(*LessonData)
 	if !ok {
 		log.Warn(ctx, "asset content data type failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
 	}
-
+	log.Info(ctx,
+		"publish plans with teacher manuals",
+		log.Any("content", content),
+		log.Any("data", lessonData.TeacherManualBatch))
 	//create assets data object, and parse it
 	for i := range lessonData.TeacherManualBatch {
 		assetsData := new(AssetsData)
