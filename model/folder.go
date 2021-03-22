@@ -1362,7 +1362,7 @@ func (f *FolderModel) removeItemInternal(ctx context.Context, tx *dbo.DBContext,
 
 func (f *FolderModel) addItemInternal(ctx context.Context, tx *dbo.DBContext, req entity.CreateFolderItemRequest, operator *entity.Operator) (string, error) {
 	//check item
-	item, err := createFolderItemByID(ctx, req.Link, operator)
+	item, err := createFolderItemByID(ctx, tx, req.Link, operator)
 	if err != nil {
 		log.Warn(ctx, "check item id failed", log.Err(err), log.Any("req", req))
 		return "", err
@@ -2104,14 +2104,14 @@ func (f *FolderModel) replaceLinkedItemPath(ctx context.Context, tx *dbo.DBConte
 	return nil
 }
 
-func createFolderItemByID(ctx context.Context, link string, user *entity.Operator) (*FolderItem, error) {
+func createFolderItemByID(ctx context.Context, tx *dbo.DBContext, link string, user *entity.Operator) (*FolderItem, error) {
 	fileType, id, err := parseLink(ctx, link)
 	if err != nil {
 		return nil, err
 	}
 	switch fileType {
 	case entity.FolderFileTypeContent:
-		content, err := GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), id, user)
+		content, err := GetContentModel().GetContentByID(ctx, tx, id, user)
 		if err != nil {
 			log.Warn(ctx, "can't find content by id", log.Err(err),
 				log.String("itemType", string(fileType)), log.String("id", id))

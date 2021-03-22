@@ -640,6 +640,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 // @Router /schedules_time_view/dates [get]
 func (s *Server) getScheduledDates(c *gin.Context) {
 	ctx := c.Request.Context()
+	op := s.getOperator(c)
 	offsetStr := c.Query("time_zone_offset")
 	offset, _ := strconv.Atoi(offsetStr)
 	loc := utils.GetTimeLocationByOffset(offset)
@@ -649,7 +650,7 @@ func (s *Server) getScheduledDates(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, condition, loc)
+	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, op, condition, loc)
 	if err != nil {
 		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
