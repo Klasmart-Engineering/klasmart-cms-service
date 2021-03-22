@@ -1079,8 +1079,8 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 		if err != nil {
 			return 0, nil, err
 		}
-		teacherIDs := make([]string, 0)
-		studentIDs := make([]string, 0)
+		teacherIDs := make([]string, 0, len(relations))
+		studentIDs := make([]string, 0, len(relations))
 		for _, relationItem := range relations {
 			switch relationItem.RelationType {
 			case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
@@ -1317,18 +1317,18 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 		return nil, err
 	}
 
-	subjectMap, err = s.geSubjectInfoMapBySubjectIDs(ctx, op, subjectIDs)
+	subjectMap, err = s.getSubjectsByIDs(ctx, op, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 		return nil, err
 	}
 
-	programMap, err = s.getProgramInfoMapByProgramIDs(ctx, op, programIDs)
+	programMap, err = s.getProgramsByIDs(ctx, op, programIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Strings("programIDs", programIDs))
 		return nil, err
 	}
-	lessonPlanMap, err = s.getLessonPlanMapByLessonPlanIDs(ctx, dbo.MustGetDB(ctx), lessonPlanIDs)
+	lessonPlanMap, err = s.getLessonPlanByIDs(ctx, dbo.MustGetDB(ctx), lessonPlanIDs)
 	if err != nil {
 		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Any("lessonPlanIDs", lessonPlanIDs))
 		return nil, err
@@ -1361,7 +1361,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 	return scheduleBasicMap, nil
 }
 
-func (s *scheduleModel) getLessonPlanMapByLessonPlanIDs(ctx context.Context, tx *dbo.DBContext, lessonPlanIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) getLessonPlanByIDs(ctx context.Context, tx *dbo.DBContext, lessonPlanIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	lessonPlanMap := make(map[string]*entity.ScheduleShortInfo)
 	if len(lessonPlanIDs) != 0 {
 		lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
@@ -1402,7 +1402,7 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator 
 	return classMap, nil
 }
 
-func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) getSubjectsByIDs(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
 		subjectIDs = utils.SliceDeduplication(subjectIDs)
@@ -1422,7 +1422,7 @@ func (s *scheduleModel) geSubjectInfoMapBySubjectIDs(ctx context.Context, operat
 	return subjectMap, nil
 }
 
-func (s *scheduleModel) getProgramInfoMapByProgramIDs(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) getProgramsByIDs(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var programMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(programIDs) != 0 {
 		programIDs = utils.SliceDeduplication(programIDs)
