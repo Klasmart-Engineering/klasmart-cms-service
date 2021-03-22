@@ -345,13 +345,13 @@ type CreateContentRequest struct {
 	Extra string `json:"extra"`
 
 	//TeacherManual     string `json:"teacher_manual"`
-	//TeacherManualName string `json:"teacher_manual_name"`
+	//Name string `json:"teacher_manual_name"`
 	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
 }
 
 type TeacherManualFile struct {
-	TeacherManualSource     string `json:"teacher_manual_source"`
-	TeacherManualName string `json:"teacher_manual_name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func (c *CreateContentRequest) Trim() {
@@ -477,7 +477,7 @@ type ContentInfo struct {
 	Extra string `json:"extra"`
 
 	//TeacherManual     []string `json:"teacher_manual"`
-	//TeacherManualName []string `json:"teacher_manual_name"`
+	//Name []string `json:"teacher_manual_name"`
 	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
 	Author  string `json:"author"`
 	Creator string `json:"creator"`

@@ -75,6 +75,9 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
 	h.TeacherManualBatch = t.TeacherManualBatch
 	h.Material = nil
+	//clear old data format
+	h.TeacherManual = ""
+	h.TeacherManualName = ""
 	return nil
 }
 func (l *LessonData) SubContentIDs(ctx context.Context) []string {
@@ -130,7 +133,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 		if l.TeacherManualName == "" {
 			log.Warn(ctx, "teacher_manual name is nil",
 				log.String("TeacherManual", l.TeacherManual),
-				log.String("TeacherManualName", l.TeacherManualName),
+				log.String("Name", l.TeacherManualName),
 				log.Any("TeacherManualBatch", l.TeacherManualBatch))
 			return ErrTeacherManualNameNil
 		}
@@ -140,7 +143,7 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 		}
 	}
 	for i := range l.TeacherManualBatch {
-		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].TeacherManualSource)
+		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].ID)
 		if err != nil{
 			return err
 		}

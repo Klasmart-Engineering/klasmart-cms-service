@@ -110,6 +110,7 @@ func (s Server) registeRoute() {
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
 		scheduleFeedback.POST("", s.mustLogin, s.addScheduleFeedback)
+		scheduleFeedback.GET("", s.mustLogin, s.queryFeedback)
 	}
 
 	assessments := s.engine.Group("/v1")
@@ -247,6 +248,10 @@ func (s Server) registeRoute() {
 	organizationProperties := s.engine.Group("/v1/organizations_propertys")
 	{
 		organizationProperties.GET("/:id", s.mustLoginWithoutOrgID, s.getOrganizationPropertyByID)
+	}
+	organizationRegions := s.engine.Group("/v1/organizations_region")
+	{
+		organizationRegions.GET("", s.mustLoginWithoutOrgID, s.getOrganizationByHeadquarterForDetails)
 	}
 }
 

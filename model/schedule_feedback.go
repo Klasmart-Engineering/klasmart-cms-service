@@ -15,12 +15,14 @@ import (
 )
 
 var (
-	ErrOnlyStudentCanSubmitFeedback = errors.New("only student can submit feedback")
+	ErrOnlyStudentCanSubmitFeedback  = errors.New("only student can submit feedback")
+	ErrFeedbackNotGenerateAssessment = errors.New("feedback not generate assessment")
 )
 
 type IScheduleFeedbackModel interface {
 	Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error)
 	ExistByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
+	ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (bool, error)
 	Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) ([]*entity.ScheduleFeedbackView, error)
 	GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error)
 }
@@ -29,8 +31,12 @@ type scheduleFeedbackModel struct {
 }
 
 func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operator, condition *da.ScheduleFeedbackCondition) (*entity.ScheduleFeedbackView, error) {
-	condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
+	result := &entity.ScheduleFeedbackView{
+		IsAllowSubmit: true,
+	}
 
+	// get feedback info
+	condition.Pager = dbo.Pager{Page: 1, PageSize: 1}
 	var dataList []*entity.ScheduleFeedback
 	err := da.GetScheduleFeedbackDA().Query(ctx, condition, &dataList)
 	if err != nil {
@@ -39,18 +45,18 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 	}
 	if len(dataList) <= 0 {
 		log.Warn(ctx, "not found", log.Any("op", op), log.Any("condition", condition))
-		return nil, constant.ErrRecordNotFound
+		return result, nil
 	}
 	feedback := dataList[0]
-	result := &entity.ScheduleFeedbackView{
-		ScheduleFeedback: entity.ScheduleFeedback{
-			ID:         feedback.ID,
-			ScheduleID: feedback.ScheduleID,
-			UserID:     feedback.UserID,
-			Comment:    feedback.Comment,
-			CreateAt:   feedback.CreateAt,
-		},
+	result.ScheduleFeedback = entity.ScheduleFeedback{
+		ID:         feedback.ID,
+		ScheduleID: feedback.ScheduleID,
+		UserID:     feedback.UserID,
+		Comment:    feedback.Comment,
+		CreateAt:   feedback.CreateAt,
 	}
+
+	// get assignment
 	assignmentCondition := &da.FeedbackAssignmentCondition{
 		FeedBackID: sql.NullString{
 			String: result.ID,
@@ -63,6 +69,17 @@ func (s *scheduleFeedbackModel) GetNewest(ctx context.Context, op *entity.Operat
 		return nil, err
 	}
 	result.Assignments = assignments
+
+	homeFun, err := GetHomeFunStudyModel().GetByScheduleIDAndStudentID(ctx, op, feedback.ScheduleID, op.UserID)
+	if err == constant.ErrRecordNotFound {
+		log.Error(ctx, "not found home fun", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
+		return nil, ErrFeedbackNotGenerateAssessment
+	}
+	if err != nil {
+		log.Error(ctx, "get home fun study  error", log.Err(err), log.Any("op", op), log.Any("feedback", feedback))
+		return nil, err
+	}
+	result.IsAllowSubmit = homeFun.Status != entity.AssessmentStatusComplete
 	return result, nil
 }
 
@@ -115,6 +132,21 @@ func (s *scheduleFeedbackModel) ExistByScheduleID(ctx context.Context, op *entit
 	return count > 0, nil
 }
 
+func (s *scheduleFeedbackModel) ExistByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (bool, error) {
+	condition := &da.ScheduleFeedbackCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+	}
+	count, err := da.GetScheduleFeedbackDA().Count(ctx, condition, &entity.ScheduleFeedback{})
+	if err != nil {
+		log.Error(ctx, "ScheduleFeedback count error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, input *entity.ScheduleFeedbackAddInput) (string, error) {
 	err := s.verifyScheduleFeedback(ctx, op, input)
 	if err != nil {
@@ -141,11 +173,15 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 		// insert feedback assignments
 		assignments := make([]*entity.FeedbackAssignment, len(input.Assignments))
 		for i, item := range input.Assignments {
+			if item.AttachmentID == "" || item.AttachmentName == "" {
+				log.Info(ctx, "feedback assignment invalid args", log.Any("input", input))
+				return "", constant.ErrInvalidArgs
+			}
 			assignments[i] = &entity.FeedbackAssignment{
 				ID:             utils.NewID(),
 				FeedbackID:     feedback.ID,
-				AssignmentUrl:  item.Url,
-				AssignmentName: item.Name,
+				AttachmentID:   item.AttachmentID,
+				AttachmentName: item.AttachmentName,
 				Number:         item.Number,
 				CreateAt:       time.Now().Unix(),
 				UpdateAt:       0,
@@ -180,6 +216,7 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 			DueAt:            scheduleInfo.DueAt,
 			LatestFeedbackID: feedback.ID,
 			LatestFeedbackAt: feedback.CreateAt,
+			SubjectID:        scheduleInfo.SubjectID,
 		}
 		err = GetHomeFunStudyModel().Save(ctx, tx, op, homeFun)
 		if err != nil {
@@ -191,6 +228,10 @@ func (s *scheduleFeedbackModel) Add(ctx context.Context, op *entity.Operator, in
 	if err != nil {
 		log.Error(ctx, "feedback insert error", log.Err(err), log.Any("op", op), log.Any("input", input))
 		return "", err
+	}
+	err = da.GetScheduleRedisDA().Clean(ctx, op, []string{input.ScheduleID})
+	if err != nil {
+		log.Info(ctx, "UpdateScheduleStatus:GetScheduleRedisDA.Clean error", log.Err(err))
 	}
 	return id.(string), nil
 }
