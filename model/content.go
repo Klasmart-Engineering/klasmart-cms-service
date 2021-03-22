@@ -893,7 +893,7 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 		assetsData := new(AssetsData)
 		assetsData.Source = SourceID(lessonData.TeacherManualBatch[i].ID)
 		assetsDataJSON, err := assetsData.Marshal(ctx)
-		if !ok {
+		if err != nil {
 			log.Warn(ctx, "marshal assets data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 			return ErrMarshalContentDataFailed
 		}
@@ -907,7 +907,7 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 			Skills:        utils.StringToStringArray(ctx, content.Skills),
 			Age:           utils.StringToStringArray(ctx, content.Age),
 			Grade:         utils.StringToStringArray(ctx, content.Grade),
-			Keywords:      utils.StringToStringArray(ctx, content.Keywords),
+			Keywords:      append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
 			Description:   "",
 			Thumbnail:     "",
 			SuggestTime:   0,
