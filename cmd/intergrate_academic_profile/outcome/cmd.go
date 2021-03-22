@@ -20,7 +20,7 @@ import (
 )
 
 //var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE0NDk0YzA3LTBkNGYtNTE0MS05ZGIyLTE1Nzk5OTkzZjQ0OCIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYxNTc5NTUyOCwiaXNzIjoia2lkc2xvb3AifQ.mLLPk3Qasoeow4Q5c-FWUBrhP7gURz35wlWUcq9ycjjOPTzIr8HN0lDjFwH6-3F-Tic6Skt1JSdJ-sS9jV4ZA4IsPHllIkvDXCSOGXKTXyUC0fLv_5GOS-5FHvjt5ekMtjhMRHtXKaimQ0xz_a2gPqxBWDzSs3Sy8svM4-wytshP53Cr31bUwLkGAnuG0h1StPMp8LYznIkAe9K7vjnwQJTvrCy-GbPLOA7bhXOVpkNut24-dIZEpPH_4KDjBUHsUvmzr5pHo-di1PhH0GmJBu1oBpn24Q1WG1CNcxRwJi7wuMZnfJdEBSwXhSf-YyvkdDV-jqBlS0-8rHOdR2bQcQ"
-var orgID = "10f38ce9-5152-4049-b4e7-6d2e2ba884e6"
+//var orgID = "10f38ce9-5152-4049-b4e7-6d2e2ba884e6"
 
 func isRecordNotFoundErr(err error) bool {
 	if err.Error() == "record not found" {
@@ -54,7 +54,9 @@ func main() {
 	setupConfig()
 	withPage := flag.Bool("page", false, "true: page")
 	tokenPtr := flag.String("token", "", "token")
+	orgID := flag.String("orgID", "10f38ce9-5152-4049-b4e7-6d2e2ba884e6", "oid")
 	flag.Parse()
+	fmt.Println("orgID", *orgID)
 	if tokenPtr == nil {
 		panic("need token")
 	}
@@ -110,7 +112,7 @@ func main() {
 	mapper := intergrate_academic_profile.NewMapper(&entity.Operator{
 		Token:  token,
 		UserID: "14494c07-0d4f-5141-9db2-15799993f448",
-		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6",
+		OrgID:  *orgID,
 	})
 
 	wg.Add(len(outcomes))

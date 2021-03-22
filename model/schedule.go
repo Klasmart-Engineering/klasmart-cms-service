@@ -872,6 +872,10 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		schedule.UpdatedAt = time.Now().Unix()
 		schedule.DeletedID = ""
 		schedule.DeleteAt = 0
+		schedule.IsHomeFun = viewData.IsHomeFun
+		if viewData.ClassType != entity.ScheduleClassTypeHomework {
+			schedule.IsHomeFun = false
+		}
 		// attachment
 		b, err := json.Marshal(viewData.Attachment)
 		if err != nil {
@@ -1144,6 +1148,7 @@ func (s *scheduleModel) Query(ctx context.Context, op *entity.Operator, conditio
 			ClassID:      item.ClassID,
 			DueAt:        item.DueAt,
 			IsHidden:     item.IsHidden,
+			IsHomeFun:    item.IsHomeFun,
 		}
 		temp.Status = temp.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 			EndAt:     temp.EndAt,
