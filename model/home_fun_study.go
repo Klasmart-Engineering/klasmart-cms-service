@@ -28,7 +28,10 @@ func GetHomeFunStudyModel() IHomeFunStudyModel {
 	return homeFunStudyModelInstance
 }
 
-var ErrHomeFunStudyHasCompleted = errors.New("home fun study has completed")
+var (
+	ErrHomeFunStudyHasCompleted   = errors.New("home fun study has completed")
+	ErrHomeFunStudyHasNewFeedback = errors.New("home fun study has new feedback")
+)
 
 type IHomeFunStudyModel interface {
 	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
@@ -424,7 +427,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 			log.Any("args", args),
 			log.String("id", args.ID),
 		)
-		if err == sql.ErrNoRows {
+		if err == dbo.ErrRecordNotFound {
 			return constant.ErrRecordNotFound
 		}
 		return err
@@ -439,15 +442,48 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 		return err
 	}
 	if study.Status == entity.AssessmentStatusComplete {
+		log.Error(ctx, "Assess: study has completed",
+			log.Any("operator", operator),
+			log.Any("args", args),
+		)
 		return ErrHomeFunStudyHasCompleted
 	}
-	if args.Action == entity.UpdateHomeFunStudyActionComplete {
-		study.Status = entity.AssessmentStatusComplete
+
+	newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, &da.ScheduleFeedbackCondition{
+		ScheduleID: sql.NullString{
+			String: study.ScheduleID,
+			Valid:  true,
+		},
+		UserID: sql.NullString{
+			String: study.StudentID,
+			Valid:  true,
+		},
+	})
+	if err != nil {
+		log.Error(ctx, "Assess: GetScheduleFeedbackModel().GetNewest: get newest feedback failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("args", args),
+			log.Any("study", study),
+		)
+		return err
 	}
+	if study.AssessFeedbackID != newest.ScheduleFeedback.ID {
+		log.Error(ctx, "Assess: study has new feedback",
+			log.Any("operator", operator),
+			log.Any("args", args),
+			log.Any("study", study),
+		)
+		return ErrHomeFunStudyHasNewFeedback
+	}
+
 	study.AssessFeedbackID = args.AssessFeedbackID
 	study.AssessScore = args.AssessScore
 	study.AssessComment = args.AssessComment
-	study.CompleteAt = time.Now().Unix()
+	if args.Action == entity.UpdateHomeFunStudyActionComplete {
+		study.Status = entity.AssessmentStatusComplete
+		study.CompleteAt = time.Now().Unix()
+	}
 	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
 			log.Err(err),

@@ -152,6 +152,8 @@ func (s *Server) assessHomeFunStudy(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case constant.ErrRecordNotFound, sql.ErrNoRows:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrHomeFunStudyHasNewFeedback:
+		c.JSON(http.StatusInternalServerError, L(AssessMsgNewVersion))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
