@@ -372,6 +372,9 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		IsAllDay:        s.IsAllDay,
 		IsHomeFun:       s.IsHomeFun,
 	}
+	if schedule.ClassType != ScheduleClassTypeHomework {
+		schedule.IsHomeFun = false
+	}
 	if s.IsRepeat {
 		b, err := json.Marshal(s.Repeat)
 		if err != nil {
@@ -476,6 +479,8 @@ type ScheduleBasicDataInput struct {
 	ProgramID    string
 	LessonPlanID string
 	SubjectID    string
+	TeacherIDs   []string
+	StudentIDs   []string
 }
 type ScheduleUserInput struct {
 	ID   string               `json:"id"`
@@ -645,4 +650,7 @@ func (s ScheduleShowOption) IsValid() bool {
 	default:
 		return false
 	}
+}
+
+type AMSInScheduleInput struct {
 }
