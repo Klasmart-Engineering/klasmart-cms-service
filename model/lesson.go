@@ -113,6 +113,7 @@ func (l2 *LessonData) checkTeacherManual(ctx context.Context, teacherManual stri
 	}
 	extensionPairs := strings.Split(teacherManual, ".")
 	extension := extensionPairs[len(extensionPairs) - 1]
+	extension = strings.ToLower(extension)
 	ret := isArray(extension, constant.TeacherManualExtension)
 	if !ret {
 		log.Warn(ctx, "teacher_manual is extension is not supported",
