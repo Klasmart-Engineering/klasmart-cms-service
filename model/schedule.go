@@ -1956,7 +1956,7 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		log.Error(ctx, "verifyData:GetProgramServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 		return err
 	}
-	if v.IsHomeFun {
+	if v.ClassType == entity.ScheduleClassTypeHomework && v.IsHomeFun {
 		return nil
 	}
 	// verify lessPlan type

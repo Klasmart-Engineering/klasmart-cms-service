@@ -449,6 +449,16 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 		return ErrHomeFunStudyHasCompleted
 	}
 
+	study.AssessFeedbackID = args.AssessFeedbackID
+	study.AssessScore = args.AssessScore
+	study.AssessComment = args.AssessComment
+	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
+		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
+			log.Err(err),
+			log.Any("study", study))
+		return err
+	}
+
 	newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, study.StudentID, study.ScheduleID)
 	if err != nil {
 		log.Error(ctx, "Assess: GetScheduleFeedbackModel().GetNewest: get newest feedback failed",
@@ -468,19 +478,17 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 		return ErrHomeFunStudyHasNewFeedback
 	}
 
-	study.AssessFeedbackID = args.AssessFeedbackID
-	study.AssessScore = args.AssessScore
-	study.AssessComment = args.AssessComment
 	if args.Action == entity.UpdateHomeFunStudyActionComplete {
 		study.Status = entity.AssessmentStatusComplete
 		study.CompleteAt = time.Now().Unix()
+		if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
+			log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
+				log.Err(err),
+				log.Any("study", study))
+			return err
+		}
 	}
-	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
-		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
-			log.Err(err),
-			log.Any("study", study))
-		return err
-	}
+
 	return nil
 }
 
