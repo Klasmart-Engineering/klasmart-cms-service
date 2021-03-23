@@ -449,40 +449,46 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 		return ErrHomeFunStudyHasCompleted
 	}
 
-	if study.AssessFeedbackID != "" {
-		newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, study.StudentID, study.ScheduleID)
-		if err != nil {
-			log.Error(ctx, "Assess: GetScheduleFeedbackModel().GetNewest: get newest feedback failed",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.Any("args", args),
-				log.Any("study", study),
-			)
-			return err
-		}
-		if study.AssessFeedbackID != newest.ScheduleFeedback.ID {
-			log.Error(ctx, "Assess: study has new feedback",
-				log.Any("operator", operator),
-				log.Any("args", args),
-				log.Any("study", study),
-			)
-			return ErrHomeFunStudyHasNewFeedback
-		}
-	}
-
 	study.AssessFeedbackID = args.AssessFeedbackID
 	study.AssessScore = args.AssessScore
 	study.AssessComment = args.AssessComment
-	if args.Action == entity.UpdateHomeFunStudyActionComplete {
-		study.Status = entity.AssessmentStatusComplete
-		study.CompleteAt = time.Now().Unix()
-	}
 	if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
 			log.Err(err),
 			log.Any("study", study))
 		return err
 	}
+
+	newest, err := GetScheduleFeedbackModel().GetNewest(ctx, operator, study.StudentID, study.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "Assess: GetScheduleFeedbackModel().GetNewest: get newest feedback failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("args", args),
+			log.Any("study", study),
+		)
+		return err
+	}
+	if args.AssessFeedbackID != newest.ScheduleFeedback.ID {
+		log.Error(ctx, "Assess: study has new feedback",
+			log.Any("operator", operator),
+			log.Any("args", args),
+			log.Any("study", study),
+		)
+		return ErrHomeFunStudyHasNewFeedback
+	}
+
+	if args.Action == entity.UpdateHomeFunStudyActionComplete {
+		study.Status = entity.AssessmentStatusComplete
+		study.CompleteAt = time.Now().Unix()
+		if err := da.GetHomeFunStudyDA().SaveTx(ctx, tx, &study); err != nil {
+			log.Error(ctx, "da.GetHomeFunStudyDA().SaveTx: save failed",
+				log.Err(err),
+				log.Any("study", study))
+			return err
+		}
+	}
+
 	return nil
 }
 

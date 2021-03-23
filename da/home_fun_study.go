@@ -76,9 +76,16 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 		pb.Append("status = ?", *c.Status)
 	}
 
-	if len(c.AllowTeacherIDs) > 0 {
+	if c.AllowTeacherIDs != nil {
+		if len(c.AllowTeacherIDs) == 0 {
+			return utils.FalsePredicateBuilder().Raw()
+		}
+		tmpPB := utils.NewPredicateBuilder()
 		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
-		pb.Append("json_contains(teacher_ids, json_array(?))", allowTeacherIDs)
+		for _, tid := range allowTeacherIDs {
+			tmpPB.Append("json_contains(teacher_ids, json_array(?))", tid)
+		}
+		pb.Merge(tmpPB.Or())
 	}
 
 	for _, pair := range c.AllowPairs {
