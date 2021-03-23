@@ -134,13 +134,13 @@ func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.TeacherIDs != nil {
-		c.TeacherIDs = utils.SliceDeduplication(c.TeacherIDs)
 		if len(c.TeacherIDs) == 0 {
 			return utils.FalsePredicateBuilder().Raw()
 		}
+		uqTeacherIDs := utils.SliceDeduplication(c.TeacherIDs)
 		tmpPB := utils.NewPredicateBuilder()
-		for _, teacherID := range c.TeacherIDs {
-			tmpPB.Append("json_contains(teacher_ids, json_array(?))", teacherID)
+		for _, tid := range uqTeacherIDs {
+			tmpPB.Append("json_contains(teacher_ids, json_array(?))", tid)
 		}
 		pb.Merge(tmpPB.Or())
 	}

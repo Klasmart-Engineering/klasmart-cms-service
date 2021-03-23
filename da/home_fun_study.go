@@ -77,8 +77,10 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if len(c.AllowTeacherIDs) > 0 {
-		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
-		pb.Append("json_contains(teacher_ids, json_array(?))", allowTeacherIDs)
+		uqAllowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
+		for _, tid := range uqAllowTeacherIDs {
+			pb.Append("json_contains(teacher_ids, json_array(?))", tid)
+		}
 	}
 
 	for _, pair := range c.AllowPairs {
