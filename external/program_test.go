@@ -27,7 +27,7 @@ func TestAmsProgramService_BatchGet(t *testing.T) {
 }
 
 func TestAmsProgramService_GetByOrganization(t *testing.T) {
-	programs, err := GetProgramServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	programs, err := GetProgramServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Inactive))
 	if err != nil {
 		t.Errorf("GetProgramServiceProvider().GetByOrganization() error = %v", err)
 		return

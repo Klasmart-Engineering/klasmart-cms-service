@@ -27,7 +27,7 @@ func TestAmsGradeService_BatchGet(t *testing.T) {
 }
 
 func TestAmsGradeService_GetByProgram(t *testing.T) {
-	grades, err := GetGradeServiceProvider().GetByProgram(context.TODO(), testOperator, "75004121-0c0d-486c-ba65-4c57deacb44b")
+	grades, err := GetGradeServiceProvider().GetByProgram(context.TODO(), testOperator, "75004121-0c0d-486c-ba65-4c57deacb44b", WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetGradeServiceProvider().GetByProgram() error = %v", err)
 		return
@@ -47,7 +47,7 @@ func TestAmsGradeService_GetByProgram(t *testing.T) {
 }
 
 func TestAmsGradeService_GetByOrganization(t *testing.T) {
-	grades, err := GetGradeServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	grades, err := GetGradeServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetGradeServiceProvider().GetByOrganization() error = %v", err)
 		return
