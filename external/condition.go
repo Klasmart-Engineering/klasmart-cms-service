@@ -2,11 +2,10 @@ package external
 
 import "gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 
+// APCondition academic profile query condition
 type APCondition struct {
-	OrganizationID entity.NullString
-	Status         NullAPStatus
-	System         entity.NullBool
-	ProgramID      entity.NullString
+	Status NullAPStatus
+	System entity.NullBool
 }
 
 func NewCondition(options ...APOption) *APCondition {
@@ -18,13 +17,8 @@ func NewCondition(options ...APOption) *APCondition {
 	return condition
 }
 
+// APOption academic profile query option
 type APOption func(*APCondition)
-
-func WithOrganization(organizationID string) APOption {
-	return func(c *APCondition) {
-		c.OrganizationID = entity.NullString{String: organizationID, Valid: true}
-	}
-}
 
 func WithStatus(status APStatus) APOption {
 	return func(c *APCondition) {
@@ -35,11 +29,5 @@ func WithStatus(status APStatus) APOption {
 func WithSystem(system bool) APOption {
 	return func(c *APCondition) {
 		c.System = entity.NullBool{Bool: system, Valid: true}
-	}
-}
-
-func WithProgram(programID string) APOption {
-	return func(c *APCondition) {
-		c.ProgramID = entity.NullString{String: programID, Valid: true}
 	}
 }
