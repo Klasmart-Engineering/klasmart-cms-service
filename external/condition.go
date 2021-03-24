@@ -6,6 +6,7 @@ type APCondition struct {
 	OrganizationID entity.NullString
 	Status         NullAPStatus
 	System         entity.NullBool
+	ProgramID      entity.NullString
 }
 
 func NewCondition(options ...APOption) *APCondition {
@@ -34,5 +35,11 @@ func WithStatus(status APStatus) APOption {
 func WithSystem(system bool) APOption {
 	return func(c *APCondition) {
 		c.System = entity.NullBool{Bool: system, Valid: true}
+	}
+}
+
+func WithProgram(programID string) APOption {
+	return func(c *APCondition) {
+		c.ProgramID = entity.NullString{String: programID, Valid: true}
 	}
 }

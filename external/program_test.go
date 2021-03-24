@@ -27,7 +27,7 @@ func TestAmsProgramService_BatchGet(t *testing.T) {
 }
 
 func TestAmsProgramService_GetByOrganization(t *testing.T) {
-	programs, err := GetProgramServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	programs, err := GetProgramServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Inactive))
 	if err != nil {
 		t.Errorf("GetProgramServiceProvider().GetByOrganization() error = %v", err)
 		return
@@ -41,29 +41,6 @@ func TestAmsProgramService_GetByOrganization(t *testing.T) {
 	for _, program := range programs {
 		if program == nil {
 			t.Error("GetProgramServiceProvider().GetByOrganization() get null")
-			return
-		}
-	}
-}
-
-func TestAmsProgramService_Query(t *testing.T) {
-	programs, err := GetProgramServiceProvider().Query(context.TODO(),
-		testOperator,
-		WithOrganization(testOperator.OrgID),
-		WithStatus(Inactive))
-	if err != nil {
-		t.Errorf("GetProgramServiceProvider().Query() error = %v", err)
-		return
-	}
-
-	if len(programs) == 0 {
-		t.Error("GetProgramServiceProvider().Query() get empty slice")
-		return
-	}
-
-	for _, program := range programs {
-		if program == nil {
-			t.Error("GetProgramServiceProvider().Query() get null")
 			return
 		}
 	}

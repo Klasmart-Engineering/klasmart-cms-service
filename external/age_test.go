@@ -47,7 +47,7 @@ func TestAmsAgeService_GetByProgram(t *testing.T) {
 }
 
 func TestAmsAgeService_GetByOrganization(t *testing.T) {
-	ages, err := GetAgeServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	ages, err := GetAgeServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetAgeServiceProvider().GetByOrganization() error = %v", err)
 		return
