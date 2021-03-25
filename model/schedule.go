@@ -1354,6 +1354,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 			scheduleBasic.MemberTeachers[i] = teacherMap[teacherID]
 		}
 		scheduleBasic.StudentCount = len(item.StudentIDs)
+		scheduleBasic.Members = scheduleBasic.MemberTeachers
 		scheduleBasicMap[item.ScheduleID] = scheduleBasic
 
 		da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{ScheduleID: item.ScheduleID}, scheduleBasic)
@@ -1526,6 +1527,22 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 	if err != nil {
 		return nil, err
 	}
+
+	relations, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, schedule.ID)
+	if err != nil {
+		log.Error(ctx, "get users by schedule id error", log.Err(err), log.Any("operator", operator), log.String("scheduleID", schedule.ID))
+		return nil, err
+	}
+	teacherIDs := make([]string, 0, len(relations))
+	studentIDs := make([]string, 0, len(relations))
+	for _, relationItem := range relations {
+		switch relationItem.RelationType {
+		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
+			teacherIDs = append(teacherIDs, relationItem.RelationID)
+		case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
+			studentIDs = append(studentIDs, relationItem.RelationID)
+		}
+	}
 	basicInfo, err := s.getBasicInfo(ctx, operator, []*entity.ScheduleBasicDataInput{
 		&entity.ScheduleBasicDataInput{
 			ScheduleID:   schedule.ID,
@@ -1533,6 +1550,8 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 			ProgramID:    schedule.ProgramID,
 			LessonPlanID: schedule.LessonPlanID,
 			SubjectID:    schedule.SubjectID,
+			StudentIDs:   studentIDs,
+			TeacherIDs:   teacherIDs,
 		},
 	})
 	if err != nil {
