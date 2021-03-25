@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 	"time"
@@ -93,7 +94,7 @@ func (fda *FolderDA) BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBConte
 		fidsSQLParts[i] = "?"
 		params = append(params, fids[i])
 	}
-	fidsSQL := strings.Join(fidsSQLParts, ",")
+	fidsSQL := strings.Join(fidsSQLParts, constant.StringArraySeparator)
 
 	sql := fmt.Sprintf(`UPDATE cms_folder_items SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
 	err := tx.Exec(sql, params...).Error

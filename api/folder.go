@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"net/http"
 	"strings"
 
@@ -507,7 +508,7 @@ func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	folderIDs := strings.Split(folderIDsStr, ",")
+	folderIDs := strings.Split(folderIDsStr, constant.StringArraySeparator)
 	results, err := model.GetFolderModel().GetFoldersSharedRecords(ctx, folderIDs, op)
 	switch err {
 	case nil:

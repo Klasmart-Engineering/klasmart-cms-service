@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"regexp"
 	"strings"
 	"sync"
@@ -423,7 +424,7 @@ func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBCo
 		fidsSQLParts[i] = "?"
 		params = append(params, cids[i])
 	}
-	fidsSQL := strings.Join(fidsSQLParts, ",")
+	fidsSQL := strings.Join(fidsSQLParts, constant.StringArraySeparator)
 
 	sql := fmt.Sprintf(`UPDATE cms_contents SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
 	err := tx.Exec(sql, params...).Error

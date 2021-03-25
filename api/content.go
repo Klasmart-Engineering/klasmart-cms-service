@@ -906,7 +906,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//	condition.Name = keywords
 	//}
 	if contentTypeStr != "" {
-		contentTypeList := strings.Split(contentTypeStr, ",")
+		contentTypeList := strings.Split(contentTypeStr, constant.StringArraySeparator)
 		for i := range contentTypeList {
 			contentType, err := strconv.Atoi(contentTypeList[i])
 			if err != nil {
@@ -918,14 +918,14 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		}
 	}
 	if scope != "" {
-		scopes := strings.Split(scope, ",")
+		scopes := strings.Split(scope, constant.StringArraySeparator)
 		condition.Scope = append(condition.Scope, scopes...)
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)
 	}
 	if programs != "" {
-		program := strings.Split(programs, ",")
+		program := strings.Split(programs, constant.StringArraySeparator)
 		condition.Program = program
 	}
 	if programGroup != "" {
