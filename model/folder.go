@@ -1828,7 +1828,7 @@ func (f *FolderModel) rootFolder(ctx context.Context, ownerType entity.OwnerType
 type FolderItem struct {
 	Name              string
 	Thumbnail         string
-	VisibilitySetting string
+	VisibilitySetting []string
 }
 
 func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context, tx *dbo.DBContext, contentLinks []string, fromRootFolder, distFolder *entity.FolderItem, operator *entity.Operator) error {

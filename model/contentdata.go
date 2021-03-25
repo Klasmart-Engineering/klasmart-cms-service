@@ -115,7 +115,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 		DrawActivity:  obj.DrawActivity.Bool(),
 		LessonType:    obj.LessonType,
 		Org:           obj.Org,
-		PublishScope:  obj.PublishScope,
+		//PublishScope:  visibilitySettings,
 		PublishStatus: obj.PublishStatus,
 		Version:       obj.Version,
 		CreatedAt:     obj.CreateAt,

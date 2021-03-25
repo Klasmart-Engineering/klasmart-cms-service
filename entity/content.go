@@ -204,8 +204,15 @@ func ContentLink(id string) string {
 	return string(FolderFileTypeContent) + "-" + id
 }
 
+type ContentVisibilitySetting struct {
+	ID            int      `gorm:"type:int;PRIMARY_KEY;AUTO_INCREMENT"`
+	ContentID	  string 	  `gorm:"type:char(50);NOT NULL;column:content_id"`
+	VisibilitySetting string  `gorm:"type:char(50);NOT NULL;column:visibility_setting;index"`
+
+}
+
 type Content struct {
-	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
+	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY"`
 	ContentType   ContentType `gorm:"type:int;NOT NULL; column:content_type"`
 	Name          string      `gorm:"type:varchar(255);NOT NULL;column:content_name"`
 	Program       string      `gorm:"type:varchar(1024);NOT NULL;column:program"`
@@ -233,7 +240,7 @@ type Content struct {
 	DrawActivity BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
 	LessonType   string      `gorm:"type:varchar(100);column:lesson_type"`
 
-	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
+	//PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
 
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason"`
@@ -339,7 +346,7 @@ type CreateContentRequest struct {
 
 	Outcomes []string `json:"outcomes"`
 
-	PublishScope string `json:"publish_scope"`
+	PublishScope []string `json:"publish_scope"`
 
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
@@ -364,7 +371,7 @@ func (c CreateContentRequest) Validate() error {
 	if c.Name == "" {
 		return ErrRequireContentName
 	}
-	if c.PublishScope == "" {
+	if len(c.PublishScope) == 0 {
 		return ErrRequirePublishScope
 	}
 	if c.Thumbnail != "" {
@@ -401,7 +408,7 @@ type ContentInfoWithDetails struct {
 	AgeName           []string `json:"age_name"`
 	GradeName         []string `json:"grade_name"`
 	OrgName           string   `json:"org_name"`
-	PublishScopeName  string   `json:"publish_scope_name"`
+	PublishScopeName  []string   `json:"publish_scope_name"`
 	LessonTypeName    string   `json:"lesson_type_name"`
 
 	//AuthorName string `json:"author_name"`
@@ -483,7 +490,7 @@ type ContentInfo struct {
 	Creator string `json:"creator"`
 	Org     string `json:"org"`
 
-	PublishScope  string               `json:"publish_scope"`
+	PublishScope  []string               `json:"publish_scope"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
 
 	CreatedAt int64 `json:"created_at"`

@@ -36,6 +36,12 @@ type IContentDA interface {
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
 
+	SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition)([]*entity.ContentVisibilitySetting, error)
+	CreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, co entity.ContentVisibilitySetting) error
+	GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string)([]string, error)
+	BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error
+	BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error
+
 	GetContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
 	SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error)
 	SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition ContentConditionInternal) (int, []*entity.Content, error)
@@ -140,6 +146,7 @@ type ContentConditionInternal struct {
 	Name          string   `json:"name"`
 	ContentType   []int    `json:"content_type"`
 	Scope         []string `json:"scope"`
+	VisibilitySettings []string `json:"visibility_settings"`
 	PublishStatus []string `json:"publish_status"`
 	Author        string   `json:"author"`
 	Org           string   `json:"org"`
@@ -220,6 +227,12 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 		conditions = append(conditions, condition)
 		params = append(params, s.Scope)
 	}
+	if len(s.VisibilitySettings) > 0 {
+		condition := "id IN (SELECT content_id) FROM cms_content_visibility_settings WHERE visibility_setting IN (?)"
+		conditions = append(conditions, condition)
+		params = append(params, s.VisibilitySettings)
+	}
+
 	if s.SourceType != "" {
 		condition := "source_type = ?"
 		conditions = append(conditions, condition)
@@ -339,6 +352,40 @@ func (cd *DBContentDA) CreateContent(ctx context.Context, tx *dbo.DBContext, co 
 	}
 	return co.ID, nil
 }
+
+func (cd *DBContentDA) CreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cv entity.ContentVisibilitySetting) error {
+	_, err := cd.s.InsertTx(ctx, tx, &cv)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (cd *DBContentDA) BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
+	cv := make([]entity.ContentVisibilitySetting, len(scope))
+	for i := range scope {
+		cv[i] = entity.ContentVisibilitySetting{
+			ContentID:         cid,
+			VisibilitySetting: scope[i],
+		}
+	}
+	for i := range cv {
+		_, err := cd.s.InsertTx(ctx, tx, &cv[i])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (cd *DBContentDA) BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error {
+	err := tx.Model(entity.ContentVisibilitySetting{}).Delete("content_id = ? AND visibility_setting IN (?)",
+		cid, visibilitySettings).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, co entity.Content) error {
 	co.ID = cid
 	log.Info(ctx, "Update contentdata path", log.String("id", co.ID))
@@ -349,6 +396,7 @@ func (cd *DBContentDA) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid
 
 	return nil
 }
+
 func (cd *DBContentDA) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error {
 	now := time.Now()
 	content := new(entity.Content)
@@ -391,6 +439,31 @@ func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBCont
 	}
 
 	return count, objs, nil
+}
+
+func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string)([]string, error){
+	objs := make([]*entity.ContentVisibilitySetting, 0)
+	err := cd.s.QueryTx(ctx, tx, &ContentVisibilitySettingsCondition{
+		ContentIDs:         []string{cid},
+	},&objs)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]string, len(objs))
+	for i := range objs {
+		ret[i] = objs[i].VisibilitySetting
+	}
+
+	return ret, nil
+}
+
+func (cd *DBContentDA) SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition)([]*entity.ContentVisibilitySetting, error){
+	objs := make([]*entity.ContentVisibilitySetting, 0)
+	err := cd.s.QueryTx(ctx, tx, condition,&objs)
+	if err != nil {
+		return nil, err
+	}
+	return objs, nil
 }
 func (cd *DBContentDA) SearchContent(ctx context.Context, tx *dbo.DBContext, condition ContentCondition) (int, []*entity.Content, error) {
 	objs := make([]*entity.Content, 0)
@@ -445,6 +518,45 @@ func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBCo
 	return nil
 }
 
+type ContentVisibilitySettingsCondition struct {
+	IDS           []string `json:"ids"`
+	VisibilitySettings []string `json:"visibility_settings"`
+	ContentIDs []string `json:"content_i_ds"`
+	Pager       utils.Pager
+}
+
+func (s *ContentVisibilitySettingsCondition) GetConditions() ([]string, []interface{}) {
+	conditions := make([]string, 0)
+	params := make([]interface{}, 0)
+
+	if len(s.IDS) > 0 {
+		condition := " id in (?) "
+		conditions = append(conditions, condition)
+		params = append(params, s.IDS)
+	}
+
+	if len(s.ContentIDs) > 0 {
+		condition := " content_id in (?) "
+		conditions = append(conditions, condition)
+		params = append(params, s.ContentIDs)
+	}
+
+	if len(s.VisibilitySettings) > 0 {
+		condition := " visibility_setting in (?) "
+		conditions = append(conditions, condition)
+		params = append(params, s.IDS)
+	}
+	return conditions, params
+}
+func (s *ContentVisibilitySettingsCondition) GetPager() *dbo.Pager {
+	return &dbo.Pager{
+		Page:     int(s.Pager.PageIndex),
+		PageSize: int(s.Pager.PageSize),
+	}
+}
+func (s *ContentVisibilitySettingsCondition) GetOrderBy() string {
+	return "content_id"
+}
 type TotalContentResponse struct {
 	Total int
 }

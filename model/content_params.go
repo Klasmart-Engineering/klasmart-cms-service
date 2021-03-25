@@ -88,7 +88,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	c.Data = data
 
 	//get publishScope&authorName
-	publishScope := c.PublishScope
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
@@ -132,7 +131,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Creator:       operator.UserID,
 		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
-		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
 		Version:       1,
 	}, nil
@@ -193,11 +191,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusDraft
 	}
-	//若已发布，不能修改publishScope
-	if content.PublishStatus == entity.ContentStatusDraft ||
-		content.PublishStatus == entity.ContentStatusRejected {
-		content.PublishScope = data.PublishScope
-	}
+
 
 	//Asset修改后直接发布
 	//if the content is assets, publish immediately after update

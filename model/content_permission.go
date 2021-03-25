@@ -23,8 +23,9 @@ var (
 
 type IContentPermissionModel interface {
 	CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error)
-	CheckPublishContentsPermission(ctx context.Context, cids []string, scope string, user *entity.Operator) (bool, error)
+	CheckPublishContentsPermission(ctx context.Context, cids []string, scope []string, user *entity.Operator) (bool, error)
 	CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
+	CheckPublishContentsPermissionBatch(ctx context.Context, cids []string, scope []string, user *entity.Operator) (bool, error)
 
 	CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
 	CheckLockContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
@@ -56,7 +57,7 @@ func (cpm *ContentPermissionModel) CheckCreateContentPermission(ctx context.Cont
 	return true, nil
 }
 
-func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Context, cids []string, scope string, user *entity.Operator) (bool, error) {
+func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Context, cids []string, scope []string, user *entity.Operator) (bool, error) {
 	contentList, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
 	if err != nil {
 		log.Warn(ctx, "get content list failed", log.Strings("ids", cids), log.Err(err))
@@ -74,10 +75,10 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 		}
 		if contentList[i].Author != user.UserID {
 			othersContents = append(othersContents, contentList[i])
-		} else if scope != "" {
+		} else if scope != nil {
 			//若作者是自己，且非republish，则查看权限
 			//if author is current user, and it is not republish content, check the permission
-			ret, err := cpm.checkCMSPermission(ctx, scope, cpm.createPermissionName(ctx, contentList[i].ContentType), user)
+			ret, err := cpm.checkCMSPermissionBatch(ctx, scope, cpm.createPermissionName(ctx, contentList[i].ContentType), user)
 			if err != nil {
 				return false, err
 			}
@@ -98,8 +99,17 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 	//check if the content is archive status
 	republishScope := make([]string, 0)
 	for i := range othersContents {
-		if scope == "" {
-			scope = othersContents[i].PublishScope
+		if len(scope) == 0 {
+			visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), othersContents[i].ID)
+			if err != nil {
+				log.Error(ctx, "GetContentVisibilitySettings failed",
+					log.Err(err),
+					log.Any("content", othersContents[i]),
+					log.String("org_id", contentList[i].Org),
+					log.String("user_org_id", user.OrgID))
+				return false, err
+			}
+			scope = visibilitySettings
 		}
 		//有republish archive权限
 		//user has republish archive permission
@@ -107,7 +117,83 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Co
 			log.Info(ctx, "republish not archive content", log.String("cid", othersContents[i].ID))
 			return false, nil
 		}
-		republishScope = append(republishScope, scope)
+		republishScope = append(republishScope, scope...)
+	}
+
+	hasPermission, err := cpm.checkCMSPermissionBatch(ctx, republishScope, []external.PermissionName{external.RepublishArchivedContent274}, user)
+	if err != nil {
+		return false, err
+	}
+	if !hasPermission {
+		log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
+		return false, nil
+	}
+	return true, nil
+}
+
+
+func (cpm *ContentPermissionModel) CheckPublishContentsPermissionBatch(ctx context.Context, cids []string, scope []string, user *entity.Operator) (bool, error) {
+	contentList, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
+	if err != nil {
+		log.Warn(ctx, "get content list failed", log.Strings("ids", cids), log.Err(err))
+		return false, err
+	}
+
+	//排除自己的content
+	othersContents := make([]*entity.Content, 0)
+	for i := range contentList {
+		if contentList[i].Org != user.OrgID {
+			//若org_id不相等，则无权限
+			//if org_id is not user's org id, no permission
+			log.Info(ctx, "publish content in other org", log.String("org_id", contentList[i].Org), log.String("user_org_id", user.OrgID))
+			return false, nil
+		}
+		if contentList[i].Author != user.UserID {
+			othersContents = append(othersContents, contentList[i])
+		} else if len(scope) != 0 {
+			//若作者是自己，且非republish，则查看权限
+			//if author is current user, and it is not republish content, check the permission
+			ret, err := cpm.checkCMSPermissionBatch(ctx, scope, cpm.createPermissionName(ctx, contentList[i].ContentType), user)
+			if err != nil {
+					return false, err
+			}
+			if !ret {
+				return false, nil
+			}
+
+		}
+	}
+
+	//若全是自己的content，则返回有权限
+	//if user is the author of all the contents, no need to check the permission, pass
+	if len(othersContents) == 0 {
+		return true, nil
+	}
+
+	//检查是否有republished权限及该content是否为archive状态
+	//check if user have republished permission to operate the content
+	//check if the content is archive status
+	republishScope := make([]string, 0)
+	for i := range othersContents {
+		if len(scope) == 0 {
+			visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), othersContents[i].ID)
+			if err != nil {
+				log.Error(ctx, "GetContentVisibilitySettings failed",
+					log.Err(err),
+					log.Any("content", othersContents[i]),
+					log.String("org_id", contentList[i].Org),
+					log.String("user_org_id", user.OrgID))
+				return false, err
+			}
+			scope = visibilitySettings
+		}
+		//有republish archive权限
+		//user has republish archive permission
+		if othersContents[i].PublishStatus != entity.ContentStatusArchive {
+			log.Info(ctx, "republish not archive content", log.String("cid", othersContents[i].ID))
+			return false, nil
+		}
+		republishScope = append(republishScope, scope...)
 	}
 
 	hasPermission, err := cpm.checkCMSPermissionBatch(ctx, republishScope, []external.PermissionName{external.RepublishArchivedContent274}, user)
@@ -222,7 +308,14 @@ func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Cont
 
 	//若被自己锁定，则查看权限
 	//if user is locked, check the permission
-	return cpm.checkCMSPermission(ctx, content.PublishScope, cpm.editPermissionName(ctx, content.ContentType), user)
+	visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
+	if err != nil {
+		log.Error(ctx, "GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", content.ID))
+		return false, err
+	}
+	return cpm.checkCMSPermissionBatch(ctx, visibilitySettings, cpm.editPermissionName(ctx, content.ContentType), user)
 }
 
 func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
@@ -259,7 +352,14 @@ func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Contex
 	}
 	//若未锁定，则查看权限
 	//if it is not locked, check the permission
-	return cpm.checkCMSPermission(ctx, content.PublishScope, cpm.editPermissionName(ctx, content.ContentType), user)
+	visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
+	if err != nil {
+		log.Error(ctx, "GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", content.ID))
+		return false, err
+	}
+	return cpm.checkCMSPermissionBatch(ctx, visibilitySettings, cpm.editPermissionName(ctx, content.ContentType), user)
 }
 
 func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
@@ -302,7 +402,14 @@ func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Cont
 			return false, nil
 		}
 
-		flag, err := cpm.checkCMSPermission(ctx, othersContents[i].PublishScope, permissions, user)
+		visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), othersContents[i].ID)
+		if err != nil {
+			log.Error(ctx, "GetContentVisibilitySettings failed",
+				log.Err(err),
+				log.String("cid", contentList[i].ID))
+			return false, err
+		}
+		flag, err := cpm.checkCMSPermissionBatch(ctx, visibilitySettings, permissions, user)
 		if err != nil {
 			return false, err
 		}
@@ -519,7 +626,14 @@ func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content 
 	}
 	log.Info(ctx, "user orgs with permission", log.Strings("orgs", orgs), log.String("permission", string(permission)), log.Any("user", op), log.Any("content", content))
 	for i := range orgs {
-		if orgs[i] == content.PublishScope {
+		visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
+		if err != nil {
+			log.Error(ctx, "GetContentVisibilitySettings failed",
+				log.Err(err),
+				log.String("cid", content.ID))
+			return false, err
+		}
+		if utils.ContainsStr(visibilitySettings, orgs[i]){
 			return true, nil
 		}
 	}

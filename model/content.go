@@ -85,8 +85,8 @@ var (
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
-	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
-	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error
+	PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error
+	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
@@ -194,7 +194,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	return nil
 }
 
-func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.preparePublishContent(ctx, tx, content, user)
 	if err != nil {
 		log.Error(ctx, "prepare publish failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
@@ -206,6 +206,20 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		log.Error(ctx, "update lesson plan failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
 		return ErrUpdateContentFailed
 	}
+
+	//If scope changed, refresh visibility settings
+	if scope != nil {
+		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, scope)
+		if err != nil {
+			log.Error(ctx, "refreshContentVisibilitySettings failed",
+				log.Err(err),
+				log.String("cid", content.ID),
+				log.Strings("scope", scope),
+				log.String("uid", user.UserID))
+			return ErrUpdateContentFailed
+		}
+	}
+
 
 	return nil
 }
@@ -352,7 +366,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
 		// use operator's org id as asset publish scope, maybe not right...
-		c.PublishScope = operator.OrgID
+		c.PublishScope = []string{operator.OrgID}
 	}
 
 	err := cm.checkContentInfo(ctx, c, true)
@@ -377,6 +391,17 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	pid, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
 	if err != nil {
 		log.Error(ctx, "can't create contentdata", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		return "", err
+	}
+
+	//Insert into visibility settings
+	err = cm.insertContentVisibilitySettings(ctx, tx, pid, c.PublishScope)
+	if err != nil{
+		log.Error(ctx, "insertContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("uid", operator.UserID),
+			log.String("pid", pid),
+			log.Any("data", c))
 		return "", err
 	}
 
@@ -437,6 +462,21 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if err != nil {
 		log.Error(ctx, "update contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
 		return err
+	}
+
+	//若已发布，不能修改publishScope
+	//If it is already published, can't update publish scope
+	if content.PublishStatus == entity.ContentStatusDraft ||
+		content.PublishStatus == entity.ContentStatusRejected {
+		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, data.PublishScope)
+		if err != nil {
+			log.Error(ctx, "refreshContentVisibilitySettings failed",
+				log.Err(err),
+				log.String("cid", cid),
+				log.String("uid", user.UserID),
+				log.Any("data", data))
+			return err
+		}
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid})
@@ -624,7 +664,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 			log.Warn(ctx, "try to publish asset", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
 			continue
 		}
-		err = cm.doPublishContent(ctx, tx, contents[i], user)
+		err = cm.doPublishContent(ctx, tx, contents[i], nil, user)
 		if err != nil {
 			log.Error(ctx, "can't publish content", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
 			return err
@@ -720,7 +760,6 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 	//check if user have copy permission
 	err := cm.CheckContentAuthorization(ctx, tx, &entity.Content{
 		ID:            content.ID,
-		PublishScope:  content.PublishScope,
 		PublishStatus: content.PublishStatus,
 		Author:        content.Author,
 		Org:           content.Org,
@@ -749,27 +788,21 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 	return id, nil
 }
 
-func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
+func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
 	}
 	if err != nil {
-		log.Error(ctx, "can't read contentdata for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "can't read contentdata for publishing", log.Err(err), log.String("cid", cid), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
 	}
 	if content.ContentType.IsAsset() {
 		return ErrInvalidContentType
 	}
 
-	//发布
-	//do publish
-	if scope != "" {
-		content.PublishScope = scope
-	}
-
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -922,14 +955,14 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 	return nil
 }
 
-func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error {
+func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
 	}
 	if err != nil {
-		log.Error(ctx, "can't read content data for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "can't read content data for publishing", log.Err(err), log.String("cid", cid), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
 	}
 	switch content.ContentType {
@@ -978,17 +1011,11 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 
-func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
+func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.validatePublishContentWithAssets(ctx, content, user)
 	if err != nil {
-		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
-	}
-
-	//修改发布状态
-	//update publish status
-	if scope != "" {
-		content.PublishScope = scope
 	}
 
 	//准备发布（1.创建assets，2.修改contentdata）
@@ -1000,7 +1027,7 @@ func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.D
 
 	//发布
 	//do publish
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -1008,15 +1035,11 @@ func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.D
 	return nil
 }
 
-func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
+func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.validatePublishContentWithAssets(ctx, content, user)
 	if err != nil {
-		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
-	}
-	//Update publish status if indicates
-	if scope != "" {
-		content.PublishScope = scope
 	}
 
 	//create content data object
@@ -1068,7 +1091,7 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		}
 	}
 	//do publish
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -1076,17 +1099,11 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 }
 
 
-func (cm *ContentModel) publishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
+func (cm *ContentModel) publishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.validatePublishContentWithAssets(ctx, content, user)
 	if err != nil {
-		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
-	}
-
-	//修改发布状态
-	//update publish status
-	if scope != "" {
-		content.PublishScope = scope
 	}
 
 	//准备发布（1.创建assets，2.修改contentdata）
@@ -1098,7 +1115,7 @@ func (cm *ContentModel) publishPlanWithAssets(ctx context.Context, tx *dbo.DBCon
 
 	//发布
 	//do publish
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -1197,7 +1214,6 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 	//check permission
 	err = cm.CheckContentAuthorization(ctx, tx, &entity.Content{
 		ID:            content.ID,
-		PublishScope:  content.PublishScope,
 		PublishStatus: content.PublishStatus,
 		Author:        content.Author,
 		Org:           content.Org,
@@ -1792,6 +1808,73 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
+func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error{
+	alreadyScopes, err := da.GetContentDA().GetContentVisibilitySettings(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx,
+			"GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("scope", scope))
+		return err
+	}
+	pendingAddScopes := cm.checkDiff(ctx, alreadyScopes, scope)
+	pendingDeleteScopes := cm.checkDiff(ctx, scope, alreadyScopes)
+
+	err = da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, pendingAddScopes)
+	if err != nil {
+		log.Error(ctx,
+			"BatchCreateContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("alreadyScopes", alreadyScopes),
+			log.Strings("scope", scope),
+			log.Strings("pendingAddScopes", pendingAddScopes))
+		return err
+	}
+	err = da.GetContentDA().BatchDeleteContentVisibilitySettings(ctx, tx, cid, pendingDeleteScopes)
+	if err != nil {
+		log.Error(ctx,
+			"BatchDeleteContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("alreadyScopes", alreadyScopes),
+			log.Strings("scope", scope),
+			log.Strings("pendingDeleteScopes", pendingDeleteScopes))
+		return err
+	}
+	return nil
+}
+
+func (cm *ContentModel) checkDiff(ctx context.Context, base []string, compare []string) []string{
+	sourceMap := make(map[string]bool)
+	ret := make([]string, 0)
+	for i := range base {
+		sourceMap[base[i]] = true
+	}
+	for i := range compare {
+		_, exist := sourceMap[compare[i]]
+		if !exist {
+			ret = append(ret, compare[i])
+		}
+	}
+	return ret
+}
+
+func (cm *ContentModel) insertContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
+	//Insert visibility settings
+	err := da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, scope)
+	if err != nil{
+		log.Error(ctx,
+			"BatchCreateContentVisibilitySettings failed",
+			log.Err(err),
+			log.Strings("scope", scope),
+			log.String("cid", cid))
+		return err
+	}
+	return nil
+}
+
 func (cm *ContentModel) getVisibleContentOutcomeByIDs(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
 	//get latest content ids
 	newCids, err := cm.GetLatestContentIDByIDList(ctx, tx, cids)
@@ -2128,6 +2211,29 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 	return nil
 }
 
+func (cm *ContentModel) buildVisibilitySettingsMap(ctx context.Context, contentList []*entity.ContentInfo)(map[string][]string, error) {
+	contentIDs := make([]string, len(contentList))
+	for i := range contentList{
+		contentIDs[i] = contentList[i].ID
+	}
+
+	visibilitySettings, err := da.GetContentDA().SearchContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), &da.ContentVisibilitySettingsCondition{
+		ContentIDs:         contentIDs,
+	})
+	if err != nil{
+		log.Error(ctx, "GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.Any("contentList", contentList))
+		return nil, err
+	}
+
+	ret := make(map[string][]string)
+	for i := range visibilitySettings {
+		ret[visibilitySettings[i].ContentID] = append(ret[visibilitySettings[i].ContentID], visibilitySettings[i].VisibilitySetting)
+	}
+	return ret, nil
+}
+
 func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, outComes bool, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
 	orgProvider := external.GetOrganizationServiceProvider()
@@ -2162,6 +2268,14 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	lessonTypeIDs := make([]string, 0)
 	userIDs := make([]string, 0)
 
+	visibilitySettingsMap, err := cm.buildVisibilitySettingsMap(ctx, contentList)
+	if err != nil{
+		log.Error(ctx, "buildVisibilitySettingsMap failed",
+			log.Err(err),
+			log.Any("contentList", contentList))
+		return nil, err
+	}
+
 	for i := range contentList {
 		programIDs = append(programIDs, contentList[i].Program)
 		subjectIDs = append(subjectIDs, contentList[i].Subject...)
@@ -2170,7 +2284,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		ageIDs = append(ageIDs, contentList[i].Age...)
 		gradeIDs = append(gradeIDs, contentList[i].Grade...)
 
-		scopeIDs = append(scopeIDs, contentList[i].PublishScope)
+		scopeIDs = append(scopeIDs, visibilitySettingsMap[contentList[i].ID]...)
 		lessonTypeIDs = append(lessonTypeIDs, contentList[i].LessonType)
 		userIDs = append(userIDs, contentList[i].Author)
 		userIDs = append(userIDs, contentList[i].Creator)
@@ -2322,6 +2436,10 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
 		}
+		publishScopeNames := make([]string, len(contentList[i].PublishScope))
+		for i := range contentList[i].PublishScope {
+			publishScopeNames[i] = publishScopeNameMap[contentList[i].PublishScope[i]]
+		}
 
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
@@ -2334,7 +2452,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			AgeName:           ageNames,
 			GradeName:         gradeNames,
 			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
-			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
+			PublishScopeName:  publishScopeNames,
 			OrgName:           orgName,
 			//AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:     userNameMap[contentList[i].Creator],
