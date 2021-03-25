@@ -125,10 +125,10 @@ CREATE TABLE `learning_outcomes` (
     KEY `index_publish_status` (`publish_status`),
     KEY `index_source_id` (`source_id`),
     FULLTEXT INDEX `fullindex_name_description_keywords_shortcode` (
-        `name`,
-        `keywords`,
-        `description`,
-        `shortcode`
+ `name`,
+ `keywords`,
+ `description`,
+ `shortcode`
     )
 ) COMMENT 'outcomes table' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
@@ -508,3 +508,12 @@ CREATE TABLE IF NOT EXISTS `home_fun_studies` (
     KEY `home_fun_studies_complete_at` (complete_at),
     KEY `home_fun_studies_schedule_id_and_student_id` (schedule_id, student_id)
 ) COMMENT 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE `cms_content_visibility_settings` (
+ `id` int AUTO_INCREMENT,
+ `content_id` char(50) NOT NULL comment 'content id',
+ `visibility_setting` char(50) NOT NULL comment 'visibility setting',
+ PRIMARY KEY (`id`),
+ key `cms_content_visibility_settings_content_id_idx` (`content_id`),
+ key `cms_content_visibility_settings_visibility_settings_idx` (`content_id`)
+) comment 'cms content visibility settings' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

@@ -210,6 +210,9 @@ type ContentVisibilitySetting struct {
 	VisibilitySetting string  `gorm:"type:char(50);NOT NULL;column:visibility_setting;index"`
 
 }
+func (ContentVisibilitySetting) TableName() string {
+	return "cms_content_visibility_settings"
+}
 
 type Content struct {
 	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY"`
