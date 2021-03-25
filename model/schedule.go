@@ -1958,17 +1958,20 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		return nil
 	}
 	// subject
-	if v.SubjectID == "" || v.ProgramID == "" {
-		log.Info(ctx, "programID and subjectID is required", log.Any("op", operator), log.Any("input", v))
+	if v.SubjectID != "" {
+		subjectIDs := []string{v.SubjectID}
+		_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
+		if err != nil {
+			log.Error(ctx, "verifyData:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
+			return err
+		}
+	}
+
+	// program
+	if v.ProgramID == "" {
+		log.Info(ctx, "programID is required", log.Any("op", operator), log.Any("input", v))
 		return constant.ErrInvalidArgs
 	}
-	subjectIDs := []string{v.SubjectID}
-	_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
-	if err != nil {
-		log.Error(ctx, "verifyData:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
-		return err
-	}
-	// program
 	programIDs := []string{v.ProgramID}
 	_, err = external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
 	if err != nil {
