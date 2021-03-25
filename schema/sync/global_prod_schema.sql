@@ -295,6 +295,27 @@ CREATE TABLE `developments_skills` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `feedbacks_assignments`
+--
+
+DROP TABLE IF EXISTS `feedbacks_assignments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `feedbacks_assignments` (
+  `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `feedback_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'feedback_id',
+  `attachment_id` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'attachment_id',
+  `attachment_name` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'attachment_name',
+  `number` int DEFAULT '0' COMMENT 'number',
+  `create_at` bigint DEFAULT '0' COMMENT 'create_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'update_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  PRIMARY KEY (`id`),
+  KEY `idx_feedback_id` (`feedback_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='feedbacks_assignments';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `grades`
 --
 
@@ -314,6 +335,40 @@ CREATE TABLE `grades` (
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='grades';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `home_fun_studies`
+--
+
+DROP TABLE IF EXISTS `home_fun_studies`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `home_fun_studies` (
+  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'id',
+  `schedule_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule id',
+  `title` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'title',
+  `teacher_ids` json NOT NULL COMMENT 'teacher id',
+  `student_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'student id',
+  `subject_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'subject id',
+  `status` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'status (enum: in_progress, complete)',
+  `due_at` bigint NOT NULL DEFAULT '0' COMMENT 'due at',
+  `complete_at` bigint NOT NULL DEFAULT '0' COMMENT 'complete at (unix seconds)',
+  `latest_feedback_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'latest feedback id',
+  `latest_feedback_at` bigint NOT NULL DEFAULT '0' COMMENT 'latest feedback at (unix seconds)',
+  `assess_feedback_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assess feedback id',
+  `assess_score` int NOT NULL DEFAULT '0' COMMENT 'score',
+  `assess_comment` text COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'text',
+  `create_at` bigint NOT NULL DEFAULT '0' COMMENT 'create at (unix seconds)',
+  `update_at` bigint NOT NULL DEFAULT '0' COMMENT 'update at (unix seconds)',
+  `delete_at` bigint NOT NULL DEFAULT '0' COMMENT 'delete at (unix seconds)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_home_fun_studies_schedule_id_and_student_id` (`schedule_id`,`student_id`),
+  KEY `idx_home_fun_studies_schedule_id` (`schedule_id`),
+  KEY `idx_home_fun_studies_status` (`status`),
+  KEY `idx_home_fun_studies_latest_feedback_at` (`latest_feedback_at`),
+  KEY `idx_home_fun_studies_complete_at` (`complete_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='home_fun_studies';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -581,12 +636,35 @@ CREATE TABLE `schedules` (
   `created_at` bigint DEFAULT '0' COMMENT 'created_at',
   `updated_at` bigint DEFAULT '0' COMMENT 'updated_at',
   `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  `is_hidden` tinyint(1) DEFAULT '0' COMMENT 'is hidden',
+  `is_home_fun` tinyint(1) DEFAULT '0' COMMENT 'is home fun',
   PRIMARY KEY (`id`),
   KEY `schedules_org_id` (`org_id`),
   KEY `schedules_start_at` (`start_at`),
   KEY `schedules_end_at` (`end_at`),
   KEY `schedules_deleted_at` (`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='schedules';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `schedules_feedbacks`
+--
+
+DROP TABLE IF EXISTS `schedules_feedbacks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `schedules_feedbacks` (
+  `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `schedule_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
+  `user_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'user_id',
+  `comment` text COLLATE utf8mb4_unicode_ci COMMENT 'Comment',
+  `create_at` bigint DEFAULT '0' COMMENT 'create_at',
+  `update_at` bigint DEFAULT '0' COMMENT 'update_at',
+  `delete_at` bigint DEFAULT '0' COMMENT 'delete_at',
+  PRIMARY KEY (`id`),
+  KEY `idx_schedule_id` (`schedule_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='schedules_feedbacks';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -699,4 +777,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-24 17:00:33
+-- Dump completed on 2021-03-25 17:00:34
