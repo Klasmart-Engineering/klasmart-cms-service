@@ -3,19 +3,66 @@ package model
 import (
 	"context"
 	"database/sql"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"sync"
 )
 
 type IScheduleRelationModel interface {
 	Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]*entity.ScheduleRelation, error)
+	IsTeacher(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error)
 	GetRelationTypeByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (entity.ScheduleRoleType, error)
 	GetTeacherIDs(ctx context.Context, op *entity.Operator, scheduleID string) ([]string, error)
 	GetClassRosterID(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
+	GetUsersByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleRelation, error)
 }
 type scheduleRelationModel struct {
+}
+
+func (s *scheduleRelationModel) GetUsersByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleRelation, error) {
+	var scheduleRelations []*entity.ScheduleRelation
+	relationCondition := da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{
+				string(entity.ScheduleRelationTypeParticipantTeacher),
+				string(entity.ScheduleRelationTypeParticipantStudent),
+				string(entity.ScheduleRelationTypeClassRosterTeacher),
+				string(entity.ScheduleRelationTypeClassRosterStudent),
+			},
+			Valid: true,
+		},
+	}
+	err := da.GetScheduleRelationDA().Query(ctx, relationCondition, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "get users relation error", log.Err(err), log.Any("relationCondition", relationCondition))
+		return nil, err
+	}
+	return scheduleRelations, nil
+}
+
+func (s *scheduleRelationModel) IsTeacher(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error) {
+	condition := &da.ScheduleRelationCondition{
+		RelationID: sql.NullString{
+			String: op.UserID,
+			Valid:  true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{string(entity.ScheduleRelationTypeClassRosterTeacher), string(entity.ScheduleRelationTypeParticipantTeacher)},
+			Valid:   true,
+		},
+	}
+	count, err := da.GetScheduleRelationDA().Count(ctx, condition, &entity.ScheduleRelation{})
+	if err != nil {
+		log.Error(ctx, "get relation count error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (s *scheduleRelationModel) GetClassRosterID(ctx context.Context, op *entity.Operator, scheduleID string) (string, error) {

@@ -99,7 +99,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	if schedule.ClassType == entity.ScheduleClassTypeTask {
+	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
 		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
@@ -244,12 +244,12 @@ func (s *liveTokenModel) isTeacherByScheduleID(ctx context.Context, op *entity.O
 		log.Info(ctx, "has no teacher permission", log.Err(err), log.Any("op", op))
 		return false, nil
 	}
-	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, op, scheduleID)
+	isTeacher, err := GetScheduleRelationModel().IsTeacher(ctx, op, scheduleID)
 	if err != nil {
 		log.Error(ctx, "GetScheduleRelationModel.IsTeacher error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
 		return false, err
 	}
-	return roleType == entity.ScheduleRoleTypeTeacher, nil
+	return isTeacher, nil
 }
 
 func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {

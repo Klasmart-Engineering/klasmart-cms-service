@@ -20,7 +20,7 @@ type ResourceUploaderModel struct {
 
 func (r *ResourceUploaderModel) GetResourceUploadPath(ctx context.Context, partition string, extension string) (string, string, error) {
 	fileName := utils.NewID() + "." + extension
-	pat, err := storage.NewStoragePartition(partition, extension)
+	pat, err := storage.NewStoragePartition(ctx, partition, extension)
 	if err != nil{
 		log.Error(ctx, "invalid partition", log.Err(err), log.String("partition", partition), log.String("extension", extension))
 		return "", "", err
@@ -39,7 +39,13 @@ func (r *ResourceUploaderModel) GetResourcePath(ctx context.Context, resourceId 
 		log.Error(ctx, "invalid resource id", log.String("resourceId", resourceId))
 		return "", ErrInvalidResourceID
 	}
-	pat, err := storage.NewStoragePartition(parts[0], parts[1])
+	extensionPairs := strings.Split(parts[1], ".")
+	if len(extensionPairs) != 2 {
+		log.Error(ctx, "invalid extension", log.String("resourceId", resourceId))
+		return "", ErrInvalidResourceID
+	}
+
+	pat, err := storage.NewStoragePartition(ctx, parts[0], extensionPairs[1])
 	if err != nil{
 		log.Error(ctx, "invalid partition", log.Err(err), log.String("resourceId", resourceId), log.Strings("parts", parts))
 		return "", err

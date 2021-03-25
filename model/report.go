@@ -2,10 +2,11 @@ package model
 
 import (
 	"context"
-	"github.com/tidwall/gjson"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/tidwall/gjson"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -300,7 +301,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	developmentals, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{})
+	developmentals, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
 	if err != nil {
 		log.Error(ctx, "get student detail report: query all developmental failed",
 			log.Err(err),
@@ -372,6 +373,7 @@ func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, 
 	{
 		var assessments []*entity.Assessment
 		if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentsCondition{
+			OrgID:      &operator.OrgID,
 			TeacherIDs: []string{teacherID},
 		}, &assessments); err != nil {
 			log.Error(ctx, "get teacher report: query failed",
@@ -418,7 +420,7 @@ func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, 
 	}
 	developmentalID2NameMap := map[string]string{}
 	{
-		developmentalList, err := GetDevelopmentalModel().Query(ctx, &da.DevelopmentalCondition{})
+		developmentalList, err := external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
 		if err != nil {
 			log.Error(ctx, "get teacher report: query all developmental failed",
 				log.Err(err),

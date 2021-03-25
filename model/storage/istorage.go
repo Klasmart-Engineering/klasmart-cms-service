@@ -5,11 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"io"
 	"mime/multipart"
 	"os"
+	"strings"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -42,17 +44,26 @@ func (s StoragePartition) SizeLimit() int64 {
 	return 0
 }
 
-func NewStoragePartition(partition, extension string) (StoragePartition, error) {
+func NewStoragePartition(ctx context.Context, partition, extension string) (StoragePartition, error) {
+	extension = strings.ToLower(extension)
 	switch partition {
 	case string(AssetStoragePartition):
 		ret := utils.CheckInStringArray(extension, constant.MaterialsExtension)
 		if !ret {
+			log.Warn(ctx, "Check partition extension failed",
+				log.String("extension", extension),
+				log.String("partition", partition),
+				log.Strings("expected", constant.MaterialsExtension))
 			return "", ErrInvalidExtensionInPartitionFile
 		}
 		return AssetStoragePartition, nil
 	case string(ThumbnailStoragePartition):
 		ret := utils.CheckInStringArray(extension, constant.AssetsImageExtension)
 		if !ret {
+			log.Warn(ctx, "Check partition extension failed",
+				log.String("extension", extension),
+				log.String("partition", partition),
+				log.Strings("expected", constant.AssetsImageExtension))
 			return "", ErrInvalidExtensionInPartitionFile
 		}
 		return ThumbnailStoragePartition, nil
@@ -61,10 +72,17 @@ func NewStoragePartition(partition, extension string) (StoragePartition, error) 
 	case string(TeacherManualStoragePartition):
 		ret := utils.CheckInStringArray(extension, constant.TeacherManualExtension)
 		if !ret {
+			log.Warn(ctx, "Check partition extension failed",
+				log.String("extension", extension),
+				log.String("partition", partition),
+				log.Strings("expected", constant.TeacherManualExtension))
 			return "", ErrInvalidExtensionInPartitionFile
 		}
 		return TeacherManualStoragePartition, nil
 	}
+	log.Warn(ctx, "Invalid upload partition",
+		log.String("extension", extension),
+		log.String("partition", partition))
 	return "", ErrInvalidUploadPartition
 }
 

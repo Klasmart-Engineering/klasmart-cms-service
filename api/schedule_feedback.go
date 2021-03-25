@@ -41,6 +41,10 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrOnlyStudentCanSubmitFeedback:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrHomeFunStudyHasCompleted:
+		c.JSON(http.StatusBadRequest, L(ScheduleFeedbackCompleted))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -56,7 +60,7 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 // @Tags scheduleFeedback
 // @Success 200 {array} entity.ScheduleFeedbackView
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedule_feedbacks [get]
+// @Router /schedules_feedbacks [get]
 func (s *Server) queryFeedback(c *gin.Context) {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()

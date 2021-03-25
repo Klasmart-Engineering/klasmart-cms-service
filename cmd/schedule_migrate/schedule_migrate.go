@@ -1,9 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
+	"flag"
 	"fmt"
+	"log"
+	"os"
+	"time"
+
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -12,9 +18,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"log"
-	"strings"
-	"time"
 )
 
 func main() {
@@ -31,24 +34,22 @@ func main() {
 	operator := &entity.Operator{
 		Token: "test",
 	}
-	for strings.TrimSpace(cfg.DBConfig.ConnectionString) == "" ||
-		strings.TrimSpace(cfg.AMS.EndPoint) == "" ||
-		strings.TrimSpace(operator.Token) == "" {
-		if strings.TrimSpace(cfg.DBConfig.ConnectionString) == "" {
-			fmt.Println("Please enter mysql dsn: ")
-			fmt.Scanln(&cfg.DBConfig.ConnectionString)
-		}
-		if strings.TrimSpace(cfg.AMS.EndPoint) == "" {
-			fmt.Println("Please enter ams endPoint: ")
-			fmt.Scanln(&cfg.AMS.EndPoint)
-		}
-		if strings.TrimSpace(operator.Token) == "" {
-			fmt.Println("Please enter login operator token: ")
-			fmt.Scanln(&operator.Token)
-		}
-	}
-	config.Set(cfg)
 
+	flag.StringVar(&cfg.DBConfig.ConnectionString, "dsn", "", `db connection string,required`)
+	flag.StringVar(&cfg.AMS.EndPoint, "ams", "", "AMS EndPoint,required")
+	flag.Parse()
+
+	if cfg.DBConfig.ConnectionString == "" || cfg.AMS.EndPoint == "" {
+		fmt.Println("Please enter params, --help")
+		return
+	}
+	fmt.Println("dsn:", cfg.DBConfig.ConnectionString)
+	fmt.Println("ams:", cfg.AMS.EndPoint)
+	fmt.Println("Enter to continue....")
+	inputReader := bufio.NewReader(os.Stdin)
+	inputReader.ReadString('\n')
+
+	config.Set(cfg)
 	option := dbo.WithConnectionString(cfg.DBConfig.ConnectionString)
 	newDBO, err := dbo.NewWithConfig(option)
 	if err != nil {

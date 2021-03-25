@@ -1,6 +1,16 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"database/sql"
+	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"net/http"
+)
 
 // @Summary list home fun studies
 // @Description list home fun studies
@@ -19,7 +29,38 @@ import "github.com/gin-gonic/gin"
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /home_fun_studies [get]
 func (s *Server) listHomeFunStudies(c *gin.Context) {
-	panic("not implemented")
+	ctx := c.Request.Context()
+
+	args := entity.ListHomeFunStudiesArgs{}
+
+	if status := entity.AssessmentStatus(c.Query("status")); status.Valid() {
+		args.Status = &status
+	}
+
+	args.Query = c.Query("query")
+
+	if orderBy := entity.ListHomeFunStudiesOrderBy(c.Query("order_by")); orderBy.Valid() {
+		args.OrderBy = &orderBy
+	}
+
+	pager := utils.GetDboPager(c.Query("page"), c.Query("page_size"))
+	args.Page, args.PageSize = pager.Page, pager.PageSize
+
+	result, err := model.GetHomeFunStudyModel().List(ctx, s.getOperator(c), args)
+	if err != nil {
+		log.Error(ctx, "listHomeFunStudies: model.GetHomeFunStudyModel().List",
+			log.Err(err),
+			log.Any("args", args),
+		)
+	}
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
 
 // @Summary get home fun study
@@ -29,14 +70,39 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "home fun study id"
-// @Success 200 {object} entity.ListHomeFunStudiesResult
+// @Success 200 {object} entity.GetHomeFunStudyResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /home_fun_studies/{id} [get]
 func (s *Server) getHomeFunStudy(c *gin.Context) {
-	panic("not implemented")
+	ctx := c.Request.Context()
+
+	id := c.Param("id")
+	if id == "" {
+		log.Info(ctx, "getHomeFunStudy: require id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetHomeFunStudyModel().Get(ctx, s.getOperator(c), id)
+	if err != nil {
+		log.Info(ctx, "model.GetHomeFunStudyModel().Get: get failed",
+			log.Err(err),
+			log.String("id", id),
+		)
+	}
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrRecordNotFound, sql.ErrNoRows:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
 
 // @Summary assess home fun study
@@ -46,12 +112,49 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "home fun study id"
-// @Param assess_home_fun_study_args body entity.AssessHomeFunStudyArgs true "assess home fun study args"
+// @Param assess_home_fun_study_args body entity.AssessHomeFunStudyArgs true "assess home fun study args, body id don't need"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /home_fun_studies/{id}/assess [put]
 func (s *Server) assessHomeFunStudy(c *gin.Context) {
-	panic("not implemented")
+	ctx := c.Request.Context()
+
+	args := entity.AssessHomeFunStudyArgs{}
+	if err := c.ShouldBind(&args); err != nil {
+		log.Error(ctx, "assessHomeFunStudy: c.ShouldBind: bind failed",
+			log.Err(err),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if id := c.Param("id"); id == "" {
+		log.Error(ctx, "assessHomeFunStudy: require id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	} else {
+		args.ID = id
+	}
+
+	err := model.GetHomeFunStudyModel().Assess(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	if err != nil {
+		log.Info(ctx, "assessHomeFunStudy: model.GetHomeFunStudyModel().Assess: assess failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+	}
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrRecordNotFound, sql.ErrNoRows:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrHomeFunStudyHasNewFeedback:
+		c.JSON(http.StatusInternalServerError, L(AssessMsgNewVersion))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }

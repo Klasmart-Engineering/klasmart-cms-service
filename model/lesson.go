@@ -23,8 +23,7 @@ type LessonData struct {
 	TeacherManual     string              `json:"teacher_manual"`
 	TeacherManualName string              `json:"teacher_manual_name"`
 
-	TeacherManualBatch []string `json:"teacher_manual_batch"`
-	TeacherManualBatchNames []string `json:"teacher_manual_batch_names"`
+	TeacherManualBatch []*entity.TeacherManualFile `json:"teacher_manual_batch"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -74,9 +73,11 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 	}
 }
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
-	h.TeacherManualBatch = t.TeacherManual
-	h.TeacherManualBatchNames = t.TeacherManualName
+	h.TeacherManualBatch = t.TeacherManualBatch
 	h.Material = nil
+	//clear old data format
+	h.TeacherManual = ""
+	h.TeacherManualName = ""
 	return nil
 }
 func (l *LessonData) SubContentIDs(ctx context.Context) []string {
@@ -112,6 +113,7 @@ func (l2 *LessonData) checkTeacherManual(ctx context.Context, teacherManual stri
 	}
 	extensionPairs := strings.Split(teacherManual, ".")
 	extension := extensionPairs[len(extensionPairs) - 1]
+	extension = strings.ToLower(extension)
 	ret := isArray(extension, constant.TeacherManualExtension)
 	if !ret {
 		log.Warn(ctx, "teacher_manual is extension is not supported",
@@ -132,9 +134,8 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 		if l.TeacherManualName == "" {
 			log.Warn(ctx, "teacher_manual name is nil",
 				log.String("TeacherManual", l.TeacherManual),
-				log.String("TeacherManualName", l.TeacherManualName),
-				log.Strings("TeacherManualBatch", l.TeacherManualBatch),
-				log.Strings("TeacherManualBatchNames", l.TeacherManualBatchNames))
+				log.String("Name", l.TeacherManualName),
+				log.Any("TeacherManualBatch", l.TeacherManualBatch))
 			return ErrTeacherManualNameNil
 		}
 		err := l.checkTeacherManual(ctx, l.TeacherManual)
@@ -142,16 +143,8 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 			return err
 		}
 	}
-	if(len(l.TeacherManualBatch) != len(l.TeacherManualBatchNames)) {
-		log.Warn(ctx, "teacher_manual batch name is nil",
-			log.String("TeacherManual", l.TeacherManual),
-			log.String("TeacherManualName", l.TeacherManualName),
-			log.Strings("TeacherManualBatch", l.TeacherManualBatch),
-			log.Strings("TeacherManualBatchNames", l.TeacherManualBatchNames))
-		return ErrTeacherManualBatchNameNil
-	}
 	for i := range l.TeacherManualBatch {
-		err := l.checkTeacherManual(ctx, l.TeacherManualBatchNames[i])
+		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].ID)
 		if err != nil{
 			return err
 		}
