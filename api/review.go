@@ -100,7 +100,7 @@ func (s *Server) approve(c *gin.Context) {
 			return
 		}
 
-		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
+		hasPermission, err = external.GetPermissionServiceProvider().HasAnySchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
 		if err != nil {
 			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -174,7 +174,7 @@ func (s *Server) reject(c *gin.Context) {
 			return
 		}
 
-		hasPermission, err = external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
+		hasPermission, err = external.GetPermissionServiceProvider().HasAnySchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
 		if err != nil {
 			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -276,9 +276,9 @@ func (s *Server) checkApproveAuthByCIDs(ctx context.Context, cids []string, perm
 	}
 
 	//Collect all publish scope
-	publishScopes := make([]string, len(contentList))
+	var publishScopes []string
 	for i := range contentList {
-		publishScopes[i] = contentList[i].PublishScope
+		publishScopes = append(publishScopes, contentList[i].PublishScope...)
 	}
 	//remove duplicate publish scopes
 	publishScopes = utils.SliceDeduplication(publishScopes)
