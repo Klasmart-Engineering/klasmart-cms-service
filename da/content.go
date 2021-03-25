@@ -87,6 +87,7 @@ type ContentCondition struct {
 	Name          string   `json:"name"`
 	ContentType   []int    `json:"content_type"`
 	Scope         []string `json:"scope"`
+	VisibilitySettings []string `json:"visibility_settings"`
 	PublishStatus []string `json:"publish_status"`
 	Author        string   `json:"author"`
 	Org           string   `json:"org"`

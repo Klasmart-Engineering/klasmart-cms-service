@@ -928,7 +928,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	}
 	if scope != "" {
 		scopes := strings.Split(scope, constant.StringArraySeparator)
-		condition.Scope = append(condition.Scope, scopes...)
+		condition.VisibilitySettings = append(condition.Scope, scopes...)
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)
