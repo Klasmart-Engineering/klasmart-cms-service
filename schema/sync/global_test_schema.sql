@@ -226,7 +226,10 @@ CREATE TABLE `cms_folder_items` (
   `create_at` bigint(20) NOT NULL COMMENT 'create time (unix seconds)',
   `update_at` bigint(20) NOT NULL COMMENT 'update time (unix seconds)',
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'delete time (unix seconds)',
-  PRIMARY KEY (`id`)
+  `keywords` text COLLATE utf8mb4_unicode_ci COMMENT '关键字',
+  `description` text COLLATE utf8mb4_unicode_ci COMMENT '描述',
+  PRIMARY KEY (`id`),
+  FULLTEXT KEY `folder_name_description_keywords_author_index` (`name`,`keywords`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms folder';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -798,4 +801,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-25 17:00:35
+-- Dump completed on 2021-03-26 17:00:39
