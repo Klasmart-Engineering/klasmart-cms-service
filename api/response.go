@@ -14,6 +14,7 @@ const (
 	// Assessment
 	AssessMsgOneStudent   ResponseLabel = "assess_msg_one_student"
 	AssessMsgNoPermission ResponseLabel = "assess_msg_no_permission"
+	AssessMsgNewVersion   ResponseLabel = "assess_msg_new_version"
 
 	// Report
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
@@ -44,6 +45,7 @@ const (
 	ScheduleMsgHidden                    ResponseLabel = "schedule_msg_hidden"
 	scheduleMsgHide                      ResponseLabel = "schedule_msg_hide"
 	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
+	ScheduleFeedbackCompleted            ResponseLabel = "schedule_msg_cannot_submit"
 )
 
 // L create response object with label

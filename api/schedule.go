@@ -75,6 +75,7 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		ParticipantsStudentIDs: data.ParticipantsStudentIDs,
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
+		Title:                  data.Title,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
@@ -161,6 +162,10 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case model.ErrScheduleEditMissTimeForDueAt:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgEditMissDueDate))
+	case model.ErrScheduleAlreadyHidden:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
+	case model.ErrScheduleAlreadyFeedback:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgAssignmentNew))
 	case nil:
 		c.JSON(http.StatusOK, D(IDResponse{ID: newID}))
 	default:
@@ -216,6 +221,10 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageDeleteMissTime))
 	case model.ErrScheduleEditMissTimeForDueAt:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgDeleteMissDueDate))
+	case model.ErrScheduleAlreadyHidden:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
+	case model.ErrScheduleAlreadyFeedback:
+		c.JSON(http.StatusBadRequest, L(scheduleMsgHide))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
@@ -226,6 +235,12 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 func (s *Server) verifyScheduleData(c *gin.Context, input *entity.ScheduleEditValidation) error {
 	op := s.getOperator(c)
 	ctx := c.Request.Context()
+
+	if strings.TrimSpace(input.Title) == "" {
+		log.Info(ctx, "schedule title required", log.Any("input", input))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return constant.ErrInvalidArgs
+	}
 
 	// Students and teachers must exist
 	if (len(input.ClassRosterTeacherIDs) == 0 &&
@@ -293,6 +308,7 @@ func (s *Server) addSchedule(c *gin.Context) {
 		ParticipantsStudentIDs: data.ParticipantsStudentIDs,
 		ClassID:                data.ClassID,
 		ClassType:              data.ClassType,
+		Title:                  data.Title,
 	})
 	if err != nil {
 		log.Debug(ctx, "request data verify error", log.Err(err), log.Any("operator", op), log.Any("requestData", data))
@@ -579,6 +595,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view [get]
 func (s *Server) getScheduleTimeView(c *gin.Context) {
+	op := s.getOperator(c)
 	ctx := c.Request.Context()
 	offsetStr := c.Query("time_zone_offset")
 	offset, _ := strconv.Atoi(offsetStr)
@@ -588,7 +605,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().Query(ctx, condition, loc)
+	result, err := model.GetScheduleModel().Query(ctx, op, condition, loc)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
@@ -623,6 +640,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 // @Router /schedules_time_view/dates [get]
 func (s *Server) getScheduledDates(c *gin.Context) {
 	ctx := c.Request.Context()
+	op := s.getOperator(c)
 	offsetStr := c.Query("time_zone_offset")
 	offset, _ := strconv.Atoi(offsetStr)
 	loc := utils.GetTimeLocationByOffset(offset)
@@ -632,7 +650,7 @@ func (s *Server) getScheduledDates(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, condition, loc)
+	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, op, condition, loc)
 	if err != nil {
 		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -1016,6 +1034,69 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary updateScheduleShowOption
+// @ID updateScheduleShowOption
+// @Description update schedule show option
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Param show_option query string false "hidden properties" enums(hidden,visible)
+// @Tags schedule
+// @Success 200 {object} IDResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id}/show_option [put]
+func (s *Server) updateScheduleShowOption(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	id := c.Param("id")
+	option := c.Query("show_option")
+	id, err := model.GetScheduleModel().UpdateScheduleShowOption(ctx, op, id, entity.ScheduleShowOption(option))
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, IDResponse{ID: id})
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary getScheduleNewestFeedbackByOperator
+// @ID getScheduleNewestFeedbackByOperator
+// @Description get schedule newest feedback by operator
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleFeedbackView
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules/{schedule_id}/operator/newest_feedback [get]
+func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+	scheduleID := c.Param("id")
+
+	result, err := model.GetScheduleFeedbackModel().GetNewest(ctx, op, op.UserID, scheduleID)
+
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case model.ErrFeedbackNotGenerateAssessment:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

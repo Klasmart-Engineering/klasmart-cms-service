@@ -31,7 +31,8 @@ func NewMapper(operator *entity.Operator) Mapper {
 			"98988158-a2cd-47d1-b199-5afa74639b80": true, // International Sales Team NEW
 			"740ec808-bd56-46c6-8bcb-babbe1666dc4": true, // Badanamu KR
 			"f5b80992-9b4a-4f05-8f6e-27090569b75a": true, // KidsLoop Indonesia
-			"af405e51-b65a-49fe-ab5f-2cd9dd435aee": true, // KidsloopVN
+			"9d42af2a-d943-4bb7-84d8-9e2e28b0e290": true, // Kidsloop VN
+			"2829208e-d701-441d-83c1-d0decde73fc0": true, // Badanamu HQ UK
 		},
 	}
 

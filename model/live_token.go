@@ -99,7 +99,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	if schedule.ClassType == entity.ScheduleClassTypeTask {
+	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
 		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
@@ -307,6 +307,8 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
+		//case entity.FileTypeDocument:
+		//	materialItem.TypeName = entity.MaterialTypeDoc
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
 			continue

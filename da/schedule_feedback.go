@@ -3,6 +3,7 @@ package da
 import (
 	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
 
@@ -27,8 +28,9 @@ func GetScheduleFeedbackDA() IScheduleFeedbackDA {
 }
 
 type ScheduleFeedbackCondition struct {
-	ScheduleID sql.NullString
-	UserID     sql.NullString
+	ScheduleID  sql.NullString
+	UserID      sql.NullString
+	ScheduleIDs entity.NullStrings
 
 	OrderBy ScheduleFeedbackOrderBy
 	Pager   dbo.Pager
@@ -48,6 +50,11 @@ func (c ScheduleFeedbackCondition) GetConditions() ([]string, []interface{}) {
 	if c.ScheduleID.Valid {
 		wheres = append(wheres, "schedule_id = ?")
 		params = append(params, c.ScheduleID.String)
+	}
+
+	if c.ScheduleIDs.Valid {
+		wheres = append(wheres, "schedule_id in (?)")
+		params = append(params, c.ScheduleIDs.Strings)
 	}
 
 	if c.DeleteAt.Valid {

@@ -22,6 +22,8 @@ type LessonData struct {
 	NextNode          []*LessonData       `json:"next"`
 	TeacherManual     string              `json:"teacher_manual"`
 	TeacherManualName string              `json:"teacher_manual_name"`
+
+	TeacherManualBatch []*entity.TeacherManualFile `json:"teacher_manual_batch"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -71,9 +73,11 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 	}
 }
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
-	h.TeacherManual = t.TeacherManual
-	h.TeacherManualName = t.TeacherManualName
+	h.TeacherManualBatch = t.TeacherManualBatch
 	h.Material = nil
+	//clear old data format
+	h.TeacherManual = ""
+	h.TeacherManualName = ""
 	return nil
 }
 func (l *LessonData) SubContentIDs(ctx context.Context) []string {
@@ -93,25 +97,59 @@ func (l *LessonData) ReplaceContentIDs(ctx context.Context, IDMap map[string]str
 	})
 }
 
+func (l2 *LessonData) checkTeacherManual(ctx context.Context, teacherManual string) error {
+	teacherManualPairs := strings.Split(teacherManual, constant.TeacherManualSeparator)
+	if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
+		log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", teacherManual),
+			log.String("partition", string(storage.TeacherManualStoragePartition)))
+		return ErrInvalidTeacherManual
+	}
+
+	_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, teacherManualPairs[1])
+	if !exist {
+		log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", teacherManual),
+			log.String("partition", string(storage.TeacherManualStoragePartition)))
+		return ErrTeacherManual
+	}
+	extensionPairs := strings.Split(teacherManual, ".")
+	extension := extensionPairs[len(extensionPairs) - 1]
+	extension = strings.ToLower(extension)
+	ret := isArray(extension, constant.TeacherManualExtension)
+	if !ret {
+		log.Warn(ctx, "teacher_manual is extension is not supported",
+			log.String("TeacherManual", teacherManual),
+			log.String("extension", extension),
+			log.Strings("extensionPairs", extensionPairs),
+			log.Strings("expected", constant.TeacherManualExtension))
+		return ErrTeacherManualExtension
+	}
+	return nil
+}
+
 func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentType) error {
 	if contentType != entity.ContentTypePlan {
 		return ErrInvalidContentType
 	}
 	if l.TeacherManual != "" {
-		teacherManualPairs := strings.Split(l.TeacherManual, constant.TeacherManualSeparator)
-		if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
-			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
-				log.String("partition", string(storage.TeacherManualStoragePartition)))
-			return ErrInvalidTeacherManual
+		if l.TeacherManualName == "" {
+			log.Warn(ctx, "teacher_manual name is nil",
+				log.String("TeacherManual", l.TeacherManual),
+				log.String("Name", l.TeacherManualName),
+				log.Any("TeacherManualBatch", l.TeacherManualBatch))
+			return ErrTeacherManualNameNil
 		}
-
-		_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, teacherManualPairs[1])
-		if !exist {
-			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
-				log.String("partition", string(storage.TeacherManualStoragePartition)))
-			return ErrTeacherManual
+		err := l.checkTeacherManual(ctx, l.TeacherManual)
+		if err != nil{
+			return err
 		}
 	}
+	for i := range l.TeacherManualBatch {
+		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].ID)
+		if err != nil{
+			return err
+		}
+	}
+
 
 	//暂时不做检查
 	//检查material合法性
