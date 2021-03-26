@@ -49,9 +49,12 @@ func (s *scheduleDA) GetPrograms(ctx context.Context, tx *dbo.DBContext, conditi
 		)
 		return nil, err
 	}
-	var result = make([]string, len(scheduleList))
-	for i, item := range scheduleList {
-		result[i] = item.ProgramID
+	var result = make([]string, 0, len(scheduleList))
+	for _, item := range scheduleList {
+		if item.ProgramID == "" {
+			continue
+		}
+		result = append(result, item.ProgramID)
 	}
 	log.Debug(ctx, "ProgramIDs", log.Strings("ProgramIDs", result))
 	return result, nil
@@ -71,9 +74,12 @@ func (s *scheduleDA) GetSubjects(ctx context.Context, tx *dbo.DBContext, conditi
 		)
 		return nil, err
 	}
-	var result = make([]string, len(scheduleList))
-	for i, item := range scheduleList {
-		result[i] = item.SubjectID
+	var result = make([]string, 0, len(scheduleList))
+	for _, item := range scheduleList {
+		if item.SubjectID == "" {
+			continue
+		}
+		result = append(result, item.SubjectID)
 	}
 	log.Debug(ctx, "SubjectIDs", log.Strings("SubjectIDs", result))
 	return result, nil
@@ -93,9 +99,12 @@ func (s *scheduleDA) GetClassTypes(ctx context.Context, tx *dbo.DBContext, condi
 		)
 		return nil, err
 	}
-	var result = make([]string, len(scheduleList))
-	for i, item := range scheduleList {
-		result[i] = item.ClassType.String()
+	var result = make([]string, 0, len(scheduleList))
+	for _, item := range scheduleList {
+		if item.ClassType == "" {
+			continue
+		}
+		result = append(result, item.ClassType.String())
 	}
 	log.Debug(ctx, "class_type", log.Strings("class_type", result))
 	return result, nil
