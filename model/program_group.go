@@ -79,6 +79,8 @@ func (s programGroupModel) AllGroupNames(ctx context.Context) ([]string, error) 
 		groupNames = append(groupNames, string(programGroup.GroupName))
 	}
 
+	// add default group
+	groupNames = append(groupNames, string(entity.ProgramGroupBadaMoreFeaturedContent))
 	groupNames = utils.SliceDeduplication(groupNames)
 	sort.Strings(groupNames)
 
