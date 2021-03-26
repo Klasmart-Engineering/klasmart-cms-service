@@ -603,6 +603,8 @@ func (f *FolderModel) UpdateFolder(ctx context.Context, folderID string, d entit
 	folder.Name = d.Name
 	folder.Thumbnail = d.Thumbnail
 	folder.Editor = operator.UserID
+	folder.Description = d.Description
+	folder.Keywords = strings.Join(d.Keywords, constant.StringArraySeparator)
 	err = da.GetFolderDA().UpdateFolder(ctx, dbo.MustGetDB(ctx), folderID, folder)
 	if err != nil {
 		log.Error(ctx, "update folder item failed", log.Err(err), log.Any("folder", folder))
@@ -1562,6 +1564,8 @@ func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.
 		ParentID:  req.ParentID,
 		Editor:    operator.UserID,
 		Name:      req.Name,
+		Description: req.Description,
+		Keywords: strings.Join(req.Keywords, constant.StringArraySeparator),
 		DirPath:   path,
 		Thumbnail: req.Thumbnail,
 		Partition: req.Partition,

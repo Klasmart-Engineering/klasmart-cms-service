@@ -3,6 +3,8 @@ package entity
 import (
 	"io/ioutil"
 	"os"
+	"strings"
+	"testing"
 
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -35,6 +37,15 @@ func Setup() {
 			PublicKey:  pub,
 		},
 	})
+}
+
+func TestJoin(t *testing.T) {
+	str := []string{"abb", "bbb", "ccc"}
+	str2 := []string{"abb"}
+	str3 := []string{}
+	t.Log(strings.Join(str, ","))
+	t.Log(strings.Join(str2, ","))
+	t.Log(strings.Join(str3, ","))
 }
 
 // func TestUser_Token(t *testing.T) {

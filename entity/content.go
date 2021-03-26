@@ -258,7 +258,7 @@ func (u Content) UpdateExpress() string {
 	for i := range tags {
 		updateExpressParts = append(updateExpressParts, tags[i].JSONTag+" = "+tags[i].DynamoTag)
 	}
-	updateExpress := strings.Join(updateExpressParts, ",")
+	updateExpress := strings.Join(updateExpressParts, constant.StringArraySeparator)
 	return "set " + updateExpress
 }
 

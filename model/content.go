@@ -494,7 +494,7 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		return err
 	}
 
-	rejectReason := strings.Join(reason, ",")
+	rejectReason := strings.Join(reason, constant.StringArraySeparator)
 	content.RejectReason = rejectReason
 	content.Remark = remark
 	err = da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
@@ -1812,7 +1812,7 @@ func (cm *ContentModel) getVisibleContentOutcomeByIDs(ctx context.Context, tx *d
 		if contents[i].Outcomes == "" {
 			continue
 		}
-		outcomes := strings.Split(contents[i].Outcomes, ",")
+		outcomes := strings.Split(contents[i].Outcomes, constant.StringArraySeparator)
 		for i := range outcomes {
 			if outcomes[i] != "" {
 				ret = append(ret, outcomes[i])
@@ -1861,7 +1861,7 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 	if content.Outcomes == "" {
 		return ret, nil
 	}
-	outcomes := strings.Split(content.Outcomes, ",")
+	outcomes := strings.Split(content.Outcomes, constant.StringArraySeparator)
 	for i := range outcomes {
 		if outcomes[i] != "" {
 			ret = append(ret, outcomes[i])
@@ -1944,7 +1944,7 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 		if subContents[i].Outcomes == "" {
 			continue
 		}
-		subOutcomes := strings.Split(subContents[i].Outcomes, ",")
+		subOutcomes := strings.Split(subContents[i].Outcomes, constant.StringArraySeparator)
 		for j := range subOutcomes {
 			_, ok := identityOutComes[subOutcomes[j]]
 			if !ok {
@@ -2009,7 +2009,7 @@ func (cm *ContentModel) parseContentOutcomes(ctx context.Context, content *entit
 	if content.Outcomes == "" {
 		return nil
 	}
-	outcomes := strings.Split(content.Outcomes, ",")
+	outcomes := strings.Split(content.Outcomes, constant.StringArraySeparator)
 	ret := make([]string, 0)
 	for i := range outcomes {
 		if outcomes[i] != "" {
