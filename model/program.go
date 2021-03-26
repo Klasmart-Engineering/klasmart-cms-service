@@ -41,7 +41,7 @@ func (s programModel) GetByOrganization(ctx context.Context, operator *entity.Op
 func (s programModel) fillGroupName(ctx context.Context, programs []*external.Program) ([]*entity.Program, error) {
 	condition := &da.ProgramGroupQueryCondition{
 		ProgramIDs: entity.NullStrings{
-			Strings: make([]string, len(programs)),
+			Strings: make([]string, 0, len(programs)),
 			Valid:   true,
 		},
 	}
