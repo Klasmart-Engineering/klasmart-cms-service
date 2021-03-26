@@ -115,9 +115,10 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 		return nil, err
 	}
 
-	assessmentOutcomes, err := rm.getAssessmentOutcomes(ctx, tx, assessmentIDs)
+	checked := true
+	assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs, &checked)
 	if err != nil {
-		log.Error(ctx, "list student report: get assessment outcomes failed",
+		log.Error(ctx, "ListStudentsReport: da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs: get assessment outcomes failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
@@ -244,13 +245,15 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	assessmentOutcomes, err := rm.getAssessmentOutcomes(ctx, tx, assessmentIDs)
+	checked := true
+	assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs, &checked)
 	if err != nil {
-		log.Error(ctx, "get student detail report: get assessment outcomes failed",
+		log.Error(ctx, "GetStudentDetailReport: da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs: get assessment outcomes failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
 			log.Strings("assessment_ids", assessmentIDs),
+			log.Bool("checked", checked),
 		)
 		return nil, err
 	}
@@ -389,19 +392,22 @@ func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, 
 	}
 	var outcomes []*entity.Outcome
 	{
-		assessmentOutcomes, err := rm.getAssessmentOutcomes(ctx, tx, assessmentIDs)
+		checked := true
+		assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs, &checked)
 		if err != nil {
-			log.Error(ctx, "get teacher report: batch get failed by assessment ids",
+			log.Error(ctx, "GetTeacherReport: da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs: get assessment outcomes failed",
 				log.Err(err),
 				log.Any("operator", operator),
-				log.String("teacher_id", teacherID),
+				log.Strings("assessment_ids", assessmentIDs),
+				log.Bool("checked", checked),
 			)
 			return nil, err
 		}
+
 		outcomeIDs := rm.getOutcomeIDs(assessmentOutcomes)
 		oidTr, err := rm.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
 		if err != nil {
-			log.Error(ctx, "get student detail report: make latest outcome ids translator failed",
+			log.Error(ctx, "GetTeacherReport: make latest outcome ids translator failed",
 				log.Err(err),
 				log.Any("outcome_ids", outcomeIDs),
 				log.Any("operator", operator),
@@ -524,13 +530,15 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		return nil, err
 	}
 
-	assessmentOutcomes, err := rm.getAssessmentOutcomes(ctx, tx, assessmentIDs)
+	checked := true
+	assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs, &checked)
 	if err != nil {
-		log.Error(ctx, "ListStudentsPerformanceReport: call getAssessmentOutcomes failed",
+		log.Error(ctx, "ListStudentsPerformanceReport: da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs: get assessment outcomes failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
 			log.Strings("assessment_ids", assessmentIDs),
+			log.Bool("checked", checked),
 		)
 		return nil, err
 	}
@@ -681,13 +689,15 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		schedulesMap[s.ID] = s
 	}
 
-	assessmentOutcomes, err := rm.getAssessmentOutcomes(ctx, tx, assessmentIDs)
+	checked := true
+	assessmentOutcomes, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs, &checked)
 	if err != nil {
-		log.Error(ctx, "GetStudentPerformanceReport: call getAssessmentOutcomes failed",
+		log.Error(ctx, "GetStudentPerformanceReport: da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs: get assessment outcomes failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("req", req),
 			log.Strings("assessment_ids", assessmentIDs),
+			log.Bool("checked", checked),
 		)
 		return nil, err
 	}
@@ -748,7 +758,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 	attendanceIDExistsMap := rm.getAttendanceIDsExistMap(assessmentAttendances)
 	achievedAssessmentID2OutcomeIDsMap := rm.getAchievedAssessmentID2OutcomeIDsMap(student.ID, assessmentOutcomes, outcomeAttendances)
 	skipAssessmentID2OutcomeIDsMap := rm.getSkipAssessmentID2OutcomeIDsMap(student.ID, assessmentAttendances, assessmentOutcomes)
-	notAchievedAssessmentID2OutcomeIDsMap := rm.getNotAchievedAssessmentID2OutcomeIDsMap(student.ID, assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap)
+	notAchievedAssessmentID2OutcomeIDsMap := rm.getNotAchievedAssessmentID2OutcomeIDsMap(assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap)
 	log.Debug(ctx, "GetStudentPerformanceReport: print all map",
 		log.Any("assessmentID2OutcomeIDsMap", assessmentID2OutcomeIDsMap),
 		log.Any("attendance_id_exists_map", attendanceIDExistsMap),
@@ -889,17 +899,17 @@ func (rm *reportModel) getCheckedAssessmentAttendance(ctx context.Context, tx *d
 	return result, nil
 }
 
-func (rm *reportModel) getAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
-	result, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
-	if err != nil {
-		log.Error(ctx, "getAssessmentOutcomes: batch get assessment outcomes failed",
-			log.Err(err),
-			log.Any("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-	return result, nil
-}
+//func (rm *reportModel) getAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
+//	result, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
+//	if err != nil {
+//		log.Error(ctx, "getAssessmentOutcomes: batch get assessment outcomes failed",
+//			log.Err(err),
+//			log.Any("assessment_ids", assessmentIDs),
+//		)
+//		return nil, err
+//	}
+//	return result, nil
+//}
 
 func (rm *reportModel) getOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error) {
 	result, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
@@ -1088,7 +1098,7 @@ func (rm *reportModel) getSkipAssessmentID2OutcomeIDsMap(attendanceID string, as
 	return result
 }
 
-func (rm *reportModel) getNotAchievedAssessmentID2OutcomeIDsMap(attendanceID string, assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap map[string][]string) map[string][]string {
+func (rm *reportModel) getNotAchievedAssessmentID2OutcomeIDsMap(assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap map[string][]string) map[string][]string {
 	result := map[string][]string{}
 	for assessmentID, outcomeIDs := range assessmentID2OutcomeIDsMap {
 		var excludeOutcomeIDs []string

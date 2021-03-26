@@ -113,11 +113,13 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		}
 
 		for _, item := range assessmentAttendances {
-			result.Attendances = append(result.Attendances, &entity.AssessmentAttendanceView{
-				ID:      item.AttendanceID,
-				Name:    studentMap[item.AttendanceID],
-				Checked: item.Checked,
-			})
+			if item.Role == entity.AssessmentAttendanceRoleStudent {
+				result.Students = append(result.Students, &entity.AssessmentStudent{
+					ID:      item.AttendanceID,
+					Name:    studentMap[item.AttendanceID],
+					Checked: item.Checked,
+				})
+			}
 		}
 	}
 
@@ -167,41 +169,22 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		}
 	}
 
-	// fill number of outcomes and activities
-	{
-		schedule, err := GetScheduleModel().GetPlainByID(ctx, assessment.ScheduleID)
-		if err != nil {
-			log.Error(ctx, "add assessment: get schedule failed by id",
-				log.Err(err),
-				log.Any("id", id),
-				log.Any("schedule_id", assessment.ScheduleID),
-			)
-			return nil, err
-		}
-		counts, err := GetContentModel().ContentDataCount(ctx, tx, schedule.LessonPlanID)
-		if err != nil {
-			log.Error(ctx, "add assessment: get number of activities and outcomes failed",
-				log.Err(err),
-				log.Any("id", id),
-				log.Any("lesson_plan_id", schedule.LessonPlanID),
-			)
-		}
-		result.NumberOfActivities = counts.SubContentCount
-		//result.NumberOfOutcomes = counts.OutcomesCount
-	}
-
-	// fill outcome attendance maps
+	// fill outcome attendances
 	{
 		outcomeMap := map[string]*entity.Outcome{}
-		outcomeIDs, err := da.GetAssessmentOutcomeDA().GetOutcomeIDsByAssessmentID(ctx, tx, id)
+		assessmentOutcomes, err := da.GetAssessmentOutcomeDA().GetListByAssessmentID(ctx, tx, id, nil)
 		if err != nil {
-			log.Error(ctx, "get assessment detail: get outcome ids failed by assessment id",
+			log.Error(ctx, "Get: da.GetAssessmentOutcomeDA().GetListByAssessmentID: get list failed",
 				log.Err(err),
 				log.String("id", id),
 			)
 			return nil, err
 		}
-		result.NumberOfOutcomes = len(outcomeIDs)
+		outcomeIDs := make([]string, 0, len(assessmentOutcomes))
+		for _, ao := range assessmentOutcomes {
+			outcomeIDs = append(outcomeIDs, ao.OutcomeID)
+		}
+		result.NumberOfOutcomes = len(assessmentOutcomes)
 		if len(outcomeIDs) > 0 {
 			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
 			if err != nil {
@@ -228,29 +211,21 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			for _, item := range outcomeAttendanceItems {
 				outcomeAttendanceMap[item.OutcomeID] = append(outcomeAttendanceMap[item.OutcomeID], item.AttendanceID)
 			}
-			assessmentOutcomeItems, err := da.GetAssessmentOutcomeDA().BatchGetByAssessmentIDAndOutcomeIDs(ctx, tx, id, outcomeIDs)
-			if err != nil {
-				log.Error(ctx, "get assessment detail: batch get assessment outcomes failed by assessment id and outcome ids",
-					log.Err(err),
-					log.String("id", id),
-					log.Strings("outcome_ids", outcomeIDs),
-				)
-				return nil, err
-			}
 			assessmentOutcomeMap := map[string]entity.AssessmentOutcome{}
-			for _, item := range assessmentOutcomeItems {
+			for _, item := range assessmentOutcomes {
 				assessmentOutcomeMap[item.OutcomeID] = *item
 			}
 			for _, outcome := range outcomes {
-				newItem := entity.OutcomeAttendanceMapView{
+				newItem := entity.OutcomeAttendances{
 					OutcomeID:     outcome.ID,
 					OutcomeName:   outcome.Name,
 					Assumed:       outcome.Assumed,
 					AttendanceIDs: outcomeAttendanceMap[outcome.ID],
 					Skip:          assessmentOutcomeMap[outcome.ID].Skip,
 					NoneAchieved:  assessmentOutcomeMap[outcome.ID].NoneAchieved,
+					Checked:       assessmentOutcomeMap[outcome.ID].Checked,
 				}
-				result.OutcomeAttendanceMaps = append(result.OutcomeAttendanceMaps, newItem)
+				result.OutcomeAttendances = append(result.OutcomeAttendances, newItem)
 			}
 		}
 	}
@@ -672,14 +647,50 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 	}
 
 	if cmd.AttendanceIDs != nil {
+		relations, err := GetScheduleRelationModel().GetByRelationIDs(ctx, operator, cmd.AttendanceIDs)
+		if err != nil {
+			log.Error(ctx, "addTx: GetScheduleRelationModel().GetByRelationIDs: get relations failed",
+				log.Err(err),
+				log.Any("cmd", cmd),
+				log.Any("attendance_ids", cmd.AttendanceIDs),
+			)
+			return err
+		}
+		relationMap := map[string]*entity.ScheduleRelation{}
+		for _, r := range relations {
+			relationMap[r.ID] = r
+		}
+
 		var items []*entity.AssessmentAttendance
 		for _, attendanceID := range cmd.AttendanceIDs {
-			items = append(items, &entity.AssessmentAttendance{
+			relation := relationMap[attendanceID]
+			if relation == nil {
+				continue
+			}
+			newAttendance := entity.AssessmentAttendance{
 				ID:           utils.NewID(),
 				AssessmentID: newID,
 				AttendanceID: attendanceID,
 				Checked:      true,
-			})
+			}
+			switch relation.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+				items = append(items, &newAttendance)
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+				items = append(items, &newAttendance)
+			case entity.ScheduleRelationTypeParticipantStudent:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+				items = append(items, &newAttendance)
+			case entity.ScheduleRelationTypeParticipantTeacher:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+				items = append(items, &newAttendance)
+			}
 		}
 		if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
 			log.Error(ctx, "add assessment: batch insert assessment attendance map failed",
@@ -720,6 +731,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 				OutcomeID:    outcomeID,
 				Skip:         false,
 				NoneAchieved: noneAchieved,
+				Checked:      true,
 			})
 		}
 		if len(items) > 0 {
@@ -787,8 +799,8 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 		log.Error(ctx, "update assessment: invalid action", log.Any("cmd", cmd))
 		return constant.ErrInvalidArgs
 	}
-	if cmd.OutcomeAttendanceMaps != nil {
-		for _, item := range *cmd.OutcomeAttendanceMaps {
+	if cmd.OutcomeAttendances != nil {
+		for _, item := range *cmd.OutcomeAttendances {
 			if item.Skip && item.NoneAchieved {
 				log.Error(ctx, "update assessment: check skip and none achieved combination", log.Any("cmd", cmd))
 				return constant.ErrInvalidArgs
@@ -881,9 +893,9 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 				return err
 			}
 		}
-		if cmd.OutcomeAttendanceMaps != nil {
+		if cmd.OutcomeAttendances != nil {
 			var outcomeIDs []string
-			for _, item := range *cmd.OutcomeAttendanceMaps {
+			for _, item := range *cmd.OutcomeAttendances {
 				outcomeIDs = append(outcomeIDs, item.OutcomeID)
 			}
 			if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, cmd.ID, outcomeIDs); err != nil {
@@ -894,13 +906,21 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 				)
 				return err
 			}
+			if err := da.GetAssessmentOutcomeDA().UncheckByAssessmentID(ctx, tx, cmd.ID); err != nil {
+				log.Error(ctx, "Update: da.GetAssessmentOutcomeDA().UncheckByAssessmentID: uncheck assessment outcome failed by assessment id",
+					log.Err(err),
+					log.Any("cmd", cmd),
+					log.String("id", cmd.ID),
+				)
+				return err
+			}
 			var (
-				items              []*entity.OutcomeAttendance
+				attendances        []*entity.OutcomeAttendance
 				deletingOutcomeIDs []string
 			)
-			for _, item := range *cmd.OutcomeAttendanceMaps {
+			for _, item := range *cmd.OutcomeAttendances {
 				for _, attendanceID := range item.AttendanceIDs {
-					items = append(items, &entity.OutcomeAttendance{
+					attendances = append(attendances, &entity.OutcomeAttendance{
 						ID:           utils.NewID(),
 						AssessmentID: cmd.ID,
 						OutcomeID:    item.OutcomeID,
@@ -912,6 +932,7 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 					OutcomeID:    item.OutcomeID,
 					Skip:         item.Skip,
 					NoneAchieved: item.NoneAchieved,
+					Checked:      true,
 				}); err != nil {
 					log.Error(ctx, "update assessment: batch update assessment outcome failed",
 						log.Err(err),
@@ -937,10 +958,10 @@ func (a *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 					return err
 				}
 			}
-			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, items); err != nil {
+			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, attendances); err != nil {
 				log.Error(ctx, "update assessment: batch insert outcome attendance map failed",
 					log.Err(err),
-					log.Any("items", items),
+					log.Any("attendances", attendances),
 					log.Any("cmd", cmd),
 				)
 				return err

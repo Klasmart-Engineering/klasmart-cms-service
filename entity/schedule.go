@@ -500,6 +500,7 @@ type ScheduleShortInfo struct {
 }
 type SchedulePlain struct {
 	*Schedule
+	RoomID string `json:"room_id"`
 }
 
 type ScheduleBasic struct {
