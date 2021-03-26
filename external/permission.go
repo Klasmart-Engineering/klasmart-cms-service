@@ -133,6 +133,10 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator 
 }
 
 func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName) (map[PermissionName]bool, error) {
+	if len(permissions) == 0 {
+		return map[PermissionName]bool{}, nil
+	}
+
 	raw := `
 query($user_id: ID! $organization_id: ID!) {
 	user(user_id: $user_id) {

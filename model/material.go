@@ -15,7 +15,11 @@ var (
 	ErrInvalidSourceExt         = errors.New("invalid source extension")
 
 	ErrTeacherManual        = errors.New("teacher manual resource is not exist")
+	ErrTeacherManualExtension        = errors.New("teacher manual extension is not supported")
 	ErrInvalidTeacherManual = errors.New("invalid teacher manual")
+
+	ErrTeacherManualBatchNameNil        = errors.New("teacher manual batch names is null")
+	ErrTeacherManualNameNil        = errors.New("teacher manual names is null")
 )
 
 func NewMaterialData() *MaterialData {

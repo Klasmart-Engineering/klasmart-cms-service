@@ -209,7 +209,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetAssessmentModel().Detail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
+	item, err := model.GetAssessmentModel().Get(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)

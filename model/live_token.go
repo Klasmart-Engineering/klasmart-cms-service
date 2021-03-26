@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 
 	"github.com/dgrijalva/jwt-go"
@@ -92,7 +91,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	isTeacher, err := s.isTeacherByClass(ctx, op, schedule.ClassID)
+	isTeacher, err := s.isTeacherByScheduleID(ctx, op, scheduleID)
 	if err != nil {
 		log.Error(ctx, "MakeScheduleLiveToken:judge is teacher error",
 			log.Err(err),
@@ -100,7 +99,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	if schedule.ClassType == entity.ScheduleClassTypeTask {
+	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
 		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
@@ -235,48 +234,37 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 	return token, nil
 }
 
-func (s *liveTokenModel) isTeacherByClass(ctx context.Context, op *entity.Operator, classID string) (bool, error) {
-	classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, []string{classID})
+func (s *liveTokenModel) isTeacherByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error) {
+	isTeacherPermission, err := s.isTeacherByPermission(ctx, op)
 	if err != nil {
-		log.Error(ctx, "isTeacherByClass:GetTeacherServiceProvider.GetByClasses error",
-			log.Err(err),
-			log.String("classID", classID),
-			log.Any("op", op),
-		)
+		log.Error(ctx, "get permissions error", log.Err(err), log.Any("op", op))
 		return false, err
 	}
-	teachers, ok := classTeacherMap[classID]
-	if !ok {
-		log.Info(ctx, "isTeacherByClass:No teacher under the class",
-			log.String("classID", classID),
-			log.Any("op", op),
-		)
+	if !isTeacherPermission {
+		log.Info(ctx, "has no teacher permission", log.Err(err), log.Any("op", op))
 		return false, nil
 	}
-	log.Debug(ctx, "isTeacherByClass:classTeacherMap info",
-		log.String("classID", classID),
-		log.Any("op", op),
-		log.Any("classTeacherMap", classTeacherMap),
-	)
-	for _, t := range teachers {
-		if t.ID == op.UserID {
-			return true, nil
-		}
+	isTeacher, err := GetScheduleRelationModel().IsTeacher(ctx, op, scheduleID)
+	if err != nil {
+		log.Error(ctx, "GetScheduleRelationModel.IsTeacher error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
+		return false, err
 	}
-	return false, nil
+	return isTeacher, nil
 }
 
 func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.LiveClassTeacher)
+	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.LiveClassTeacher,
+		external.LiveClassStudent,
+	})
 	if err != nil {
-		log.Error(ctx, "isTeacherByPermission:GetPermissionServiceProvider.HasOrganizationPermission error",
-			log.String("permission", external.LiveClassTeacher.String()),
-			log.Any("operator", op),
-			log.Err(err),
-		)
+		log.Error(ctx, "get permissions error", log.Err(err), log.Any("op", op))
 		return false, err
 	}
-	return hasPermission, nil
+	if permissionMap[external.LiveClassTeacher] {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput) ([]*entity.LiveMaterial, error) {
@@ -319,6 +307,8 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
+		//case entity.FileTypeDocument:
+		//	materialItem.TypeName = entity.MaterialTypeDoc
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
 			continue

@@ -22,9 +22,14 @@ type ScheduleRelationType string
 const (
 	ScheduleRelationTypeOrg                ScheduleRelationType = "org"
 	ScheduleRelationTypeSchool             ScheduleRelationType = "school"
-	ScheduleRelationTypeClass              ScheduleRelationType = "class"
+	ScheduleRelationTypeClassRosterClass   ScheduleRelationType = "class_roster_class"
+	ScheduleRelationTypeParticipantClass   ScheduleRelationType = "participant_class"
 	ScheduleRelationTypeClassRosterTeacher ScheduleRelationType = "class_roster_teacher"
 	ScheduleRelationTypeClassRosterStudent ScheduleRelationType = "class_roster_student"
 	ScheduleRelationTypeParticipantTeacher ScheduleRelationType = "participant_teacher"
 	ScheduleRelationTypeParticipantStudent ScheduleRelationType = "participant_student"
 )
+
+func (s ScheduleRelationType) String() string {
+	return string(s)
+}

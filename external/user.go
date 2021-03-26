@@ -17,6 +17,7 @@ type UserServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*User, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 }
 
@@ -156,6 +157,56 @@ func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, or
 	log.Info(ctx, "query users by keyword success",
 		log.String("organizationID", organizationID),
 		log.String("keyword", keyword),
+		log.Any("users", users))
+
+	return users, nil
+}
+
+func (s AmsUserService) GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error) {
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+		  memberships{
+			user{
+			  id: user_id
+			  name: user_name
+			  given_name
+			  family_name
+			  email
+			  avatar
+			}
+		  }
+		}
+	  }`, chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", organizationID)
+
+	data := &struct {
+		Organization struct {
+			Memberships []struct {
+				User *User `json:"user"`
+			} `json:"memberships"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query users by org failed",
+			log.Err(err),
+			log.String("organizationID", organizationID))
+		return nil, err
+	}
+
+	users := make([]*User, 0, len(data.Organization.Memberships))
+	for _, member := range data.Organization.Memberships {
+		users = append(users, member.User)
+	}
+
+	log.Info(ctx, "query users by org success",
+		log.String("organizationID", organizationID),
 		log.Any("users", users))
 
 	return users, nil

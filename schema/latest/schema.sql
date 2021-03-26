@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS `schedules` (
     `version` bigint(20) DEFAULT 0 COMMENT 'version',
     `repeat_id` varchar(100) DEFAULT NULL COMMENT 'repeat_id',
     `repeat` JSON DEFAULT NULL COMMENT 'repeat',
+    `is_hidden` BOOLEAN DEFAULT FALSE COMMENT 'is_hidden',
+    `is_home_fun` BOOLEAN DEFAULT FALSE COMMENT 'is_home_fun',
     `created_id` varchar(100) DEFAULT NULL COMMENT 'created_id',
     `updated_id` varchar(100) DEFAULT NULL COMMENT 'updated_id',
     `deleted_id` varchar(100) DEFAULT NULL COMMENT 'deleted_id',
@@ -449,3 +451,55 @@ CREATE TABLE IF NOT EXISTS `programs_subjects` (
     KEY `idx_program_id` (`program_id`),
     KEY `idx_subject_id` (`subject_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT='programs_subjects';
+
+CREATE TABLE IF NOT EXISTS `schedules_feedbacks` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `schedule_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'schedule_id',
+    `user_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'user_id',
+    `comment` TEXT DEFAULT NULL COMMENT  'Comment',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'create_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'update_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_schedule_id` (`schedule_id`),
+    KEY `idx_user_id` (`user_id`)
+) COMMENT 'schedules_feedbacks' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE IF NOT EXISTS `feedbacks_assignments` (
+    `id` varchar(256) NOT NULL COMMENT  'id',
+    `feedback_id` varchar(100) NOT NULL DEFAULT "" COMMENT  'feedback_id',
+    `attachment_id` varchar(255) NOT NULL DEFAULT "" COMMENT  'attachment_id',
+    `attachment_name` varchar(255) DEFAULT NULL COMMENT  'attachment_name',
+    `number` int DEFAULT 0 COMMENT  'number',
+    `create_at` bigint(20) DEFAULT 0 COMMENT 'create_at',
+    `update_at` bigint(20) DEFAULT 0 COMMENT 'update_at',
+    `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
+    PRIMARY KEY (`id`),
+    KEY `idx_feedback_id` (`feedback_id`)
+) COMMENT 'feedbacks_assignments' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE IF NOT EXISTS `home_fun_studies` (
+    `id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'id',
+    `schedule_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'schedule id',
+    `title` VARCHAR(1024) NOT NULL DEFAULT  '' COMMENT 'title',
+    `teacher_ids` JSON NOT NULL COMMENT 'teacher id',
+    `student_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'student id',
+    `subject_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'subject id',
+    `status` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'status (enum: in_progress, complete)',
+    `due_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'due at',
+    `complete_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'complete at (unix seconds)',
+    `latest_feedback_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'latest feedback id',
+    `latest_feedback_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'latest feedback at (unix seconds)',
+    `assess_feedback_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'assess feedback id',
+    `assess_score` INT NOT NULL DEFAULT 0 COMMENT 'score',
+    `assess_comment` TEXT NOT NULL DEFAULT '' COMMENT 'text',
+    `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'create at (unix seconds)',
+    `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'update at (unix seconds)',
+    `delete_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'delete at (unix seconds)',
+    PRIMARY KEY (`id`),
+    KEY `home_fun_studies_schedule_id` (schedule_id),
+    KEY `home_fun_studies_status` (status),
+    KEY `home_fun_studies_latest_feedback_at` (latest_feedback_at),
+    KEY `home_fun_studies_complete_at` (complete_at),
+    KEY `home_fun_studies_schedule_id_and_student_id` (schedule_id, student_id)
+) COMMENT 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

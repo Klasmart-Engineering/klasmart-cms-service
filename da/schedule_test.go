@@ -14,10 +14,10 @@ func Test_GetLessonPlanIDsByCondition_Sql(t *testing.T) {
 			String: string(entity.ScheduleStatusClosed),
 			Valid:  true,
 		},
-		ClassID: sql.NullString{
-			String: "Class_1",
-			Valid:  true,
-		},
+		// ClassID: sql.NullString{
+		// 	String: "Class_1",
+		// 	Valid:  true,
+		// },
 	}
 	wheres, parameters := c.GetConditions()
 	whereSql := strings.Join(wheres, " and ")

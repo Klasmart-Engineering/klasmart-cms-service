@@ -206,6 +206,15 @@ const (
 	ScheduleClassTypeTask         ScheduleClassType = "Task"
 )
 
+func (s ScheduleClassType) Valid() bool {
+	switch s {
+	case ScheduleClassTypeOnlineClass, ScheduleClassTypeOfflineClass, ScheduleClassTypeHomework, ScheduleClassTypeTask:
+		return true
+	default:
+		return false
+	}
+}
+
 //Live (online class)
 //Class (offline class)
 //Study (homework)
@@ -244,6 +253,8 @@ type Schedule struct {
 	ScheduleVersion int64             `gorm:"column:version;type:bigint"`
 	RepeatID        string            `gorm:"column:repeat_id;type:varchar(100)"`
 	RepeatJson      string            `gorm:"column:repeat;type:json;"`
+	IsHidden        bool              `gorm:"column:is_hidden;default:false"`
+	IsHomeFun       bool              `gorm:"column:is_home_fun;default:false"`
 	CreatedID       string            `gorm:"column:created_id;type:varchar(100)"`
 	UpdatedID       string            `gorm:"column:updated_id;type:varchar(100)"`
 	DeletedID       string            `gorm:"column:deleted_id;type:varchar(100)"`
@@ -303,8 +314,8 @@ func (s Schedule) Clone() Schedule {
 }
 
 type ScheduleAddView struct {
-	Title                  string            `json:"title" binding:"required"`
-	ClassID                string            `json:"class_id" binding:"required"`
+	Title                  string            `json:"title"`
+	ClassID                string            `json:"class_id"`
 	LessonPlanID           string            `json:"lesson_plan_id"`
 	ClassRosterTeacherIDs  []string          `json:"class_roster_teacher_ids"`
 	ClassRosterStudentIDs  []string          `json:"class_roster_student_ids"`
@@ -327,6 +338,17 @@ type ScheduleAddView struct {
 	IsForce                bool              `json:"is_force"`
 	TimeZoneOffset         int               `json:"time_zone_offset"`
 	Location               *time.Location    `json:"-"`
+	IsHomeFun              bool              `json:"is_home_fun"`
+}
+
+type ScheduleEditValidation struct {
+	ClassRosterTeacherIDs  []string
+	ClassRosterStudentIDs  []string
+	ParticipantsTeacherIDs []string
+	ParticipantsStudentIDs []string
+	ClassID                string
+	ClassType              ScheduleClassType
+	Title                  string
 }
 
 func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
@@ -348,6 +370,10 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		CreatedAt:       time.Now().Unix(),
 		UpdatedAt:       time.Now().Unix(),
 		IsAllDay:        s.IsAllDay,
+		IsHomeFun:       s.IsHomeFun,
+	}
+	if schedule.ClassType != ScheduleClassTypeHomework {
+		schedule.IsHomeFun = false
 	}
 	if s.IsRepeat {
 		b, err := json.Marshal(s.Repeat)
@@ -377,16 +403,20 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID           string            `json:"id"`
-	Title        string            `json:"title"`
-	StartAt      int64             `json:"start_at"`
-	EndAt        int64             `json:"end_at"`
-	IsRepeat     bool              `json:"is_repeat"`
-	LessonPlanID string            `json:"lesson_plan_id"`
-	ClassType    ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	Status       ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ClassID      string            `json:"class_id"`
-	DueAt        int64             `json:"due_at"`
+	ID            string            `json:"id"`
+	Title         string            `json:"title"`
+	StartAt       int64             `json:"start_at"`
+	EndAt         int64             `json:"end_at"`
+	IsRepeat      bool              `json:"is_repeat"`
+	LessonPlanID  string            `json:"lesson_plan_id"`
+	ClassType     ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status        ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID       string            `json:"class_id"`
+	DueAt         int64             `json:"due_at"`
+	IsHidden      bool              `json:"is_hidden"`
+	RoleType      ScheduleRoleType  `json:"role_type"`
+	ExistFeedback bool              `json:"exist_feedback"`
+	IsHomeFun     bool              `json:"is_home_fun"`
 }
 
 type ScheduleDateView struct {
@@ -409,11 +439,52 @@ type ScheduleDetailsView struct {
 	Repeat      RepeatOptions     `json:"repeat"`
 	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ScheduleBasic
-	RealTimeStatus       ScheduleRealTimeView `json:"real_time_status"`
-	ClassRosterTeachers  []ScheduleShortInfo  `json:"class_roster_teacher"`
-	ClassRosterStudents  []ScheduleShortInfo  `json:"class_roster_student"`
-	ParticipantsTeachers []ScheduleShortInfo  `json:"participants_teacher"`
-	ParticipantsStudents []ScheduleShortInfo  `json:"participants_student"`
+	RealTimeStatus       ScheduleRealTimeView          `json:"real_time_status"`
+	ClassRosterTeachers  []*ScheduleAccessibleUserView `json:"class_roster_teachers"`
+	ClassRosterStudents  []*ScheduleAccessibleUserView `json:"class_roster_students"`
+	ParticipantsTeachers []*ScheduleAccessibleUserView `json:"participants_teachers"`
+	ParticipantsStudents []*ScheduleAccessibleUserView `json:"participants_students"`
+	IsHidden             bool                          `json:"is_hidden"`
+	IsHomeFun            bool                          `json:"is_home_fun"`
+	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback        bool                          `json:"exist_feedback"`
+}
+
+type ScheduleRoleType string
+
+const (
+	ScheduleRoleTypeStudent ScheduleRoleType = "Student"
+	ScheduleRoleTypeTeacher ScheduleRoleType = "Teacher"
+	ScheduleRoleTypeUnknown ScheduleRoleType = "Unknown"
+)
+
+type ScheduleAccessibleUserView struct {
+	ID     string               `json:"id"`
+	Name   string               `json:"name"`
+	Type   ScheduleRelationType `json:"type"`
+	Enable bool                 `json:"enable"`
+}
+
+type ScheduleAccessibleUserInput struct {
+	ClassRosterClassID     string
+	ClassRosterTeacherIDs  []string
+	ClassRosterStudentIDs  []string
+	ParticipantsTeacherIDs []string
+	ParticipantsStudentIDs []string
+}
+
+type ScheduleBasicDataInput struct {
+	ScheduleID   string
+	ClassID      string
+	ProgramID    string
+	LessonPlanID string
+	SubjectID    string
+	TeacherIDs   []string
+	StudentIDs   []string
+}
+type ScheduleUserInput struct {
+	ID   string               `json:"id"`
+	Type ScheduleRelationType `json:"type"`
 }
 
 type ScheduleSearchView struct {
@@ -432,13 +503,13 @@ type SchedulePlain struct {
 }
 
 type ScheduleBasic struct {
-	Class          *ScheduleShortInfo   `json:"class"`
-	Subject        *ScheduleShortInfo   `json:"subject"`
-	Program        *ScheduleShortInfo   `json:"program"`
-	Members        []*ScheduleShortInfo `json:"teachers"`
-	MemberTeachers []*ScheduleShortInfo `json:"member_teachers"`
-	StudentCount   int                  `json:"student_count"`
-	LessonPlan     *ScheduleShortInfo   `json:"lesson_plan"`
+	Class          *ScheduleAccessibleUserView `json:"class"`
+	Subject        *ScheduleShortInfo          `json:"subject"`
+	Program        *ScheduleShortInfo          `json:"program"`
+	Members        []*ScheduleShortInfo        `json:"teachers"`
+	MemberTeachers []*ScheduleShortInfo        `json:"member_teachers"`
+	StudentCount   int                         `json:"student_count"`
+	LessonPlan     *ScheduleShortInfo          `json:"lesson_plan"`
 }
 type ScheduleVerify struct {
 	ClassID      string
@@ -446,6 +517,7 @@ type ScheduleVerify struct {
 	ProgramID    string
 	LessonPlanID string
 	ClassType    ScheduleClassType
+	IsHomeFun    bool
 }
 
 // ScheduleEditType include delete and edit
@@ -497,10 +569,14 @@ type ScheduleRealTimeView struct {
 }
 
 type ScheduleConflictView struct {
-	ClassRosterTeachers  []ScheduleShortInfo `json:"class_roster_teacher"`
-	ClassRosterStudents  []ScheduleShortInfo `json:"class_roster_student"`
-	ParticipantsTeachers []ScheduleShortInfo `json:"participants_teacher"`
-	ParticipantsStudents []ScheduleShortInfo `json:"participants_student"`
+	ClassRosterTeachers  []ScheduleConflictUserView `json:"class_roster_teachers"`
+	ClassRosterStudents  []ScheduleConflictUserView `json:"class_roster_students"`
+	ParticipantsTeachers []ScheduleConflictUserView `json:"participants_teachers"`
+	ParticipantsStudents []ScheduleConflictUserView `json:"participants_students"`
+}
+type ScheduleConflictUserView struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type ScheduleConflictInput struct {
@@ -508,12 +584,22 @@ type ScheduleConflictInput struct {
 	ClassRosterStudentIDs  []string
 	ParticipantsTeacherIDs []string
 	ParticipantsStudentIDs []string
+	ClassID                string
 	IgnoreScheduleID       string
 	StartAt                int64
 	EndAt                  int64
 	IsRepeat               bool
 	RepeatOptions          RepeatOptions
 	Location               *time.Location
+}
+
+type ScheduleRelationInput struct {
+	ScheduleID             string
+	ClassRosterClassID     string
+	ClassRosterTeacherIDs  []string
+	ClassRosterStudentIDs  []string
+	ParticipantsTeacherIDs []string
+	ParticipantsStudentIDs []string
 }
 
 type ProcessScheduleDueAtInput struct {
@@ -527,4 +613,44 @@ type ProcessScheduleDueAtView struct {
 	StartAt int64
 	EndAt   int64
 	DueAt   int64
+}
+
+const ScheduleFilterInvalidValue = "-1"
+const ScheduleFilterUndefinedClass = "Undefined"
+
+type ScheduleFilterClass struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	HasStudentFlag bool   `json:"has_student_flag"`
+}
+
+type ScheduleFilterSchool struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type ScheduleFilterOption string
+
+const (
+	ScheduleFilterAnyTime  ScheduleFilterOption = "any_time"
+	ScheduleFilterOnlyMine ScheduleFilterOption = "only_mine"
+)
+
+type ScheduleShowOption string
+
+const (
+	ScheduleShowOptionHidden  ScheduleShowOption = "hidden"
+	ScheduleShowOptionVisible ScheduleShowOption = "visible"
+)
+
+func (s ScheduleShowOption) IsValid() bool {
+	switch s {
+	case ScheduleShowOptionHidden, ScheduleShowOptionVisible:
+		return true
+	default:
+		return false
+	}
+}
+
+type AMSInScheduleInput struct {
 }
