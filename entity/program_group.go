@@ -14,13 +14,18 @@ func (e ProgramGroup) TableName() string {
 type ProgramGroupName string
 
 const (
-	ProgramGroupBadaESL   ProgramGroupName = "BadaESL"
-	ProgramGroupBadaSTEAM ProgramGroupName = "BadaSTEAM"
+	ProgramGroupBadaESL                 ProgramGroupName = "BadaESL"
+	ProgramGroupBadaSTEAM               ProgramGroupName = "BadaSTEAM"
+	ProgramGroupBadaMore                ProgramGroupName = "More"
+	ProgramGroupBadaMoreFeaturedContent ProgramGroupName = "More Featured Content"
 )
 
 func (t ProgramGroupName) Valid() bool {
 	switch t {
-	case ProgramGroupBadaESL, ProgramGroupBadaSTEAM:
+	case ProgramGroupBadaESL,
+		ProgramGroupBadaSTEAM,
+		ProgramGroupBadaMore,
+		ProgramGroupBadaMoreFeaturedContent:
 		return true
 	default:
 		return false
