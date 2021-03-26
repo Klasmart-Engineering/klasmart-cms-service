@@ -2,17 +2,21 @@ package model
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type IProgramGroupModel interface {
 	GetByProgramID(ctx context.Context, id string, operator *entity.Operator) (*entity.ProgramGroup, error)
+	Query(ctx context.Context, condition *da.ProgramGroupQueryCondition) ([]*entity.ProgramGroup, error)
 	QueryMap(ctx context.Context, condition *da.ProgramGroupQueryCondition) (map[string]*entity.ProgramGroup, error)
+	AllGroupNames(ctx context.Context) ([]string, error)
 }
 
 var (
@@ -41,8 +45,7 @@ func (s programGroupModel) GetByProgramID(ctx context.Context, id string, operat
 }
 
 func (s programGroupModel) QueryMap(ctx context.Context, condition *da.ProgramGroupQueryCondition) (map[string]*entity.ProgramGroup, error) {
-	programGroups := []*entity.ProgramGroup{}
-	err := da.GetProgramGroupDA().Query(ctx, condition, &programGroups)
+	programGroups, err := s.Query(ctx, condition)
 	if err != nil {
 		return nil, err
 	}
@@ -53,4 +56,31 @@ func (s programGroupModel) QueryMap(ctx context.Context, condition *da.ProgramGr
 	}
 
 	return dict, nil
+}
+
+func (s programGroupModel) Query(ctx context.Context, condition *da.ProgramGroupQueryCondition) ([]*entity.ProgramGroup, error) {
+	programGroups := []*entity.ProgramGroup{}
+	err := da.GetProgramGroupDA().Query(ctx, condition, &programGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	return programGroups, nil
+}
+
+func (s programGroupModel) AllGroupNames(ctx context.Context) ([]string, error) {
+	programGroups, err := s.Query(ctx, &da.ProgramGroupQueryCondition{})
+	if err != nil {
+		return nil, err
+	}
+
+	groupNames := make([]string, 0, len(programGroups))
+	for _, programGroup := range programGroups {
+		groupNames = append(groupNames, string(programGroup.GroupName))
+	}
+
+	groupNames = utils.SliceDeduplication(groupNames)
+	sort.Strings(groupNames)
+
+	return groupNames, nil
 }
