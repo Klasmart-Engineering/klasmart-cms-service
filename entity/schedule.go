@@ -234,6 +234,10 @@ func (s ScheduleClassType) ConvertToLiveClassType() LiveClassType {
 	}
 }
 
+func (s ScheduleClassType) String() string {
+	return string(s)
+}
+
 type Schedule struct {
 	ID              string            `gorm:"column:id;PRIMARY_KEY"`
 	Title           string            `gorm:"column:title;type:varchar(100)"`

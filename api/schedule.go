@@ -1101,3 +1101,80 @@ func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary get schedule filter programs
+// @Description get schedule filter programs
+// @Tags schedule
+// @ID getProgramsInScheduleFilter
+// @Accept json
+// @Produce json
+// @Success 200 {array} entity.ScheduleShortInfo
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_filter/programs [get]
+func (s *Server) getProgramsInScheduleFilter(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	programs, err := model.GetScheduleModel().GetPrograms(ctx, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, programs)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary get schedule filter subjects
+// @Description get schedule filter subjects
+// @Tags schedule
+// @ID getSubjectsInScheduleFilter
+// @Accept json
+// @Produce json
+// @Param program_id query string true "program id"
+// @Success 200 {array} entity.ScheduleShortInfo
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_filter/subjects [get]
+func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+	programID := c.Query("program_id")
+
+	subjects, err := model.GetScheduleModel().GetSubjects(ctx, op, programID)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, subjects)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary get schedule filter classTypes
+// @Description get schedule filter classTypes
+// @Tags schedule
+// @ID getClassTypesInScheduleFilter
+// @Accept json
+// @Produce json
+// @Success 200 {array} string
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_filter/class_types [get]
+func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	classTypes, err := model.GetScheduleModel().GetClassTypes(ctx, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, classTypes)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
