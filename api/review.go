@@ -174,7 +174,7 @@ func (s *Server) reject(c *gin.Context) {
 			return
 		}
 
-		hasPermission, err = external.GetPermissionServiceProvider().HasAnySchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
+		hasPermission, err = external.GetPermissionServiceProvider().HasAnySchoolPermission(ctx, op, content.PublishScope, external.RejectPendingContent272)
 		if err != nil {
 			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
