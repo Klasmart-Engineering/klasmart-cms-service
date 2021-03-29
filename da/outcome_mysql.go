@@ -31,7 +31,7 @@ type OutcomeCondition struct {
 	OrganizationID sql.NullString
 	SourceID       sql.NullString
 	FuzzyKey       sql.NullString
-	FuzzyAuthors   dbo.NullStrings
+	AuthorIDs      dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        OutcomeOrderBy `json:"order_by"`
@@ -42,21 +42,53 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	if c.FuzzyKey.Valid && !c.FuzzyAuthors.Valid {
-		wheres = append(wheres, "match(name, keywords, description, shortcode) against(? in boolean mode)")
+	if c.FuzzyKey.Valid {
+		clauses := []string{"match(name, keywords, description, shortcode) against(? in boolean mode)"}
 		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
+
+		if c.AuthorIDs.Valid {
+			clauses = append(clauses, fmt.Sprintf("(author_id in (%s))", c.AuthorIDs.SQLPlaceHolder()))
+			params = append(params, c.AuthorIDs.ToInterfaceSlice()...)
+		}
+
+		if c.IDs.Valid {
+			clauses = append(clauses, fmt.Sprintf("(id in (%s))", c.IDs.SQLPlaceHolder()))
+			params = append(params, c.IDs.ToInterfaceSlice()...)
+		}
+		wheres = append(wheres, fmt.Sprintf("(%s)", strings.Join(clauses, " or ")))
 	}
 
-	if c.FuzzyKey.Valid && c.FuzzyAuthors.Valid {
-		wheres = append(wheres, fmt.Sprintf("((match(name, keywords, description, shortcode) against(? in boolean mode)) or (author_id in (%s)))", c.FuzzyAuthors.SQLPlaceHolder()))
-		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
-		params = append(params, c.FuzzyAuthors.ToInterfaceSlice()...)
-
+	if !c.FuzzyKey.Valid && c.AuthorIDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("author_id in (%s)", c.AuthorIDs.SQLPlaceHolder()))
+		params = append(params, c.AuthorIDs.ToInterfaceSlice()...)
 	}
 
-	if c.IDs.Valid {
+	if !c.FuzzyKey.Valid && c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+
+	if c.Name.Valid {
+		wheres = append(wheres, "match(name) against(? in boolean mode)")
+		//wheres = append(wheres, "name=?")
+		params = append(params, c.Name.String)
+	}
+
+	if c.Shortcode.Valid {
+		wheres = append(wheres, "shortcode=?")
+		params = append(params, c.Shortcode.String)
+	}
+
+	if c.Keywords.Valid {
+		wheres = append(wheres, "match(keywords) against(? in boolean mode)")
+		//wheres = append(wheres, "keywords=?")
+		params = append(params, c.Keywords.String)
+	}
+
+	if c.Description.Valid {
+		wheres = append(wheres, "match(description) against(? in boolean mode)")
+		//wheres = append(wheres, "description=?")
+		params = append(params, c.Description.String)
 	}
 
 	if c.PublishStatus.Valid {
@@ -108,7 +140,7 @@ func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 		AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
 		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
-		FuzzyAuthors:   dbo.NullStrings{Strings: condition.FuzzyAuthorIDs, Valid: len(condition.FuzzyAuthorIDs) > 0},
+		AuthorIDs:      dbo.NullStrings{Strings: condition.AuthorIDs, Valid: len(condition.AuthorIDs) > 0},
 		Assumed:        sql.NullBool{Bool: condition.Assumed == 1, Valid: condition.Assumed != -1},
 		OrderBy:        NewOrderBy(condition.OrderBy),
 		Pager:          NewPage(condition.Page, condition.PageSize),
@@ -214,8 +246,6 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 }
 
 func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
-	//now := time.Now().Unix()
-	//outcome.UpdateAt = now
 	_, err = o.UpdateTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "UpdateOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
