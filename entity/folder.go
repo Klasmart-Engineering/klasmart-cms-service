@@ -275,9 +275,31 @@ func (f FolderItem) ChildrenPath() Path {
 }
 
 type FolderItemInfo struct {
-	FolderItem
+	ID        string `json:"id"`
+	OwnerType OwnerType `json:"owner_type"`
+	Owner     string `json:"owner"`
+	ParentID  string `json:"parent_id"`
+	Link      string `json:"link"`
+
+	ItemType  ItemType `json:"item_type"`
+	DirPath   Path `json:"dir_path"`
+	Partition FolderPartition `json:"partition"`
+	Name      string `json:"name"`
+
+	Description string `json:"description"`
+	Keywords []string `json:"keywords"`
+
+	Thumbnail string `json:"thumbnail"`
+	Creator   string `json:"creator"`
+
+	ItemsCount int `json:"items_count"`
+	Editor     string `json:"editor"`
+
+	CreateAt int64 `json:"create_at"`
+	UpdateAt int64 `json:"update_at"`
+
 	Available int           `json:"available"`
-	Items     []*FolderItem `json:"items"`
+	Items     []*FolderItemInfo `json:"items"`
 }
 
 type SearchFolderCondition struct {
