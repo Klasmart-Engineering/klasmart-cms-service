@@ -331,7 +331,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			}
 			if mData.FileType == entity.FileTypeDocument {
 				escape := url.QueryEscape(sourceUrl)
-				sourceUrl = fmt.Sprintf("https://view.officeapps.live.com/op/view.aspx?src=%s", escape)
+				sourceUrl = fmt.Sprintf("%s?src=%s", constant.LiveTokenDocumentUrlPrefix, escape)
 			}
 			materialItem.URL = sourceUrl
 		}
