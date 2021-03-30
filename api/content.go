@@ -744,7 +744,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	}
 	author := c.Query("author")
 	total := 0
-	var results []*entity.FolderContent
+	var results []*entity.FolderContentData
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	} else {

@@ -388,7 +388,7 @@ type ContentInfoWithDetailsResponse struct {
 
 type FolderContentInfoWithDetailsResponse struct {
 	Total       int              `json:"total"`
-	ContentList []*FolderContent `json:"list"`
+	ContentList []*FolderContentData `json:"list"`
 }
 
 type ContentInfoWithDetails struct {
@@ -431,6 +431,26 @@ type FolderContent struct {
 	ContentType     ContentType `json:"content_type"`
 	Description     string      `json:"description"`
 	Keywords        string      `json:"keywords"`
+	Author          string      `json:"author"`
+	ItemsCount      int         `json:"items_count"`
+	PublishStatus   string      `json:"publish_status"`
+	Thumbnail       string      `json:"thumbnail"`
+	Data            string      `json:"data"`
+	AuthorName      string      `json:"author_name"`
+	DirPath         string      `json:"dir_path"`
+	ContentTypeName string      `json:"content_type_name"`
+	CreateAt        int         `json:"create_at"`
+	UpdateAt        int         `json:"update_at"`
+}
+
+
+//Content in folder
+type FolderContentData struct {
+	ID              string      `json:"id"`
+	ContentName     string      `json:"name"`
+	ContentType     ContentType `json:"content_type"`
+	Description     string      `json:"description"`
+	Keywords        []string      `json:"keywords"`
 	Author          string      `json:"author"`
 	ItemsCount      int         `json:"items_count"`
 	PublishStatus   string      `json:"publish_status"`
