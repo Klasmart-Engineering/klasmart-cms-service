@@ -109,8 +109,8 @@ type IContentModel interface {
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
 	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, error)
-	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error)
-	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error)
+	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error)
+	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error)
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
@@ -1637,7 +1637,7 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 	return contentWithDetails, nil
 }
 
-func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
+func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error) {
 	//构造个人查询条件
 	//construct query condition for private search
 	condition.Author = user.UserID
@@ -1668,8 +1668,9 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	cm.fillFolderContent(ctx, objs, user)
-	return count, objs, nil
+	ret := cm.convertFolderContent(ctx, objs, user)
+	cm.fillFolderContent(ctx, ret, user)
+	return count, ret, nil
 }
 
 func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, error) {
@@ -1694,7 +1695,7 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 	}
 	return total, nil
 }
-func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContent, error) {
+func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error) {
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
 	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
 	if err != nil {
@@ -1714,9 +1715,10 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	cm.fillFolderContent(ctx, objs, user)
+	ret := cm.convertFolderContent(ctx, objs, user)
+	cm.fillFolderContent(ctx, ret, user)
 
-	return count, objs, nil
+	return count, ret, nil
 }
 func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//where, params := combineCondition.GetConditions()
@@ -2429,7 +2431,7 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.C
 	return folderCondition
 }
 
-func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.FolderContent, user *entity.Operator) {
+func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.FolderContentData, user *entity.Operator) {
 	authorIDs := make([]string, len(objs))
 	for i := range objs {
 		authorIDs[i] = objs[i].Author
@@ -2449,6 +2451,31 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 		objs[i].AuthorName = authorMap[objs[i].Author]
 		objs[i].ContentTypeName = objs[i].ContentType.Name()
 	}
+}
+
+
+func (cm *ContentModel) convertFolderContent(ctx context.Context, objs []*entity.FolderContent, user *entity.Operator) []*entity.FolderContentData{
+	ret := make([]*entity.FolderContentData, len(objs))
+	for i := range objs{
+		ret[i] = &entity.FolderContentData{
+			ID:              objs[i].ID,
+			ContentName:     objs[i].ContentName,
+			ContentType:     objs[i].ContentType,
+			Description:     objs[i].Description,
+			Keywords:        strings.Split(objs[i].Keywords, constant.StringArraySeparator),
+			Author:          objs[i].Author,
+			ItemsCount:      objs[i].ItemsCount,
+			PublishStatus:   objs[i].PublishStatus,
+			Thumbnail:       objs[i].Thumbnail,
+			Data:            objs[i].Data,
+			AuthorName:      objs[i].Author,
+			DirPath:         objs[i].DirPath,
+			ContentTypeName: objs[i].ContentTypeName,
+			CreateAt:        objs[i].CreateAt,
+			UpdateAt:        objs[i].UpdateAt,
+		}
+	}
+	return ret
 }
 
 var (
