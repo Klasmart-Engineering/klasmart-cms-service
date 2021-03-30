@@ -83,12 +83,12 @@ type IFolderModel interface {
 
 	//列出Folder下的所有item
 	//List all folder items belongs to the folder
-	ListItems(ctx context.Context, folderID string, itemType entity.ItemType, operator *entity.Operator) ([]*entity.FolderItem, error)
+	ListItems(ctx context.Context, folderID string, itemType entity.ItemType, operator *entity.Operator) ([]*entity.FolderItemInfo, error)
 	//查询Folder
 	//Query folders
-	SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error)
-	SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error)
-	SearchOrgFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error)
+	SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error)
+	SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error)
+	SearchOrgFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error)
 
 	//获取Folder
 	//Get Folder
@@ -759,7 +759,7 @@ func (f *FolderModel) MoveItem(ctx context.Context, req entity.MoveFolderRequest
 	return nil
 }
 
-func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType entity.ItemType, operator *entity.Operator) ([]*entity.FolderItem, error) {
+func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType entity.ItemType, operator *entity.Operator) ([]*entity.FolderItemInfo, error) {
 	//check owner type
 	folderItems, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
 		ParentID: folderID,
@@ -769,10 +769,10 @@ func (f *FolderModel) ListItems(ctx context.Context, folderID string, itemType e
 		log.Error(ctx, "list items failed", log.Err(err), log.String("folderID", folderID))
 		return nil, err
 	}
-	return folderItems, nil
+	return f.folderItemToFolderItemInfoBatch(ctx, folderItems), nil
 }
 
-func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
+func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error) {
 	total, folderItems, err := da.GetFolderDA().SearchFolderPage(ctx, dbo.MustGetDB(ctx), da.FolderCondition{
 		ParentID:  condition.ParentID,
 		NameLike:  condition.Name,
@@ -790,16 +790,17 @@ func (f *FolderModel) SearchFolder(ctx context.Context, condition entity.SearchF
 		log.Error(ctx, "list items failed", log.Err(err), log.Any("condition", condition))
 		return 0, nil, err
 	}
-	return total, folderItems, nil
+
+	return total, f.folderItemToFolderItemInfoBatch(ctx, folderItems), nil
 }
 
-func (f *FolderModel) SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
+func (f *FolderModel) SearchPrivateFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error) {
 	condition.Owner = operator.UserID
 	condition.OwnerType = entity.OwnerTypeUser
 	return f.SearchFolder(ctx, condition, operator)
 }
 
-func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItem, error) {
+func (f *FolderModel) SearchOrgFolder(ctx context.Context, condition entity.SearchFolderCondition, operator *entity.Operator) (int, []*entity.FolderItemInfo, error) {
 	condition.Owner = operator.OrgID
 	condition.OwnerType = entity.OwnerTypeOrganization
 
@@ -867,10 +868,7 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		log.Error(ctx, "get folder by id failed", log.Err(err), log.String("folderID", folderID))
 		return nil, ErrNoFolder
 	}
-	result := &entity.FolderItemInfo{
-		FolderItem: *folderItem,
-		Items:      nil,
-	}
+	result := f.folderItemToFolderItemInfo(ctx, folderItem)
 	//if folder item is folder, add children items
 	if folderItem.ItemType.IsFolder() {
 		_, folderItems, err := f.SearchFolder(ctx, entity.SearchFolderCondition{
@@ -914,6 +912,56 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 	}
 
 	return nil
+}
+func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *entity.FolderItem) *entity.FolderItemInfo{
+	return &entity.FolderItemInfo{
+		ID:          item.ID,
+		OwnerType:   item.OwnerType,
+		Owner:       item.Owner,
+		ParentID:    item.ParentID,
+		Link:        item.Link,
+		ItemType:    item.ItemType,
+		DirPath:     item.DirPath,
+		Partition:   item.Partition,
+		Name:        item.Name,
+		Description: item.Description,
+		Keywords:    strings.Split(item.Keywords, constant.StringArraySeparator),
+		Thumbnail:   item.Thumbnail,
+		Creator:     item.Creator,
+		ItemsCount:  item.ItemsCount,
+		Editor:      item.Editor,
+		CreateAt:    item.CreateAt,
+		UpdateAt:    item.UpdateAt,
+		Items:       nil,
+	}
+}
+
+
+func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items []*entity.FolderItem) []*entity.FolderItemInfo{
+	ret := make([]*entity.FolderItemInfo, len(items))
+	for i := range items{
+		ret[i] = &entity.FolderItemInfo{
+			ID:          items[i].ID,
+			OwnerType:   items[i].OwnerType,
+			Owner:       items[i].Owner,
+			ParentID:    items[i].ParentID,
+			Link:        items[i].Link,
+			ItemType:    items[i].ItemType,
+			DirPath:     items[i].DirPath,
+			Partition:   items[i].Partition,
+			Name:        items[i].Name,
+			Description: items[i].Description,
+			Keywords:    strings.Split(items[i].Keywords, constant.StringArraySeparator),
+			Thumbnail:   items[i].Thumbnail,
+			Creator:     items[i].Creator,
+			ItemsCount:  items[i].ItemsCount,
+			Editor:      items[i].Editor,
+			CreateAt:    items[i].CreateAt,
+			UpdateAt:    items[i].UpdateAt,
+			Items:       nil,
+		}
+	}
+	return ret
 }
 
 func (f *FolderModel) handleMoveContentByLink(ctx context.Context, tx *dbo.DBContext, ownerType entity.OwnerType, id string, partition entity.FolderPartition, distFolder *entity.FolderItem, operator *entity.Operator) error {

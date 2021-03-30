@@ -549,9 +549,9 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 }
 
 type FolderItemsResponse struct {
-	Items []*entity.FolderItem `json:"items"`
+	Items []*entity.FolderItemInfo `json:"items"`
 }
 type FolderItemsResponseWithTotal struct {
-	Items []*entity.FolderItem `json:"items"`
+	Items []*entity.FolderItemInfo `json:"items"`
 	Total int                  `json:"total"`
 }
