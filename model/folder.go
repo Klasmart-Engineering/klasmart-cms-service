@@ -868,7 +868,24 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		log.Error(ctx, "get folder by id failed", log.Err(err), log.String("folderID", folderID))
 		return nil, ErrNoFolder
 	}
+
 	result := f.folderItemToFolderItemInfo(ctx, folderItem)
+
+	userIDs := []string{result.Creator, result.Editor}
+	users, err := external.GetUserServiceProvider().BatchGet(ctx, operator, userIDs)
+	if err != nil {
+		log.Error(ctx, "get user name failed",
+			log.Err(err), log.Any("folderItem", result))
+		return nil, ErrNoFolder
+	}
+	for i := range users {
+		if users[i].Valid && users[i].ID == result.Creator{
+			result.CreatorName = users[i].Name
+		}
+		if users[i].Valid && users[i].ID == result.Editor{
+			result.EditorName = users[i].Name
+		}
+	}
 	//if folder item is folder, add children items
 	if folderItem.ItemType.IsFolder() {
 		_, folderItems, err := f.SearchFolder(ctx, entity.SearchFolderCondition{

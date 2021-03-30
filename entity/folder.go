@@ -291,6 +291,8 @@ type FolderItemInfo struct {
 
 	Thumbnail string `json:"thumbnail"`
 	Creator   string `json:"creator"`
+	CreatorName string `json:"creator_name"`
+	EditorName string `json:"editor_name"`
 
 	ItemsCount int `json:"items_count"`
 	Editor     string `json:"editor"`
