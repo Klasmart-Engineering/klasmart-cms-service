@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"net/url"
 
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -320,7 +321,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 		case entity.FileTypeH5p:
 			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
 		default:
-			url, err := GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
+			sourceUrl, err := GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
 			if err != nil {
 				log.Error(ctx, "getMaterials:get resource path error",
 					log.Err(err),
@@ -329,9 +330,10 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 				return nil, err
 			}
 			if mData.FileType == entity.FileTypeDocument {
-				url = fmt.Sprintf("https://view.officeapps.live.com/op/view.aspx?src=%s", url)
+				escape := url.QueryEscape(sourceUrl)
+				sourceUrl = fmt.Sprintf("https://view.officeapps.live.com/op/view.aspx?src=%s", escape)
 			}
-			materialItem.URL = url
+			materialItem.URL = sourceUrl
 		}
 		materials = append(materials, materialItem)
 	}
