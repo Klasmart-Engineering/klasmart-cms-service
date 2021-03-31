@@ -39,20 +39,25 @@ func (s *FolderPermissionModel) CheckShareFolderOperatorPermission(ctx context.C
 
 	switch orgInfo.Region {
 	case entity.Global:
+		log.Info(ctx, "Check global org permission")
 		permissions := []external.PermissionName{external.PublishFeaturedContentForAllHub, external.PublishFeaturedContentForAllOrgsHub}
 		hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, permissions)
 		if err != nil {
-			log.Error(ctx, "get permission failed", log.Err(err))
+			log.Error(ctx, "get permission failed",
+				log.Err(err))
 			return false, err
 		}
 		//有permission，直接返回
 		//has permission
-		for _,v := range hasPermission {
+		for k,v := range hasPermission {
 			if !v {
+				log.Warn(ctx, "No permission",
+					log.String("Permission", string(k)))
 				return false, nil
 			}
 		}
 	case entity.VN:
+		log.Info(ctx, "Check VN org permission")
 		permission := external.PublishFeaturedContentForSpecificOrgsHub
 		hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
 		if err != nil {
@@ -62,10 +67,12 @@ func (s *FolderPermissionModel) CheckShareFolderOperatorPermission(ctx context.C
 		//有permission，直接返回
 		//has permission
 		if !hasPermission {
+			log.Warn(ctx, "No permission",
+				log.String("Permission", string(external.PublishFeaturedContentForSpecificOrgsHub)))
 			return false, nil
 		}
 	case entity.UnknownRegion:
-		log.Error(ctx, "unknown region", log.Err(err))
+		log.Warn(ctx, "unknown region", log.String("region", string(entity.UnknownRegion)))
 		return false, ErrUnknownRegion
 	}
 
