@@ -398,7 +398,6 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error {
 	data.Trim()
-
 	if data.ContentType.IsAsset() {
 		//Assets can't be updated
 		return ErrInvalidContentType
