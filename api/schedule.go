@@ -1019,7 +1019,6 @@ func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
 // @Param school_id query string false "school id,if "-1",return classes without school"
 // @Success 200 {array} entity.ScheduleFilterClass
 // @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/classes [get]
 func (s Server) getClassesInScheduleFilter(c *gin.Context) {
@@ -1030,7 +1029,7 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
-	case constant.ErrForbidden:
+	case constant.ErrForbidden, constant.ErrRecordNotFound:
 		c.JSON(http.StatusOK, []*entity.ScheduleFilterClass{})
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
