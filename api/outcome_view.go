@@ -45,11 +45,12 @@ func (req OutcomeCreateView) outcome() (*entity.Outcome, error) {
 	outcome.Age = strings.Join(req.Age, ",")
 	outcome.Keywords = strings.Join(req.Keywords, ",")
 
+	outcome.Sets = make([]*entity.Set, len(req.Sets))
 	for i := range req.Sets {
 		set := &entity.Set{
 			ID: req.Sets[i].SetID,
 		}
-		outcome.Sets = append(outcome.Sets, set)
+		outcome.Sets[i] = set
 	}
 
 	return &outcome, nil
@@ -283,6 +284,14 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 	for k, id := range gIDs {
 		view.Grade[k].GradeID = id
 		view.Grade[k].GradeName = gNames[id]
+	}
+	view.Sets = make([]*OutcomeSetCreateView, len(outcome.Sets))
+	for i := range outcome.Sets {
+		set := OutcomeSetCreateView{
+			SetID:   outcome.Sets[i].ID,
+			SetName: outcome.Sets[i].Name,
+		}
+		view.Sets[i] = &set
 	}
 	return view
 }

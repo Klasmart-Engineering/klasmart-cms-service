@@ -35,15 +35,13 @@ func (o OutcomeSqlDA) IsShortcodeExistInRedis(ctx context.Context, orgID string,
 }
 
 func (o OutcomeSqlDA) IsShortcodeExistInDBWithOtherAncestor(ctx context.Context, tx *dbo.DBContext, orgID string, ancestorID string, shortcode string) (bool, error) {
-	sql := fmt.Sprintf("select distinct shortcode from %s where organization_id = %s and ancestor_id != %s and delete_at=0 and length(shortcode) = %d order by shortcode",
-		entity.Outcome{}.TableName(), orgID, ancestorID, constant.ShortcodeShowLength)
+	sql := fmt.Sprintf("select distinct shortcode from %s where organization_id = ? and ancestor_id != ? and delete_at=0 and length(shortcode) = %d order by shortcode",
+		entity.Outcome{}.TableName(), constant.ShortcodeShowLength)
 
-	//sql := fmt.Sprintf("select distinct shortcode from %s where delete_at=0 and length(shortcode) = %d order by shortcode",
-	//	entity.Outcome{}.TableName(), constant.ShortcodeShowLength)
 	var result []*struct {
 		Shortcode string `gorm:"column:shortcode"`
 	}
-	err := tx.Raw(sql).Scan(&result).Error
+	err := tx.Raw(sql, orgID, ancestorID).Scan(&result).Error
 	if err != nil {
 		log.Error(ctx, "SearchShortcode: exec sql failed",
 			log.Err(err),
@@ -70,15 +68,13 @@ func (o OutcomeSqlDA) searchRedisShortcode(ctx context.Context, orgID string) ([
 }
 
 func (o OutcomeSqlDA) searchDBShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) (map[string]struct{}, error) {
-	sql := fmt.Sprintf("select distinct shortcode from %s where organization_id = %s and delete_at=0 and length(shortcode) = %d order by shortcode",
-		entity.Outcome{}.TableName(), orgID, constant.ShortcodeShowLength)
+	sql := fmt.Sprintf("select distinct shortcode from %s where organization_id = ? and delete_at=0 and length(shortcode) = %d order by shortcode",
+		entity.Outcome{}.TableName(), constant.ShortcodeShowLength)
 
-	//sql := fmt.Sprintf("select distinct shortcode from %s where delete_at=0 and length(shortcode) = %d order by shortcode",
-	//	entity.Outcome{}.TableName(), constant.ShortcodeShowLength)
 	var result []*struct {
 		Shortcode string `gorm:"column:shortcode"`
 	}
-	err := tx.Raw(sql).Scan(&result).Error
+	err := tx.Raw(sql, orgID).Scan(&result).Error
 	if err != nil {
 		log.Error(ctx, "SearchShortcode: exec sql failed",
 			log.Err(err),

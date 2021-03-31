@@ -161,8 +161,9 @@ func (o SetSqlDA) CreateSet(ctx context.Context, tx *dbo.DBContext, set *entity.
 }
 
 func (o SetSqlDA) UpdateOutcomeSet(ctx context.Context, tx *dbo.DBContext, set *entity.Set) (err error) {
-	//now := time.Now().Unix()
-	//outcome.UpdateAt = now
+	if set.UpdateAt == 0 {
+		set.UpdateAt = time.Now().Unix()
+	}
 	_, err = o.UpdateTx(ctx, tx, set)
 	if err != nil {
 		log.Error(ctx, "UpdateOutcomeSet: UpdateTx failed", log.Err(err), log.Any("outcome_set", set))
@@ -234,8 +235,8 @@ func (o SetSqlDA) BindOutcomeSet(ctx context.Context, op *entity.Operator, tx *d
 }
 
 func (o SetSqlDA) DeleteBoundOutcomeSet(ctx context.Context, tx *dbo.DBContext, outcomeID string) error {
-	sql := fmt.Sprintf("delete from %s where outcome_id='%s'", entity.OutcomeSet{}.TableName(), outcomeID)
-	err := tx.Exec(sql).Error
+	sql := fmt.Sprintf("delete from %s where outcome_id = ?", entity.OutcomeSet{}.TableName())
+	err := tx.Exec(sql, outcomeID).Error
 	if err != nil {
 		log.Error(ctx, "DeleteBoundOutcomeSet: exec sql failed",
 			log.Err(err),
@@ -246,10 +247,10 @@ func (o SetSqlDA) DeleteBoundOutcomeSet(ctx context.Context, tx *dbo.DBContext, 
 }
 
 func (o SetSqlDA) SearchOutcomeBySetName(ctx context.Context, op *entity.Operator, name string) ([]*entity.OutcomeSet, error) {
-	sql := fmt.Sprintf("select * from %s where set_id in (select id from %s where match(name) against('%s' in boolean mode) and organization_id = '%s' and delete_at = 0) and delete_at is null",
-		entity.OutcomeSet{}.TableName(), entity.Set{}.TableName(), name, op.OrgID)
+	sql := fmt.Sprintf("select * from %s where set_id in (select id from %s where match(name) against(? in boolean mode) and organization_id = ? and delete_at = 0) and delete_at is null",
+		entity.OutcomeSet{}.TableName(), entity.Set{}.TableName())
 	var outcomeSets []*entity.OutcomeSet
-	err := dbo.MustGetDB(ctx).Raw(sql).Scan(&outcomeSets).Error
+	err := dbo.MustGetDB(ctx).Raw(sql, name, op.OrgID).Scan(&outcomeSets).Error
 	if err != nil {
 		log.Error(ctx, "SearchOutcomeBySetName: exec sql failed",
 			log.Err(err),
@@ -258,4 +259,30 @@ func (o SetSqlDA) SearchOutcomeBySetName(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 	return outcomeSets, nil
+}
+
+func (o SetSqlDA) SearchSetsByOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) (map[string][]*entity.Set, error) {
+	sql := fmt.Sprintf("select distinct a.outcome_id, a.set_id, b.name from (select * from %s where outcome_id in (?)) as a left join %s as b on (a.set_id=b.id)",
+		entity.OutcomeSet{}.TableName(), entity.Set{}.TableName())
+	var result []*struct {
+		OutcomeID string `gorm:"column:outcome_id"`
+		SetID     string `gorm:"column:set_id"`
+		Name      string `gorm:"column:name"`
+	}
+	err := dbo.MustGetDB(ctx).Raw(sql, outcomeIDs).Scan(&result).Error
+	if err != nil {
+		log.Error(ctx, "SearchSetsByOutcome: exec sql failed",
+			log.Err(err),
+			log.Strings("outcome", outcomeIDs))
+		return nil, err
+	}
+	outcomesSets := make(map[string][]*entity.Set)
+	for i := range result {
+		set := entity.Set{
+			ID:   result[i].SetID,
+			Name: result[i].Name,
+		}
+		outcomesSets[result[i].OutcomeID] = append(outcomesSets[result[i].OutcomeID], &set)
+	}
+	return outcomesSets, nil
 }

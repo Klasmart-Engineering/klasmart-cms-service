@@ -278,6 +278,12 @@ func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id 
 		log.Error(ctx, "GetOutcomeByID: GetTx failed", log.Err(err), log.Any("outcome", outcome))
 		return nil, err
 	}
+	outcomeSet, err := GetOutcomeSetDA().SearchSetsByOutcome(ctx, tx, []string{outcome.ID})
+	if err != nil {
+		log.Error(ctx, "GetOutcomeByID: SearchSetsByOutcome failed", log.Err(err), log.Any("outcome", outcome))
+		return nil, err
+	}
+	outcome.Sets = outcomeSet[outcome.ID]
 	GetOutcomeRedis().SaveOutcomeCache(ctx, &outcome)
 	return &outcome, nil
 }
@@ -314,6 +320,7 @@ func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, cond
 			log.Err(err),
 			log.Any("condition", condition))
 	}
+
 	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, condition, &OutcomeListWithKey{total, outcomes})
 	return
 }

@@ -16,7 +16,7 @@ import (
 )
 
 // @ID createLearningOutcomes
-// @Summary createOutcome
+// @Summary createLearningOutcome
 // @Tags learning_outcomes
 // @Description Create learning outcomes
 // @Accept json
@@ -795,7 +795,7 @@ type ShortcodeResponse struct {
 }
 
 // @ID generateShortcode
-// @Summary createOutcome
+// @Summary generate Shortcode
 // @Tags learning_outcomes
 // @Description generate shortcode
 // @Accept json
@@ -804,7 +804,7 @@ type ShortcodeResponse struct {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /learning_outcomes [post]
+// @Router /shortcode [post]
 func (s *Server) generateShortcode(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)

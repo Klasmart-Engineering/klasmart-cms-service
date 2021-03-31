@@ -2,8 +2,6 @@ package model
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"gitlab.badanamu.com.cn/calmisland/ro"
 )
 
 type IOutcomeModel interface {
@@ -54,7 +51,7 @@ type OutcomeModel struct {
 
 func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, outcome *entity.Outcome, operator *entity.Operator) (err error) {
 	// outcome get value from api lay, this lay add some information
-	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, operator, outcome.AuthorID)
+	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, operator, operator.UserID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: getAuthorNameByID failed",
 			log.String("op", outcome.AuthorID),
@@ -171,15 +168,14 @@ func (ocm OutcomeModel) updateOutcomeSet(ctx context.Context, op *entity.Operato
 }
 
 func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *entity.Outcome, operator *entity.Operator) error {
-	// TODO: just for test
-	//perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
-	//	external.EditMyUnpublishedLearningOutcome,
-	//	external.EditOrgUnpublishedLearningOutcome,
-	//})
-	//if err != nil {
-	//	log.Error(ctx, "UpdateLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
-	//	return err
-	//}
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
+		external.EditMyUnpublishedLearningOutcome,
+		external.EditOrgUnpublishedLearningOutcome,
+	})
+	if err != nil {
+		log.Error(ctx, "UpdateLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
+		return err
+	}
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, operator.OrgID)
 	if err != nil {
 		log.Error(ctx, "UpdateLearningOutcome: NewLock failed",
@@ -212,14 +208,13 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 				log.Any("data", data))
 			return err
 		}
-		// TODO: just for test
-		//if !allowEditOutcome(ctx, operator, perms, data) {
-		//	log.Warn(ctx, "UpdateLearningOutcome: no permission",
-		//		log.Any("op", operator),
-		//		log.Any("perms", perms),
-		//		log.Any("data", data))
-		//	return constant.ErrOperateNotAllowed
-		//}
+		if !allowEditOutcome(ctx, operator, perms, data) {
+			log.Warn(ctx, "UpdateLearningOutcome: no permission",
+				log.Any("op", operator),
+				log.Any("perms", perms),
+				log.Any("data", data))
+			return constant.ErrOperateNotAllowed
+		}
 		if data.PublishStatus != entity.OutcomeStatusDraft && data.PublishStatus != entity.OutcomeStatusRejected {
 			log.Error(ctx, "UpdateLearningOutcome: publish status not allowed edit",
 				log.String("op", operator.UserID),
@@ -263,19 +258,18 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, outcome *enti
 }
 
 func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID string, operator *entity.Operator) error {
-	// TODO: just for test
-	//perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
-	//	external.DeleteMyUnpublishedLearningOutcome,
-	//	external.DeleteOrgUnpublishedLearningOutcome,
-	//	external.DeleteMyPendingLearningOutcome,
-	//	external.DeleteOrgPendingLearningOutcome,
-	//	external.DeletePublishedLearningOutcome,
-	//})
-	//if err != nil {
-	//	log.Error(ctx, "DeleteLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
-	//	return err
-	//}
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
+		external.DeleteMyUnpublishedLearningOutcome,
+		external.DeleteOrgUnpublishedLearningOutcome,
+		external.DeleteMyPendingLearningOutcome,
+		external.DeleteOrgPendingLearningOutcome,
+		external.DeletePublishedLearningOutcome,
+	})
+	if err != nil {
+		log.Error(ctx, "DeleteLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
+		return err
+	}
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err != nil && err != dbo.ErrRecordNotFound {
 			log.Error(ctx, "DeleteLearningOutcome: no permission",
@@ -283,12 +277,11 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, outcomeID str
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		// TODO: just for test
-		//if !allowDeleteOutcome(ctx, operator, perms, outcome) {
-		//	log.Warn(ctx, "DeleteLearningOutcome: no permission", log.Any("op", operator),
-		//		log.Any("perms", perms), log.Any("outcome", outcome))
-		//	return constant.ErrOperateNotAllowed
-		//}
+		if !allowDeleteOutcome(ctx, operator, perms, outcome) {
+			log.Warn(ctx, "DeleteLearningOutcome: no permission", log.Any("op", operator),
+				log.Any("perms", perms), log.Any("outcome", outcome))
+			return constant.ErrOperateNotAllowed
+		}
 		err = ocm.deleteOutcome(ctx, tx, outcome, operator)
 		if err != nil {
 			log.Error(ctx, "DeleteLearningOutcome: deleteOutcome failed",
@@ -1050,17 +1043,6 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, tx 
 	return
 }
 
-func (ocm OutcomeModel) getShortCode(ctx context.Context, orgID string) (shortcode string, err error) {
-	redisKey := fmt.Sprintf("%s:%s", da.RedisKeyPrefixOutcomeShortcode, orgID)
-	num, err := ro.MustGetRedis(ctx).Incr(redisKey).Result()
-	if err != nil {
-		log.Error(ctx, "getShortCode failed",
-			log.Err(err))
-	}
-	shortcode = PaddingStr(NumToBHex(int(num), constant.ShortcodeBaseCustom), constant.ShortcodeShowLength)
-	return
-}
-
 func (ocm OutcomeModel) lockOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) (err error) {
 	// must in a transaction
 	if outcome.PublishStatus != entity.OutcomeStatusPublished {
@@ -1271,23 +1253,4 @@ func GetOutcomeModel() IOutcomeModel {
 		_outcomeModel = new(OutcomeModel)
 	})
 	return _outcomeModel
-}
-
-var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
-
-func NumToBHex(num int, n int) string {
-	numStr := ""
-	for num != 0 {
-		yu := num % n
-		numStr = string(num2char[yu]) + numStr
-		num = num / n
-	}
-	return strings.ToUpper(numStr)
-}
-
-func PaddingStr(s string, l int) string {
-	if l <= len(s) {
-		return s
-	}
-	return strings.Repeat("0", l-len(s)) + s
 }

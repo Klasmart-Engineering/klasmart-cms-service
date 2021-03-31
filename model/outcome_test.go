@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"os"
 	"testing"
@@ -43,6 +44,16 @@ func setup() {
 	})
 }
 
+func TestOutcomeModel_GetLearningOutcomeByID(t *testing.T) {
+	setup()
+	ctx := context.TODO()
+	outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, dbo.MustGetDB(ctx), "60616800e7c9026bb00d1d6c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%#v\n", outcome)
+}
+
 func TestGenerateShortcode(t *testing.T) {
 	setup()
 	ctx := context.TODO()
@@ -51,4 +62,14 @@ func TestGenerateShortcode(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(shortcode)
+}
+
+func TestSearchSetsByOutcome(t *testing.T) {
+	setup()
+	ctx := context.TODO()
+	outcomesSets, err := da.GetOutcomeSetDA().SearchSetsByOutcome(ctx, dbo.MustGetDB(ctx), []string{"60616800e7c9026bb00d1d6c"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%#v\n", outcomesSets)
 }

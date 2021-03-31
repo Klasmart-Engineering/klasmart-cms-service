@@ -1,7 +1,7 @@
 package api
 
 import (
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +11,7 @@ import (
 )
 
 type OutcomeSetCreateView struct {
-	SetID   string `json:"set_id"`
+	SetID   string `json:"set_id" form:"set_id"`
 	SetName string `json:"set_name" form:"set_name"`
 }
 
@@ -40,17 +40,30 @@ func (s *Server) createOutcomeSet(c *gin.Context) {
 		return
 	}
 
-	//hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
-	//if err != nil {
-	//	log.Warn(ctx, "createOutcome: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
-	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	//	return
-	//}
-	//if !hasPerm {
-	//	log.Warn(ctx, "createOutcome: no permission", log.Any("op", op), log.String("perm", string(external.CreateLearningOutcome)))
-	//	c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
-	//	return
-	//}
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.CreateLearningOutcome,
+		external.EditMyUnpublishedLearningOutcome,
+		external.EditOrgUnpublishedLearningOutcome,
+		external.EditPublishedLearningOutcome,
+	})
+	if err != nil {
+		log.Warn(ctx, "createOutcomeSet: HasOrganizationPermissions failed", log.Any("op", op), log.Any("data", data), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
+	hasPerm := false
+	for _, v := range perms {
+		if v == true {
+			hasPerm = true
+			break
+		}
+	}
+	if !hasPerm {
+		log.Warn(ctx, "createOutcomeSet: no permission", log.Any("op", op))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
 	data.SetID, err = model.GetOutcomeSetModel().CreateOutcomeSet(ctx, op, data.SetName)
 	switch err {
 	case nil:
@@ -66,7 +79,7 @@ type PullOutcomeSetRequest struct {
 	SetName string `json:"set_name" form:"set_name"`
 }
 type PullOutcomeSetResponse struct {
-	Sets []*entity.Set
+	Sets []*OutcomeSetCreateView
 }
 
 // @ID pullOutcomeSet
@@ -95,11 +108,19 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 		return
 	}
 	outcomeSets, err := model.GetOutcomeSetModel().PullOutcomeSet(ctx, op, request.SetName)
+	var response PullOutcomeSetResponse
+	for i := range outcomeSets {
+		set := OutcomeSetCreateView{
+			SetID:   outcomeSets[i].ID,
+			SetName: outcomeSets[i].Name,
+		}
+		response.Sets = append(response.Sets, &set)
+	}
 	switch err {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, PullOutcomeSetResponse{Sets: outcomeSets})
+		c.JSON(http.StatusOK, response)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -119,6 +140,7 @@ type BulkBindOutcomeSetRequest struct {
 // @Param outcome body BulkBindOutcomeSetRequest true "learning outcome"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /sets/bulk_bind [post]
@@ -133,8 +155,34 @@ func (s *Server) bulkBindOutcomeSet(c *gin.Context) {
 		return
 	}
 
-	// permission check has to delegated to business lay for recognizing org's permission or author's permission
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.CreateLearningOutcome,
+		external.EditMyUnpublishedLearningOutcome,
+		external.EditOrgUnpublishedLearningOutcome,
+		external.EditPublishedLearningOutcome,
+	})
+	if err != nil {
+		log.Warn(ctx, "bulkBindOutcomeSet: HasOrganizationPermissions failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Strings("outcome", request.OutcomeIDs),
+			log.Strings("set", request.SetIDs))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
 
+	hasPerm := false
+	for _, v := range perms {
+		if v == true {
+			hasPerm = true
+			break
+		}
+	}
+	if !hasPerm {
+		log.Warn(ctx, "bulkBindOutcomeSet: no permission", log.Any("op", op))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
 	err = model.GetOutcomeSetModel().BulkBindOutcomeSet(ctx, op, request.OutcomeIDs, request.SetIDs)
 	switch err {
 	case constant.ErrOperateNotAllowed:
