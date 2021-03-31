@@ -25,10 +25,89 @@ type IScheduleDA interface {
 	GetLessonPlanIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	UpdateProgram(ctx context.Context, tx *sql.Tx, orgID string, oldProgramID string, newProgramID string) error
 	UpdateSubject(ctx context.Context, tx *sql.Tx, orgID string, oldSubjectID string, oldProgramID string, newSubjectID string) error
+	GetPrograms(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
+	GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
+	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 }
 
 type scheduleDA struct {
 	dbo.BaseDA
+}
+
+func (s *scheduleDA) GetPrograms(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
+	wheres, parameters := condition.GetConditions()
+	whereSql := strings.Join(wheres, " and ")
+	var scheduleList []*entity.Schedule
+	err := tx.Table(constant.TableNameSchedule).Select("distinct program_id").Where(whereSql, parameters...).Find(&scheduleList).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "get programs ids from db error",
+			log.Err(err),
+			log.Any("condition", condition),
+		)
+		return nil, err
+	}
+	var result = make([]string, 0, len(scheduleList))
+	for _, item := range scheduleList {
+		if item.ProgramID == "" {
+			continue
+		}
+		result = append(result, item.ProgramID)
+	}
+	log.Debug(ctx, "ProgramIDs", log.Strings("ProgramIDs", result))
+	return result, nil
+}
+func (s *scheduleDA) GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
+	wheres, parameters := condition.GetConditions()
+	whereSql := strings.Join(wheres, " and ")
+	var scheduleList []*entity.Schedule
+	err := tx.Table(constant.TableNameSchedule).Select("distinct subject_id").Where(whereSql, parameters...).Find(&scheduleList).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "get programs ids from db error",
+			log.Err(err),
+			log.Any("condition", condition),
+		)
+		return nil, err
+	}
+	var result = make([]string, 0, len(scheduleList))
+	for _, item := range scheduleList {
+		if item.SubjectID == "" {
+			continue
+		}
+		result = append(result, item.SubjectID)
+	}
+	log.Debug(ctx, "SubjectIDs", log.Strings("SubjectIDs", result))
+	return result, nil
+}
+func (s *scheduleDA) GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
+	wheres, parameters := condition.GetConditions()
+	whereSql := strings.Join(wheres, " and ")
+	var scheduleList []*entity.Schedule
+	err := tx.Table(constant.TableNameSchedule).Select("distinct class_type").Where(whereSql, parameters...).Find(&scheduleList).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return nil, constant.ErrRecordNotFound
+	}
+	if err != nil {
+		log.Error(ctx, "get class_type from db error",
+			log.Err(err),
+			log.Any("condition", condition),
+		)
+		return nil, err
+	}
+	var result = make([]string, 0, len(scheduleList))
+	for _, item := range scheduleList {
+		if item.ClassType == "" {
+			continue
+		}
+		result = append(result, item.ClassType.String())
+	}
+	log.Debug(ctx, "class_type", log.Strings("class_type", result))
+	return result, nil
 }
 
 func (s *scheduleDA) MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, schedules []*entity.Schedule) (int64, error) {
