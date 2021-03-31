@@ -207,6 +207,11 @@ func (s Server) registeRoute() {
 		lessonTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getLessonTypeByID)
 	}
 
+	programGroups := s.engine.Group("/v1/programs_groups")
+	{
+		programGroups.GET("", s.mustLoginWithoutOrgID, s.getProgramGroup)
+	}
+
 	programs := s.engine.Group("/v1/programs")
 	{
 		programs.GET("", s.mustLoginWithoutOrgID, s.getProgram)

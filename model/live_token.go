@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"net/url"
 
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -307,17 +308,20 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
-		//case entity.FileTypeDocument:
-		//	materialItem.TypeName = entity.MaterialTypeDoc
+		case entity.FileTypeDocument:
+			materialItem.TypeName = entity.MaterialTypeH5P
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
 			continue
 		}
 		// material url
-		if materialItem.TypeName == entity.MaterialTypeH5P {
+		switch mData.FileType {
+		case entity.FileTypeH5pExtend:
+			materialItem.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p", op.OrgID, item.ID, input.ScheduleID, input.TokenType)
+		case entity.FileTypeH5p:
 			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
-		} else {
-			materialItem.URL, err = GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
+		default:
+			sourceUrl, err := GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
 			if err != nil {
 				log.Error(ctx, "getMaterials:get resource path error",
 					log.Err(err),
@@ -325,9 +329,11 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 					log.Any("mData", mData))
 				return nil, err
 			}
-		}
-		if mData.FileType == entity.FileTypeH5pExtend {
-			materialItem.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p", op.OrgID, item.ID, input.ScheduleID, input.TokenType)
+			if mData.FileType == entity.FileTypeDocument {
+				escape := url.QueryEscape(sourceUrl)
+				sourceUrl = fmt.Sprintf("%s?src=%s", constant.LiveTokenDocumentUrlPrefix, escape)
+			}
+			materialItem.URL = sourceUrl
 		}
 		materials = append(materials, materialItem)
 	}

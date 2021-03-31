@@ -24,6 +24,8 @@ const (
 	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
 	LibraryContentLockedByMe     ResponseLabel = "library_error_content_locked_by_me"
 
+	LibraryErrorPlanDuration ResponseLabel = "library_error_plan_duration"
+
 	//Folder
 	FolderDeleteNoEmptyFolder ResponseLabel = "library_error_delete_folder"
 

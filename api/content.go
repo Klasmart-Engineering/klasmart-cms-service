@@ -79,6 +79,8 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrSuggestTimeTooSmall:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorPlanDuration))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidSelectForm:
@@ -384,6 +386,8 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrSuggestTimeTooSmall:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorPlanDuration))
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
@@ -744,7 +748,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	}
 	author := c.Query("author")
 	total := 0
-	var results []*entity.FolderContent
+	var results []*entity.FolderContentData
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	} else {
@@ -906,7 +910,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	//	condition.Name = keywords
 	//}
 	if contentTypeStr != "" {
-		contentTypeList := strings.Split(contentTypeStr, ",")
+		contentTypeList := strings.Split(contentTypeStr, constant.StringArraySeparator)
 		for i := range contentTypeList {
 			contentType, err := strconv.Atoi(contentTypeList[i])
 			if err != nil {
@@ -918,14 +922,14 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		}
 	}
 	if scope != "" {
-		scopes := strings.Split(scope, ",")
+		scopes := strings.Split(scope, constant.StringArraySeparator)
 		condition.Scope = append(condition.Scope, scopes...)
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)
 	}
 	if programs != "" {
-		program := strings.Split(programs, ",")
+		program := strings.Split(programs, constant.StringArraySeparator)
 		condition.Program = program
 	}
 	if programGroup != "" {
