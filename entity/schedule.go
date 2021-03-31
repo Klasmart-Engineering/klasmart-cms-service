@@ -623,9 +623,9 @@ const ScheduleFilterInvalidValue = "-1"
 const ScheduleFilterUndefinedClass = "Undefined"
 
 type ScheduleFilterClass struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	HasStudentFlag bool   `json:"has_student_flag"`
+	ID               string           `json:"id"`
+	Name             string           `json:"name"`
+	OperatorRoleType ScheduleRoleType `json:"operator_role_type" enums:"Student,Teacher,Unknown"`
 }
 
 type ScheduleFilterSchool struct {
