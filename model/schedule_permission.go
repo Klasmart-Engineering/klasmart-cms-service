@@ -20,32 +20,118 @@ type ISchedulePermissionModel interface {
 	GetClassesBySchoolID(ctx context.Context, op *entity.Operator, schoolID string) ([]*entity.ScheduleFilterClass, error)
 	GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleFilterClass, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator) ([]*external.User, error)
+	GetUnDefineClass(ctx context.Context, op *entity.Operator) (*entity.ScheduleFilterClass, error)
 }
 
 type schedulePermissionModel struct {
 	testSchedulePermissionRepeatFlag bool
 }
 
+func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *entity.Operator) (*entity.ScheduleFilterClass, error) {
+	permissionMap, err := s.HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewMyCalendar,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// only have ScheduleViewMyCalendar permission
+	if !permissionMap[external.ScheduleViewOrgCalendar] &&
+		permissionMap[external.ScheduleViewMyCalendar] {
+
+	}
+
+	userInfos, err := s.GetOnlyUnderOrgUsers(ctx, op)
+	if err != nil {
+		log.Error(ctx, "GetOnlyUnderOrgUsers error", log.Any("op", op))
+		return nil, err
+	}
+
+	if len(userInfos) <= 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+
+	userIDs := make([]string, len(userInfos))
+	hasOperator := false
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+		if item.ID == op.UserID {
+			hasOperator = true
+		}
+	}
+
+	if !permissionMap[external.ScheduleViewOrgCalendar] &&
+		permissionMap[external.ScheduleViewMyCalendar] &&
+		!hasOperator {
+		return nil, constant.ErrRecordNotFound
+	}
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		// org permission
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		userIDs = []string{op.UserID}
+	}
+
+	hasSchedule, err := GetScheduleRelationModel().HasScheduleByRelationIDs(ctx, op, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	if !hasSchedule {
+		return nil, constant.ErrRecordNotFound
+	}
+	result := &entity.ScheduleFilterClass{
+		ID:             entity.ScheduleFilterUndefinedClass,
+		Name:           entity.ScheduleFilterUndefinedClass,
+		HasStudentFlag: false,
+	}
+	return result, nil
+}
+
 func (s *schedulePermissionModel) GetClassesByOperator(ctx context.Context, op *entity.Operator, schoolID string) ([]*entity.ScheduleFilterClass, error) {
 	if schoolID == entity.ScheduleFilterInvalidValue {
+		permissionMap, err := s.HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+			external.ScheduleViewOrgCalendar,
+			external.ScheduleViewMyCalendar,
+		})
+		if err != nil {
+			return nil, err
+		}
+		// only school permission
+		if permissionMap[external.ScheduleViewSchoolCalendar] &&
+			!permissionMap[external.ScheduleViewOrgCalendar] &&
+			!permissionMap[external.ScheduleViewMyCalendar] {
+			log.Debug(ctx, "only school permission", log.Any("op", op))
+			return nil, nil
+		}
+
 		classInfos, err := s.GetOnlyUnderOrgClasses(ctx, op)
 		if err != nil {
 			log.Error(ctx, "GetOnlyUnderOrgClasses error", log.Any("op", op))
 			return nil, err
 		}
-		userInfos, err := s.GetOnlyUnderOrgUsers(ctx, op)
+
+		unDefineClass, err := s.GetUnDefineClass(ctx, op)
+		if err == constant.ErrRecordNotFound {
+			return classInfos, nil
+		}
 		if err != nil {
-			log.Error(ctx, "GetOnlyUnderOrgUsers error", log.Any("op", op))
 			return nil, err
 		}
-		if len(userInfos) > 0 {
-			classInfos = append(classInfos, &entity.ScheduleFilterClass{
-				ID:             entity.ScheduleFilterUndefinedClass,
-				Name:           entity.ScheduleFilterUndefinedClass,
-				HasStudentFlag: false,
-			})
+		classInfos = append(classInfos, unDefineClass)
+
+		if permissionMap[external.ScheduleViewOrgCalendar] {
+			return classInfos, nil
 		}
-		return classInfos, nil
+
+		if permissionMap[external.ScheduleViewMyCalendar] {
+			//userClasses, err := external.GetClassServiceProvider().GetByUserID(ctx, op, op.UserID)
+			//if err != nil {
+			//	return nil, err
+			//}
+		}
+
+		//da.GetScheduleRedisDA().Add()
+
 	}
 	return s.GetClassesBySchoolID(ctx, op, schoolID)
 }

@@ -1002,7 +1002,7 @@ func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
 	result, err := model.GetSchedulePermissionModel().GetSchoolsByOperator(ctx, op)
 	switch err {
 	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		c.JSON(http.StatusForbidden, []*entity.ScheduleFilterSchool{})
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
@@ -1028,12 +1028,12 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 	schoolID := c.Query("school_id")
 	result, err := model.GetSchedulePermissionModel().GetClassesByOperator(ctx, op, schoolID)
 	switch err {
-	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusOK, []*entity.ScheduleFilterClass{})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
