@@ -521,6 +521,25 @@ CREATE TABLE `outcomes_attendances` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `outcomes_sets`
+--
+
+DROP TABLE IF EXISTS `outcomes_sets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `outcomes_sets` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `outcome_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'outcome_id',
+  `set_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'set_id',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `outcome_set_id_delete` (`outcome_id`,`set_id`,`delete_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `programs`
 --
 
@@ -711,6 +730,26 @@ CREATE TABLE `schedules_relations` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `sets`
+--
+
+DROP TABLE IF EXISTS `sets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sets` (
+  `id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'name',
+  `organization_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'organization_id',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name_organization_id` (`name`,`organization_id`),
+  FULLTEXT KEY `fullindex_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='sets';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `skills`
 --
 
@@ -801,4 +840,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-30 17:02:00
+-- Dump completed on 2021-03-31 17:00:42
