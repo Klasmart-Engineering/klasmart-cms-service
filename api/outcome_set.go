@@ -79,7 +79,7 @@ type PullOutcomeSetRequest struct {
 	SetName string `json:"set_name" form:"set_name"`
 }
 type PullOutcomeSetResponse struct {
-	Sets []*OutcomeSetCreateView
+	Sets []*OutcomeSetCreateView `json:"sets" form:"sets"`
 }
 
 // @ID pullOutcomeSet

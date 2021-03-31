@@ -86,27 +86,16 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, outcome *enti
 		if exists {
 			return constant.ErrConflict
 		}
-		err = da.GetOutcomeDA().CreateOutcome(ctx, tx, outcome)
+		err = GetOutcomeSetModel().BindByOutcome(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "CreateLearningOutcome: CreateOutcome failed",
+			log.Error(ctx, "CreateLearningOutcome: BindByOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
-		if len(outcome.Sets) == 0 {
-			return nil
-		}
-		outcomeSets := make([]*entity.OutcomeSet, len(outcome.Sets))
-		for i := range outcome.Sets {
-			outcomeSet := entity.OutcomeSet{
-				OutcomeID: outcome.ID,
-				SetID:     outcome.Sets[i].ID,
-			}
-			outcomeSets[i] = &outcomeSet
-		}
-		err = da.GetOutcomeSetDA().BindOutcomeSet(ctx, operator, tx, outcomeSets)
+		err = da.GetOutcomeDA().CreateOutcome(ctx, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "CreateLearningOutcome: BindOutcomeSet failed",
+			log.Error(ctx, "CreateLearningOutcome: CreateOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
@@ -444,6 +433,13 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, tx *dbo.DBConte
 			return err
 		}
 		newVersion = outcome.Clone(operator)
+		err = GetOutcomeSetModel().BindByOutcome(ctx, operator, tx, &newVersion)
+		if err != nil {
+			log.Error(ctx, "LockLearningOutcome: BindByOutcome failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
 		err = da.GetOutcomeDA().CreateOutcome(ctx, tx, &newVersion)
 		if err != nil {
 			log.Error(ctx, "LockLearningOutcome: CreateOutcome failed",

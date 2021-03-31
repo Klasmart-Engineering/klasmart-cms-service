@@ -17,6 +17,7 @@ type IOutcomeSetModel interface {
 	CreateOutcomeSet(ctx context.Context, op *entity.Operator, name string) (string, error)
 	PullOutcomeSet(ctx context.Context, op *entity.Operator, name string) ([]*entity.Set, error)
 	BulkBindOutcomeSet(ctx context.Context, op *entity.Operator, outcomeIDs []string, setIDs []string) error
+	BindByOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
 }
 
 type OutcomeSetModel struct{}
@@ -98,6 +99,28 @@ func (OutcomeSetModel) BulkBindOutcomeSet(ctx context.Context, op *entity.Operat
 		return nil
 	})
 	return err
+}
+
+func (OutcomeSetModel) BindByOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error {
+	if len(outcome.Sets) == 0 {
+		return nil
+	}
+	outcomeSets := make([]*entity.OutcomeSet, len(outcome.Sets))
+	for i := range outcome.Sets {
+		outcomeSet := entity.OutcomeSet{
+			OutcomeID: outcome.ID,
+			SetID:     outcome.Sets[i].ID,
+		}
+		outcomeSets[i] = &outcomeSet
+	}
+	err := da.GetOutcomeSetDA().BindOutcomeSet(ctx, op, tx, outcomeSets)
+	if err != nil {
+		log.Error(ctx, "CreateLearningOutcome: BindOutcomeSet failed",
+			log.String("op", op.UserID),
+			log.Any("outcome", outcome))
+		return err
+	}
+	return nil
 }
 
 var (

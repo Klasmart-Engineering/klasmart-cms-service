@@ -320,6 +320,20 @@ func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, cond
 			log.Err(err),
 			log.Any("condition", condition))
 	}
+	outcomeIDs := make([]string, len(outcomes))
+	for i := range outcomes {
+		outcomeIDs[i] = outcomes[i].ID
+	}
+	if len(outcomeIDs) > 0 {
+		outcomeSets, err := GetOutcomeSetDA().SearchSetsByOutcome(ctx, tx, outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "GetOutcomeByID: SearchSetsByOutcome failed", log.Err(err), log.Strings("outcome", outcomeIDs))
+			return 0, nil, err
+		}
+		for i := range outcomes {
+			outcomes[i].Sets = outcomeSets[outcomes[i].ID]
+		}
+	}
 
 	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, condition, &OutcomeListWithKey{total, outcomes})
 	return
