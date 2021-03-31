@@ -993,7 +993,6 @@ func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {array} entity.ScheduleFilterSchool
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/schools [get]
 func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
@@ -1002,7 +1001,7 @@ func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
 	result, err := model.GetSchedulePermissionModel().GetSchoolsByOperator(ctx, op)
 	switch err {
 	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, []*entity.ScheduleFilterSchool{})
+		c.JSON(http.StatusOK, []*entity.ScheduleFilterSchool{})
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
@@ -1108,7 +1107,6 @@ func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {array} entity.ScheduleShortInfo
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/programs [get]
 func (s *Server) getProgramsInScheduleFilter(c *gin.Context) {
@@ -1120,7 +1118,7 @@ func (s *Server) getProgramsInScheduleFilter(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, programs)
 	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusOK, []*entity.ScheduleShortInfo{})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -1134,7 +1132,6 @@ func (s *Server) getProgramsInScheduleFilter(c *gin.Context) {
 // @Produce json
 // @Param program_id query string true "program id"
 // @Success 200 {array} entity.ScheduleShortInfo
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/subjects [get]
 func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
@@ -1147,7 +1144,7 @@ func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, subjects)
 	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusOK, []*entity.ScheduleShortInfo{})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -1160,7 +1157,6 @@ func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {array} string
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/class_types [get]
 func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
@@ -1172,7 +1168,7 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, classTypes)
 	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusOK, []string{})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
