@@ -2305,8 +2305,9 @@ func (s *scheduleModel) getRelationCondition(ctx context.Context, op *entity.Ope
 	}
 
 	if permissionMap[external.ScheduleViewOrgCalendar] {
-
-	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
+		return condition, nil
+	}
+	if permissionMap[external.ScheduleViewSchoolCalendar] {
 		schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
 		if err != nil {
 			log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
@@ -2317,19 +2318,22 @@ func (s *scheduleModel) getRelationCondition(ctx context.Context, op *entity.Ope
 			return nil, constant.ErrInternalServer
 		}
 		relationIDs := make([]string, len(schoolList))
-		for _, item := range schoolList {
-			relationIDs = append(relationIDs, item.ID)
+		for i, item := range schoolList {
+			relationIDs[i] = item.ID
 		}
 
 		condition.RelationIDs = entity.NullStrings{
 			Strings: relationIDs,
 			Valid:   true,
 		}
-	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		return condition, nil
+	}
+	if permissionMap[external.ScheduleViewMyCalendar] {
 		condition.RelationIDs = entity.NullStrings{
 			Strings: []string{op.UserID},
 			Valid:   true,
 		}
+		return condition, nil
 	}
 	return condition, nil
 }
