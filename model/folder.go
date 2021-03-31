@@ -1698,14 +1698,21 @@ func (f *FolderModel) checkDuplicateFolderName(ctx context.Context, ownerType en
 		Partition: partition,
 		Name:      name,
 	}
-	total, err := da.GetFolderDA().SearchFolderCount(ctx, dbo.MustGetDB(ctx), condition)
+	folders, err := da.GetFolderDA().SearchFolder(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		log.Error(ctx, "count parentFolder for check duplicate parentFolder failed",
 			log.Err(err), log.Any("condition", condition))
 		return err
 	}
-	if total > 0 {
-		return ErrDuplicateFolderName
+
+	for i := range folders {
+		if folders[i].Name == name {
+			log.Warn(ctx, "check duplicate name failed",
+				log.Err(err),
+				log.String("name", name),
+				log.Any("folders", folders))
+			return ErrDuplicateFolderName
+		}
 	}
 
 	return nil
@@ -1730,25 +1737,35 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 		return err
 	}
 	//check duplicate folder name
-	if len(folders) > 0 {
-		//if owner type is organization,folder can be the same
-		//in different partition
-		if folder.OwnerType == entity.OwnerTypeOrganization {
-			p := folder.DirPath.Parents()
-			if len(p) < 1 {
-				//root path can't be the same
-				return ErrDuplicateFolderName
-			}
-			for i := range folders {
-				parents := folders[i].DirPath.Parents()
-				if len(parents) > 1 && parents[0] == p[0] {
+	for i := range folders {
+		if folders[i].Name == name {
+			//if owner type is organization,folder can be the same
+			//in different partition
+			if folder.OwnerType == entity.OwnerTypeOrganization {
+				p := folder.DirPath.Parents()
+				if len(p) < 1 {
+					//root path can't be the same
+					log.Warn(ctx, "root path can't be the same",
+						log.Strings("p", p),
+						log.Any("folders[i]", folders[i]),
+						log.String("name", name),
+						log.Any("condition", condition))
 					return ErrDuplicateFolderName
 				}
+				parents := folders[i].DirPath.Parents()
+				if len(parents) > 1 && parents[0] == p[0] {
+					log.Warn(ctx, "same path same name",
+						log.Strings("parents", parents),
+						log.Strings("p", p),
+						log.Any("folders[i]", folders[i]),
+						log.String("name", name),
+						log.Any("condition", condition))
+					return ErrDuplicateFolderName
+				}
+			}else{
+				return ErrDuplicateFolderName
 			}
-			return nil
 		}
-
-		return ErrDuplicateFolderName
 	}
 
 	return nil
