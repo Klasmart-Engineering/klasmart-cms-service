@@ -23,6 +23,7 @@ const (
 	LibraryMsgContentLocked      ResponseLabel = "library_error_content_locked"
 	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
 	LibraryContentLockedByMe     ResponseLabel = "library_error_content_locked_by_me"
+	LibraryErrDuplicateFolderName     ResponseLabel = "library_error_duplicate_folder_name"
 
 	LibraryErrorPlanDuration ResponseLabel = "library_error_plan_duration"
 
