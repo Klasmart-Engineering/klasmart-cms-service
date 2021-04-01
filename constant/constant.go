@@ -55,6 +55,7 @@ var (
 	ErrOperateNotAllowed = errors.New("operation not allowed")
 	ErrInternalServer    = errors.New("internal server error")
 	ErrForbidden         = errors.New("forbidden")
+	ErrHasLocked         = errors.New("has locked")
 )
 
 const (

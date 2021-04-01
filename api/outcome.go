@@ -665,6 +665,11 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 		return
 	}
 	err = model.GetOutcomeModel().BulkDelLearningOutcome(ctx, dbo.MustGetDB(ctx), data.OutcomeIDs, op)
+	_, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, L(AssessMsgLockedLo))
+		return
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
