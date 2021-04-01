@@ -414,7 +414,11 @@ CREATE TABLE `learning_outcomes` (
   KEY `index_latest_id` (`latest_id`),
   KEY `index_publish_status` (`publish_status`),
   KEY `index_source_id` (`source_id`),
-  FULLTEXT KEY `fullindex_name_description_keywords_shortcode` (`name`,`keywords`,`description`,`shortcode`)
+  FULLTEXT KEY `fullindex_name_description_keywords_shortcode` (`name`,`keywords`,`description`,`shortcode`),
+  FULLTEXT KEY `fullindex_name` (`name`),
+  FULLTEXT KEY `fullindex_keywords` (`keywords`),
+  FULLTEXT KEY `fullindex_description` (`description`),
+  FULLTEXT KEY `fullindex_shortcode` (`shortcode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes table';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -536,7 +540,7 @@ CREATE TABLE `outcomes_sets` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `outcome_set_id_delete` (`outcome_id`,`set_id`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
+) ENGINE=InnoDB AUTO_INCREMENT=248 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -840,4 +844,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-03-31 17:00:42
+-- Dump completed on 2021-04-01 17:00:34
