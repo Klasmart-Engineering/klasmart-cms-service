@@ -23,4 +23,5 @@ CREATE TABLE IF NOT EXISTS `outcomes_sets` (
 
 alter table learning_outcomes add fulltext fullindex_name (name);
 alter table learning_outcomes add fulltext fullindex_keywords(keywords);
+alter table learning_outcomes add fulltext fullindex_shortcode(shortcode);
 alter table learning_outcomes add fulltext fullindex_description(description);
