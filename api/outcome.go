@@ -205,6 +205,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param keywords query string false "search by keywords"
 // @Param shortcode query string false "search by shortcode"
 // @Param author_name query string false "search by author_name"
+// @Param set_name query string false "search by set_name"
 // @Param search_key query string false "search by search_key"
 // @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
