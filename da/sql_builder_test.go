@@ -16,12 +16,12 @@ func TestSQLBuilder(t *testing.T) {
 		{"3", "Unknown"},
 	}
 	b := NewSQLBuilder().Append("insert into user(id, name) values")
-	values := NewSQLBuilder()
+	tpl := NewSQLTemplate("")
 	for _, item := range data {
-		values.Append("(?,?)", item.id, item.name)
+		tpl.Join(", ", "(?,?)", item.id, item.name)
 	}
-	b.AppendTemplate(values.Join(","))
-	t.Logf("%+v", b.Join())
+	b.AppendTemplate(tpl)
+	t.Logf("%+v", b.MergePlain())
 }
 
 func TestSQLBatchInsert(t *testing.T) {

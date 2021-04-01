@@ -35,7 +35,7 @@ import (
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	cmd := entity.ListAssessmentsQuery{}
+	cmd := entity.QueryAssessmentsArgs{}
 	{
 		status := c.Query("status")
 		if status != "" {
@@ -100,7 +100,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 // @ID addAssessment
 // @Accept json
 // @Produce json
-// @Param assessment body entity.AddAssessmentCommand true "add assessment command"
+// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -120,7 +120,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 		return
 	}
 
-	cmd := entity.AddAssessmentCommand{}
+	cmd := entity.AddAssessmentArgs{}
 	if _, err := jwt.ParseWithClaims(body.Token, &cmd, func(token *jwt.Token) (interface{}, error) {
 		return config.Get().Assessment.AddAssessmentSecret, nil
 	}); err != nil {
@@ -156,7 +156,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 // @ID addAssessmentForTest
 // @Accept json
 // @Produce json
-// @Param assessment body entity.AddAssessmentCommand true "add assessment command"
+// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
 // @Success 200 {object} entity.AddAssessmentResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -164,7 +164,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 func (s *Server) addAssessmentForTest(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	cmd := entity.AddAssessmentCommand{}
+	cmd := entity.AddAssessmentArgs{}
 	if err := c.ShouldBind(&cmd); err != nil {
 		log.Info(ctx, "add assessment: bind failed",
 			log.Err(err),
@@ -193,7 +193,7 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "assessment id"
-// @Success 200 {object} entity.AssessmentDetailView
+// @Success 200 {object} entity.AssessmentDetail
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -233,7 +233,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "assessment id"
-// @Param update_assessment_command body entity.UpdateAssessmentCommand true "update assessment assessment command"
+// @Param update_assessment_command body entity.UpdateAssessmentArgs true "update assessment assessment command"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -242,33 +242,29 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 func (s *Server) updateAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	cmd := entity.UpdateAssessmentCommand{}
-	{
-		if err := c.ShouldBind(&cmd); err != nil {
-			log.Info(ctx, "update assessment: bind failed",
-				log.Err(err),
-			)
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return
-		}
-
-		id := c.Param("id")
-		if id == "" {
-			log.Info(ctx, "update assessment: require id")
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return
-		}
-		cmd.ID = id
+	args := entity.UpdateAssessmentArgs{}
+	if err := c.ShouldBind(&args); err != nil {
+		log.Info(ctx, "update assessment: bind failed",
+			log.Err(err),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
 	}
 
-	{
-		if cmd.AttendanceIDs != nil && len(*cmd.AttendanceIDs) == 0 {
-			c.JSON(http.StatusBadRequest, L(AssessMsgOneStudent))
-			return
-		}
+	id := c.Param("id")
+	if id == "" {
+		log.Info(ctx, "update assessment: require id")
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	args.ID = id
+
+	if args.AttendanceIDs != nil && len(*args.AttendanceIDs) == 0 {
+		c.JSON(http.StatusBadRequest, L(AssessMsgOneStudent))
+		return
 	}
 
-	err := model.GetAssessmentModel().Update(ctx, s.getOperator(c), cmd)
+	err := model.GetAssessmentModel().Update(ctx, s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))

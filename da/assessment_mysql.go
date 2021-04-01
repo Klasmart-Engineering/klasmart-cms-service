@@ -110,66 +110,79 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 	return "delete_at = 0"
 }
 
-type QueryAssessmentsCondition struct {
-	OrgID                           *string                                  `json:"org_id"`
-	Status                          *entity.AssessmentStatus                 `json:"status"`
-	ScheduleIDs                     []string                                 `json:"schedule_ids"`
-	TeacherIDs                      []string                                 `json:"teacher_ids"`
-	AssessmentTeacherAndStatusPairs []*entity.AssessmentTeacherAndStatusPair `json:"assessment_teacher_and_status_pairs"`
-	OrderBy                         *entity.ListAssessmentsOrderBy           `json:"order_by"`
-	Page                            int                                      `json:"page"`
-	PageSize                        int                                      `json:"page_size"`
+type QueryAssessmentsConditions struct {
+	OrgID                   *string                                    `json:"org_id"`
+	Status                  *entity.AssessmentStatus                   `json:"status"`
+	ScheduleIDs             []string                                   `json:"schedule_ids"`
+	TeacherIDs              []string                                   `json:"teacher_ids"`
+	AllowTeacherIDs              []string `json:"allow_teacher_ids"`
+	TeacherIDAndStatusPairs []*entity.AssessmentTeacherIDAndStatusPair `json:"teacher_id_and_status_pairs"`
+	OrderBy                 *entity.ListAssessmentsOrderBy             `json:"order_by"`
+	Page                    int                                        `json:"page"`
+	PageSize                int                                        `json:"page_size"`
 }
 
-func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
-	pb := utils.NewPredicateBuilder().Append("delete_at = 0")
+func (c *QueryAssessmentsConditions) GetConditions() ([]string, []interface{}) {
+	b := NewSQLBuilder().Append("delete_at = 0")
 
 	if c.OrgID != nil {
-		pb.Append("exists (select 1 from schedules"+
+		b.Append("exists (select 1 from schedules"+
 			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
 	}
 
 	if c.Status != nil {
-		pb.Append("status = ?", *c.Status)
+		b.Append("status = ?", *c.Status)
 	}
 
 	if c.TeacherIDs != nil {
 		if len(c.TeacherIDs) == 0 {
-			return utils.FalsePredicateBuilder().Raw()
+			return FalseSQLTemplate().DBOConditions()
 		}
 		teacherIDs := utils.SliceDeduplication(c.TeacherIDs)
-		tmpPB := utils.NewPredicateBuilder()
+		t := NewSQLTemplate("")
 		for _, tid := range teacherIDs {
-			tmpPB.Append("json_contains(teacher_ids, json_array(?))", tid)
+			t.Or("json_contains(teacher_ids, json_array(?))", tid)
 		}
-		pb.Merge(tmpPB.Or())
+		b.AppendTemplate(t.WrapBracket())
 	}
 
-	if len(c.AssessmentTeacherAndStatusPairs) > 0 {
-		for _, item := range c.AssessmentTeacherAndStatusPairs {
-			pb.Append("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
-				item.TeacherID, item.TeacherID, string(item.Status))
+	if c.AllowTeacherIDs != nil {
+		if len(c.AllowTeacherIDs) == 0 {
+			return FalseSQLTemplate().DBOConditions()
+		}
+		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
+		t := NewSQLTemplate("")
+		for _, tid := range allowTeacherIDs {
+			t.Or("json_contains(teacher_ids, json_array(?))", tid)
+		}
+		b.AppendTemplate(t.WrapBracket())
+	}
+
+	if len(c.TeacherIDAndStatusPairs) > 0 {
+		for _, p := range c.TeacherIDAndStatusPairs {
+			b.Append("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
+				p.TeacherID, p.TeacherID, string(p.Status))
 		}
 	}
 
 	if c.ScheduleIDs != nil {
 		if len(c.ScheduleIDs) == 0 {
-			return utils.FalsePredicateBuilder().Raw()
+			return FalseSQLTemplate().DBOConditions()
 		}
-		pb.Append("schedule_id in (?)", c.ScheduleIDs)
+		b.Append("schedule_id in (?)", c.ScheduleIDs)
 	}
 
-	return pb.Raw()
+	return b.MergeWithAnd().DBOConditions()
 }
 
-func (c *QueryAssessmentsCondition) GetPager() *dbo.Pager {
+func (c *QueryAssessmentsConditions) GetPager() *dbo.Pager {
 	return &dbo.Pager{
 		Page:     c.Page,
 		PageSize: c.PageSize,
 	}
 }
 
-func (c *QueryAssessmentsCondition) GetOrderBy() string {
+func (c *QueryAssessmentsConditions) GetOrderBy() string {
 	if c.OrderBy == nil {
 		return ""
 	}

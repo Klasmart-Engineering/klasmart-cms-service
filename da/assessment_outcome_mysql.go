@@ -6,14 +6,11 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
 	"sync"
 )
 
 type IAssessmentOutcomeDA interface {
-	GetListByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string, checked *bool) ([]*entity.AssessmentOutcome, error)
-	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, checked *bool) ([]*entity.AssessmentOutcome, error)
-	BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey, checked *bool) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error)
+	dbo.Querier
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
 	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
 	UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
@@ -32,80 +29,15 @@ func GetAssessmentOutcomeDA() IAssessmentOutcomeDA {
 	return assessmentOutcomeDAInstance
 }
 
-type assessmentOutcomeDA struct{}
-
-func (*assessmentOutcomeDA) GetListByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string, checked *bool) ([]*entity.AssessmentOutcome, error) {
-	db := tx.Where("assessment_id = ?", assessmentID)
-	if checked != nil {
-		db = db.Where("checked = ?", *checked)
-	}
-	var items []*entity.AssessmentOutcome
-	if err := db.Find(&items).Error; err != nil {
-		log.Error(ctx, "GetListByAssessmentID: db.Find: find failed",
-			log.Err(err),
-			log.Any("checked", checked),
-			log.String("assessment_id", assessmentID),
-		)
-		return nil, err
-	}
-	return items, nil
-}
-
-func (*assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, checked *bool) ([]*entity.AssessmentOutcome, error) {
-	db := tx.Where("assessment_id in (?)", assessmentIDs)
-	if checked != nil {
-		db = db.Where("checked = ?", *checked)
-	}
-	var items []*entity.AssessmentOutcome
-	if err := db.Find(&items).Error; err != nil {
-		log.Error(ctx, "batch get assessment outcome by assessment ids: find failed",
-			log.Err(err),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-	return items, nil
-}
-
-func (*assessmentOutcomeDA) BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey, checked *bool) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error) {
-	var (
-		template string
-		formats  []string
-		values   []interface{}
-	)
-	for _, key := range keys {
-		formats = append(formats, "(assessment_id = ? and outcome_id = ?)")
-		values = append(values, key.AssessmentID, key.OutcomeID)
-	}
-	template = strings.Join(formats, " or ")
-	db := tx.Where(template, values...)
-	if checked != nil {
-		db = db.Where("checked = ?", *checked)
-	}
-	var items []*entity.AssessmentOutcome
-	if err := db.Find(&items).Error; err != nil {
-		log.Error(ctx, "batch get assessment outcome by keys: find failed",
-			log.Err(err),
-			log.Any("checked", checked),
-			log.String("template", template),
-			log.Any("values", values),
-			log.Any("keys", keys),
-		)
-		return nil, err
-	}
-	result := map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome{}
-	for _, item := range items {
-		result[entity.AssessmentOutcomeKey{
-			AssessmentID: item.AssessmentID,
-			OutcomeID:    item.OutcomeID,
-		}] = item
-	}
-	return result, nil
+type assessmentOutcomeDA struct {
+	dbo.BaseDA
 }
 
 func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error {
-	columns := []string{"id", "assessment_id", "outcome_id"}
-	var values [][]interface{}
+	var (
+		columns = []string{"id", "assessment_id", "outcome_id"}
+		values  [][]interface{}
+	)
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
@@ -163,3 +95,28 @@ func (*assessmentOutcomeDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.D
 	}
 	return nil
 }
+
+type QueryAssessmentOutcomeConditions struct {
+	AssessmentIDs []string `json:"assessment_ids"`
+	Checked       *bool    `json:"checked"`
+}
+
+func (c *QueryAssessmentOutcomeConditions) GetConditions() ([]string, []interface{}) {
+	b := NewSQLBuilder()
+
+	if c.AssessmentIDs != nil {
+		if len(c.AssessmentIDs) == 0 {
+			return FalseSQLTemplate().DBOConditions()
+		}
+		b.Append("assessment_id in (?)", c.AssessmentIDs)
+	}
+	if c.Checked != nil {
+		b.Append("checked = ?", *c.Checked)
+	}
+
+	return b.MergeWithAnd().DBOConditions()
+}
+
+func (c *QueryAssessmentOutcomeConditions) GetPager() *dbo.Pager { return nil }
+
+func (c *QueryAssessmentOutcomeConditions) GetOrderBy() string { return "" }
