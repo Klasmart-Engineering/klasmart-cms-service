@@ -165,6 +165,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [delete]
 func (s *Server) deleteOutcome(c *gin.Context) {
@@ -178,6 +179,11 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 	}
 
 	err := model.GetOutcomeModel().DeleteLearningOutcome(ctx, outcomeID, op)
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
@@ -270,6 +276,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id}/lock [put]
 func (s *Server) lockOutcome(c *gin.Context) {
