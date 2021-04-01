@@ -20,10 +20,10 @@ const (
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
 
 	//Library
-	LibraryMsgContentLocked      ResponseLabel = "library_error_content_locked"
-	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
-	LibraryContentLockedByMe     ResponseLabel = "library_error_content_locked_by_me"
-	LibraryErrDuplicateFolderName     ResponseLabel = "library_error_duplicate_folder_name"
+	LibraryMsgContentLocked       ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentDataInvalid  ResponseLabel = "library_error_content_data_invalid"
+	LibraryContentLockedByMe      ResponseLabel = "library_error_content_locked_by_me"
+	LibraryErrDuplicateFolderName ResponseLabel = "library_error_duplicate_folder_name"
 
 	LibraryErrorPlanDuration ResponseLabel = "library_error_plan_duration"
 
@@ -49,6 +49,8 @@ const (
 	scheduleMsgHide                      ResponseLabel = "schedule_msg_hide"
 	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
 	ScheduleFeedbackCompleted            ResponseLabel = "schedule_msg_cannot_submit"
+
+	AssessMsgLockedLo ResponseLabel = "assess_msg_locked_lo"
 )
 
 // L create response object with label

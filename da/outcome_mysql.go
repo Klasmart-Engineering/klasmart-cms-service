@@ -75,7 +75,7 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.Shortcode.Valid {
-		wheres = append(wheres, "shortcode=?")
+		wheres = append(wheres, "match(shortcode) against(? in boolean mode)")
 		params = append(params, c.Shortcode.String)
 	}
 

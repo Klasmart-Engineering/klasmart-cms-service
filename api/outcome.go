@@ -205,6 +205,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param keywords query string false "search by keywords"
 // @Param shortcode query string false "search by shortcode"
 // @Param author_name query string false "search by author_name"
+// @Param set_name query string false "search by set_name"
 // @Param search_key query string false "search by search_key"
 // @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
@@ -665,6 +666,11 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 		return
 	}
 	err = model.GetOutcomeModel().BulkDelLearningOutcome(ctx, dbo.MustGetDB(ctx), data.OutcomeIDs, op)
+	_, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, L(AssessMsgLockedLo))
+		return
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))

@@ -22,7 +22,7 @@ type SetCondition struct {
 	Name           sql.NullString
 	Names          dbo.NullStrings
 	OrganizationID sql.NullString
-	FuzzyName      sql.NullString
+	//FuzzyName      sql.NullString
 
 	IncludeDeleted bool
 	OrderBy        SetOrderBy `json:"order_by"`
@@ -33,10 +33,10 @@ func (c *SetCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	if c.FuzzyName.Valid {
-		wheres = append(wheres, "match(name) against(? in boolean mode)")
-		params = append(params, strings.TrimSpace(c.FuzzyName.String))
-	}
+	//if c.FuzzyName.Valid {
+	//	wheres = append(wheres, "match(name) against(? in boolean mode)")
+	//	params = append(params, strings.TrimSpace(c.FuzzyName.String))
+	//}
 
 	if c.ID.Valid {
 		wheres = append(wheres, "id=?")
@@ -49,8 +49,10 @@ func (c *SetCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.Name.Valid {
-		wheres = append(wheres, "name=?")
-		params = append(params, c.Name.String)
+		wheres = append(wheres, "match(name) against(? in boolean mode)")
+		params = append(params, strings.TrimSpace(c.Name.String))
+		//wheres = append(wheres, "name=?")
+		//params = append(params, strings.TrimSpace(c.Name.String))
 	}
 
 	if c.Names.Valid {
