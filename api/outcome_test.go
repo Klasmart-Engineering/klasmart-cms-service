@@ -33,6 +33,11 @@ func TestCreateOutcome(t *testing.T) {
 		Estimated:     30,
 		Keywords:      []string{"kyd001", "kyd002"},
 		Description:   "some description",
+		Shortcode:     "003NZ",
+		Sets: []*OutcomeSetCreateView{
+			{SetID: "60583986fc229e722bead09a"},
+			{SetID: "60583cfcf5808149b5cbe24c"},
+		},
 	}
 	data, err := json.Marshal(createView)
 	if err != nil {
@@ -62,25 +67,30 @@ func TestUpdateOutcome(t *testing.T) {
 		Estimated:     45,
 		Keywords:      []string{"Modify_kyd001", "kyd002"},
 		Description:   "some description",
+		Shortcode:     "12345",
+		Sets: []*OutcomeSetCreateView{
+			{SetID: "60616c5c43c74caa2b16623c"},
+			{SetID: "60583cfcf5808149b5cbe24c"},
+		},
 	}
 	data, err := json.Marshal(createView)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println(string(data))
-	outcomeID := "5f63336202bf949d92fa955b"
+	outcomeID := "60616800e7c9026bb00d1d6c"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID, string(data))
 	fmt.Println(res)
 }
 
 func TestDeleteOutcome(t *testing.T) {
-	outcomeID := "5f55d43f3695b7ca67729069"
+	outcomeID := "605af5e5ad682b6f63aebb58"
 	res := DoHttp(http.MethodDelete, prefix+"/learning_outcomes/"+outcomeID, "")
 	fmt.Println(res)
 }
 
 func TestQueryOutcome(t *testing.T) {
-	query := fmt.Sprintf("search_key=%s&assumed=%d", "TestOutcomeYY", 1)
+	query := fmt.Sprintf("set_name=%s&assumed=%d", "math", 1)
 	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes"+"?"+query, "")
 	fmt.Println(res)
 }

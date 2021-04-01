@@ -18,6 +18,11 @@ type IOutcomeDA interface {
 	SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (int, []*entity.Outcome, error)
 
 	UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error
+
+	SearchShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) (map[string]struct{}, error)
+	IsShortcodeExistInRedis(ctx context.Context, orgID string, shortcode string) (bool, error)
+	IsShortcodeExistInDBWithOtherAncestor(ctx context.Context, tx *dbo.DBContext, orgID string, ancestorID string, shortcode string) (bool, error)
+	SaveShortcodeInRedis(ctx context.Context, orgID string, shortcode string) error
 }
 
 var _outcomeOnce sync.Once

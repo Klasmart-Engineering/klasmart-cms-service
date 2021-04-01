@@ -16,7 +16,7 @@ import (
 )
 
 // @ID createLearningOutcomes
-// @Summary createOutcome
+// @Summary createLearningOutcome
 // @Tags learning_outcomes
 // @Description Create learning outcomes
 // @Accept json
@@ -24,6 +24,7 @@ import (
 // @Param outcome body OutcomeCreateView true "create outcome"
 // @Success 200 {object} OutcomeCreateResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes [post]
 func (s *Server) createOutcome(c *gin.Context) {
@@ -54,11 +55,13 @@ func (s *Server) createOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
+	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, outcome, op)
 	data.OutcomeID = outcome.ID
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, op, &data, outcome))
+	case constant.ErrConflict:
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -113,6 +116,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 // @Param outcome body OutcomeCreateView true "learning outcome"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [put]
@@ -138,7 +142,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	err = model.GetOutcomeModel().UpdateLearningOutcome(ctx, outcome, op)
 	switch err {
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusForbidden, L(AssessMsgOneStudent))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
@@ -159,7 +163,9 @@ func (s *Server) updateOutcome(c *gin.Context) {
 // @Param outcome_id path string true "outcome id"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [delete]
 func (s *Server) deleteOutcome(c *gin.Context) {
@@ -173,9 +179,14 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 	}
 
 	err := model.GetOutcomeModel().DeleteLearningOutcome(ctx, outcomeID, op)
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -202,6 +213,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes [get]
@@ -264,6 +276,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id}/lock [put]
 func (s *Server) lockOutcome(c *gin.Context) {
@@ -343,7 +356,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 
 	switch err {
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentStatusToPublish:
@@ -779,6 +792,49 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+type ShortcodeResponse struct {
+	Shortcode string `json:"shortcode" form:"shortcode"`
+}
+
+// @ID generateShortcode
+// @Summary generate Shortcode
+// @Tags learning_outcomes
+// @Description generate shortcode
+// @Accept json
+// @Produce json
+// @Success 200 {object} ShortcodeResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /shortcode [post]
+func (s *Server) generateShortcode(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
+	if err != nil {
+		log.Warn(ctx, "generateShortcode: HasOrganizationPermission failed", log.Any("op", op), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "generateShortcode: no permission", log.Any("op", op), log.String("perm", string(external.CreateLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+	shortcode, err := model.GetOutcomeModel().GenerateShortcode(ctx, dbo.MustGetDB(ctx), op.OrgID, "")
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &ShortcodeResponse{Shortcode: shortcode})
+	case constant.ErrConflict:
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
+	case constant.ErrExceededLimit:
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
