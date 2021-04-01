@@ -109,12 +109,13 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 	}
 	outcomeSets, err := model.GetOutcomeSetModel().PullOutcomeSet(ctx, op, request.SetName)
 	var response PullOutcomeSetResponse
+	response.Sets = make([]*OutcomeSetCreateView, len(outcomeSets))
 	for i := range outcomeSets {
 		set := OutcomeSetCreateView{
 			SetID:   outcomeSets[i].ID,
 			SetName: outcomeSets[i].Name,
 		}
-		response.Sets = append(response.Sets, &set)
+		response.Sets[i] = &set
 	}
 	switch err {
 	case model.ErrResourceNotFound:
