@@ -143,6 +143,7 @@ type BulkBindOutcomeSetRequest struct {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /sets/bulk_bind [post]
 func (s *Server) bulkBindOutcomeSet(c *gin.Context) {
@@ -192,6 +193,8 @@ func (s *Server) bulkBindOutcomeSet(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
+	case constant.ErrHasLocked:
+		c.JSON(http.StatusNotAcceptable, L(AssessMsgLockedLo))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:

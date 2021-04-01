@@ -44,6 +44,8 @@ type IOutcomeModel interface {
 
 	GetLatestOutcomesByIDsMapResult(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string, operator *entity.Operator) (map[string]*entity.Outcome, error)
 	GenerateShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcode string) (string, error)
+
+	HasLockedOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
 }
 
 type OutcomeModel struct {
@@ -1037,6 +1039,24 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, tx 
 		return nil
 	})
 	return
+}
+
+func (ocm OutcomeModel) HasLockedOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) (bool, error) {
+	if len(outcomeIDs) == 0 {
+		return false, nil
+	}
+	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, tx, &da.OutcomeCondition{
+		IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+	})
+	if err != nil {
+		return false, err
+	}
+	for i := range outcomes {
+		if outcomes[i].LockedBy != "" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (ocm OutcomeModel) lockOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome, operator *entity.Operator) (err error) {

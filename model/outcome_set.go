@@ -9,6 +9,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
@@ -57,7 +58,30 @@ func (OutcomeSetModel) PullOutcomeSet(ctx context.Context, op *entity.Operator, 
 }
 
 func (OutcomeSetModel) BulkBindOutcomeSet(ctx context.Context, op *entity.Operator, outcomeIDs []string, setIDs []string) error {
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeSetLock, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "BulkBindOutcomeSet: NewLock failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Strings("outcome", outcomeIDs),
+			log.Strings("set", setIDs))
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		hasLocked, err := GetOutcomeModel().HasLockedOutcome(ctx, tx, outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "BulkBindOutcomeSet: HasLockedOutcome failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Strings("outcomes", outcomeIDs),
+				log.Strings("sets", setIDs))
+			return err
+		}
+		if hasLocked {
+			return constant.ErrHasLocked
+		}
 		_, outcomeTags, err := da.GetOutcomeSetDA().SearchOutcomeSet(ctx, tx, &da.OutcomeSetCondition{
 			OutcomeIDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 			SetIDs:     dbo.NullStrings{Strings: setIDs, Valid: true},
