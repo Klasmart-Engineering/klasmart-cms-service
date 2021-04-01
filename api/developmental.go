@@ -26,12 +26,17 @@ func (s *Server) getDevelopmental(c *gin.Context) {
 	var result []*external.Category
 	var err error
 
+	programID := c.Query("program_id")
 	subjectIDQuery := c.Query("subject_ids")
-	subjectIDs := strings.Split(subjectIDQuery, ",")
 
-	if len(subjectIDs) == 0 {
-		result, err = external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+	if subjectIDQuery == "" {
+		if programID == "" {
+			result, err = external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+		} else {
+			result, err = external.GetCategoryServiceProvider().GetByProgram(ctx, operator, programID)
+		}
 	} else {
+		subjectIDs := strings.Split(subjectIDQuery, ",")
 		result, err = external.GetCategoryServiceProvider().GetBySubjects(ctx, operator, subjectIDs)
 	}
 
