@@ -84,6 +84,7 @@ const (
 const (
 	ShortcodeBaseCustom = 36
 	ShortcodeShowLength = 5
+	ShortcodeSpace      = ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom
 )
 
 const (

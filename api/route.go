@@ -167,6 +167,7 @@ func (s Server) registeRoute() {
 
 		outcomes.GET("/private_learning_outcomes", s.mustLogin, s.queryPrivateOutcomes)
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
+		outcomes.POST("/shortcode", s.mustLogin, s.generateShortcode)
 	}
 
 	folders := s.engine.Group("/v1/folders")
@@ -260,6 +261,13 @@ func (s Server) registeRoute() {
 	organizationRegions := s.engine.Group("/v1/organizations_region")
 	{
 		organizationRegions.GET("", s.mustLoginWithoutOrgID, s.getOrganizationByHeadquarterForDetails)
+	}
+
+	learningOutcomeSet := s.engine.Group("/v1/sets")
+	{
+		learningOutcomeSet.POST("", s.mustLogin, s.createOutcomeSet)
+		learningOutcomeSet.POST("/bulk_bind", s.mustLogin, s.bulkBindOutcomeSet)
+		learningOutcomeSet.GET("", s.mustLogin, s.pullOutcomeSet)
 	}
 }
 

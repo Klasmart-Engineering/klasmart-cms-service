@@ -5,7 +5,7 @@ const (
 	RedisKeyPrefixContentId        = "content:id"
 	RedisKeyPrefixContentLock      = "content:lock"
 	RedisKeyPrefixContentReview    = "content:review"
-	RedisKeyPrefixContentAuth = "content:auth"
+	RedisKeyPrefixContentAuth      = "content:auth"
 
 	RedisKeyPrefixScheduleID        = "schedule:id"
 	RedisKeyPrefixScheduleCondition = "schedule:condition"
@@ -19,8 +19,11 @@ const (
 
 	RedisKeyPrefixVerifyCodeLock = "verify_code:lock"
 
-	RedisKeyPrefixFolderName = "folder:name"
+	RedisKeyPrefixFolderName  = "folder:name"
 	RedisKeyPrefixFolderShare = "folder:share"
+
+	RedisKeyPrefixShortcodeMute = "shortcode:lock"
+	RedisKeyPrefixShortcode     = "shortcode"
 )
 
 const (

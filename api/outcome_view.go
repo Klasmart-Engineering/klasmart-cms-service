@@ -12,19 +12,21 @@ import (
 )
 
 type OutcomeCreateView struct {
-	OutcomeID      string   `json:"outcome_id"`
-	OutcomeName    string   `json:"outcome_name"`
-	Assumed        bool     `json:"assumed"`
-	OrganizationID string   `json:"organization_id"`
-	Program        []string `json:"program"`
-	Subject        []string `json:"subject"`
-	Developmental  []string `json:"developmental"`
-	Skills         []string `json:"skills"`
-	Age            []string `json:"age"`
-	Grade          []string `json:"grade"`
-	Estimated      int      `json:"estimated_time"`
-	Keywords       []string `json:"keywords"`
-	Description    string   `json:"description"`
+	OutcomeID      string                  `json:"outcome_id"`
+	OutcomeName    string                  `json:"outcome_name"`
+	Assumed        bool                    `json:"assumed"`
+	OrganizationID string                  `json:"organization_id"`
+	Program        []string                `json:"program"`
+	Subject        []string                `json:"subject"`
+	Developmental  []string                `json:"developmental"`
+	Skills         []string                `json:"skills"`
+	Age            []string                `json:"age"`
+	Grade          []string                `json:"grade"`
+	Estimated      int                     `json:"estimated_time"`
+	Keywords       []string                `json:"keywords"`
+	Description    string                  `json:"description"`
+	Shortcode      string                  `json:"shortcode,omitempty"`
+	Sets           []*OutcomeSetCreateView `json:"sets"`
 }
 
 func (req OutcomeCreateView) outcome() (*entity.Outcome, error) {
@@ -33,6 +35,7 @@ func (req OutcomeCreateView) outcome() (*entity.Outcome, error) {
 		Assumed:       req.Assumed,
 		EstimatedTime: req.Estimated,
 		Description:   req.Description,
+		Shortcode:     req.Shortcode,
 	}
 	outcome.Program = strings.Join(req.Program, ",")
 	outcome.Subject = strings.Join(req.Subject, ",")
@@ -41,6 +44,15 @@ func (req OutcomeCreateView) outcome() (*entity.Outcome, error) {
 	outcome.Grade = strings.Join(req.Grade, ",")
 	outcome.Age = strings.Join(req.Age, ",")
 	outcome.Keywords = strings.Join(req.Keywords, ",")
+
+	outcome.Sets = make([]*entity.Set, len(req.Sets))
+	for i := range req.Sets {
+		set := &entity.Set{
+			ID: req.Sets[i].SetID,
+		}
+		outcome.Sets[i] = set
+	}
+
 	return &outcome, nil
 }
 
@@ -115,32 +127,33 @@ func newOutcomeCreateResponse(ctx context.Context, operator *entity.Operator, cr
 }
 
 type OutcomeView struct {
-	OutcomeID        string          `json:"outcome_id"`
-	OutcomeName      string          `json:"outcome_name"`
-	AncestorID       string          `json:"ancestor_id"`
-	Shortcode        string          `json:"shortcode"`
-	Assumed          bool            `json:"assumed"`
-	Program          []Program       `json:"program"`
-	Subject          []Subject       `json:"subject"`
-	Developmental    []Developmental `json:"developmental"`
-	Skills           []Skill         `json:"skills"`
-	Age              []Age           `json:"age"`
-	Grade            []Grade         `json:"grade"`
-	EstimatedTime    int             `json:"estimated_time"`
-	Keywords         []string        `json:"keywords"`
-	SourceID         string          `json:"source_id"`
-	LatestID         string          `json:"latest_id"`
-	LockedBy         string          `json:"locked_by"`
-	AuthorID         string          `json:"author_id"`
-	AuthorName       string          `json:"author_name"`
-	OrganizationID   string          `json:"organization_id"`
-	OrganizationName string          `json:"organization_name"`
-	PublishScope     string          `json:"publish_scope"`
-	PublishStatus    string          `json:"publish_status"`
-	RejectReason     string          `json:"reject_reason"`
-	Description      string          `json:"description"`
-	CreatedAt        int64           `json:"created_at"`
-	UpdatedAt        int64           `json:"update_at"`
+	OutcomeID        string                  `json:"outcome_id"`
+	OutcomeName      string                  `json:"outcome_name"`
+	AncestorID       string                  `json:"ancestor_id"`
+	Shortcode        string                  `json:"shortcode"`
+	Assumed          bool                    `json:"assumed"`
+	Program          []Program               `json:"program"`
+	Subject          []Subject               `json:"subject"`
+	Developmental    []Developmental         `json:"developmental"`
+	Skills           []Skill                 `json:"skills"`
+	Age              []Age                   `json:"age"`
+	Grade            []Grade                 `json:"grade"`
+	EstimatedTime    int                     `json:"estimated_time"`
+	Keywords         []string                `json:"keywords"`
+	SourceID         string                  `json:"source_id"`
+	LatestID         string                  `json:"latest_id"`
+	LockedBy         string                  `json:"locked_by"`
+	AuthorID         string                  `json:"author_id"`
+	AuthorName       string                  `json:"author_name"`
+	OrganizationID   string                  `json:"organization_id"`
+	OrganizationName string                  `json:"organization_name"`
+	PublishScope     string                  `json:"publish_scope"`
+	PublishStatus    string                  `json:"publish_status"`
+	RejectReason     string                  `json:"reject_reason"`
+	Description      string                  `json:"description"`
+	CreatedAt        int64                   `json:"created_at"`
+	UpdatedAt        int64                   `json:"update_at"`
+	Sets             []*OutcomeSetCreateView `json:"sets"`
 }
 
 type OutcomeSearchResponse struct {
@@ -271,6 +284,14 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 	for k, id := range gIDs {
 		view.Grade[k].GradeID = id
 		view.Grade[k].GradeName = gNames[id]
+	}
+	view.Sets = make([]*OutcomeSetCreateView, len(outcome.Sets))
+	for i := range outcome.Sets {
+		set := OutcomeSetCreateView{
+			SetID:   outcome.Sets[i].ID,
+			SetName: outcome.Sets[i].Name,
+		}
+		view.Sets[i] = &set
 	}
 	return view
 }
