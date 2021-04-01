@@ -2,8 +2,6 @@ package external
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 )
 
@@ -82,34 +80,4 @@ func TestAmsCategoryService_GetBySubjects(t *testing.T) {
 	for _, item := range result {
 		t.Log(*item)
 	}
-}
-
-func TestJsonTemp(t *testing.T) {
-	json2 := `{
-    "q0": {
-      "categories": [
-        {
-          "id": "2d5ea951-836c-471e-996e-76823a992689",
-          "name": "None Specified",
-          "status": "active",
-          "system": true
-        }
-      ]
-    },
-    "q1": {
-      "categories": [
-        {
-          "id": "2d5ea951-836c-471e-996e-76823a992689",
-          "name": "None Specified",
-          "status": "active",
-          "system": true
-        }
-      ]
-    }
-  }`
-
-	data := map[string]struct {
-	}{}
-	json.Unmarshal([]byte(json2), &data)
-	fmt.Println(data)
 }
