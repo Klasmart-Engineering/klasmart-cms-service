@@ -115,7 +115,7 @@ func (OutcomeSetModel) BindByOutcome(ctx context.Context, op *entity.Operator, t
 	}
 	err := da.GetOutcomeSetDA().BindOutcomeSet(ctx, op, tx, outcomeSets)
 	if err != nil {
-		log.Error(ctx, "CreateLearningOutcome: BindOutcomeSet failed",
+		log.Error(ctx, "BindByOutcome: BindOutcomeSet failed",
 			log.String("op", op.UserID),
 			log.Any("outcome", outcome))
 		return err
