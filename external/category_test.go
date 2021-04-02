@@ -65,3 +65,19 @@ func TestAmsCategoryService_GetByOrganization(t *testing.T) {
 		}
 	}
 }
+
+func TestAmsCategoryService_GetBySubjects(t *testing.T) {
+	result, err := GetCategoryServiceProvider().GetBySubjects(context.TODO(), testOperator, []string{
+		"2e922238-decb-438e-b960-a0e404e015a5",
+		"44a5ecab-2d1c-4dd7-b20e-f67ec923ed02",
+		"fab745e8-9e31-4d0c-b780-c40120c98b27",
+		"66a453b0-d38f-472e-b055-7a94a94d66c4",
+	}, WithStatus(Active))
+	if err != nil {
+		t.Errorf("GetCategoryServiceProvider().GetBySubjects(() error = %v", err)
+		return
+	}
+	for _, item := range result {
+		t.Log(*item)
+	}
+}
