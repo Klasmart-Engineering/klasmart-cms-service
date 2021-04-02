@@ -186,9 +186,8 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 	}
 
 	var result []*entity.ScheduleFilterClass
-
 	if permissionMap[external.ScheduleViewOrgCalendar] {
-		result := make([]*entity.ScheduleFilterClass, 0, len(classInfos))
+		result = make([]*entity.ScheduleFilterClass, 0, len(classInfos))
 
 		for _, item := range classInfos {
 			if item.Valid {
@@ -210,7 +209,7 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 			operatorClassMap[item.ID] = item
 		}
 
-		result := make([]*entity.ScheduleFilterClass, 0, len(operatorClasses))
+		result = make([]*entity.ScheduleFilterClass, 0, len(operatorClasses))
 		for _, item := range classInfos {
 			if _, ok := operatorClassMap[item.ID]; ok {
 				result = append(result, &entity.ScheduleFilterClass{
@@ -221,6 +220,7 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 			}
 		}
 	}
+	log.Debug(ctx, "no permission", log.Any("result", result), log.Any("permissionMap", permissionMap))
 	if len(result) <= 0 {
 		return nil, constant.ErrRecordNotFound
 	}
@@ -245,7 +245,7 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 			}
 		}
 		if item.OperatorRoleType == entity.ScheduleRoleTypeTeacher {
-			break
+			continue
 		}
 		stuList := classStuMap[item.ID]
 		for _, stu := range stuList {
@@ -319,7 +319,7 @@ func (s *schedulePermissionModel) GetClassesBySchoolID(ctx context.Context, op *
 					}
 				}
 				if item.OperatorRoleType == entity.ScheduleRoleTypeTeacher {
-					break
+					continue
 				}
 				stuList := classStuMap[item.ID]
 				for _, stu := range stuList {

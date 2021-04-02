@@ -55,7 +55,7 @@ type IScheduleModel interface {
 	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
-	GetClassTypes(ctx context.Context, op *entity.Operator) ([]string, error)
+	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -2408,14 +2408,24 @@ func (s *scheduleModel) getClassTypesCondition(ctx context.Context, op *entity.O
 	return s.getRelationCondition(ctx, op)
 }
 
-func (s *scheduleModel) GetClassTypes(ctx context.Context, op *entity.Operator) ([]string, error) {
+func (s *scheduleModel) GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error) {
 	condition, err := s.getClassTypesCondition(ctx, op)
 	if err != nil {
 		return nil, err
 	}
-	result, err := da.GetScheduleDA().GetClassTypes(ctx, dbo.MustGetDB(ctx), condition)
+	classTypes, err := da.GetScheduleDA().GetClassTypes(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		return nil, err
+	}
+
+	result := make([]*entity.ScheduleShortInfo, len(classTypes))
+	for i, item := range classTypes {
+		name := entity.ScheduleClassType(item)
+
+		result[i] = &entity.ScheduleShortInfo{
+			ID:   item,
+			Name: name.ToLabel().String(),
+		}
 	}
 
 	return result, nil

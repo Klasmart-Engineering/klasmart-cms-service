@@ -81,6 +81,10 @@ func (s *scheduleRelationModel) IsTeacher(ctx context.Context, op *entity.Operat
 			Strings: []string{string(entity.ScheduleRelationTypeClassRosterTeacher), string(entity.ScheduleRelationTypeParticipantTeacher)},
 			Valid:   true,
 		},
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
 	}
 	count, err := da.GetScheduleRelationDA().Count(ctx, condition, &entity.ScheduleRelation{})
 	if err != nil {

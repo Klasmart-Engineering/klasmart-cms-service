@@ -49,3 +49,35 @@ func TestJsonTemp(t *testing.T) {
 	b, _ := json.Marshal(data)
 	t.Log(string(b))
 }
+
+type ClassUpdateUserEvent struct {
+	Action  string      `json:"action" enums:"Add,Delete"`
+	ClassID string      `json:"class_id"`
+	Users   []*UserInfo `json:"users"`
+}
+type UserInfo struct {
+	ID       string `json:"id"`
+	RoleType string `json:"role_type" enums:"Student,Teacher"`
+}
+
+func TestScheduleJson(t *testing.T) {
+	data := new(ClassUpdateUserEvent)
+	data.Action = "add"
+	data.ClassID = "e0de477a-d1ff-446f-977c-1bad0f3299d1"
+	data.Users = []*UserInfo{
+		{
+			ID:       "e0de477a-d1ff-446f-977c-1bad0f3299d1",
+			RoleType: "Student",
+		},
+		{
+			ID:       "8ffd6cf2-9cef-5b5c-9d6e-20b2e4f19fb4",
+			RoleType: "Student",
+		},
+		{
+			ID:       "c88a6f42-4806-5cb2-be94-cc592a629053",
+			RoleType: "Teacher",
+		},
+	}
+	b, _ := json.Marshal(data)
+	t.Log(string(b))
+}
