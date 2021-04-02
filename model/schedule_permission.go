@@ -36,9 +36,9 @@ func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *enti
 		return nil, constant.ErrRecordNotFound
 	}
 	result := &entity.ScheduleFilterClass{
-		ID:             entity.ScheduleFilterUndefinedClass,
-		Name:           entity.ScheduleFilterUndefinedClass,
-		HasStudentFlag: false,
+		ID:               entity.ScheduleFilterUndefinedClass,
+		Name:             entity.ScheduleFilterUndefinedClass,
+		OperatorRoleType: entity.ScheduleRoleTypeUnknown,
 	}
 	return result, nil
 }
@@ -193,9 +193,9 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 		for _, item := range classInfos {
 			if item.Valid {
 				result = append(result, &entity.ScheduleFilterClass{
-					ID:             item.ID,
-					Name:           item.Name,
-					HasStudentFlag: false,
+					ID:               item.ID,
+					Name:             item.Name,
+					OperatorRoleType: entity.ScheduleRoleTypeUnknown,
 				})
 			}
 		}
@@ -214,9 +214,9 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 		for _, item := range classInfos {
 			if _, ok := operatorClassMap[item.ID]; ok {
 				result = append(result, &entity.ScheduleFilterClass{
-					ID:             item.ID,
-					Name:           item.Name,
-					HasStudentFlag: false,
+					ID:               item.ID,
+					Name:             item.Name,
+					OperatorRoleType: entity.ScheduleRoleTypeUnknown,
 				})
 			}
 		}
@@ -230,12 +230,27 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 		log.Error(ctx, "GetStudentServiceProvider.GetByClassIDs error", log.Any("op", op), log.Strings("underOrgClassIDs", underOrgClassIDs))
 		return nil, err
 	}
+	classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, underOrgClassIDs)
+	if err != nil {
+		log.Error(ctx, "GetTeacherServiceProvider.GetByClasses error", log.Any("op", op), log.Strings("underOrgClassIDs", underOrgClassIDs))
+		return nil, err
+	}
 
 	for _, item := range result {
+		teacherList := classTeacherMap[item.ID]
+		for _, teacher := range teacherList {
+			if teacher.ID == op.UserID {
+				item.OperatorRoleType = entity.ScheduleRoleTypeTeacher
+				break
+			}
+		}
+		if item.OperatorRoleType == entity.ScheduleRoleTypeTeacher {
+			break
+		}
 		stuList := classStuMap[item.ID]
 		for _, stu := range stuList {
 			if stu.ID == op.UserID {
-				item.HasStudentFlag = true
+				item.OperatorRoleType = entity.ScheduleRoleTypeStudent
 				break
 			}
 		}
@@ -274,9 +289,9 @@ func (s *schedulePermissionModel) GetClassesBySchoolID(ctx context.Context, op *
 		classList := schoolClassMap[schoolID]
 		for _, item := range classList {
 			classMap[item.ID] = &entity.ScheduleFilterClass{
-				ID:             item.ID,
-				Name:           item.Name,
-				HasStudentFlag: false,
+				ID:               item.ID,
+				Name:             item.Name,
+				OperatorRoleType: entity.ScheduleRoleTypeUnknown,
 			}
 			classIDs = append(classIDs, item.ID)
 		}
@@ -289,12 +304,27 @@ func (s *schedulePermissionModel) GetClassesBySchoolID(ctx context.Context, op *
 				log.Error(ctx, "GetStudentServiceProvider.GetByClassIDs error", log.Any("op", op), log.Strings("classIDs", classIDs))
 				return nil, err
 			}
+			classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, classIDs)
+			if err != nil {
+				log.Error(ctx, "GetTeacherServiceProvider.GetByClasses error", log.Any("op", op), log.Strings("classIDs", classIDs))
+				return nil, err
+			}
 			// Judge you are a student in the class
 			for _, item := range classMap {
+				teacherList := classTeacherMap[item.ID]
+				for _, teacher := range teacherList {
+					if teacher.ID == op.UserID {
+						item.OperatorRoleType = entity.ScheduleRoleTypeTeacher
+						break
+					}
+				}
+				if item.OperatorRoleType == entity.ScheduleRoleTypeTeacher {
+					break
+				}
 				stuList := classStuMap[item.ID]
 				for _, stu := range stuList {
 					if stu.ID == op.UserID {
-						item.HasStudentFlag = true
+						item.OperatorRoleType = entity.ScheduleRoleTypeUnknown
 						break
 					}
 				}

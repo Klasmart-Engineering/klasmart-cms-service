@@ -583,7 +583,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Param class_ids query string false "class id,separated by comma,special classes id is 'Undefined',this class members only under org"
 // @Param subject_ids query string false "subject id,separated by comma"
 // @Param program_ids query string false "program id,separated by comma"
-// @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
+// @Param class_types query string false "class type,separated by comma"
 // @Param due_at_eq query integer false "get schedules equal to due_at"
 // @Param start_at_ge query integer false "get schedules greater than or equal to start_at"
 // @Param end_at_le query integer false "get schedules less than or equal to end_at"

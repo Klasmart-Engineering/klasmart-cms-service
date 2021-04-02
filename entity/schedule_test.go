@@ -17,3 +17,35 @@ func TestScheduleAddViewJson(t *testing.T) {
 	}
 	t.Log(scheduleObj)
 }
+
+func TestJsonTemp(t *testing.T) {
+	data := []*ScheduleFilterClass{
+		{
+			ID:               ScheduleFilterUndefinedClass,
+			Name:             ScheduleFilterUndefinedClass,
+			OperatorRoleType: ScheduleRoleTypeUnknown,
+		},
+		{
+			ID:               "1",
+			Name:             "班级一",
+			OperatorRoleType: ScheduleRoleTypeUnknown,
+		},
+		{
+			ID:               "2",
+			Name:             "班级二",
+			OperatorRoleType: ScheduleRoleTypeStudent,
+		},
+		{
+			ID:               "3",
+			Name:             "班级三",
+			OperatorRoleType: ScheduleRoleTypeTeacher,
+		},
+		{
+			ID:               "4",
+			Name:             "班级四",
+			OperatorRoleType: ScheduleRoleTypeStudent,
+		},
+	}
+	b, _ := json.Marshal(data)
+	t.Log(string(b))
+}
