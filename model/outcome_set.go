@@ -24,12 +24,23 @@ type IOutcomeSetModel interface {
 type OutcomeSetModel struct{}
 
 func (OutcomeSetModel) CreateOutcomeSet(ctx context.Context, op *entity.Operator, name string) (string, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeSetLock, op.OrgID, name)
+	if err != nil {
+		log.Error(ctx, "CreateOutcomeSet: NewLock failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("set", name))
+		return "", err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
 	set := entity.Set{
 		ID:             utils.NewID(),
 		Name:           name,
 		OrganizationID: op.OrgID,
 	}
-	err := da.GetOutcomeSetDA().CreateSet(ctx, dbo.MustGetDB(ctx), &set)
+	err = da.GetOutcomeSetDA().CreateSet(ctx, dbo.MustGetDB(ctx), &set)
 	if err != nil {
 		log.Error(ctx, "CreateSet: CreateSet failed",
 			log.Err(err),
