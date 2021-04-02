@@ -385,7 +385,7 @@ func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, 
 	var assessmentIDs []string
 	{
 		var assessments []*entity.Assessment
-		if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentsConditions{
+		if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
 			OrgID:      &operator.OrgID,
 			TeacherIDs: []string{teacherID},
 		}, &assessments); err != nil {

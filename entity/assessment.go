@@ -6,7 +6,6 @@ type Assessment struct {
 	Title        string                   `gorm:"column:title;type:varchar(1024);not null" json:"title"`
 	ProgramID    string                   `gorm:"column:program_id;type:varchar(64);not null" json:"program_id"`
 	SubjectID    string                   `gorm:"column:subject_id;type:varchar(64);not null" json:"subject"`
-	//TeacherIDs   utils.SQLJSONStringArray `gorm:"column:teacher_ids;type:json;not null" json:"teacher_ids"`
 	ClassLength  int                      `gorm:"column:class_length;type:int;not null" json:"class_length"`
 	ClassEndTime int64                    `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
 	CompleteTime int64                    `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`

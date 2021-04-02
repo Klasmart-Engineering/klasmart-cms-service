@@ -269,7 +269,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	// get assessment list
 	var (
 		assessments []*entity.Assessment
-		cond        = da.QueryAssessmentsConditions{
+		cond        = da.QueryAssessmentConditions{
 			OrgID:                   &operator.OrgID,
 			Status:                  args.Status,
 			AllowTeacherIDs:         checker.AllowTeacherIDs(),
@@ -438,7 +438,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
 	// check if assessment already exits
 	var assessments []entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentsConditions{
+	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
 		OrgID:       &operator.OrgID,
 		ScheduleIDs: []string{args.ScheduleID},
 	}, &assessments); err != nil {

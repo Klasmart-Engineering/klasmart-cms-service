@@ -110,7 +110,7 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 	return "delete_at = 0"
 }
 
-type QueryAssessmentsConditions struct {
+type QueryAssessmentConditions struct {
 	OrgID                   *string                                    `json:"org_id"`
 	Status                  *entity.AssessmentStatus                   `json:"status"`
 	ScheduleIDs             []string                                   `json:"schedule_ids"`
@@ -122,7 +122,7 @@ type QueryAssessmentsConditions struct {
 	PageSize                int                                        `json:"page_size"`
 }
 
-func (c *QueryAssessmentsConditions) GetConditions() ([]string, []interface{}) {
+func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 	b := NewSQLBuilder().Append("delete_at = 0")
 
 	if c.OrgID != nil {
@@ -175,14 +175,14 @@ func (c *QueryAssessmentsConditions) GetConditions() ([]string, []interface{}) {
 	return b.MergeWithAnd().DBOConditions()
 }
 
-func (c *QueryAssessmentsConditions) GetPager() *dbo.Pager {
+func (c *QueryAssessmentConditions) GetPager() *dbo.Pager {
 	return &dbo.Pager{
 		Page:     c.Page,
 		PageSize: c.PageSize,
 	}
 }
 
-func (c *QueryAssessmentsConditions) GetOrderBy() string {
+func (c *QueryAssessmentConditions) GetOrderBy() string {
 	if c.OrderBy == nil {
 		return ""
 	}
