@@ -186,12 +186,8 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 	}
 
 	var result []*entity.ScheduleFilterClass
-	log.Debug(ctx, "debug", log.Any("result", result), log.Any("permissionMap", permissionMap))
-	for _, item := range classInfos {
-		log.Debug(ctx, "classInfos", log.Any("id", item.ID), log.Any("name", item.Name), log.Any("valid", item.Valid))
-	}
 	if permissionMap[external.ScheduleViewOrgCalendar] {
-		result := make([]*entity.ScheduleFilterClass, 0, len(classInfos))
+		result = make([]*entity.ScheduleFilterClass, 0, len(classInfos))
 
 		for _, item := range classInfos {
 			if item.Valid {
@@ -213,7 +209,7 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 			operatorClassMap[item.ID] = item
 		}
 
-		result := make([]*entity.ScheduleFilterClass, 0, len(operatorClasses))
+		result = make([]*entity.ScheduleFilterClass, 0, len(operatorClasses))
 		for _, item := range classInfos {
 			if _, ok := operatorClassMap[item.ID]; ok {
 				result = append(result, &entity.ScheduleFilterClass{
