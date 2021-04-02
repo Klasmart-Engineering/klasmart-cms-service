@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -13,6 +14,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param program_id query string false "program id"
+// @Param subject_ids query string false "subject ids,separated by comma"
 // @Tags developmental
 // @Success 200 {array} external.Category
 // @Failure 500 {object} InternalServerErrorResponse
@@ -25,11 +27,17 @@ func (s *Server) getDevelopmental(c *gin.Context) {
 	var err error
 
 	programID := c.Query("program_id")
+	subjectIDQuery := c.Query("subject_ids")
 
-	if programID == "" {
-		result, err = external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+	if subjectIDQuery == "" {
+		if programID == "" {
+			result, err = external.GetCategoryServiceProvider().GetByOrganization(ctx, operator)
+		} else {
+			result, err = external.GetCategoryServiceProvider().GetByProgram(ctx, operator, programID)
+		}
 	} else {
-		result, err = external.GetCategoryServiceProvider().GetByProgram(ctx, operator, programID)
+		subjectIDs := strings.Split(subjectIDQuery, ",")
+		result, err = external.GetCategoryServiceProvider().GetBySubjects(ctx, operator, subjectIDs)
 	}
 
 	switch err {
