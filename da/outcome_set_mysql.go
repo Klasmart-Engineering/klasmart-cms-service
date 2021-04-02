@@ -289,10 +289,10 @@ func (o SetSqlDA) SearchSetsByOutcome(ctx context.Context, tx *dbo.DBContext, ou
 	return outcomesSets, nil
 }
 
-func (o SetSqlDA) IsSetExist(ctx context.Context, tx *dbo.DBContext, name string) (bool, error) {
-	sql := fmt.Sprintf("select * from %s where name=?", entity.Set{}.TableName())
+func (o SetSqlDA) IsSetExist(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, name string) (bool, error) {
+	sql := fmt.Sprintf("select * from %s where name=? and organization_id=?", entity.Set{}.TableName())
 	var sets []*entity.Set
-	err := tx.Raw(sql, name).Scan(&sets).Error
+	err := tx.Raw(sql, name, op.OrgID).Scan(&sets).Error
 	if err != nil {
 		log.Error(ctx, "IsSetExist: exec sql failed",
 			log.Err(err),
