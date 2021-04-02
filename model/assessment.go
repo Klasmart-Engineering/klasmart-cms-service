@@ -253,7 +253,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	// check permission
 	var (
 		checker = NewAssessmentPermissionChecker(operator)
-		err error
+		err     error
 	)
 	if err = checker.SearchAllPermissions(ctx); err != nil {
 		log.Error(ctx, "List: checker.SearchAllPermissions: search failed",
@@ -332,7 +332,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 
 	// get assessment list total
 	var total int
-	if total, err = da.GetAssessmentDA().CountTx(ctx, tx, &cond, &entity.Assessment{});  err != nil {
+	if total, err = da.GetAssessmentDA().CountTx(ctx, tx, &cond, &entity.Assessment{}); err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().CountTx: count failed",
 			log.Err(err),
 			log.Any("args", args),
@@ -345,14 +345,14 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	// batch get program, subject and teachers
 	var (
 		programIDs              []string
-		programNameMap map[string]string
+		programNameMap          map[string]string
 		subjectIDs              []string
-		subjectNameMap map[string]string
+		subjectNameMap          map[string]string
 		assessmentIDs           []string
 		assessmentAttendances   []*entity.AssessmentAttendance
 		assessmentTeacherIDsMap map[string][]string
 		teacherIDs              []string
-		teacherNameMap map[string]string
+		teacherNameMap          map[string]string
 	)
 	for _, a := range assessments {
 		programIDs = append(programIDs, a.ProgramID)
@@ -489,32 +489,48 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 
 	// get contents
 	var (
-		materials  []*entity.SubContentsWithName
-		contentIDs = []string{schedule.LessonPlanID}
-		contents   []*entity.ContentInfoWithDetails
+		latestContent   *entity.ContentInfoWithDetails
+		materialIDs     []string
+		materials       []*entity.SubContentsWithName
+		materialDetails []*entity.ContentInfoWithDetails
+		contents        []*entity.ContentInfoWithDetails
 	)
-	if materials, err = GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID, operator); err != nil {
-		log.Info(ctx, "Add: GetContentModel().GetContentSubContentsByID: get materials failed",
+	if latestContent, err = GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), schedule.LessonPlanID, operator); err != nil {
+		log.Warn(ctx, "Add: GetContentModel().GetVisibleContentByID: get latest content failed",
 			log.Err(err),
 			log.Any("args", args),
-			log.Any("operator", operator),
+			log.String("lesson_plan_id", schedule.LessonPlanID),
 			log.Any("schedule", schedule),
-			log.Any("lesson_plan_id", schedule.LessonPlanID),
-		)
-		return "", nil
-	}
-	for _, m := range materials {
-		contentIDs = append(contentIDs, m.ID)
-	}
-	if contents, err = GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), contentIDs, operator); err != nil {
-		log.Info(ctx, "Add: GetContentModel().GetContentByIDList: get contents failed",
-			log.Err(err),
-			log.Strings("content_ids", contentIDs),
-			log.Any("schedule", schedule),
-			log.Any("args", args),
 			log.Any("operator", operator),
 		)
-		return "", nil
+	} else {
+		contents = append(contents, latestContent)
+		if materials, err = GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), latestContent.ID, operator); err != nil {
+			log.Warn(ctx, "Add: GetContentModel().GetContentSubContentsByID: get materials failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.String("latest_lesson_plan_id", latestContent.ID),
+				log.Any("latest_content", latestContent),
+				log.Any("operator", operator),
+				log.Any("schedule", schedule),
+			)
+		} else {
+			for _, m := range materials {
+				materialIDs = append(materialIDs, m.ID)
+			}
+			if materialDetails, err = GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), materialIDs, operator); err != nil {
+				log.Warn(ctx, "Add: GetContentModel().GetContentByIDList: get contents failed",
+					log.Err(err),
+					log.Strings("material_ids", materialIDs),
+					log.Any("latest_content", latestContent),
+					log.Any("schedule", schedule),
+					log.Any("args", args),
+					log.Any("operator", operator),
+				)
+			} else {
+				contents = append(contents, materialDetails...)
+			}
+		}
 	}
 
 	// get outcomes
@@ -525,15 +541,17 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 	for _, c := range contents {
 		outcomeIDs = append(outcomeIDs, c.Outcomes...)
 	}
-	outcomeIDs = utils.SliceDeduplication(outcomeIDs)
-	if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, operator); err != nil {
-		log.Error(ctx, "Add: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
-			log.Err(err),
-			log.Strings("outcome_ids", outcomeIDs),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return "", err
+	if len(outcomeIDs) > 0 {
+		outcomeIDs = utils.SliceDeduplication(outcomeIDs)
+		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, operator); err != nil {
+			log.Error(ctx, "Add: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
+				log.Err(err),
+				log.Strings("outcome_ids", outcomeIDs),
+				log.Any("args", args),
+				log.Any("operator", operator),
+			)
+			return "", err
+		}
 	}
 
 	// generate new assessment id
