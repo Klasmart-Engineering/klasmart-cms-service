@@ -540,7 +540,7 @@ CREATE TABLE `outcomes_sets` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `outcome_set_id_delete` (`outcome_id`,`set_id`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=248 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
+) ENGINE=InnoDB AUTO_INCREMENT=447 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -748,7 +748,7 @@ CREATE TABLE `sets` (
   `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `name_organization_id` (`name`,`organization_id`),
+  KEY `index_name` (`name`),
   FULLTEXT KEY `fullindex_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='sets';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -844,4 +844,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-04-01 17:00:34
+-- Dump completed on 2021-04-02 17:00:34
