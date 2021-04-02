@@ -69,7 +69,7 @@ func (s *Server) createOutcomeSet(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, data)
 	case constant.ErrDuplicateRecord:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(AssessMsgExistingSet))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

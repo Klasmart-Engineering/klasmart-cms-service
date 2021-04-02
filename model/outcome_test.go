@@ -8,6 +8,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"os"
 	"testing"
@@ -72,4 +73,14 @@ func TestSearchSetsByOutcome(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Printf("%#v\n", outcomesSets)
+}
+
+func TestOutcomeSetModel_CreateOutcomeSet(t *testing.T) {
+	setup()
+	ctx := context.TODO()
+	set, err := GetOutcomeSetModel().CreateOutcomeSet(ctx, &entity.Operator{OrgID: "org-1"}, "math2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%#v\n", set)
 }

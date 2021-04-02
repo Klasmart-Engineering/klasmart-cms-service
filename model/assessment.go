@@ -203,7 +203,7 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		}
 		result.NumberOfOutcomes = len(outcomeIDs)
 		if len(outcomeIDs) > 0 {
-			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
+			outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, &entity.Operator{}, tx, outcomeIDs)
 			if err != nil {
 				log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
 					log.Err(err),
@@ -693,7 +693,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 
 	var outcomeMap map[string]*entity.Outcome
 	{
-		outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{})
+		outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, &entity.Operator{}, tx, outcomeIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get outcomes failed by outcome ids",
 				log.Err(err),
