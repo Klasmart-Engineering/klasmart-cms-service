@@ -9,15 +9,15 @@ import (
 )
 
 type IOutcomeDA interface {
-	CreateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error
-	UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error
-	DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) error
+	CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
+	UpdateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
+	DeleteOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
 
 	GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Outcome, error)
-	GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error)
-	SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (int, []*entity.Outcome, error)
+	GetOutcomeBySourceID(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error)
+	SearchOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *OutcomeCondition) (int, []*entity.Outcome, error)
 
-	UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error
+	UpdateLatestHead(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, oldHeader, newHeader string) error
 
 	SearchShortcode(ctx context.Context, tx *dbo.DBContext, orgID string) (map[string]struct{}, error)
 	IsShortcodeExistInRedis(ctx context.Context, orgID string, shortcode string) (bool, error)

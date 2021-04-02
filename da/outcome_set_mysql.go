@@ -288,3 +288,23 @@ func (o SetSqlDA) SearchSetsByOutcome(ctx context.Context, tx *dbo.DBContext, ou
 	}
 	return outcomesSets, nil
 }
+
+func (o SetSqlDA) IsSetExist(ctx context.Context, tx *dbo.DBContext, name string) (bool, error) {
+	sql := fmt.Sprintf("select * from %s where name=?", entity.Set{}.TableName())
+	var sets []*entity.Set
+	err := tx.Raw(sql, name).Scan(&sets).Error
+	if err != nil {
+		log.Error(ctx, "IsSetExist: exec sql failed",
+			log.Err(err),
+			log.String("set_name", name))
+		return false, err
+	}
+
+	for i := range sets {
+		if sets[i].Name == name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}

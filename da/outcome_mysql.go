@@ -224,7 +224,7 @@ func (c *OutcomeCondition) GetOrderBy() string {
 	}
 }
 
-func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	now := time.Now().Unix()
 	if outcome.CreateAt == 0 {
 		outcome.CreateAt = now
@@ -238,23 +238,23 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 		return
 	}
 	if outcome.SourceID != "" && outcome.SourceID != constant.LockedByNoBody && outcome.SourceID != outcome.ID {
-		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID, outcome.SourceID})
+		GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID, outcome.SourceID})
 	} else {
-		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
+		GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID})
 	}
 	return
 }
 
-func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	_, err = o.UpdateTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "UpdateOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
-	GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
+	GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID})
 	return
 }
 
-func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	now := time.Now().Unix()
 	outcome.UpdateAt = now
 	outcome.DeleteAt = now
@@ -262,7 +262,7 @@ func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	if err != nil {
 		log.Error(ctx, "DeleteOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
-	GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
+	GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID})
 	return
 }
 
@@ -288,9 +288,9 @@ func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id 
 	return &outcome, nil
 }
 
-func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
+func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
 	condition := OutcomeCondition{SourceID: sql.NullString{String: sourceID, Valid: true}}
-	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, &condition)
+	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, op, &condition)
 	if hits != nil && len(hits.OutcomeList) == 1 {
 		return hits.OutcomeList[0], nil
 	}
@@ -304,12 +304,12 @@ func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContex
 			log.String("source_id", sourceID))
 		return nil, err
 	}
-	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, &condition, &OutcomeListWithKey{1, []*entity.Outcome{&outcome}})
+	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, op, &condition, &OutcomeListWithKey{1, []*entity.Outcome{&outcome}})
 	return &outcome, nil
 }
 
-func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (total int, outcomes []*entity.Outcome, err error) {
-	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, condition)
+func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *OutcomeCondition) (total int, outcomes []*entity.Outcome, err error) {
+	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, op, condition)
 	if hits != nil {
 		return hits.Total, hits.OutcomeList, nil
 	}
@@ -335,11 +335,11 @@ func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, cond
 		}
 	}
 
-	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, condition, &OutcomeListWithKey{total, outcomes})
+	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, op, condition, &OutcomeListWithKey{total, outcomes})
 	return
 }
 
-func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error {
+func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, oldHeader, newHeader string) error {
 	sql := fmt.Sprintf("update %s set latest_id='%s' where latest_id='%s' and delete_at=0", entity.Outcome{}.TableName(), newHeader, oldHeader)
 	err := tx.Exec(sql).Error
 	if err != nil {
@@ -371,6 +371,6 @@ func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, o
 	for i := range outcomes {
 		ids[i] = outcomes[i].ID
 	}
-	GetOutcomeRedis().CleanOutcomeCache(ctx, ids)
+	GetOutcomeRedis().CleanOutcomeCache(ctx, op, ids)
 	return nil
 }

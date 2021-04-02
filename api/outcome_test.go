@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"testing"
 
@@ -192,11 +193,11 @@ func TestRedis(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(model.NumToBHex(int(num), 36))
+	fmt.Println(utils.NumToBHex(int(num), 36))
 }
 
 func TestNumToBHex(t *testing.T) {
-	fmt.Println(model.PaddingStr(model.NumToBHex(901, 36), constant.ShortcodeShowLength))
+	fmt.Println(utils.PaddingString(utils.NumToBHex(901, 36), constant.ShortcodeShowLength))
 }
 
 func TestFindRoot(t *testing.T) {

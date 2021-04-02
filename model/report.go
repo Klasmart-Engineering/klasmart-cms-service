@@ -408,7 +408,7 @@ func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, 
 			)
 		}
 		outcomeIDs = oidTr(outcomeIDs)
-		outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, operator)
+		outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, outcomeIDs)
 		if err != nil {
 			log.Error(ctx, "get teacher report: get learning outcome failed by ids",
 				log.Err(err),
@@ -922,7 +922,7 @@ func (rm *reportModel) getOutcomeIDs(assessmentOutcomes []*entity.AssessmentOutc
 }
 
 func (rm *reportModel) getOutcomesMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, outcomeIDs []string) (map[string]*entity.Outcome, error) {
-	outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, operator)
+	outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: get learning outcome failed by ids",
 			log.Err(err),
@@ -939,7 +939,7 @@ func (rm *reportModel) getOutcomesMap(ctx context.Context, tx *dbo.DBContext, op
 }
 
 func (rm *reportModel) getOutcomeNamesMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, outcomeIDs []string) (map[string]string, error) {
-	outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, operator)
+	outcomes, err := GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: get learning outcome failed by ids",
 			log.Err(err),
@@ -1100,7 +1100,7 @@ func (rm *reportModel) getNotAchievedAssessmentID2OutcomeIDsMap(attendanceID str
 }
 
 func (rm *reportModel) makeLatestOutcomeIDsTranslator(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, outcomeIDs []string) (func([]string) []string, error) {
-	m, err := GetOutcomeModel().GetLatestOutcomesByIDsMapResult(ctx, tx, outcomeIDs, operator)
+	m, err := GetOutcomeModel().GetLatestOutcomesByIDsMapResult(ctx, operator, tx, outcomeIDs)
 	if err != nil {
 		if err != constant.ErrRecordNotFound {
 			log.Error(ctx, "make latest outcome id translator: call outcome model failed",
