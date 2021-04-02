@@ -1156,7 +1156,7 @@ func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
 // @ID getClassTypesInScheduleFilter
 // @Accept json
 // @Produce json
-// @Success 200 {array} string
+// @Success 200 {array} entity.ScheduleShortInfo
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/class_types [get]
 func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {

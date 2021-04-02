@@ -214,6 +214,33 @@ func (s ScheduleClassType) Valid() bool {
 		return false
 	}
 }
+func (s ScheduleClassType) ToLabel() ScheduleClassTypeLabel {
+	switch s {
+	case ScheduleClassTypeOnlineClass:
+		return ScheduleClassTypeLabelOnlineClass
+	case ScheduleClassTypeOfflineClass:
+		return ScheduleClassTypeLabelOfflineClass
+	case ScheduleClassTypeHomework:
+		return ScheduleClassTypeLabelHomework
+	case ScheduleClassTypeTask:
+		return ScheduleClassTypeLabelTask
+	}
+	return ScheduleClassTypeLabelInvalid
+}
+
+type ScheduleClassTypeLabel string
+
+const (
+	ScheduleClassTypeLabelInvalid      ScheduleClassTypeLabel = "schedule_detail_invalid"
+	ScheduleClassTypeLabelOnlineClass  ScheduleClassTypeLabel = "schedule_detail_online_class"
+	ScheduleClassTypeLabelOfflineClass ScheduleClassTypeLabel = "schedule_detail_offline_class"
+	ScheduleClassTypeLabelHomework     ScheduleClassTypeLabel = "schedule_detail_homework"
+	ScheduleClassTypeLabelTask         ScheduleClassTypeLabel = "schedule_detail_task"
+)
+
+func (s ScheduleClassTypeLabel) String() string {
+	return string(s)
+}
 
 //Live (online class)
 //Class (offline class)
