@@ -24,19 +24,43 @@ type IOutcomeSetModel interface {
 type OutcomeSetModel struct{}
 
 func (OutcomeSetModel) CreateOutcomeSet(ctx context.Context, op *entity.Operator, name string) (string, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeSetLock, op.OrgID, name)
+	if err != nil {
+		log.Error(ctx, "CreateOutcomeSet: NewLock failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("set", name))
+		return "", err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
 	set := entity.Set{
 		ID:             utils.NewID(),
 		Name:           name,
 		OrganizationID: op.OrgID,
 	}
-	err := da.GetOutcomeSetDA().CreateSet(ctx, dbo.MustGetDB(ctx), &set)
-	if err != nil {
-		log.Error(ctx, "CreateSet: CreateSet failed",
-			log.Err(err),
-			log.String("name", name))
-		if err == dbo.ErrDuplicateRecord || err.Error() == "duplicate record" {
-			return "", constant.ErrDuplicateRecord
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		exist, err := da.GetOutcomeSetDA().IsSetExist(ctx, tx, set.Name)
+		if err != nil {
+			log.Error(ctx, "CreateSet: IsSetExist failed",
+				log.Err(err),
+				log.String("name", name))
+			return err
 		}
+		if exist {
+			return constant.ErrDuplicateRecord
+		}
+		err = da.GetOutcomeSetDA().CreateSet(ctx, tx, &set)
+		if err != nil {
+			log.Error(ctx, "CreateSet: CreateSet failed",
+				log.Err(err),
+				log.String("name", name))
+			return err
+		}
+		return nil
+	})
+	if err != nil {
 		return "", err
 	}
 	return set.ID, nil
@@ -70,7 +94,7 @@ func (OutcomeSetModel) BulkBindOutcomeSet(ctx context.Context, op *entity.Operat
 	locker.Lock()
 	defer locker.Unlock()
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		hasLocked, err := GetOutcomeModel().HasLockedOutcome(ctx, tx, outcomeIDs)
+		hasLocked, err := GetOutcomeModel().HasLockedOutcome(ctx, op, tx, outcomeIDs)
 		if err != nil {
 			log.Error(ctx, "BulkBindOutcomeSet: HasLockedOutcome failed",
 				log.Err(err),
@@ -122,7 +146,11 @@ func (OutcomeSetModel) BulkBindOutcomeSet(ctx context.Context, op *entity.Operat
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, op, nil)
+	return nil
 }
 
 func (OutcomeSetModel) BindByOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error {

@@ -787,21 +787,21 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
 	}
-	switch data:=cd.(type){
-		case *MaterialData:
-			if data.InputSource != entity.MaterialInputSourceDisk {
-				log.Warn(ctx, "invalid material type", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
-				return ErrInvalidMaterialType
-			}
-		case *LessonData:
-			if len(data.TeacherManualBatch) < 1{
-				log.Warn(ctx, "empty teacher manual batch", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
-				return ErrEmptyTeacherManual
-			}
+	switch data := cd.(type) {
+	case *MaterialData:
+		if data.InputSource != entity.MaterialInputSourceDisk {
+			log.Warn(ctx, "invalid material type", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
+			return ErrInvalidMaterialType
+		}
+	case *LessonData:
+		if len(data.TeacherManualBatch) < 1 {
+			log.Warn(ctx, "empty teacher manual batch", log.Err(err), log.String("uid", user.UserID), log.Any("data", data))
+			return ErrEmptyTeacherManual
+		}
 
-		default:
-			log.Warn(ctx, "validate content data with content type 2 failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
-			return ErrInvalidContentData
+	default:
+		log.Warn(ctx, "validate content data with content type 2 failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
+		return ErrInvalidContentData
 	}
 
 	return nil
@@ -867,7 +867,6 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 	content.Data = d
 	return nil
 }
-
 
 func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//创建data对象
@@ -1073,7 +1072,6 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 	}
 	return nil
 }
-
 
 func (cm *ContentModel) publishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
 	err := cm.validatePublishContentWithAssets(ctx, content, user)
@@ -2318,7 +2316,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		outcomeEntities := make([]*entity.Outcome, 0)
 		if outComes {
-			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), contentList[i].Outcomes, user)
+			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomesByIDs(ctx, user, dbo.MustGetDB(ctx), contentList[i].Outcomes)
 			if err != nil {
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
@@ -2348,7 +2346,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 }
 
 func (cm *ContentModel) getOutcomes(ctx context.Context, pickIDs []string, user *entity.Operator) []*entity.Outcome {
-	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), pickIDs, user)
+	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, user, dbo.MustGetDB(ctx), pickIDs)
 	if err != nil {
 		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", pickIDs), log.String("uid", user.UserID))
 	}
@@ -2452,10 +2450,9 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 	}
 }
 
-
-func (cm *ContentModel) convertFolderContent(ctx context.Context, objs []*entity.FolderContent, user *entity.Operator) []*entity.FolderContentData{
+func (cm *ContentModel) convertFolderContent(ctx context.Context, objs []*entity.FolderContent, user *entity.Operator) []*entity.FolderContentData {
 	ret := make([]*entity.FolderContentData, len(objs))
-	for i := range objs{
+	for i := range objs {
 		ret[i] = &entity.FolderContentData{
 			ID:              objs[i].ID,
 			ContentName:     objs[i].ContentName,

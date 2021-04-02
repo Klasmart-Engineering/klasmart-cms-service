@@ -18,6 +18,7 @@ type IOutcomeSetDA interface {
 	DeleteBoundOutcomeSet(ctx context.Context, tx *dbo.DBContext, outcomeID string) error
 	SearchOutcomeBySetName(ctx context.Context, op *entity.Operator, name string) ([]*entity.OutcomeSet, error)
 	SearchSetsByOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) (map[string][]*entity.Set, error)
+	IsSetExist(ctx context.Context, tx *dbo.DBContext, name string) (bool, error)
 }
 
 var outcomeSetDA *SetSqlDA
