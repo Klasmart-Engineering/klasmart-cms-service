@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -56,28 +57,28 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 	outcomes := make([]string, 0)
 	rejectReason := make([]string, 0)
 	if obj.Subject != "" {
-		subjects = strings.Split(obj.Subject, ",")
+		subjects = strings.Split(obj.Subject, constant.StringArraySeparator)
 	}
 	if obj.Developmental != "" {
-		developmentals = strings.Split(obj.Developmental, ",")
+		developmentals = strings.Split(obj.Developmental, constant.StringArraySeparator)
 	}
 	if obj.Skills != "" {
-		skills = strings.Split(obj.Skills, ",")
+		skills = strings.Split(obj.Skills, constant.StringArraySeparator)
 	}
 	if obj.Age != "" {
-		ages = strings.Split(obj.Age, ",")
+		ages = strings.Split(obj.Age, constant.StringArraySeparator)
 	}
 	if obj.Grade != "" {
-		grades = strings.Split(obj.Grade, ",")
+		grades = strings.Split(obj.Grade, constant.StringArraySeparator)
 	}
 	if obj.Keywords != "" {
-		keywords = strings.Split(obj.Keywords, ",")
+		keywords = strings.Split(obj.Keywords, constant.StringArraySeparator)
 	}
 	if obj.Outcomes != "" {
-		outcomes = strings.Split(obj.Outcomes, ",")
+		outcomes = strings.Split(obj.Outcomes, constant.StringArraySeparator)
 	}
 	if obj.RejectReason != "" {
-		rejectReason = strings.Split(obj.RejectReason, ",")
+		rejectReason = strings.Split(obj.RejectReason, constant.StringArraySeparator)
 	}
 	//user, err := external.GetUserServiceProvider().Get(ctx, operator, obj.Author)
 	//authorName := ""

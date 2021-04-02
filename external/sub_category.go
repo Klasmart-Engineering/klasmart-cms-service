@@ -14,13 +14,15 @@ import (
 
 type SubCategoryServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*SubCategory, error)
-	GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string) ([]*SubCategory, error)
-	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*SubCategory, error)
+	GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error)
 }
 
 type SubCategory struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Status APStatus `json:"status"`
+	System bool     `json:"system"`
 }
 
 func GetSubCategoryServiceProvider() SubCategoryServiceProvider {
@@ -39,7 +41,7 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: subcategory(id: \"%s\") {id name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: subcategory(id: \"%s\") {id name status system}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -83,13 +85,17 @@ func (s AmsSubCategoryService) BatchGet(ctx context.Context, operator *entity.Op
 	return subCategories, nil
 }
 
-func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string) ([]*SubCategory, error) {
+func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *entity.Operator, categoryID string, options ...APOption) ([]*SubCategory, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($category_id: ID!) {
 		category(id: $category_id) {
 			subcategories {
 				id
 				name
+				status
+				system
 			}
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -107,38 +113,63 @@ func (s AmsSubCategoryService) GetByCategory(ctx context.Context, operator *enti
 
 	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "query subCategories by operator failed",
+		log.Error(ctx, "query sub categories by operator failed",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.String("categoryID", categoryID))
+			log.String("categoryID", categoryID),
+			log.Any("condition", condition))
 		return nil, err
 	}
 
 	if len(response.Errors) > 0 {
-		log.Error(ctx, "get subCategories by operator failed",
+		log.Error(ctx, "get sub categories by operator failed",
 			log.Err(response.Errors),
 			log.Any("operator", operator),
-			log.String("categoryID", categoryID))
+			log.String("categoryID", categoryID),
+			log.Any("condition", condition))
 		return nil, response.Errors
 	}
 
-	subCategories := data.Category.SubCategories
+	subCategories := make([]*SubCategory, 0, len(data.Category.SubCategories))
+	for _, subCategory := range data.Category.SubCategories {
+		if condition.Status.Valid {
+			if condition.Status.Status != subCategory.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if subCategory.Status != Active {
+				continue
+			}
+		}
 
-	log.Info(ctx, "get subCategories by program success",
+		if condition.System.Valid && subCategory.System != condition.System.Bool {
+			continue
+		}
+
+		subCategories = append(subCategories, subCategory)
+	}
+
+	log.Info(ctx, "get sub categories by program success",
 		log.Any("operator", operator),
 		log.String("categoryID", categoryID),
+		log.Any("condition", condition),
 		log.Any("subCategories", subCategories))
 
 	return subCategories, nil
 }
 
-func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*SubCategory, error) {
+func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*SubCategory, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
 			subcategories {
 				id
 				name
+				status
+				system
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -158,21 +189,42 @@ func (s AmsSubCategoryService) GetByOrganization(ctx context.Context, operator *
 	if err != nil {
 		log.Error(ctx, "query sub categories by operator failed",
 			log.Err(err),
-			log.Any("operator", operator))
+			log.Any("operator", operator),
+			log.Any("condition", condition))
 		return nil, err
 	}
 
 	if len(response.Errors) > 0 {
 		log.Error(ctx, "query sub categories by operator failed",
 			log.Err(response.Errors),
-			log.Any("operator", operator))
+			log.Any("operator", operator),
+			log.Any("condition", condition))
 		return nil, response.Errors
 	}
 
-	subCategories := data.Organization.SubCategories
+	subCategories := make([]*SubCategory, 0, len(data.Organization.SubCategories))
+	for _, subCategory := range data.Organization.SubCategories {
+		if condition.Status.Valid {
+			if condition.Status.Status != subCategory.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if subCategory.Status != Active {
+				continue
+			}
+		}
+
+		if condition.System.Valid && subCategory.System != condition.System.Bool {
+			continue
+		}
+
+		subCategories = append(subCategories, subCategory)
+	}
 
 	log.Info(ctx, "get sub categories by operator success",
 		log.Any("operator", operator),
+		log.Any("condition", condition),
 		log.Any("subcategories", subCategories))
 
 	return subCategories, nil

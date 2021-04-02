@@ -112,12 +112,12 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		ContentType:   c.ContentType,
 		Name:          c.Name,
 		Program:       c.Program,
-		Subject:       strings.Join(c.Subject, ","),
-		Developmental: strings.Join(c.Developmental, ","),
-		Skills:        strings.Join(c.Skills, ","),
-		Age:           strings.Join(c.Age, ","),
-		Grade:         strings.Join(c.Grade, ","),
-		Keywords:      strings.Join(c.Keywords, ","),
+		Subject:       strings.Join(c.Subject, constant.StringArraySeparator),
+		Developmental: strings.Join(c.Developmental, constant.StringArraySeparator),
+		Skills:        strings.Join(c.Skills, constant.StringArraySeparator),
+		Age:           strings.Join(c.Age, constant.StringArraySeparator),
+		Grade:         strings.Join(c.Grade, constant.StringArraySeparator),
+		Keywords:      strings.Join(c.Keywords, constant.StringArraySeparator),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
 		SuggestTime:   c.SuggestTime,
@@ -127,7 +127,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		DirPath:       path,
 		SelfStudy:     c.SelfStudy.Int(),
 		DrawActivity:  c.DrawActivity.Int(),
-		Outcomes:      strings.Join(c.Outcomes, ","),
+		Outcomes:      strings.Join(c.Outcomes, constant.StringArraySeparator),
 		Author:        operator.UserID,
 		Creator:       operator.UserID,
 		LockedBy:      constant.LockedByNoBody,
@@ -149,19 +149,19 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.Program = data.Program
 	}
 	if data.Subject != nil {
-		content.Subject = strings.Join(data.Subject, ",")
+		content.Subject = strings.Join(data.Subject, constant.StringArraySeparator)
 	}
 	if data.Developmental != nil {
-		content.Developmental = strings.Join(data.Developmental, ",")
+		content.Developmental = strings.Join(data.Developmental, constant.StringArraySeparator)
 	}
 	if data.Skills != nil {
-		content.Skills = strings.Join(data.Skills, ",")
+		content.Skills = strings.Join(data.Skills, constant.StringArraySeparator)
 	}
 	if data.Age != nil {
-		content.Age = strings.Join(data.Age, ",")
+		content.Age = strings.Join(data.Age, constant.StringArraySeparator)
 	}
 	if data.Grade != nil {
-		content.Grade = strings.Join(data.Grade, ",")
+		content.Grade = strings.Join(data.Grade, constant.StringArraySeparator)
 	}
 	if data.Description != "" {
 		content.Description = data.Description
@@ -170,13 +170,13 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.Thumbnail = data.Thumbnail
 	}
 	if data.Outcomes != nil {
-		content.Outcomes = strings.Join(data.Outcomes, ",")
+		content.Outcomes = strings.Join(data.Outcomes, constant.StringArraySeparator)
 	}
 	if data.Extra != "" {
 		content.Extra = data.Extra
 	}
 	if len(data.Keywords) > 0 {
-		content.Keywords = strings.Join(data.Keywords, ",")
+		content.Keywords = strings.Join(data.Keywords, constant.StringArraySeparator)
 	}
 	if data.SuggestTime > 0 {
 		content.SuggestTime = data.SuggestTime

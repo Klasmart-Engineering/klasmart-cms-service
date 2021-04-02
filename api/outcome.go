@@ -16,7 +16,7 @@ import (
 )
 
 // @ID createLearningOutcomes
-// @Summary createOutcome
+// @Summary createLearningOutcome
 // @Tags learning_outcomes
 // @Description Create learning outcomes
 // @Accept json
@@ -24,8 +24,9 @@ import (
 // @Param outcome body OutcomeCreateView true "create outcome"
 // @Success 200 {object} OutcomeCreateResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /learning_outcomes [post]
+//
 func (s *Server) createOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
@@ -54,11 +55,13 @@ func (s *Server) createOutcome(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, dbo.MustGetDB(ctx), outcome, op)
+	err = model.GetOutcomeModel().CreateLearningOutcome(ctx, op, outcome)
 	data.OutcomeID = outcome.ID
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, op, &data, outcome))
+	case constant.ErrConflict:
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -80,7 +83,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	outcomeID := c.Param("id")
-	outcome, err := model.GetOutcomeModel().GetLearningOutcomeByID(ctx, dbo.MustGetDB(ctx), outcomeID, op)
+	outcome, err := model.GetOutcomeModel().GetLearningOutcomeByID(ctx, op, dbo.MustGetDB(ctx), outcomeID)
 	switch err {
 	//case model.ErrInvalidResourceID:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -113,6 +116,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 // @Param outcome body OutcomeCreateView true "learning outcome"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [put]
@@ -135,10 +139,10 @@ func (s *Server) updateOutcome(c *gin.Context) {
 		return
 	}
 	// permission check has to delegated to business lay for recognizing org's permission or author's permission
-	err = model.GetOutcomeModel().UpdateLearningOutcome(ctx, outcome, op)
+	err = model.GetOutcomeModel().UpdateLearningOutcome(ctx, op, outcome)
 	switch err {
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusForbidden, L(AssessMsgOneStudent))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
@@ -159,7 +163,9 @@ func (s *Server) updateOutcome(c *gin.Context) {
 // @Param outcome_id path string true "outcome id"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [delete]
 func (s *Server) deleteOutcome(c *gin.Context) {
@@ -172,10 +178,15 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 		return
 	}
 
-	err := model.GetOutcomeModel().DeleteLearningOutcome(ctx, outcomeID, op)
+	err := model.GetOutcomeModel().DeleteLearningOutcome(ctx, op, outcomeID)
+	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		return
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -194,6 +205,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param keywords query string false "search by keywords"
 // @Param shortcode query string false "search by shortcode"
 // @Param author_name query string false "search by author_name"
+// @Param set_name query string false "search by set_name"
 // @Param search_key query string false "search by search_key"
 // @Param assumed query integer false "search by assumed: 1 true, 0 false, -1 all"
 // @Param publish_status query string false "search by publish_status" Enums(draft, pending, published, rejected)
@@ -202,6 +214,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
 // @Success 200 {object} OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes [get]
@@ -230,7 +243,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, dbo.MustGetDB(ctx), &condition, op)
+	total, outcomes, err := model.GetOutcomeModel().SearchLearningOutcome(ctx, op, dbo.MustGetDB(ctx), &condition)
 	switch err {
 	//case model.ErrInvalidResourceID:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -264,6 +277,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id}/lock [put]
 func (s *Server) lockOutcome(c *gin.Context) {
@@ -287,7 +301,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	newID, err := model.GetOutcomeModel().LockLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, op)
+	newID, err := model.GetOutcomeModel().LockLearningOutcome(ctx, op, dbo.MustGetDB(ctx), outcomeID)
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
 		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
@@ -339,11 +353,11 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		return
 	}
 	req.Scope = op.OrgID
-	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, outcomeID, req.Scope, op)
+	err = model.GetOutcomeModel().PublishLearningOutcome(ctx, op, outcomeID, req.Scope)
 
 	switch err {
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentStatusToPublish:
@@ -385,7 +399,7 @@ func (s *Server) approveOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	err = model.GetOutcomeModel().ApproveLearningOutcome(ctx, outcomeID, op)
+	err = model.GetOutcomeModel().ApproveLearningOutcome(ctx, op, outcomeID)
 	switch err {
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
@@ -438,7 +452,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	err = model.GetOutcomeModel().RejectLearningOutcome(ctx, dbo.MustGetDB(ctx), outcomeID, reason.RejectReason, op)
+	err = model.GetOutcomeModel().RejectLearningOutcome(ctx, op, dbo.MustGetDB(ctx), outcomeID, reason.RejectReason)
 	switch err {
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
@@ -490,7 +504,7 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	err = model.GetOutcomeModel().BulkApproveLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), op)
+	err = model.GetOutcomeModel().BulkApproveLearningOutcome(ctx, op, utils.SliceDeduplication(data.OutcomeIDs))
 	switch err {
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
@@ -552,7 +566,7 @@ func (s *Server) bulkRejectOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	err = model.GetOutcomeModel().BulkRejectLearningOutcome(ctx, utils.SliceDeduplication(data.OutcomeIDs), data.RejectReason, op)
+	err = model.GetOutcomeModel().BulkRejectLearningOutcome(ctx, op, utils.SliceDeduplication(data.OutcomeIDs), data.RejectReason)
 	switch err {
 	case model.ErrNoAuth:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
@@ -603,7 +617,7 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 		return
 	}
 
-	err = model.GetOutcomeModel().BulkPubLearningOutcome(ctx, dbo.MustGetDB(ctx), data.OutcomeIDs, "", op)
+	err = model.GetOutcomeModel().BulkPubLearningOutcome(ctx, op, dbo.MustGetDB(ctx), data.OutcomeIDs, "")
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -651,7 +665,12 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetOutcomeModel().BulkDelLearningOutcome(ctx, dbo.MustGetDB(ctx), data.OutcomeIDs, op)
+	err = model.GetOutcomeModel().BulkDelLearningOutcome(ctx, op, dbo.MustGetDB(ctx), data.OutcomeIDs)
+	_, ok := err.(*model.ErrContentAlreadyLocked)
+	if ok {
+		c.JSON(http.StatusNotAcceptable, L(AssessMsgLockedLo))
+		return
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
@@ -698,7 +717,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPrivateOutcomes(ctx, dbo.MustGetDB(ctx), &condition, op)
+	total, outcomes, err := model.GetOutcomeModel().SearchPrivateOutcomes(ctx, op, dbo.MustGetDB(ctx), &condition)
 	switch err {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -757,7 +776,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		return
 	}
 
-	total, outcomes, err := model.GetOutcomeModel().SearchPendingOutcomes(ctx, dbo.MustGetDB(ctx), &condition, op)
+	total, outcomes, err := model.GetOutcomeModel().SearchPendingOutcomes(ctx, op, dbo.MustGetDB(ctx), &condition)
 	switch err {
 	case model.ErrBadRequest:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -779,6 +798,49 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+type ShortcodeResponse struct {
+	Shortcode string `json:"shortcode" form:"shortcode"`
+}
+
+// @ID generateShortcode
+// @Summary generate Shortcode
+// @Tags learning_outcomes
+// @Description generate shortcode
+// @Accept json
+// @Produce json
+// @Success 200 {object} ShortcodeResponse
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /shortcode [post]
+func (s *Server) generateShortcode(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
+	if err != nil {
+		log.Warn(ctx, "generateShortcode: HasOrganizationPermission failed", log.Any("op", op), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "generateShortcode: no permission", log.Any("op", op), log.String("perm", string(external.CreateLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+	shortcode, err := model.GetOutcomeModel().GenerateShortcode(ctx, dbo.MustGetDB(ctx), op.OrgID, "")
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, &ShortcodeResponse{Shortcode: shortcode})
+	case constant.ErrConflict:
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
+	case constant.ErrExceededLimit:
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

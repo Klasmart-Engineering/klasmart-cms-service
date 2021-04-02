@@ -3,6 +3,7 @@ package da
 import (
 	"context"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"regexp"
 	"strings"
 	"sync"
@@ -423,7 +424,7 @@ func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBCo
 		fidsSQLParts[i] = "?"
 		params = append(params, cids[i])
 	}
-	fidsSQL := strings.Join(fidsSQLParts, ",")
+	fidsSQL := strings.Join(fidsSQLParts, constant.StringArraySeparator)
 
 	sql := fmt.Sprintf(`UPDATE cms_contents SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
 	err := tx.Exec(sql, params...).Error
@@ -527,7 +528,7 @@ func (cd *DBContentDA) searchFolderContentSQL(ctx context.Context, query1, query
 	rawQuery1 := strings.Join(query1, " and ")
 	rawQuery2 := strings.Join(query2, " and ")
 	sql := fmt.Sprintf(`SELECT 
-	id, %v as content_type, name AS content_name, items_count, '' AS description, '' as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
+	id, %v as content_type, name AS content_name, items_count, description AS description, keywords as keywords, creator as author, dir_path, 'published' as publish_status, thumbnail, '' as data, create_at, update_at 
 	FROM cms_folder_items 
 	WHERE  %v
 	UNION ALL SELECT 

@@ -14,13 +14,15 @@ import (
 
 type GradeServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Grade, error)
-	GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Grade, error)
-	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Grade, error)
+	GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error)
 }
 
 type Grade struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Status APStatus `json:"status"`
+	System bool     `json:"system"`
 }
 
 func GetGradeServiceProvider() GradeServiceProvider {
@@ -39,7 +41,7 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: grade(id: \"%s\") {id name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: grade(id: \"%s\") {id name status system}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -83,13 +85,17 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 	return grades, nil
 }
 
-func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Grade, error) {
+func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
 			grades {
 				id
 				name
+				status
+				system
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -110,7 +116,8 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 		log.Error(ctx, "query grades by operator failed",
 			log.Err(err),
 			log.Any("operator", operator),
-			log.String("programID", programID))
+			log.String("programID", programID),
+			log.Any("condition", condition))
 		return nil, err
 	}
 
@@ -118,27 +125,51 @@ func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Oper
 		log.Error(ctx, "get grades by operator failed",
 			log.Err(response.Errors),
 			log.Any("operator", operator),
-			log.String("programID", programID))
+			log.String("programID", programID),
+			log.Any("condition", condition))
 		return nil, response.Errors
 	}
 
-	grades := data.Program.Grades
+	grades := make([]*Grade, 0, len(data.Program.Grades))
+	for _, grade := range data.Program.Grades {
+		if condition.Status.Valid {
+			if condition.Status.Status != grade.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if grade.Status != Active {
+				continue
+			}
+		}
+
+		if condition.System.Valid && grade.System != condition.System.Bool {
+			continue
+		}
+
+		grades = append(grades, grade)
+	}
 
 	log.Info(ctx, "get grades by program success",
 		log.Any("operator", operator),
 		log.String("programID", programID),
+		log.Any("condition", condition),
 		log.Any("grades", grades))
 
 	return grades, nil
 }
 
-func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Grade, error) {
+func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
 			grades {
 				id
 				name
+				status
+				system
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -158,21 +189,42 @@ func (s AmsGradeService) GetByOrganization(ctx context.Context, operator *entity
 	if err != nil {
 		log.Error(ctx, "query grades by operator failed",
 			log.Err(err),
-			log.Any("operator", operator))
+			log.Any("operator", operator),
+			log.Any("condition", condition))
 		return nil, err
 	}
 
 	if len(response.Errors) > 0 {
 		log.Error(ctx, "query grades by operator failed",
 			log.Err(response.Errors),
-			log.Any("operator", operator))
+			log.Any("operator", operator),
+			log.Any("condition", condition))
 		return nil, response.Errors
 	}
 
-	grades := data.Organization.Grades
+	grades := make([]*Grade, 0, len(data.Organization.Grades))
+	for _, grade := range data.Organization.Grades {
+		if condition.Status.Valid {
+			if condition.Status.Status != grade.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if grade.Status != Active {
+				continue
+			}
+		}
+
+		if condition.System.Valid && grade.System != condition.System.Bool {
+			continue
+		}
+
+		grades = append(grades, grade)
+	}
 
 	log.Info(ctx, "get grades by operator success",
 		log.Any("operator", operator),
+		log.Any("condition", condition),
 		log.Any("grades", grades))
 
 	return grades, nil

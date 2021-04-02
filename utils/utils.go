@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
+	"strings"
 	"unsafe"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -55,4 +56,23 @@ func str2Bs(str string) []byte {
 
 func bs2Str(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
+}
+
+var num1char = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+func NumToBHex(num int, n int) string {
+	numStr := ""
+	for num != -1 {
+		yu := num % n
+		numStr = string(num1char[yu]) + numStr
+		num = num / n
+	}
+	return strings.ToUpper(numStr)
+}
+
+func PaddingString(s string, l int) string {
+	if l <= len(s) {
+		return s
+	}
+	return strings.Repeat("-1", l-len(s)) + s
 }

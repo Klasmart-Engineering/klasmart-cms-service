@@ -583,7 +583,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Param class_ids query string false "class id,separated by comma,special classes id is 'Undefined',this class members only under org"
 // @Param subject_ids query string false "subject id,separated by comma"
 // @Param program_ids query string false "program id,separated by comma"
-// @Param class_types query string false "class type,separated by comma" enums(OnlineClass,OfflineClass,Homework,Task)
+// @Param class_types query string false "class type,separated by comma"
 // @Param due_at_eq query integer false "get schedules equal to due_at"
 // @Param start_at_ge query integer false "get schedules greater than or equal to start_at"
 // @Param end_at_le query integer false "get schedules less than or equal to end_at"
@@ -993,7 +993,6 @@ func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {array} entity.ScheduleFilterSchool
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/schools [get]
 func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
@@ -1002,7 +1001,7 @@ func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
 	result, err := model.GetSchedulePermissionModel().GetSchoolsByOperator(ctx, op)
 	switch err {
 	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		c.JSON(http.StatusOK, []*entity.ScheduleFilterSchool{})
 	case nil:
 		c.JSON(http.StatusOK, result)
 	default:
@@ -1019,7 +1018,6 @@ func (s Server) getSchoolInScheduleFilter(c *gin.Context) {
 // @Param school_id query string false "school id,if "-1",return classes without school"
 // @Success 200 {array} entity.ScheduleFilterClass
 // @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_filter/classes [get]
 func (s Server) getClassesInScheduleFilter(c *gin.Context) {
@@ -1028,12 +1026,12 @@ func (s Server) getClassesInScheduleFilter(c *gin.Context) {
 	schoolID := c.Query("school_id")
 	result, err := model.GetSchedulePermissionModel().GetClassesByOperator(ctx, op, schoolID)
 	switch err {
-	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden, constant.ErrRecordNotFound:
+		c.JSON(http.StatusOK, []*entity.ScheduleFilterClass{})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -1097,6 +1095,80 @@ func (s *Server) getScheduleNewestFeedbackByOperator(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary get schedule filter programs
+// @Description get schedule filter programs
+// @Tags schedule
+// @ID getProgramsInScheduleFilter
+// @Accept json
+// @Produce json
+// @Success 200 {array} entity.ScheduleShortInfo
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_filter/programs [get]
+func (s *Server) getProgramsInScheduleFilter(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	programs, err := model.GetScheduleModel().GetPrograms(ctx, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, programs)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusOK, []*entity.ScheduleShortInfo{})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary get schedule filter subjects
+// @Description get schedule filter subjects
+// @Tags schedule
+// @ID getSubjectsInScheduleFilter
+// @Accept json
+// @Produce json
+// @Param program_id query string true "program id"
+// @Success 200 {array} entity.ScheduleShortInfo
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_filter/subjects [get]
+func (s *Server) getSubjectsInScheduleFilter(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+	programID := c.Query("program_id")
+
+	subjects, err := model.GetScheduleModel().GetSubjects(ctx, op, programID)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, subjects)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusOK, []*entity.ScheduleShortInfo{})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary get schedule filter classTypes
+// @Description get schedule filter classTypes
+// @Tags schedule
+// @ID getClassTypesInScheduleFilter
+// @Accept json
+// @Produce json
+// @Success 200 {array} entity.ScheduleShortInfo
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_filter/class_types [get]
+func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	classTypes, err := model.GetScheduleModel().GetClassTypes(ctx, op)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, classTypes)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusOK, []string{})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

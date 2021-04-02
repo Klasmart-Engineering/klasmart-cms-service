@@ -156,7 +156,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			assessmentOutcomeMap[o.OutcomeID] = *o
 			outcomeIDs = append(outcomeIDs, o.OutcomeID)
 		}
-		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, outcomeIDs, &entity.Operator{}); err != nil {
+		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, outcomeIDs); err != nil {
 			log.Error(ctx, "Get: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
 				log.Err(err),
 				log.Strings("outcome_ids", outcomeIDs),
@@ -543,7 +543,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 	}
 	if len(outcomeIDs) > 0 {
 		outcomeIDs = utils.SliceDeduplication(outcomeIDs)
-		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, operator); err != nil {
+		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, dbo.MustGetDB(ctx), outcomeIDs); err != nil {
 			log.Error(ctx, "Add: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
 				log.Err(err),
 				log.Strings("outcome_ids", outcomeIDs),
@@ -1141,7 +1141,7 @@ func (m *assessmentModel) getOutcomeMap(ctx context.Context, tx *dbo.DBContext, 
 		outcomes   []*entity.Outcome
 		outcomeMap map[string]*entity.Outcome
 	)
-	if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, tx, ids, operator); err != nil {
+	if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, ids); err != nil {
 		log.Error(ctx, "addAssessmentOutcomes: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
 			log.Err(err),
 			log.Strings("outcome_ids", ids),

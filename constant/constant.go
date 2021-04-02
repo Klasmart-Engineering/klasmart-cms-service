@@ -55,6 +55,7 @@ var (
 	ErrOperateNotAllowed = errors.New("operation not allowed")
 	ErrInternalServer    = errors.New("internal server error")
 	ErrForbidden         = errors.New("forbidden")
+	ErrHasLocked         = errors.New("has locked")
 )
 
 const (
@@ -84,6 +85,7 @@ const (
 const (
 	ShortcodeBaseCustom = 36
 	ShortcodeShowLength = 5
+	ShortcodeSpace      = ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom
 )
 
 const (
@@ -102,6 +104,8 @@ const (
 	FolderItemLinkSeparator = "-"
 
 	TeacherManualAssetsKeyword = "Teacher Manual"
+
+	StringArraySeparator = ","
 )
 
 const (

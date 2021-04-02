@@ -27,7 +27,7 @@ func TestAmsSubjectService_BatchGet(t *testing.T) {
 }
 
 func TestAmsSubjectService_GetByProgram(t *testing.T) {
-	subjects, err := GetSubjectServiceProvider().GetByProgram(context.TODO(), testOperator, "75004121-0c0d-486c-ba65-4c57deacb44b")
+	subjects, err := GetSubjectServiceProvider().GetByProgram(context.TODO(), testOperator, "75004121-0c0d-486c-ba65-4c57deacb44b", WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSubjectServiceProvider().GetByProgram() error = %v", err)
 		return
@@ -47,7 +47,7 @@ func TestAmsSubjectService_GetByProgram(t *testing.T) {
 }
 
 func TestAmsSubjectService_GetByOrganization(t *testing.T) {
-	subjects, err := GetSubjectServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	subjects, err := GetSubjectServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSubjectServiceProvider().GetByOrganization() error = %v", err)
 		return

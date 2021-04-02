@@ -27,7 +27,7 @@ func TestAmsSubCategoryService_BatchGet(t *testing.T) {
 }
 
 func TestAmsSubCategoryService_GetByCategory(t *testing.T) {
-	subCategories, err := GetSubCategoryServiceProvider().GetByCategory(context.TODO(), testOperator, "84b8f87a-7b61-4580-a190-a9ce3fe90dd3")
+	subCategories, err := GetSubCategoryServiceProvider().GetByCategory(context.TODO(), testOperator, "84b8f87a-7b61-4580-a190-a9ce3fe90dd3", WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSubCategoryServiceProvider().GetByCategory(() error = %v", err)
 		return
@@ -47,7 +47,7 @@ func TestAmsSubCategoryService_GetByCategory(t *testing.T) {
 }
 
 func TestAmsSubCategoryService_GetByOrganization(t *testing.T) {
-	subCategories, err := GetSubCategoryServiceProvider().GetByOrganization(context.TODO(), testOperator)
+	subCategories, err := GetSubCategoryServiceProvider().GetByOrganization(context.TODO(), testOperator, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSubCategoryServiceProvider().GetByOrganization() error = %v", err)
 		return

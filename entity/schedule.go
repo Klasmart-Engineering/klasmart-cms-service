@@ -214,6 +214,33 @@ func (s ScheduleClassType) Valid() bool {
 		return false
 	}
 }
+func (s ScheduleClassType) ToLabel() ScheduleClassTypeLabel {
+	switch s {
+	case ScheduleClassTypeOnlineClass:
+		return ScheduleClassTypeLabelOnlineClass
+	case ScheduleClassTypeOfflineClass:
+		return ScheduleClassTypeLabelOfflineClass
+	case ScheduleClassTypeHomework:
+		return ScheduleClassTypeLabelHomework
+	case ScheduleClassTypeTask:
+		return ScheduleClassTypeLabelTask
+	}
+	return ScheduleClassTypeLabelInvalid
+}
+
+type ScheduleClassTypeLabel string
+
+const (
+	ScheduleClassTypeLabelInvalid      ScheduleClassTypeLabel = "schedule_detail_invalid"
+	ScheduleClassTypeLabelOnlineClass  ScheduleClassTypeLabel = "schedule_detail_online_class"
+	ScheduleClassTypeLabelOfflineClass ScheduleClassTypeLabel = "schedule_detail_offline_class"
+	ScheduleClassTypeLabelHomework     ScheduleClassTypeLabel = "schedule_detail_homework"
+	ScheduleClassTypeLabelTask         ScheduleClassTypeLabel = "schedule_detail_task"
+)
+
+func (s ScheduleClassTypeLabel) String() string {
+	return string(s)
+}
 
 //Live (online class)
 //Class (offline class)
@@ -232,6 +259,10 @@ func (s ScheduleClassType) ConvertToLiveClassType() LiveClassType {
 	default:
 		return LiveClassTypeInvalid
 	}
+}
+
+func (s ScheduleClassType) String() string {
+	return string(s)
 }
 
 type Schedule struct {
@@ -620,9 +651,9 @@ const ScheduleFilterInvalidValue = "-1"
 const ScheduleFilterUndefinedClass = "Undefined"
 
 type ScheduleFilterClass struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	HasStudentFlag bool   `json:"has_student_flag"`
+	ID               string           `json:"id"`
+	Name             string           `json:"name"`
+	OperatorRoleType ScheduleRoleType `json:"operator_role_type" enums:"Student,Teacher,Unknown"`
 }
 
 type ScheduleFilterSchool struct {

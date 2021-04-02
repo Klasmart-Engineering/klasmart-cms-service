@@ -14,13 +14,15 @@ import (
 
 type SubjectServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error)
-	GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Subject, error)
-	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Subject, error)
+	GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error)
 }
 
 type Subject struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Status APStatus `json:"status"`
+	System bool     `json:"system"`
 }
 
 func GetSubjectServiceProvider() SubjectServiceProvider {
@@ -39,7 +41,7 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: subject(id: \"%s\") {id name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: subject(id: \"%s\") {id name status system}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -83,13 +85,17 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 	return subjects, nil
 }
 
-func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string) ([]*Subject, error) {
+func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($program_id: ID!) {
 		program(id: $program_id) {
 			subjects {
 				id
 				name
+				status
+				system
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -122,7 +128,25 @@ func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Op
 		return nil, response.Errors
 	}
 
-	subjects := data.Program.Subjects
+	subjects := make([]*Subject, 0, len(data.Program.Subjects))
+	for _, subject := range data.Program.Subjects {
+		if condition.Status.Valid {
+			if condition.Status.Status != subject.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if subject.Status != Active {
+				continue
+			}
+		}
+
+		if condition.System.Valid && subject.System != condition.System.Bool {
+			continue
+		}
+
+		subjects = append(subjects, subject)
+	}
 
 	log.Info(ctx, "get subjects by program success",
 		log.Any("operator", operator),
@@ -132,13 +156,17 @@ func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Op
 	return subjects, nil
 }
 
-func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Subject, error) {
+func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
 			subjects {
 				id
 				name
+				status
+				system
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -169,7 +197,25 @@ func (s AmsSubjectService) GetByOrganization(ctx context.Context, operator *enti
 		return nil, response.Errors
 	}
 
-	subjects := data.Organization.Subjects
+	subjects := make([]*Subject, 0, len(data.Organization.Subjects))
+	for _, subject := range data.Organization.Subjects {
+		if condition.Status.Valid {
+			if condition.Status.Status != subject.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if subject.Status != Active {
+				continue
+			}
+		}
+
+		if condition.System.Valid && subject.System != condition.System.Bool {
+			continue
+		}
+
+		subjects = append(subjects, subject)
+	}
 
 	log.Info(ctx, "get subjects by operator success",
 		log.Any("operator", operator),

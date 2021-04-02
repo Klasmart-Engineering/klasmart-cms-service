@@ -18,9 +18,34 @@ type IScheduleRelationModel interface {
 	GetClassRosterID(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
 	GetUsersByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleRelation, error)
 	GetByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) ([]*entity.ScheduleRelation, error)
+	Count(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) (int, error)
+	HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error)
 }
 
 type scheduleRelationModel struct {
+}
+
+func (s *scheduleRelationModel) HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error) {
+	condition := &da.ScheduleRelationCondition{
+		RelationIDs: entity.NullStrings{
+			Valid:   true,
+			Strings: relationIDs,
+		},
+	}
+	count, err := GetScheduleRelationModel().Count(ctx, op, condition)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *scheduleRelationModel) Count(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) (int, error) {
+	count, err := da.GetScheduleRelationDA().Count(ctx, condition, &entity.ScheduleRelation{})
+	if err != nil {
+		log.Error(ctx, "schedule relation count error", log.Err(err), log.Any("condition", condition))
+		return 0, err
+	}
+	return count, nil
 }
 
 func (s *scheduleRelationModel) GetUsersByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleRelation, error) {
@@ -57,6 +82,10 @@ func (s *scheduleRelationModel) IsTeacher(ctx context.Context, op *entity.Operat
 		RelationTypes: entity.NullStrings{
 			Strings: []string{string(entity.ScheduleRelationTypeClassRosterTeacher), string(entity.ScheduleRelationTypeParticipantTeacher)},
 			Valid:   true,
+		},
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
 		},
 	}
 	count, err := da.GetScheduleRelationDA().Count(ctx, condition, &entity.ScheduleRelation{})

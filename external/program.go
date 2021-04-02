@@ -14,13 +14,15 @@ import (
 
 type ProgramServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Program, error)
-	GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Program, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error)
 }
 
 type Program struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	GroupName string `json:"group_name"`
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	GroupName string   `json:"group_name"`
+	Status    APStatus `json:"status"`
+	System    bool     `json:"system"`
 }
 
 func GetProgramServiceProvider() ProgramServiceProvider {
@@ -39,7 +41,7 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: program(id: \"%s\") {id name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: program(id: \"%s\") {id name status system}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -83,13 +85,17 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 	return programs, nil
 }
 
-func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *entity.Operator) ([]*Program, error) {
+func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
 			programs {
 				id
 				name
+				status
+				system
 			}			
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -107,23 +113,44 @@ func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *enti
 
 	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "query programs by operator failed",
+		log.Error(ctx, "query programs failed",
 			log.Err(err),
-			log.Any("operator", operator))
+			log.Any("operator", operator),
+			log.Any("condition", condition))
 		return nil, err
 	}
 
 	if len(response.Errors) > 0 {
-		log.Error(ctx, "query programs by operator failed",
+		log.Error(ctx, "query programs failed",
 			log.Err(response.Errors),
-			log.Any("operator", operator))
+			log.Any("operator", operator),
+			log.Any("condition", condition))
 		return nil, response.Errors
 	}
 
-	programs := data.Organization.Programs
+	programs := make([]*Program, 0, len(data.Organization.Programs))
+	for _, program := range data.Organization.Programs {
+		if condition.Status.Valid {
+			if condition.Status.Status != program.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if program.Status != Active {
+				continue
+			}
+		}
 
-	log.Info(ctx, "get programs by operator success",
+		if condition.System.Valid && program.System != condition.System.Bool {
+			continue
+		}
+
+		programs = append(programs, program)
+	}
+
+	log.Info(ctx, "query programs success",
 		log.Any("operator", operator),
+		log.Any("condition", condition),
 		log.Any("programs", programs))
 
 	return programs, nil

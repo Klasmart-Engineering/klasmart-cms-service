@@ -19,6 +19,7 @@ type ScheduleCacheCondition struct {
 	Condition  dbo.Conditions
 	UserID     string
 	ScheduleID string
+	SchoolID   string
 }
 
 type IScheduleCacheDA interface {

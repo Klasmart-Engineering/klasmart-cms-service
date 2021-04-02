@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"net/http"
 	"strings"
 
@@ -50,6 +51,8 @@ func (s *Server) createFolder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
 		})
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -93,6 +96,8 @@ func (s *Server) addFolderItem(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
 		})
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -221,6 +226,8 @@ func (s *Server) updateFolderItem(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -264,6 +271,8 @@ func (s *Server) moveFolderItem(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	case model.ErrMoveToChild:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
@@ -309,6 +318,8 @@ func (s *Server) moveFolderItemBulk(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	case model.ErrMoveToChild:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
@@ -507,7 +518,7 @@ func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	folderIDs := strings.Split(folderIDsStr, ",")
+	folderIDs := strings.Split(folderIDsStr, constant.StringArraySeparator)
 	results, err := model.GetFolderModel().GetFoldersSharedRecords(ctx, folderIDs, op)
 	switch err {
 	case nil:
@@ -548,9 +559,9 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 }
 
 type FolderItemsResponse struct {
-	Items []*entity.FolderItem `json:"items"`
+	Items []*entity.FolderItemInfo `json:"items"`
 }
 type FolderItemsResponseWithTotal struct {
-	Items []*entity.FolderItem `json:"items"`
+	Items []*entity.FolderItemInfo `json:"items"`
 	Total int                  `json:"total"`
 }

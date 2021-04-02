@@ -17,15 +17,15 @@ import (
 
 type IOutcomeRedis interface {
 	SaveOutcomeCacheList(ctx context.Context, outcomes []*entity.Outcome)
-	SaveOutcomeCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *OutcomeListWithKey)
+	SaveOutcomeCacheListBySearchCondition(ctx context.Context, op *entity.Operator, condition dbo.Conditions, c *OutcomeListWithKey)
 	GetOutcomeCacheByIdList(ctx context.Context, IDs []string) ([]string, []*entity.Outcome)
-	GetOutcomeCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *OutcomeListWithKey
+	GetOutcomeCacheBySearchCondition(ctx context.Context, op *entity.Operator, condition dbo.Conditions) *OutcomeListWithKey
 
 	SaveOutcomeCache(ctx context.Context, outcome *entity.Outcome)
 	GetOutcomeCacheByID(ctx context.Context, ID string) *entity.Outcome
 
-	CleanOutcomeCache(ctx context.Context, IDs []string)
-	CleanOutcomeConditionCache(ctx context.Context, condition dbo.Conditions)
+	CleanOutcomeCache(ctx context.Context, op *entity.Operator, IDs []string)
+	CleanOutcomeConditionCache(ctx context.Context, op *entity.Operator, condition dbo.Conditions)
 
 	SetExpiration(t time.Duration)
 }
@@ -49,9 +49,13 @@ func (r *OutcomeRedis) conditionHash(condition dbo.Conditions) string {
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
 	return fmt.Sprintf("%v", md5Hash)
 }
-func (r *OutcomeRedis) outcomeConditionKey(condition dbo.Conditions) string {
+func (r *OutcomeRedis) outcomeConditionKey(orgID string, condition dbo.Conditions) string {
 	md5Hash := r.conditionHash(condition)
-	return fmt.Sprintf("%v:%v", RedisKeyPrefixOutcomeCondition, md5Hash)
+	return fmt.Sprintf("%v:%v:%v", RedisKeyPrefixOutcomeCondition, orgID, md5Hash)
+}
+
+func (r *OutcomeRedis) outcomeOrgConditionKey(orgID string) string {
+	return fmt.Sprintf("%v:%v:*", RedisKeyPrefixOutcomeCondition, orgID)
 }
 
 func (r *OutcomeRedis) SaveOutcomeCacheList(ctx context.Context, outcomes []*entity.Outcome) {
@@ -91,12 +95,12 @@ func (r *OutcomeRedis) GetOutcomeCacheByID(ctx context.Context, ID string) *enti
 	return nil
 }
 
-func (r *OutcomeRedis) SaveOutcomeCacheListBySearchCondition(ctx context.Context, condition dbo.Conditions, c *OutcomeListWithKey) {
+func (r *OutcomeRedis) SaveOutcomeCacheListBySearchCondition(ctx context.Context, op *entity.Operator, condition dbo.Conditions, c *OutcomeListWithKey) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
 	//go func() {
-	key := r.outcomeConditionKey(condition)
+	key := r.outcomeConditionKey(op.OrgID, condition)
 	outcomeListJSON, err := json.Marshal(c)
 	if err != nil {
 		log.Error(ctx, "Can't parse outcome list into json", log.Err(err), log.String("key", key), log.String("data", string(outcomeListJSON)))
@@ -164,12 +168,12 @@ func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, IDs []string
 	return restIds, cachedOutcomes
 }
 
-func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, condition dbo.Conditions) *OutcomeListWithKey {
+func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, op *entity.Operator, condition dbo.Conditions) *OutcomeListWithKey {
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
 
-	key := r.outcomeConditionKey(condition)
+	key := r.outcomeConditionKey(op.OrgID, condition)
 
 	res, err := ro.MustGetRedis(ctx).Get(key).Result()
 	//res, err := ro.MustGetRedis(ctx).HGet(RedisKeyPrefixOutcomeCondition, r.conditionHash(condition)).Result()
@@ -195,7 +199,7 @@ func (r *OutcomeRedis) GetOutcomeCacheBySearchCondition(ctx context.Context, con
 	return outcomeLists
 }
 
-func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, IDs []string) {
+func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, op *entity.Operator, IDs []string) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
@@ -212,7 +216,7 @@ func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, IDs []string) {
 	//delete condition cache
 	//conditionKeys := ro.MustGetRedis(ctx).Keys(RedisKeyPrefixOutcomeCondition + ":*").Val()
 	//keys = append(keys, conditionKeys...)
-	keys = append(keys, RedisKeyPrefixOutcomeCondition)
+	keys = append(keys, r.outcomeOrgConditionKey(op.OrgID))
 	// go func() {
 	err := ro.MustGetRedis(ctx).Del(keys...).Err()
 	if err != nil {
@@ -226,18 +230,18 @@ func (r *OutcomeRedis) CleanOutcomeCache(ctx context.Context, IDs []string) {
 	// }()
 }
 
-func (r *OutcomeRedis) CleanOutcomeConditionCache(ctx context.Context, condition dbo.Conditions) {
+func (r *OutcomeRedis) CleanOutcomeConditionCache(ctx context.Context, op *entity.Operator, condition dbo.Conditions) {
 	if !config.Get().RedisConfig.OpenCache {
 		return
 	}
 
 	var keys []string
 	if condition != nil {
-		key := r.outcomeConditionKey(condition)
+		key := r.outcomeConditionKey(op.OrgID, condition)
 		keys = append(keys, key)
 	} else {
 		var err error
-		keys, err = ro.MustGetRedis(ctx).Keys(RedisKeyPrefixOutcomeCondition + "*").Result()
+		keys, err = ro.MustGetRedis(ctx).Keys(r.outcomeOrgConditionKey(op.OrgID)).Result()
 		if err != nil {
 			log.Error(ctx, "CleanOutcomeConditionCache: keys failed", log.Err(err), log.Strings("keys", keys))
 			return
