@@ -54,6 +54,7 @@ type AssessmentDetail struct {
 	CompleteTime int64                `json:"complete_time"`
 	Teachers     []*AssessmentTeacher `json:"teachers"`
 	Students     []*AssessmentStudent `json:"students"`
+	Program AssessmentProgram `json:"program"`
 	Subject      AssessmentSubject    `json:"subject"`
 	ClassEndTime int64                `json:"class_end_time"`
 	ClassLength  int                  `json:"class_length"`
@@ -62,6 +63,7 @@ type AssessmentDetail struct {
 	Plan               AssessmentContentView    `json:"plan"`
 	Materials          []*AssessmentContentView `json:"materials"`
 	OutcomeAttendances []*OutcomeAttendances    `json:"outcome_attendances"`
+	NumberOfOutcomes int `json:"number_of_outcomes"`
 }
 
 type OutcomeAttendances struct {

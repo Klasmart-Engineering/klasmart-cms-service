@@ -348,4 +348,17 @@ type ActivityFlashCardsPlayRecord struct {
 	CorrectCardsCount int   `json:"correct_cards_count"`
 }
 
+type GetTeachingHoursReportArgs struct {
+	OrgID      *string  `json:"org_id`
+	SchoolIDs  []string `json:"school_ids"`
+	TeacherIDs []string `json:"teacher_ids"`
+	Days       int      `json:"days"`
+}
+
+type GetTeachingHoursReportResultItem struct {
+	TeacherID   string  `json:"teacher_id"`
+	TeacherName string  `json:"teacher_name"`
+	Durations   []int64 `json:"durations"`
+}
+
 // endregion activities

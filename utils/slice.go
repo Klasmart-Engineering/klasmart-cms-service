@@ -41,6 +41,9 @@ func SliceDeduplicationMap(origin []string) ([]string, map[int]int) {
 }
 
 func ExcludeStrings(source []string, targets []string) []string {
+	if len(targets) == 0 {
+		return source
+	}
 	var result []string
 	for _, item := range source {
 		find := false

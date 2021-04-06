@@ -27,6 +27,8 @@ type IReportModel interface {
 
 	ListStudentsPerformanceH5PReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceH5PReportRequest) (*entity.ListStudentsPerformanceH5PReportResponse, error)
 	GetStudentPerformanceH5PReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentPerformanceH5PReportRequest) (*entity.GetStudentPerformanceH5PReportResponse, error)
+
+	GetTeachingHoursReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.GetTeachingHoursReportArgs) ([]*entity.GetTeachingHoursReportResultItem, error)
 }
 
 var (
@@ -2053,6 +2055,10 @@ func (rm *reportModel) getActivityFlashCards(materialID string, meta string, eve
 	}
 
 	return &r, nil
+}
+
+func (rm *reportModel) GetTeachingHoursReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.GetTeachingHoursReportArgs) ([]*entity.GetTeachingHoursReportResultItem, error) {
+	panic("implement me")
 }
 
 // endregion

@@ -115,7 +115,7 @@ type QueryAssessmentConditions struct {
 	Status                  *entity.AssessmentStatus                   `json:"status"`
 	ScheduleIDs             []string                                   `json:"schedule_ids"`
 	TeacherIDs              []string                                   `json:"teacher_ids"`
-	AllowTeacherIDs              []string `json:"allow_teacher_ids"`
+	AllowTeacherIDs         []string                                   `json:"allow_teacher_ids"`
 	TeacherIDAndStatusPairs []*entity.AssessmentTeacherIDAndStatusPair `json:"teacher_id_and_status_pairs"`
 	OrderBy                 *entity.ListAssessmentsOrderBy             `json:"order_by"`
 	Page                    int                                        `json:"page"`

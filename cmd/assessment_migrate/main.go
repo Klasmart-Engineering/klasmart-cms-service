@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -13,13 +14,29 @@ import (
 )
 
 func main() {
+	// load args
 	//a, err := parseArgs()
 	a, err := loadLocalDevArgs()
 	if err != nil {
 		panic(err)
 	}
+
+	// init config
 	confirmArgs(a)
 	if err := initConfig(a); err != nil {
+		panic(err)
+	}
+
+	// execute tasks
+	if err := dbo.GetTrans(context.Background(), func(ctx context.Context, tx *dbo.DBContext) error {
+		if err := handleAssessmentAttendanceDefault(ctx, tx); err != nil {
+			return err
+		}
+		if err := handleTeacherIDs(ctx, tx); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		panic(err)
 	}
 
@@ -97,3 +114,4 @@ func initConfig(a *args) error {
 
 	return nil
 }
+

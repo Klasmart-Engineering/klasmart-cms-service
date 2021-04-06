@@ -120,6 +120,21 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		})
 	}
 
+	// fill program
+	programNameMap, err := m.getProgramNameMap(ctx, operator, []string{assessment.ProgramID})
+	if err != nil {
+		log.Error(ctx, "Get: m.getProgramNameMap: get failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+			log.String("program_id", assessment.ProgramID),
+		)
+		return nil, err
+	}
+	result.Program = entity.AssessmentProgram{
+		ID:   assessment.ProgramID,
+		Name: programNameMap[assessment.ProgramID],
+	}
+
 	// fill subject
 	subjectNameMap, err := m.getSubjectNameMap(ctx, operator, []string{assessment.SubjectID})
 	if err != nil {
@@ -155,6 +170,9 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		for _, o := range assessmentOutcomes {
 			assessmentOutcomeMap[o.OutcomeID] = *o
 			outcomeIDs = append(outcomeIDs, o.OutcomeID)
+			if o.Checked {
+				result.NumberOfOutcomes++
+			}
 		}
 		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, outcomeIDs); err != nil {
 			log.Error(ctx, "Get: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
