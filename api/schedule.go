@@ -588,6 +588,7 @@ func (s *Server) querySchedule(c *gin.Context) {
 // @Param start_at_ge query integer false "get schedules greater than or equal to start_at"
 // @Param end_at_le query integer false "get schedules less than or equal to end_at"
 // @Param filter_option query string false "get schedules by filter option" enums(any_time,only_mine)
+// @Param order_by query string false "order by" enums(create_at, -create_at, start_at, -start_at)
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleListView
 // @Failure 400 {object} BadRequestResponse
@@ -725,6 +726,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 	condition.SubjectIDs = entity.SplitStringToNullStrings(c.Query("subject_ids"))
 	condition.ProgramIDs = entity.SplitStringToNullStrings(c.Query("program_ids"))
 	condition.ClassTypes = entity.SplitStringToNullStrings(c.Query("class_types"))
+	condition.OrderBy = da.NewScheduleOrderBy(c.Query("order_by"))
 	err = s.processTimeQuery(c, condition)
 	if err != nil {
 		return nil, err
