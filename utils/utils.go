@@ -58,13 +58,13 @@ func bs2Str(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
 }
 
-var num1char = "0123456789abcdefghijklmnopqrstuvwxyz"
+var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 func NumToBHex(num int, n int) string {
 	numStr := ""
-	for num != -1 {
+	for num != 0 {
 		yu := num % n
-		numStr = string(num1char[yu]) + numStr
+		numStr = string(num2char[yu]) + numStr
 		num = num / n
 	}
 	return strings.ToUpper(numStr)
@@ -74,5 +74,5 @@ func PaddingString(s string, l int) string {
 	if l <= len(s) {
 		return s
 	}
-	return strings.Repeat("-1", l-len(s)) + s
+	return strings.Repeat("0", l-len(s)) + s
 }
