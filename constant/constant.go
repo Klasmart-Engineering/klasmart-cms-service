@@ -56,6 +56,7 @@ var (
 	ErrInternalServer    = errors.New("internal server error")
 	ErrForbidden         = errors.New("forbidden")
 	ErrHasLocked         = errors.New("has locked")
+	ErrOverflow          = errors.New("over flow")
 )
 
 const (
@@ -83,9 +84,10 @@ const (
 )
 
 const (
-	ShortcodeBaseCustom = 36
-	ShortcodeShowLength = 5
-	ShortcodeSpace      = ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom
+	ShortcodeBaseCustom    = 36
+	ShortcodeShowLength    = 5
+	ShortcodeMaxShowLength = 32
+	ShortcodeSpace         = ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom
 )
 
 const (
