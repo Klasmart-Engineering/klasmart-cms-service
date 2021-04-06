@@ -61,6 +61,9 @@ func bs2Str(bs []byte) string {
 var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 func NumToBHex(num int, n int) string {
+	if n > len(num2char) {
+		panic("base exceed")
+	}
 	numStr := ""
 	for num != 0 {
 		yu := num % n
