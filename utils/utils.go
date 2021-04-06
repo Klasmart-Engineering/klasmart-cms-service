@@ -58,21 +58,36 @@ func bs2Str(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
 }
 
-var num1char = "0123456789abcdefghijklmnopqrstuvwxyz"
+var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
 
-func NumToBHex(num int, n int) string {
-	numStr := ""
-	for num != -1 {
-		yu := num % n
-		numStr = string(num1char[yu]) + numStr
-		num = num / n
+func NumToBHex(ctx context.Context, num int, n int, l int) (string, error) {
+	if n > len(num2char) || l > constant.ShortcodeMaxShowLength {
+		log.Error(ctx, "NumToBHex: n is overflow",
+			log.Int("num", num),
+			log.Int("base", n),
+			log.Int("length", l))
+		return "", constant.ErrOverflow
 	}
-	return strings.ToUpper(numStr)
+	result := [constant.ShortcodeMaxShowLength]uint8{num2char[0]}
+	for i := 0; num != 0 && i < l; {
+		yu := num % n
+		result[l-1-i] = num2char[yu]
+		num = num / n
+		i++
+	}
+	if num != 0 {
+		log.Error(ctx, "NumToBHex: num is overflow",
+			log.Int("num", num),
+			log.Int("base", n),
+			log.Int("length", l))
+		return "", constant.ErrOverflow
+	}
+	return strings.ToUpper(string(result[:l])), nil
 }
 
 func PaddingString(s string, l int) string {
 	if l <= len(s) {
 		return s
 	}
-	return strings.Repeat("-1", l-len(s)) + s
+	return strings.Repeat("0", l-len(s)) + s
 }
