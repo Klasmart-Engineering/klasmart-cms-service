@@ -485,7 +485,7 @@ func NewScheduleOrderBy(orderby string) ScheduleOrderBy {
 	case "-start_at":
 		return ScheduleOrderByStartAtDesc
 	default:
-		return ScheduleOrderByCreateAtDesc
+		return ScheduleOrderByStartAtAsc
 	}
 }
 
@@ -500,6 +500,6 @@ func (c ScheduleOrderBy) ToSQL() string {
 	case ScheduleOrderByStartAtDesc:
 		return "start_at desc"
 	default:
-		return "created_at desc"
+		return "start_at"
 	}
 }
