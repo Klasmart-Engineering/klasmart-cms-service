@@ -276,10 +276,7 @@ func (s AmsCategoryService) GetBySubjects(ctx context.Context, operator *entity.
 			log.Strings("subjectIDs", _ids))
 		return nil, response.Errors
 	}
-	fmt.Println(indexMapping)
-	for key, item := range data {
-		fmt.Println(key, ":", item.Categories)
-	}
+
 	categoryMap := make(map[string]*Category)
 	result := make([]*Category, 0)
 	for index := range subjectIDs {
