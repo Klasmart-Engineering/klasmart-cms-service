@@ -60,17 +60,29 @@ func bs2Str(bs []byte) string {
 
 var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
 
-func NumToBHex(num int, n int) string {
-	if n > len(num2char) {
-		panic("base exceed")
+func NumToBHex(ctx context.Context, num int, n int, l int) (string, error) {
+	if n > len(num2char) || l > constant.ShortcodeMaxShowLength {
+		log.Error(ctx, "NumToBHex: n is overflow",
+			log.Int("num", num),
+			log.Int("base", n),
+			log.Int("length", l))
+		return "", constant.ErrOverflow
 	}
-	numStr := ""
-	for num != 0 {
+	result := [constant.ShortcodeMaxShowLength]uint8{num2char[0]}
+	for i := 0; num != 0 && i < l; {
 		yu := num % n
-		numStr = string(num2char[yu]) + numStr
+		result[l-1-i] = num2char[yu]
 		num = num / n
+		i++
 	}
-	return strings.ToUpper(numStr)
+	if num != 0 {
+		log.Error(ctx, "NumToBHex: num is overflow",
+			log.Int("num", num),
+			log.Int("base", n),
+			log.Int("length", l))
+		return "", constant.ErrOverflow
+	}
+	return strings.ToUpper(string(result[:l])), nil
 }
 
 func PaddingString(s string, l int) string {

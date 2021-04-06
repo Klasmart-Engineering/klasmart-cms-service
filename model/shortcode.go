@@ -30,7 +30,10 @@ func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, tx *dbo.DBContext
 		return "", err
 	}
 	for i := 0; i < constant.ShortcodeSpace; i++ {
-		value := utils.PaddingString(utils.NumToBHex(i, constant.ShortcodeBaseCustom), constant.ShortcodeShowLength)
+		value, err := utils.NumToBHex(ctx, i, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+		if err != nil {
+			return "", err
+		}
 		if _, ok := shortcodes[value]; !ok && value != utils.PaddingString(shortcode, constant.ShortcodeShowLength) {
 			err = da.GetOutcomeDA().SaveShortcodeInRedis(ctx, orgID, value)
 			if err != nil {
