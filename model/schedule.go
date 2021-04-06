@@ -1187,6 +1187,13 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, loc).Unix()
 			temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, loc).Unix()
 		}
+		// get role type
+		roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, op, item.ID)
+		if err != nil {
+			log.Error(ctx, "get relation type error", log.Any("op", op), log.Any("schedule", item), log.Err(err))
+			return nil, err
+		}
+		temp.RoleType = roleType
 		// verify is exist feedback
 		existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, item.ID)
 		if err != nil {
