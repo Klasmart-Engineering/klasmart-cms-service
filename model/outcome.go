@@ -455,6 +455,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 	if err != nil {
 		return "", err
 	}
+	da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
 	return newVersion.ID, nil
 }
 
