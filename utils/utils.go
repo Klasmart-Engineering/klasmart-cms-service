@@ -68,12 +68,17 @@ func NumToBHex(ctx context.Context, num int, n int, l int) (string, error) {
 			log.Int("length", l))
 		return "", constant.ErrOverflow
 	}
-	result := [constant.ShortcodeMaxShowLength]uint8{num2char[0]}
+	result := make([]uint8, l)
+	index := l
 	for i := 0; num != 0 && i < l; {
 		yu := num % n
-		result[l-1-i] = num2char[yu]
+		index = l - 1 - i
+		result[index] = num2char[yu]
 		num = num / n
 		i++
+	}
+	for i := 0; i < index; i++ {
+		result[i] = num2char[0]
 	}
 	if num != 0 {
 		log.Error(ctx, "NumToBHex: num is overflow",
