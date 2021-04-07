@@ -41,7 +41,7 @@ func (OutcomeSetModel) CreateOutcomeSet(ctx context.Context, op *entity.Operator
 		OrganizationID: op.OrgID,
 	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		exist, err := da.GetOutcomeSetDA().IsSetExist(ctx, tx, set.Name)
+		exist, err := da.GetOutcomeSetDA().IsSetExist(ctx, op, tx, set.Name)
 		if err != nil {
 			log.Error(ctx, "CreateSet: IsSetExist failed",
 				log.Err(err),

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS `sets` (
     `update_at` BIGINT NOT NULL DEFAULT 0  COMMENT 'updated_at',
     `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
     PRIMARY KEY (`id`),
-    UNIQUE  KEY `name_organization_id` (`name`, `organization_id`),
+    KEY `index_name` (`name`),
     FULLTEXT KEY `fullindex_name` (`name`)
 ) COMMENT 'sets' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 

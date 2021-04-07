@@ -3,6 +3,7 @@ package api
 import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -34,6 +35,7 @@ func (s *Server) createOutcomeSet(c *gin.Context) {
 	op := s.getOperator(c)
 	var data OutcomeSetCreateView
 	err := c.ShouldBindJSON(&data)
+	data.SetName = strings.TrimSpace(data.SetName)
 	if err != nil || data.SetName == "" {
 		log.Warn(ctx, "createOutcomeSet: ShouldBind failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))

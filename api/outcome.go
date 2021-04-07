@@ -26,7 +26,7 @@ import (
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-//
+// @Router /learning_outcomes [post]
 func (s *Server) createOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)

@@ -492,9 +492,9 @@ func NewScheduleOrderBy(orderby string) ScheduleOrderBy {
 func (c ScheduleOrderBy) ToSQL() string {
 	switch c {
 	case ScheduleOrderByCreateAtAsc:
-		return "create_at"
+		return "created_at"
 	case ScheduleOrderByCreateAtDesc:
-		return "create_at desc"
+		return "created_at desc"
 	case ScheduleOrderByStartAtAsc:
 		return "start_at"
 	case ScheduleOrderByStartAtDesc:

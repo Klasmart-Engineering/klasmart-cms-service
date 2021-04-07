@@ -159,7 +159,7 @@ func TestGetLearningOutcomesByIDs(t *testing.T) {
 	}
 	ctx := context.Background()
 	ids := []string{"5f5726af0944d7c38e20696f"}
-	outcomes, err := model.GetOutcomeModel().GetLearningOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	outcomes, err := model.GetOutcomeModel().GetLearningOutcomesByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestGetLatestOutcomesByIDs(t *testing.T) {
 	ctx := context.Background()
 	//ids := []string{"5f5726af0944d7c38e20696f"}
 	ids := []string{}
-	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,11 +193,11 @@ func TestRedis(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(utils.NumToBHex(int(num), 36))
+	fmt.Println(utils.NumToBHex(context.TODO(), int(num), 36, constant.ShortcodeShowLength))
 }
 
 func TestNumToBHex(t *testing.T) {
-	fmt.Println(utils.PaddingString(utils.NumToBHex(901, 36), constant.ShortcodeShowLength))
+	fmt.Println("")
 }
 
 func TestFindRoot(t *testing.T) {
