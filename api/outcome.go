@@ -61,7 +61,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, op, &data, outcome))
 	case constant.ErrConflict:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
