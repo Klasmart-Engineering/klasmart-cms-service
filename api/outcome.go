@@ -118,6 +118,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /learning_outcomes/{outcome_id} [put]
 func (s *Server) updateOutcome(c *gin.Context) {
@@ -147,6 +148,8 @@ func (s *Server) updateOutcome(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
+	case constant.ErrConflict:
+		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -816,6 +819,7 @@ type ShortcodeResponse struct {
 // @Success 200 {object} ShortcodeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
+// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /shortcode [post]
 func (s *Server) generateShortcode(c *gin.Context) {
@@ -838,9 +842,9 @@ func (s *Server) generateShortcode(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, &ShortcodeResponse{Shortcode: shortcode})
 	case constant.ErrConflict:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	case constant.ErrExceededLimit:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

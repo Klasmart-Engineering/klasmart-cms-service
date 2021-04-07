@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"testing"
 
 	"github.com/go-redis/redis"
@@ -19,7 +20,7 @@ func TestOutcomeRedis_GetOutcomeCacheBySearchCondition(t *testing.T) {
 		Password: config.Get().RedisConfig.Password,
 	})
 
-	result := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(context.Background(), &OutcomeCondition{
+	result := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(context.Background(), &entity.Operator{}, &OutcomeCondition{
 		IDs: dbo.NullStrings{Strings: []string{"1234"}, Valid: true},
 	})
 	if result != nil {
@@ -34,7 +35,7 @@ func TestOutcomeRedis_SaveOutcomeCacheListBySearchCondition(t *testing.T) {
 		Password: config.Get().RedisConfig.Password,
 	})
 
-	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(context.Background(),
+	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(context.Background(), &entity.Operator{},
 		&OutcomeCondition{
 			IDs: dbo.NullStrings{Strings: []string{"123"}, Valid: true},
 		}, &OutcomeListWithKey{0, nil})
@@ -64,5 +65,5 @@ func TestOutcomeRedis_CleanOutcomeConditionCache(t *testing.T) {
 	condition := OutcomeCondition{
 		IDs: dbo.NullStrings{Strings: []string{"123"}, Valid: true},
 	}
-	GetOutcomeRedis().CleanOutcomeConditionCache(context.Background(), &condition)
+	GetOutcomeRedis().CleanOutcomeConditionCache(context.Background(), &entity.Operator{}, &condition)
 }
