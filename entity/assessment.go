@@ -115,6 +115,7 @@ type QueryAssessmentsArgs struct {
 	Status                  *AssessmentStatus                   `json:"status"`
 	TeacherName             *string                             `json:"teacher_name"`
 	OrderBy                 *ListAssessmentsOrderBy             `json:"order_by"`
+	ClassType               *ScheduleClassType                  `json:"class_type"`
 	Page                    int                                 `json:"page"`
 	PageSize                int                                 `json:"page_size"`
 }

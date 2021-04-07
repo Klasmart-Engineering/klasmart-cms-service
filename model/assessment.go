@@ -292,10 +292,12 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 			Status:                  args.Status,
 			AllowTeacherIDs:         checker.AllowTeacherIDs(),
 			TeacherIDAndStatusPairs: checker.AllowPairs(),
+			ClassType:               args.ClassType,
 			OrderBy:                 args.OrderBy,
 			Page:                    args.Page,
 			PageSize:                args.PageSize,
 		}
+
 		teachers    []*external.Teacher
 		scheduleIDs []string
 	)

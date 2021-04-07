@@ -117,6 +117,7 @@ type QueryAssessmentConditions struct {
 	TeacherIDs              []string                                   `json:"teacher_ids"`
 	AllowTeacherIDs         []string                                   `json:"allow_teacher_ids"`
 	TeacherIDAndStatusPairs []*entity.AssessmentTeacherIDAndStatusPair `json:"teacher_id_and_status_pairs"`
+	ClassType               *entity.ScheduleClassType                  `json:"class_type"`
 	OrderBy                 *entity.ListAssessmentsOrderBy             `json:"order_by"`
 	Page                    int                                        `json:"page"`
 	PageSize                int                                        `json:"page_size"`
@@ -128,6 +129,11 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 	if c.OrgID != nil {
 		b.Append("exists (select 1 from schedules"+
 			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
+	}
+
+	if c.ClassType != nil {
+		b.Append("exists (select 1 from schedules"+
+			" where class_type = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
 	}
 
 	if c.Status != nil {

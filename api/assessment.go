@@ -76,6 +76,12 @@ func (s *Server) listAssessments(c *gin.Context) {
 
 		pager := utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
+
+		classType := c.Query("class_type")
+		if classType != "" {
+			tmp := entity.ScheduleClassType(classType)
+			cmd.ClassType = &tmp
+		}
 	}
 
 	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
