@@ -103,6 +103,8 @@ func (o OutcomeSqlDA) SearchShortcode(ctx context.Context, tx *dbo.DBContext, or
 			log.String("org", orgID))
 		return nil, err
 	}
+	log.Info(ctx, "SearchShortcode: searchRedisShortcode success",
+		log.Strings("shortcode", temp))
 	for i := range temp {
 		shortcodes[temp[i]] = struct{}{}
 	}
