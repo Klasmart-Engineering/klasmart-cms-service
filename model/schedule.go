@@ -56,6 +56,7 @@ type IScheduleModel interface {
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
+	GetRosterClassNotStartScheduleIDs(ctx context.Context, op *entity.Operator, rosterClassID string) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -2426,6 +2427,23 @@ func (s *scheduleModel) GetClassTypes(ctx context.Context, op *entity.Operator) 
 			ID:   item,
 			Name: name.ToLabel().String(),
 		}
+	}
+
+	return result, nil
+}
+
+func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, op *entity.Operator, rosterClassID string) ([]string, error) {
+	condition := da.NewNotStartScheduleCondition(rosterClassID)
+
+	var scheduleList []*entity.Schedule
+	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)
+	if err != nil {
+		log.Error(ctx, "schedule query error", log.Err(err), log.Any("condition", condition))
+		return nil, err
+	}
+	var result = make([]string, len(scheduleList))
+	for i, item := range scheduleList {
+		result[i] = item.ID
 	}
 
 	return result, nil

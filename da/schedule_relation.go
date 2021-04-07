@@ -20,6 +20,7 @@ type IScheduleRelationDA interface {
 	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
 	//GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
 	GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
+	DeleteByRelationIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string, relationIDs []string) error
 }
 
 type scheduleRelationDA struct {
@@ -100,6 +101,19 @@ func (s *scheduleRelationDA) BatchInsert(ctx context.Context, tx *dbo.DBContext,
 func (s *scheduleRelationDA) Delete(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) error {
 	if err := tx.Unscoped().
 		Where("schedule_id in (?)", scheduleIDs).
+		Delete(&entity.ScheduleRelation{}).Error; err != nil {
+		log.Error(ctx, "delete schedules relation delete failed",
+			log.Strings("schedule_id", scheduleIDs),
+		)
+		return err
+	}
+	return nil
+}
+
+func (s *scheduleRelationDA) DeleteByRelationIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string, relationIDs []string) error {
+	if err := tx.Unscoped().
+		Where("schedule_id in (?)", scheduleIDs).
+		Where("relation_id in (?)", relationIDs).
 		Delete(&entity.ScheduleRelation{}).Error; err != nil {
 		log.Error(ctx, "delete schedules relation delete failed",
 			log.Strings("schedule_id", scheduleIDs),
