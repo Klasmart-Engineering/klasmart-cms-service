@@ -19,6 +19,14 @@ func (o OutcomeSqlDA) shortcodeRedisKey(orgID, shortcode string) string {
 	return fmt.Sprintf("%s:%s:%s", RedisKeyPrefixShortcode, orgID, shortcode)
 }
 
+func (o OutcomeSqlDA) getShortcodeFromKey(key string) string {
+	length := len(key)
+	if length >= constant.ShortcodeShowLength {
+		return key[length-constant.ShortcodeShowLength : length]
+	}
+	return key
+}
+
 func (o OutcomeSqlDA) IsShortcodeExistInRedis(ctx context.Context, orgID string, shortcode string) (bool, error) {
 	result, err := ro.MustGetRedis(ctx).Exists(o.shortcodeRedisKey(orgID, shortcode)).Result()
 	if err != nil {
@@ -106,7 +114,8 @@ func (o OutcomeSqlDA) SearchShortcode(ctx context.Context, tx *dbo.DBContext, or
 	log.Info(ctx, "SearchShortcode: searchRedisShortcode success",
 		log.Strings("shortcode", temp))
 	for i := range temp {
-		shortcodes[temp[i]] = struct{}{}
+		shortcode := o.getShortcodeFromKey(temp[i])
+		shortcodes[shortcode] = struct{}{}
 	}
 	return shortcodes, nil
 }
