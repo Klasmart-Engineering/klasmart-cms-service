@@ -446,12 +446,14 @@ func (a *assessmentModel) getProgramNameMap(ctx context.Context, operator *entit
 }
 
 func (a *assessmentModel) getSubjectNameMap(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]string, error) {
+	subIDs := utils.SliceDeduplicationExcludeEmpty(subjectIDs)
 	subjectNameMap := map[string]string{}
-	items, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
+	items, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subIDs)
 	if err != nil {
 		log.Error(ctx, "list assessments: batch get subject failed",
 			log.Err(err),
 			log.Strings("subject_ids", subjectIDs),
+			log.Strings("subIDs", subIDs),
 		)
 		return nil, err
 	}

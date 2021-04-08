@@ -68,3 +68,9 @@ func TestSliceDeduplicationMap(t *testing.T) {
 		t.Errorf("SliceDeduplicationMap() got = %+v, want %+v", resultMap, wantMap)
 	}
 }
+
+func TestSliceDeduplicationExcludeEmpty(t *testing.T) {
+	testData := []string{"", "1", "1", "2", "3", "2", ""}
+	result := SliceDeduplicationExcludeEmpty(testData)
+	t.Log(result)
+}
