@@ -184,6 +184,16 @@ func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) strin
 	return md5Hash
 }
 
+//func (r *ContentRedis) conditionHash(condition dbo.Conditions) string {
+//	h := md5.New()
+//	h.Write([]byte(fmt.Sprintf("%v", condition)))
+//	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
+//	return fmt.Sprintf("%v", md5Hash)
+//}
+//func (r *ContentRedis) contentConditionKey(condition dbo.Conditions) string {
+//	md5Hash := r.conditionHash(condition)
+//	return fmt.Sprintf("%v:%v", RedisKeyPrefixContentCondition, md5Hash)
+//}
 //func (r *ScheduleRedisDA) BatchAdd(ctx context.Context, op *entity.Operator, schedules []*entity.ScheduleDetailsView) error {
 //	if !config.Get().RedisConfig.OpenCache {
 //		log.Info(ctx, "redis disabled")
