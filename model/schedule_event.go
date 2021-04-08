@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -20,6 +21,10 @@ type scheduleEventModel struct {
 }
 
 func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error {
+	if event.ClassID == "" || len(event.Users) <= 0 {
+		log.Info(ctx, "event invalid args", log.Any("event", event))
+		return constant.ErrInvalidArgs
+	}
 	scheduleIDs, err := GetScheduleModel().GetRosterClassNotStartScheduleIDs(ctx, op, event.ClassID)
 	if err != nil {
 		log.Error(ctx, "class has schedule error", log.Err(err), log.Any("event", event))
@@ -29,10 +34,13 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 		log.Debug(ctx, "class are not scheduled", log.Any("event", event))
 		return nil
 	}
-
+	userDistinct := make(map[string]bool)
 	relations := make([]*entity.ScheduleRelation, 0, len(scheduleIDs)*len(event.Users))
 	for _, scheduleID := range scheduleIDs {
 		for _, user := range event.Users {
+			if _, ok := userDistinct[user.ID]; ok {
+				continue
+			}
 			var roleType entity.ScheduleRelationType
 			switch user.RoleType {
 			case entity.ClassUserRoleTypeEventTeacher:
@@ -72,9 +80,13 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 				RelationID:   user.ID,
 				RelationType: roleType,
 			})
+			userDistinct[user.ID] = true
 		}
 	}
-
+	if len(relations) <= 0 {
+		log.Info(ctx, "relation data not found", log.Any("event", event))
+		return nil
+	}
 	_, err = da.GetScheduleRelationDA().BatchInsert(ctx, dbo.MustGetDB(ctx), relations)
 	if err != nil {
 		log.Error(ctx, "count by schedule condition error", log.Err(err), log.Any("event", event), log.Any("relations", relations))
@@ -85,6 +97,10 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 }
 
 func (s *scheduleEventModel) DeleteUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error {
+	if event.ClassID == "" || len(event.Users) <= 0 {
+		log.Info(ctx, "event invalid args", log.Any("event", event))
+		return constant.ErrInvalidArgs
+	}
 	scheduleIDs, err := GetScheduleModel().GetRosterClassNotStartScheduleIDs(ctx, op, event.ClassID)
 	if err != nil {
 		log.Error(ctx, "class has schedule error", log.Err(err), log.Any("event", event))

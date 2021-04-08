@@ -109,6 +109,9 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
 		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
+
+		// ams event
+		schedules.GET("/class_user_edit_to_schedule", s.classUserEditEventToSchedule)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{

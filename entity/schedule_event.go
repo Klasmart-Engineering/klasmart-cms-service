@@ -1,14 +1,24 @@
 package entity
 
-type ScheduleClassEvent struct {
-	Action  ClassActionEvent  `json:"action" enums:"Add,Delete"`
-	ClassID string            `json:"class_id"`
-	Users   []*ClassUserEvent `json:"users"`
+type ScheduleEventBody struct {
+	Token string `json:"token"`
 }
-type ClassUserEvent struct {
+
+type ScheduleClassEvent struct {
+	Action  ClassActionEvent          `json:"action" enums:"Add,Delete"`
+	ClassID string                    `json:"class_id"`
+	Users   []*ScheduleClassUserEvent `json:"users"`
+}
+
+func (s ScheduleClassEvent) Valid() error {
+	return nil
+}
+
+type ScheduleClassUserEvent struct {
 	ID       string                 `json:"id"`
 	RoleType ClassUserRoleTypeEvent `json:"role_type" enums:"Student,Teacher"`
 }
+
 type ClassUserRoleTypeEvent string
 
 const (
