@@ -540,7 +540,7 @@ CREATE TABLE `outcomes_sets` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `outcome_set_id_delete` (`outcome_id`,`set_id`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=881 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
+) ENGINE=InnoDB AUTO_INCREMENT=966 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -844,4 +844,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-04-06 17:00:46
+-- Dump completed on 2021-04-08 17:00:34
