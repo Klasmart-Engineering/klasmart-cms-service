@@ -43,6 +43,9 @@ func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, tx *dbo.DBContext
 					log.String("old", shortcode))
 				return "", err
 			}
+			log.Info(ctx, "GenerateShortcode: SaveShortcodeInRedis success",
+				log.String("old", shortcode),
+				log.String("new", value))
 			return value, nil
 		}
 	}

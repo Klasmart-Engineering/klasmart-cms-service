@@ -22,10 +22,13 @@ func TestNumToBHex(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(result)
-	//for i := 0; i < constant.ShortcodeSpace; i++ {
-	//	_, err := NumToBHex(context.TODO(), i, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//}
+	for i := 0; i < constant.ShortcodeSpace; i++ {
+		res, err := NumToBHex(context.TODO(), i, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i%10000 == 0 {
+			fmt.Println(i, res)
+		}
+	}
 }
