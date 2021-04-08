@@ -179,7 +179,8 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 
 func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) string {
 	h := md5.New()
-	h.Write([]byte(fmt.Sprintf("%v", condition)))
+	b, _ := json.Marshal(condition)
+	h.Write(b)
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
 	return md5Hash
 }

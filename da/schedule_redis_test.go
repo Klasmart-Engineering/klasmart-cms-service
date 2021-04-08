@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"testing"
 )
 
@@ -122,25 +121,16 @@ func Test_conditionHash(t *testing.T) {
 	condition := new(ScheduleCondition)
 	json.Unmarshal([]byte(str), condition)
 	//t.Log(condition)
-	key := conditionHash(ScheduleCacheCondition{Condition: condition})
+	key := conditionHash(&ScheduleCacheCondition{Condition: condition})
 
 	t.Log(key)
 }
 
-func conditionHash2(condition dbo.Conditions) string {
+func conditionHash(condition *ScheduleCacheCondition) string {
 	h := md5.New()
-	str := fmt.Sprintf("%v", condition)
-	h.Write([]byte(str))
+	b, _ := json.Marshal(condition)
+	h.Write(b)
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
-	fmt.Println(str)
-	return md5Hash
-}
-
-func conditionHash(condition ScheduleCacheCondition) string {
-	h := md5.New()
-	str := fmt.Sprintf("%v", condition)
-	h.Write([]byte(str))
-	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
-	fmt.Println(str)
+	fmt.Println(string(b))
 	return md5Hash
 }
