@@ -141,6 +141,7 @@ type ScheduleRelationCondition struct {
 	RelationID        sql.NullString
 	RelationType      sql.NullString
 	RelationTypes     entity.NullStrings
+	RelationIDs       entity.NullStrings
 }
 
 //select * from schedules_relations where
@@ -215,6 +216,10 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 	if c.RelationTypes.Valid {
 		wheres = append(wheres, "relation_type in (?)")
 		params = append(params, c.RelationTypes.Strings)
+	}
+	if c.RelationIDs.Valid {
+		wheres = append(wheres, "relation_id in (?)")
+		params = append(params, c.RelationIDs.Strings)
 	}
 	return wheres, params
 }

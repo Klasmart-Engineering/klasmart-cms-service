@@ -131,12 +131,12 @@ func NewItemType(num int) ItemType {
 }
 
 type CreateFolderRequest struct {
-	OwnerType OwnerType       `json:"owner_type"`
-	ParentID  string          `json:"parent_id"`
-	Name      string          `json:"name"`
-	Partition FolderPartition `json:"partition"`
-	Description string `json:"description"`
-	Keywords []string `json:"keywords"`
+	OwnerType   OwnerType       `json:"owner_type"`
+	ParentID    string          `json:"parent_id"`
+	Name        string          `json:"name"`
+	Partition   FolderPartition `json:"partition"`
+	Description string          `json:"description"`
+	Keywords    []string        `json:"keywords"`
 
 	Thumbnail string `json:"thumbnail"`
 }
@@ -150,10 +150,10 @@ type MoveFolderRequest struct {
 }
 
 type UpdateFolderRequest struct {
-	Name      string `json:"name"`
-	Thumbnail string `json:"thumbnail"`
-	Description string `json:"description"`
-	Keywords []string `json:"keywords"`
+	Name        string   `json:"name"`
+	Thumbnail   string   `json:"thumbnail"`
+	Description string   `json:"description"`
+	Keywords    []string `json:"keywords"`
 }
 
 type ShareFoldersRequest struct {
@@ -246,8 +246,8 @@ type FolderItem struct {
 	Partition FolderPartition `gorm:"type:varchar(256);NOT NULL" json:"partition"`
 	Name      string          `gorm:"type:varchar(256);NOT NULL" json:"name"`
 
-	Description string 	`gorm:"type:text;NOT NULL" json:"description"`
-	Keywords string `gorm:"type:text;NOT NULL" json:"keywords"`
+	Description string `gorm:"type:text;NOT NULL" json:"description"`
+	Keywords    string `gorm:"type:text;NOT NULL" json:"keywords"`
 
 	Thumbnail string `gorm:"type:text" json:"thumbnail"`
 	Creator   string `gorm:"type:varchar(50)" json:"creator"`
@@ -275,9 +275,33 @@ func (f FolderItem) ChildrenPath() Path {
 }
 
 type FolderItemInfo struct {
-	FolderItem
-	Available int           `json:"available"`
-	Items     []*FolderItem `json:"items"`
+	ID        string    `json:"id"`
+	OwnerType OwnerType `json:"owner_type"`
+	Owner     string    `json:"owner"`
+	ParentID  string    `json:"parent_id"`
+	Link      string    `json:"link"`
+
+	ItemType  ItemType        `json:"item_type"`
+	DirPath   Path            `json:"dir_path"`
+	Partition FolderPartition `json:"partition"`
+	Name      string          `json:"name"`
+
+	Description string   `json:"description"`
+	Keywords    []string `json:"keywords"`
+
+	Thumbnail   string `json:"thumbnail"`
+	Creator     string `json:"creator"`
+	CreatorName string `json:"creator_name"`
+	EditorName  string `json:"editor_name"`
+
+	ItemsCount int    `json:"items_count"`
+	Editor     string `json:"editor"`
+
+	CreateAt int64 `json:"create_at"`
+	UpdateAt int64 `json:"update_at"`
+
+	Available int               `json:"available"`
+	Items     []*FolderItemInfo `json:"items"`
 }
 
 type SearchFolderCondition struct {

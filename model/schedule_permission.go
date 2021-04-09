@@ -18,36 +18,105 @@ type ISchedulePermissionModel interface {
 	GetSchoolsByOperator(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleFilterSchool, error)
 	GetClassesByOperator(ctx context.Context, op *entity.Operator, schoolID string) ([]*entity.ScheduleFilterClass, error)
 	GetClassesBySchoolID(ctx context.Context, op *entity.Operator, schoolID string) ([]*entity.ScheduleFilterClass, error)
-	GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleFilterClass, error)
+	GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) ([]*entity.ScheduleFilterClass, error)
 	GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator) ([]*external.User, error)
+	GetUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error)
 }
 
 type schedulePermissionModel struct {
 	testSchedulePermissionRepeatFlag bool
 }
 
+func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error) {
+	hasUnDefineClass, err := s.HasUnDefineClass(ctx, op, permissionMap)
+	if err != nil {
+		return nil, err
+	}
+	if !hasUnDefineClass {
+		return nil, constant.ErrRecordNotFound
+	}
+	result := &entity.ScheduleFilterClass{
+		ID:               entity.ScheduleFilterUndefinedClass,
+		Name:             entity.ScheduleFilterUndefinedClass,
+		OperatorRoleType: entity.ScheduleRoleTypeUnknown,
+	}
+	return result, nil
+}
+
+func (s *schedulePermissionModel) HasUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (bool, error) {
+	userInfos, err := s.GetOnlyUnderOrgUsers(ctx, op)
+	if err != nil {
+		log.Error(ctx, "GetOnlyUnderOrgUsers error", log.Any("op", op))
+		return false, err
+	}
+
+	if len(userInfos) <= 0 {
+		return false, nil
+	}
+
+	userIDs := make([]string, len(userInfos))
+	hasOperator := false
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+		if item.ID == op.UserID {
+			hasOperator = true
+		}
+	}
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		// org permission
+		log.Debug(ctx, "org permission", log.Strings("userIDs", userIDs), log.Any("op", op))
+	} else if permissionMap[external.ScheduleViewMyCalendar] && hasOperator {
+		userIDs = []string{op.UserID}
+	} else {
+		return false, nil
+	}
+
+	hasSchedule, err := GetScheduleRelationModel().HasScheduleByRelationIDs(ctx, op, userIDs)
+	if err != nil {
+		log.Error(ctx, "has schedule by relation ids", log.Strings("userIDs", userIDs), log.Any("op", op))
+		return false, err
+	}
+	return hasSchedule, nil
+}
+
 func (s *schedulePermissionModel) GetClassesByOperator(ctx context.Context, op *entity.Operator, schoolID string) ([]*entity.ScheduleFilterClass, error) {
 	if schoolID == entity.ScheduleFilterInvalidValue {
-		classInfos, err := s.GetOnlyUnderOrgClasses(ctx, op)
-		if err != nil {
-			log.Error(ctx, "GetOnlyUnderOrgClasses error", log.Any("op", op))
-			return nil, err
-		}
-		userInfos, err := s.GetOnlyUnderOrgUsers(ctx, op)
-		if err != nil {
-			log.Error(ctx, "GetOnlyUnderOrgUsers error", log.Any("op", op))
-			return nil, err
-		}
-		if len(userInfos) > 0 {
-			classInfos = append(classInfos, &entity.ScheduleFilterClass{
-				ID:             entity.ScheduleFilterUndefinedClass,
-				Name:           entity.ScheduleFilterUndefinedClass,
-				HasStudentFlag: false,
-			})
-		}
-		return classInfos, nil
+		return s.getClassesWithoutSchool(ctx, op)
 	}
 	return s.GetClassesBySchoolID(ctx, op, schoolID)
+}
+
+func (s *schedulePermissionModel) getClassesWithoutSchool(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleFilterClass, error) {
+	permissionMap, err := s.HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewMyCalendar,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.ScheduleFilterClass, 0)
+
+	// unDefine classes
+	unDefineClass, err := s.GetUnDefineClass(ctx, op, permissionMap)
+	if err != constant.ErrRecordNotFound && err != nil {
+		log.Error(ctx, "GetUnDefineClass error", log.Any("op", op), log.Any("permissionMap", permissionMap))
+		return nil, err
+	}
+	if err == nil {
+		result = append(result, unDefineClass)
+	}
+
+	// only under org classes
+	classInfos, err := s.GetOnlyUnderOrgClasses(ctx, op, permissionMap)
+	if err != constant.ErrRecordNotFound && err != nil {
+		log.Error(ctx, "GetOnlyUnderOrgClasses error", log.Any("op", op))
+		return nil, err
+	}
+	if err == nil {
+		result = append(result, classInfos...)
+	}
+
+	return result, nil
 }
 
 func (s *schedulePermissionModel) GetOnlyUnderOrgUsers(ctx context.Context, op *entity.Operator) ([]*external.User, error) {
@@ -83,7 +152,7 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgUsers(ctx context.Context, op *
 	return result, nil
 }
 
-func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleFilterClass, error) {
+func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) ([]*entity.ScheduleFilterClass, error) {
 	orgClassMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, op, []string{op.OrgID})
 	if err != nil {
 		log.Error(ctx, "GetClassServiceProvider.GetByOrganizationIDs error", log.Any("op", op))
@@ -115,27 +184,73 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 		log.Error(ctx, "GetClassServiceProvider.BatchGet error", log.Any("op", op), log.Strings("underOrgClassIDs", underOrgClassIDs))
 		return nil, err
 	}
-	result := make([]*entity.ScheduleFilterClass, 0, len(classInfos))
-	for _, item := range classInfos {
-		if item.Valid {
-			result = append(result, &entity.ScheduleFilterClass{
-				ID:             item.ID,
-				Name:           item.Name,
-				HasStudentFlag: false,
-			})
+
+	var result []*entity.ScheduleFilterClass
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		result = make([]*entity.ScheduleFilterClass, 0, len(classInfos))
+
+		for _, item := range classInfos {
+			if item.Valid {
+				result = append(result, &entity.ScheduleFilterClass{
+					ID:               item.ID,
+					Name:             item.Name,
+					OperatorRoleType: entity.ScheduleRoleTypeUnknown,
+				})
+			}
+		}
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		operatorClasses, err := external.GetClassServiceProvider().GetByUserID(ctx, op, op.UserID)
+		if err != nil {
+			log.Error(ctx, "get operator classes IDs error", log.Any("op", op))
+			return nil, err
+		}
+		operatorClassMap := make(map[string]*external.Class, len(operatorClasses))
+		for _, item := range operatorClasses {
+			operatorClassMap[item.ID] = item
+		}
+
+		result = make([]*entity.ScheduleFilterClass, 0, len(operatorClasses))
+		for _, item := range classInfos {
+			if _, ok := operatorClassMap[item.ID]; ok {
+				result = append(result, &entity.ScheduleFilterClass{
+					ID:               item.ID,
+					Name:             item.Name,
+					OperatorRoleType: entity.ScheduleRoleTypeUnknown,
+				})
+			}
 		}
 	}
-	// is student in class
+	log.Debug(ctx, "no permission", log.Any("result", result), log.Any("permissionMap", permissionMap))
+	if len(result) <= 0 {
+		return nil, constant.ErrRecordNotFound
+	}
+
 	classStuMap, err := external.GetStudentServiceProvider().GetByClassIDs(ctx, op, underOrgClassIDs)
 	if err != nil {
 		log.Error(ctx, "GetStudentServiceProvider.GetByClassIDs error", log.Any("op", op), log.Strings("underOrgClassIDs", underOrgClassIDs))
 		return nil, err
 	}
+	classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, underOrgClassIDs)
+	if err != nil {
+		log.Error(ctx, "GetTeacherServiceProvider.GetByClasses error", log.Any("op", op), log.Strings("underOrgClassIDs", underOrgClassIDs))
+		return nil, err
+	}
+
 	for _, item := range result {
+		teacherList := classTeacherMap[item.ID]
+		for _, teacher := range teacherList {
+			if teacher.ID == op.UserID {
+				item.OperatorRoleType = entity.ScheduleRoleTypeTeacher
+				break
+			}
+		}
+		if item.OperatorRoleType == entity.ScheduleRoleTypeTeacher {
+			continue
+		}
 		stuList := classStuMap[item.ID]
 		for _, stu := range stuList {
 			if stu.ID == op.UserID {
-				item.HasStudentFlag = true
+				item.OperatorRoleType = entity.ScheduleRoleTypeStudent
 				break
 			}
 		}
@@ -174,9 +289,9 @@ func (s *schedulePermissionModel) GetClassesBySchoolID(ctx context.Context, op *
 		classList := schoolClassMap[schoolID]
 		for _, item := range classList {
 			classMap[item.ID] = &entity.ScheduleFilterClass{
-				ID:             item.ID,
-				Name:           item.Name,
-				HasStudentFlag: false,
+				ID:               item.ID,
+				Name:             item.Name,
+				OperatorRoleType: entity.ScheduleRoleTypeUnknown,
 			}
 			classIDs = append(classIDs, item.ID)
 		}
@@ -189,12 +304,27 @@ func (s *schedulePermissionModel) GetClassesBySchoolID(ctx context.Context, op *
 				log.Error(ctx, "GetStudentServiceProvider.GetByClassIDs error", log.Any("op", op), log.Strings("classIDs", classIDs))
 				return nil, err
 			}
+			classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, classIDs)
+			if err != nil {
+				log.Error(ctx, "GetTeacherServiceProvider.GetByClasses error", log.Any("op", op), log.Strings("classIDs", classIDs))
+				return nil, err
+			}
 			// Judge you are a student in the class
 			for _, item := range classMap {
+				teacherList := classTeacherMap[item.ID]
+				for _, teacher := range teacherList {
+					if teacher.ID == op.UserID {
+						item.OperatorRoleType = entity.ScheduleRoleTypeTeacher
+						break
+					}
+				}
+				if item.OperatorRoleType == entity.ScheduleRoleTypeTeacher {
+					continue
+				}
 				stuList := classStuMap[item.ID]
 				for _, stu := range stuList {
 					if stu.ID == op.UserID {
-						item.HasStudentFlag = true
+						item.OperatorRoleType = entity.ScheduleRoleTypeUnknown
 						break
 					}
 				}

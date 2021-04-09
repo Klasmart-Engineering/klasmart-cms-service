@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type IProgramModel interface {
@@ -40,7 +41,7 @@ func (s programModel) GetByOrganization(ctx context.Context, operator *entity.Op
 func (s programModel) fillGroupName(ctx context.Context, programs []*external.Program) ([]*entity.Program, error) {
 	condition := &da.ProgramGroupQueryCondition{
 		ProgramIDs: entity.NullStrings{
-			Strings: make([]string, len(programs)),
+			Strings: make([]string, 0, len(programs)),
 			Valid:   true,
 		},
 	}
@@ -53,6 +54,7 @@ func (s programModel) fillGroupName(ctx context.Context, programs []*external.Pr
 		})
 		condition.ProgramIDs.Strings = append(condition.ProgramIDs.Strings, program.ID)
 	}
+	condition.ProgramIDs.Strings = utils.SliceDeduplication(condition.ProgramIDs.Strings)
 
 	if len(programs) == 0 {
 		return newPrograms, nil
@@ -66,6 +68,8 @@ func (s programModel) fillGroupName(ctx context.Context, programs []*external.Pr
 	for _, program := range newPrograms {
 		group, found := groupMap[program.ID]
 		if !found {
+			// Math, ESL, Science and other custom programs are "More Featured Content"
+			program.GroupName = entity.ProgramGroupBadaMoreFeaturedContent
 			continue
 		}
 

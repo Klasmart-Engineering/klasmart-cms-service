@@ -106,6 +106,9 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/classes", s.mustLogin, s.getClassesInScheduleFilter)
 		schedules.PUT("/schedules/:id/show_option", s.mustLogin, s.updateScheduleShowOption)
 		schedules.GET("/schedules/:id/operator/newest_feedback", s.mustLogin, s.getScheduleNewestFeedbackByOperator)
+		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
+		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
+		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
@@ -164,6 +167,7 @@ func (s Server) registeRoute() {
 
 		outcomes.GET("/private_learning_outcomes", s.mustLogin, s.queryPrivateOutcomes)
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
+		outcomes.POST("/shortcode", s.mustLogin, s.generateShortcode)
 	}
 
 	folders := s.engine.Group("/v1/folders")
@@ -202,6 +206,11 @@ func (s Server) registeRoute() {
 	{
 		lessonTypes.GET("", s.mustLoginWithoutOrgID, s.getLessonType)
 		lessonTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getLessonTypeByID)
+	}
+
+	programGroups := s.engine.Group("/v1/programs_groups")
+	{
+		programGroups.GET("", s.mustLoginWithoutOrgID, s.getProgramGroup)
 	}
 
 	programs := s.engine.Group("/v1/programs")
@@ -252,6 +261,13 @@ func (s Server) registeRoute() {
 	organizationRegions := s.engine.Group("/v1/organizations_region")
 	{
 		organizationRegions.GET("", s.mustLoginWithoutOrgID, s.getOrganizationByHeadquarterForDetails)
+	}
+
+	learningOutcomeSet := s.engine.Group("/v1/sets")
+	{
+		learningOutcomeSet.POST("", s.mustLogin, s.createOutcomeSet)
+		learningOutcomeSet.POST("/bulk_bind", s.mustLogin, s.bulkBindOutcomeSet)
+		learningOutcomeSet.GET("", s.mustLogin, s.pullOutcomeSet)
 	}
 }
 

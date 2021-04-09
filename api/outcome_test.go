@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"testing"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+
 	"github.com/dgrijalva/jwt-go"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
@@ -15,7 +17,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 )
@@ -33,6 +34,11 @@ func TestCreateOutcome(t *testing.T) {
 		Estimated:     30,
 		Keywords:      []string{"kyd001", "kyd002"},
 		Description:   "some description",
+		Shortcode:     "003NZ",
+		Sets: []*OutcomeSetCreateView{
+			{SetID: "60583986fc229e722bead09a"},
+			{SetID: "60583cfcf5808149b5cbe24c"},
+		},
 	}
 	data, err := json.Marshal(createView)
 	if err != nil {
@@ -62,25 +68,30 @@ func TestUpdateOutcome(t *testing.T) {
 		Estimated:     45,
 		Keywords:      []string{"Modify_kyd001", "kyd002"},
 		Description:   "some description",
+		Shortcode:     "12345",
+		Sets: []*OutcomeSetCreateView{
+			{SetID: "60616c5c43c74caa2b16623c"},
+			{SetID: "60583cfcf5808149b5cbe24c"},
+		},
 	}
 	data, err := json.Marshal(createView)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println(string(data))
-	outcomeID := "5f63336202bf949d92fa955b"
+	outcomeID := "60616800e7c9026bb00d1d6c"
 	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID, string(data))
 	fmt.Println(res)
 }
 
 func TestDeleteOutcome(t *testing.T) {
-	outcomeID := "5f55d43f3695b7ca67729069"
+	outcomeID := "605af5e5ad682b6f63aebb58"
 	res := DoHttp(http.MethodDelete, prefix+"/learning_outcomes/"+outcomeID, "")
 	fmt.Println(res)
 }
 
 func TestQueryOutcome(t *testing.T) {
-	query := fmt.Sprintf("search_key=%s&assumed=%d", "TestOutcomeYY", 1)
+	query := fmt.Sprintf("set_name=%s&assumed=%d", "math", 1)
 	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes"+"?"+query, "")
 	fmt.Println(res)
 }
@@ -148,7 +159,7 @@ func TestGetLearningOutcomesByIDs(t *testing.T) {
 	}
 	ctx := context.Background()
 	ids := []string{"5f5726af0944d7c38e20696f"}
-	outcomes, err := model.GetOutcomeModel().GetLearningOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	outcomes, err := model.GetOutcomeModel().GetLearningOutcomesByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +177,7 @@ func TestGetLatestOutcomesByIDs(t *testing.T) {
 	ctx := context.Background()
 	//ids := []string{"5f5726af0944d7c38e20696f"}
 	ids := []string{}
-	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), ids, op)
+	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,32 +193,11 @@ func TestRedis(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(model.NumToBHex(int(num), 36))
+	fmt.Println(utils.NumToBHex(context.TODO(), int(num), 36, constant.ShortcodeShowLength))
 }
 
 func TestNumToBHex(t *testing.T) {
-	fmt.Println(model.PaddingStr(model.NumToBHex(901, 36), constant.ShortcodeShowLength))
-}
-
-func TestFindRoot(t *testing.T) {
-	orgs := []*external.Organization{
-		{ID: "1", ParentID: "3"},
-		{ID: "2", ParentID: "1"},
-		{ID: "3", ParentID: "4"},
-		{ID: "4", ParentID: ""},
-	}
-	root := orgs[3]
-	for i := 0; i < len(orgs); i++ {
-		if root.ParentID != "" && root.ParentID != root.ID {
-			for _, o := range orgs {
-				if o.ID == root.ParentID {
-					root = o
-					break
-				}
-			}
-		}
-	}
-	fmt.Printf("%+v", root)
+	fmt.Println("")
 }
 
 var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI0MjI3NDNlLTllYmMtNWVkNy1iNzI1LTA2Mjk5NGVjNzdmMiIsImVtYWlsIjoiYnJpbGxpYW50LnlhbmdAYmFkYW5hbXUuY29tLmNuIiwiZXhwIjoxNjA1MTc4Nzk2LCJpc3MiOiJraWRzbG9vcCJ9.sDkGFTIWm-NgEDfNJoMS_3KoKcZs0smnR7whqWY0AMnYLFYX3j_Saj6gHjXHpmZMVewbnaNfv9lYfhSokFBZaCcYyeVBXQo6DHL6nppsMUFwmcTjl-NjqSGwYUvjpV7cmkmL33H8KojEuBUDP8kOK-cF5Km28PC6sV2nFRVBNFBXlcNsdB-CIQEeycCzRhw078GAP64Bpugay8W-77keldN-C1Qnrc6spbSCOKnxMpT94pBRzgB8D-vHdcnvB3zlfPj8RYWFlGE_uufHfPTSgS-nTzrz8vRhiJdOAYdPys90w87jGfmopm1AT-qDSqa4Qf8hMW4bj_UDAa4-1bI-yQ"

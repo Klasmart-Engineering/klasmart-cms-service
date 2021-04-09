@@ -19,6 +19,7 @@ type ScheduleCacheCondition struct {
 	Condition  dbo.Conditions
 	UserID     string
 	ScheduleID string
+	SchoolID   string
 }
 
 type IScheduleCacheDA interface {
@@ -178,11 +179,22 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 
 func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) string {
 	h := md5.New()
-	h.Write([]byte(fmt.Sprintf("%v", condition)))
+	b, _ := json.Marshal(condition)
+	h.Write(b)
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
 	return md5Hash
 }
 
+//func (r *ContentRedis) conditionHash(condition dbo.Conditions) string {
+//	h := md5.New()
+//	h.Write([]byte(fmt.Sprintf("%v", condition)))
+//	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
+//	return fmt.Sprintf("%v", md5Hash)
+//}
+//func (r *ContentRedis) contentConditionKey(condition dbo.Conditions) string {
+//	md5Hash := r.conditionHash(condition)
+//	return fmt.Sprintf("%v:%v", RedisKeyPrefixContentCondition, md5Hash)
+//}
 //func (r *ScheduleRedisDA) BatchAdd(ctx context.Context, op *entity.Operator, schedules []*entity.ScheduleDetailsView) error {
 //	if !config.Get().RedisConfig.OpenCache {
 //		log.Info(ctx, "redis disabled")

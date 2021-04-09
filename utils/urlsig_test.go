@@ -2,6 +2,8 @@ package utils
 
 import (
 	"context"
+	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"testing"
 )
 
@@ -12,4 +14,21 @@ func TestURLSig(t *testing.T) {
 		return
 	}
 	t.Log(token)
+}
+
+func TestNumToBHex(t *testing.T) {
+	result, err := NumToBHex(context.TODO(), 60466175, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(result)
+	for i := 0; i < constant.ShortcodeSpace; i++ {
+		res, err := NumToBHex(context.TODO(), i, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i%10000 == 0 {
+			fmt.Println(i, res)
+		}
+	}
 }

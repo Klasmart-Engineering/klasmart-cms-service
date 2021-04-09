@@ -17,16 +17,17 @@ import (
 type SchoolServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
-	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*School, error)
-	GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error)
-	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error)
-	GetByOperator(ctx context.Context, operator *entity.Operator) ([]*School, error)
-	GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string) (map[string][]*School, error)
+	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error)
+	GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string, options ...APOption) ([]*School, error)
+	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*School, error)
+	GetByOperator(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*School, error)
+	GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string, options ...APOption) (map[string][]*School, error)
 }
 
 type School struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Status APStatus `json:"status"`
 }
 
 type NullableSchool struct {
@@ -72,7 +73,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _ids {
-		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {id:school_id name:school_name}\n", index, id)
+		fmt.Fprintf(sb, "q%d: school(school_id: \"%s\") {id:school_id name:school_name status}\n", index, id)
 	}
 	sb.WriteString("}")
 
@@ -108,17 +109,19 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*School, error) {
+func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error) {
 	if len(classIDs) == 0 {
 		return map[string][]*School{}, nil
 	}
+
+	condition := NewCondition(options...)
 
 	_classIDs, indexMapping := utils.SliceDeduplicationMap(classIDs)
 
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _classIDs {
-		fmt.Fprintf(sb, `q%d: class(class_id: "%s") {schools{id:school_id name:school_name}}`, index, id)
+		fmt.Fprintf(sb, `q%d: class(class_id: "%s") {schools{id:school_id name:school_name status}}`, index, id)
 	}
 	sb.WriteString("}")
 
@@ -148,7 +151,21 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 			continue
 		}
 
-		schools[classID] = class.Schools
+		schools[classID] = make([]*School, 0, len(class.Schools))
+		for _, school := range class.Schools {
+			if condition.Status.Valid {
+				if condition.Status.Status != school.Status {
+					continue
+				}
+			} else {
+				// only status = "Active" data is returned by default
+				if school.Status != Active {
+					continue
+				}
+			}
+
+			schools[classID] = append(schools[classID], school)
+		}
 	}
 
 	log.Info(ctx, "get schools by classes success",
@@ -159,13 +176,16 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string) ([]*School, error) {
+func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string, options ...APOption) ([]*School, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($organization_id: ID!) {
 		organization(organization_id: $organization_id) {
 			schools{
 				school_id
 				school_name
+				status
 			}
 		}
 	}`, chlorine.ReqToken(operator.Token))
@@ -174,8 +194,9 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 	data := &struct {
 		Organization struct {
 			Schools []struct {
-				SchoolID   string `json:"school_id"`
-				SchoolName string `json:"school_name"`
+				SchoolID   string   `json:"school_id"`
+				SchoolName string   `json:"school_name"`
+				Status     APStatus `json:"status"`
 			} `json:"schools"`
 		} `json:"organization"`
 	}{}
@@ -194,9 +215,21 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 
 	schools := make([]*School, 0, len(data.Organization.Schools))
 	for _, school := range data.Organization.Schools {
+		if condition.Status.Valid {
+			if condition.Status.Status != school.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if school.Status != Active {
+				continue
+			}
+		}
+
 		schools = append(schools, &School{
-			ID:   school.SchoolID,
-			Name: school.SchoolName,
+			ID:     school.SchoolID,
+			Name:   school.SchoolName,
+			Status: school.Status,
 		})
 	}
 
@@ -207,7 +240,9 @@ func (s AmsSchoolService) GetByOrganizationID(ctx context.Context, operator *ent
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName) ([]*School, error) {
+func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*School, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query(
 		$user_id: ID!
@@ -218,6 +253,7 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 				school {
 					school_id
 					school_name
+					status
 					organization {
 						organization_id
 					}
@@ -232,8 +268,9 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 		User struct {
 			SchoolsWithPermission []struct {
 				School struct {
-					SchoolID     string `json:"school_id"`
-					SchoolName   string `json:"school_name"`
+					SchoolID     string   `json:"school_id"`
+					SchoolName   string   `json:"school_name"`
+					Status       APStatus `json:"status"`
 					Organization struct {
 						OrganizationID string `json:"organization_id"`
 					} `json:"organization"`
@@ -262,9 +299,21 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 			continue
 		}
 
+		if condition.Status.Valid {
+			if condition.Status.Status != membership.School.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if membership.School.Status != Active {
+				continue
+			}
+		}
+
 		schools = append(schools, &School{
-			ID:   membership.School.SchoolID,
-			Name: membership.School.SchoolName,
+			ID:     membership.School.SchoolID,
+			Name:   membership.School.SchoolName,
+			Status: membership.School.Status,
 		})
 	}
 
@@ -276,7 +325,9 @@ func (s AmsSchoolService) GetByPermission(ctx context.Context, operator *entity.
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Operator) ([]*School, error) {
+func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*School, error) {
+	condition := NewCondition(options...)
+
 	request := chlorine.NewRequest(`
 	query($user_id: ID!) {
 		user(user_id: $user_id) {
@@ -284,6 +335,7 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 				school {
 					school_id
 					school_name
+					status
 					organization {
 						organization_id
 					}
@@ -297,8 +349,9 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 		User struct {
 			SchoolMemberships []struct {
 				School struct {
-					SchoolID     string `json:"school_id"`
-					SchoolName   string `json:"school_name"`
+					SchoolID     string   `json:"school_id"`
+					SchoolName   string   `json:"school_name"`
+					Status       APStatus `json:"status"`
 					Organization struct {
 						OrganizationID string `json:"organization_id"`
 					} `json:"organization"`
@@ -319,36 +372,51 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 		return nil, err
 	}
 
-	schools := make([]*School, 0)
+	schools := make([]*School, 0, len(data.User.SchoolMemberships))
 	for _, membership := range data.User.SchoolMemberships {
 		// filtering by operator's org id
 		if membership.School.Organization.OrganizationID != operator.OrgID {
 			continue
 		}
 
+		if condition.Status.Valid {
+			if condition.Status.Status != membership.School.Status {
+				continue
+			}
+		} else {
+			// only status = "Active" data is returned by default
+			if membership.School.Status != Active {
+				continue
+			}
+		}
+
 		schools = append(schools, &School{
-			ID:   membership.School.SchoolID,
-			Name: membership.School.SchoolName,
+			ID:     membership.School.SchoolID,
+			Name:   membership.School.SchoolName,
+			Status: membership.School.Status,
 		})
 	}
 
 	log.Info(ctx, "get schools by operator success",
-		log.Any("operator", operator))
+		log.Any("operator", operator),
+		log.Any("schools", schools))
 
 	return schools, nil
 }
 
-func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string) (map[string][]*School, error) {
+func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string, options ...APOption) (map[string][]*School, error) {
 	if len(userIDs) == 0 {
 		return map[string][]*School{}, nil
 	}
+
+	condition := NewCondition(options...)
 
 	_userIDs, indexMapping := utils.SliceDeduplicationMap(userIDs)
 
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
 	for index, id := range _userIDs {
-		fmt.Fprintf(sb, `q%d: user(user_id: "%s") {school_memberships {school {school_id school_name organization {organization_id}}}}`, index, id)
+		fmt.Fprintf(sb, `q%d: user(user_id: "%s") {school_memberships {school {school_id school_name status organization {organization_id}}}}`, index, id)
 	}
 	sb.WriteString("}")
 
@@ -357,8 +425,9 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 	data := map[string]*struct {
 		SchoolMemberships []struct {
 			School struct {
-				SchoolID     string `json:"school_id"`
-				SchoolName   string `json:"school_name"`
+				SchoolID     string   `json:"school_id"`
+				SchoolName   string   `json:"school_name"`
+				Status       APStatus `json:"status"`
 				Organization struct {
 					OrganizationID string `json:"organization_id"`
 				} `json:"organization"`
@@ -372,7 +441,7 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 
 	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "get user school mapping by org and user ids failed",
+		log.Error(ctx, "get user schools filter by org and user ids failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("orgID", orgID),
@@ -383,27 +452,38 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 	schools := make(map[string][]*School, len(userIDs))
 	for index, userID := range userIDs {
 		user := data[fmt.Sprintf("q%d", indexMapping[index])]
-		schools[userID] = make([]*School, 0)
-
 		if user == nil {
 			continue
 		}
 
+		schools[userID] = make([]*School, 0)
 		for _, membership := range user.SchoolMemberships {
 			// filtering by operator's org id
 			if membership.School.Organization.OrganizationID != orgID {
 				continue
 			}
 
+			if condition.Status.Valid {
+				if condition.Status.Status != membership.School.Status {
+					continue
+				}
+			} else {
+				// only status = "Active" data is returned by default
+				if membership.School.Status != Active {
+					continue
+				}
+			}
+
 			schools[userID] = append(schools[userID], &School{
-				ID:   membership.School.SchoolID,
-				Name: membership.School.SchoolName,
+				ID:     membership.School.SchoolID,
+				Name:   membership.School.SchoolName,
+				Status: membership.School.Status,
 			})
 		}
 
 	}
 
-	log.Info(ctx, "get user school mapping by org and user ids success",
+	log.Info(ctx, "get user school filter by org and user ids success",
 		log.Any("operator", operator),
 		log.String("orgID", orgID),
 		log.Strings("userIDs", userIDs),
