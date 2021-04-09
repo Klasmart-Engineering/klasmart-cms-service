@@ -298,15 +298,15 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 
 func getOrganizationName(ctx context.Context, operator *entity.Operator, id string) (name string) {
 	ids := []string{id}
-	names, err := external.GetOrganizationServiceProvider().GetOrganizationOrSchoolName(ctx, operator, ids)
+	names, err := external.GetOrganizationServiceProvider().GetNameByOrganizationOrSchool(ctx, operator, ids)
 	if err != nil {
-		log.Error(ctx, "getOrganizationName: GetOrganizationOrSchoolName failed",
+		log.Error(ctx, "getOrganizationName: GetNameByOrganizationOrSchool failed",
 			log.Err(err),
 			log.Strings("org_ids", ids))
 		return ""
 	}
 	if len(names) == 0 {
-		log.Info(ctx, "getOrganizationName: GetOrganizationOrSchoolName empty",
+		log.Info(ctx, "getOrganizationName: GetNameByOrganizationOrSchool empty",
 			log.Strings("org_ids", ids))
 	}
 	return names[0]
