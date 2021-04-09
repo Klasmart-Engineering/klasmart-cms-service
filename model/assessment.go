@@ -252,7 +252,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		})
 	}
 
-	// fill room id from schedule
+	// fill room id and class name from schedule
 	schedule, err := GetScheduleModel().GetPlainByID(ctx, assessment.ScheduleID)
 	if err != nil {
 		log.Error(ctx, "Get: GetScheduleModel().GetByID: get failed",
@@ -263,6 +263,20 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		return nil, err
 	}
 	result.RoomID = schedule.RoomID
+	classNameMap, err := m.getClassNameMap(ctx, operator, []string{schedule.ClassID})
+	if err != nil {
+		log.Error(ctx, "Get: m.getClassNameMap: get failed",
+			log.Err(err),
+			log.String("class_id", schedule.ClassID),
+			log.Any("schedule", schedule),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	result.Class = entity.AssessmentClass{
+		ID:   schedule.ClassID,
+		Name: classNameMap[schedule.ClassID],
+	}
 
 	return &result, nil
 }

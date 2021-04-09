@@ -1,15 +1,15 @@
 package entity
 
 type Assessment struct {
-	ID           string                   `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
-	ScheduleID   string                   `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
-	Title        string                   `gorm:"column:title;type:varchar(1024);not null" json:"title"`
-	ProgramID    string                   `gorm:"column:program_id;type:varchar(64);not null" json:"program_id"`
-	SubjectID    string                   `gorm:"column:subject_id;type:varchar(64);not null" json:"subject"`
-	ClassLength  int                      `gorm:"column:class_length;type:int;not null" json:"class_length"`
-	ClassEndTime int64                    `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
-	CompleteTime int64                    `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
-	Status       AssessmentStatus         `gorm:"column:status;type:varchar(128);not null" json:"status"`
+	ID           string           `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
+	ScheduleID   string           `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
+	Title        string           `gorm:"column:title;type:varchar(1024);not null" json:"title"`
+	ProgramID    string           `gorm:"column:program_id;type:varchar(64);not null" json:"program_id"`
+	SubjectID    string           `gorm:"column:subject_id;type:varchar(64);not null" json:"subject"`
+	ClassLength  int              `gorm:"column:class_length;type:int;not null" json:"class_length"`
+	ClassEndTime int64            `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
+	CompleteTime int64            `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
+	Status       AssessmentStatus `gorm:"column:status;type:varchar(128);not null" json:"status"`
 
 	CreateAt int64 `gorm:"column:create_at;type:bigint;not null" json:"create_at"`
 	UpdateAt int64 `gorm:"column:update_at;type:bigint;not null" json:"update_at"`
@@ -50,11 +50,12 @@ func (s AssessmentStatus) Valid() bool {
 type AssessmentDetail struct {
 	ID           string               `json:"id"`
 	Title        string               `json:"title"`
+	Class        AssessmentClass      `json:"class"`
 	Status       AssessmentStatus     `json:"status"`
 	CompleteTime int64                `json:"complete_time"`
 	Teachers     []*AssessmentTeacher `json:"teachers"`
 	Students     []*AssessmentStudent `json:"students"`
-	Program AssessmentProgram `json:"program"`
+	Program      AssessmentProgram    `json:"program"`
 	Subject      AssessmentSubject    `json:"subject"`
 	ClassEndTime int64                `json:"class_end_time"`
 	ClassLength  int                  `json:"class_length"`
@@ -63,7 +64,7 @@ type AssessmentDetail struct {
 	Plan               AssessmentContentView    `json:"plan"`
 	Materials          []*AssessmentContentView `json:"materials"`
 	OutcomeAttendances []*OutcomeAttendances    `json:"outcome_attendances"`
-	NumberOfOutcomes int `json:"number_of_outcomes"`
+	NumberOfOutcomes   int                      `json:"number_of_outcomes"`
 }
 
 type OutcomeAttendances struct {
@@ -97,6 +98,11 @@ type AssessmentStudent struct {
 	Checked bool   `json:"checked"`
 }
 
+type AssessmentClass struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type AssessmentOutcomeView struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
@@ -112,12 +118,12 @@ type AssessmentContentView struct {
 }
 
 type QueryAssessmentsArgs struct {
-	Status                  *AssessmentStatus                   `json:"status"`
-	TeacherName             *string                             `json:"teacher_name"`
-	OrderBy                 *ListAssessmentsOrderBy             `json:"order_by"`
-	ClassType               *ScheduleClassType                  `json:"class_type"`
-	Page                    int                                 `json:"page"`
-	PageSize                int                                 `json:"page_size"`
+	Status      *AssessmentStatus       `json:"status"`
+	TeacherName *string                 `json:"teacher_name"`
+	OrderBy     *ListAssessmentsOrderBy `json:"order_by"`
+	ClassType   *ScheduleClassType      `json:"class_type"`
+	Page        int                     `json:"page"`
+	PageSize    int                     `json:"page_size"`
 }
 
 type AssessmentTeacherIDAndStatusPair struct {
