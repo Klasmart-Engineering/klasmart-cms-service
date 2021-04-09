@@ -66,7 +66,7 @@ func (s *Server) createContent(c *gin.Context) {
 	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
 		cid, err := model.GetContentModel().CreateContent(ctx, tx, data, op)
 		if err != nil {
-			return "", nil
+			return "", err
 		}
 		return cid, nil
 	})
