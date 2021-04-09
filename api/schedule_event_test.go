@@ -1,23 +1,26 @@
 package api
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 )
 
 func readKey(path string) string {
-	var keyPath = "D:\\workbench\\auth_private_key.pem"
-	b, err := ReadAll(keyPath)
+	b, err := ReadAll(path)
 	if err != nil {
 		fmt.Println(err)
 		return ""
@@ -64,8 +67,23 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	}
 	server.engine.POST("/v1/class_user_edit_to_schedule", server.classUserEditEventToSchedule)
 
-	w := httptest.NewRecorder()
-	data := &entity.ScheduleClassEvent{
+	//w := httptest.NewRecorder()
+
+	stdClaims := &jwt.StandardClaims{
+		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
+		IssuedAt:  time.Now().Unix(),
+		Audience:  "kidsloop-live",
+
+		Issuer:    "KidsLoopUser-live",
+		NotBefore: 0,
+		Subject:   "authorization",
+	}
+	type ScheduleClassEvent2 struct {
+		Action  entity.ClassActionEvent          `json:"action" enums:"Add,Delete"`
+		ClassID string                           `json:"class_id"`
+		Users   []*entity.ScheduleClassUserEvent `json:"users"`
+	}
+	data := &ScheduleClassEvent2{
 		Action:  entity.ClassActionEventAdd,
 		ClassID: "0c01504d-d6ae-4c40-9862-68566bff0767",
 		Users: []*entity.ScheduleClassUserEvent{
@@ -75,13 +93,25 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 			},
 		},
 	}
+	type StandardClaims struct {
+		*jwt.StandardClaims
+		ScheduleClassEvent2
+	}
+	claims := &StandardClaims{
+		StandardClaims:      stdClaims,
+		ScheduleClassEvent2: *data,
+	}
+	token, err := utils.CreateJWT(context.Background(), claims, privateKey)
+	fmt.Println(err)
+	fmt.Println(token)
+	body := &entity.ScheduleEventBody{Token: token}
+	jsonStr, _ := json.Marshal(body)
+	resp, _ := http.Post("/v1/class_user_edit_to_schedule", "application/json", bytes.NewBuffer(jsonStr))
 
-	body := entity.ScheduleEventBody{Token: token}
-	r, _ := http.NewRequest("POST", "/v1/class_user_edit_to_schedule", nil)
+	//server.engine.ServeHTTP(w, r)
 
-	server.engine.ServeHTTP(w, r)
-
-	resp := w.Result()
+	//resp := w.Result()
 	//body, _ := ioutil.ReadAll(resp.Body)
-	t.Log(resp.StatusCode)
+	//t.Log(resp.StatusCode)
+	fmt.Println(resp)
 }

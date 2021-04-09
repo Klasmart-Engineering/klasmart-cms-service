@@ -14,6 +14,10 @@ func (s ScheduleClassEvent) Valid() error {
 	return nil
 }
 
+//func (s ScheduleClassEvent) Valid() error {
+//	return nil
+//}
+
 type ScheduleClassUserEvent struct {
 	ID       string                 `json:"id"`
 	RoleType ClassUserRoleTypeEvent `json:"role_type" enums:"Student,Teacher"`
