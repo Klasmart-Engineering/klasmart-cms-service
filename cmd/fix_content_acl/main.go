@@ -5,6 +5,7 @@ import (
 	"flag"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -37,6 +38,14 @@ func init() {
 	flag.StringVar(&prefix, "p", "", "Query objects prefix.")
 	flag.StringVar(&granteeID, "g", "", "Grantee AWS account ID.")
 	flag.IntVar(&workerCount, "w", 0, "Worker pool size,default is runtime.NumCPU().")
+
+	if granteeID == "" {
+		granteeID = defaultGranteeID
+	}
+
+	if workerCount < 1 {
+		workerCount = runtime.NumCPU()
+	}
 }
 
 func main() {
@@ -47,38 +56,30 @@ func main() {
 	log.Info(ctx, "Arguments",
 		log.String("Region", region),
 		log.String("Bucket", bucket),
+		log.String("AccessKeyID", accessKeyID),
+		log.String("SecretAccessKey", secretAccessKey),
 		log.String("Prefix", prefix),
 		log.String("GranteeID", granteeID),
 		log.Int("WorkerCount", workerCount))
 
-	if granteeID == "" {
-		granteeID = defaultGranteeID
-	}
-
-	if workerCount < 1 {
-		workerCount = runtime.NumCPU()
-	}
-
-	svc, err := NewS3Client(accessKeyID, secretAccessKey, region)
+	svc, err := NewS3Client(ctx, accessKeyID, secretAccessKey, region)
 	if err != nil {
-		log.Error(ctx, "Create AWS session failed", log.Err(err))
 		return
 	}
 
-	objKeys, err := ListObjectKeys(svc, bucket, prefix)
+	objKeys, err := ListObjectKeys(ctx, svc, bucket, prefix)
 	if err != nil {
-		log.Error(ctx, "List object keys failed", log.Err(err))
 		return
 	}
 
 	log.Info(ctx, "Object keys.",
 		log.String("Bucket:", bucket),
+		log.String("Prefix:", prefix),
 		log.Int("Key count:", len(objKeys)))
 
-	var publicAccessObjCount int
+	var publicAccessObjCount uint32
 
 	jobs := make(chan int, 100)
-	results := make(chan int, 100)
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < workerCount; i++ {
@@ -87,34 +88,27 @@ func main() {
 			defer wg.Done()
 			for j := range jobs {
 				objKey := objKeys[j]
-				objAclOut, err := GetObjectACL(svc, bucket, objKey)
+				objAclOut, err := GetObjectACL(ctx, svc, bucket, objKey)
 				if err != nil {
-					log.Error(ctx, "Get object acl failed", log.Err(err), log.String("Key", objKey))
-					results <- j
 					continue
 				}
 
-				for j := range objAclOut.Grants {
-					if IsPublicAccess(objAclOut.Grants[j]) {
-						log.Info(ctx, "Put object acl", log.String("Key", objKey))
-						err = PutObjectACL(svc, bucket, objKey, granteeID)
-						if err != nil {
-							log.Error(ctx, "Put object acl failed", log.Err(err), log.String("Key", objKey), log.String("GranteeID", granteeID))
-							results <- j
-							continue
-						}
-						results <- j
-						break
+				for k := range objAclOut.Grants {
+					if !IsPublicAccess(objAclOut.Grants[k]) {
+						continue
 					}
+
+					log.Info(ctx, "Put object acl", log.String("Key", objKey))
+					atomic.AddUint32(&publicAccessObjCount, 1)
+					err = PutObjectACL(ctx, svc, bucket, objKey, granteeID)
+					if err != nil {
+						continue
+					}
+					break
 				}
 			}
 		}()
 	}
-
-	go func() {
-		defer close(results)
-		wg.Wait()
-	}()
 
 	go func() {
 		defer close(jobs)
@@ -123,19 +117,24 @@ func main() {
 		}
 	}()
 
-	for _ = range results {
-		publicAccessObjCount++
-	}
+	wg.Wait()
 
-	log.Info(ctx, "Done.", log.Int("Public access count", publicAccessObjCount))
+	log.Info(ctx, "Done.",
+		log.Uint32("Public access count", publicAccessObjCount))
 }
 
-func NewS3Client(accessKeyID, secretAccessKey, region string) (s3iface.S3API, error) {
+func NewS3Client(ctx context.Context, accessKeyID, secretAccessKey, region string) (s3iface.S3API, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: credentials.NewStaticCredentials(accessKeyID, secretAccessKey, ""),
 		Region:      aws.String(region),
 	})
 	if err != nil {
+		log.Error(ctx, "Create AWS session failed",
+			log.Err(err),
+			log.String("accessKeyID", accessKeyID),
+			log.String("secretAccessKey", secretAccessKey),
+			log.String("region", region),
+		)
 		return nil, err
 	}
 
@@ -144,19 +143,23 @@ func NewS3Client(accessKeyID, secretAccessKey, region string) (s3iface.S3API, er
 }
 
 // GetObjectACL gets the ACL for a bucket object
-func GetObjectACL(svc s3iface.S3API, bucket, key string) (*s3.GetObjectAclOutput, error) {
+func GetObjectACL(ctx context.Context, svc s3iface.S3API, bucket, key string) (*s3.GetObjectAclOutput, error) {
 	result, err := svc.GetObjectAcl(&s3.GetObjectAclInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
 	if err != nil {
+		log.Error(ctx, "Get object acl failed",
+			log.Err(err),
+			log.String("bucket", bucket),
+			log.String("key", key))
 		return nil, err
 	}
 	return result, nil
 }
 
 // PutObjectACL gives the person with AWS account user ID access to BUCKET OBJECT
-func PutObjectACL(svc s3iface.S3API, bucket, key, ID string) error {
+func PutObjectACL(ctx context.Context, svc s3iface.S3API, bucket, key, ID string) error {
 	granteeIDStr := aws.String("id=" + ID)
 	// Default config READ WRITE READ_ACP WRITE_ACP to BUCKET OBJECT
 	_, err := svc.PutObjectAcl(&s3.PutObjectAclInput{
@@ -168,6 +171,12 @@ func PutObjectACL(svc s3iface.S3API, bucket, key, ID string) error {
 		GrantWriteACP: granteeIDStr,
 	})
 	if err != nil {
+		log.Error(ctx, "Put object acl failed",
+			log.Err(err),
+			log.String("bucket", bucket),
+			log.String("key", key),
+			log.String("GranteeID", ID))
+
 		return err
 	}
 
@@ -175,7 +184,7 @@ func PutObjectACL(svc s3iface.S3API, bucket, key, ID string) error {
 }
 
 // ListObjectsKeys iterate all objects in an Amazon S3 bucket
-func ListObjectKeys(svc s3iface.S3API, bucket, prefix string) ([]string, error) {
+func ListObjectKeys(ctx context.Context, svc s3iface.S3API, bucket, prefix string) ([]string, error) {
 	objKeys := []string{}
 	input := &s3.ListObjectsV2Input{Bucket: aws.String(bucket)}
 	if prefix != "" {
@@ -184,6 +193,10 @@ func ListObjectKeys(svc s3iface.S3API, bucket, prefix string) ([]string, error) 
 
 	output, err := svc.ListObjectsV2(input)
 	if err != nil {
+		log.Error(ctx, "List objects failed",
+			log.Err(err),
+			log.String("bucket", bucket),
+			log.String("prefix", prefix))
 		return nil, err
 	}
 
@@ -196,6 +209,11 @@ func ListObjectKeys(svc s3iface.S3API, bucket, prefix string) ([]string, error) 
 
 		output, err = svc.ListObjectsV2(input)
 		if err != nil {
+			log.Error(ctx, "List objects failed",
+				log.Err(err),
+				log.String("bucket", bucket),
+				log.String("prefix", prefix),
+				log.String("ContinuationToken", *input.ContinuationToken))
 			return nil, err
 		}
 
