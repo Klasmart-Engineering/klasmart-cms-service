@@ -148,6 +148,42 @@ CREATE TABLE `cms_authed_contents` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `cms_content_properties`
+--
+
+DROP TABLE IF EXISTS `cms_content_properties`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `cms_content_properties` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `content_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content id',
+  `property_type` int(11) NOT NULL DEFAULT '0' COMMENT 'property type',
+  `property_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'property id',
+  `sequence` int(11) NOT NULL DEFAULT '0' COMMENT 'sequence',
+  PRIMARY KEY (`id`),
+  KEY `cms_content_properties_content_id_idx` (`content_id`),
+  KEY `cms_content_properties_property_type_idx` (`property_type`)
+) ENGINE=InnoDB AUTO_INCREMENT=98299 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `cms_content_visibility_settings`
+--
+
+DROP TABLE IF EXISTS `cms_content_visibility_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `cms_content_visibility_settings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `content_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content id',
+  `visibility_setting` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'visibility setting',
+  PRIMARY KEY (`id`),
+  KEY `cms_content_visibility_settings_content_id_idx` (`content_id`),
+  KEY `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
+) ENGINE=InnoDB AUTO_INCREMENT=16384 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `cms_contents`
 --
 
@@ -540,7 +576,7 @@ CREATE TABLE `outcomes_sets` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `outcome_set_id_delete` (`outcome_id`,`set_id`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=966 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
+) ENGINE=InnoDB AUTO_INCREMENT=981 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -844,4 +880,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-04-08 17:00:34
+-- Dump completed on 2021-04-09 17:00:38
