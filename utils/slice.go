@@ -121,3 +121,19 @@ func IntersectAndDeduplicateStrSlice(slice1 []string, slice2 []string) []string 
 	}
 	return result
 }
+
+func SliceDeduplicationExcludeEmpty(s []string) []string {
+	temp := make(map[string]bool)
+	for i := range s {
+		temp[s[i]] = true
+	}
+
+	result := make([]string, 0, len(temp))
+	for k, v := range temp {
+		if v && k != "" {
+			result = append(result, k)
+		}
+	}
+
+	return result
+}

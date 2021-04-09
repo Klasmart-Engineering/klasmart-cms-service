@@ -1096,6 +1096,7 @@ func (m *assessmentModel) getProgramNameMap(ctx context.Context, operator *entit
 }
 
 func (m *assessmentModel) getSubjectNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	ids = utils.SliceDeduplicationExcludeEmpty(ids)
 	nameMap := make(map[string]string, len(ids))
 	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, ids)
 	if err != nil {

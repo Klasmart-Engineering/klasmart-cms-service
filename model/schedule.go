@@ -2354,23 +2354,32 @@ func (s *scheduleModel) GetPrograms(ctx context.Context, op *entity.Operator) ([
 	if err != nil {
 		return nil, err
 	}
-	programIDs, err := da.GetScheduleDA().GetPrograms(ctx, dbo.MustGetDB(ctx), condition)
+	dbProgramIDs, err := da.GetScheduleDA().GetPrograms(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		log.Error(ctx, "get program ids from db error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
-
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, op, programIDs)
+	amsPrograms, err := external.GetProgramServiceProvider().GetByOrganization(ctx, op)
 	if err != nil {
+		log.Error(ctx, "get program from ams error", log.Err(err), log.Any("op", op))
 		return nil, err
 	}
-	result := make([]*entity.ScheduleShortInfo, len(programs))
-	for i, item := range programs {
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   item.ID,
-			Name: item.Name,
+
+	amsProgramMap := make(map[string]*external.Program, len(amsPrograms))
+	for _, amsProgram := range amsPrograms {
+		amsProgramMap[amsProgram.ID] = amsProgram
+	}
+
+	result := make([]*entity.ScheduleShortInfo, 0, len(amsPrograms))
+	for _, sID := range dbProgramIDs {
+		if program, ok := amsProgramMap[sID]; ok {
+			result = append(result, &entity.ScheduleShortInfo{
+				ID:   program.ID,
+				Name: program.Name,
+			})
 		}
 	}
+
 	return result, nil
 }
 
@@ -2391,21 +2400,29 @@ func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, pr
 	if err != nil {
 		return nil, err
 	}
-	subjectIDs, err := da.GetScheduleDA().GetSubjects(ctx, dbo.MustGetDB(ctx), condition)
+	dbSubjectIDs, err := da.GetScheduleDA().GetSubjects(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		log.Error(ctx, "get subject ids from db error", log.Err(err), log.Any("condition", condition))
 		return nil, err
 	}
-
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, op, subjectIDs)
+	amsSubjects, err := external.GetSubjectServiceProvider().GetByProgram(ctx, op, programID)
 	if err != nil {
+		log.Error(ctx, "get subject ids by program id from ams error", log.Err(err), log.Any("op", op), log.Any("programID", programID))
 		return nil, err
 	}
-	result := make([]*entity.ScheduleShortInfo, len(subjects))
-	for i, item := range subjects {
-		result[i] = &entity.ScheduleShortInfo{
-			ID:   item.ID,
-			Name: item.Name,
+
+	amsSubjectMap := make(map[string]*external.Subject, len(amsSubjects))
+	for _, amsSubject := range amsSubjects {
+		amsSubjectMap[amsSubject.ID] = amsSubject
+	}
+
+	result := make([]*entity.ScheduleShortInfo, 0, len(amsSubjects))
+	for _, sID := range dbSubjectIDs {
+		if subject, ok := amsSubjectMap[sID]; ok {
+			result = append(result, &entity.ScheduleShortInfo{
+				ID:   subject.ID,
+				Name: subject.Name,
+			})
 		}
 	}
 	return result, nil
