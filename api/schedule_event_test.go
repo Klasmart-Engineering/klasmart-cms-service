@@ -82,11 +82,6 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	stdClaims := &jwt.StandardClaims{
 		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 		IssuedAt:  time.Now().Unix(),
-		Audience:  "kidsloop-live",
-
-		Issuer:    "KidsLoopUser-live",
-		NotBefore: 0,
-		Subject:   "authorization",
 	}
 	type ScheduleClassEvent2 struct {
 		Action  entity.ClassActionEvent          `json:"action" enums:"Add,Delete"`
@@ -98,8 +93,8 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 		ClassID: "0c01504d-d6ae-4c40-9862-68566bff0767",
 		Users: []*entity.ScheduleClassUserEvent{
 			{
-				ID:       "4f614ccc-0867-5e5c-91f2-b71b895d2c48",
-				RoleType: entity.ClassUserRoleTypeEventStudent,
+				ID:       "3d71820e-6f37-5a1d-a855-a94c0c9035fa",
+				RoleType: entity.ClassUserRoleTypeEventTeacher,
 			},
 		},
 	}
