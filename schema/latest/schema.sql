@@ -510,22 +510,20 @@ CREATE TABLE IF NOT EXISTS `home_fun_studies` (
 ) COMMENT 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE `cms_content_visibility_settings` (
- `id` int AUTO_INCREMENT,
- `content_id` char(50) NOT NULL comment 'content id',
- `visibility_setting` char(50) NOT NULL comment 'visibility setting',
- PRIMARY KEY (`id`),
- key `cms_content_visibility_settings_content_id_idx` (`content_id`),
- key `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
+   `id` int AUTO_INCREMENT PRIMARY KEY ,
+   `content_id` varchar(50) NOT NULL DEFAULT '' comment 'content id',
+   `visibility_setting` varchar(50) NOT NULL DEFAULT '' comment 'visibility setting',
+   key `cms_content_visibility_settings_content_id_idx` (`content_id`),
+   key `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
 ) comment 'cms content visibility settings' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 
 CREATE TABLE `cms_content_properties` (
-    `id` int AUTO_INCREMENT,
-    `content_id` char(50) NOT NULL comment 'content id',
-    `property_type` int NOT NULL comment 'property type',
-    `property_id` char(50) NOT NULL comment 'property id',
-    `sequence` int NOT NULL comment 'sequence',
-    PRIMARY KEY (`id`),
-    key `cms_content_properties_content_id_idx` (`content_id`),
-    key `cms_content_properties_property_type_idx` (`property_type`)
+     `id` int AUTO_INCREMENT  PRIMARY KEY,
+     `content_id` varchar(50) NOT NULL DEFAULT '' comment 'content id',
+     `property_type` int NOT NULL DEFAULT 0 comment 'property type',
+     `property_id` varchar(50) NOT NULL DEFAULT '' comment 'property id',
+     `sequence` int NOT NULL DEFAULT 0 comment 'sequence',
+     key `cms_content_properties_content_id_idx` (`content_id`),
+     key `cms_content_properties_property_type_idx` (`property_type`)
 ) comment 'cms content properties' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
