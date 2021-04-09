@@ -343,29 +343,29 @@ type CopyContentRequest struct {
 }
 
 type ContentProperties struct {
-	ContentID     string   `json:"content_id"`
-	Program       string   `json:"program"`
-	Subject       []string `json:"subject"`
-	Developmental []string `json:"developmental"`
-	Skills        []string `json:"skills"`
-	Age           []string `json:"age"`
-	Grade         []string `json:"grade"`
+	ContentID   string   `json:"content_id"`
+	Program     string   `json:"program"`
+	Subject     []string `json:"subject"`
+	Category    []string `json:"developmental"`
+	SubCategory []string `json:"skills"`
+	Age         []string `json:"age"`
+	Grade       []string `json:"grade"`
 }
 
 type CreateContentRequest struct {
-	ContentType   ContentType `json:"content_type"`
-	SourceType    string      `json:"source_type"`
-	Name          string      `json:"name"`
-	Program       string      `json:"program"`
-	Subject       []string    `json:"subject"`
-	Developmental []string    `json:"developmental"`
-	Skills        []string    `json:"skills"`
-	Age           []string    `json:"age"`
-	Grade         []string    `json:"grade"`
-	Keywords      []string    `json:"keywords"`
-	Description   string      `json:"description"`
-	Thumbnail     string      `json:"thumbnail"`
-	SuggestTime   int         `json:"suggest_time"`
+	ContentType ContentType `json:"content_type"`
+	SourceType  string      `json:"source_type"`
+	Name        string      `json:"name"`
+	Program     string      `json:"program"`
+	Subject     []string    `json:"subject"`
+	Category    []string    `json:"developmental"`
+	SubCategory []string    `json:"skills"`
+	Age         []string    `json:"age"`
+	Grade       []string    `json:"grade"`
+	Keywords    []string    `json:"keywords"`
+	Description string      `json:"description"`
+	Thumbnail   string      `json:"thumbnail"`
+	SuggestTime int         `json:"suggest_time"`
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
@@ -427,16 +427,16 @@ type FolderContentInfoWithDetailsResponse struct {
 
 type ContentInfoWithDetails struct {
 	ContentInfo
-	ContentTypeName   string   `json:"content_type_name"`
-	ProgramName       string   `json:"program_name"`
-	SubjectName       []string `json:"subject_name"`
-	DevelopmentalName []string `json:"developmental_name"`
-	SkillsName        []string `json:"skills_name"`
-	AgeName           []string `json:"age_name"`
-	GradeName         []string `json:"grade_name"`
-	OrgName           string   `json:"org_name"`
-	PublishScopeName  []string `json:"publish_scope_name"`
-	LessonTypeName    string   `json:"lesson_type_name"`
+	ContentTypeName  string   `json:"content_type_name"`
+	ProgramName      string   `json:"program_name"`
+	SubjectName      []string `json:"subject_name"`
+	CategoryName     []string `json:"developmental_name"`
+	SubCategoryName  []string `json:"skills_name"`
+	AgeName          []string `json:"age_name"`
+	GradeName        []string `json:"grade_name"`
+	OrgName          string   `json:"org_name"`
+	PublishScopeName []string `json:"publish_scope_name"`
+	LessonTypeName   string   `json:"lesson_type_name"`
 
 	//AuthorName string `json:"author_name"`
 	CreatorName string `json:"creator_name"`
@@ -497,22 +497,22 @@ type FolderContentData struct {
 }
 
 type ContentInfo struct {
-	ID            string      `json:"id"`
-	ContentType   ContentType `json:"content_type"`
-	Name          string      `json:"name"`
-	Program       string      `json:"program"`
-	Subject       []string    `json:"subject"`
-	Developmental []string    `json:"developmental"`
-	Skills        []string    `json:"skills"`
-	Age           []string    `json:"age"`
-	Grade         []string    `json:"grade"`
-	Keywords      []string    `json:"keywords"`
-	Description   string      `json:"description"`
-	Thumbnail     string      `json:"thumbnail"`
-	Version       int64       `json:"version"`
-	SuggestTime   int         `json:"suggest_time"`
-	SourceType    string      `json:"source_type"`
-	AuthorName    string      `json:"author_name"`
+	ID          string      `json:"id"`
+	ContentType ContentType `json:"content_type"`
+	Name        string      `json:"name"`
+	Program     string      `json:"program"`
+	Subject     []string    `json:"subject"`
+	Category    []string    `json:"developmental"`
+	SubCategory []string    `json:"skills"`
+	Age         []string    `json:"age"`
+	Grade       []string    `json:"grade"`
+	Keywords    []string    `json:"keywords"`
+	Description string      `json:"description"`
+	Thumbnail   string      `json:"thumbnail"`
+	Version     int64       `json:"version"`
+	SuggestTime int         `json:"suggest_time"`
+	SourceType  string      `json:"source_type"`
+	AuthorName  string      `json:"author_name"`
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`

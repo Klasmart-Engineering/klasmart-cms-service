@@ -20,13 +20,12 @@ import (
 	"sync/atomic"
 )
 
-
 var (
 	//connDBStr = "admin:LH1MCuL3V0Ib3254@tcp(kl2-migration-test.copqnkcbdsts.ap-northeast-2.rds.amazonaws.com:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
 	//connDBStr = "admin:LH1MCuL3V0Ib3254@tcp(192.168.1.233:28344)/kidsloop2?parseTime=true&charset=utf8mb4"
 	connDBStr = "root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4"
 	doUpdate  = true
-	apiURL = "https://api.beta.kidsloop.net/user/"
+	apiURL    = "https://api.beta.kidsloop.net/user/"
 
 	operator *entity.Operator = &entity.Operator{
 		UserID: "14494c07-0d4f-5141-9db2-15799993f448", // PJ
@@ -82,7 +81,7 @@ func loadContentsPages(ctx context.Context) ([]*entity.Content, error) {
 	}
 	res = append(res, contentList...)
 	for len(res) < total {
-		pageIndex ++
+		pageIndex++
 		total, contentList, err = da.GetContentDA().SearchContent(ctx, dbo.MustGetDB(ctx), da.ContentCondition{
 			Pager: utils.Pager{PageIndex: pageIndex, PageSize: pageSize},
 		})
@@ -94,7 +93,6 @@ func loadContentsPages(ctx context.Context) ([]*entity.Content, error) {
 
 	return contentList, nil
 }
-
 
 func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_academic_profile.Mapper) error {
 	//program map
@@ -123,7 +121,7 @@ func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_
 					log.Any("Grade", content.Subject),
 					log.Any("Content", content))
 				// return errors.New("Can't find subject")
-			 }
+			}
 			newSubjects = append(newSubjects, newSubject)
 		}
 		newSubjects = utils.SliceDeduplication(newSubjects)
@@ -136,7 +134,7 @@ func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_
 		log.Error(ctx,
 			"Can't find developmental",
 			log.Err(err),
-			log.Any("Developmental", content.Developmental),
+			log.Any("Category", content.Developmental),
 			log.Any("Content", content))
 		// return errors.New("Can't find developmental")
 	}
@@ -152,7 +150,7 @@ func mapContent(ctx context.Context, content *entity.Content, mapper intergrate_
 				log.Error(ctx,
 					"Can't find skill",
 					log.Err(err),
-					log.Any("Skills", content.Skills),
+					log.Any("SubCategory", content.Skills),
 					log.Any("Content", content))
 				// return errors.New("Can't find skill")
 			}
@@ -266,37 +264,37 @@ func updateContent(ctx context.Context, contentList []*entity.Content, mappedInd
 	}
 	return nil
 }
-func readParams(){
+func readParams() {
 	args := os.Args
 	if len(args) > 1 {
 		connDBStr = args[1]
 	}
-	if len(args) > 2{
+	if len(args) > 2 {
 		apiURL = args[2]
 	}
 
-	if len(args) > 3{
+	if len(args) > 3 {
 		operator.Token = args[3]
 	}
 }
 
-func requestToken() string{
+func requestToken() string {
 	res, err := http.Get("http://192.168.1.233:10210/ll?email=pj.williams@calmid.com")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	data, err := ioutil.ReadAll(res.Body)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	defer res.Body.Close()
 	access := struct {
-		Hit struct{
+		Hit struct {
 			Access string `json:"access"`
 		} `json:"hit"`
 	}{}
 	err = json.Unmarshal(data, &access)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	return access.Hit.Access

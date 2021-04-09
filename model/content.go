@@ -245,7 +245,7 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		log.Error(ctx, "content type invalid", log.Any("data", c), log.Err(err))
 		return err
 	}
-	if len(c.Developmental) == 0 ||
+	if len(c.Category) == 0 ||
 		c.Program == "" {
 		log.Error(ctx, "select form invalid", log.Any("data", c), log.Err(err))
 		return ErrInvalidSelectForm
@@ -390,13 +390,13 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 
 	//Insert content properties
 	err = cm.doCreateContentProperties(ctx, tx, entity.ContentProperties{
-		ContentID:     pid,
-		Program:       c.Program,
-		Subject:       c.Subject,
-		Developmental: c.Developmental,
-		Skills:        c.Skills,
-		Age:           c.Age,
-		Grade:         c.Grade,
+		ContentID:   pid,
+		Program:     c.Program,
+		Subject:     c.Subject,
+		Category:    c.Category,
+		SubCategory: c.SubCategory,
+		Age:         c.Age,
+		Grade:       c.Grade,
 	}, false)
 	if err != nil {
 		log.Error(ctx, "doCreateContentProperties failed",
@@ -476,13 +476,13 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	}
 	//Insert content properties
 	err = cm.doCreateContentProperties(ctx, tx, entity.ContentProperties{
-		ContentID:     cid,
-		Program:       data.Program,
-		Subject:       data.Subject,
-		Developmental: data.Developmental,
-		Skills:        data.Skills,
-		Age:           data.Age,
-		Grade:         data.Grade,
+		ContentID:   cid,
+		Program:     data.Program,
+		Subject:     data.Subject,
+		Category:    data.Category,
+		SubCategory: data.SubCategory,
+		Age:         data.Age,
+		Grade:       data.Grade,
 	}, true)
 	if err != nil {
 		log.Error(ctx, "doCreateContentProperties failed",
@@ -2282,7 +2282,7 @@ func (cm *ContentModel) doCreateContentProperties(ctx context.Context, tx *dbo.D
 			return err
 		}
 	}
-	size := len(c.Grade) + len(c.Subject) + len(c.Age) + len(c.Developmental) + len(c.Skills)
+	size := len(c.Grade) + len(c.Subject) + len(c.Age) + len(c.Category) + len(c.SubCategory)
 	properties := make([]*entity.ContentProperty, size+1)
 	index := 0
 	for i := range c.Grade {
@@ -2312,20 +2312,20 @@ func (cm *ContentModel) doCreateContentProperties(ctx context.Context, tx *dbo.D
 		}
 		index++
 	}
-	for i := range c.Developmental {
+	for i := range c.Category {
 		properties[index] = &entity.ContentProperty{
 			PropertyType: entity.ContentPropertyTypeCategory,
 			ContentID:    c.ContentID,
-			PropertyID:   c.Developmental[i],
+			PropertyID:   c.Category[i],
 			Sequence:     i,
 		}
 		index++
 	}
-	for i := range c.Skills {
+	for i := range c.SubCategory {
 		properties[index] = &entity.ContentProperty{
 			PropertyType: entity.ContentPropertyTypeSubCategory,
 			ContentID:    c.ContentID,
-			PropertyID:   c.Skills[i],
+			PropertyID:   c.SubCategory[i],
 			Sequence:     i,
 		}
 		index++
@@ -2419,8 +2419,8 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	for i := range contentList {
 		programIDs = append(programIDs, contentList[i].Program)
 		subjectIDs = append(subjectIDs, contentList[i].Subject...)
-		developmentalIDs = append(developmentalIDs, contentList[i].Developmental...)
-		skillsIDs = append(skillsIDs, contentList[i].Skills...)
+		developmentalIDs = append(developmentalIDs, contentList[i].Category...)
+		skillsIDs = append(skillsIDs, contentList[i].SubCategory...)
 		ageIDs = append(ageIDs, contentList[i].Age...)
 		gradeIDs = append(gradeIDs, contentList[i].Grade...)
 
@@ -2548,19 +2548,19 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
 		subjectNames := make([]string, len(contentList[i].Subject))
-		developmentalNames := make([]string, len(contentList[i].Developmental))
-		skillsNames := make([]string, len(contentList[i].Skills))
+		developmentalNames := make([]string, len(contentList[i].Category))
+		skillsNames := make([]string, len(contentList[i].SubCategory))
 		ageNames := make([]string, len(contentList[i].Age))
 		gradeNames := make([]string, len(contentList[i].Grade))
 
 		for j := range contentList[i].Subject {
 			subjectNames[j] = subjectNameMap[contentList[i].Subject[j]]
 		}
-		for j := range contentList[i].Developmental {
-			developmentalNames[j] = developmentalNameMap[contentList[i].Developmental[j]]
+		for j := range contentList[i].Category {
+			developmentalNames[j] = developmentalNameMap[contentList[i].Category[j]]
 		}
-		for j := range contentList[i].Skills {
-			skillsNames[j] = skillsNameMap[contentList[i].Skills[j]]
+		for j := range contentList[i].SubCategory {
+			skillsNames[j] = skillsNameMap[contentList[i].SubCategory[j]]
 		}
 		for j := range contentList[i].Age {
 			ageNames[j] = ageNameMap[contentList[i].Age[j]]
@@ -2583,17 +2583,17 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		}
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
-			ContentInfo:       *contentList[i],
-			ContentTypeName:   contentList[i].ContentType.Name(),
-			ProgramName:       programNameMap[contentList[i].Program],
-			SubjectName:       subjectNames,
-			DevelopmentalName: developmentalNames,
-			SkillsName:        skillsNames,
-			AgeName:           ageNames,
-			GradeName:         gradeNames,
-			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
-			PublishScopeName:  publishScopeNames,
-			OrgName:           orgName,
+			ContentInfo:      *contentList[i],
+			ContentTypeName:  contentList[i].ContentType.Name(),
+			ProgramName:      programNameMap[contentList[i].Program],
+			SubjectName:      subjectNames,
+			CategoryName:     developmentalNames,
+			SubCategoryName:  skillsNames,
+			AgeName:          ageNames,
+			GradeName:        gradeNames,
+			LessonTypeName:   lessonTypeNameMap[contentList[i].LessonType],
+			PublishScopeName: publishScopeNames,
+			OrgName:          orgName,
 			//AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:     userNameMap[contentList[i].Creator],
 			OutcomeEntities: outcomeEntities,
