@@ -78,6 +78,7 @@ func main() {
 		log.Int("Key count:", len(objKeys)))
 
 	var publicAccessObjCount uint32
+	var fixedAclObjCount uint32
 
 	jobs := make(chan int, 100)
 	wg := sync.WaitGroup{}
@@ -100,9 +101,9 @@ func main() {
 
 					log.Info(ctx, "Put object acl", log.String("Key", objKey))
 					atomic.AddUint32(&publicAccessObjCount, 1)
-					err = PutObjectACL(ctx, svc, bucket, objKey, granteeID)
-					if err != nil {
-						continue
+					err := PutObjectACL(ctx, svc, bucket, objKey, granteeID)
+					if err == nil {
+						atomic.AddUint32(&fixedAclObjCount, 1)
 					}
 					break
 				}
@@ -120,7 +121,8 @@ func main() {
 	wg.Wait()
 
 	log.Info(ctx, "Done.",
-		log.Uint32("Public access count", publicAccessObjCount))
+		log.Uint32("Public access count", publicAccessObjCount),
+		log.Uint32("Fixed acl object count", fixedAclObjCount))
 }
 
 func NewS3Client(ctx context.Context, accessKeyID, secretAccessKey, region string) (s3iface.S3API, error) {
