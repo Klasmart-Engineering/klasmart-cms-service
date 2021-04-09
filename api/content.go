@@ -173,18 +173,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIDList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
-	//if err != nil {
-	//	log.Error(ctx, "check author failed", log.Err(err))
-	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	//	return
-	//}
-	////不是作者，则检查权限
-	////if not author, check the permission
-	//if !isAuthor {
-	//
-	//}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, nil, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -234,7 +223,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -282,7 +271,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -928,7 +917,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	}
 	if scope != "" {
 		scopes := strings.Split(scope, constant.StringArraySeparator)
-		condition.VisibilitySettings = append(condition.Scope, scopes...)
+		condition.VisibilitySettings = append(condition.VisibilitySettings, scopes...)
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)

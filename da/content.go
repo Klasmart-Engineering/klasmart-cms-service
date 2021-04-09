@@ -36,9 +36,9 @@ type IContentDA interface {
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string) error
 	GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.Content, error)
 
-	SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition)([]*entity.ContentVisibilitySetting, error)
+	SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition) ([]*entity.ContentVisibilitySetting, error)
 	CreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, co entity.ContentVisibilitySetting) error
-	GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string)([]string, error)
+	GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	BatchCreateContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error
 	BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error
 
@@ -83,20 +83,19 @@ func (s *CombineConditions) GetOrderBy() string {
 }
 
 type ContentCondition struct {
-	IDS           []string `json:"ids"`
-	Name          string   `json:"name"`
-	ContentType   []int    `json:"content_type"`
-	Scope         []string `json:"scope"`
+	IDS                []string `json:"ids"`
+	Name               string   `json:"name"`
+	ContentType        []int    `json:"content_type"`
 	VisibilitySettings []string `json:"visibility_settings"`
-	PublishStatus []string `json:"publish_status"`
-	Author        string   `json:"author"`
-	Org           string   `json:"org"`
-	Program       []string `json:"program"`
-	SourceID      string   `json:"source_id"`
-	LatestID      string   `json:"latest_id"`
-	SourceType    string   `json:"source_type"`
-	DirPath       string   `json:"dir_path"`
-	ContentName string `json:"content_name"`
+	PublishStatus      []string `json:"publish_status"`
+	Author             string   `json:"author"`
+	Org                string   `json:"org"`
+	Program            []string `json:"program"`
+	SourceID           string   `json:"source_id"`
+	LatestID           string   `json:"latest_id"`
+	SourceType         string   `json:"source_type"`
+	DirPath            string   `json:"dir_path"`
+	ContentName        string   `json:"content_name"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
@@ -105,6 +104,7 @@ type ContentCondition struct {
 
 	JoinUserIDList []string `json:"join_user_id_list"`
 }
+
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
 	internalCondition := NewContentConditionByInternalCondition(*s)
 	conditions, params := internalCondition.GetConditions()
@@ -121,42 +121,43 @@ func (s *ContentCondition) GetOrderBy() string {
 	return internalCondition.GetOrderBy()
 }
 
-func NewContentConditionByInternalCondition(s ContentCondition) *ContentConditionInternal{
+func NewContentConditionByInternalCondition(s ContentCondition) *ContentConditionInternal {
 	return &ContentConditionInternal{
-		IDS:            s.IDS,
-		Name:           s.Name,
-		ContentType:    s.ContentType,
-		Scope:          s.Scope,
-		PublishStatus:  s.PublishStatus,
-		Author:         s.Author,
-		Org:            s.Org,
-		Program:        s.Program,
-		SourceID:       s.SourceID,
-		LatestID:       s.LatestID,
-		SourceType:     s.SourceType,
-		DirPath:        s.DirPath,
-		ContentName:    s.ContentName,
-		AuthedOrgID:    s.AuthedOrgID,
-		OrderBy:        s.OrderBy,
-		Pager:          s.Pager,
-		JoinUserIDList: s.JoinUserIDList,
+		IDS:                s.IDS,
+		Name:               s.Name,
+		ContentType:        s.ContentType,
+		VisibilitySettings: s.VisibilitySettings,
+		PublishStatus:      s.PublishStatus,
+		Author:             s.Author,
+		Org:                s.Org,
+		Program:            s.Program,
+		SourceID:           s.SourceID,
+		LatestID:           s.LatestID,
+		SourceType:         s.SourceType,
+		DirPath:            s.DirPath,
+		ContentName:        s.ContentName,
+		AuthedOrgID:        s.AuthedOrgID,
+		OrderBy:            s.OrderBy,
+		Pager:              s.Pager,
+		JoinUserIDList:     s.JoinUserIDList,
 	}
 }
+
 type ContentConditionInternal struct {
-	IDS           []string `json:"ids"`
-	Name          string   `json:"name"`
-	ContentType   []int    `json:"content_type"`
-	Scope         []string `json:"scope"`
+	IDS         []string `json:"ids"`
+	Name        string   `json:"name"`
+	ContentType []int    `json:"content_type"`
+	//Scope         []string `json:"scope"`
 	VisibilitySettings []string `json:"visibility_settings"`
-	PublishStatus []string `json:"publish_status"`
-	Author        string   `json:"author"`
-	Org           string   `json:"org"`
-	Program       []string `json:"program"`
-	SourceID      string   `json:"source_id"`
-	LatestID      string   `json:"latest_id"`
-	SourceType    string   `json:"source_type"`
-	DirPath       string   `json:"dir_path"`
-	ContentName string `json:"content_name"`
+	PublishStatus      []string `json:"publish_status"`
+	Author             string   `json:"author"`
+	Org                string   `json:"org"`
+	Program            []string `json:"program"`
+	SourceID           string   `json:"source_id"`
+	LatestID           string   `json:"latest_id"`
+	SourceType         string   `json:"source_type"`
+	DirPath            string   `json:"dir_path"`
+	ContentName        string   `json:"content_name"`
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID entity.NullStrings `json:"authed_org_ids"`
@@ -223,11 +224,6 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.AuthedOrgID.Strings)
 	}
 
-	if len(s.Scope) > 0 {
-		condition := " publish_scope in (?) "
-		conditions = append(conditions, condition)
-		params = append(params, s.Scope)
-	}
 	if len(s.VisibilitySettings) > 0 {
 		condition := "id IN (SELECT content_id) FROM cms_content_visibility_settings WHERE visibility_setting IN (?)"
 		conditions = append(conditions, condition)
@@ -432,7 +428,7 @@ func (cd *DBContentDA) GetContentByIDList(ctx context.Context, tx *dbo.DBContext
 
 	return objs, nil
 }
-func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition ContentConditionInternal) (int, []*entity.Content, error){
+func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBContext, condition ContentConditionInternal) (int, []*entity.Content, error) {
 	objs := make([]*entity.Content, 0)
 	count, err := cd.s.PageTx(ctx, tx, &condition, &objs)
 	if err != nil {
@@ -442,11 +438,11 @@ func (cd *DBContentDA) SearchContentInternal(ctx context.Context, tx *dbo.DBCont
 	return count, objs, nil
 }
 
-func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string)([]string, error){
+func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error) {
 	objs := make([]*entity.ContentVisibilitySetting, 0)
 	err := cd.s.QueryTx(ctx, tx, &ContentVisibilitySettingsCondition{
-		ContentIDs:         []string{cid},
-	},&objs)
+		ContentIDs: []string{cid},
+	}, &objs)
 	if err != nil {
 		return nil, err
 	}
@@ -458,9 +454,9 @@ func (cd *DBContentDA) GetContentVisibilitySettings(ctx context.Context, tx *dbo
 	return ret, nil
 }
 
-func (cd *DBContentDA) SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition)([]*entity.ContentVisibilitySetting, error){
+func (cd *DBContentDA) SearchContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, condition *ContentVisibilitySettingsCondition) ([]*entity.ContentVisibilitySetting, error) {
 	objs := make([]*entity.ContentVisibilitySetting, 0)
-	err := cd.s.QueryTx(ctx, tx, condition,&objs)
+	err := cd.s.QueryTx(ctx, tx, condition, &objs)
 	if err != nil {
 		return nil, err
 	}
@@ -520,10 +516,10 @@ func (cm *DBContentDA) BatchReplaceContentPath(ctx context.Context, tx *dbo.DBCo
 }
 
 type ContentVisibilitySettingsCondition struct {
-	IDS           []string `json:"ids"`
+	IDS                []string `json:"ids"`
 	VisibilitySettings []string `json:"visibility_settings"`
-	ContentIDs []string `json:"content_i_ds"`
-	Pager       utils.Pager
+	ContentIDs         []string `json:"content_i_ds"`
+	Pager              utils.Pager
 }
 
 func (s *ContentVisibilitySettingsCondition) GetConditions() ([]string, []interface{}) {
@@ -558,6 +554,7 @@ func (s *ContentVisibilitySettingsCondition) GetPager() *dbo.Pager {
 func (s *ContentVisibilitySettingsCondition) GetOrderBy() string {
 	return "content_id"
 }
+
 type TotalContentResponse struct {
 	Total int
 }

@@ -47,6 +47,13 @@ const (
 
 	ContentAuthed   ContentAuth = 1
 	ContentUnauthed ContentAuth = 2
+
+	ContentPropertyTypeProgram       ContentPropertyType = 1
+	ContentPropertyTypeSubject       ContentPropertyType = 2
+	ContentPropertyTypeDevelopmental ContentPropertyType = 3
+	ContentPropertyTypeAge           ContentPropertyType = 4
+	ContentPropertyTypeGrade         ContentPropertyType = 5
+	ContentPropertyTypeSkill         ContentPropertyType = 6
 )
 
 var (
@@ -59,6 +66,8 @@ var (
 
 type ContentPublishStatus string
 type ContentType int
+
+type ContentPropertyType int
 
 type FileType int
 
@@ -205,28 +214,34 @@ func ContentLink(id string) string {
 }
 
 type ContentVisibilitySetting struct {
-	ID            int      `gorm:"type:int;PRIMARY_KEY;AUTO_INCREMENT"`
-	ContentID	  string 	  `gorm:"type:char(50);NOT NULL;column:content_id"`
-	VisibilitySetting string  `gorm:"type:char(50);NOT NULL;column:visibility_setting;index"`
-
+	ID                int    `gorm:"type:int;PRIMARY_KEY;AUTO_INCREMENT"`
+	ContentID         string `gorm:"type:char(50);NOT NULL;column:content_id"`
+	VisibilitySetting string `gorm:"type:char(50);NOT NULL;column:visibility_setting;index"`
 }
+
 func (ContentVisibilitySetting) TableName() string {
 	return "cms_content_visibility_settings"
 }
 
+type ContentProperty struct {
+	ID           int                 `gorm:"type:int;AUTO_INCREMENT;PRIMARY_KEY"`
+	PropertyType ContentPropertyType `gorm:"type:int;column:property_type"`
+	ContentID    string              `gorm:"type: varchar(50);column:content_id"`
+	PropertyID   string              `gorm:"type: varchar(50);column:property_id"`
+	Sequence     int                 `gorm:"type: index;column:sequence"`
+}
+
+func (ContentProperty) TableName() string {
+	return "cms_content_properties"
+}
+
 type Content struct {
-	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY"`
-	ContentType   ContentType `gorm:"type:int;NOT NULL; column:content_type"`
-	Name          string      `gorm:"type:varchar(255);NOT NULL;column:content_name"`
-	Program       string      `gorm:"type:varchar(1024);NOT NULL;column:program"`
-	Subject       string      `gorm:"type:varchar(1024);NOT NULL;column:subject"`
-	Developmental string      `gorm:"type:varchar(1024);NOT NULL;column:developmental"`
-	Skills        string      `gorm:"type:varchar(1024);NOT NULL;column:skills"`
-	Age           string      `gorm:"type:varchar(1024);NOT NULL;column:age"`
-	Grade         string      `gorm:"type:varchar(1024);NOT NULL;column:grade"`
-	Keywords      string      `gorm:"type:text;NOT NULL;column:keywords"`
-	Description   string      `gorm:"type:text;NOT NULL;column:description"`
-	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail"`
+	ID          string      `gorm:"type:varchar(50);PRIMARY_KEY"`
+	ContentType ContentType `gorm:"type:int;NOT NULL; column:content_type"`
+	Name        string      `gorm:"type:varchar(255);NOT NULL;column:content_name"`
+	Keywords    string      `gorm:"type:text;NOT NULL;column:keywords"`
+	Description string      `gorm:"type:text;NOT NULL;column:description"`
+	Thumbnail   string      `gorm:"type:text;NOT NULL;column:thumbnail"`
 
 	SourceType string `gorm:"type:varchar(256); column:source_type"`
 
@@ -243,7 +258,6 @@ type Content struct {
 	DrawActivity BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
 	LessonType   string      `gorm:"type:varchar(100);column:lesson_type"`
 
-	//PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
 
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason"`
@@ -326,6 +340,16 @@ func (b BoolTinyInt) Bool() TinyIntBool {
 type CopyContentRequest struct {
 	ContentID string `json:"content_id"`
 	Deep      bool   `json:"deep"`
+}
+
+type ContentProperties struct {
+	ContentID     string   `json:"content_id"`
+	Program       string   `json:"program"`
+	Subject       []string `json:"subject"`
+	Developmental []string `json:"developmental"`
+	Skills        []string `json:"skills"`
+	Age           []string `json:"age"`
+	Grade         []string `json:"grade"`
 }
 
 type CreateContentRequest struct {
@@ -411,7 +435,7 @@ type ContentInfoWithDetails struct {
 	AgeName           []string `json:"age_name"`
 	GradeName         []string `json:"grade_name"`
 	OrgName           string   `json:"org_name"`
-	PublishScopeName  []string   `json:"publish_scope_name"`
+	PublishScopeName  []string `json:"publish_scope_name"`
 	LessonTypeName    string   `json:"lesson_type_name"`
 
 	//AuthorName string `json:"author_name"`
@@ -489,11 +513,11 @@ type ContentInfo struct {
 	//TeacherManual     []string `json:"teacher_manual"`
 	//Name []string `json:"teacher_manual_name"`
 	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
-	Author  string `json:"author"`
-	Creator string `json:"creator"`
-	Org     string `json:"org"`
+	Author             string               `json:"author"`
+	Creator            string               `json:"creator"`
+	Org                string               `json:"org"`
 
-	PublishScope  []string               `json:"publish_scope"`
+	PublishScope  []string             `json:"publish_scope"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
 
 	CreatedAt int64 `json:"created_at"`
@@ -501,7 +525,7 @@ type ContentInfo struct {
 }
 
 type ExtraDataInRequest struct {
-	TeacherManualBatch     []*TeacherManualFile `json:"teacher_manual_batch"`
+	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
 }
 
 type ContentData interface {

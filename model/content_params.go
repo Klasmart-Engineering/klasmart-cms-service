@@ -110,12 +110,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
 		Name:          c.Name,
-		Program:       c.Program,
-		Subject:       strings.Join(c.Subject, constant.StringArraySeparator),
-		Developmental: strings.Join(c.Developmental, constant.StringArraySeparator),
-		Skills:        strings.Join(c.Skills, constant.StringArraySeparator),
-		Age:           strings.Join(c.Age, constant.StringArraySeparator),
-		Grade:         strings.Join(c.Grade, constant.StringArraySeparator),
 		Keywords:      strings.Join(c.Keywords, constant.StringArraySeparator),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
@@ -142,24 +136,6 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 	if data.ContentType > 0 && data.Data != "" {
 		content.ContentType = data.ContentType
-	}
-	if data.Program != "" {
-		content.Program = data.Program
-	}
-	if data.Subject != nil {
-		content.Subject = strings.Join(data.Subject, constant.StringArraySeparator)
-	}
-	if data.Developmental != nil {
-		content.Developmental = strings.Join(data.Developmental, constant.StringArraySeparator)
-	}
-	if data.Skills != nil {
-		content.Skills = strings.Join(data.Skills, constant.StringArraySeparator)
-	}
-	if data.Age != nil {
-		content.Age = strings.Join(data.Age, constant.StringArraySeparator)
-	}
-	if data.Grade != nil {
-		content.Grade = strings.Join(data.Grade, constant.StringArraySeparator)
 	}
 	if data.Description != "" {
 		content.Description = data.Description
@@ -191,7 +167,6 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusDraft
 	}
-
 
 	//Asset修改后直接发布
 	//if the content is assets, publish immediately after update
