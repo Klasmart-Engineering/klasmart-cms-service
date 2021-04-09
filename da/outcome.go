@@ -23,6 +23,7 @@ type IOutcomeDA interface {
 	IsShortcodeExistInRedis(ctx context.Context, orgID string, shortcode string) (bool, error)
 	IsShortcodeExistInDBWithOtherAncestor(ctx context.Context, tx *dbo.DBContext, orgID string, ancestorID string, shortcode string) (bool, error)
 	SaveShortcodeInRedis(ctx context.Context, orgID string, shortcode string) error
+	DeleteShortcodeInRedis(ctx context.Context, orgID string, shortcode string) error
 }
 
 var _outcomeOnce sync.Once
