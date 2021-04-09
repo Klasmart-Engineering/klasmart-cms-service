@@ -28,6 +28,8 @@ const (
 
 	CreateFolder289 PermissionName = "create_folder_289"
 	PublishFeaturedContentForAllHub PermissionName = "publish_featured_content_for_all_hub_79000"
+	PublishFeaturedContentForAllOrgsHub PermissionName = "publish_featured_content_for_all_orgs_79002"
+	PublishFeaturedContentForSpecificOrgsHub PermissionName = "publish_featured_content_for_specific_orgs_79001"
 
 	CreateAssetPage301 PermissionName = "create_asset_page_301"
 	CreateAsset320     PermissionName = "create_asset_320"

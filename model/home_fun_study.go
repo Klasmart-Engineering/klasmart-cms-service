@@ -227,25 +227,27 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 	for _, t := range teachers {
 		teacherNames = append(teacherNames, t.Name)
 	}
-
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
-	if err != nil {
-		log.Error(ctx, "Get: external.GetSubjectServiceProvider().BatchGet: get subject failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("subject_id", study.SubjectID),
-		)
-		return nil, err
+	var subjectName string
+	if study.SubjectID != "" {
+		subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
+		if err != nil {
+			log.Error(ctx, "Get: external.GetSubjectServiceProvider().BatchGet: get subject failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("subject_id", study.SubjectID),
+			)
+			return nil, err
+		}
+		if len(subjects) == 0 {
+			log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: not found subject",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("subject_id", study.SubjectID),
+			)
+			return nil, err
+		}
+		subjectName = subjects[0].Name
 	}
-	if len(subjects) == 0 {
-		log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: not found subject",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("subject_id", study.SubjectID),
-		)
-		return nil, err
-	}
-	subject := subjects[0]
 
 	result := &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
@@ -255,7 +257,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		TeacherNames:     teacherNames,
 		StudentID:        study.StudentID,
 		StudentName:      studentName,
-		SubjectName:      subject.Name,
+		SubjectName:      subjectName,
 		Status:           study.Status,
 		DueAt:            study.DueAt,
 		CompleteAt:       study.CompleteAt,

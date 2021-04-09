@@ -20,20 +20,20 @@ const (
 
 type OutcomeStatus string
 type Outcome struct {
-	ID            string `gorm:"type:varchar(50);column:id" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
-	Name          string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"outcome_name" json:"outcome_name" dynamoupdate:":n"`
-	Shortcode     string `gorm:"type:char(8);NOT NULL;column:shortcode" dynamodbav:"shortcode" json:"shortcode" dynamoupdate:":code"`
-	AncestorID    string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"ancestor_id" dynamoupdate:"-"`
-	Program       string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
-	Subject       string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
+	ID         string `gorm:"type:varchar(50);column:id" dynamodbav:"outcome_id" json:"outcome_id" dynamoupdate:"-"`
+	Name       string `gorm:"type:varchar(255);NOT NULL;column:name" dynamodbav:"outcome_name" json:"outcome_name" dynamoupdate:":n"`
+	Shortcode  string `gorm:"type:char(8);DEFAULT NULL;column:shortcode" dynamodbav:"shortcode" json:"shortcode" dynamoupdate:":code"`
+	AncestorID string `gorm:"type:varchar(50);column:ancestor_id" dynamodbav:"ancestor_id" json:"ancestor_id" dynamoupdate:"-"`
+	Program    string `gorm:"type:varchar(1024);NOT NULL;column:program" dynamodbav:"program" json:"program" dynamoupdate:":p"`
+	Subject    string `gorm:"type:varchar(1024);NOT NULL;column:subject" dynamodbav:"subject" json:"subject" dynamoupdate:":su"`
 	// Category
 	Developmental string `gorm:"type:varchar(1024);NOT NULL;column:developmental" dynamodbav:"developmental" json:"developmental" dynamoupdate:":dv"`
 	// SubCategory
-	Skills        string `gorm:"type:varchar(1024);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
-	Age           string `gorm:"type:varchar(1024);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
-	Grade         string `gorm:"type:varchar(1024);NOT NULL;column:grade" dynamodbav:"grade" json:"grade" dynamoupdate:":grd"`
-	Keywords      string `gorm:"type:text;NOT NULL;column:keywords" dynamodbav:"keywords" json:"keywords" dynamoupdate:":ky"`
-	Description   string `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
+	Skills      string `gorm:"type:varchar(1024);NOT NULL;column:skills" dynamodbav:"skills" json:"skills" dynamoupdate:":sk"`
+	Age         string `gorm:"type:varchar(1024);NOT NULL;column:age" dynamodbav:"age" json:"age" dynamoupdate:":a"`
+	Grade       string `gorm:"type:varchar(1024);NOT NULL;column:grade" dynamodbav:"grade" json:"grade" dynamoupdate:":grd"`
+	Keywords    string `gorm:"type:text;NOT NULL;column:keywords" dynamodbav:"keywords" json:"keywords" dynamoupdate:":ky"`
+	Description string `gorm:"type:text;NOT NULL;column:description" dynamodbav:"description" json:"description" dynamoupdate:":de"`
 
 	EstimatedTime  int    `gorm:"type:int;NOT NULL;column:estimated_time" dynamodbav:"estimated_time" json:"extra" dynamoupdate:":est"`
 	AuthorID       string `gorm:"type:varchar(50);NOT NULL;column:author_id" dynamodbav:"author_id" json:"author" dynamoupdate:":au"`
@@ -50,9 +50,10 @@ type Outcome struct {
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"assumed" dynamoupdate:":asum"`
 
-	CreateAt int64 `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdateAt int64 `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeleteAt int64 `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	CreateAt int64  `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt int64  `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt int64  `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	Sets     []*Set `gorm:"-" json:"sets"`
 }
 
 func (Outcome) TableName() string {
@@ -79,6 +80,8 @@ func (oc *Outcome) Update(data *Outcome) {
 	oc.Keywords = data.Keywords
 	oc.Description = data.Description
 	oc.PublishStatus = OutcomeStatusDraft
+	oc.Shortcode = data.Shortcode
+	oc.Sets = data.Sets
 	oc.UpdateAt = time.Now().Unix()
 }
 
@@ -106,6 +109,7 @@ func (oc *Outcome) Clone(op *Operator) Outcome {
 		PublishStatus: OutcomeStatusDraft,
 		PublishScope:  oc.PublishScope,
 		LatestID:      oc.LatestID,
+		Sets:          oc.Sets,
 
 		Version:  1,
 		SourceID: oc.ID,
@@ -188,15 +192,16 @@ type OutcomeCondition struct {
 	Description    string   `json:"description" form:"description"`
 	Keywords       string   `json:"keywords" form:"keywords"`
 	Shortcode      string   `json:"shortcode" form:"shortcode"`
-	AuthorID       string   `json:"author_id" form:"author_id"`
+	AuthorID       string   `json:"-" form:"-"`
 	AuthorName     string   `json:"author_name" form:"author_name"`
 	Page           int      `json:"page" form:"page"`
 	PageSize       int      `json:"page_size" form:"page_size"`
 	OrderBy        string   `json:"order_by" form:"order_by"`
 	PublishStatus  string   `json:"publish_status" form:"publish_status"`
 	FuzzyKey       string   `json:"search_key" form:"search_key"`
-	FuzzyAuthorIDs []string `json:"fuzzy_authors" form:"fuzzy_authors"`
+	AuthorIDs      []string `json:"-" form:"-"`
 	Assumed        int      `json:"assumed" form:"assumed"`
 	PublishScope   string   `json:"publish_scope" form:"publish_scope"`
 	OrganizationID string   `json:"organization_id" form:"organization_id"`
+	SetName        string   `json:"set_name" form:"set_name"`
 }

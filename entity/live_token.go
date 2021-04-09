@@ -27,7 +27,6 @@ const (
 	MaterialTypeVideo MaterialType = "Video"
 	MaterialTypeAudio MaterialType = "Audio"
 	MaterialTypeImage MaterialType = "Image"
-	MaterialTypeDoc   MaterialType = "Doc"
 )
 
 //Live (online class)
