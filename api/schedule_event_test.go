@@ -13,7 +13,8 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"io/ioutil"
 	"log"
-	"net/http"
+	"net/http/httptest"
+
 	"os"
 	"testing"
 	"time"
@@ -38,9 +39,18 @@ func ReadAll(filePth string) ([]byte, error) {
 }
 
 func Test_classUserEditEventToSchedule(t *testing.T) {
-	privateKey := readKey("D:\\workbench\\demo_private_key.pem")
-	publicKey := readKey("D:\\workbench\\demo_public_key.pem")
-
+	privateKey := readKey("D:\\workbench\\auth_private_key.pem")
+	publicKey := readKey("D:\\workbench\\auth_public_key.pem")
+	privateKeyPB, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(privateKey))
+	if err != nil {
+		fmt.Println("ParseRSAPrivateKeyFromPEM:", err.Error())
+		return
+	}
+	publicKeyPB, err := jwt.ParseRSAPublicKeyFromPEM([]byte(publicKey))
+	if err != nil {
+		fmt.Println("ParseRSAPublicKeyFromPEM:", err.Error())
+		return
+	}
 	cfg := &config.Config{
 		DBConfig: config.DBConfig{
 			//root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local
@@ -49,7 +59,7 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 		Schedule: config.ScheduleConfig{
 			MaxRepeatYear:    2,
 			CacheExpiration:  3 * time.Minute,
-			ClassEventSecret: publicKey,
+			ClassEventSecret: publicKeyPB,
 		},
 	}
 	config.Set(cfg)
@@ -84,7 +94,7 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 		Users   []*entity.ScheduleClassUserEvent `json:"users"`
 	}
 	data := &ScheduleClassEvent2{
-		Action:  entity.ClassActionEventAdd,
+		Action:  entity.ClassActionEventDelete,
 		ClassID: "0c01504d-d6ae-4c40-9862-68566bff0767",
 		Users: []*entity.ScheduleClassUserEvent{
 			{
@@ -101,17 +111,30 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 		StandardClaims:      stdClaims,
 		ScheduleClassEvent2: *data,
 	}
-	token, err := utils.CreateJWT(context.Background(), claims, privateKey)
+
+	token, err := utils.CreateJWT(context.Background(), claims, privateKeyPB)
 	fmt.Println(err)
 	fmt.Println(token)
-	body := &entity.ScheduleEventBody{Token: token}
+	body := entity.ScheduleEventBody{Token: token}
 	jsonStr, _ := json.Marshal(body)
-	resp, _ := http.Post("/v1/class_user_edit_to_schedule", "application/json", bytes.NewBuffer(jsonStr))
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/v1/class_user_edit_to_schedule", bytes.NewBufferString(string(jsonStr)))
+	req.Header.Add("content-type", "application/json")
+	server.ServeHTTP(w, req)
+	res := w.Result()
 
+	str, err := ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(str))
+	//r, err := http.NewRequest("POST", "/v1/class_user_edit_to_schedule", bytes.NewBuffer(jsonStr))
+	//
 	//server.engine.ServeHTTP(w, r)
-
+	//
 	//resp := w.Result()
-	//body, _ := ioutil.ReadAll(resp.Body)
-	//t.Log(resp.StatusCode)
-	fmt.Println(resp)
+	//ioutil.ReadAll(resp.Body)
+	//fmt.Println(resp)
+	//fmt.Println(err)
 }

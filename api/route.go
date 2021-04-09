@@ -111,7 +111,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
 
 		// ams event
-		schedules.GET("/class_user_edit_to_schedule", s.classUserEditEventToSchedule)
+		schedules.POST("/class_user_edit_to_schedule", s.classUserEditEventToSchedule)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{

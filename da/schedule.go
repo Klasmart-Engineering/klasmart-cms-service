@@ -299,7 +299,7 @@ func GetScheduleDA() IScheduleDA {
 	return _scheduleDA
 }
 
-func NewNotStartScheduleCondition(classRosterID string) *ScheduleCondition {
+func NewNotStartScheduleCondition(classRosterID string, userIDs []string) *ScheduleCondition {
 	condition := &ScheduleCondition{
 		RosterClassID: sql.NullString{
 			String: classRosterID,
@@ -308,6 +308,10 @@ func NewNotStartScheduleCondition(classRosterID string) *ScheduleCondition {
 		NotStart: sql.NullBool{
 			Bool:  true,
 			Valid: true,
+		},
+		RelationIDs: entity.NullStrings{
+			Strings: userIDs,
+			Valid:   len(userIDs) > 0,
 		},
 	}
 	return condition
@@ -465,10 +469,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.RosterClassID.Valid {
-		sql := fmt.Sprintf("exists(select 1 from %s where relation_id = ? and relation_type = %s and %s.id = %s.schedule_id)",
-			constant.TableNameScheduleRelation, entity.ScheduleRelationTypeClassRosterClass, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id = ? and relation_type = ? and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
 		wheres = append(wheres, sql)
-		params = append(params, c.RosterClassID.String)
+		params = append(params, c.RosterClassID.String, entity.ScheduleRelationTypeClassRosterClass)
 	}
 	if c.NotStart.Valid {
 		notEditAt := time.Now().Add(constant.ScheduleAllowEditTime).Unix()

@@ -56,7 +56,7 @@ type IScheduleModel interface {
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
-	GetRosterClassNotStartScheduleIDs(ctx context.Context, op *entity.Operator, rosterClassID string) ([]string, error)
+	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -2456,8 +2456,8 @@ func (s *scheduleModel) GetClassTypes(ctx context.Context, op *entity.Operator) 
 	return result, nil
 }
 
-func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, op *entity.Operator, rosterClassID string) ([]string, error) {
-	condition := da.NewNotStartScheduleCondition(rosterClassID)
+func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error) {
+	condition := da.NewNotStartScheduleCondition(rosterClassID, userIDs)
 
 	var scheduleList []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, condition, &scheduleList)

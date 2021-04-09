@@ -25,7 +25,7 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 		log.Info(ctx, "event invalid args", log.Any("event", event))
 		return constant.ErrInvalidArgs
 	}
-	scheduleIDs, err := GetScheduleModel().GetRosterClassNotStartScheduleIDs(ctx, op, event.ClassID)
+	scheduleIDs, err := GetScheduleModel().GetRosterClassNotStartScheduleIDs(ctx, event.ClassID, nil)
 	if err != nil {
 		log.Error(ctx, "class has schedule error", log.Err(err), log.Any("event", event))
 		return err
@@ -92,7 +92,7 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 		log.Error(ctx, "count by schedule condition error", log.Err(err), log.Any("event", event), log.Any("relations", relations))
 		return err
 	}
-
+	log.Debug(ctx, "class add user event end", log.Any("relations", relations), log.Any("event", event))
 	return nil
 }
 
@@ -101,7 +101,11 @@ func (s *scheduleEventModel) DeleteUserEvent(ctx context.Context, op *entity.Ope
 		log.Info(ctx, "event invalid args", log.Any("event", event))
 		return constant.ErrInvalidArgs
 	}
-	scheduleIDs, err := GetScheduleModel().GetRosterClassNotStartScheduleIDs(ctx, op, event.ClassID)
+	userIDs := make([]string, len(event.Users))
+	for i, item := range event.Users {
+		userIDs[i] = item.ID
+	}
+	scheduleIDs, err := GetScheduleModel().GetRosterClassNotStartScheduleIDs(ctx, event.ClassID, userIDs)
 	if err != nil {
 		log.Error(ctx, "class has schedule error", log.Err(err), log.Any("event", event))
 		return err
@@ -110,15 +114,13 @@ func (s *scheduleEventModel) DeleteUserEvent(ctx context.Context, op *entity.Ope
 		log.Debug(ctx, "class are not scheduled", log.Any("event", event))
 		return nil
 	}
-	userIDs := make([]string, len(event.Users))
-	for i, item := range event.Users {
-		userIDs[i] = item.ID
-	}
+
 	err = da.GetScheduleRelationDA().DeleteByRelationIDs(ctx, dbo.MustGetDB(ctx), scheduleIDs, userIDs)
 	if err != nil {
 		log.Error(ctx, "delete error", log.Err(err), log.Any("event", event), log.Strings("scheduleIDs", scheduleIDs))
 		return err
 	}
+	log.Debug(ctx, "class delete user event end", log.Any("scheduleIDs", scheduleIDs), log.Any("event", event))
 	return err
 }
 
