@@ -55,7 +55,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	if c.Data == "" {
 		return nil, ErrNoContentData
 	}
-	cd, err := CreateContentData(ctx, c.ContentType, c.Data)
+	cd, err := cm.CreateContentData(ctx, c.ContentType, c.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
@@ -180,7 +180,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 	//检查data
 	if data.Data != "" {
-		cd, err := CreateContentData(ctx, data.ContentType, data.Data)
+		cd, err := cm.CreateContentData(ctx, data.ContentType, data.Data)
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}

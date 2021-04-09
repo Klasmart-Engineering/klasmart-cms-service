@@ -12,7 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
+func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
 	var contentData entity.ContentData
 	switch contentType {
 	case entity.ContentTypePlan:
@@ -31,9 +31,9 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 	return contentData, nil
 }
 
-func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
+func (c *ContentModel) ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
 	log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
-	contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+	contentData, err := c.CreateContentData(ctx, obj.ContentType, obj.Data)
 	if err != nil {
 		log.Error(ctx, "CreateContentData",
 			log.Err(err),
@@ -76,13 +76,13 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 			program = contentProperties[i].PropertyID
 		case entity.ContentPropertyTypeSubject:
 			subjects = append(subjects, contentProperties[i].PropertyID)
-		case entity.ContentPropertyTypeDevelopmental:
+		case entity.ContentPropertyTypeCategory:
 			developmentals = append(developmentals, contentProperties[i].PropertyID)
 		case entity.ContentPropertyTypeAge:
 			ages = append(ages, contentProperties[i].PropertyID)
 		case entity.ContentPropertyTypeGrade:
 			grades = append(grades, contentProperties[i].PropertyID)
-		case entity.ContentPropertyTypeSkill:
+		case entity.ContentPropertyTypeSubCategory:
 			skills = append(skills, contentProperties[i].PropertyID)
 		}
 	}
@@ -134,7 +134,7 @@ func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entit
 	return cm, nil
 }
 
-func BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
+func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
 	if len(objs) < 1 {
 		return nil, nil
 	}
@@ -154,7 +154,7 @@ func BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operato
 	res := make([]*entity.ContentInfo, 0)
 	for _, obj := range objs {
 		log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
-		contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+		contentData, err := c.CreateContentData(ctx, obj.ContentType, obj.Data)
 		if err != nil {
 			log.Error(ctx, "CreateContentData",
 				log.Err(err),
@@ -193,13 +193,13 @@ func BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operato
 				program = contentProperties[i].PropertyID
 			case entity.ContentPropertyTypeSubject:
 				subjects = append(subjects, contentProperties[i].PropertyID)
-			case entity.ContentPropertyTypeDevelopmental:
+			case entity.ContentPropertyTypeCategory:
 				developmentals = append(developmentals, contentProperties[i].PropertyID)
 			case entity.ContentPropertyTypeAge:
 				ages = append(ages, contentProperties[i].PropertyID)
 			case entity.ContentPropertyTypeGrade:
 				grades = append(grades, contentProperties[i].PropertyID)
-			case entity.ContentPropertyTypeSkill:
+			case entity.ContentPropertyTypeSubCategory:
 				skills = append(skills, contentProperties[i].PropertyID)
 			}
 		}

@@ -48,12 +48,12 @@ const (
 	ContentAuthed   ContentAuth = 1
 	ContentUnauthed ContentAuth = 2
 
-	ContentPropertyTypeProgram       ContentPropertyType = 1
-	ContentPropertyTypeSubject       ContentPropertyType = 2
-	ContentPropertyTypeDevelopmental ContentPropertyType = 3
-	ContentPropertyTypeAge           ContentPropertyType = 4
-	ContentPropertyTypeGrade         ContentPropertyType = 5
-	ContentPropertyTypeSkill         ContentPropertyType = 6
+	ContentPropertyTypeProgram     ContentPropertyType = 1
+	ContentPropertyTypeSubject     ContentPropertyType = 2
+	ContentPropertyTypeCategory    ContentPropertyType = 3
+	ContentPropertyTypeAge         ContentPropertyType = 4
+	ContentPropertyTypeGrade       ContentPropertyType = 5
+	ContentPropertyTypeSubCategory ContentPropertyType = 6
 )
 
 var (

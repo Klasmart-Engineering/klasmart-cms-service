@@ -130,6 +130,10 @@ type IContentModel interface {
 	//For authed content
 	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error)
+
+	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error)
+	ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
+	BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
 }
 
 type ContentModel struct {
@@ -280,7 +284,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 		return ErrInvalidContentStatusToPublish
 	}
 
-	contentData, err := CreateContentData(ctx, content.ContentType, content.Data)
+	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Any("contentData", contentData), log.Err(err))
 		return err
@@ -313,7 +317,7 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
-	response, err := BatchConvertContentObj(ctx, objs, user)
+	response, err := cm.BatchConvertContentObj(ctx, objs, user)
 	if err != nil {
 		log.Error(ctx, "Can't parse contentdata, contentID: %v, error: %v", log.Any("objs", objs), log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -334,7 +338,7 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	response, err := BatchConvertContentObj(ctx, objs, user)
+	response, err := cm.BatchConvertContentObj(ctx, objs, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -731,7 +735,7 @@ func (cm *ContentModel) CopyContent(ctx context.Context, tx *dbo.DBContext, cid 
 	//if deep copy & content is lesson plan copy sub contents
 	if deep && content.ContentType == entity.ContentTypePlan {
 		//get sub contents in plan
-		cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+		cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 		if err != nil {
 			return "", err
 		}
@@ -840,7 +844,7 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 		return ErrInvalidContentType
 	}
 	//查看data
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -868,7 +872,7 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//创建data对象
 	//create content data object
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -933,7 +937,7 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//创建data对象
 	//create content data object
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -1073,7 +1077,7 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 	}
 
 	//create content data object
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -1295,7 +1299,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 	}
 	contentInfoMap := make(map[string][]*entity.SubContentsWithName)
 	for _, obj := range objs {
-		cd, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+		cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 		if err != nil {
 			log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 			return nil, err
@@ -1305,7 +1309,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *LessonData:
 			//存在子内容，则返回子内容
 			//if the content contains sub contents, return sub contents
-			content, err := ConvertContentObj(ctx, obj, user)
+			content, err := cm.ConvertContentObj(ctx, obj, user)
 			if err != nil {
 				log.Error(ctx, "can't parse contentdata", log.Err(err))
 				return nil, ErrParseContentDataFailed
@@ -1323,7 +1327,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			ret := make([]*entity.SubContentsWithName, 0)
 			v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 				if l.Material != nil {
-					cd0, err := CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+					cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
 					if err != nil {
 						log.Error(ctx, "can't parse sub content data",
 							log.Err(err),
@@ -1383,7 +1387,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		}
 	}
 
-	cd, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+	cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 	if err != nil {
 		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 		return nil, err
@@ -1393,7 +1397,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *LessonData:
 		//存在子内容，则返回子内容
 		//if the content contains sub contents, return sub contents
-		content, err := ConvertContentObj(ctx, obj, user)
+		content, err := cm.ConvertContentObj(ctx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -1411,7 +1415,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		ret := make([]*entity.SubContentsWithName, 0)
 		v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 			if l.Material != nil {
-				cd0, err := CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+				cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
 				if err != nil {
 					log.Error(ctx, "can't parse sub content data",
 						log.Err(err),
@@ -1501,7 +1505,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 			log.Error(ctx, "can't read contentdata", log.Err(err))
 			return nil, err
 		}
-		content, err = ConvertContentObj(ctx, obj, user)
+		content, err = cm.ConvertContentObj(ctx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -1511,7 +1515,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 
 	//补全相关内容
 	//fill related data
-	contentData, err := CreateContentData(ctx, content.ContentType, content.Data)
+	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -1664,7 +1668,7 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
-	res, err := BatchConvertContentObj(ctx, data, user)
+	res, err := cm.BatchConvertContentObj(ctx, data, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Any("data", data), log.Err(err))
 		return nil, ErrReadContentFailed
@@ -1952,7 +1956,7 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 	ret := make([]string, 0)
 	//if content is a plan, collect outcomes from materials
 	if content.ContentType == entity.ContentTypePlan {
-		contentData, err := CreateContentData(ctx, entity.ContentTypePlan, content.Data)
+		contentData, err := cm.CreateContentData(ctx, entity.ContentTypePlan, content.Data)
 		if err != nil {
 			log.Error(ctx, "can't parse content data",
 				log.Err(err),
@@ -1994,7 +1998,7 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 	ret := cm.parseContentOutcomes(ctx, content)
 	//if content is a lesson, add materials outcomes
 	if content.ContentType == entity.ContentTypePlan {
-		data, err := CreateContentData(ctx, content.ContentType, content.Data)
+		data, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 		if err != nil {
 			log.Error(ctx, "parse content data failed",
 				log.Err(err),
@@ -2034,7 +2038,7 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 		return nil, ErrInvalidContentType
 	}
 
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Error(ctx, "can't parse content data", log.Err(err), log.String("cid", cid), log.Int("contentType", int(content.ContentType)), log.String("data", content.Data))
 		return nil, err
@@ -2310,7 +2314,7 @@ func (cm *ContentModel) doCreateContentProperties(ctx context.Context, tx *dbo.D
 	}
 	for i := range c.Developmental {
 		properties[index] = &entity.ContentProperty{
-			PropertyType: entity.ContentPropertyTypeDevelopmental,
+			PropertyType: entity.ContentPropertyTypeCategory,
 			ContentID:    c.ContentID,
 			PropertyID:   c.Developmental[i],
 			Sequence:     i,
@@ -2319,7 +2323,7 @@ func (cm *ContentModel) doCreateContentProperties(ctx context.Context, tx *dbo.D
 	}
 	for i := range c.Skills {
 		properties[index] = &entity.ContentProperty{
-			PropertyType: entity.ContentPropertyTypeSkill,
+			PropertyType: entity.ContentPropertyTypeSubCategory,
 			ContentID:    c.ContentID,
 			PropertyID:   c.Skills[i],
 			Sequence:     i,
