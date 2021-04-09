@@ -112,7 +112,7 @@ func (l2 *LessonData) checkTeacherManual(ctx context.Context, teacherManual stri
 		return ErrTeacherManual
 	}
 	extensionPairs := strings.Split(teacherManual, ".")
-	extension := extensionPairs[len(extensionPairs) - 1]
+	extension := extensionPairs[len(extensionPairs)-1]
 	extension = strings.ToLower(extension)
 	ret := isArray(extension, constant.TeacherManualExtension)
 	if !ret {
@@ -139,17 +139,16 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 			return ErrTeacherManualNameNil
 		}
 		err := l.checkTeacherManual(ctx, l.TeacherManual)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
 	for i := range l.TeacherManualBatch {
 		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].ID)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
-
 
 	//暂时不做检查
 	//检查material合法性
@@ -268,7 +267,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		data, ok := contentMap[l.MaterialId]
 		if ok {
-			material, _ := ConvertContentObj(ctx, data, operator)
+			material, _ := GetContentModel().ConvertContentObj(ctx, data, operator)
 			l.Material = material
 		}
 	})

@@ -22,25 +22,25 @@ func TestMapperImpl_Category(t *testing.T) {
 			AmsCategoryID: "1080d319-8ce7-4378-9c71-a5019d6b9386",
 		},
 		{
-			// Speech & Language Skills
+			// Speech & Language SubCategory
 			ProgramID:     "5fdac0f61f066722a1351adb",
 			CategoryID:    "developmental1",
 			AmsCategoryID: "1080d319-8ce7-4378-9c71-a5019d6b9386",
 		},
 		{
-			// Fine Motor Skills
+			// Fine Motor SubCategory
 			ProgramID:     "5fdac0f61f066722a1351adb",
 			CategoryID:    "developmental2",
 			AmsCategoryID: "f9d82bdd-4ee2-49dd-a707-133407cdef19",
 		},
 		{
-			// Gross Motor Skills
+			// Gross Motor SubCategory
 			ProgramID:     "5fdac0f61f066722a1351adb",
 			CategoryID:    "developmental3",
 			AmsCategoryID: "a1c26321-e3a7-4ff2-9f1c-bb1c5e420fb7",
 		},
 		{
-			// Cognitive Skills
+			// Cognitive SubCategory
 			ProgramID:     "5fdac0f61f066722a1351adb",
 			CategoryID:    "developmental4",
 			AmsCategoryID: "c12f363a-633b-4080-bd2b-9ced8d034379",
