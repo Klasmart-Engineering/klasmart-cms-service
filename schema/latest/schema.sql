@@ -546,5 +546,6 @@ CREATE TABLE assessments_contents_outcomes (
     `assessment_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'assessment id',
     `content_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'content id',
     `outcome_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'outcome id',
+    PRIMARY KEY (`id`),
     UNIQUE `uq_assessments_contents_outcomes_assessment_id_content_id` (`assessment_id`, `content_id`)
 ) COMMENT 'assessment content and outcome map' DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_UNICODE_CI;
