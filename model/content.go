@@ -85,8 +85,8 @@ var (
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
-	PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error
-	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error
+	PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error
+	PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error
 	LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
 	DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error
 	CloneContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error)
@@ -130,6 +130,19 @@ type IContentModel interface {
 	//For authed content
 	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error)
+
+	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error)
+	ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
+	BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
+
+	PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
+	LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error)
+	CreateContentTx(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
+	CopyContentTx(ctx context.Context, cid string, deep bool, op *entity.Operator) (string, error)
+	PublishContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
+	PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
+	DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
+	DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error
 }
 
 type ContentModel struct {
@@ -194,7 +207,7 @@ func (cm *ContentModel) handleSourceContent(ctx context.Context, tx *dbo.DBConte
 	return nil
 }
 
-func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
+func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.preparePublishContent(ctx, tx, content, user)
 	if err != nil {
 		log.Error(ctx, "prepare publish failed", log.Err(err), log.String("cid", content.ID), log.String("uid", user.UserID))
@@ -207,10 +220,23 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 		return ErrUpdateContentFailed
 	}
 
+	//If scope changed, refresh visibility settings
+	if scope != nil {
+		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, scope)
+		if err != nil {
+			log.Error(ctx, "refreshContentVisibilitySettings failed",
+				log.Err(err),
+				log.String("cid", content.ID),
+				log.Strings("scope", scope),
+				log.String("uid", user.UserID))
+			return ErrUpdateContentFailed
+		}
+	}
+
 	return nil
 }
 
-func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, created bool) error {
+func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest) error {
 	if c.LessonType != "" {
 		_, err := GetLessonTypeModel().GetByID(ctx, c.LessonType)
 		if err != nil {
@@ -220,20 +246,18 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 	}
 	err := c.Validate()
 	if err != nil {
-		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Bool("created", created), log.Err(err))
+		log.Error(ctx, "asset no need to check", log.Any("data", c), log.Err(err))
 		return err
 	}
 	err = c.ContentType.Validate()
 	if err != nil {
-		log.Error(ctx, "content type invalid", log.Any("data", c), log.Bool("created", created), log.Err(err))
+		log.Error(ctx, "content type invalid", log.Any("data", c), log.Err(err))
 		return err
 	}
-	if created {
-		if len(c.Developmental) == 0 ||
-			len(c.Program) == 0 {
-			log.Error(ctx, "select form invalid", log.Any("data", c), log.Bool("created", created), log.Err(err))
-			return ErrInvalidSelectForm
-		}
+	if len(c.Category) == 0 ||
+		c.Program == "" {
+		log.Error(ctx, "select form invalid", log.Any("data", c), log.Err(err))
+		return ErrInvalidSelectForm
 	}
 
 	return nil
@@ -269,7 +293,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 		return ErrInvalidContentStatusToPublish
 	}
 
-	contentData, err := CreateContentData(ctx, content.ContentType, content.Data)
+	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Any("contentData", contentData), log.Err(err))
 		return err
@@ -302,15 +326,12 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
-	response := make([]*entity.ContentInfo, len(objs))
-	for i := range objs {
-		temp, err := ConvertContentObj(ctx, objs[i], user)
-		if err != nil {
-			log.Error(ctx, "Can't parse contentdata, contentID: %v, error: %v", log.String("id", objs[i].ID), log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
-			return 0, nil, err
-		}
-		response[i] = temp
+	response, err := cm.BatchConvertContentObj(ctx, objs, user)
+	if err != nil {
+		log.Error(ctx, "Can't parse contentdata, contentID: %v, error: %v", log.Any("objs", objs), log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
+		return 0, nil, err
 	}
+
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, response, false, user)
 	if err != nil {
 		log.Error(ctx, "build content details failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
@@ -326,14 +347,10 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	response := make([]*entity.ContentInfo, len(objs))
-	for i := range objs {
-		temp, err := ConvertContentObj(ctx, objs[i], user)
-		if err != nil {
-			log.Error(ctx, "can't parse contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
-			return 0, nil, err
-		}
-		response[i] = temp
+	response, err := cm.BatchConvertContentObj(ctx, objs, user)
+	if err != nil {
+		log.Error(ctx, "can't parse contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
+		return 0, nil, err
 	}
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, response, false, user)
 	if err != nil {
@@ -343,7 +360,16 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 
 	return count, contentWithDetails, nil
 }
-
+func (cm *ContentModel) CreateContentTx(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
+	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := cm.CreateContent(ctx, tx, c, operator)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+	return cid.(string), err
+}
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
 	//检查数据信息是否正确
 	//valid the data
@@ -352,10 +378,10 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	log.Info(ctx, "create content")
 	if c.ContentType.IsAsset() {
 		// use operator's org id as asset publish scope, maybe not right...
-		c.PublishScope = operator.OrgID
+		c.PublishScope = []string{operator.OrgID}
 	}
 
-	err := cm.checkContentInfo(ctx, c, true)
+	err := cm.checkContentInfo(ctx, c)
 	if err != nil {
 		log.Warn(ctx, "check content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return "", err
@@ -377,6 +403,35 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 	pid, err := da.GetContentDA().CreateContent(ctx, tx, *obj)
 	if err != nil {
 		log.Error(ctx, "can't create contentdata", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
+		return "", err
+	}
+
+	//Insert content properties
+	err = cm.doCreateContentProperties(ctx, tx, entity.ContentProperties{
+		ContentID:   pid,
+		Program:     c.Program,
+		Subject:     c.Subject,
+		Category:    c.Category,
+		SubCategory: c.SubCategory,
+		Age:         c.Age,
+		Grade:       c.Grade,
+	}, false)
+	if err != nil {
+		log.Error(ctx, "doCreateContentProperties failed",
+			log.Err(err),
+			log.String("uid", operator.UserID),
+			log.Any("data", c))
+		return "", err
+	}
+
+	//Insert into visibility settings
+	err = cm.insertContentVisibilitySettings(ctx, tx, pid, c.PublishScope)
+	if err != nil {
+		log.Error(ctx, "insertContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("uid", operator.UserID),
+			log.String("pid", pid),
+			log.Any("data", c))
 		return "", err
 	}
 
@@ -403,7 +458,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 		return ErrInvalidContentType
 	}
 
-	err := cm.checkContentInfo(ctx, data, false)
+	err := cm.checkContentInfo(ctx, data)
 	if err != nil {
 		return err
 	}
@@ -436,6 +491,38 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 	if err != nil {
 		log.Error(ctx, "update contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID), log.Any("data", data))
 		return err
+	}
+	//Insert content properties
+	err = cm.doCreateContentProperties(ctx, tx, entity.ContentProperties{
+		ContentID:   cid,
+		Program:     data.Program,
+		Subject:     data.Subject,
+		Category:    data.Category,
+		SubCategory: data.SubCategory,
+		Age:         data.Age,
+		Grade:       data.Grade,
+	}, true)
+	if err != nil {
+		log.Error(ctx, "doCreateContentProperties failed",
+			log.Err(err),
+			log.String("uid", user.UserID),
+			log.Any("data", data))
+		return err
+	}
+
+	//若已发布，不能修改publishScope
+	//If it is already published, can't update publish scope
+	if content.PublishStatus == entity.ContentStatusDraft ||
+		content.PublishStatus == entity.ContentStatusRejected {
+		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, data.PublishScope)
+		if err != nil {
+			log.Error(ctx, "refreshContentVisibilitySettings failed",
+				log.Err(err),
+				log.String("cid", cid),
+				log.String("uid", user.UserID),
+				log.Any("data", data))
+			return err
+		}
 	}
 
 	da.GetContentRedis().CleanContentCache(ctx, []string{cid})
@@ -534,6 +621,18 @@ func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, ci
 	content.LockedBy = constant.LockedByNoBody
 	return da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 }
+
+func (cm *ContentModel) LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error) {
+	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		ncid, err := cm.LockContent(ctx, tx, cid, user)
+		if err != nil {
+			return nil, err
+		}
+		return ncid, nil
+	})
+	return ncid.(string), err
+}
+
 func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentLock, cid)
 	if err != nil {
@@ -609,6 +708,15 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	return ccid, nil
 
 }
+func (cm *ContentModel) PublishContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.PublishContentBulk(ctx, tx, ids, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	updateIDs := make([]string, 0)
 	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
@@ -623,7 +731,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 			log.Warn(ctx, "try to publish asset", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
 			continue
 		}
-		err = cm.doPublishContent(ctx, tx, contents[i], user)
+		err = cm.doPublishContent(ctx, tx, contents[i], nil, user)
 		if err != nil {
 			log.Error(ctx, "can't publish content", log.Err(err), log.Strings("ids", ids), log.String("uid", user.UserID))
 			return err
@@ -647,6 +755,16 @@ func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBConte
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	return cm.searchContent(ctx, tx, &condition, user)
 }
+func (cm *ContentModel) CopyContentTx(ctx context.Context, cid string, deep bool, op *entity.Operator) (string, error) {
+	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := cm.CopyContent(ctx, tx, cid, deep, op)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+	return id.(string), err
+}
 
 //TODO:For authed content => implement copy content => done
 func (cm *ContentModel) CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error) {
@@ -666,7 +784,7 @@ func (cm *ContentModel) CopyContent(ctx context.Context, tx *dbo.DBContext, cid 
 	//if deep copy & content is lesson plan copy sub contents
 	if deep && content.ContentType == entity.ContentTypePlan {
 		//get sub contents in plan
-		cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+		cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 		if err != nil {
 			return "", err
 		}
@@ -719,7 +837,6 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 	//check if user have copy permission
 	err := cm.CheckContentAuthorization(ctx, tx, &entity.Content{
 		ID:            content.ID,
-		PublishScope:  content.PublishScope,
 		PublishStatus: content.PublishStatus,
 		Author:        content.Author,
 		Org:           content.Org,
@@ -748,27 +865,27 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 	return id, nil
 }
 
-func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid, scope string, user *entity.Operator) error {
+func (cm *ContentModel) PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.PublishContent(ctx, tx, cid, scope, user)
+		return err
+	})
+}
+func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
 	}
 	if err != nil {
-		log.Error(ctx, "can't read contentdata for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "can't read contentdata for publishing", log.Err(err), log.String("cid", cid), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
 	}
 	if content.ContentType.IsAsset() {
 		return ErrInvalidContentType
 	}
 
-	//发布
-	//do publish
-	if scope != "" {
-		content.PublishScope = scope
-	}
-
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -782,7 +899,7 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 		return ErrInvalidContentType
 	}
 	//查看data
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -810,7 +927,7 @@ func (cm *ContentModel) validatePublishContentWithAssets(ctx context.Context, co
 func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//创建data对象
 	//create content data object
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -835,23 +952,27 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 	//创建assets
 	//Create assets
 	req := entity.CreateContentRequest{
-		ContentType:   entity.ContentTypeAssets,
-		Name:          content.Name,
-		Program:       content.Program,
-		Subject:       utils.StringToStringArray(ctx, content.Subject),
-		Developmental: utils.StringToStringArray(ctx, content.Developmental),
-		Skills:        utils.StringToStringArray(ctx, content.Skills),
-		Age:           utils.StringToStringArray(ctx, content.Age),
-		Grade:         utils.StringToStringArray(ctx, content.Grade),
-		Keywords:      utils.StringToStringArray(ctx, content.Keywords),
-		Description:   content.Description,
-		Thumbnail:     content.Thumbnail,
-		SuggestTime:   content.SuggestTime,
-		Data:          assetsDataJSON,
+		ContentType: entity.ContentTypeAssets,
+		Name:        content.Name,
+		Keywords:    utils.StringToStringArray(ctx, content.Keywords),
+		Description: content.Description,
+		Thumbnail:   content.Thumbnail,
+		SuggestTime: content.SuggestTime,
+		Data:        assetsDataJSON,
 	}
-	_, err = cm.CreateContent(ctx, tx, req, user)
+	pid, err := cm.CreateContent(ctx, tx, req, user)
 	if err != nil {
 		log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
+		return err
+	}
+
+	//copy content properties
+	err = cm.copyContentProperties(ctx, tx, content.ID, pid)
+	if err != nil {
+		log.Warn(ctx, "copyContentProperties failed", log.Err(err),
+			log.String("uid", user.UserID),
+			log.Any("content", content),
+			log.Any("req", req))
 		return err
 	}
 
@@ -871,7 +992,7 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//创建data对象
 	//create content data object
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -897,37 +1018,45 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 		}
 		//创建assets
 		req := entity.CreateContentRequest{
-			ContentType:   entity.ContentTypeAssets,
-			Name:          content.Name,
-			Program:       content.Program,
-			Subject:       utils.StringToStringArray(ctx, content.Subject),
-			Developmental: utils.StringToStringArray(ctx, content.Developmental),
-			Skills:        utils.StringToStringArray(ctx, content.Skills),
-			Age:           utils.StringToStringArray(ctx, content.Age),
-			Grade:         utils.StringToStringArray(ctx, content.Grade),
-			Keywords:      append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
-			Description:   content.Description,
-			Thumbnail:     "",
-			SuggestTime:   0,
-			Data:          assetsDataJSON,
+			ContentType: entity.ContentTypeAssets,
+			Name:        content.Name,
+			Keywords:    append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
+			Description: content.Description,
+			Thumbnail:   "",
+			SuggestTime: 0,
+			Data:        assetsDataJSON,
 		}
-		_, err = cm.CreateContent(ctx, tx, req, user)
+		pid, err := cm.CreateContent(ctx, tx, req, user)
 		if err != nil {
 			log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
+			return err
+		}
+		err = cm.copyContentProperties(ctx, tx, content.ID, pid)
+		if err != nil {
+			log.Warn(ctx, "copyContentProperties failed",
+				log.Err(err),
+				log.String("uid", user.UserID),
+				log.Any("content", content),
+				log.Any("req", req))
 			return err
 		}
 	}
 	return nil
 }
 
-func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope string, user *entity.Operator) error {
+func (cm *ContentModel) PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return cm.PublishContentWithAssets(ctx, tx, cid, scope, user)
+	})
+}
+func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return ErrNoContent
 	}
 	if err != nil {
-		log.Error(ctx, "can't read content data for publishing", log.Err(err), log.String("cid", cid), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "can't read content data for publishing", log.Err(err), log.String("cid", cid), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
 	}
 	switch content.ContentType {
@@ -951,7 +1080,15 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 	da.GetContentRedis().CleanContentCache(ctx, []string{content.ID, content.SourceID})
 	return nil
 }
-
+func (cm *ContentModel) DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.DeleteContentBulk(ctx, tx, ids, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	deletedIDs := make([]string, 0)
 	deletedIDs = append(deletedIDs, ids...)
@@ -976,17 +1113,11 @@ func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 
-func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
+func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.validatePublishContentWithAssets(ctx, content, user)
 	if err != nil {
-		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
-	}
-
-	//修改发布状态
-	//update publish status
-	if scope != "" {
-		content.PublishScope = scope
 	}
 
 	//准备发布（1.创建assets，2.修改contentdata）
@@ -998,7 +1129,7 @@ func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.D
 
 	//发布
 	//do publish
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -1006,19 +1137,15 @@ func (cm *ContentModel) publishMaterialWithAssets(ctx context.Context, tx *dbo.D
 	return nil
 }
 
-func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
+func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.validatePublishContentWithAssets(ctx, content, user)
 	if err != nil {
-		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
-	}
-	//Update publish status if indicates
-	if scope != "" {
-		content.PublishScope = scope
 	}
 
 	//create content data object
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", user.UserID), log.Any("data", content))
 		return ErrInvalidContentData
@@ -1045,45 +1172,42 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		}
 		//创建assets
 		req := entity.CreateContentRequest{
-			ContentType:   entity.ContentTypeAssets,
-			Name:          content.Name,
-			Program:       content.Program,
-			Subject:       utils.StringToStringArray(ctx, content.Subject),
-			Developmental: utils.StringToStringArray(ctx, content.Developmental),
-			Skills:        utils.StringToStringArray(ctx, content.Skills),
-			Age:           utils.StringToStringArray(ctx, content.Age),
-			Grade:         utils.StringToStringArray(ctx, content.Grade),
-			Keywords:      append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
-			Description:   content.Description,
-			Thumbnail:     "",
-			SuggestTime:   0,
-			Data:          assetsDataJSON,
+			ContentType: entity.ContentTypeAssets,
+			Name:        content.Name,
+			Keywords:    append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
+			Description: content.Description,
+			Thumbnail:   "",
+			SuggestTime: 0,
+			Data:        assetsDataJSON,
 		}
-		_, err = cm.CreateContent(ctx, tx, req, user)
+		pid, err := cm.CreateContent(ctx, tx, req, user)
 		if err != nil {
 			log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
 			return err
 		}
+		err = cm.copyContentProperties(ctx, tx, content.ID, pid)
+		if err != nil {
+			log.Warn(ctx, "copyContentProperties failed",
+				log.Err(err),
+				log.String("uid", user.UserID),
+				log.Any("content", content),
+				log.Any("req", req))
+			return err
+		}
 	}
 	//do publish
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (cm *ContentModel) publishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope string, user *entity.Operator) error {
+func (cm *ContentModel) publishPlanWithAssets(ctx context.Context, tx *dbo.DBContext, content *entity.Content, scope []string, user *entity.Operator) error {
 	err := cm.validatePublishContentWithAssets(ctx, content, user)
 	if err != nil {
-		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.String("scope", scope), log.String("uid", user.UserID))
+		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
-	}
-
-	//修改发布状态
-	//update publish status
-	if scope != "" {
-		content.PublishScope = scope
 	}
 
 	//准备发布（1.创建assets，2.修改contentdata）
@@ -1095,7 +1219,7 @@ func (cm *ContentModel) publishPlanWithAssets(ctx context.Context, tx *dbo.DBCon
 
 	//发布
 	//do publish
-	err = cm.doPublishContent(ctx, tx, content, user)
+	err = cm.doPublishContent(ctx, tx, content, scope, user)
 	if err != nil {
 		return err
 	}
@@ -1155,7 +1279,15 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	}
 	return nil
 }
-
+func (cm *ContentModel) DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.DeleteContent(ctx, tx, cid, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -1194,7 +1326,6 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 	//check permission
 	err = cm.CheckContentAuthorization(ctx, tx, &entity.Content{
 		ID:            content.ID,
-		PublishScope:  content.PublishScope,
 		PublishStatus: content.PublishStatus,
 		Author:        content.Author,
 		Org:           content.Org,
@@ -1244,7 +1375,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 	}
 	contentInfoMap := make(map[string][]*entity.SubContentsWithName)
 	for _, obj := range objs {
-		cd, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+		cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 		if err != nil {
 			log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 			return nil, err
@@ -1254,7 +1385,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *LessonData:
 			//存在子内容，则返回子内容
 			//if the content contains sub contents, return sub contents
-			content, err := ConvertContentObj(ctx, obj, user)
+			content, err := cm.ConvertContentObj(ctx, obj, user)
 			if err != nil {
 				log.Error(ctx, "can't parse contentdata", log.Err(err))
 				return nil, ErrParseContentDataFailed
@@ -1272,7 +1403,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 			ret := make([]*entity.SubContentsWithName, 0)
 			v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 				if l.Material != nil {
-					cd0, err := CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+					cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
 					if err != nil {
 						log.Error(ctx, "can't parse sub content data",
 							log.Err(err),
@@ -1332,7 +1463,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		}
 	}
 
-	cd, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+	cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 	if err != nil {
 		log.Error(ctx, "can't unmarshal contentdata", log.Err(err), log.Any("content", obj))
 		return nil, err
@@ -1342,7 +1473,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *LessonData:
 		//存在子内容，则返回子内容
 		//if the content contains sub contents, return sub contents
-		content, err := ConvertContentObj(ctx, obj, user)
+		content, err := cm.ConvertContentObj(ctx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -1360,7 +1491,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 		ret := make([]*entity.SubContentsWithName, 0)
 		v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 			if l.Material != nil {
-				cd0, err := CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
+				cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
 				if err != nil {
 					log.Error(ctx, "can't parse sub content data",
 						log.Err(err),
@@ -1450,7 +1581,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 			log.Error(ctx, "can't read contentdata", log.Err(err))
 			return nil, err
 		}
-		content, err = ConvertContentObj(ctx, obj, user)
+		content, err = cm.ConvertContentObj(ctx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -1460,7 +1591,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 
 	//补全相关内容
 	//fill related data
-	contentData, err := CreateContentData(ctx, content.ContentType, content.Data)
+	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -1613,14 +1744,10 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
-	res := make([]*entity.ContentInfo, len(data))
-	for i := range data {
-		temp, err := ConvertContentObj(ctx, data[i], user)
-		if err != nil {
-			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.String("id", data[i].ID), log.Err(err))
-			return nil, ErrReadContentFailed
-		}
-		res[i] = temp
+	res, err := cm.BatchConvertContentObj(ctx, data, user)
+	if err != nil {
+		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Any("data", data), log.Err(err))
+		return nil, ErrReadContentFailed
 	}
 	res = append(res, cachedContent...)
 	contentWithDetails, err := cm.buildContentWithDetails(ctx, res, true, user)
@@ -1651,7 +1778,7 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	if err != nil {
 		return 0, nil, err
 	}
-	condition.Scope = scope
+	condition.VisibilitySettings = scope
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
 	condition.JoinUserIDList = searchUserIDs
 	//cm.addUserCondition(ctx, &condition, user)
@@ -1739,7 +1866,7 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 		log.Info(ctx, "no valid scope", log.Strings("scopes", scope), log.Any("user", user))
 		scope = []string{constant.NoSearchItem}
 	}
-	condition.Scope = scope
+	condition.VisibilitySettings = scope
 
 	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
@@ -1755,7 +1882,7 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
 		scope = []string{constant.NoSearchItem}
 	}
-	condition.Scope = scope
+	condition.VisibilitySettings = scope
 
 	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
@@ -1789,6 +1916,73 @@ func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, co
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
+}
+
+func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
+	alreadyScopes, err := da.GetContentDA().GetContentVisibilitySettings(ctx, tx, cid)
+	if err != nil {
+		log.Error(ctx,
+			"GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("scope", scope))
+		return err
+	}
+	pendingAddScopes := cm.checkDiff(ctx, alreadyScopes, scope)
+	pendingDeleteScopes := cm.checkDiff(ctx, scope, alreadyScopes)
+
+	err = da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, pendingAddScopes)
+	if err != nil {
+		log.Error(ctx,
+			"BatchCreateContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("alreadyScopes", alreadyScopes),
+			log.Strings("scope", scope),
+			log.Strings("pendingAddScopes", pendingAddScopes))
+		return err
+	}
+	err = da.GetContentDA().BatchDeleteContentVisibilitySettings(ctx, tx, cid, pendingDeleteScopes)
+	if err != nil {
+		log.Error(ctx,
+			"BatchDeleteContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("alreadyScopes", alreadyScopes),
+			log.Strings("scope", scope),
+			log.Strings("pendingDeleteScopes", pendingDeleteScopes))
+		return err
+	}
+	return nil
+}
+
+func (cm *ContentModel) checkDiff(ctx context.Context, base []string, compare []string) []string {
+	sourceMap := make(map[string]bool)
+	ret := make([]string, 0)
+	for i := range base {
+		sourceMap[base[i]] = true
+	}
+	for i := range compare {
+		_, exist := sourceMap[compare[i]]
+		if !exist {
+			ret = append(ret, compare[i])
+		}
+	}
+	return ret
+}
+
+func (cm *ContentModel) insertContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
+	//Insert visibility settings
+	err := da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, scope)
+	if err != nil {
+		log.Error(ctx,
+			"BatchCreateContentVisibilitySettings failed",
+			log.Err(err),
+			log.Strings("scope", scope),
+			log.String("cid", cid))
+		return err
+	}
+	return nil
 }
 
 func (cm *ContentModel) getVisibleContentOutcomeByIDs(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error) {
@@ -1838,7 +2032,7 @@ func (cm *ContentModel) GetVisibleContentOutcomeByID(ctx context.Context, tx *db
 	ret := make([]string, 0)
 	//if content is a plan, collect outcomes from materials
 	if content.ContentType == entity.ContentTypePlan {
-		contentData, err := CreateContentData(ctx, entity.ContentTypePlan, content.Data)
+		contentData, err := cm.CreateContentData(ctx, entity.ContentTypePlan, content.Data)
 		if err != nil {
 			log.Error(ctx, "can't parse content data",
 				log.Err(err),
@@ -1880,7 +2074,7 @@ func (cm *ContentModel) GetContentOutcomeByID(ctx context.Context, tx *dbo.DBCon
 	ret := cm.parseContentOutcomes(ctx, content)
 	//if content is a lesson, add materials outcomes
 	if content.ContentType == entity.ContentTypePlan {
-		data, err := CreateContentData(ctx, content.ContentType, content.Data)
+		data, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 		if err != nil {
 			log.Error(ctx, "parse content data failed",
 				log.Err(err),
@@ -1920,7 +2114,7 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 		return nil, ErrInvalidContentType
 	}
 
-	cd, err := CreateContentData(ctx, content.ContentType, content.Data)
+	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
 		log.Error(ctx, "can't parse content data", log.Err(err), log.String("cid", cid), log.Int("contentType", int(content.ContentType)), log.String("data", content.Data))
 		return nil, err
@@ -2083,14 +2277,14 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
 		scope = []string{constant.NoSearchItem}
 	}
-	condition1.Scope = scope
+	condition1.VisibilitySettings = scope
 	//condition2 others
 
 	condition2.PublishStatus = cm.filterPublishedPublishStatus(ctx, condition2.PublishStatus)
 
 	//filter visible
 	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
-		condition2.Scope = []string{user.OrgID}
+		condition2.VisibilitySettings = []string{user.OrgID}
 	} else {
 		scopes, err := cm.ListVisibleScopes(ctx, visiblePermissionPublished, user)
 		if err != nil {
@@ -2100,7 +2294,7 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 			log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
 			scopes = []string{constant.NoSearchItem}
 		}
-		condition2.Scope = scopes
+		condition2.VisibilitySettings = scopes
 	}
 
 	//condition2.Scope = scopes
@@ -2127,6 +2321,135 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 	return nil
 }
 
+func (cm *ContentModel) buildVisibilitySettingsMap(ctx context.Context, contentList []*entity.ContentInfo) (map[string][]string, error) {
+	contentIDs := make([]string, len(contentList))
+	for i := range contentList {
+		contentIDs[i] = contentList[i].ID
+	}
+
+	visibilitySettings, err := da.GetContentDA().SearchContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), &da.ContentVisibilitySettingsCondition{
+		ContentIDs: contentIDs,
+	})
+	if err != nil {
+		log.Error(ctx, "GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.Any("contentList", contentList))
+		return nil, err
+	}
+
+	ret := make(map[string][]string)
+	for i := range visibilitySettings {
+		ret[visibilitySettings[i].ContentID] = append(ret[visibilitySettings[i].ContentID], visibilitySettings[i].VisibilitySetting)
+	}
+	return ret, nil
+}
+
+func (cm *ContentModel) doCreateContentProperties(ctx context.Context, tx *dbo.DBContext, c entity.ContentProperties, refresh bool) error {
+	propertyDA := da.GetContentPropertyDA()
+
+	if refresh {
+		//delete old properties
+		err := propertyDA.CleanByContentID(ctx, tx, c.ContentID)
+		if err != nil {
+			log.Error(ctx, "CleanByContentID failed",
+				log.Err(err),
+				log.String("ContentID", c.ContentID),
+				log.Any("data", c))
+			return err
+		}
+	}
+	size := len(c.Grade) + len(c.Subject) + len(c.Age) + len(c.Category) + len(c.SubCategory)
+	properties := make([]*entity.ContentProperty, size+1)
+	index := 0
+	for i := range c.Grade {
+		properties[index] = &entity.ContentProperty{
+			PropertyType: entity.ContentPropertyTypeGrade,
+			ContentID:    c.ContentID,
+			PropertyID:   c.Grade[i],
+			Sequence:     i,
+		}
+		index++
+	}
+	for i := range c.Subject {
+		properties[index] = &entity.ContentProperty{
+			PropertyType: entity.ContentPropertyTypeSubject,
+			ContentID:    c.ContentID,
+			PropertyID:   c.Subject[i],
+			Sequence:     i,
+		}
+		index++
+	}
+	for i := range c.Age {
+		properties[index] = &entity.ContentProperty{
+			PropertyType: entity.ContentPropertyTypeAge,
+			ContentID:    c.ContentID,
+			PropertyID:   c.Age[i],
+			Sequence:     i,
+		}
+		index++
+	}
+	for i := range c.Category {
+		properties[index] = &entity.ContentProperty{
+			PropertyType: entity.ContentPropertyTypeCategory,
+			ContentID:    c.ContentID,
+			PropertyID:   c.Category[i],
+			Sequence:     i,
+		}
+		index++
+	}
+	for i := range c.SubCategory {
+		properties[index] = &entity.ContentProperty{
+			PropertyType: entity.ContentPropertyTypeSubCategory,
+			ContentID:    c.ContentID,
+			PropertyID:   c.SubCategory[i],
+			Sequence:     i,
+		}
+		index++
+	}
+	properties[index] = &entity.ContentProperty{
+		PropertyType: entity.ContentPropertyTypeProgram,
+		ContentID:    c.ContentID,
+		PropertyID:   c.Program,
+		Sequence:     0,
+	}
+
+	err := propertyDA.BatchAdd(ctx, tx, properties)
+	if err != nil {
+		log.Error(ctx, "BatchAdd failed",
+			log.Err(err),
+			log.String("ContentID", c.ContentID),
+			log.Any("properties", properties),
+			log.Any("data", c))
+		return err
+	}
+	return nil
+}
+
+func (cm *ContentModel) copyContentProperties(ctx context.Context, tx *dbo.DBContext, cid string, newCid string) error {
+	propertyDA := da.GetContentPropertyDA()
+
+	contentProperties, err := propertyDA.BatchGetByContentIDList(ctx, tx, []string{cid})
+	if err != nil {
+		log.Error(ctx, "BatchGetByContentIDList failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.String("newCid", newCid))
+		return err
+	}
+
+	for i := range contentProperties {
+		contentProperties[i].ContentID = newCid
+	}
+	err = propertyDA.BatchAdd(ctx, tx, contentProperties)
+	if err != nil {
+		log.Error(ctx, "BatchAdd failed",
+			log.Err(err),
+			log.String("ContentID", newCid),
+			log.Any("contentProperties", contentProperties))
+		return err
+	}
+	return nil
+}
 func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList []*entity.ContentInfo, outComes bool, user *entity.Operator) ([]*entity.ContentInfoWithDetails, error) {
 	orgName := ""
 	orgProvider := external.GetOrganizationServiceProvider()
@@ -2161,15 +2484,23 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	lessonTypeIDs := make([]string, 0)
 	userIDs := make([]string, 0)
 
+	visibilitySettingsMap, err := cm.buildVisibilitySettingsMap(ctx, contentList)
+	if err != nil {
+		log.Error(ctx, "buildVisibilitySettingsMap failed",
+			log.Err(err),
+			log.Any("contentList", contentList))
+		return nil, err
+	}
+
 	for i := range contentList {
 		programIDs = append(programIDs, contentList[i].Program)
 		subjectIDs = append(subjectIDs, contentList[i].Subject...)
-		developmentalIDs = append(developmentalIDs, contentList[i].Developmental...)
-		skillsIDs = append(skillsIDs, contentList[i].Skills...)
+		developmentalIDs = append(developmentalIDs, contentList[i].Category...)
+		skillsIDs = append(skillsIDs, contentList[i].SubCategory...)
 		ageIDs = append(ageIDs, contentList[i].Age...)
 		gradeIDs = append(gradeIDs, contentList[i].Grade...)
 
-		scopeIDs = append(scopeIDs, contentList[i].PublishScope)
+		scopeIDs = append(scopeIDs, visibilitySettingsMap[contentList[i].ID]...)
 		lessonTypeIDs = append(lessonTypeIDs, contentList[i].LessonType)
 		userIDs = append(userIDs, contentList[i].Author)
 		userIDs = append(userIDs, contentList[i].Creator)
@@ -2293,19 +2624,19 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	contentDetailsList := make([]*entity.ContentInfoWithDetails, len(contentList))
 	for i := range contentList {
 		subjectNames := make([]string, len(contentList[i].Subject))
-		developmentalNames := make([]string, len(contentList[i].Developmental))
-		skillsNames := make([]string, len(contentList[i].Skills))
+		developmentalNames := make([]string, len(contentList[i].Category))
+		skillsNames := make([]string, len(contentList[i].SubCategory))
 		ageNames := make([]string, len(contentList[i].Age))
 		gradeNames := make([]string, len(contentList[i].Grade))
 
 		for j := range contentList[i].Subject {
 			subjectNames[j] = subjectNameMap[contentList[i].Subject[j]]
 		}
-		for j := range contentList[i].Developmental {
-			developmentalNames[j] = developmentalNameMap[contentList[i].Developmental[j]]
+		for j := range contentList[i].Category {
+			developmentalNames[j] = developmentalNameMap[contentList[i].Category[j]]
 		}
-		for j := range contentList[i].Skills {
-			skillsNames[j] = skillsNameMap[contentList[i].Skills[j]]
+		for j := range contentList[i].SubCategory {
+			skillsNames[j] = skillsNameMap[contentList[i].SubCategory[j]]
 		}
 		for j := range contentList[i].Age {
 			ageNames[j] = ageNameMap[contentList[i].Age[j]]
@@ -2321,20 +2652,24 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
 		}
-
+		publishScopeNames := make([]string, len(visibilitySettingsMap[contentList[i].ID]))
+		contentList[i].PublishScope = visibilitySettingsMap[contentList[i].ID]
+		for i := range contentList[i].PublishScope {
+			publishScopeNames[i] = publishScopeNameMap[contentList[i].PublishScope[i]]
+		}
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
-			ContentInfo:       *contentList[i],
-			ContentTypeName:   contentList[i].ContentType.Name(),
-			ProgramName:       programNameMap[contentList[i].Program],
-			SubjectName:       subjectNames,
-			DevelopmentalName: developmentalNames,
-			SkillsName:        skillsNames,
-			AgeName:           ageNames,
-			GradeName:         gradeNames,
-			LessonTypeName:    lessonTypeNameMap[contentList[i].LessonType],
-			PublishScopeName:  publishScopeNameMap[contentList[i].PublishScope],
-			OrgName:           orgName,
+			ContentInfo:      *contentList[i],
+			ContentTypeName:  contentList[i].ContentType.Name(),
+			ProgramName:      programNameMap[contentList[i].Program],
+			SubjectName:      subjectNames,
+			CategoryName:     developmentalNames,
+			SubCategoryName:  skillsNames,
+			AgeName:          ageNames,
+			GradeName:        gradeNames,
+			LessonTypeName:   lessonTypeNameMap[contentList[i].LessonType],
+			PublishScopeName: publishScopeNames,
+			OrgName:          orgName,
 			//AuthorName:        userNameMap[contentList[i].Author],
 			CreatorName:     userNameMap[contentList[i].Creator],
 			OutcomeEntities: outcomeEntities,

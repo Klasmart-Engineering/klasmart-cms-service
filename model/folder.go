@@ -879,10 +879,10 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		return nil, ErrNoFolder
 	}
 	for i := range users {
-		if users[i].Valid && users[i].ID == result.Creator{
+		if users[i].Valid && users[i].ID == result.Creator {
 			result.CreatorName = users[i].Name
 		}
-		if users[i].Valid && users[i].ID == result.Editor{
+		if users[i].Valid && users[i].ID == result.Editor {
 			result.EditorName = users[i].Name
 		}
 	}
@@ -930,7 +930,7 @@ func (f *FolderModel) checkMoveItem(ctx context.Context, folder *entity.FolderIt
 
 	return nil
 }
-func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *entity.FolderItem) *entity.FolderItemInfo{
+func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *entity.FolderItem) *entity.FolderItemInfo {
 	return &entity.FolderItemInfo{
 		ID:          item.ID,
 		OwnerType:   item.OwnerType,
@@ -953,10 +953,9 @@ func (f *FolderModel) folderItemToFolderItemInfo(ctx context.Context, item *enti
 	}
 }
 
-
-func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items []*entity.FolderItem) []*entity.FolderItemInfo{
+func (f *FolderModel) folderItemToFolderItemInfoBatch(ctx context.Context, items []*entity.FolderItem) []*entity.FolderItemInfo {
 	ret := make([]*entity.FolderItemInfo, len(items))
-	for i := range items{
+	for i := range items {
 		ret[i] = &entity.FolderItemInfo{
 			ID:          items[i].ID,
 			OwnerType:   items[i].OwnerType,
@@ -1622,18 +1621,18 @@ func (f *FolderModel) prepareCreateFolderParams(ctx context.Context, req entity.
 	now := time.Now().Unix()
 	id := utils.NewID()
 	return &entity.FolderItem{
-		ID:        id,
-		ItemType:  entity.FolderItemTypeFolder,
-		OwnerType: req.OwnerType,
-		Owner:     owner,
-		ParentID:  req.ParentID,
-		Editor:    operator.UserID,
-		Name:      req.Name,
+		ID:          id,
+		ItemType:    entity.FolderItemTypeFolder,
+		OwnerType:   req.OwnerType,
+		Owner:       owner,
+		ParentID:    req.ParentID,
+		Editor:      operator.UserID,
+		Name:        req.Name,
 		Description: req.Description,
-		Keywords: strings.Join(req.Keywords, constant.StringArraySeparator),
-		DirPath:   path,
-		Thumbnail: req.Thumbnail,
-		Partition: req.Partition,
+		Keywords:    strings.Join(req.Keywords, constant.StringArraySeparator),
+		DirPath:     path,
+		Thumbnail:   req.Thumbnail,
+		Partition:   req.Partition,
 		//VisibilitySetting: constant.NoVisibilitySetting,
 		Creator:  operator.UserID,
 		CreateAt: now,
@@ -1762,7 +1761,7 @@ func (f *FolderModel) checkDuplicateFolderNameForUpdate(ctx context.Context, nam
 						log.Any("condition", condition))
 					return ErrDuplicateFolderName
 				}
-			}else{
+			} else {
 				return ErrDuplicateFolderName
 			}
 		}
@@ -1910,7 +1909,7 @@ func (f *FolderModel) rootFolder(ctx context.Context, ownerType entity.OwnerType
 type FolderItem struct {
 	Name              string
 	Thumbnail         string
-	VisibilitySetting string
+	VisibilitySetting []string
 }
 
 func (f *FolderModel) handleMoveSharedContentFolderRecursion(ctx context.Context, tx *dbo.DBContext, contentLinks []string, fromRootFolder, distFolder *entity.FolderItem, operator *entity.Operator) error {

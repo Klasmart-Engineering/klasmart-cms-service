@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,7 +27,7 @@ type CreateFolderResponse struct {
 	ID string `json:"id"`
 }
 type PublishContentRequest struct {
-	Scope string `json:"scope"`
+	Scope []string `json:"scope"`
 }
 
 // @Summary createContent
@@ -63,7 +62,8 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 
-	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
+	cid, err := model.GetContentModel().CreateContentTx(ctx, data, op)
+
 	switch err {
 	case model.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
@@ -128,14 +128,7 @@ func (s *Server) copyContent(c *gin.Context) {
 	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	// 	return
 	// }
-	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		cid, err := model.GetContentModel().CopyContent(ctx, tx, data.ContentID, data.Deep, op)
-		if err != nil {
-			return "", err
-		}
-		return cid, nil
-	})
-
+	cid, err := model.GetContentModel().CopyContentTx(ctx, data.ContentID, data.Deep, op)
 	switch err {
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -169,18 +162,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIDList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
-	//if err != nil {
-	//	log.Error(ctx, "check author failed", log.Err(err))
-	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	//	return
-	//}
-	////不是作者，则检查权限
-	////if not author, check the permission
-	//if !isAuthor {
-	//
-	//}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, "", op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -190,13 +172,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := model.GetContentModel().PublishContentBulk(ctx, tx, ids.ID, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().PublishContentBulkTx(ctx, ids.ID, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, L(GeneralUnknown))
@@ -230,8 +206,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -241,7 +216,8 @@ func (s *Server) publishContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetContentModel().PublishContent(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
+	err = model.GetContentModel().PublishContentTx(ctx, cid, data.Scope, op)
+
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -275,7 +251,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -284,9 +260,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		return model.GetContentModel().PublishContentWithAssets(ctx, tx, cid, data.Scope, op)
-	})
+	err = model.GetContentModel().PublishContentWithAssetsTx(ctx, cid, data.Scope, op)
 
 	switch err {
 	case model.ErrNoContent:
@@ -446,14 +420,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		return
 	}
 
-	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		ncid, err := model.GetContentModel().LockContent(ctx, tx, cid, op)
-		if err != nil {
-			return nil, err
-		}
-		return ncid, nil
-	})
-
+	ncid, err := model.GetContentModel().LockContentTx(ctx, cid, op)
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
 		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
@@ -509,13 +476,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err = model.GetContentModel().DeleteContentBulk(ctx, tx, ids.ID, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().DeleteContentBulkTx(ctx, ids.ID, op)
 
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
@@ -558,13 +519,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().DeleteContentTx(ctx, cid, op)
 
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
@@ -923,7 +878,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	}
 	if scope != "" {
 		scopes := strings.Split(scope, constant.StringArraySeparator)
-		condition.Scope = append(condition.Scope, scopes...)
+		condition.VisibilitySettings = append(condition.VisibilitySettings, scopes...)
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)

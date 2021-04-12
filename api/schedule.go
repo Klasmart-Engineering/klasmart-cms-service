@@ -793,7 +793,7 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 		}
 		condition.RelationIDs = entity.NullStrings{
 			Strings: relationIDs,
-			Valid:   true,
+			Valid:   len(relationIDs) > 0,
 		}
 	}
 	filterOption := c.Query("filter_option")

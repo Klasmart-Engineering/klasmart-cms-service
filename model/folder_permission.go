@@ -13,6 +13,7 @@ import (
 var (
 	ErrUnknownRegion = errors.New("unknown region")
 )
+
 type IFolderPermissionModel interface {
 	CheckFolderOperatorPermission(ctx context.Context, op *entity.Operator) (bool, error)
 	CheckShareFolderOperatorPermission(ctx context.Context, op *entity.Operator) (bool, error)
@@ -49,7 +50,7 @@ func (s *FolderPermissionModel) CheckShareFolderOperatorPermission(ctx context.C
 		}
 		//有permission，直接返回
 		//has permission
-		for k,v := range hasPermission {
+		for k, v := range hasPermission {
 			if !v {
 				log.Warn(ctx, "No permission",
 					log.String("Permission", string(k)))
