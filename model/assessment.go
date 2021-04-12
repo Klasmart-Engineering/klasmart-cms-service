@@ -97,8 +97,7 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			attendanceIDs = append(attendanceIDs, item.AttendanceID)
 		}
 
-		studentService := external.GetStudentServiceProvider()
-		students, err := studentService.BatchGet(ctx, operator, attendanceIDs)
+		studentMap, err := external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, attendanceIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get student failed",
 				log.Err(err),
@@ -106,10 +105,6 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 				log.Strings("attendance_ids", attendanceIDs),
 			)
 			return nil, err
-		}
-		studentMap := map[string]string{}
-		for _, student := range students {
-			studentMap[student.ID] = student.Name
 		}
 
 		for _, item := range assessmentAttendances {
@@ -123,7 +118,7 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 
 	// fill subject
 	{
-		nameMap, err := a.getSubjectNameMap(ctx, operator, []string{assessment.SubjectID})
+		nameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, []string{assessment.SubjectID})
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get subject name map failed",
 				log.Err(err),
@@ -364,7 +359,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		teacherIDs = append(teacherIDs, itemTeacherIDs...)
 	}
 
-	subjectNameMap, err := a.getSubjectNameMap(ctx, operator, subjectIDs)
+	subjectNameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get subject name map failed",
 			log.Err(err),
@@ -373,7 +368,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		return nil, err
 	}
 
-	programNameMap, err := a.getProgramNameMap(ctx, operator, programIDs)
+	programNameMap, err := external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get program name map failed",
 			log.Err(err),
@@ -382,7 +377,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		return nil, err
 	}
 
-	teacherNameMap, err := a.getTeacherNameMap(ctx, operator, teacherIDs)
+	teacherNameMap, err := external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get teacher name map failed",
 			log.Err(err),
@@ -427,78 +422,6 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	}
 
 	return &result, err
-}
-
-func (a *assessmentModel) getProgramNameMap(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]string, error) {
-	programNameMap := map[string]string{}
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
-	if err != nil {
-		log.Error(ctx, "list assessments: batch get program failed",
-			log.Err(err),
-			log.Strings("program_ids", programIDs),
-		)
-		return nil, err
-	}
-	for _, program := range programs {
-		programNameMap[program.ID] = program.Name
-	}
-	return programNameMap, nil
-}
-
-func (a *assessmentModel) getSubjectNameMap(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]string, error) {
-	subIDs := utils.SliceDeduplicationExcludeEmpty(subjectIDs)
-	subjectNameMap := map[string]string{}
-	items, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subIDs)
-	if err != nil {
-		log.Error(ctx, "list assessments: batch get subject failed",
-			log.Err(err),
-			log.Strings("subject_ids", subjectIDs),
-			log.Strings("subIDs", subIDs),
-		)
-		return nil, err
-	}
-	for _, item := range items {
-		subjectNameMap[item.ID] = item.Name
-	}
-	return subjectNameMap, nil
-}
-
-func (a *assessmentModel) getTeacherNameMap(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]string, error) {
-	teacherNameMap := map[string]string{}
-	teacherNameService := external.GetTeacherServiceProvider()
-	items, err := teacherNameService.BatchGet(ctx, operator, teacherIDs)
-	if err != nil {
-		log.Error(ctx, "list assessments: batch get teacher failed",
-			log.Err(err),
-			log.Strings("teacher_ids", teacherIDs),
-		)
-		return nil, err
-	}
-	for _, item := range items {
-		teacherNameMap[item.ID] = item.Name
-	}
-	return teacherNameMap, nil
-}
-
-func (a *assessmentModel) getClassNameMap(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]string, error) {
-	classNameMap := map[string]string{}
-	classService := external.GetClassServiceProvider()
-	items, err := classService.BatchGet(ctx, operator, classIDs)
-	if err != nil {
-		log.Error(ctx, "get class name map: batch get class failed",
-			log.Err(err),
-			log.Strings("class_ids", classIDs),
-		)
-		return nil, err
-	}
-	for i, item := range items {
-		if item.Valid {
-			classNameMap[item.ID] = item.Name
-		} else {
-			log.Warn(ctx, "invalid item", log.Strings("class_ids", classIDs), log.Int("index", i))
-		}
-	}
-	return classNameMap, nil
 }
 
 func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error) {
@@ -592,7 +515,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 		CreateAt:     nowUnix,
 		UpdateAt:     nowUnix,
 	}
-	classNameMap, err := a.getClassNameMap(ctx, operator, []string{schedule.ClassID})
+	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID})
 	if err != nil {
 		log.Error(ctx, "add assessment: get class name map failed",
 			log.Err(err),

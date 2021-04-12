@@ -144,6 +144,6 @@ func (s *MapperImpl) loadOurPrograms(ctx context.Context) error {
 	return nil
 }
 
-func (s MapperImpl) defaultProgram() (string, error) {
+func (s *MapperImpl) defaultProgram() (string, error) {
 	return "7565ae11-8130-4b7d-ac24-1d9dd6f792f2", nil
 }

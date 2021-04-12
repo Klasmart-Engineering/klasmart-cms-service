@@ -17,6 +17,8 @@ import (
 type SchoolServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*School, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableSchool, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error)
 	GetByOrganizationID(ctx context.Context, operator *entity.Operator, organizationID string, options ...APOption) ([]*School, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*School, error)
@@ -107,6 +109,34 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 		log.Any("schools", schools))
 
 	return schools, nil
+}
+
+func (s AmsSchoolService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error) {
+	ages, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*NullableSchool{}, err
+	}
+
+	dict := make(map[string]*NullableSchool, len(ages))
+	for _, age := range ages {
+		dict[age.ID] = age
+	}
+
+	return dict, nil
+}
+
+func (s AmsSchoolService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	ages, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(ages))
+	for _, age := range ages {
+		dict[age.ID] = age.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error) {

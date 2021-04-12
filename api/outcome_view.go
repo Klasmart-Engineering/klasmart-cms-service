@@ -244,42 +244,42 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 	author, _ := external.GetUserServiceProvider().Get(ctx, operator, outcome.AuthorID)
 	view.AuthorName = author.Name
 	pIDs := strings.Split(outcome.Program, ",")
-	pNames := getProgramsName(ctx, operator, pIDs)
+	pNames, _ := external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, pIDs)
 	view.Program = make([]Program, len(pIDs))
 	for k, id := range pIDs {
 		view.Program[k].ProgramID = id
 		view.Program[k].ProgramName = pNames[id]
 	}
 	sIDs := strings.Split(outcome.Subject, ",")
-	sNames := getSubjectsName(ctx, operator, sIDs)
+	sNames, _ := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, sIDs)
 	view.Subject = make([]Subject, len(sIDs))
 	for k, id := range sIDs {
 		view.Subject[k].SubjectID = id
 		view.Subject[k].SubjectName = sNames[id]
 	}
 	dIDs := strings.Split(outcome.Developmental, ",")
-	dNames := getDevelopmentalsName(ctx, operator, dIDs)
+	categoryNames, _ := external.GetCategoryServiceProvider().BatchGetNameMap(ctx, operator, dIDs)
 	view.Developmental = make([]Developmental, len(dIDs))
 	for k, id := range dIDs {
 		view.Developmental[k].DevelopmentalID = id
-		view.Developmental[k].DevelopmentalName = dNames[id]
+		view.Developmental[k].DevelopmentalName = categoryNames[id]
 	}
 	skIDs := strings.Split(outcome.Skills, ",")
-	skNames := getSkillsName(ctx, operator, skIDs)
+	skNames, _ := external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, operator, skIDs)
 	view.Skills = make([]Skill, len(skIDs))
 	for k, id := range skIDs {
 		view.Skills[k].SkillID = id
 		view.Skills[k].SkillName = skNames[id]
 	}
 	aIDs := strings.Split(outcome.Age, ",")
-	aNames := getAgesName(ctx, operator, aIDs)
+	aNames, _ := external.GetAgeServiceProvider().BatchGetNameMap(ctx, operator, aIDs)
 	view.Age = make([]Age, len(aIDs))
 	for k, id := range aIDs {
 		view.Age[k].AgeID = id
 		view.Age[k].AgeName = aNames[id]
 	}
 	gIDs := strings.Split(outcome.Grade, ",")
-	gNames := getGradeName(ctx, operator, gIDs)
+	gNames, _ := external.GetGradeServiceProvider().BatchGetNameMap(ctx, operator, gIDs)
 	view.Grade = make([]Grade, len(gIDs))
 	for k, id := range gIDs {
 		view.Grade[k].GradeID = id
@@ -310,91 +310,4 @@ func getOrganizationName(ctx context.Context, operator *entity.Operator, id stri
 			log.Strings("org_ids", ids))
 	}
 	return names[0]
-}
-func getProgramsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getProgramName: BatchGet failed",
-			log.Err(err),
-			log.Strings("program_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, p := range programs {
-		names[p.ID] = p.Name
-	}
-	return
-}
-
-func getSubjectsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getSubjectsName: BatchGet failed",
-			log.Err(err),
-			log.Strings("subjects_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, s := range subjects {
-		names[s.ID] = s.Name
-	}
-	return
-}
-
-func getDevelopmentalsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getDevelopmentalsName: BatchGet failed",
-			log.Err(err),
-			log.Strings("development_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, d := range developmentals {
-		names[d.ID] = d.Name
-	}
-	return
-}
-
-func getSkillsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getSkillsName: BatchGet failed",
-			log.Err(err),
-			log.Strings("skill_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, s := range skills {
-		names[s.ID] = s.Name
-	}
-	return
-}
-
-func getAgesName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "BatchGet:error", log.Err(err), log.Strings("ids", ids))
-		return
-	}
-	names = make(map[string]string, len(ids))
-	for _, a := range ages {
-		names[a.ID] = a.Name
-	}
-	return
-}
-
-func getGradeName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getGradeName: BatchGet failed",
-			log.Err(err),
-			log.Strings("grade_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, g := range grades {
-		names[g.ID] = g.Name
-	}
-	return
 }
