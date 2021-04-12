@@ -2570,13 +2570,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//skill
-	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, user, skillsIDs)
+	skillsNameMap, err = external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, user, skillsIDs)
 	if err != nil {
 		log.Error(ctx, "can't get skills info", log.Strings("skillsIDs", skillsIDs), log.Err(err))
-	} else {
-		for i := range skills {
-			skillsNameMap[skills[i].ID] = skills[i].Name
-		}
 	}
 
 	//age

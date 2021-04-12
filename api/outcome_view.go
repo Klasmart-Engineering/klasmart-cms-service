@@ -265,7 +265,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Developmental[k].DevelopmentalName = categoryNames[id]
 	}
 	skIDs := strings.Split(outcome.Skills, ",")
-	skNames := getSkillsName(ctx, operator, skIDs)
+	skNames, _ := external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, operator, skIDs)
 	view.Skills = make([]Skill, len(skIDs))
 	for k, id := range skIDs {
 		view.Skills[k].SkillID = id
@@ -322,21 +322,6 @@ func getSubjectsName(ctx context.Context, operator *entity.Operator, ids []strin
 	}
 	names = make(map[string]string, len(ids))
 	for _, s := range subjects {
-		names[s.ID] = s.Name
-	}
-	return
-}
-
-func getSkillsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getSkillsName: BatchGet failed",
-			log.Err(err),
-			log.Strings("skill_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, s := range skills {
 		names[s.ID] = s.Name
 	}
 	return
