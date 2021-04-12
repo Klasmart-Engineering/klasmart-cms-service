@@ -36,16 +36,16 @@ type assessmentOutcomeDA struct {
 func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error {
 	var (
 		columns = []string{"id", "assessment_id", "outcome_id"}
-		values  [][]interface{}
+		matrix  [][]interface{}
 	)
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.AssessmentID, item.OutcomeID})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID})
 	}
-	template := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, values)
-	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {
+	format, values := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values...).Error; err != nil {
 		log.Error(ctx, "batch insert assessments_outcomes: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -106,19 +106,19 @@ type QueryAssessmentOutcomeConditions struct {
 }
 
 func (c *QueryAssessmentOutcomeConditions) GetConditions() ([]string, []interface{}) {
-	b := NewSQLBuilder()
+	b := NewSQLTemplate("")
 
 	if c.AssessmentIDs != nil {
 		if len(c.AssessmentIDs) == 0 {
 			return FalseSQLTemplate().DBOConditions()
 		}
-		b.Append("assessment_id in (?)", c.AssessmentIDs)
+		b.Appendf("assessment_id in (?)", c.AssessmentIDs)
 	}
 	if c.Checked != nil {
-		b.Append("checked = ?", *c.Checked)
+		b.Appendf("checked = ?", *c.Checked)
 	}
 
-	return b.MergeWithAnd().DBOConditions()
+	return b.DBOConditions()
 }
 
 func (c *QueryAssessmentOutcomeConditions) GetPager() *dbo.Pager { return nil }

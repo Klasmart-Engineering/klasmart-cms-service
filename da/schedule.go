@@ -163,7 +163,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 			item.IsHidden,
 		})
 	}
-	sql := SQLBatchInsert(constant.TableNameSchedule, []string{
+	format, values := SQLBatchInsert(constant.TableNameSchedule, []string{
 		"`id`",
 		"`title`",
 		"`class_id`",
@@ -191,9 +191,9 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 		"`is_home_fun`",
 		"`is_hidden`",
 	}, data)
-	execResult := dbContext.Exec(sql.Format, sql.Values...)
+	execResult := dbContext.Exec(format, values...)
 	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
+		logger.Error(ctx, "db exec sql error", log.Any("format", format), log.Any("values", values), log.Err(execResult.Error))
 		return 0, execResult.Error
 	}
 	return execResult.RowsAffected, nil

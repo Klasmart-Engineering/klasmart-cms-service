@@ -80,8 +80,8 @@ func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 			item.OutcomeIDs,
 		})
 	}
-	template := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
-	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {
+	format, values := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values).Error; err != nil {
 		log.Error(ctx, "BatchInsert: SQLBatchInsert: batch insert assessment contents failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -156,23 +156,23 @@ type QueryAssessmentContentConditions struct {
 }
 
 func (c *QueryAssessmentContentConditions) GetConditions() ([]string, []interface{}) {
-	b := NewSQLBuilder()
+	t := NewSQLTemplate("")
 	if c.AssessmentID != nil {
-		b.Append("assessment_id = ?", *c.AssessmentID)
+		t.Appendf("assessment_id = ?", *c.AssessmentID)
 	}
 	if c.ContentIDs != nil {
 		if len(c.ContentIDs) == 0 {
 			return FalseSQLTemplate().DBOConditions()
 		}
-		b.Append("content_id in (?)", c.ContentIDs)
+		t.Appendf("content_id in (?)", c.ContentIDs)
 	}
 	if c.ContentType != nil {
-		b.Append("content_type = ?", *c.ContentType)
+		t.Appendf("content_type = ?", *c.ContentType)
 	}
 	if c.Checked != nil {
-		b.Append("checked = ?", *c.Checked)
+		t.Appendf("checked = ?", *c.Checked)
 	}
-	return b.MergeWithAnd().DBOConditions()
+	return t.DBOConditions()
 }
 
 func (c *QueryAssessmentContentConditions) GetPager() *dbo.Pager {

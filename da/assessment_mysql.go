@@ -124,20 +124,20 @@ type QueryAssessmentConditions struct {
 }
 
 func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
-	b := NewSQLBuilder().Append("delete_at = 0")
+	t := NewSQLTemplate("delete_at = 0")
 
 	if c.OrgID != nil {
-		b.Append("exists (select 1 from schedules"+
+		t.Appendf("exists (select 1 from schedules"+
 			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
 	}
 
 	if c.ClassType != nil {
-		b.Append("exists (select 1 from schedules"+
+		t.Appendf("exists (select 1 from schedules"+
 			" where class_type = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
 	}
 
 	if c.Status != nil {
-		b.Append("status = ?", *c.Status)
+		t.Appendf("status = ?", *c.Status)
 	}
 
 	if c.TeacherIDs != nil {
@@ -145,11 +145,11 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 			return FalseSQLTemplate().DBOConditions()
 		}
 		teacherIDs := utils.SliceDeduplication(c.TeacherIDs)
-		t := NewSQLTemplate("")
+		t2 := NewSQLTemplate("")
 		for _, tid := range teacherIDs {
-			t.Or("json_contains(teacher_ids, json_array(?))", tid)
+			t2.Appendf("json_contains(teacher_ids, json_array(?))", tid)
 		}
-		b.AppendTemplate(t.WrapBracket())
+		t.AppendResult(t2.Or())
 	}
 
 	if c.AllowTeacherIDs != nil {
@@ -157,16 +157,16 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 			return FalseSQLTemplate().DBOConditions()
 		}
 		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
-		t := NewSQLTemplate("")
+		t2 := NewSQLTemplate("")
 		for _, tid := range allowTeacherIDs {
-			t.Or("json_contains(teacher_ids, json_array(?))", tid)
+			t2.Appendf("json_contains(teacher_ids, json_array(?))", tid)
 		}
-		b.AppendTemplate(t.WrapBracket())
+		t.AppendResult(t2.Or())
 	}
 
 	if len(c.TeacherIDAndStatusPairs) > 0 {
 		for _, p := range c.TeacherIDAndStatusPairs {
-			b.Append("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
+			t.Appendf("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
 				p.TeacherID, p.TeacherID, string(p.Status))
 		}
 	}
@@ -175,10 +175,10 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		if len(c.ScheduleIDs) == 0 {
 			return FalseSQLTemplate().DBOConditions()
 		}
-		b.Append("schedule_id in (?)", c.ScheduleIDs)
+		t.Appendf("schedule_id in (?)", c.ScheduleIDs)
 	}
 
-	return b.MergeWithAnd().DBOConditions()
+	return t.DBOConditions()
 }
 
 func (c *QueryAssessmentConditions) GetPager() *dbo.Pager {

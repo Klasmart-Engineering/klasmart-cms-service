@@ -34,7 +34,7 @@ func (s *feedbackAssignmentDA) BatchInsert(ctx context.Context, dbContext *dbo.D
 			item.DeleteAt,
 		})
 	}
-	sql := SQLBatchInsert(constant.TableNameFeedbackAssignment, []string{
+	format, values := SQLBatchInsert(constant.TableNameFeedbackAssignment, []string{
 		"`id`",
 		"`feedback_id`",
 		"`attachment_id`",
@@ -44,9 +44,9 @@ func (s *feedbackAssignmentDA) BatchInsert(ctx context.Context, dbContext *dbo.D
 		"`update_at`",
 		"`delete_at`",
 	}, data)
-	execResult := dbContext.Exec(sql.Format, sql.Values...)
+	execResult := dbContext.Exec(format, values...)
 	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
+		logger.Error(ctx, "db exec sql error", log.String("format", format), log.Any("values", values), log.Err(execResult.Error))
 		return 0, execResult.Error
 	}
 	return execResult.RowsAffected, nil

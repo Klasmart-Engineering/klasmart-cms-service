@@ -62,7 +62,7 @@ func handleTeacherIDs(ctx context.Context, tx *dbo.DBContext) error {
 		}
 		if len(matrix) > 0 {
 			t := da.SQLBatchInsert("assessments_attendances", columns, matrix)
-			if err := tx.Exec(t.Format, t.Values...).Error; err != nil {
+			if err := tx.Exec(t.Formats, t.Values...).Error; err != nil {
 				return err
 			}
 		}
