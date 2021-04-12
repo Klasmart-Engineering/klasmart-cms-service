@@ -14,6 +14,8 @@ import (
 
 type SubjectServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Subject, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Subject, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Subject, error)
 }
@@ -83,6 +85,34 @@ func (s AmsSubjectService) BatchGet(ctx context.Context, operator *entity.Operat
 		log.Any("subjects", subjects))
 
 	return subjects, nil
+}
+
+func (s AmsSubjectService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Subject, error) {
+	subjects, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*Subject{}, err
+	}
+
+	dict := make(map[string]*Subject, len(subjects))
+	for _, subject := range subjects {
+		dict[subject.ID] = subject
+	}
+
+	return dict, nil
+}
+
+func (s AmsSubjectService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	subjects, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(subjects))
+	for _, subject := range subjects {
+		dict[subject.ID] = subject.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsSubjectService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Subject, error) {

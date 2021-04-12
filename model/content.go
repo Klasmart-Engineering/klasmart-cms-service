@@ -2543,13 +2543,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Subjects
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, user, subjectIDs)
+	subjectNameMap, err = external.GetSubjectServiceProvider().BatchGetNameMap(ctx, user, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "can't get subjects info", log.Err(err))
-	} else {
-		for i := range subjects {
-			subjectNameMap[subjects[i].ID] = subjects[i].Name
-		}
 	}
 
 	//developmental

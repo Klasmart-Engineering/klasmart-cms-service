@@ -123,7 +123,7 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 
 	// fill subject
 	{
-		nameMap, err := a.getSubjectNameMap(ctx, operator, []string{assessment.SubjectID})
+		nameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, []string{assessment.SubjectID})
 		if err != nil {
 			log.Error(ctx, "get assessment detail: get subject name map failed",
 				log.Err(err),
@@ -364,7 +364,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		teacherIDs = append(teacherIDs, itemTeacherIDs...)
 	}
 
-	subjectNameMap, err := a.getSubjectNameMap(ctx, operator, subjectIDs)
+	subjectNameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get subject name map failed",
 			log.Err(err),
@@ -427,24 +427,6 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	}
 
 	return &result, err
-}
-
-func (a *assessmentModel) getSubjectNameMap(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]string, error) {
-	subIDs := utils.SliceDeduplicationExcludeEmpty(subjectIDs)
-	subjectNameMap := map[string]string{}
-	items, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subIDs)
-	if err != nil {
-		log.Error(ctx, "list assessments: batch get subject failed",
-			log.Err(err),
-			log.Strings("subject_ids", subjectIDs),
-			log.Strings("subIDs", subIDs),
-		)
-		return nil, err
-	}
-	for _, item := range items {
-		subjectNameMap[item.ID] = item.Name
-	}
-	return subjectNameMap, nil
 }
 
 func (a *assessmentModel) getTeacherNameMap(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]string, error) {

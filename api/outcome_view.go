@@ -251,7 +251,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Program[k].ProgramName = pNames[id]
 	}
 	sIDs := strings.Split(outcome.Subject, ",")
-	sNames := getSubjectsName(ctx, operator, sIDs)
+	sNames, _ := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, sIDs)
 	view.Subject = make([]Subject, len(sIDs))
 	for k, id := range sIDs {
 		view.Subject[k].SubjectID = id
@@ -310,19 +310,4 @@ func getOrganizationName(ctx context.Context, operator *entity.Operator, id stri
 			log.Strings("org_ids", ids))
 	}
 	return names[0]
-}
-
-func getSubjectsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getSubjectsName: BatchGet failed",
-			log.Err(err),
-			log.Strings("subjects_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, s := range subjects {
-		names[s.ID] = s.Name
-	}
-	return
 }
