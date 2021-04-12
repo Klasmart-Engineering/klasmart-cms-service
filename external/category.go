@@ -14,6 +14,8 @@ import (
 
 type CategoryServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Category, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Category, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Category, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Category, error)
 	GetBySubjects(ctx context.Context, operator *entity.Operator, subjectIDs []string, options ...APOption) ([]*Category, error)
@@ -84,6 +86,34 @@ func (s AmsCategoryService) BatchGet(ctx context.Context, operator *entity.Opera
 		log.Any("categories", categories))
 
 	return categories, nil
+}
+
+func (s AmsCategoryService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Category, error) {
+	categories, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*Category{}, err
+	}
+
+	dict := make(map[string]*Category, len(categories))
+	for _, category := range categories {
+		dict[category.ID] = category
+	}
+
+	return dict, nil
+}
+
+func (s AmsCategoryService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	categories, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(categories))
+	for _, category := range categories {
+		dict[category.ID] = category.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsCategoryService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Category, error) {

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -63,13 +62,8 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 
-	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		cid, err := model.GetContentModel().CreateContent(ctx, tx, data, op)
-		if err != nil {
-			return "", err
-		}
-		return cid, nil
-	})
+	cid, err := model.GetContentModel().CreateContentTx(ctx, data, op)
+
 	switch err {
 	case model.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
@@ -134,14 +128,7 @@ func (s *Server) copyContent(c *gin.Context) {
 	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	// 	return
 	// }
-	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		cid, err := model.GetContentModel().CopyContent(ctx, tx, data.ContentID, data.Deep, op)
-		if err != nil {
-			return "", err
-		}
-		return cid, nil
-	})
-
+	cid, err := model.GetContentModel().CopyContentTx(ctx, data.ContentID, data.Deep, op)
 	switch err {
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -185,13 +172,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := model.GetContentModel().PublishContentBulk(ctx, tx, ids.ID, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().PublishContentBulkTx(ctx, ids.ID, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, L(GeneralUnknown))
@@ -235,10 +216,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := model.GetContentModel().PublishContent(ctx, tx, cid, data.Scope, op)
-		return err
-	})
+	err = model.GetContentModel().PublishContentTx(ctx, cid, data.Scope, op)
 
 	switch err {
 	case model.ErrNoContent:
@@ -282,9 +260,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		return model.GetContentModel().PublishContentWithAssets(ctx, tx, cid, data.Scope, op)
-	})
+	err = model.GetContentModel().PublishContentWithAssetsTx(ctx, cid, data.Scope, op)
 
 	switch err {
 	case model.ErrNoContent:
@@ -444,14 +420,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		return
 	}
 
-	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		ncid, err := model.GetContentModel().LockContent(ctx, tx, cid, op)
-		if err != nil {
-			return nil, err
-		}
-		return ncid, nil
-	})
-
+	ncid, err := model.GetContentModel().LockContentTx(ctx, cid, op)
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
 		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
@@ -507,13 +476,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err = model.GetContentModel().DeleteContentBulk(ctx, tx, ids.ID, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().DeleteContentBulkTx(ctx, ids.ID, op)
 
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
@@ -556,13 +519,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().DeleteContentTx(ctx, cid, op)
 
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {

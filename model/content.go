@@ -134,6 +134,15 @@ type IContentModel interface {
 	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error)
 	ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
 	BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
+
+	PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
+	LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error)
+	CreateContentTx(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
+	CopyContentTx(ctx context.Context, cid string, deep bool, op *entity.Operator) (string, error)
+	PublishContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
+	PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
+	DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
+	DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error
 }
 
 type ContentModel struct {
@@ -351,7 +360,16 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 
 	return count, contentWithDetails, nil
 }
-
+func (cm *ContentModel) CreateContentTx(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
+	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := cm.CreateContent(ctx, tx, c, operator)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+	return cid.(string), err
+}
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
 	//检查数据信息是否正确
 	//valid the data
@@ -603,6 +621,18 @@ func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, ci
 	content.LockedBy = constant.LockedByNoBody
 	return da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 }
+
+func (cm *ContentModel) LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error) {
+	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		ncid, err := cm.LockContent(ctx, tx, cid, user)
+		if err != nil {
+			return nil, err
+		}
+		return ncid, nil
+	})
+	return ncid.(string), err
+}
+
 func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentLock, cid)
 	if err != nil {
@@ -678,6 +708,15 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	return ccid, nil
 
 }
+func (cm *ContentModel) PublishContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.PublishContentBulk(ctx, tx, ids, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	updateIDs := make([]string, 0)
 	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
@@ -715,6 +754,16 @@ func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBConte
 	}
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	return cm.searchContent(ctx, tx, &condition, user)
+}
+func (cm *ContentModel) CopyContentTx(ctx context.Context, cid string, deep bool, op *entity.Operator) (string, error) {
+	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := cm.CopyContent(ctx, tx, cid, deep, op)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+	return id.(string), err
 }
 
 //TODO:For authed content => implement copy content => done
@@ -816,6 +865,12 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 	return id, nil
 }
 
+func (cm *ContentModel) PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.PublishContent(ctx, tx, cid, scope, user)
+		return err
+	})
+}
 func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -989,6 +1044,11 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 	return nil
 }
 
+func (cm *ContentModel) PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return cm.PublishContentWithAssets(ctx, tx, cid, scope, user)
+	})
+}
 func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -1020,7 +1080,15 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 	da.GetContentRedis().CleanContentCache(ctx, []string{content.ID, content.SourceID})
 	return nil
 }
-
+func (cm *ContentModel) DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.DeleteContentBulk(ctx, tx, ids, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	deletedIDs := make([]string, 0)
 	deletedIDs = append(deletedIDs, ids...)
@@ -1211,7 +1279,15 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	}
 	return nil
 }
-
+func (cm *ContentModel) DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.DeleteContent(ctx, tx, cid, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -2431,18 +2507,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Users
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, userIDs)
+	userNameMap, err = external.GetUserServiceProvider().BatchGetNameMap(ctx, user, userIDs)
 	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIDs))
-	} else {
-		for i := range users {
-			if !users[i].Valid {
-				log.Warn(ctx, "user not exists, may be deleted", log.String("id", userIDs[i]))
-				continue
-			}
-
-			userNameMap[users[i].ID] = users[i].Name
-		}
 	}
 
 	//LessonType
@@ -2461,74 +2528,46 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, user, programIDs)
+	programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, user, programIDs)
 	if err != nil {
 		log.Error(ctx, "can't get programs", log.Err(err), log.Strings("ids", programIDs))
-	} else {
-		for i := range programs {
-			programNameMap[programs[i].ID] = programs[i].Name
-		}
 	}
 
 	//Subjects
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, user, subjectIDs)
+	subjectNameMap, err = external.GetSubjectServiceProvider().BatchGetNameMap(ctx, user, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "can't get subjects info", log.Err(err))
-	} else {
-		for i := range subjects {
-			subjectNameMap[subjects[i].ID] = subjects[i].Name
-		}
 	}
 
 	//developmental
-	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, user, developmentalIDs)
+	developmentalNameMap, err = external.GetCategoryServiceProvider().BatchGetNameMap(ctx, user, developmentalIDs)
 	if err != nil {
-		log.Error(ctx, "can't get developmentals info", log.Err(err))
-	} else {
-		for i := range developmentals {
-			developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
-		}
+		log.Error(ctx, "can't get category info", log.Err(err), log.Strings("ids", developmentalIDs))
 	}
 
 	//scope
 	//TODO:change to get org name
-	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetNameByOrganizationOrSchool(ctx, user, scopeIDs)
+	publishScopeNameMap, err = external.GetOrganizationServiceProvider().GetNameMapByOrganizationOrSchool(ctx, user, scopeIDs)
 	if err != nil {
 		log.Error(ctx, "can't get publish scope info", log.Strings("scope", scopeIDs), log.Err(err))
-	} else {
-		for i := range scopeIDs {
-			publishScopeNameMap[scopeIDs[i]] = publishScopeNameList[i]
-		}
 	}
 
 	//skill
-	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, user, skillsIDs)
+	skillsNameMap, err = external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, user, skillsIDs)
 	if err != nil {
 		log.Error(ctx, "can't get skills info", log.Strings("skillsIDs", skillsIDs), log.Err(err))
-	} else {
-		for i := range skills {
-			skillsNameMap[skills[i].ID] = skills[i].Name
-		}
 	}
 
 	//age
-	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, user, ageIDs)
+	ageNameMap, err = external.GetAgeServiceProvider().BatchGetNameMap(ctx, user, ageIDs)
 	if err != nil {
 		log.Error(ctx, "can't get age info", log.Strings("ageIDs", ageIDs), log.Err(err))
-	} else {
-		for i := range ages {
-			ageNameMap[ages[i].ID] = ages[i].Name
-		}
 	}
 
 	//grade
-	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, user, gradeIDs)
+	gradeNameMap, err = external.GetGradeServiceProvider().BatchGetNameMap(ctx, user, gradeIDs)
 	if err != nil {
 		log.Error(ctx, "can't get grade info", log.Strings("gradeIDs", gradeIDs), log.Err(err))
-	} else {
-		for i := range grades {
-			gradeNameMap[grades[i].ID] = grades[i].Name
-		}
 	}
 
 	//Outcomes
@@ -2576,10 +2615,15 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
 		}
-		publishScopeNames := make([]string, len(contentList[i].PublishScope))
 		contentList[i].PublishScope = visibilitySettingsMap[contentList[i].ID]
-		for i := range contentList[i].PublishScope {
-			publishScopeNames[i] = publishScopeNameMap[contentList[i].PublishScope[i]]
+		publishScopeNames := make([]string, len(contentList[i].PublishScope))
+		log.Info(ctx, "get publish scope names",
+			log.Strings("contentList[i].PublishScope", contentList[i].PublishScope),
+			log.Any("visibilitySettingsMap", visibilitySettingsMap),
+			log.String("contentList[i].ID", contentList[i].ID),
+			log.Strings("visibilitySettingsMap[contentList[i].ID]", visibilitySettingsMap[contentList[i].ID]))
+		for j := range contentList[i].PublishScope {
+			publishScopeNames[j] = publishScopeNameMap[contentList[i].PublishScope[j]]
 		}
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
@@ -2693,16 +2737,11 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 		authorIDs[i] = objs[i].Author
 	}
 
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, authorIDs)
+	authorMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, user, authorIDs)
 	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("objs", objs))
 	}
-	authorMap := make(map[string]string)
-	for i := range users {
-		if users[i].Valid {
-			authorMap[users[i].ID] = users[i].Name
-		}
-	}
+
 	for i := range objs {
 		objs[i].AuthorName = authorMap[objs[i].Author]
 		objs[i].ContentTypeName = objs[i].ContentType.Name()
