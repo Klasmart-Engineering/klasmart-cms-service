@@ -2652,8 +2652,13 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
 		}
-		publishScopeNames := make([]string, len(visibilitySettingsMap[contentList[i].ID]))
 		contentList[i].PublishScope = visibilitySettingsMap[contentList[i].ID]
+		publishScopeNames := make([]string, len(contentList[i].PublishScope))
+		log.Info(ctx, "get publish scope names",
+			log.Strings("contentList[i].PublishScope", contentList[i].PublishScope),
+			log.Any("visibilitySettingsMap", visibilitySettingsMap),
+			log.String("contentList[i].ID", contentList[i].ID),
+			log.Strings("visibilitySettingsMap[contentList[i].ID]", visibilitySettingsMap[contentList[i].ID]))
 		for i := range contentList[i].PublishScope {
 			publishScopeNames[i] = publishScopeNameMap[contentList[i].PublishScope[i]]
 		}
