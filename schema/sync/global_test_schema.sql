@@ -77,10 +77,51 @@ CREATE TABLE `assessments_attendances` (
   `assessment_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'assessment id',
   `attendance_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'attendance id',
   `checked` tinyint(1) NOT NULL COMMENT 'checked',
+  `origin` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'origin',
+  `role` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'role',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_assessments_attendances_assessment_id_attendance_id` (`assessment_id`,`attendance_id`),
   KEY `assessments_attendances_assessment_id` (`assessment_id`),
   KEY `assessments_attendances_attendance_id` (`attendance_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='assessment and attendance map';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `assessments_contents`
+--
+
+DROP TABLE IF EXISTS `assessments_contents`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `assessments_contents` (
+  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'id',
+  `assessment_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assessment id',
+  `content_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content id',
+  `content_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content name',
+  `content_type` int(11) NOT NULL DEFAULT '0' COMMENT 'content type',
+  `content_comment` text COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'content comment',
+  `checked` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'checked',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_assessments_contents_assessment_id_content_id` (`assessment_id`,`content_id`),
+  KEY `idx_assessments_contents_assessment_id` (`assessment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='assessment and outcome map';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `assessments_contents_outcomes`
+--
+
+DROP TABLE IF EXISTS `assessments_contents_outcomes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `assessments_contents_outcomes` (
+  `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'id',
+  `assessment_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'assessment id',
+  `content_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'content id',
+  `outcome_id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'outcome id',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_assessments_contents_outcomes_assessment_id_content_id` (`assessment_id`,`content_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='assessment content and outcome map';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -96,6 +137,7 @@ CREATE TABLE `assessments_outcomes` (
   `outcome_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'outcome id',
   `skip` tinyint(1) NOT NULL COMMENT 'skip',
   `none_achieved` tinyint(1) NOT NULL COMMENT 'none achieved',
+  `checked` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'checked',
   PRIMARY KEY (`id`),
   KEY `assessments_outcomes_assessment_id` (`assessment_id`),
   KEY `assessments_outcomes_outcome_id` (`outcome_id`)
@@ -163,7 +205,7 @@ CREATE TABLE `cms_content_properties` (
   PRIMARY KEY (`id`),
   KEY `cms_content_properties_content_id_idx` (`content_id`),
   KEY `cms_content_properties_property_type_idx` (`property_type`)
-) ENGINE=InnoDB AUTO_INCREMENT=98299 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
+) ENGINE=InnoDB AUTO_INCREMENT=98556 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -180,7 +222,7 @@ CREATE TABLE `cms_content_visibility_settings` (
   PRIMARY KEY (`id`),
   KEY `cms_content_visibility_settings_content_id_idx` (`content_id`),
   KEY `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
-) ENGINE=InnoDB AUTO_INCREMENT=16384 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
+) ENGINE=InnoDB AUTO_INCREMENT=16437 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -880,4 +922,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-04-11 17:00:33
+-- Dump completed on 2021-04-12 17:00:34
