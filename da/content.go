@@ -225,7 +225,7 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 	}
 
 	if len(s.VisibilitySettings) > 0 {
-		condition := "id IN (SELECT content_id) FROM cms_content_visibility_settings WHERE visibility_setting IN (?)"
+		condition := "id IN (SELECT content_id FROM cms_content_visibility_settings WHERE visibility_setting IN (?))"
 		conditions = append(conditions, condition)
 		params = append(params, s.VisibilitySettings)
 	}
