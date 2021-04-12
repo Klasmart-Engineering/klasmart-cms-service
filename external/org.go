@@ -18,6 +18,8 @@ import (
 
 type OrganizationServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableOrganization, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableOrganization, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string]*Organization, error)
 	GetNameByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) ([]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error)
@@ -87,6 +89,34 @@ func (s AmsOrganizationService) BatchGet(ctx context.Context, operator *entity.O
 		log.Any("orgs", nullableOrganizations))
 
 	return nullableOrganizations, nil
+}
+
+func (s AmsOrganizationService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableOrganization, error) {
+	organizations, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*NullableOrganization{}, err
+	}
+
+	dict := make(map[string]*NullableOrganization, len(organizations))
+	for _, organization := range organizations {
+		dict[organization.ID] = organization
+	}
+
+	return dict, nil
+}
+
+func (s AmsOrganizationService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	organizations, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(organizations))
+	for _, organization := range organizations {
+		dict[organization.ID] = organization.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsOrganizationService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string]*Organization, error) {
