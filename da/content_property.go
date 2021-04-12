@@ -5,7 +5,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -30,7 +29,7 @@ func (c *ContentPropertyDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, co 
 			item.Sequence,
 		})
 	}
-	sql := SQLBatchInsert(constant.TableNameSchedule, []string{
+	sql := SQLBatchInsert(entity.ContentProperty{}.TableName(), []string{
 		"`property_type`",
 		"`content_id`",
 		"`property_id`",
