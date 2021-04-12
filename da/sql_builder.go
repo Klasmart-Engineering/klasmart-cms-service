@@ -23,7 +23,10 @@ type SQLTemplate struct {
 }
 
 func NewSQLTemplate(format string, values ...interface{}) *SQLTemplate {
-	return &SQLTemplate{}
+	return &SQLTemplate{
+		Format: format,
+		Values: values,
+	}
 }
 
 func FalseSQLTemplate() *SQLTemplate {
