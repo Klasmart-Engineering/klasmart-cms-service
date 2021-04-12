@@ -16,7 +16,7 @@ func handleTeacherIDs(ctx context.Context, tx *dbo.DBContext) error {
 	}
 	var (
 		page     = 1
-		size     = 5
+		size     = 100
 		inserted int
 	)
 	for {
