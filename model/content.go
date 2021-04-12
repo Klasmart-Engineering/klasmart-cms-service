@@ -2659,8 +2659,8 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 			log.Any("visibilitySettingsMap", visibilitySettingsMap),
 			log.String("contentList[i].ID", contentList[i].ID),
 			log.Strings("visibilitySettingsMap[contentList[i].ID]", visibilitySettingsMap[contentList[i].ID]))
-		for i := range contentList[i].PublishScope {
-			publishScopeNames[i] = publishScopeNameMap[contentList[i].PublishScope[i]]
+		for j := range contentList[i].PublishScope {
+			publishScopeNames[j] = publishScopeNameMap[contentList[i].PublishScope[j]]
 		}
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
