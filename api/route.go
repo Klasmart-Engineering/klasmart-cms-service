@@ -109,9 +109,6 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
 		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
-
-		// ams event
-		schedules.POST("/class_user_edit_to_schedule", s.classUserEditEventToSchedule)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
@@ -271,6 +268,13 @@ func (s Server) registeRoute() {
 		learningOutcomeSet.POST("", s.mustLogin, s.createOutcomeSet)
 		learningOutcomeSet.POST("/bulk_bind", s.mustLogin, s.bulkBindOutcomeSet)
 		learningOutcomeSet.GET("", s.mustLogin, s.pullOutcomeSet)
+	}
+
+	classes := s.engine.Group("/v1")
+	{
+		// ams-class add members event
+		classes.POST("/classes_members", s.addUserToClassEvent)
+		classes.DELETE("/classes_members", s.deleteUserToClassEvent)
 	}
 }
 

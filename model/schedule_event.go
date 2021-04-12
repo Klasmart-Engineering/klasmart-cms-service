@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -21,6 +22,8 @@ type scheduleEventModel struct {
 }
 
 func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error {
+	fmt.Println(ctx, op, event)
+	return nil
 	if event.ClassID == "" || len(event.Users) <= 0 {
 		log.Info(ctx, "event invalid args", log.Any("event", event))
 		return constant.ErrInvalidArgs
@@ -101,6 +104,8 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 }
 
 func (s *scheduleEventModel) DeleteUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error {
+	fmt.Println(ctx, op, event)
+	return nil
 	if event.ClassID == "" || len(event.Users) <= 0 {
 		log.Info(ctx, "event invalid args", log.Any("event", event))
 		return constant.ErrInvalidArgs

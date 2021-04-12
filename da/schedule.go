@@ -476,7 +476,7 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if c.NotStart.Valid {
 		notEditAt := time.Now().Add(constant.ScheduleAllowEditTime).Unix()
-		wheres = append(wheres, " ((due_at=0 and start_at=0 and end_at=0) || (due_at > ?) || (start_at > ?)) ")
+		wheres = append(wheres, " ((due_at=0 and start_at=0 and end_at=0) || (start_at = 0 and due_at > ?) || (start_at > ?)) ")
 		params = append(params, time.Now().Unix(), notEditAt)
 	}
 
