@@ -272,7 +272,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Skills[k].SkillName = skNames[id]
 	}
 	aIDs := strings.Split(outcome.Age, ",")
-	aNames := getAgesName(ctx, operator, aIDs)
+	aNames, _ := external.GetAgeServiceProvider().BatchGetNameMap(ctx, operator, aIDs)
 	view.Age = make([]Age, len(aIDs))
 	for k, id := range aIDs {
 		view.Age[k].AgeID = id
@@ -367,19 +367,6 @@ func getSkillsName(ctx context.Context, operator *entity.Operator, ids []string)
 	names = make(map[string]string, len(ids))
 	for _, s := range skills {
 		names[s.ID] = s.Name
-	}
-	return
-}
-
-func getAgesName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "BatchGet:error", log.Err(err), log.Strings("ids", ids))
-		return
-	}
-	names = make(map[string]string, len(ids))
-	for _, a := range ages {
-		names[a.ID] = a.Name
 	}
 	return
 }

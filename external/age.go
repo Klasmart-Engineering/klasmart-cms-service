@@ -14,6 +14,8 @@ import (
 
 type AgeServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Age, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Age, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Age, error)
 }
@@ -83,6 +85,34 @@ func (s AmsAgeService) BatchGet(ctx context.Context, operator *entity.Operator, 
 		log.Any("ages", ages))
 
 	return ages, nil
+}
+
+func (s AmsAgeService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Age, error) {
+	ages, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*Age{}, err
+	}
+
+	dict := make(map[string]*Age, len(ages))
+	for _, age := range ages {
+		dict[age.ID] = age
+	}
+
+	return dict, nil
+}
+
+func (s AmsAgeService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	ages, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(ages))
+	for _, age := range ages {
+		dict[age.ID] = age.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsAgeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Age, error) {

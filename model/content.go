@@ -2588,13 +2588,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//age
-	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, user, ageIDs)
+	ageNameMap, err = external.GetAgeServiceProvider().BatchGetNameMap(ctx, user, ageIDs)
 	if err != nil {
 		log.Error(ctx, "can't get age info", log.Strings("ageIDs", ageIDs), log.Err(err))
-	} else {
-		for i := range ages {
-			ageNameMap[ages[i].ID] = ages[i].Name
-		}
 	}
 
 	//grade
