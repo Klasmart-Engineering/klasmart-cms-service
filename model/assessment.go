@@ -65,7 +65,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 	// convert to assessment view
 	var (
 		views []*entity.AssessmentView
-		view *entity.AssessmentView
+		view  *entity.AssessmentView
 	)
 	if views, err = m.convertToAssessmentViews(ctx, tx, operator, []*entity.Assessment{assessment}, nil); err != nil {
 		log.Error(ctx, "Get: m.convertToAssessmentViews: get failed",
@@ -79,16 +79,16 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 
 	// fill partial result
 	result := entity.AssessmentDetail{
-		ID:                 assessment.ID,
-		Title:              assessment.Title,
-		Status:             assessment.Status,
-		CompleteTime:       assessment.CompleteTime,
-		Teachers:           view.Teachers,
-		Students:           view.Students,
-		Program:            view.Program,
-		Subject:            view.Subject,
-		ClassEndTime:       assessment.ClassEndTime,
-		ClassLength:        assessment.ClassLength,
+		ID:           assessment.ID,
+		Title:        assessment.Title,
+		Status:       assessment.Status,
+		CompleteTime: assessment.CompleteTime,
+		Teachers:     view.Teachers,
+		Students:     view.Students,
+		Program:      view.Program,
+		Subject:      view.Subject,
+		ClassEndTime: assessment.ClassEndTime,
+		ClassLength:  assessment.ClassLength,
 	}
 
 	// fill outcome attendances
@@ -204,9 +204,9 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		return nil, err
 	}
 	result.RoomID = schedule.RoomID
-	classNameMap, err := m.getClassNameMap(ctx, operator, []string{schedule.ClassID})
+	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID})
 	if err != nil {
-		log.Error(ctx, "Get: m.getClassNameMap: get failed",
+		log.Error(ctx, "Get: external.GetClassServiceProvider().BatchGetNameMap: get failed",
 			log.Err(err),
 			log.String("class_id", schedule.ClassID),
 			log.Any("schedule", schedule),
@@ -362,9 +362,9 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	}
 
 	// fill program
-	programNameMap, err := m.getProgramNameMap(ctx, operator, programIDs)
+	programNameMap, err := external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, programIDs)
 	if err != nil {
-		log.Error(ctx, "convertToAssessmentViews: m.getProgramNameMap: get failed",
+		log.Error(ctx, "convertToAssessmentViews: external.GetProgramServiceProvider().BatchGetNameMap: get failed",
 			log.Err(err),
 			log.Strings("assessment_ids", assessmentIDs),
 			log.Strings("program_ids", programIDs),
@@ -374,9 +374,9 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	}
 
 	// fill subject
-	subjectNameMap, err := m.getSubjectNameMap(ctx, operator, subjectIDs)
+	subjectNameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, subjectIDs)
 	if err != nil {
-		log.Error(ctx, "convertToAssessmentViews: Get: m.getSubjectNameMap: get failed",
+		log.Error(ctx, "convertToAssessmentViews: external.GetSubjectServiceProvider().BatchGetNameMap: get failed",
 			log.Err(err),
 			log.Strings("assessment_ids", assessmentIDs),
 			log.Strings("subject_ids", subjectIDs),
@@ -418,8 +418,8 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 			assessmentTeachersMap[a.ID] = append(assessmentTeachersMap[a.ID], a)
 		}
 	}
-	if teacherNameMap, err = m.getTeacherNameMap(ctx, operator, teacherIDs); err != nil {
-		log.Error(ctx, "convertToAssessmentViews: m.getTeacherNameMap: get failed",
+	if teacherNameMap, err = external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs); err != nil {
+		log.Error(ctx, "convertToAssessmentViews: external.GetTeacherServiceProvider().BatchGetNameMap: get failed",
 			log.Err(err),
 			log.Strings("teacher_ids", teacherIDs),
 			log.Strings("assessment_ids", assessmentIDs),
@@ -427,8 +427,8 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 		)
 		return nil, err
 	}
-	if studentNameMap, err = m.getStudentNameMap(ctx, operator, studentIDs); err != nil {
-		log.Error(ctx, "convertToAssessmentViews: m.getStudentNameMap: get failed",
+	if studentNameMap, err = external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs); err != nil {
+		log.Error(ctx, "convertToAssessmentViews: external.GetStudentServiceProvider().BatchGetNameMap: get failed",
 			log.Err(err),
 			log.Strings("student_ids", studentIDs),
 			log.Strings("assessment_ids", assessmentIDs),
@@ -614,8 +614,8 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 		} else {
 			newAssessment.Status = entity.AssessmentStatusInProgress
 		}
-		if classNameMap, err = m.getClassNameMap(ctx, operator, []string{schedule.ClassID}); err != nil {
-			log.Error(ctx, "Add: m.getClassNameMap: get failed",
+		if classNameMap, err = external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID}); err != nil {
+			log.Error(ctx, "Add: external.GetClassServiceProvider().BatchGetNameMap: get failed",
 				log.Err(err),
 				log.Strings("class_ids", []string{schedule.ClassID}),
 				log.Any("args", args),
@@ -1076,119 +1076,6 @@ func (m *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 
 func (m *assessmentModel) generateTitle(classEndTime int64, className string, lessonName string) string {
 	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, lessonName)
-}
-
-func (m *assessmentModel) getProgramNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
-	nameMap := make(map[string]string, len(ids))
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getProgramNameMap: external.GetProgramServiceProvider().BatchGet: batch get failed",
-			log.Err(err),
-			log.Strings("program_ids", ids),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	for _, p := range programs {
-		nameMap[p.ID] = p.Name
-	}
-	return nameMap, nil
-}
-
-func (m *assessmentModel) getSubjectNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
-	ids = utils.SliceDeduplicationExcludeEmpty(ids)
-	nameMap := make(map[string]string, len(ids))
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getSubjectNameMap: external.GetSubjectServiceProvider().BatchGet: batch get failed",
-			log.Err(err),
-			log.Strings("subject_ids", ids),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	for _, s := range subjects {
-		nameMap[s.ID] = s.Name
-	}
-	return nameMap, nil
-}
-
-func (m *assessmentModel) getStudentNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
-	students, err := external.GetStudentServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getStudentNameMap: external.GetStudentServiceProvider().BatchGet: batch get student failed",
-			log.Err(err),
-			log.Strings("ids", ids),
-		)
-		return nil, err
-	}
-	nameMap := map[string]string{}
-	for _, student := range students {
-		nameMap[student.ID] = student.Name
-	}
-	return nameMap, nil
-}
-
-func (m *assessmentModel) getTeacherNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
-	nameMap := make(map[string]string, len(ids))
-	teachers, err := external.GetTeacherServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getTeacherNameMap: external.GetTeacherServiceProvider().BatchGet: batch get failed",
-			log.Err(err),
-			log.Strings("teacher_ids", ids),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	for _, t := range teachers {
-		nameMap[t.ID] = t.Name
-	}
-	return nameMap, nil
-}
-
-func (m *assessmentModel) getClassNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
-	nameMap := make(map[string]string, len(ids))
-	classes, err := external.GetClassServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getClassNameMap: external.GetClassServiceProvider().BatchGet: batch get failed",
-			log.Err(err),
-			log.Strings("class_ids", ids),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	for i, c := range classes {
-		if c.Valid {
-			nameMap[c.ID] = c.Name
-		} else {
-			log.Warn(ctx, "getClassNameMap: invalid class",
-				log.Strings("class_ids", ids),
-				log.Int("index", i),
-			)
-		}
-	}
-	return nameMap, nil
-}
-
-func (m *assessmentModel) getOutcomeMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*entity.Outcome, error) {
-	var (
-		err        error
-		outcomes   []*entity.Outcome
-		outcomeMap map[string]*entity.Outcome
-	)
-	if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, ids); err != nil {
-		log.Error(ctx, "addAssessmentOutcomes: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
-			log.Err(err),
-			log.Strings("outcome_ids", ids),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	outcomeMap = make(map[string]*entity.Outcome, len(outcomes))
-	for _, outcome := range outcomes {
-		outcomeMap[outcome.ID] = outcome
-	}
-	return outcomeMap, nil
 }
 
 type outcomesSortByAssumedAndName []*entity.Outcome

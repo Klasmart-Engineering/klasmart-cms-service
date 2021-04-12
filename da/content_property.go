@@ -5,7 +5,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-cn/logger"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"sync"
 )
@@ -27,16 +26,18 @@ func (c *ContentPropertyDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, co 
 			item.PropertyType,
 			item.ContentID,
 			item.PropertyID,
+			item.Sequence,
 		})
 	}
-	format, values := SQLBatchInsert(constant.TableNameSchedule, []string{
+	format, values := SQLBatchInsert(entity.ContentProperty{}.TableName(), []string{
 		"`property_type`",
 		"`content_id`",
 		"`property_id`",
+		"`sequence`",
 	}, data)
 	execResult := tx.Exec(format, values...)
 	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("sql", format), log.Any("values", values), log.Err(execResult.Error))
+		logger.Error(ctx, "db exec sql error", log.Any("format", format), log.Any("values", values), log.Err(execResult.Error))
 		return execResult.Error
 	}
 	return nil

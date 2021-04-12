@@ -121,7 +121,7 @@ func (s *MapperImpl) loadOurGrades(ctx context.Context) error {
 	return nil
 }
 
-func (s MapperImpl) defaultGrade(programID string) (string, error) {
+func (s *MapperImpl) defaultGrade(programID string) (string, error) {
 	switch programID {
 	case "7565ae11-8130-4b7d-ac24-1d9dd6f792f2":
 		// None Specified

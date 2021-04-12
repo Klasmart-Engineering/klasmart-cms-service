@@ -940,6 +940,14 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 		return ErrInvalidContentData
 	}
 
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", content.ID))
+		return ErrInvalidContentData
+	}
+
 	//创建assets data对象，并解析
 	//create assets data object, and parse it
 	assetsData := new(AssetsData)
@@ -959,20 +967,17 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 		Thumbnail:   content.Thumbnail,
 		SuggestTime: content.SuggestTime,
 		Data:        assetsDataJSON,
+
+		Program:     contentProperties.Program,
+		Subject:     contentProperties.Subject,
+		Category:    contentProperties.Category,
+		SubCategory: contentProperties.SubCategory,
+		Age:         contentProperties.Age,
+		Grade:       contentProperties.Grade,
 	}
-	pid, err := cm.CreateContent(ctx, tx, req, user)
+	_, err = cm.CreateContent(ctx, tx, req, user)
 	if err != nil {
 		log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
-		return err
-	}
-
-	//copy content properties
-	err = cm.copyContentProperties(ctx, tx, content.ID, pid)
-	if err != nil {
-		log.Warn(ctx, "copyContentProperties failed", log.Err(err),
-			log.String("uid", user.UserID),
-			log.Any("content", content),
-			log.Any("req", req))
 		return err
 	}
 
@@ -1143,6 +1148,13 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
 	}
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", content.ID))
+		return ErrInvalidContentData
+	}
 
 	//create content data object
 	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
@@ -1178,20 +1190,17 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 			Description: content.Description,
 			Thumbnail:   "",
 			SuggestTime: 0,
+			Program:     contentProperties.Program,
+			Subject:     contentProperties.Subject,
+			Category:    contentProperties.Category,
+			SubCategory: contentProperties.SubCategory,
+			Age:         contentProperties.Age,
+			Grade:       contentProperties.Grade,
 			Data:        assetsDataJSON,
 		}
-		pid, err := cm.CreateContent(ctx, tx, req, user)
+		_, err = cm.CreateContent(ctx, tx, req, user)
 		if err != nil {
 			log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
-			return err
-		}
-		err = cm.copyContentProperties(ctx, tx, content.ID, pid)
-		if err != nil {
-			log.Warn(ctx, "copyContentProperties failed",
-				log.Err(err),
-				log.String("uid", user.UserID),
-				log.Any("content", content),
-				log.Any("req", req))
 			return err
 		}
 	}
@@ -2507,18 +2516,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Users
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, userIDs)
+	userNameMap, err = external.GetUserServiceProvider().BatchGetNameMap(ctx, user, userIDs)
 	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIDs))
-	} else {
-		for i := range users {
-			if !users[i].Valid {
-				log.Warn(ctx, "user not exists, may be deleted", log.String("id", userIDs[i]))
-				continue
-			}
-
-			userNameMap[users[i].ID] = users[i].Name
-		}
 	}
 
 	//LessonType
@@ -2537,74 +2537,46 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, user, programIDs)
+	programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, user, programIDs)
 	if err != nil {
 		log.Error(ctx, "can't get programs", log.Err(err), log.Strings("ids", programIDs))
-	} else {
-		for i := range programs {
-			programNameMap[programs[i].ID] = programs[i].Name
-		}
 	}
 
 	//Subjects
-	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, user, subjectIDs)
+	subjectNameMap, err = external.GetSubjectServiceProvider().BatchGetNameMap(ctx, user, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "can't get subjects info", log.Err(err))
-	} else {
-		for i := range subjects {
-			subjectNameMap[subjects[i].ID] = subjects[i].Name
-		}
 	}
 
 	//developmental
-	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, user, developmentalIDs)
+	developmentalNameMap, err = external.GetCategoryServiceProvider().BatchGetNameMap(ctx, user, developmentalIDs)
 	if err != nil {
-		log.Error(ctx, "can't get developmentals info", log.Err(err))
-	} else {
-		for i := range developmentals {
-			developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
-		}
+		log.Error(ctx, "can't get category info", log.Err(err), log.Strings("ids", developmentalIDs))
 	}
 
 	//scope
 	//TODO:change to get org name
-	publishScopeNameList, err := external.GetOrganizationServiceProvider().GetNameByOrganizationOrSchool(ctx, user, scopeIDs)
+	publishScopeNameMap, err = external.GetOrganizationServiceProvider().GetNameMapByOrganizationOrSchool(ctx, user, scopeIDs)
 	if err != nil {
 		log.Error(ctx, "can't get publish scope info", log.Strings("scope", scopeIDs), log.Err(err))
-	} else {
-		for i := range scopeIDs {
-			publishScopeNameMap[scopeIDs[i]] = publishScopeNameList[i]
-		}
 	}
 
 	//skill
-	skills, err := external.GetSubCategoryServiceProvider().BatchGet(ctx, user, skillsIDs)
+	skillsNameMap, err = external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, user, skillsIDs)
 	if err != nil {
 		log.Error(ctx, "can't get skills info", log.Strings("skillsIDs", skillsIDs), log.Err(err))
-	} else {
-		for i := range skills {
-			skillsNameMap[skills[i].ID] = skills[i].Name
-		}
 	}
 
 	//age
-	ages, err := external.GetAgeServiceProvider().BatchGet(ctx, user, ageIDs)
+	ageNameMap, err = external.GetAgeServiceProvider().BatchGetNameMap(ctx, user, ageIDs)
 	if err != nil {
 		log.Error(ctx, "can't get age info", log.Strings("ageIDs", ageIDs), log.Err(err))
-	} else {
-		for i := range ages {
-			ageNameMap[ages[i].ID] = ages[i].Name
-		}
 	}
 
 	//grade
-	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, user, gradeIDs)
+	gradeNameMap, err = external.GetGradeServiceProvider().BatchGetNameMap(ctx, user, gradeIDs)
 	if err != nil {
 		log.Error(ctx, "can't get grade info", log.Strings("gradeIDs", gradeIDs), log.Err(err))
-	} else {
-		for i := range grades {
-			gradeNameMap[grades[i].ID] = grades[i].Name
-		}
 	}
 
 	//Outcomes
@@ -2652,10 +2624,15 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
 		}
-		publishScopeNames := make([]string, len(visibilitySettingsMap[contentList[i].ID]))
 		contentList[i].PublishScope = visibilitySettingsMap[contentList[i].ID]
-		for i := range contentList[i].PublishScope {
-			publishScopeNames[i] = publishScopeNameMap[contentList[i].PublishScope[i]]
+		publishScopeNames := make([]string, len(contentList[i].PublishScope))
+		log.Info(ctx, "get publish scope names",
+			log.Strings("contentList[i].PublishScope", contentList[i].PublishScope),
+			log.Any("visibilitySettingsMap", visibilitySettingsMap),
+			log.String("contentList[i].ID", contentList[i].ID),
+			log.Strings("visibilitySettingsMap[contentList[i].ID]", visibilitySettingsMap[contentList[i].ID]))
+		for j := range contentList[i].PublishScope {
+			publishScopeNames[j] = publishScopeNameMap[contentList[i].PublishScope[j]]
 		}
 		contentList[i].AuthorName = userNameMap[contentList[i].Author]
 		contentDetailsList[i] = &entity.ContentInfoWithDetails{
@@ -2731,6 +2708,49 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	return ret, nil
 }
 
+func (cm *ContentModel) getContentProperties(ctx context.Context, cid string) (*entity.ContentProperties, error) {
+	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), []string{cid})
+	if err != nil {
+		log.Error(ctx, "BatchGetByContentIDList",
+			log.Err(err),
+			log.String("id", cid))
+		return nil, err
+	}
+
+	subjects := make([]string, 0)
+	categories := make([]string, 0)
+	subCategories := make([]string, 0)
+	ages := make([]string, 0)
+	grades := make([]string, 0)
+	program := ""
+
+	for i := range contentProperties {
+		switch contentProperties[i].PropertyType {
+		case entity.ContentPropertyTypeProgram:
+			program = contentProperties[i].PropertyID
+		case entity.ContentPropertyTypeSubject:
+			subjects = append(subjects, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeCategory:
+			categories = append(categories, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeAge:
+			ages = append(ages, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeGrade:
+			grades = append(grades, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeSubCategory:
+			subCategories = append(subCategories, contentProperties[i].PropertyID)
+		}
+	}
+	return &entity.ContentProperties{
+		ContentID:   cid,
+		Program:     program,
+		Subject:     subjects,
+		Category:    categories,
+		SubCategory: subCategories,
+		Age:         ages,
+		Grade:       grades,
+	}, nil
+}
+
 func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIDs []string, user *entity.Operator) *da.FolderCondition {
 	dirPath := condition.DirPath
 	isAssets := false
@@ -2769,16 +2789,11 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 		authorIDs[i] = objs[i].Author
 	}
 
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, authorIDs)
+	authorMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, user, authorIDs)
 	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("objs", objs))
 	}
-	authorMap := make(map[string]string)
-	for i := range users {
-		if users[i].Valid {
-			authorMap[users[i].ID] = users[i].Name
-		}
-	}
+
 	for i := range objs {
 		objs[i].AuthorName = authorMap[objs[i].Author]
 		objs[i].ContentTypeName = objs[i].ContentType.Name()

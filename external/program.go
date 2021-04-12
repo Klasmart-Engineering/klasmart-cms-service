@@ -14,6 +14,8 @@ import (
 
 type ProgramServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Program, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Program, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error)
 }
 
@@ -83,6 +85,34 @@ func (s AmsProgramService) BatchGet(ctx context.Context, operator *entity.Operat
 		log.Any("programs", programs))
 
 	return programs, nil
+}
+
+func (s AmsProgramService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Program, error) {
+	programs, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*Program{}, err
+	}
+
+	dict := make(map[string]*Program, len(programs))
+	for _, program := range programs {
+		dict[program.ID] = program
+	}
+
+	return dict, nil
+}
+
+func (s AmsProgramService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	programs, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(programs))
+	for _, program := range programs {
+		dict[program.ID] = program.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsProgramService) GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Program, error) {
