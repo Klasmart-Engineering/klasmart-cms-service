@@ -502,11 +502,11 @@ CREATE TABLE IF NOT EXISTS `home_fun_studies` (
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'update at (unix seconds)',
     `delete_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'delete at (unix seconds)',
     PRIMARY KEY (`id`),
-    KEY `home_fun_studies_schedule_id` (schedule_id),
-    KEY `home_fun_studies_status` (status),
-    KEY `home_fun_studies_latest_feedback_at` (latest_feedback_at),
-    KEY `home_fun_studies_complete_at` (complete_at),
-    KEY `home_fun_studies_schedule_id_and_student_id` (schedule_id, student_id)
+    KEY `idx_home_fun_studies_schedule_id` (schedule_id),
+    KEY `idx_home_fun_studies_status` (status),
+    KEY `idx_home_fun_studies_latest_feedback_at` (latest_feedback_at),
+    KEY `idx_home_fun_studies_complete_at` (complete_at),
+    UNIQUE KEY `uq_home_fun_studies_schedule_id_and_student_id` (schedule_id, student_id)
 ) COMMENT 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE `cms_content_visibility_settings` (
@@ -527,3 +527,18 @@ CREATE TABLE `cms_content_properties` (
      key `cms_content_properties_content_id_idx` (`content_id`),
      key `cms_content_properties_property_type_idx` (`property_type`)
 ) comment 'cms content properties' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+CREATE TABLE assessments_contents (
+    `id` VARCHAR(64) NOT NULL COMMENT 'id',
+    `assessment_id` VARCHAR(64) NOT NULL COMMENT 'assessment id',
+    `content_id` VARCHAR(64) NOT NULL COMMENT 'content id',
+    `content_name` VARCHAR(255) NOT NULL COMMENT 'content name',
+    `content_type` int NOT NULL COMMENT 'content type',
+    `content_comment` BOOLEAN NOT NULL COMMENT 'content comment',
+    `checked` BOOLEAN NOT NULL DEFAULT true COMMENT 'checked',
+    `outcome_ids` JSON NOT NULL COMMENT 'outcome ids',
+    PRIMARY KEY (`id`),
+    UNIQUE `uq_assessments_contents_assessment_id_content_id` (`assessment_id`, `content_id`),
+    KEY `idx_assessments_contents_assessment_id` (`assessment_id`)
+)  COMMENT 'assessment and outcome map' DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_UNICODE_CI;

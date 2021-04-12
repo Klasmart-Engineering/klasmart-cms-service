@@ -47,15 +47,15 @@ func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 		return nil
 	}
 	columns := []string{"id", "assessment_id", "outcome_id", "attendance_id"}
-	var values [][]interface{}
+	var matrix [][]interface{}
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.AttendanceID})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.AttendanceID})
 	}
-	template := SQLBatchInsert(entity.OutcomeAttendance{}.TableName(), columns, values)
-	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {
+	format, values := SQLBatchInsert(entity.OutcomeAttendance{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values...).Error; err != nil {
 		log.Error(ctx, "batch insert outcomes_attendances: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),

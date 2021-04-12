@@ -6,18 +6,15 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
 	"sync"
 )
 
 type IAssessmentOutcomeDA interface {
-	GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
-	BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.AssessmentOutcome, error)
+	dbo.Querier
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
-	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
-	BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error)
-	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error)
+	UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
+	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 }
 
 var (
@@ -32,35 +29,23 @@ func GetAssessmentOutcomeDA() IAssessmentOutcomeDA {
 	return assessmentOutcomeDAInstance
 }
 
-type assessmentOutcomeDA struct{}
-
-func (*assessmentOutcomeDA) GetOutcomeIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error) {
-	var items []entity.AssessmentOutcome
-	if err := tx.Where("assessment_id = ?", assessmentID).Find(&items).Error; err != nil {
-		log.Error(ctx, "get outcome ids failed by assessment id",
-			log.Err(err),
-			log.String("assessment_id", assessmentID),
-		)
-		return nil, err
-	}
-	var ids []string
-	for _, item := range items {
-		ids = append(ids, item.OutcomeID)
-	}
-	return ids, nil
+type assessmentOutcomeDA struct {
+	dbo.BaseDA
 }
 
 func (*assessmentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error {
-	columns := []string{"id", "assessment_id", "outcome_id"}
-	var values [][]interface{}
+	var (
+		columns = []string{"id", "assessment_id", "outcome_id"}
+		matrix  [][]interface{}
+	)
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.AssessmentID, item.OutcomeID})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID})
 	}
-	template := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, values)
-	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {
+	format, values := SQLBatchInsert(entity.AssessmentOutcome{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values...).Error; err != nil {
 		log.Error(ctx, "batch insert assessments_outcomes: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -81,14 +66,33 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 	return nil
 }
 
-func (d *assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error {
+func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error {
 	changes := map[string]interface{}{
 		"skip":          item.Skip,
 		"none_achieved": item.NoneAchieved,
+		"checked":       item.Checked,
 	}
 	if err := tx.
 		Model(entity.AssessmentOutcome{}).
 		Where("assessment_id = ? and outcome_id = ?", item.AssessmentID, item.OutcomeID).
+		Updates(changes).
+		Error; err != nil {
+		log.Error(ctx, "UpdateByAssessmentIDAndOutcomeID: Updates: update failed",
+			log.Err(err),
+			log.Any("assessment_outcome", item),
+		)
+		return err
+	}
+	return nil
+}
+
+func (*assessmentOutcomeDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	changes := map[string]interface{}{
+		"checked": false,
+	}
+	if err := tx.
+		Model(entity.AssessmentOutcome{}).
+		Where("assessment_id = ? and outcome_id = ?", assessmentID).
 		Updates(changes).
 		Error; err != nil {
 		return err
@@ -96,62 +100,27 @@ func (d *assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Conte
 	return nil
 }
 
-func (d *assessmentOutcomeDA) BatchGetByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) ([]*entity.AssessmentOutcome, error) {
-	var items []*entity.AssessmentOutcome
-	if err := tx.
-		Where("assessment_id = ?", assessmentID).
-		Where("outcome_id in (?)", outcomeIDs).
-		Find(&items).Error; err != nil {
-		return nil, err
-	}
-	return items, nil
+type QueryAssessmentOutcomeConditions struct {
+	AssessmentIDs []string `json:"assessment_ids"`
+	Checked       *bool    `json:"checked"`
 }
 
-func (d *assessmentOutcomeDA) BatchGetMapByKeys(ctx context.Context, tx *dbo.DBContext, keys []entity.AssessmentOutcomeKey) (map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome, error) {
-	var items []*entity.AssessmentOutcome
-	var (
-		template string
-		values   []interface{}
-	)
-	{
-		var items []string
-		for _, key := range keys {
-			items = append(items, "(assessment_id = ? and outcome_id = ?)")
-			values = append(values, key.AssessmentID, key.OutcomeID)
+func (c *QueryAssessmentOutcomeConditions) GetConditions() ([]string, []interface{}) {
+	b := NewSQLTemplate("")
+
+	if c.AssessmentIDs != nil {
+		if len(c.AssessmentIDs) == 0 {
+			return FalseSQLTemplate().DBOConditions()
 		}
-		template = strings.Join(items, " or ")
+		b.Appendf("assessment_id in (?)", c.AssessmentIDs)
 	}
-	if err := tx.
-		Where(template, values...).
-		Find(&items).Error; err != nil {
-		log.Error(ctx, "batch get assessment outcome by keys: find failed",
-			log.Err(err),
-			log.String("template", template),
-			log.Any("values", values),
-			log.Any("keys", keys),
-		)
-		return nil, err
+	if c.Checked != nil {
+		b.Appendf("checked = ?", *c.Checked)
 	}
-	result := map[entity.AssessmentOutcomeKey]*entity.AssessmentOutcome{}
-	for _, item := range items {
-		result[entity.AssessmentOutcomeKey{
-			AssessmentID: item.AssessmentID,
-			OutcomeID:    item.OutcomeID,
-		}] = item
-	}
-	return result, nil
+
+	return b.DBOConditions()
 }
 
-func (d *assessmentOutcomeDA) BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentOutcome, error) {
-	var items []*entity.AssessmentOutcome
-	if err := tx.
-		Where("assessment_id in (?)", assessmentIDs).
-		Find(&items).Error; err != nil {
-		log.Error(ctx, "batch get assessment outcome by assessment ids: find failed",
-			log.Err(err),
-			log.Strings("assessment_ids", assessmentIDs),
-		)
-		return nil, err
-	}
-	return items, nil
-}
+func (c *QueryAssessmentOutcomeConditions) GetPager() *dbo.Pager { return nil }
+
+func (c *QueryAssessmentOutcomeConditions) GetOrderBy() string { return "" }

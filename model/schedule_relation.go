@@ -17,9 +17,11 @@ type IScheduleRelationModel interface {
 	GetTeacherIDs(ctx context.Context, op *entity.Operator, scheduleID string) ([]string, error)
 	GetClassRosterID(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
 	GetUsersByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleRelation, error)
+	GetByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) ([]*entity.ScheduleRelation, error)
 	Count(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) (int, error)
 	HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error)
 }
+
 type scheduleRelationModel struct {
 }
 
@@ -186,6 +188,11 @@ func (s *scheduleRelationModel) Query(ctx context.Context, op *entity.Operator, 
 		return nil, err
 	}
 	return result, nil
+}
+
+// TODO:
+func (s *scheduleRelationModel) GetByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) ([]*entity.ScheduleRelation, error) {
+	panic("implement me")
 }
 
 var (
