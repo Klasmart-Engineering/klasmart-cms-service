@@ -244,7 +244,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 	author, _ := external.GetUserServiceProvider().Get(ctx, operator, outcome.AuthorID)
 	view.AuthorName = author.Name
 	pIDs := strings.Split(outcome.Program, ",")
-	pNames := getProgramsName(ctx, operator, pIDs)
+	pNames, _ := external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, pIDs)
 	view.Program = make([]Program, len(pIDs))
 	for k, id := range pIDs {
 		view.Program[k].ProgramID = id
@@ -310,20 +310,6 @@ func getOrganizationName(ctx context.Context, operator *entity.Operator, id stri
 			log.Strings("org_ids", ids))
 	}
 	return names[0]
-}
-func getProgramsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getProgramName: BatchGet failed",
-			log.Err(err),
-			log.Strings("program_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, p := range programs {
-		names[p.ID] = p.Name
-	}
-	return
 }
 
 func getSubjectsName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {

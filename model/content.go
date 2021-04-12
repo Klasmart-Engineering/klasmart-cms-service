@@ -2537,13 +2537,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Program
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, user, programIDs)
+	programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, user, programIDs)
 	if err != nil {
 		log.Error(ctx, "can't get programs", log.Err(err), log.Strings("ids", programIDs))
-	} else {
-		for i := range programs {
-			programNameMap[programs[i].ID] = programs[i].Name
-		}
 	}
 
 	//Subjects

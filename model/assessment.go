@@ -373,7 +373,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		return nil, err
 	}
 
-	programNameMap, err := a.getProgramNameMap(ctx, operator, programIDs)
+	programNameMap, err := external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, programIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get program name map failed",
 			log.Err(err),
@@ -427,22 +427,6 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	}
 
 	return &result, err
-}
-
-func (a *assessmentModel) getProgramNameMap(ctx context.Context, operator *entity.Operator, programIDs []string) (map[string]string, error) {
-	programNameMap := map[string]string{}
-	programs, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
-	if err != nil {
-		log.Error(ctx, "list assessments: batch get program failed",
-			log.Err(err),
-			log.Strings("program_ids", programIDs),
-		)
-		return nil, err
-	}
-	for _, program := range programs {
-		programNameMap[program.ID] = program.Name
-	}
-	return programNameMap, nil
 }
 
 func (a *assessmentModel) getSubjectNameMap(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]string, error) {
