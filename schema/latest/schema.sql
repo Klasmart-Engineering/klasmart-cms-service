@@ -533,8 +533,8 @@ CREATE TABLE assessments_contents (
     `assessment_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'assessment id',
     `content_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'content id',
     `content_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'content name',
-    `content_type` INT NOT NULL DEFAULT '' COMMENT 'content type',
-    `content_comment` TEXT NOT NULL DEFAULT '' COMMENT 'content comment',
+    `content_type` INT NOT NULL DEFAULT 0 COMMENT 'content type',
+    `content_comment` TEXT NOT NULL COMMENT 'content comment',
     `checked` BOOLEAN NOT NULL DEFAULT true COMMENT 'checked',
     PRIMARY KEY (`id`),
     UNIQUE `uq_assessments_contents_assessment_id_content_id` (`assessment_id`, `content_id`),
@@ -546,5 +546,5 @@ CREATE TABLE assessments_contents_outcomes (
     `assessment_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'assessment id',
     `content_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'content id',
     `outcome_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'outcome id',
-    UNIQUE `uq_assessments_contents_outcomes_assessment_id_content_id` (`assessment_id`, `content_id`),
+    UNIQUE `uq_assessments_contents_outcomes_assessment_id_content_id` (`assessment_id`, `content_id`)
 ) COMMENT 'assessment content and outcome map' DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_UNICODE_CI;
