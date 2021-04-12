@@ -100,6 +100,10 @@ func (*assessmentContentDA) UncheckAllMaterials(ctx context.Context, tx *dbo.DBC
 		Where("assessment_id = ? and content_type = ?", assessmentID, entity.ContentTypeMaterial).
 		Updates(changes).
 		Error; err != nil {
+		log.Error(ctx, "UncheckAllMaterials: uncheck failed",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+		)
 		return err
 	}
 	return nil
@@ -115,6 +119,11 @@ func (*assessmentContentDA) BatchCheckMaterials(ctx context.Context, tx *dbo.DBC
 			entity.ContentTypeMaterial, assessmentID, materialIDs).
 		Updates(changes).
 		Error; err != nil {
+		log.Error(ctx, "BatchCheckMaterials: check failed",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+			log.Strings("material_ids", materialIDs),
+		)
 		return err
 	}
 	return nil

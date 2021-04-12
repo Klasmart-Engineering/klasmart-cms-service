@@ -62,92 +62,33 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		return nil, err
 	}
 
-	result := entity.AssessmentDetail{
-		ID:           assessment.ID,
-		Title:        assessment.Title,
-		Status:       assessment.Status,
-		CompleteTime: assessment.CompleteTime,
-		ClassEndTime: assessment.ClassEndTime,
-		ClassLength:  assessment.ClassLength,
-	}
-
-	// fill students and teachers
+	// convert to assessment view
 	var (
-		assessmentAttendances    []*entity.AssessmentAttendance
-		assessmentAttendancesMap = map[string]*entity.AssessmentAttendance{}
-		studentIDs               []string
-		studentNameMap           map[string]string
-		teacherIDs               []string
-		teacherNameMap           map[string]string
+		views []*entity.AssessmentView
+		view *entity.AssessmentView
 	)
-	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
-		AssessmentIDs: []string{id},
-	}, &assessmentAttendances); err != nil {
-		log.Error(ctx, "Get: da.GetAssessmentAttendanceDA().QueryTx: query failed",
-			log.Err(err),
-			log.String("id", "id"),
-		)
-		return nil, err
-	}
-	for _, a := range assessmentAttendances {
-		assessmentAttendancesMap[a.AttendanceID] = a
-		switch a.Role {
-		case entity.AssessmentAttendanceRoleStudent:
-			studentIDs = append(studentIDs, a.AttendanceID)
-		case entity.AssessmentAttendanceRoleTeacher:
-			teacherIDs = append(teacherIDs, a.AttendanceID)
-		}
-	}
-	if studentNameMap, err = m.getStudentNameMap(ctx, operator, studentIDs); err != nil {
-		log.Error(ctx, "Get: m.getStudentNameMap: get failed",
-			log.Err(err),
-			log.Strings("student_ids", studentIDs),
-			log.Any("assessment_id", id),
-		)
-		return nil, err
-	}
-	for _, sid := range studentIDs {
-		result.Students = append(result.Students, &entity.AssessmentStudent{
-			ID:      sid,
-			Name:    studentNameMap[sid],
-			Checked: assessmentAttendancesMap[sid].Checked,
-		})
-	}
-	for _, tid := range teacherIDs {
-		result.Teachers = append(result.Teachers, &entity.AssessmentTeacher{
-			ID:   tid,
-			Name: teacherNameMap[tid],
-		})
-	}
-
-	// fill program
-	programNameMap, err := m.getProgramNameMap(ctx, operator, []string{assessment.ProgramID})
-	if err != nil {
-		log.Error(ctx, "Get: m.getProgramNameMap: get failed",
+	if views, err = m.convertToAssessmentViews(ctx, tx, operator, []*entity.Assessment{assessment}, nil); err != nil {
+		log.Error(ctx, "Get: m.convertToAssessmentViews: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
-			log.String("program_id", assessment.ProgramID),
+			log.Any("operator", operator),
 		)
 		return nil, err
 	}
-	result.Program = entity.AssessmentProgram{
-		ID:   assessment.ProgramID,
-		Name: programNameMap[assessment.ProgramID],
-	}
+	view = views[0]
 
-	// fill subject
-	subjectNameMap, err := m.getSubjectNameMap(ctx, operator, []string{assessment.SubjectID})
-	if err != nil {
-		log.Error(ctx, "Get: m.getSubjectNameMap: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-			log.String("subject_id", assessment.SubjectID),
-		)
-		return nil, err
-	}
-	result.Subject = entity.AssessmentSubject{
-		ID:   assessment.SubjectID,
-		Name: subjectNameMap[assessment.SubjectID],
+	// fill partial result
+	result := entity.AssessmentDetail{
+		ID:                 assessment.ID,
+		Title:              assessment.Title,
+		Status:             assessment.Status,
+		CompleteTime:       assessment.CompleteTime,
+		Teachers:           view.Teachers,
+		Students:           view.Students,
+		Program:            view.Program,
+		Subject:            view.Subject,
+		ClassEndTime:       assessment.ClassEndTime,
+		ClassLength:        assessment.ClassLength,
 	}
 
 	// fill outcome attendances
@@ -311,7 +252,6 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 			Page:                    args.Page,
 			PageSize:                args.PageSize,
 		}
-
 		teachers    []*external.Teacher
 		scheduleIDs []string
 	)
@@ -376,63 +316,12 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		return nil, err
 	}
 
-	// batch get program, subject and teachers
-	var (
-		programIDs              []string
-		programNameMap          map[string]string
-		subjectIDs              []string
-		subjectNameMap          map[string]string
-		assessmentIDs           []string
-		assessmentAttendances   []*entity.AssessmentAttendance
-		assessmentTeacherIDsMap map[string][]string
-		teacherIDs              []string
-		teacherNameMap          map[string]string
-	)
-	for _, a := range assessments {
-		programIDs = append(programIDs, a.ProgramID)
-		subjectIDs = append(subjectIDs, a.SubjectID)
-		assessmentIDs = append(assessmentIDs, a.ID)
-	}
-	role := entity.AssessmentAttendanceRoleTeacher
-	if err = da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
-		AssessmentIDs: assessmentIDs,
-		Role:          &role,
-		Checked:       da.RefBool(true),
-	}, &assessmentAttendances); err != nil {
-		log.Error(ctx, "List: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+	// convert to assessment view
+	var views []*entity.AssessmentView
+	if views, err = m.convertToAssessmentViews(ctx, tx, operator, assessments, da.RefBool(true)); err != nil {
+		log.Error(ctx, "List: m.convertToAssessmentViews: get failed",
 			log.Err(err),
-			log.Strings("assessment_ids", assessmentIDs),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-	}
-	if programNameMap, err = m.getProgramNameMap(ctx, operator, programIDs); err != nil {
-		log.Error(ctx, "List: m.getProgramNameMap: get failed",
-			log.Err(err),
-			log.Strings("program_ids", programIDs),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	if subjectNameMap, err = m.getSubjectNameMap(ctx, operator, subjectIDs); err != nil {
-		log.Error(ctx, "List: m.getSubjectNameMap: get failed",
-			log.Err(err),
-			log.Strings("subject_ids", subjectIDs),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	assessmentTeacherIDsMap = make(map[string][]string, len(assessmentAttendances))
-	for _, aa := range assessmentAttendances {
-		teacherIDs = append(teacherIDs, aa.AttendanceID)
-		assessmentTeacherIDsMap[aa.AssessmentID] = append(assessmentTeacherIDsMap[aa.AssessmentID], aa.AttendanceID)
-	}
-	if teacherNameMap, err = m.getTeacherNameMap(ctx, operator, teacherIDs); err != nil {
-		log.Error(ctx, "List: m.getTeacherNameMap: get failed",
-			log.Err(err),
-			log.Strings("teacher_ids", teacherIDs),
+			log.Any("assessments", assessments),
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
@@ -441,32 +330,143 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 
 	// construct result
 	var result = entity.ListAssessmentsResult{Total: total}
-	for _, a := range assessments {
+	for _, v := range views {
 		newItem := entity.AssessmentItem{
-			ID:    a.ID,
-			Title: a.Title,
-			Subject: entity.AssessmentSubject{
-				ID:   a.SubjectID,
-				Name: subjectNameMap[a.SubjectID],
-			},
-			Program: entity.AssessmentProgram{
-				ID:   a.ProgramID,
-				Name: programNameMap[a.ProgramID],
-			},
-			ClassEndTime: a.ClassEndTime,
-			CompleteTime: a.CompleteTime,
-			Status:       a.Status,
-		}
-		for _, teacherID := range assessmentTeacherIDsMap[a.ID] {
-			newItem.Teachers = append(newItem.Teachers, entity.AssessmentTeacher{
-				ID:   teacherID,
-				Name: teacherNameMap[teacherID],
-			})
+			ID:           v.ID,
+			Title:        v.Title,
+			Program:      v.Program,
+			Subject:      v.Subject,
+			Teachers:     v.Teachers,
+			ClassEndTime: v.ClassEndTime,
+			CompleteTime: v.CompleteTime,
+			Status:       v.Status,
 		}
 		result.Items = append(result.Items, &newItem)
 	}
 
 	return &result, nil
+}
+
+func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, checkedStudents *bool) ([]*entity.AssessmentView, error) {
+	//
+	var (
+		err           error
+		assessmentIDs []string
+		subjectIDs    []string
+		programIDs    []string
+	)
+	for _, a := range assessments {
+		assessmentIDs = append(assessmentIDs, a.ID)
+		subjectIDs = append(subjectIDs, a.SubjectID)
+		programIDs = append(programIDs, a.ProgramID)
+	}
+
+	// fill program
+	programNameMap, err := m.getProgramNameMap(ctx, operator, programIDs)
+	if err != nil {
+		log.Error(ctx, "convertToAssessmentViews: m.getProgramNameMap: get failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Strings("program_ids", programIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	// fill subject
+	subjectNameMap, err := m.getSubjectNameMap(ctx, operator, subjectIDs)
+	if err != nil {
+		log.Error(ctx, "convertToAssessmentViews: Get: m.getSubjectNameMap: get failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Strings("subject_ids", subjectIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	// fill students and teachers
+	var (
+		assessmentAttendances    []*entity.AssessmentAttendance
+		assessmentAttendancesMap = map[string]*entity.AssessmentAttendance{}
+		studentIDs               []string
+		studentNameMap           map[string]string
+		assessmentStudentsMap    = map[string][]*entity.AssessmentAttendance{}
+		teacherIDs               []string
+		teacherNameMap           map[string]string
+		assessmentTeachersMap    = map[string][]*entity.AssessmentAttendance{}
+	)
+	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
+		AssessmentIDs: assessmentIDs,
+		Checked:       checkedStudents,
+	}, &assessmentAttendances); err != nil {
+		log.Error(ctx, "convertToAssessmentViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	for _, a := range assessmentAttendances {
+		assessmentAttendancesMap[a.AttendanceID] = a
+		switch a.Role {
+		case entity.AssessmentAttendanceRoleStudent:
+			studentIDs = append(studentIDs, a.AttendanceID)
+			assessmentStudentsMap[a.ID] = append(assessmentStudentsMap[a.ID], a)
+		case entity.AssessmentAttendanceRoleTeacher:
+			teacherIDs = append(teacherIDs, a.AttendanceID)
+			assessmentTeachersMap[a.ID] = append(assessmentTeachersMap[a.ID], a)
+		}
+	}
+	if teacherNameMap, err = m.getTeacherNameMap(ctx, operator, teacherIDs); err != nil {
+		log.Error(ctx, "convertToAssessmentViews: m.getTeacherNameMap: get failed",
+			log.Err(err),
+			log.Strings("teacher_ids", teacherIDs),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	if studentNameMap, err = m.getStudentNameMap(ctx, operator, studentIDs); err != nil {
+		log.Error(ctx, "convertToAssessmentViews: m.getStudentNameMap: get failed",
+			log.Err(err),
+			log.Strings("student_ids", studentIDs),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	var result []*entity.AssessmentView
+	for _, a := range assessments {
+		v := entity.AssessmentView{
+			Assessment: a,
+			Program: entity.AssessmentProgram{
+				ID:   a.ProgramID,
+				Name: programNameMap[a.ProgramID],
+			},
+			Subject: entity.AssessmentSubject{
+				ID:   a.SubjectID,
+				Name: subjectNameMap[a.SubjectID],
+			},
+		}
+		for _, t := range assessmentTeachersMap[a.ID] {
+			v.Teachers = append(v.Teachers, &entity.AssessmentTeacher{
+				ID:   t.AttendanceID,
+				Name: teacherNameMap[t.AttendanceID],
+			})
+		}
+		for _, s := range assessmentStudentsMap[a.ID] {
+			v.Students = append(v.Students, &entity.AssessmentStudent{
+				ID:      s.AttendanceID,
+				Name:    studentNameMap[s.AttendanceID],
+				Checked: s.Checked,
+			})
+		}
+		result = append(result, &v)
+	}
+
+	return result, nil
 }
 
 func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {

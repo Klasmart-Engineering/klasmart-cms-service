@@ -190,6 +190,7 @@ func (s *scheduleRelationModel) Query(ctx context.Context, op *entity.Operator, 
 	return result, nil
 }
 
+// TODO:
 func (s *scheduleRelationModel) GetByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) ([]*entity.ScheduleRelation, error) {
 	panic("implement me")
 }

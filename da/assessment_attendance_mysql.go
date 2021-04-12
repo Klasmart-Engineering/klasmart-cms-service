@@ -42,6 +42,9 @@ func (*assessmentAttendanceDA) GetTeacherIDsByAssessmentID(ctx context.Context, 
 	if err := tx.Where("assessment_id = ? and role = ?", assessmentID, entity.AssessmentAttendanceRoleTeacher).
 		Find(&items).
 		Error; err != nil {
+		log.Error(ctx, "GetTeacherIDsByAssessmentID: Find: find failed",
+			log.String("assessment_id", assessmentID),
+		)
 		return nil, err
 	}
 	for _, item := range items {
@@ -58,6 +61,9 @@ func (*assessmentAttendanceDA) GetStudentIDsByAssessmentID(ctx context.Context, 
 	if err := tx.Where("assessment_id = ? and role = ?", assessmentID, entity.AssessmentAttendanceRoleStudent).
 		Find(&items).
 		Error; err != nil {
+		log.Error(ctx, "GetStudentIDsByAssessmentID: Find: find failed",
+			log.String("assessment_id", assessmentID),
+		)
 		return nil, err
 	}
 	for _, item := range items {

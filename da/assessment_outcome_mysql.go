@@ -77,6 +77,10 @@ func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context
 		Where("assessment_id = ? and outcome_id = ?", item.AssessmentID, item.OutcomeID).
 		Updates(changes).
 		Error; err != nil {
+		log.Error(ctx, "UpdateByAssessmentIDAndOutcomeID: Updates: update failed",
+			log.Err(err),
+			log.Any("assessment_outcome", item),
+		)
 		return err
 	}
 	return nil
