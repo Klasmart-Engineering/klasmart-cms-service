@@ -2557,13 +2557,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//developmental
-	developmentals, err := external.GetCategoryServiceProvider().BatchGet(ctx, user, developmentalIDs)
+	developmentalNameMap, err = external.GetCategoryServiceProvider().BatchGetNameMap(ctx, user, developmentalIDs)
 	if err != nil {
-		log.Error(ctx, "can't get developmentals info", log.Err(err))
-	} else {
-		for i := range developmentals {
-			developmentalNameMap[developmentals[i].ID] = developmentals[i].Name
-		}
+		log.Error(ctx, "can't get category info", log.Err(err), log.Strings("ids", developmentalIDs))
 	}
 
 	//scope
