@@ -160,8 +160,10 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 
 	// fill lesson plan and lesson materials
 	var (
-		plan      *entity.AssessmentContent
-		materials []*entity.AssessmentContent
+		plan                     *entity.AssessmentContent
+		materials                []*entity.AssessmentContent
+		contentIDs               []string
+		currentContentOutcomeMap map[string][]string
 	)
 	if plan, err = da.GetAssessmentContentDA().GetPlan(ctx, tx, id); err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetPlan: get failed",
@@ -177,11 +179,25 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		)
 		return nil, err
 	}
+	contentIDs = []string{plan.ID}
+	for _, m := range materials {
+		contentIDs = append(contentIDs, m.ID)
+	}
+	assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, tx, []string{id}, contentIDs)
+	if err != nil {
+		log.Error(ctx, "Get: m.getAssessmentContentOutcomeMap: get failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+			log.Strings("content_ids", contentIDs),
+		)
+		return nil, err
+	}
+	currentContentOutcomeMap = assessmentContentOutcomeMap[id]
 	result.Plan = entity.AssessmentContentView{
 		ID:         plan.ContentID,
 		Name:       plan.ContentName,
 		Checked:    true,
-		OutcomeIDs: plan.OutcomeIDs,
+		OutcomeIDs: currentContentOutcomeMap[plan.ID],
 	}
 	for _, m := range materials {
 		result.Materials = append(result.Materials, &entity.AssessmentContentView{
@@ -189,7 +205,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			Name:       m.ContentName,
 			Comment:    m.ContentComment,
 			Checked:    m.Checked,
-			OutcomeIDs: m.OutcomeIDs,
+			OutcomeIDs: currentContentOutcomeMap[m.ID],
 		})
 	}
 
@@ -724,7 +740,10 @@ func (m *assessmentModel) addAssessmentContents(ctx context.Context, tx *dbo.DBC
 	if len(contents) == 0 {
 		return nil
 	}
-	var assessmentContents []*entity.AssessmentContent
+	var (
+		assessmentContents        []*entity.AssessmentContent
+		assessmentContentOutcomes []*entity.AssessmentContentOutcome
+	)
 	for _, c := range contents {
 		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
 			ID:           utils.NewID(),
@@ -733,8 +752,15 @@ func (m *assessmentModel) addAssessmentContents(ctx context.Context, tx *dbo.DBC
 			ContentName:  c.Name,
 			ContentType:  c.ContentType,
 			Checked:      true,
-			OutcomeIDs:   c.Outcomes,
 		})
+		for _, oid := range c.Outcomes {
+			assessmentContentOutcomes = append(assessmentContentOutcomes, &entity.AssessmentContentOutcome{
+				ID:           utils.NewID(),
+				AssessmentID: assessmentID,
+				ContentID:    c.ID,
+				OutcomeID:    oid,
+			})
+		}
 	}
 	if len(assessmentContents) == 0 {
 		return nil
@@ -749,6 +775,20 @@ func (m *assessmentModel) addAssessmentContents(ctx context.Context, tx *dbo.DBC
 		)
 		return err
 	}
+	if len(assessmentContentOutcomes) == 0 {
+		return nil
+	}
+	if err := da.GetAssessmentContentOutcomeDA().BatchInsert(ctx, tx, assessmentContentOutcomes); err != nil {
+		log.Error(ctx, "addAssessmentContents: da.GetAssessmentContentOutcomeDA().BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("assessment_content_outcomes", assessmentContentOutcomes),
+			log.String("assessment_id", assessmentID),
+			log.Any("contents", contents),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+
 	return nil
 }
 
@@ -1076,6 +1116,32 @@ func (m *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 
 func (m *assessmentModel) generateTitle(classEndTime int64, className string, lessonName string) string {
 	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, lessonName)
+}
+
+func (m *assessmentModel) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
+	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
+	cond := da.QueryAssessmentContentOutcomeConditions{
+		AssessmentIDs: assessmentIDs,
+		ContentIDs:    contentIDs,
+	}
+	if err := da.GetAssessmentContentOutcomeDA().QueryTx(ctx, tx, &cond, &assessmentContentOutcomes); err != nil {
+		log.Error(ctx, "getAssessmentContentOutcomeMap: da.GetAssessmentContentOutcomeDA().QueryTx: get failed",
+			log.Err(err),
+			log.Any("cond", cond),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Strings("content_ids", contentIDs),
+		)
+		return nil, err
+	}
+	result := map[string]map[string][]string{}
+	for _, co := range assessmentContentOutcomes {
+		if result[co.AssessmentID] == nil {
+			result[co.AssessmentID] = map[string][]string{}
+		} else {
+			result[co.AssessmentID][co.ContentID] = append(result[co.AssessmentID][co.ContentID], co.OutcomeID)
+		}
+	}
+	return result, nil
 }
 
 type outcomesSortByAssumedAndName []*entity.Outcome
