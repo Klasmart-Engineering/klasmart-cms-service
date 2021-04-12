@@ -123,3 +123,7 @@ func (o OutcomeSqlDA) SearchShortcode(ctx context.Context, tx *dbo.DBContext, or
 func (o OutcomeSqlDA) SaveShortcodeInRedis(ctx context.Context, orgID string, shortcode string) error {
 	return ro.MustGetRedis(ctx).Set(o.shortcodeRedisKey(orgID, shortcode), shortcode, time.Hour).Err()
 }
+
+func (o OutcomeSqlDA) DeleteShortcodeInRedis(ctx context.Context, orgID string, shortcode string) error {
+	return ro.MustGetRedis(ctx).Del(o.shortcodeRedisKey(orgID, shortcode)).Err()
+}

@@ -28,7 +28,7 @@ type CreateFolderResponse struct {
 	ID string `json:"id"`
 }
 type PublishContentRequest struct {
-	Scope string `json:"scope"`
+	Scope []string `json:"scope"`
 }
 
 // @Summary createContent
@@ -63,7 +63,13 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 
-	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
+	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := model.GetContentModel().CreateContent(ctx, tx, data, op)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
 	switch err {
 	case model.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
@@ -169,18 +175,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIDList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
-	//if err != nil {
-	//	log.Error(ctx, "check author failed", log.Err(err))
-	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	//	return
-	//}
-	////不是作者，则检查权限
-	////if not author, check the permission
-	//if !isAuthor {
-	//
-	//}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, "", op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -230,8 +225,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -241,7 +235,11 @@ func (s *Server) publishContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetContentModel().PublishContent(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := model.GetContentModel().PublishContent(ctx, tx, cid, data.Scope, op)
+		return err
+	})
+
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -275,7 +273,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -923,7 +921,7 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	}
 	if scope != "" {
 		scopes := strings.Split(scope, constant.StringArraySeparator)
-		condition.Scope = append(condition.Scope, scopes...)
+		condition.VisibilitySettings = append(condition.VisibilitySettings, scopes...)
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)

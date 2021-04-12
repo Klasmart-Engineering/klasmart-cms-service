@@ -787,12 +787,13 @@ func (s *Server) getScheduleTimeViewCondition(c *gin.Context, loc *time.Location
 			Valid:   true,
 		}
 	} else if permissionMap[external.ScheduleViewMyCalendar] {
-		if len(relationIDs) == 0 {
-			relationIDs = append(relationIDs, op.UserID)
+		condition.RelationID = sql.NullString{
+			String: op.UserID,
+			Valid:  true,
 		}
 		condition.RelationIDs = entity.NullStrings{
 			Strings: relationIDs,
-			Valid:   true,
+			Valid:   len(relationIDs) > 0,
 		}
 	}
 	filterOption := c.Query("filter_option")

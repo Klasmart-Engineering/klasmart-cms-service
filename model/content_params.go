@@ -55,7 +55,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	if c.Data == "" {
 		return nil, ErrNoContentData
 	}
-	cd, err := CreateContentData(ctx, c.ContentType, c.Data)
+	cd, err := cm.CreateContentData(ctx, c.ContentType, c.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
@@ -88,7 +88,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	c.Data = data
 
 	//get publishScope&authorName
-	publishScope := c.PublishScope
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
@@ -111,12 +110,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
 		Name:          c.Name,
-		Program:       c.Program,
-		Subject:       strings.Join(c.Subject, constant.StringArraySeparator),
-		Developmental: strings.Join(c.Developmental, constant.StringArraySeparator),
-		Skills:        strings.Join(c.Skills, constant.StringArraySeparator),
-		Age:           strings.Join(c.Age, constant.StringArraySeparator),
-		Grade:         strings.Join(c.Grade, constant.StringArraySeparator),
 		Keywords:      strings.Join(c.Keywords, constant.StringArraySeparator),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
@@ -132,7 +125,6 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		Creator:       operator.UserID,
 		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
-		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
 		Version:       1,
 	}, nil
@@ -144,24 +136,6 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	}
 	if data.ContentType > 0 && data.Data != "" {
 		content.ContentType = data.ContentType
-	}
-	if data.Program != "" {
-		content.Program = data.Program
-	}
-	if data.Subject != nil {
-		content.Subject = strings.Join(data.Subject, constant.StringArraySeparator)
-	}
-	if data.Developmental != nil {
-		content.Developmental = strings.Join(data.Developmental, constant.StringArraySeparator)
-	}
-	if data.Skills != nil {
-		content.Skills = strings.Join(data.Skills, constant.StringArraySeparator)
-	}
-	if data.Age != nil {
-		content.Age = strings.Join(data.Age, constant.StringArraySeparator)
-	}
-	if data.Grade != nil {
-		content.Grade = strings.Join(data.Grade, constant.StringArraySeparator)
 	}
 	if data.Description != "" {
 		content.Description = data.Description
@@ -193,11 +167,6 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusDraft
 	}
-	//若已发布，不能修改publishScope
-	if content.PublishStatus == entity.ContentStatusDraft ||
-		content.PublishStatus == entity.ContentStatusRejected {
-		content.PublishScope = data.PublishScope
-	}
 
 	//Asset修改后直接发布
 	//if the content is assets, publish immediately after update
@@ -211,7 +180,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 	//检查data
 	if data.Data != "" {
-		cd, err := CreateContentData(ctx, data.ContentType, data.Data)
+		cd, err := cm.CreateContentData(ctx, data.ContentType, data.Data)
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}

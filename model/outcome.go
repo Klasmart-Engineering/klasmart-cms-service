@@ -104,6 +104,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		}
 		return nil
 	})
+	da.GetOutcomeDA().DeleteShortcodeInRedis(ctx, operator.OrgID, outcome.Shortcode)
 	if err != nil {
 		return err
 	}

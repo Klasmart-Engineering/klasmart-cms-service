@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"net/http"
 	"testing"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -16,7 +17,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 )
@@ -198,27 +198,6 @@ func TestRedis(t *testing.T) {
 
 func TestNumToBHex(t *testing.T) {
 	fmt.Println("")
-}
-
-func TestFindRoot(t *testing.T) {
-	orgs := []*external.Organization{
-		{ID: "1", ParentID: "3"},
-		{ID: "2", ParentID: "1"},
-		{ID: "3", ParentID: "4"},
-		{ID: "4", ParentID: ""},
-	}
-	root := orgs[3]
-	for i := 0; i < len(orgs); i++ {
-		if root.ParentID != "" && root.ParentID != root.ID {
-			for _, o := range orgs {
-				if o.ID == root.ParentID {
-					root = o
-					break
-				}
-			}
-		}
-	}
-	fmt.Printf("%+v", root)
 }
 
 var token = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI0MjI3NDNlLTllYmMtNWVkNy1iNzI1LTA2Mjk5NGVjNzdmMiIsImVtYWlsIjoiYnJpbGxpYW50LnlhbmdAYmFkYW5hbXUuY29tLmNuIiwiZXhwIjoxNjA1MTc4Nzk2LCJpc3MiOiJraWRzbG9vcCJ9.sDkGFTIWm-NgEDfNJoMS_3KoKcZs0smnR7whqWY0AMnYLFYX3j_Saj6gHjXHpmZMVewbnaNfv9lYfhSokFBZaCcYyeVBXQo6DHL6nppsMUFwmcTjl-NjqSGwYUvjpV7cmkmL33H8KojEuBUDP8kOK-cF5Km28PC6sV2nFRVBNFBXlcNsdB-CIQEeycCzRhw078GAP64Bpugay8W-77keldN-C1Qnrc6spbSCOKnxMpT94pBRzgB8D-vHdcnvB3zlfPj8RYWFlGE_uufHfPTSgS-nTzrz8vRhiJdOAYdPys90w87jGfmopm1AT-qDSqa4Qf8hMW4bj_UDAa4-1bI-yQ"
