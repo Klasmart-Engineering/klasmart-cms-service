@@ -90,10 +90,10 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	}
 	data := &ScheduleClassEvent2{
 		Action:  entity.ClassActionEventDelete,
-		ClassID: "0c01504d-d6ae-4c40-9862-68566bff0767",
+		ClassID: "dc33ce61-6ac7-4a12-8592-ca857e6eb395",
 		Users: []*entity.ScheduleClassUserEvent{
 			{
-				ID:       "3d71820e-6f37-5a1d-a855-a94c0c9035fa",
+				ID:       "11bb492e-ff80-5928-ac86-8b639a0c1a44",
 				RoleType: entity.ClassUserRoleTypeEventTeacher,
 			},
 		},
@@ -108,8 +108,9 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	}
 
 	token, err := utils.CreateJWT(context.Background(), claims, privateKeyPB)
-	fmt.Println(err)
-	fmt.Println(token)
+	if err != nil {
+		t.Fatal(err)
+	}
 	body := entity.ScheduleEventBody{Token: token}
 	jsonStr, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
@@ -121,15 +122,7 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	str, err := ioutil.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	fmt.Println(string(str))
-	//r, err := http.NewRequest("POST", "/v1/class_user_edit_to_schedule", bytes.NewBuffer(jsonStr))
-	//
-	//server.engine.ServeHTTP(w, r)
-	//
-	//resp := w.Result()
-	//ioutil.ReadAll(resp.Body)
-	//fmt.Println(resp)
-	//fmt.Println(err)
 }

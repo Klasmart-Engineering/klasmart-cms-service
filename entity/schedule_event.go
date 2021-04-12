@@ -30,6 +30,17 @@ const (
 	ClassUserRoleTypeEventStudent ClassUserRoleTypeEvent = "Student"
 )
 
+func (t ClassUserRoleTypeEvent) ToScheduleRelationType() ScheduleRelationType {
+	switch t {
+	case ClassUserRoleTypeEventTeacher:
+		return ScheduleRelationTypeClassRosterTeacher
+	case ClassUserRoleTypeEventStudent:
+		return ScheduleRelationTypeClassRosterStudent
+	default:
+		return ScheduleRelationTypeInvalid
+	}
+}
+
 type ClassActionEvent string
 
 const (

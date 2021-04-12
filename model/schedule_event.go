@@ -34,23 +34,23 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 		log.Debug(ctx, "class are not scheduled", log.Any("event", event))
 		return nil
 	}
+
+	log.Debug(ctx, "about scheduleIDs", log.Any("scheduleIDs", scheduleIDs), log.Int("schedule count", len(scheduleIDs)), log.Any("event", event))
+
 	userDistinct := make(map[string]bool)
-	relations := make([]*entity.ScheduleRelation, 0, len(scheduleIDs)*len(event.Users))
-	for _, scheduleID := range scheduleIDs {
-		for _, user := range event.Users {
-			if _, ok := userDistinct[user.ID]; ok {
+	relations := make([]*entity.ScheduleRelation, 0, len(event.Users)*len(scheduleIDs))
+
+	for _, user := range event.Users {
+		var roleType = user.RoleType.ToScheduleRelationType()
+		if roleType == entity.ScheduleRelationTypeInvalid {
+			log.Info(ctx, "user role type invalid", log.Any("event", event))
+			continue
+		}
+		for _, scheduleID := range scheduleIDs {
+			if _, ok := userDistinct[scheduleID+user.ID]; ok {
 				continue
 			}
-			var roleType entity.ScheduleRelationType
-			switch user.RoleType {
-			case entity.ClassUserRoleTypeEventTeacher:
-				roleType = entity.ScheduleRelationTypeClassRosterTeacher
-			case entity.ClassUserRoleTypeEventStudent:
-				roleType = entity.ScheduleRelationTypeClassRosterStudent
-			default:
-				log.Info(ctx, "user role type is invalid", log.Any("event", event))
-				continue
-			}
+
 			countCondition := &da.ScheduleRelationCondition{
 				ScheduleID: sql.NullString{
 					String: scheduleID,
@@ -80,19 +80,23 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 				RelationID:   user.ID,
 				RelationType: roleType,
 			})
-			userDistinct[user.ID] = true
+			userDistinct[scheduleID+user.ID] = true
 		}
 	}
+
 	if len(relations) <= 0 {
 		log.Info(ctx, "relation data not found", log.Any("event", event))
 		return nil
 	}
+
 	_, err = da.GetScheduleRelationDA().BatchInsert(ctx, dbo.MustGetDB(ctx), relations)
 	if err != nil {
 		log.Error(ctx, "count by schedule condition error", log.Err(err), log.Any("event", event), log.Any("relations", relations))
 		return err
 	}
+
 	log.Debug(ctx, "class add user event end", log.Any("relations", relations), log.Any("event", event))
+
 	return nil
 }
 
