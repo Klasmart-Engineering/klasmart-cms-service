@@ -35,7 +35,7 @@ func (c *ContentPropertyDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, co 
 		"`property_id`",
 		"`sequence`",
 	}, data)
-	execResult := tx.Model(entity.ContentProperty{}).Exec(sql.Format, sql.Values...)
+	execResult := tx.Exec(sql.Format, sql.Values...)
 	if execResult.Error != nil {
 		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
 		return execResult.Error
