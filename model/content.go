@@ -940,6 +940,14 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 		return ErrInvalidContentData
 	}
 
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", content.ID))
+		return ErrInvalidContentData
+	}
+
 	//创建assets data对象，并解析
 	//create assets data object, and parse it
 	assetsData := new(AssetsData)
@@ -959,20 +967,17 @@ func (cm *ContentModel) prepareForPublishMaterialsAssets(ctx context.Context, tx
 		Thumbnail:   content.Thumbnail,
 		SuggestTime: content.SuggestTime,
 		Data:        assetsDataJSON,
+
+		Program:     contentProperties.Program,
+		Subject:     contentProperties.Subject,
+		Category:    contentProperties.Category,
+		SubCategory: contentProperties.SubCategory,
+		Age:         contentProperties.Age,
+		Grade:       contentProperties.Grade,
 	}
-	pid, err := cm.CreateContent(ctx, tx, req, user)
+	_, err = cm.CreateContent(ctx, tx, req, user)
 	if err != nil {
 		log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
-		return err
-	}
-
-	//copy content properties
-	err = cm.copyContentProperties(ctx, tx, content.ID, pid)
-	if err != nil {
-		log.Warn(ctx, "copyContentProperties failed", log.Err(err),
-			log.String("uid", user.UserID),
-			log.Any("content", content),
-			log.Any("req", req))
 		return err
 	}
 
@@ -1143,6 +1148,13 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		log.Error(ctx, "validate for publishing failed", log.Err(err), log.String("cid", content.ID), log.Strings("scope", scope), log.String("uid", user.UserID))
 		return err
 	}
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", content.ID))
+		return ErrInvalidContentData
+	}
 
 	//create content data object
 	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
@@ -1178,20 +1190,17 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 			Description: content.Description,
 			Thumbnail:   "",
 			SuggestTime: 0,
+			Program:     contentProperties.Program,
+			Subject:     contentProperties.Subject,
+			Category:    contentProperties.Category,
+			SubCategory: contentProperties.SubCategory,
+			Age:         contentProperties.Age,
+			Grade:       contentProperties.Grade,
 			Data:        assetsDataJSON,
 		}
-		pid, err := cm.CreateContent(ctx, tx, req, user)
+		_, err = cm.CreateContent(ctx, tx, req, user)
 		if err != nil {
 			log.Warn(ctx, "create assets failed", log.Err(err), log.String("uid", user.UserID), log.Any("req", req))
-			return err
-		}
-		err = cm.copyContentProperties(ctx, tx, content.ID, pid)
-		if err != nil {
-			log.Warn(ctx, "copyContentProperties failed",
-				log.Err(err),
-				log.String("uid", user.UserID),
-				log.Any("content", content),
-				log.Any("req", req))
 			return err
 		}
 	}
@@ -2697,6 +2706,49 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	}
 
 	return ret, nil
+}
+
+func (cm *ContentModel) getContentProperties(ctx context.Context, cid string) (*entity.ContentProperties, error) {
+	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), []string{cid})
+	if err != nil {
+		log.Error(ctx, "BatchGetByContentIDList",
+			log.Err(err),
+			log.String("id", cid))
+		return nil, err
+	}
+
+	subjects := make([]string, 0)
+	categories := make([]string, 0)
+	subCategories := make([]string, 0)
+	ages := make([]string, 0)
+	grades := make([]string, 0)
+	program := ""
+
+	for i := range contentProperties {
+		switch contentProperties[i].PropertyType {
+		case entity.ContentPropertyTypeProgram:
+			program = contentProperties[i].PropertyID
+		case entity.ContentPropertyTypeSubject:
+			subjects = append(subjects, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeCategory:
+			categories = append(categories, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeAge:
+			ages = append(ages, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeGrade:
+			grades = append(grades, contentProperties[i].PropertyID)
+		case entity.ContentPropertyTypeSubCategory:
+			subCategories = append(subCategories, contentProperties[i].PropertyID)
+		}
+	}
+	return &entity.ContentProperties{
+		ContentID:   cid,
+		Program:     program,
+		Subject:     subjects,
+		Category:    categories,
+		SubCategory: subCategories,
+		Age:         ages,
+		Grade:       grades,
+	}, nil
 }
 
 func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIDs []string, user *entity.Operator) *da.FolderCondition {
