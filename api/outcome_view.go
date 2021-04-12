@@ -279,7 +279,7 @@ func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *ent
 		view.Age[k].AgeName = aNames[id]
 	}
 	gIDs := strings.Split(outcome.Grade, ",")
-	gNames := getGradeName(ctx, operator, gIDs)
+	gNames, _ := external.GetGradeServiceProvider().BatchGetNameMap(ctx, operator, gIDs)
 	view.Grade = make([]Grade, len(gIDs))
 	for k, id := range gIDs {
 		view.Grade[k].GradeID = id
@@ -352,21 +352,6 @@ func getSkillsName(ctx context.Context, operator *entity.Operator, ids []string)
 	names = make(map[string]string, len(ids))
 	for _, s := range skills {
 		names[s.ID] = s.Name
-	}
-	return
-}
-
-func getGradeName(ctx context.Context, operator *entity.Operator, ids []string) (names map[string]string) {
-	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, operator, ids)
-	if err != nil {
-		log.Error(ctx, "getGradeName: BatchGet failed",
-			log.Err(err),
-			log.Strings("grade_ids", ids))
-		return nil
-	}
-	names = make(map[string]string, len(ids))
-	for _, g := range grades {
-		names[g.ID] = g.Name
 	}
 	return
 }

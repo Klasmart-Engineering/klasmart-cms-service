@@ -2590,13 +2590,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//grade
-	grades, err := external.GetGradeServiceProvider().BatchGet(ctx, user, gradeIDs)
+	gradeNameMap, err = external.GetGradeServiceProvider().BatchGetNameMap(ctx, user, gradeIDs)
 	if err != nil {
 		log.Error(ctx, "can't get grade info", log.Strings("gradeIDs", gradeIDs), log.Err(err))
-	} else {
-		for i := range grades {
-			gradeNameMap[grades[i].ID] = grades[i].Name
-		}
 	}
 
 	//Outcomes
