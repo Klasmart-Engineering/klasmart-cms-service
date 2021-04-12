@@ -97,8 +97,7 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			attendanceIDs = append(attendanceIDs, item.AttendanceID)
 		}
 
-		studentService := external.GetStudentServiceProvider()
-		students, err := studentService.BatchGet(ctx, operator, attendanceIDs)
+		studentMap, err := external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, attendanceIDs)
 		if err != nil {
 			log.Error(ctx, "get assessment detail: batch get student failed",
 				log.Err(err),
@@ -106,10 +105,6 @@ func (a *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 				log.Strings("attendance_ids", attendanceIDs),
 			)
 			return nil, err
-		}
-		studentMap := map[string]string{}
-		for _, student := range students {
-			studentMap[student.ID] = student.Name
 		}
 
 		for _, item := range assessmentAttendances {
@@ -382,7 +377,7 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		return nil, err
 	}
 
-	teacherNameMap, err := a.getTeacherNameMap(ctx, operator, teacherIDs)
+	teacherNameMap, err := external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "detail: get teacher name map failed",
 			log.Err(err),
@@ -427,23 +422,6 @@ func (a *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	}
 
 	return &result, err
-}
-
-func (a *assessmentModel) getTeacherNameMap(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]string, error) {
-	teacherNameMap := map[string]string{}
-	teacherNameService := external.GetTeacherServiceProvider()
-	items, err := teacherNameService.BatchGet(ctx, operator, teacherIDs)
-	if err != nil {
-		log.Error(ctx, "list assessments: batch get teacher failed",
-			log.Err(err),
-			log.Strings("teacher_ids", teacherIDs),
-		)
-		return nil, err
-	}
-	for _, item := range items {
-		teacherNameMap[item.ID] = item.Name
-	}
-	return teacherNameMap, nil
 }
 
 func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error) {

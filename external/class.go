@@ -128,10 +128,6 @@ func (s AmsClassService) BatchGetNameMap(ctx context.Context, operator *entity.O
 
 	dict := make(map[string]string, len(classes))
 	for _, class := range classes {
-		if !class.Valid {
-			continue
-		}
-
 		dict[class.ID] = class.Name
 	}
 

@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,8 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sync"
-	"time"
 )
 
 var (
@@ -114,7 +115,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		studentIDs = append(studentIDs, item.StudentID)
 		teacherIDs = append(teacherIDs, item.TeacherIDs...)
 	}
-	studentNamesMap, err := m.getStudentNamesMap(ctx, operator, studentIDs)
+	studentNamesMap, err := external.GetAgeServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
 	if err != nil {
 		log.Error(ctx, "m.getStudentNamesMap: get failed",
 			log.Err(err),
@@ -124,7 +125,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		)
 		return nil, err
 	}
-	teacherNamesMap, err := m.getTeacherNamesMap(ctx, operator, teacherIDs)
+	teacherNamesMap, err := external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs)
 	if err != nil {
 		log.Error(ctx, "m.getTeacherNamesMap: get failed",
 			log.Err(err),
@@ -500,36 +501,4 @@ func (m *homeFunStudyModel) EncodeTitle(className *string, lessonName string) st
 		className = &tmp
 	}
 	return fmt.Sprintf("%s-%s", *className, lessonName)
-}
-
-func (m *homeFunStudyModel) getTeacherNamesMap(ctx context.Context, operator *entity.Operator, teacherIDs []string) (map[string]string, error) {
-	namesMap := map[string]string{}
-	teachers, err := external.GetTeacherServiceProvider().BatchGet(ctx, operator, teacherIDs)
-	if err != nil {
-		log.Error(ctx, "external.GetTeacherServiceProvider().BatchGet: batch get failed",
-			log.Err(err),
-			log.Strings("teacher_ids", teacherIDs),
-		)
-		return nil, err
-	}
-	for _, t := range teachers {
-		namesMap[t.ID] = t.Name
-	}
-	return namesMap, nil
-}
-
-func (m *homeFunStudyModel) getStudentNamesMap(ctx context.Context, operator *entity.Operator, studentIDs []string) (map[string]string, error) {
-	students, err := external.GetStudentServiceProvider().BatchGet(ctx, operator, studentIDs)
-	if err != nil {
-		log.Error(ctx, "external.GetStudentServiceProvider().BatchGet: batch get failed",
-			log.Err(err),
-			log.Strings("student_ids", studentIDs),
-		)
-		return nil, err
-	}
-	namesMap := map[string]string{}
-	for _, s := range students {
-		namesMap[s.ID] = s.Name
-	}
-	return namesMap, nil
 }

@@ -2507,18 +2507,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	//Users
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, userIDs)
+	userNameMap, err = external.GetUserServiceProvider().BatchGetNameMap(ctx, user, userIDs)
 	if err != nil {
 		log.Error(ctx, "can't get user info", log.Err(err), log.Strings("ids", userIDs))
-	} else {
-		for i := range users {
-			if !users[i].Valid {
-				log.Warn(ctx, "user not exists, may be deleted", log.String("id", userIDs[i]))
-				continue
-			}
-
-			userNameMap[users[i].ID] = users[i].Name
-		}
 	}
 
 	//LessonType
@@ -2746,16 +2737,11 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 		authorIDs[i] = objs[i].Author
 	}
 
-	users, err := external.GetUserServiceProvider().BatchGet(ctx, user, authorIDs)
+	authorMap, err := external.GetUserServiceProvider().BatchGetNameMap(ctx, user, authorIDs)
 	if err != nil {
 		log.Warn(ctx, "get user info failed", log.Err(err), log.Any("objs", objs))
 	}
-	authorMap := make(map[string]string)
-	for i := range users {
-		if users[i].Valid {
-			authorMap[users[i].ID] = users[i].Name
-		}
-	}
+
 	for i := range objs {
 		objs[i].AuthorName = authorMap[objs[i].Author]
 		objs[i].ContentTypeName = objs[i].ContentType.Name()
