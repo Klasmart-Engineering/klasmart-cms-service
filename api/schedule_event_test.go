@@ -84,12 +84,12 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 		IssuedAt:  time.Now().Unix(),
 	}
 	type ScheduleClassEvent2 struct {
-		Action  entity.ClassActionEvent          `json:"action" enums:"Add,Delete"`
+		Action  entity.ScheduleClassEventAction  `json:"action" enums:"Add,Delete"`
 		ClassID string                           `json:"class_id"`
 		Users   []*entity.ScheduleClassUserEvent `json:"users"`
 	}
 	data := &ScheduleClassEvent2{
-		Action:  entity.ClassActionEventDelete,
+		Action:  entity.ScheduleClassEventActionDelete,
 		ClassID: "dc33ce61-6ac7-4a12-8592-ca857e6eb395",
 		Users: []*entity.ScheduleClassUserEvent{
 			{

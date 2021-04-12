@@ -51,9 +51,9 @@ func (s *Server) classUserEditEventToSchedule(c *gin.Context) {
 	log.Debug(ctx, "class event", log.Any("event", event), log.String("token", body.Token))
 	var err error
 	switch event.Action {
-	case entity.ClassActionEventAdd:
+	case entity.ScheduleClassEventActionAdd:
 		err = model.GetScheduleEventModel().AddUserEvent(ctx, op, event)
-	case entity.ClassActionEventDelete:
+	case entity.ScheduleClassEventActionDelete:
 		err = model.GetScheduleEventModel().DeleteUserEvent(ctx, op, event)
 	default:
 		log.Info(ctx, "event action not found", log.Any("event", event))

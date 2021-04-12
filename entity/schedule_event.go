@@ -5,7 +5,7 @@ type ScheduleEventBody struct {
 }
 
 type ScheduleClassEvent struct {
-	Action  ClassActionEvent          `json:"action" enums:"Add,Delete"`
+	Action  ScheduleClassEventAction  `json:"action" enums:"Add,Delete"`
 	ClassID string                    `json:"class_id"`
 	Users   []*ScheduleClassUserEvent `json:"users"`
 }
@@ -13,10 +13,6 @@ type ScheduleClassEvent struct {
 func (s ScheduleClassEvent) Valid() error {
 	return nil
 }
-
-//func (s ScheduleClassEvent) Valid() error {
-//	return nil
-//}
 
 type ScheduleClassUserEvent struct {
 	ID       string                 `json:"id"`
@@ -41,9 +37,9 @@ func (t ClassUserRoleTypeEvent) ToScheduleRelationType() ScheduleRelationType {
 	}
 }
 
-type ClassActionEvent string
+type ScheduleClassEventAction string
 
 const (
-	ClassActionEventAdd    ClassActionEvent = "Add"
-	ClassActionEventDelete ClassActionEvent = "Delete"
+	ScheduleClassEventActionAdd    ScheduleClassEventAction = "Add"
+	ScheduleClassEventActionDelete ScheduleClassEventAction = "Delete"
 )
