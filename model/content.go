@@ -2708,26 +2708,39 @@ func (cm *ContentModel) ListVisibleScopes(ctx context.Context, permission visibl
 	if permission == visiblePermissionPending {
 		p = external.PendingContentPage203
 	}
-	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
-	if err != nil {
-		log.Warn(ctx, "can't get schools from org", log.Err(err))
-		return nil, err
-	}
-	ret := []string{operator.OrgID}
-	for i := range schools {
-		ret = append(ret, schools[i].ID)
-	}
+	ret := make([]string, 0)
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, p)
 	if err != nil {
 		log.Warn(ctx, "can't get schools from org", log.Err(err))
 		return nil, err
-	} else if hasPermission {
-		ret = append(ret, operator.OrgID)
 	}
+	if hasPermission {
+		schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
+		if err != nil {
+			log.Warn(ctx, "GetByOrganizationID failed", log.Err(err), log.Any("operator", operator))
+			return nil, err
+		}
+		ret = append(ret, operator.OrgID)
+		for i := range schools {
+			ret = append(ret, schools[i].ID)
+		}
+		return ret, nil
+	}
+
+	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
+	if err != nil {
+		log.Warn(ctx, "can't get schools from org", log.Err(err))
+		return nil, err
+	}
+	for i := range schools {
+		ret = append(ret, schools[i].ID)
+	}
+
 	if len(ret) == 0 {
 		return ret, ErrInvalidVisibleScope
 	}
+	ret = append(ret, operator.OrgID)
 
 	return ret, nil
 }
