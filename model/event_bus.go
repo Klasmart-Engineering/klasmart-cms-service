@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+type BusTopic string
+
 type IBus interface {
 	Sub(topic BusTopic, handler interface{}) error
 	Pub(topic BusTopic, args ...interface{}) error
@@ -58,13 +60,11 @@ func (b *AsyncEventBus) Pub(topic BusTopic, args ...interface{}) error {
 	for i := range handlers {
 		wg.Add(1)
 
-		go func() {
+		go func(i int) {
 			defer wg.Done()
 			handlers[i].Call(params)
-		}()
+		}(i)
 	}
 	wg.Wait()
 	return nil
 }
-
-type BusTopic string
