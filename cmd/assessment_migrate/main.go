@@ -15,9 +15,11 @@ import (
 
 func main() {
 	// load args
-	//a, err := parseArgs()
-	a, err := loadLocalDevArgs()
+	a, err := parseArgs()
+	//a, err := loadLocalDevArgs()
 	if err != nil {
+		flag.Usage()
+		fmt.Println()
 		panic(err)
 	}
 
@@ -53,8 +55,8 @@ func parseArgs() (*args, error) {
 	// parse flag and set args
 	a := args{}
 	flag.StringVar(&a.DSN, "dsn", "", `db connection string, required`)
-	flag.StringVar(&a.AMS, "ams", "", "ams endpoint")
-	flag.StringVar(&a.Token, "token", "", "token")
+	//flag.StringVar(&a.AMS, "ams", "", "ams endpoint")
+	//flag.StringVar(&a.Token, "token", "", "token")
 	flag.Parse()
 
 	// check args
@@ -114,4 +116,3 @@ func initConfig(a *args) error {
 
 	return nil
 }
-
