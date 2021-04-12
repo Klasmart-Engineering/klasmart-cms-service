@@ -22,6 +22,7 @@ type OrganizationServiceProvider interface {
 	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string]*Organization, error)
 	GetNameByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) ([]string, error)
+	GetNameMapByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) (map[string]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error)
 	GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error)
 }
@@ -250,6 +251,20 @@ func (s AmsOrganizationService) GetNameByOrganizationOrSchool(ctx context.Contex
 		log.Strings("names", nameList))
 
 	return nameList, nil
+}
+
+func (s AmsOrganizationService) GetNameMapByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	names, err := s.GetNameByOrganizationOrSchool(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(names))
+	for index, name := range names {
+		dict[ids[index]] = name
+	}
+
+	return dict, nil
 }
 
 func (s AmsOrganizationService) GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error) {
