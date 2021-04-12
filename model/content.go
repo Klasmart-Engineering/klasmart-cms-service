@@ -134,6 +134,15 @@ type IContentModel interface {
 	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error)
 	ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
 	BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
+
+	PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
+	LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error)
+	CreateContentTx(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
+	CopyContentTx(ctx context.Context, cid string, deep bool, op *entity.Operator) (string, error)
+	PublishContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
+	PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
+	DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error
+	DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error
 }
 
 type ContentModel struct {
@@ -351,7 +360,16 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 
 	return count, contentWithDetails, nil
 }
-
+func (cm *ContentModel) CreateContentTx(ctx context.Context, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
+	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := cm.CreateContent(ctx, tx, c, operator)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+	return cid.(string), err
+}
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
 	//检查数据信息是否正确
 	//valid the data
@@ -603,6 +621,18 @@ func (cm *ContentModel) UnlockContent(ctx context.Context, tx *dbo.DBContext, ci
 	content.LockedBy = constant.LockedByNoBody
 	return da.GetContentDA().UpdateContent(ctx, tx, cid, *content)
 }
+
+func (cm *ContentModel) LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error) {
+	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		ncid, err := cm.LockContent(ctx, tx, cid, user)
+		if err != nil {
+			return nil, err
+		}
+		return ncid, nil
+	})
+	return ncid.(string), err
+}
+
 func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (string, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixContentLock, cid)
 	if err != nil {
@@ -678,6 +708,15 @@ func (cm *ContentModel) LockContent(ctx context.Context, tx *dbo.DBContext, cid 
 	return ccid, nil
 
 }
+func (cm *ContentModel) PublishContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.PublishContentBulk(ctx, tx, ids, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	updateIDs := make([]string, 0)
 	_, contents, err := da.GetContentDA().SearchContent(ctx, tx, da.ContentCondition{
@@ -715,6 +754,16 @@ func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBConte
 	}
 	condition.PublishStatus = []string{entity.ContentStatusPublished}
 	return cm.searchContent(ctx, tx, &condition, user)
+}
+func (cm *ContentModel) CopyContentTx(ctx context.Context, cid string, deep bool, op *entity.Operator) (string, error) {
+	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		cid, err := cm.CopyContent(ctx, tx, cid, deep, op)
+		if err != nil {
+			return "", err
+		}
+		return cid, nil
+	})
+	return id.(string), err
 }
 
 //TODO:For authed content => implement copy content => done
@@ -816,6 +865,12 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 	return id, nil
 }
 
+func (cm *ContentModel) PublishContentTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.PublishContent(ctx, tx, cid, scope, user)
+		return err
+	})
+}
 func (cm *ContentModel) PublishContent(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -989,6 +1044,11 @@ func (cm *ContentModel) prepareForPublishPlansAssets(ctx context.Context, tx *db
 	return nil
 }
 
+func (cm *ContentModel) PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return cm.PublishContentWithAssets(ctx, tx, cid, scope, user)
+	})
+}
 func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DBContext, cid string, scope []string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -1020,7 +1080,15 @@ func (cm *ContentModel) PublishContentWithAssets(ctx context.Context, tx *dbo.DB
 	da.GetContentRedis().CleanContentCache(ctx, []string{content.ID, content.SourceID})
 	return nil
 }
-
+func (cm *ContentModel) DeleteContentBulkTx(ctx context.Context, ids []string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.DeleteContentBulk(ctx, tx, ids, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) DeleteContentBulk(ctx context.Context, tx *dbo.DBContext, ids []string, user *entity.Operator) error {
 	deletedIDs := make([]string, 0)
 	deletedIDs = append(deletedIDs, ids...)
@@ -1211,7 +1279,15 @@ func (cm *ContentModel) doDeleteContent(ctx context.Context, tx *dbo.DBContext, 
 	}
 	return nil
 }
-
+func (cm *ContentModel) DeleteContentTx(ctx context.Context, cid string, user *entity.Operator) error {
+	return dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		err := cm.DeleteContent(ctx, tx, cid, user)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
 func (cm *ContentModel) DeleteContent(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) error {
 	content, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
