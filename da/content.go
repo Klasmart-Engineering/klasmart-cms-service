@@ -375,8 +375,8 @@ func (cd *DBContentDA) BatchCreateContentVisibilitySettings(ctx context.Context,
 }
 
 func (cd *DBContentDA) BatchDeleteContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, visibilitySettings []string) error {
-	err := tx.Model(entity.ContentVisibilitySetting{}).Delete("content_id = ? AND visibility_setting IN (?)",
-		cid, visibilitySettings).Error
+	err := tx.Where("content_id = ? AND visibility_setting IN (?)",
+		cid, visibilitySettings).Delete(entity.ContentVisibilitySetting{}).Error
 	if err != nil {
 		return err
 	}
