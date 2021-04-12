@@ -480,27 +480,6 @@ func (a *assessmentModel) getTeacherNameMap(ctx context.Context, operator *entit
 	return teacherNameMap, nil
 }
 
-func (a *assessmentModel) getClassNameMap(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string]string, error) {
-	classNameMap := map[string]string{}
-	classService := external.GetClassServiceProvider()
-	items, err := classService.BatchGet(ctx, operator, classIDs)
-	if err != nil {
-		log.Error(ctx, "get class name map: batch get class failed",
-			log.Err(err),
-			log.Strings("class_ids", classIDs),
-		)
-		return nil, err
-	}
-	for i, item := range items {
-		if item.Valid {
-			classNameMap[item.ID] = item.Name
-		} else {
-			log.Warn(ctx, "invalid item", log.Strings("class_ids", classIDs), log.Int("index", i))
-		}
-	}
-	return classNameMap, nil
-}
-
 func (a *assessmentModel) Add(ctx context.Context, operator *entity.Operator, cmd entity.AddAssessmentCommand) (string, error) {
 	var (
 		outcomeIDs []string
@@ -592,7 +571,7 @@ func (a *assessmentModel) addTx(ctx context.Context, operator *entity.Operator, 
 		CreateAt:     nowUnix,
 		UpdateAt:     nowUnix,
 	}
-	classNameMap, err := a.getClassNameMap(ctx, operator, []string{schedule.ClassID})
+	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID})
 	if err != nil {
 		log.Error(ctx, "add assessment: get class name map failed",
 			log.Err(err),

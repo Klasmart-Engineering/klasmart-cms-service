@@ -17,6 +17,8 @@ import (
 
 type ClassServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableClass, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableClass, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByUserID(ctx context.Context, operator *entity.Operator, userID string, options ...APOption) ([]*Class, error)
 	GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, options ...APOption) (map[string][]*Class, error)
 	GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, orgIDs []string, options ...APOption) (map[string][]*Class, error)
@@ -102,6 +104,38 @@ func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator
 		log.Any("classes", classes))
 
 	return classes, nil
+}
+
+func (s AmsClassService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableClass, error) {
+	classes, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*NullableClass{}, err
+	}
+
+	dict := make(map[string]*NullableClass, len(classes))
+	for _, class := range classes {
+		dict[class.ID] = class
+	}
+
+	return dict, nil
+}
+
+func (s AmsClassService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	classes, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(classes))
+	for _, class := range classes {
+		if !class.Valid {
+			continue
+		}
+
+		dict[class.ID] = class.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsClassService) GetByUserID(ctx context.Context, operator *entity.Operator, userID string, options ...APOption) ([]*Class, error) {
