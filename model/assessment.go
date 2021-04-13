@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"sort"
@@ -170,43 +171,47 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			log.Err(err),
 			log.String("assessment_id", id),
 		)
-		return nil, err
+	} else {
+		contentIDs = append(contentIDs, plan.ID)
 	}
 	if materials, err = da.GetAssessmentContentDA().GetMaterials(ctx, tx, id); err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetMaterials: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
 		)
-		return nil, err
+	} else {
+		for _, m := range materials {
+			contentIDs = append(contentIDs, m.ID)
+		}
 	}
-	contentIDs = []string{plan.ID}
-	for _, m := range materials {
-		contentIDs = append(contentIDs, m.ID)
-	}
-	assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, tx, []string{id}, contentIDs)
-	if err != nil {
-		log.Error(ctx, "Get: m.getAssessmentContentOutcomeMap: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-			log.Strings("content_ids", contentIDs),
-		)
-		return nil, err
-	}
-	currentContentOutcomeMap = assessmentContentOutcomeMap[id]
-	result.Plan = entity.AssessmentContentView{
-		ID:         plan.ContentID,
-		Name:       plan.ContentName,
-		Checked:    true,
-		OutcomeIDs: currentContentOutcomeMap[plan.ID],
-	}
-	for _, m := range materials {
-		result.Materials = append(result.Materials, &entity.AssessmentContentView{
-			ID:         m.ContentID,
-			Name:       m.ContentName,
-			Comment:    m.ContentComment,
-			Checked:    m.Checked,
-			OutcomeIDs: currentContentOutcomeMap[m.ID],
-		})
+	if len(contentIDs) > 0 {
+		assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, tx, []string{id}, contentIDs)
+		if err != nil {
+			log.Error(ctx, "Get: m.getAssessmentContentOutcomeMap: get failed",
+				log.Err(err),
+				log.String("assessment_id", id),
+				log.Strings("content_ids", contentIDs),
+			)
+			return nil, err
+		}
+		currentContentOutcomeMap = assessmentContentOutcomeMap[id]
+		if plan != nil {
+			result.Plan = entity.AssessmentContentView{
+				ID:         plan.ContentID,
+				Name:       plan.ContentName,
+				Checked:    true,
+				OutcomeIDs: currentContentOutcomeMap[plan.ID],
+			}
+		}
+		for _, m := range materials {
+			result.Materials = append(result.Materials, &entity.AssessmentContentView{
+				ID:         m.ContentID,
+				Name:       m.ContentName,
+				Comment:    m.ContentComment,
+				Checked:    m.Checked,
+				OutcomeIDs: currentContentOutcomeMap[m.ID],
+			})
+		}
 	}
 
 	// fill room id and class name from schedule
@@ -373,8 +378,12 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	)
 	for _, a := range assessments {
 		assessmentIDs = append(assessmentIDs, a.ID)
-		subjectIDs = append(subjectIDs, a.SubjectID)
-		programIDs = append(programIDs, a.ProgramID)
+		if a.SubjectID != "" {
+			subjectIDs = append(subjectIDs, a.SubjectID)
+		}
+		if a.ProgramID != "" {
+			programIDs = append(programIDs, a.ProgramID)
+		}
 	}
 
 	// fill program
@@ -428,10 +437,10 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 		switch a.Role {
 		case entity.AssessmentAttendanceRoleStudent:
 			studentIDs = append(studentIDs, a.AttendanceID)
-			assessmentStudentsMap[a.ID] = append(assessmentStudentsMap[a.ID], a)
+			assessmentStudentsMap[a.AssessmentID] = append(assessmentStudentsMap[a.AssessmentID], a)
 		case entity.AssessmentAttendanceRoleTeacher:
 			teacherIDs = append(teacherIDs, a.AttendanceID)
-			assessmentTeachersMap[a.ID] = append(assessmentTeachersMap[a.ID], a)
+			assessmentTeachersMap[a.AssessmentID] = append(assessmentTeachersMap[a.AssessmentID], a)
 		}
 	}
 	if teacherNameMap, err = external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs); err != nil {
@@ -667,6 +676,10 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 		}
 
 		cond := &da.ScheduleRelationCondition{
+			ScheduleID: sql.NullString{
+				String: newAssessmentID,
+				Valid:  true,
+			},
 			RelationIDs: entity.NullStrings{
 				Strings: finalAttendanceIDs,
 				Valid:   true,
