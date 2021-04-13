@@ -5,7 +5,6 @@ type ScheduleEventBody struct {
 }
 
 type ScheduleClassEvent struct {
-	Action  ScheduleClassEventAction  `json:"action" enums:"Add,Delete"`
 	ClassID string                    `json:"class_id"`
 	Users   []*ScheduleClassUserEvent `json:"users"`
 }

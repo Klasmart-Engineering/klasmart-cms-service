@@ -111,7 +111,7 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	body := entity.ScheduleEventBody{Token: token}
+	body := entity.ClassEventBody{Token: token}
 	jsonStr, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/v1/class_user_edit_to_schedule", bytes.NewBufferString(string(jsonStr)))

@@ -8,7 +8,7 @@ import (
 
 func TestGetClassEventBusModel(t *testing.T) {
 	ctx := context.Background()
-	err := GetClassEventBusModel().Pub(BusTopicClassAddMembers, ctx, &entity.Operator{UserID: "123"}, &entity.ScheduleClassEvent{
+	err := GetClassEventBusModel().PubAddMembers(BusTopicClassAddMembers, ctx, &entity.Operator{UserID: "123"}, &entity.ScheduleClassEvent{
 		ClassID: "33333",
 		Users: []*entity.ScheduleClassUserEvent{
 			{

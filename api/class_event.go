@@ -15,7 +15,7 @@ import (
 // @ID addUserToClassEvent
 // @Accept json
 // @Produce json
-// @Param event body entity.ScheduleEventBody true "add user to class event"
+// @Param event body entity.ClassEventBody true "add user to class event"
 // @Success 200 {object} SuccessRequestResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -25,7 +25,7 @@ func (s *Server) addUserToClassEvent(c *gin.Context) {
 	//op := s.getOperator(c)
 	log.Debug(ctx, "class add user event start")
 
-	body := new(entity.ScheduleEventBody)
+	body := new(entity.ClassEventBody)
 	if err := c.ShouldBind(body); err != nil {
 		log.Info(ctx, "json data bind failed",
 			log.Err(err),
@@ -82,7 +82,7 @@ func (s *Server) addUserToClassEvent(c *gin.Context) {
 // @ID deleteUserToClassEvent
 // @Accept json
 // @Produce json
-// @Param event body entity.ScheduleEventBody true "add user to class event"
+// @Param event body entity.ClassEventBody true "add user to class event"
 // @Success 200 {object} SuccessRequestResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -92,7 +92,7 @@ func (s *Server) deleteUserToClassEvent(c *gin.Context) {
 	//op := s.getOperator(c)
 	log.Debug(ctx, "class add user event start")
 
-	body := new(entity.ScheduleEventBody)
+	body := new(entity.ClassEventBody)
 	if err := c.ShouldBind(body); err != nil {
 		log.Info(ctx, "json data bind failed",
 			log.Err(err),
