@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -15,17 +14,15 @@ import (
 )
 
 type IScheduleEventModel interface {
-	AddUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error
-	DeleteUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error
+	AddMembersEvent(ctx context.Context, op *entity.Operator, event *entity.ClassUpdateMembersEvent) error
+	DeleteMembersEvent(ctx context.Context, op *entity.Operator, event *entity.ClassUpdateMembersEvent) error
 }
 
 type scheduleEventModel struct {
 }
 
-func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error {
-	fmt.Println(ctx, op, event)
-	return nil
-	if event.ClassID == "" || len(event.Users) <= 0 {
+func (s *scheduleEventModel) AddMembersEvent(ctx context.Context, op *entity.Operator, event *entity.ClassUpdateMembersEvent) error {
+	if event.ClassID == "" || len(event.Members) <= 0 {
 		log.Info(ctx, "event invalid args", log.Any("event", event))
 		return constant.ErrInvalidArgs
 	}
@@ -42,9 +39,9 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 	log.Debug(ctx, "about scheduleIDs", log.Any("scheduleIDs", scheduleIDs), log.Int("schedule count", len(scheduleIDs)), log.Any("event", event))
 
 	userDistinct := make(map[string]bool)
-	relations := make([]*entity.ScheduleRelation, 0, len(event.Users)*len(scheduleIDs))
+	relations := make([]*entity.ScheduleRelation, 0, len(event.Members)*len(scheduleIDs))
 
-	for _, user := range event.Users {
+	for _, user := range event.Members {
 		var roleType = user.RoleType.ToScheduleRelationType()
 		if roleType == entity.ScheduleRelationTypeInvalid {
 			log.Info(ctx, "user role type invalid", log.Any("event", event))
@@ -104,33 +101,28 @@ func (s *scheduleEventModel) AddUserEvent(ctx context.Context, op *entity.Operat
 	return nil
 }
 
-func (s *scheduleEventModel) DeleteUserEvent(ctx context.Context, op *entity.Operator, event *entity.ScheduleClassEvent) error {
-	fmt.Println(ctx, op, event)
-	return nil
-	if event.ClassID == "" || len(event.Users) <= 0 {
+func (s *scheduleEventModel) DeleteMembersEvent(ctx context.Context, op *entity.Operator, event *entity.ClassUpdateMembersEvent) error {
+	if event.ClassID == "" || len(event.Members) <= 0 {
 		log.Info(ctx, "event invalid args", log.Any("event", event))
 		return constant.ErrInvalidArgs
 	}
-	userIDs := make([]string, len(event.Users))
-	for i, item := range event.Users {
+	userIDs := make([]string, len(event.Members))
+	for i, item := range event.Members {
 		userIDs[i] = item.ID
 	}
-	scheduleIDs, err := GetScheduleModel().GetRosterClassNotStartScheduleIDs(ctx, event.ClassID, userIDs)
-	if err != nil {
-		log.Error(ctx, "class has schedule error", log.Err(err), log.Any("event", event))
-		return err
-	}
-	if len(scheduleIDs) <= 0 {
-		log.Debug(ctx, "class are not scheduled", log.Any("event", event))
-		return nil
-	}
+	condition := da.GetNotStartCondition(event.ClassID, userIDs)
 
-	err = da.GetScheduleRelationDA().DeleteByRelationIDs(ctx, dbo.MustGetDB(ctx), scheduleIDs, userIDs)
+	ids, err := GetScheduleRelationModel().GetIDs(ctx, op, condition)
 	if err != nil {
-		log.Error(ctx, "delete error", log.Err(err), log.Any("event", event), log.Strings("scheduleIDs", scheduleIDs))
+		log.Error(ctx, "get ids by condition error", log.Err(err), log.Any("event", event), log.Any("condition", condition))
 		return err
 	}
-	log.Debug(ctx, "class delete user event end", log.Any("scheduleIDs", scheduleIDs), log.Any("event", event))
+	err = da.GetScheduleRelationDA().DeleteByIDs(ctx, dbo.MustGetDB(ctx), ids)
+	if err != nil {
+		log.Error(ctx, "delete by ids error", log.Err(err), log.Any("event", event), log.Any("condition", condition), log.Strings("ids", ids))
+		return err
+	}
+	log.Debug(ctx, "class delete user event end", log.Any("event", event), log.Any("condition", condition))
 	return err
 }
 

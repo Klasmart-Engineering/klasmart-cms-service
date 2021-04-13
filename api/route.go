@@ -273,8 +273,8 @@ func (s Server) registeRoute() {
 	classes := s.engine.Group("/v1")
 	{
 		// ams-class add members event
-		classes.POST("/classes_members", s.addUserToClassEvent)
-		classes.DELETE("/classes_members", s.deleteUserToClassEvent)
+		classes.POST("/classes_members", s.classAddMembersEvent)
+		classes.DELETE("/classes_members", s.classDeleteMembersEvent)
 	}
 }
 

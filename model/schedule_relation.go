@@ -19,6 +19,7 @@ type IScheduleRelationModel interface {
 	GetUsersByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleRelation, error)
 	Count(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) (int, error)
 	HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error)
+	GetIDs(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]string, error)
 }
 type scheduleRelationModel struct {
 }
@@ -184,6 +185,18 @@ func (s *scheduleRelationModel) Query(ctx context.Context, op *entity.Operator, 
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.Any("op", op), log.Any("condition", condition))
 		return nil, err
+	}
+	return result, nil
+}
+
+func (s *scheduleRelationModel) GetIDs(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]string, error) {
+	relations, err := s.Query(ctx, op, condition)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, len(relations))
+	for i, item := range relations {
+		result[i] = item.ID
 	}
 	return result, nil
 }

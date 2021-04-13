@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"strings"
 	"sync"
+	"time"
 )
 
 type IScheduleRelationDA interface {
@@ -20,7 +21,7 @@ type IScheduleRelationDA interface {
 	MultipleBatchInsert(ctx context.Context, tx *dbo.DBContext, relations []*entity.ScheduleRelation) (int64, error)
 	//GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
 	GetRelationIDsByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleRelationCondition) ([]string, error)
-	DeleteByRelationIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string, relationIDs []string) error
+	DeleteByIDs(ctx context.Context, tx *dbo.DBContext, ids []string) error
 }
 
 type scheduleRelationDA struct {
@@ -110,13 +111,12 @@ func (s *scheduleRelationDA) Delete(ctx context.Context, tx *dbo.DBContext, sche
 	return nil
 }
 
-func (s *scheduleRelationDA) DeleteByRelationIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string, relationIDs []string) error {
+func (s *scheduleRelationDA) DeleteByIDs(ctx context.Context, tx *dbo.DBContext, ids []string) error {
 	if err := tx.Unscoped().
-		Where("schedule_id in (?)", scheduleIDs).
-		Where("relation_id in (?)", relationIDs).
+		Where("id in (?)", ids).
 		Delete(&entity.ScheduleRelation{}).Error; err != nil {
 		log.Error(ctx, "delete schedules relation delete failed",
-			log.Strings("schedule_id", scheduleIDs),
+			log.Strings("ids", ids),
 		)
 		return err
 	}
@@ -149,6 +149,31 @@ type ConflictTime struct {
 	EndAt   int64
 }
 
+func GetNotStartCondition(classRosterID string, userIDs []string) *ScheduleRelationCondition {
+	condition := &NotStartCondition{
+		RosterClassID: sql.NullString{
+			String: classRosterID,
+			Valid:  classRosterID != "",
+		},
+		NotStart: sql.NullBool{
+			Bool:  true,
+			Valid: true,
+		},
+	}
+	return &ScheduleRelationCondition{
+		NotStartCondition: condition,
+		RelationIDs: entity.NullStrings{
+			Strings: userIDs,
+			Valid:   true,
+		},
+	}
+}
+
+type NotStartCondition struct {
+	RosterClassID sql.NullString
+	NotStart      sql.NullBool
+}
+
 type ScheduleRelationCondition struct {
 	ConflictCondition *ConflictCondition
 	ScheduleID        sql.NullString
@@ -156,6 +181,7 @@ type ScheduleRelationCondition struct {
 	RelationType      sql.NullString
 	RelationTypes     entity.NullStrings
 	RelationIDs       entity.NullStrings
+	NotStartCondition *NotStartCondition
 }
 
 //select * from schedules_relations where
@@ -235,6 +261,21 @@ func (c ScheduleRelationCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "relation_id in (?)")
 		params = append(params, c.RelationIDs.Strings)
 	}
+
+	if c.NotStartCondition != nil {
+		notEditAt := time.Now().Add(constant.ScheduleAllowEditTime).Unix()
+		sql := fmt.Sprintf(`
+exists(select 1 from %s where 
+((due_at=0 and start_at=0 and end_at=0) || (start_at = 0 and due_at > ?) || (start_at > ?)) 
+and (delete_at=0) 
+and exists(select 1 from schedules_relations where relation_id = ? and relation_type = ?  and schedules.id = schedules_relations.schedule_id)
+and %s.schedule_id = %s.id)`,
+			constant.TableNameSchedule, constant.TableNameScheduleRelation, constant.TableNameSchedule)
+
+		wheres = append(wheres, sql)
+		params = append(params, time.Now().Unix(), notEditAt, c.NotStartCondition.RosterClassID.String, entity.ScheduleRelationTypeClassRosterClass.String())
+	}
+
 	return wheres, params
 }
 

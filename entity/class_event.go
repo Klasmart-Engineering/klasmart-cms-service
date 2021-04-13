@@ -1,19 +1,19 @@
 package entity
 
-type ScheduleEventBody struct {
+type ClassEventBody struct {
 	Token string `json:"token"`
 }
 
-type ScheduleClassEvent struct {
-	ClassID string                    `json:"class_id"`
-	Users   []*ScheduleClassUserEvent `json:"users"`
+type ClassUpdateMembersEvent struct {
+	ClassID string         `json:"class_id"`
+	Members []*ClassMember `json:"members"`
 }
 
-func (s ScheduleClassEvent) Valid() error {
+func (s ClassUpdateMembersEvent) Valid() error {
 	return nil
 }
 
-type ScheduleClassUserEvent struct {
+type ClassMember struct {
 	ID       string                 `json:"id"`
 	RoleType ClassUserRoleTypeEvent `json:"role_type" enums:"Student,Teacher"`
 }
@@ -35,10 +35,3 @@ func (t ClassUserRoleTypeEvent) ToScheduleRelationType() ScheduleRelationType {
 		return ScheduleRelationTypeInvalid
 	}
 }
-
-type ScheduleClassEventAction string
-
-const (
-	ScheduleClassEventActionAdd    ScheduleClassEventAction = "Add"
-	ScheduleClassEventActionDelete ScheduleClassEventAction = "Delete"
-)

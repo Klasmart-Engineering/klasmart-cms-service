@@ -6,23 +6,24 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 )
 
-// @Summary addUserToClassEvent
-// @Description add user to class event
-// @Tags addUserToClassEvent
-// @ID addUserToClassEvent
+// @Summary classAddMembersEvent
+// @Description add members to class
+// @Tags classAddMembersEvent
+// @ID classAddMembersEvent
 // @Accept json
 // @Produce json
-// @Param event body entity.ClassEventBody true "add user to class event"
+// @Param event body entity.ClassEventBody true "add member to class event"
 // @Success 200 {object} SuccessRequestResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /classes_members [post]
-func (s *Server) addUserToClassEvent(c *gin.Context) {
+func (s *Server) classAddMembersEvent(c *gin.Context) {
 	ctx := c.Request.Context()
-	//op := s.getOperator(c)
+	op := s.getOperator(c)
 	log.Debug(ctx, "class add user event start")
 
 	body := new(entity.ClassEventBody)
@@ -34,7 +35,7 @@ func (s *Server) addUserToClassEvent(c *gin.Context) {
 		return
 	}
 
-	event := new(entity.ScheduleClassEvent)
+	event := new(entity.ClassUpdateMembersEvent)
 	if _, err := jwt.ParseWithClaims(body.Token, event, func(token *jwt.Token) (interface{}, error) {
 		return config.Get().Schedule.ClassEventSecret, nil
 	}); err != nil {
@@ -48,49 +49,35 @@ func (s *Server) addUserToClassEvent(c *gin.Context) {
 
 	log.Debug(ctx, "class event", log.Any("event", event), log.String("token", body.Token))
 
-	//err := model.GetScheduleEventModel().AddUserEvent(ctx, op, event)
+	err := model.GetClassEventBusModel().PubAddMembers(ctx, op, event)
+	if err != nil {
+		log.Error(ctx, "class add user event error",
+			log.Err(err),
+			log.Any("event", event),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
 
-	//switch event.Action {
-	//case entity.ScheduleClassEventActionAdd:
-	//	err = model.GetScheduleEventModel().AddUserEvent(ctx, op, event)
-	//case entity.ScheduleClassEventActionDelete:
-	//	err = model.GetScheduleEventModel().DeleteUserEvent(ctx, op, event)
-	//default:
-	//	log.Info(ctx, "event action not found", log.Any("event", event))
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//	return
-	//}
-	//switch err {
-	//case nil:
-	//	log.Debug(ctx, "class add user event success", log.Any("event", event))
-	//	c.JSON(http.StatusOK, nil)
-	//case constant.ErrInvalidArgs:
-	//	log.Debug(ctx, "event args invalid", log.Any("event", event))
-	//	c.JSON(http.StatusOK, nil)
-	//default:
-	//	log.Error(ctx, "class add user event error",
-	//		log.Err(err),
-	//		log.Any("event", event),
-	//	)
-	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	//}
+	log.Debug(ctx, "class add user event success", log.Any("event", event))
+	c.JSON(http.StatusOK, nil)
 }
 
-// @Summary deleteUserToClassEvent
-// @Description delete user to class event
-// @Tags deleteUserToClassEvent
-// @ID deleteUserToClassEvent
+// @Summary classDeleteMembersEvent
+// @Description class delete members
+// @Tags classDeleteMembersEvent
+// @ID classDeleteMembersEvent
 // @Accept json
 // @Produce json
-// @Param event body entity.ClassEventBody true "add user to class event"
+// @Param event body entity.ClassEventBody true "delete members to class event"
 // @Success 200 {object} SuccessRequestResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /classes_members [delete]
-func (s *Server) deleteUserToClassEvent(c *gin.Context) {
+func (s *Server) classDeleteMembersEvent(c *gin.Context) {
 	ctx := c.Request.Context()
-	//op := s.getOperator(c)
-	log.Debug(ctx, "class add user event start")
+	op := s.getOperator(c)
+	log.Debug(ctx, "class delete user event start")
 
 	body := new(entity.ClassEventBody)
 	if err := c.ShouldBind(body); err != nil {
@@ -101,7 +88,7 @@ func (s *Server) deleteUserToClassEvent(c *gin.Context) {
 		return
 	}
 
-	event := new(entity.ScheduleClassEvent)
+	event := new(entity.ClassUpdateMembersEvent)
 	if _, err := jwt.ParseWithClaims(body.Token, event, func(token *jwt.Token) (interface{}, error) {
 		return config.Get().Schedule.ClassEventSecret, nil
 	}); err != nil {
@@ -113,32 +100,17 @@ func (s *Server) deleteUserToClassEvent(c *gin.Context) {
 		return
 	}
 
-	log.Debug(ctx, "class event", log.Any("event", event), log.String("token", body.Token))
+	err := model.GetClassEventBusModel().PubDeleteMembers(ctx, op, event)
+	if err != nil {
+		log.Error(ctx, "class delete user event error",
+			log.Err(err),
+			log.Any("event", event),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
 
-	//err := model.GetScheduleEventModel().AddUserEvent(ctx, op, event)
+	log.Debug(ctx, "class delete user event success", log.Any("event", event), log.String("token", body.Token))
 
-	//switch event.Action {
-	//case entity.ScheduleClassEventActionAdd:
-	//	err = model.GetScheduleEventModel().AddUserEvent(ctx, op, event)
-	//case entity.ScheduleClassEventActionDelete:
-	//	err = model.GetScheduleEventModel().DeleteUserEvent(ctx, op, event)
-	//default:
-	//	log.Info(ctx, "event action not found", log.Any("event", event))
-	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	//	return
-	//}
-	//switch err {
-	//case nil:
-	//	log.Debug(ctx, "class add user event success", log.Any("event", event))
-	//	c.JSON(http.StatusOK, nil)
-	//case constant.ErrInvalidArgs:
-	//	log.Debug(ctx, "event args invalid", log.Any("event", event))
-	//	c.JSON(http.StatusOK, nil)
-	//default:
-	//	log.Error(ctx, "class add user event error",
-	//		log.Err(err),
-	//		log.Any("event", event),
-	//	)
-	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	//}
+	c.JSON(http.StatusOK, nil)
 }

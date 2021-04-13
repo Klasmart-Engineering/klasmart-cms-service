@@ -38,7 +38,7 @@ func ReadAll(filePth string) ([]byte, error) {
 	return ioutil.ReadAll(f)
 }
 
-func Test_classUserEditEventToSchedule(t *testing.T) {
+func Test_classMembersEvent(t *testing.T) {
 	privateKey := readKey("D:\\workbench\\auth_private_key.pem")
 	publicKey := readKey("D:\\workbench\\auth_public_key.pem")
 	privateKeyPB, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(privateKey))
@@ -53,7 +53,6 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	}
 	cfg := &config.Config{
 		DBConfig: config.DBConfig{
-			//root:Passw0rd@tcp(127.0.0.1:3306)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local
 			ConnectionString: "root:Badanamu123456@tcp(192.168.1.234:3306)/kidsloop2?parseTime=true&charset=utf8mb4",
 		},
 		Schedule: config.ScheduleConfig{
@@ -75,23 +74,19 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	server := &Server{
 		engine: gin.New(),
 	}
-	server.engine.POST("/v1/class_user_edit_to_schedule", server.classUserEditEventToSchedule)
-
-	//w := httptest.NewRecorder()
+	server.engine.DELETE("/v1/classes_members", server.classDeleteMembersEvent)
 
 	stdClaims := &jwt.StandardClaims{
 		ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 		IssuedAt:  time.Now().Unix(),
 	}
 	type ScheduleClassEvent2 struct {
-		Action  entity.ScheduleClassEventAction  `json:"action" enums:"Add,Delete"`
-		ClassID string                           `json:"class_id"`
-		Users   []*entity.ScheduleClassUserEvent `json:"users"`
+		ClassID string                `json:"class_id"`
+		Members []*entity.ClassMember `json:"members"`
 	}
 	data := &ScheduleClassEvent2{
-		Action:  entity.ScheduleClassEventActionDelete,
 		ClassID: "dc33ce61-6ac7-4a12-8592-ca857e6eb395",
-		Users: []*entity.ScheduleClassUserEvent{
+		Members: []*entity.ClassMember{
 			{
 				ID:       "11bb492e-ff80-5928-ac86-8b639a0c1a44",
 				RoleType: entity.ClassUserRoleTypeEventTeacher,
@@ -114,7 +109,7 @@ func Test_classUserEditEventToSchedule(t *testing.T) {
 	body := entity.ClassEventBody{Token: token}
 	jsonStr, _ := json.Marshal(body)
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/v1/class_user_edit_to_schedule", bytes.NewBufferString(string(jsonStr)))
+	req := httptest.NewRequest("DELETE", "/v1/classes_members", bytes.NewBufferString(string(jsonStr)))
 	req.Header.Add("content-type", "application/json")
 	server.ServeHTTP(w, req)
 	res := w.Result()
