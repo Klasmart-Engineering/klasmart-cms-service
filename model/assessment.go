@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"sort"
@@ -675,6 +676,10 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 		}
 
 		cond := &da.ScheduleRelationCondition{
+			ScheduleID: sql.NullString{
+				String: newAssessmentID,
+				Valid:  true,
+			},
 			RelationIDs: entity.NullStrings{
 				Strings: finalAttendanceIDs,
 				Valid:   true,
