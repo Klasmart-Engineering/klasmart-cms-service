@@ -673,12 +673,20 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 		default:
 			finalAttendanceIDs = args.AttendanceIDs
 		}
-		if scheduleRelations, err = GetScheduleRelationModel().GetByRelationIDs(ctx, operator, finalAttendanceIDs); err != nil {
+
+		cond := &da.ScheduleRelationCondition{
+			RelationIDs: entity.NullStrings{
+				Strings: finalAttendanceIDs,
+				Valid:   true,
+			},
+		}
+		if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, cond); err != nil {
 			log.Error(ctx, "addAssessmentAttendances: GetScheduleRelationModel().GetByRelationIDs: get failed",
 				log.Err(err),
 				log.Any("attendance_ids", finalAttendanceIDs),
 				log.String("assessment_id", newAssessmentID),
 				log.Any("operator", operator),
+				log.Any("condition", cond),
 			)
 			return err
 		}

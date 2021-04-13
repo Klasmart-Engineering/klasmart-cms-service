@@ -299,6 +299,24 @@ func GetScheduleDA() IScheduleDA {
 	return _scheduleDA
 }
 
+func NewNotStartScheduleCondition(classRosterID string, userIDs []string) *ScheduleCondition {
+	condition := &ScheduleCondition{
+		RosterClassID: sql.NullString{
+			String: classRosterID,
+			Valid:  classRosterID != "",
+		},
+		NotStart: sql.NullBool{
+			Bool:  true,
+			Valid: true,
+		},
+		RelationIDs: entity.NullStrings{
+			Strings: userIDs,
+			Valid:   len(userIDs) > 0,
+		},
+	}
+	return condition
+}
+
 type ScheduleCondition struct {
 	IDs                      entity.NullStrings
 	OrgID                    sql.NullString
@@ -321,6 +339,8 @@ type ScheduleCondition struct {
 	ClassTypes               entity.NullStrings
 	DueToEq                  sql.NullInt64
 	AnyTime                  sql.NullBool
+	RosterClassID            sql.NullString
+	NotStart                 sql.NullBool
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -446,6 +466,18 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if c.AnyTime.Valid {
 		wheres = append(wheres, "due_at=0 and start_at=0 and end_at=0")
+	}
+
+	if c.RosterClassID.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id = ? and relation_type = ? and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RosterClassID.String, entity.ScheduleRelationTypeClassRosterClass)
+	}
+	if c.NotStart.Valid {
+		notEditAt := time.Now().Add(constant.ScheduleAllowEditTime).Unix()
+		wheres = append(wheres, " ((due_at=0 and start_at=0 and end_at=0) || (start_at = 0 and due_at > ?) || (start_at > ?)) ")
+		params = append(params, time.Now().Unix(), notEditAt)
 	}
 
 	if c.DeleteAt.Valid {

@@ -17,9 +17,9 @@ type IScheduleRelationModel interface {
 	GetTeacherIDs(ctx context.Context, op *entity.Operator, scheduleID string) ([]string, error)
 	GetClassRosterID(ctx context.Context, op *entity.Operator, scheduleID string) (string, error)
 	GetUsersByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleRelation, error)
-	GetByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) ([]*entity.ScheduleRelation, error)
 	Count(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) (int, error)
 	HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error)
+	GetIDs(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]string, error)
 }
 
 type scheduleRelationModel struct {
@@ -190,9 +190,16 @@ func (s *scheduleRelationModel) Query(ctx context.Context, op *entity.Operator, 
 	return result, nil
 }
 
-// TODO:
-func (s *scheduleRelationModel) GetByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) ([]*entity.ScheduleRelation, error) {
-	panic("implement me")
+func (s *scheduleRelationModel) GetIDs(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]string, error) {
+	relations, err := s.Query(ctx, op, condition)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, len(relations))
+	for i, item := range relations {
+		result[i] = item.ID
+	}
+	return result, nil
 }
 
 var (

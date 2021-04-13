@@ -269,6 +269,13 @@ func (s Server) registeRoute() {
 		learningOutcomeSet.POST("/bulk_bind", s.mustLogin, s.bulkBindOutcomeSet)
 		learningOutcomeSet.GET("", s.mustLogin, s.pullOutcomeSet)
 	}
+
+	classes := s.engine.Group("/v1")
+	{
+		// ams-class add members event
+		classes.POST("/classes_members", s.classAddMembersEvent)
+		classes.DELETE("/classes_members", s.classDeleteMembersEvent)
+	}
 }
 
 // Ping godoc

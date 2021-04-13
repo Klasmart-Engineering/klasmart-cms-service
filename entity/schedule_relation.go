@@ -20,6 +20,7 @@ func (e ScheduleRelation) GetID() interface{} {
 type ScheduleRelationType string
 
 const (
+	ScheduleRelationTypeInvalid            ScheduleRelationType = "Invalid"
 	ScheduleRelationTypeOrg                ScheduleRelationType = "org"
 	ScheduleRelationTypeSchool             ScheduleRelationType = "school"
 	ScheduleRelationTypeClassRosterClass   ScheduleRelationType = "class_roster_class"
