@@ -373,8 +373,12 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	)
 	for _, a := range assessments {
 		assessmentIDs = append(assessmentIDs, a.ID)
-		subjectIDs = append(subjectIDs, a.SubjectID)
-		programIDs = append(programIDs, a.ProgramID)
+		if a.SubjectID != "" {
+			subjectIDs = append(subjectIDs, a.SubjectID)
+		}
+		if a.ProgramID != "" {
+			programIDs = append(programIDs, a.ProgramID)
+		}
 	}
 
 	// fill program
