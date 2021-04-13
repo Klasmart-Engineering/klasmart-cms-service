@@ -170,43 +170,47 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			log.Err(err),
 			log.String("assessment_id", id),
 		)
-		return nil, err
+	} else {
+		contentIDs = append(contentIDs, plan.ID)
 	}
 	if materials, err = da.GetAssessmentContentDA().GetMaterials(ctx, tx, id); err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetMaterials: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
 		)
-		return nil, err
+	} else {
+		for _, m := range materials {
+			contentIDs = append(contentIDs, m.ID)
+		}
 	}
-	contentIDs = []string{plan.ID}
-	for _, m := range materials {
-		contentIDs = append(contentIDs, m.ID)
-	}
-	assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, tx, []string{id}, contentIDs)
-	if err != nil {
-		log.Error(ctx, "Get: m.getAssessmentContentOutcomeMap: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-			log.Strings("content_ids", contentIDs),
-		)
-		return nil, err
-	}
-	currentContentOutcomeMap = assessmentContentOutcomeMap[id]
-	result.Plan = entity.AssessmentContentView{
-		ID:         plan.ContentID,
-		Name:       plan.ContentName,
-		Checked:    true,
-		OutcomeIDs: currentContentOutcomeMap[plan.ID],
-	}
-	for _, m := range materials {
-		result.Materials = append(result.Materials, &entity.AssessmentContentView{
-			ID:         m.ContentID,
-			Name:       m.ContentName,
-			Comment:    m.ContentComment,
-			Checked:    m.Checked,
-			OutcomeIDs: currentContentOutcomeMap[m.ID],
-		})
+	if len(contentIDs) > 0 {
+		assessmentContentOutcomeMap, err := m.getAssessmentContentOutcomeMap(ctx, tx, []string{id}, contentIDs)
+		if err != nil {
+			log.Error(ctx, "Get: m.getAssessmentContentOutcomeMap: get failed",
+				log.Err(err),
+				log.String("assessment_id", id),
+				log.Strings("content_ids", contentIDs),
+			)
+			return nil, err
+		}
+		currentContentOutcomeMap = assessmentContentOutcomeMap[id]
+		if plan != nil {
+			result.Plan = entity.AssessmentContentView{
+				ID:         plan.ContentID,
+				Name:       plan.ContentName,
+				Checked:    true,
+				OutcomeIDs: currentContentOutcomeMap[plan.ID],
+			}
+		}
+		for _, m := range materials {
+			result.Materials = append(result.Materials, &entity.AssessmentContentView{
+				ID:         m.ContentID,
+				Name:       m.ContentName,
+				Comment:    m.ContentComment,
+				Checked:    m.Checked,
+				OutcomeIDs: currentContentOutcomeMap[m.ID],
+			})
+		}
 	}
 
 	// fill room id and class name from schedule
