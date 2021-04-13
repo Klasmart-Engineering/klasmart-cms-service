@@ -2502,7 +2502,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	}
 
 	for i := range contentList {
-		programIDs = append(programIDs, contentList[i].Program)
+		if contentList[i].Program != "" {
+			programIDs = append(programIDs, contentList[i].Program)
+		}
 		subjectIDs = append(subjectIDs, contentList[i].Subject...)
 		developmentalIDs = append(developmentalIDs, contentList[i].Category...)
 		skillsIDs = append(skillsIDs, contentList[i].SubCategory...)
