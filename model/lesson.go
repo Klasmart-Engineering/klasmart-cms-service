@@ -213,6 +213,11 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 
 func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error) {
 	orgInfo, err := GetOrganizationPropertyModel().GetOrDefault(ctx, orgID)
+	if err == dbo.ErrRecordNotFound {
+		log.Info(ctx, "org is not in head quarter",
+			log.Any("orgInfo", orgInfo))
+		return false, nil
+	}
 	if err != nil {
 		log.Warn(ctx, "parse get folder shared records params failed",
 			log.Err(err),
