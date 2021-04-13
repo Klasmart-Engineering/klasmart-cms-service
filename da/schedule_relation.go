@@ -85,14 +85,14 @@ func (s *scheduleRelationDA) BatchInsert(ctx context.Context, tx *dbo.DBContext,
 	if len(sqlData) <= 0 {
 		return 0, nil
 	}
-	scheduleRelationsSql := SQLBatchInsert(constant.TableNameScheduleRelation, []string{
+	format, values := SQLBatchInsert(constant.TableNameScheduleRelation, []string{
 		"`id`",
 		"`schedule_id`",
 		"`relation_id`",
 		"`relation_type`",
 	}, sqlData)
 
-	execResult := tx.Exec(scheduleRelationsSql.Format, scheduleRelationsSql.Values...)
+	execResult := tx.Exec(format, values...)
 	if execResult.Error != nil {
 		return 0, execResult.Error
 	}

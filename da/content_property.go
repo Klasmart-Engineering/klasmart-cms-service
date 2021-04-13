@@ -29,15 +29,15 @@ func (c *ContentPropertyDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, co 
 			item.Sequence,
 		})
 	}
-	sql := SQLBatchInsert(entity.ContentProperty{}.TableName(), []string{
+	format, values := SQLBatchInsert(entity.ContentProperty{}.TableName(), []string{
 		"`property_type`",
 		"`content_id`",
 		"`property_id`",
 		"`sequence`",
 	}, data)
-	execResult := tx.Exec(sql.Format, sql.Values...)
+	execResult := tx.Exec(format, values...)
 	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
+		logger.Error(ctx, "db exec sql error", log.Any("format", format), log.Any("values", values), log.Err(execResult.Error))
 		return execResult.Error
 	}
 	return nil

@@ -155,9 +155,6 @@ func (cpm *ContentPermissionModel) CheckPublishContentsPermissionBatch(ctx conte
 				log.String("user_org_id", user.OrgID))
 			return true, nil
 		}
-		if len(scope) > 1 {
-			scope = []string{content.Org}
-		}
 		//若作者是自己，且非republish，则查看权限
 		//if author is current user, and it is not republish content, check the permission
 		ret, err := cpm.checkCMSPermissionBatch(ctx, scope, cpm.createPermissionName(ctx, content.ContentType), user)
@@ -560,6 +557,12 @@ func (s *ContentPermissionModel) checkCMSPermissionBatch(ctx context.Context, sc
 			return false, err
 		}
 		orgIdList = append(orgIdList, orgs...)
+	}
+	//if the user has org permission, he can do anythings
+	for j := range orgIdList {
+		if orgIdList[j].ID == op.OrgID {
+			return true, nil
+		}
 	}
 
 	for i := range scope {

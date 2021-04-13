@@ -6,6 +6,7 @@ type AssessmentOutcome struct {
 	OutcomeID    string `gorm:"column:outcome_id;type:varchar(64);not null" json:"outcome_id"`
 	Skip         bool   `gorm:"column:skip;type:boolean;not null" json:"skip"`
 	NoneAchieved bool   `gorm:"column:none_achieved;type:boolean;not null" json:"none_achieved"`
+	Checked      bool   `gorm:"column:checked;type:boolean;not null" json:"checked"`
 }
 
 func (AssessmentOutcome) TableName() string {
