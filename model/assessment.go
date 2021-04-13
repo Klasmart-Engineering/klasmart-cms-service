@@ -436,10 +436,10 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 		switch a.Role {
 		case entity.AssessmentAttendanceRoleStudent:
 			studentIDs = append(studentIDs, a.AttendanceID)
-			assessmentStudentsMap[a.ID] = append(assessmentStudentsMap[a.ID], a)
+			assessmentStudentsMap[a.AssessmentID] = append(assessmentStudentsMap[a.AssessmentID], a)
 		case entity.AssessmentAttendanceRoleTeacher:
 			teacherIDs = append(teacherIDs, a.AttendanceID)
-			assessmentTeachersMap[a.ID] = append(assessmentTeachersMap[a.ID], a)
+			assessmentTeachersMap[a.AssessmentID] = append(assessmentTeachersMap[a.AssessmentID], a)
 		}
 	}
 	if teacherNameMap, err = external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs); err != nil {
