@@ -445,7 +445,7 @@ func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Conte
 			permissions = append(permissions, external.ArchivedContentPage205)
 		}
 		if utils.ContainsInt(condition.ContentType, entity.ContentTypeAssets) {
-			permissions = append(permissions, external.CreateContentPage201)
+			permissions = append(permissions, external.CreateAssetPage301)
 		}
 		for i := range condition.VisibilitySettings {
 			ret, err := cpm.checkCMSPermission(ctx, condition.VisibilitySettings[i], permissions, user)
