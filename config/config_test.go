@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestMarshalConfig(t *testing.T){
+func TestMarshalConfig(t *testing.T) {
 	conf := new(Config)
 	confStr, err := yaml.Marshal(conf)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(confStr))

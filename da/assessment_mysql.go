@@ -2,6 +2,7 @@ package da
 
 import (
 	"context"
+	"fmt"
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"sync"
@@ -144,31 +145,29 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		if len(c.TeacherIDs) == 0 {
 			return FalseSQLTemplate().DBOConditions()
 		}
-		teacherIDs := utils.SliceDeduplication(c.TeacherIDs)
-		t2 := NewSQLTemplate("")
-		for _, tid := range teacherIDs {
-			t2.Appendf("json_contains(teacher_ids, json_array(?))", tid)
-		}
-		t.AppendResult(t2.Or())
+		t.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
+			utils.SliceDeduplication(c.TeacherIDs))
 	}
 
 	if c.AllowTeacherIDs != nil {
 		if len(c.AllowTeacherIDs) == 0 {
 			return FalseSQLTemplate().DBOConditions()
 		}
-		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
-		t2 := NewSQLTemplate("")
-		for _, tid := range allowTeacherIDs {
-			t2.Appendf("json_contains(teacher_ids, json_array(?))", tid)
-		}
-		t.AppendResult(t2.Or())
+		t.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
+			utils.SliceDeduplication(c.AllowTeacherIDs))
 	}
 
 	if len(c.TeacherIDAndStatusPairs) > 0 {
+		t2 := NewSQLTemplate("")
 		for _, p := range c.TeacherIDAndStatusPairs {
-			t.Appendf("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
-				p.TeacherID, p.TeacherID, string(p.Status))
+			t2.Appendf("(attendance_id = ? and assessments.status = ?)", p.TeacherID, p.Status)
 		}
+		format, values := t2.Or()
+		format = fmt.Sprintf("exists (select 1 from assessments_attendances "+
+			"where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and %s", format)
+		t.Appendf(format, values...)
 	}
 
 	if c.ScheduleIDs != nil {

@@ -8,12 +8,13 @@ import (
 )
 
 type UploadPathResponse struct {
-	Path string `json:"path"`
+	Path       string `json:"path"`
 	ResourceId string `json:"resource_id"`
 }
 type DownloadPathResource struct {
 	Path string `json:"path"`
 }
+
 // @Summary getContentResourceUploadPath
 // @ID getContentResourceUploadPath
 // @Description get path to upload resource
@@ -81,7 +82,6 @@ func (s *Server) getContentResourcePath(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
-
 
 // @Summary getDownloadPath
 // @ID getDownloadPath

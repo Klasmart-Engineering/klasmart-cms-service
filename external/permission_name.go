@@ -19,12 +19,17 @@ const (
 	EditLessonMaterialMetadataAndContent236 PermissionName = "edit_lesson_material_metadata_and_content_236"
 	EditLessonPlanMetadata237               PermissionName = "edit_lesson_plan_metadata_237"
 	EditLessonPlanContent238                PermissionName = "edit_lesson_plan_content_238"
-	ApprovePendingContent271                PermissionName = "approve_pending_content_271"
-	RejectPendingContent272                 PermissionName = "reject_pending_content_272"
-	ArchivePublishedContent273              PermissionName = "archive_published_content_273"
-	RepublishArchivedContent274             PermissionName = "republish_archived_content_274"
-	DeleteArchivedContent275                PermissionName = "delete_archived_content_275"
-	AssociateLearningOutcomes284            PermissionName = "associate_learning_outcomes_284"
+
+	EditMyUnpublishedContent230   PermissionName = "edit_my_unpublished_content_230"
+	EditMyPublishedContent234     PermissionName = "edit_my_published_content_234"
+	DeleteMyUnpublishedContent240 PermissionName = "delete_my_unpublished_content_240"
+
+	ApprovePendingContent271     PermissionName = "approve_pending_content_271"
+	RejectPendingContent272      PermissionName = "reject_pending_content_272"
+	ArchivePublishedContent273   PermissionName = "archive_published_content_273"
+	RepublishArchivedContent274  PermissionName = "republish_archived_content_274"
+	DeleteArchivedContent275     PermissionName = "delete_archived_content_275"
+	AssociateLearningOutcomes284 PermissionName = "associate_learning_outcomes_284"
 
 	CreateFolder289                          PermissionName = "create_folder_289"
 	PublishFeaturedContentForAllHub          PermissionName = "publish_featured_content_for_all_hub_79000"
