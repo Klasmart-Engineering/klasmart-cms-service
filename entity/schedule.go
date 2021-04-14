@@ -355,7 +355,7 @@ type ScheduleAddView struct {
 	OrgID                  string            `json:"org_id"`
 	StartAt                int64             `json:"start_at"`
 	EndAt                  int64             `json:"end_at"`
-	SubjectID              string            `json:"subject_id"`
+	SubjectIDs             []string          `json:"subject_ids"`
 	ProgramID              string            `json:"program_id"`
 	ClassType              ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt                  int64             `json:"due_at"`
@@ -391,7 +391,6 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		OrgID:           s.OrgID,
 		StartAt:         s.StartAt,
 		EndAt:           s.EndAt,
-		SubjectID:       s.SubjectID,
 		ProgramID:       s.ProgramID,
 		ClassType:       s.ClassType,
 		DueAt:           s.DueAt,
@@ -480,7 +479,7 @@ type ScheduleDetailsView struct {
 	ExistFeedback        bool                          `json:"exist_feedback"`
 	LessonPlan           *ScheduleLessonPlan           `json:"lesson_plan"`
 	Class                *ScheduleAccessibleUserView   `json:"class"`
-	Subject              *ScheduleShortInfo            `json:"subject"`
+	Subjects             []*ScheduleShortInfo          `json:"subjects"`
 	Program              *ScheduleShortInfo            `json:"program"`
 	Teachers             []*ScheduleAccessibleUserView `json:"teachers"`
 }
@@ -562,7 +561,7 @@ type ScheduleLessonPlanMaterial struct {
 
 type ScheduleVerify struct {
 	ClassID      string
-	SubjectID    string
+	SubjectIDs   []string
 	ProgramID    string
 	LessonPlanID string
 	ClassType    ScheduleClassType
@@ -649,6 +648,7 @@ type ScheduleRelationInput struct {
 	ClassRosterStudentIDs  []string
 	ParticipantsTeacherIDs []string
 	ParticipantsStudentIDs []string
+	SubjectIDs             []string
 }
 
 type ProcessScheduleDueAtInput struct {

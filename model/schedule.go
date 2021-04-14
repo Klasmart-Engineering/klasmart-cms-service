@@ -525,6 +525,13 @@ func (s *scheduleModel) prepareScheduleRelationAddData(ctx context.Context, op *
 			RelationType: entity.ScheduleRelationTypeParticipantStudent,
 		})
 	}
+
+	for _, item := range input.SubjectIDs {
+		scheduleRelations = append(scheduleRelations, &entity.ScheduleRelation{
+			RelationID:   item,
+			RelationType: entity.ScheduleRelationTypeSubject,
+		})
+	}
 	return scheduleRelations, nil
 }
 
@@ -634,7 +641,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 	// verify data
 	err := s.verifyData(ctx, op, &entity.ScheduleVerify{
 		ClassID:      viewData.ClassID,
-		SubjectID:    viewData.SubjectID,
+		SubjectIDs:   viewData.SubjectIDs,
 		ProgramID:    viewData.ProgramID,
 		LessonPlanID: viewData.LessonPlanID,
 		ClassType:    viewData.ClassType,
@@ -649,7 +656,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 	if viewData.ClassType == entity.ScheduleClassTypeTask {
 		viewData.LessonPlanID = ""
 		viewData.ProgramID = ""
-		viewData.SubjectID = ""
+		viewData.SubjectIDs = nil
 	}
 
 	schedule, err := viewData.ToSchedule(ctx)
@@ -660,6 +667,7 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
 		ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
 		ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
+		SubjectIDs:             viewData.SubjectIDs,
 	}
 	relations, err := s.prepareScheduleRelationAddData(ctx, op, relationInput)
 	if err != nil {
@@ -808,7 +816,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	// verify data
 	err = s.verifyData(ctx, operator, &entity.ScheduleVerify{
 		ClassID:      viewData.ClassID,
-		SubjectID:    viewData.SubjectID,
+		SubjectIDs:   viewData.SubjectIDs,
 		ProgramID:    viewData.ProgramID,
 		LessonPlanID: viewData.LessonPlanID,
 		ClassType:    viewData.ClassType,
@@ -824,7 +832,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	if viewData.ClassType == entity.ScheduleClassTypeTask {
 		viewData.LessonPlanID = ""
 		viewData.ProgramID = ""
-		viewData.SubjectID = ""
+		viewData.SubjectIDs = nil
 	}
 
 	// update schedule
@@ -837,6 +845,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 			ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
 			ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
 			ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
+			SubjectIDs:             viewData.SubjectIDs,
 		}
 		var err error
 		relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
@@ -866,7 +875,6 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		schedule.ID = utils.NewID()
 		schedule.LessonPlanID = viewData.LessonPlanID
 		schedule.ProgramID = viewData.ProgramID
-		schedule.SubjectID = viewData.SubjectID
 		schedule.ClassID = viewData.ClassID
 		schedule.StartAt = viewData.StartAt
 		schedule.EndAt = viewData.EndAt
@@ -1610,15 +1618,9 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		}
 	}
 
-	if schedule.SubjectID != "" {
-		subjectMap, err := s.getSubjectsByIDs(ctx, operator, []string{schedule.SubjectID})
-		if err != nil {
-			log.Error(ctx, "getBasicInfo:get subject info error", log.Err(err), log.String("SubjectID", schedule.SubjectID))
-			return nil, err
-		}
-		if item, ok := subjectMap[schedule.SubjectID]; ok {
-			result.Subject = item
-		}
+	result.Subjects, err = GetScheduleRelationModel().GetSubjects(ctx, operator, schedule.ID)
+	if err != nil {
+		return nil, err
 	}
 
 	if schedule.LessonPlanID != "" {
@@ -2027,9 +2029,8 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		return nil
 	}
 	// subject
-	if v.SubjectID != "" {
-		subjectIDs := []string{v.SubjectID}
-		_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
+	if len(v.SubjectIDs) != 0 {
+		_, err = external.GetSubjectServiceProvider().BatchGet(ctx, operator, v.SubjectIDs)
 		if err != nil {
 			log.Error(ctx, "verifyData:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Any("ScheduleVerify", v))
 			return err

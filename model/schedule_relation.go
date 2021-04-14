@@ -23,9 +23,47 @@ type IScheduleRelationModel interface {
 	HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error)
 	GetIDs(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]string, error)
 	GetUsers(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleUserRelation, error)
+	GetSubjects(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleShortInfo, error)
 }
 
 type scheduleRelationModel struct {
+}
+
+func (s *scheduleRelationModel) GetSubjects(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleShortInfo, error) {
+	var scheduleRelations []*entity.ScheduleRelation
+	relationCondition := da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{
+				string(entity.ScheduleRelationTypeSubject),
+			},
+			Valid: true,
+		},
+	}
+	err := da.GetScheduleRelationDA().Query(ctx, relationCondition, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "get users relation error", log.Err(err), log.Any("relationCondition", relationCondition))
+		return nil, err
+	}
+	subjectIDs := make([]string, len(scheduleRelations))
+	for i, item := range scheduleRelations {
+		subjectIDs[i] = item.RelationID
+	}
+	subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, op, subjectIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.ScheduleShortInfo, len(subjects))
+	for i, item := range subjects {
+		result[i] = &entity.ScheduleShortInfo{
+			ID:   item.ID,
+			Name: item.Name,
+		}
+	}
+	return result, nil
 }
 
 func (s *scheduleRelationModel) GetUsers(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleUserRelation, error) {
