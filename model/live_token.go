@@ -9,6 +9,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"strings"
 	"sync"
 	"time"
 
@@ -332,7 +333,13 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 				return nil, err
 			}
 			if mData.FileType == entity.FileTypeDocument {
-				sourceUrl = fmt.Sprintf("/assets/%s", mData.Source)
+				source := string(mData.Source)
+				parts := strings.Split(source, "-")
+				if len(parts) != 2 {
+					log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+					return nil, constant.ErrInvalidArgs
+				}
+				sourceUrl = fmt.Sprintf("/assets/%s", parts[1])
 			}
 			materialItem.URL = sourceUrl
 		}
