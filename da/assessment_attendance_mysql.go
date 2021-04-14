@@ -76,13 +76,13 @@ func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContex
 	if len(items) == 0 {
 		return nil
 	}
-	columns := []string{"id", "assessment_id", "attendance_id", "checked"}
+	columns := []string{"id", "assessment_id", "attendance_id", "checked", "origin", "role"}
 	var matrix [][]interface{}
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.AttendanceID, item.Checked})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.AttendanceID, item.Checked, item.Origin, item.Role})
 	}
 	format, values := SQLBatchInsert(entity.AssessmentAttendance{}.TableName(), columns, matrix)
 	if err := tx.Exec(format, values...).Error; err != nil {
