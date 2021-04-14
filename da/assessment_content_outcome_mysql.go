@@ -43,7 +43,7 @@ func (*assessmentContentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBCo
 		})
 	}
 	format, values := SQLBatchInsert(entity.AssessmentContentOutcome{}.TableName(), columns, matrix)
-	if err := tx.Exec(format, values).Error; err != nil {
+	if err := tx.Exec(format, values...).Error; err != nil {
 		log.Error(ctx, "BatchInsert: SQLBatchInsert: batch insert assessment content outcomes failed",
 			log.Err(err),
 			log.Any("items", items),
