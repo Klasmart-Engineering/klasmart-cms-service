@@ -1176,3 +1176,19 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary getSchedulePopupByID
+// @ID getSchedulePopupByID
+// @Description get schedule popup info by id
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Tags schedule
+// @Success 200 {object} entity.SchedulePopup
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_popup/{schedule_id} [get]
+func (s *Server) getSchedulePopupByID(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, nil)
+}
