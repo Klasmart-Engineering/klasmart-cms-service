@@ -368,6 +368,9 @@ func (cm *ContentModel) CreateContentTx(ctx context.Context, c entity.CreateCont
 		}
 		return cid, nil
 	})
+	if cid == nil {
+		return "", err
+	}
 	return cid.(string), err
 }
 func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error) {
@@ -630,6 +633,9 @@ func (cm *ContentModel) LockContentTx(ctx context.Context, cid string, user *ent
 		}
 		return ncid, nil
 	})
+	if ncid == nil {
+		return "", err
+	}
 	return ncid.(string), err
 }
 
@@ -763,6 +769,9 @@ func (cm *ContentModel) CopyContentTx(ctx context.Context, cid string, deep bool
 		}
 		return cid, nil
 	})
+	if id == nil {
+		return "", err
+	}
 	return id.(string), err
 }
 
