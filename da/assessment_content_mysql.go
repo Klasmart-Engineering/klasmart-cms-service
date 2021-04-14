@@ -67,7 +67,7 @@ func (d *assessmentContentDA) GetMaterials(ctx context.Context, tx *dbo.DBContex
 
 func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error {
 	var (
-		columns = []string{"id", "assessment_id", "content_id", "content_name", "content_type", "checked", "outcome_ids"}
+		columns = []string{"id", "assessment_id", "content_id", "content_name", "content_type", "checked"}
 		matrix  [][]interface{}
 	)
 	for _, item := range items {
