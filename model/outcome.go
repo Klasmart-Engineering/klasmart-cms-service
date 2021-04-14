@@ -43,13 +43,55 @@ type IOutcomeModel interface {
 	BulkRejectLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error
 
 	GetLatestOutcomesByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
-	GenerateShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcode string) (string, error)
+	//GenerateShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcode string) (string, error)
 
 	HasLockedOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
 }
 
 type OutcomeModel struct {
 }
+
+//func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcode string) (string, error) {
+//	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, orgID)
+//	if err != nil {
+//		log.Error(ctx, "GenerateShortcode: NewLock failed",
+//			log.Err(err),
+//			log.String("org", orgID),
+//			log.String("shortcode", shortcode))
+//		return "", err
+//	}
+//	locker.Lock()
+//	defer locker.Unlock()
+//	shortcodes, err := da.GetOutcomeDA().SearchShortcode(ctx, tx, orgID)
+//	if err != nil {
+//		log.Error(ctx, "GenerateShortcode: SearchShortcode failed",
+//			log.Err(err),
+//			log.String("org", orgID),
+//			log.String("shortcode", shortcode))
+//		return "", err
+//	}
+//	for i := 0; i < constant.ShortcodeSpace; i++ {
+//		value, err := utils.NumToBHex(ctx, i, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+//		if err != nil {
+//			return "", err
+//		}
+//		if _, ok := shortcodes[value]; !ok && value != utils.PaddingString(shortcode, constant.ShortcodeShowLength) {
+//			err = da.GetOutcomeDA().SaveShortcodeInRedis(ctx, orgID, value)
+//			if err != nil {
+//				log.Error(ctx, "GenerateShortcode: SaveShortcodeInRedis failed",
+//					log.String("org", orgID),
+//					log.String("new", value),
+//					log.String("old", shortcode))
+//				return "", err
+//			}
+//			log.Info(ctx, "GenerateShortcode: SaveShortcodeInRedis success",
+//				log.String("old", shortcode),
+//				log.String("new", value))
+//			return value, nil
+//		}
+//	}
+//	return "", constant.ErrExceededLimit
+//}
 
 func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) (err error) {
 	// outcome get value from api lay, this lay add some information
@@ -77,7 +119,8 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		outcome.AuthorID = operator.UserID
 		outcome.OrganizationID = operator.OrgID
 		outcome.PublishStatus = entity.OutcomeStatusDraft
-		exists, err := da.GetOutcomeDA().IsShortcodeExistInDBWithOtherAncestor(ctx, tx, operator.OrgID, outcome.AncestorID, outcome.Shortcode)
+		//exists, err := da.GetOutcomeDA().IsShortcodeExistInDBWithOtherAncestor(ctx, tx, operator.OrgID, outcome.AncestorID, outcome.Shortcode)
+		exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.KindOutcome, operator.OrgID, outcome.AncestorID, outcome.Shortcode)
 		if err != nil {
 			log.Error(ctx, "CreateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
 				log.Err(err),
@@ -104,7 +147,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		}
 		return nil
 	})
-	da.GetOutcomeDA().DeleteShortcodeInRedis(ctx, operator.OrgID, outcome.Shortcode)
+	da.GetShortcodeCacheDA().Remove(ctx, entity.KindOutcome, operator.OrgID, outcome.Shortcode)
 	if err != nil {
 		return err
 	}
@@ -178,7 +221,8 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := da.GetOutcomeDA().IsShortcodeExistInRedis(ctx, operator.OrgID, outcome.Shortcode)
+	//exists, err := da.GetOutcomeDA().IsShortcodeExistInRedis(ctx, operator.OrgID, outcome.Shortcode)
+	exists, err := GetShortcodeModel().isCached(ctx, entity.KindOutcome, operator.OrgID, outcome.Shortcode)
 	if err != nil {
 		log.Error(ctx, "UpdateLearningOutcome: IsShortcodeExistInRedis failed",
 			log.Err(err),
@@ -215,7 +259,8 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 		}
 
 		if data.Shortcode != outcome.Shortcode {
-			exists, err := da.GetOutcomeDA().IsShortcodeExistInDBWithOtherAncestor(ctx, tx, operator.OrgID, data.AncestorID, outcome.Shortcode)
+			//exists, err := da.GetOutcomeDA().IsShortcodeExistInDBWithOtherAncestor(ctx, tx, operator.OrgID, data.AncestorID, outcome.Shortcode)
+			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.KindOutcome, operator.OrgID, data.AncestorID, outcome.Shortcode)
 			if err != nil {
 				log.Error(ctx, "UpdateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
 					log.Err(err),

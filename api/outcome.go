@@ -837,7 +837,7 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	shortcode, err := model.GetOutcomeModel().GenerateShortcode(ctx, dbo.MustGetDB(ctx), op.OrgID, "")
+	shortcode, err := model.GetShortcodeModel().Generate(ctx, dbo.MustGetDB(ctx), "kind", op.OrgID, "")
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &ShortcodeResponse{Shortcode: shortcode})

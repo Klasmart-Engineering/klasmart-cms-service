@@ -276,6 +276,20 @@ func (s Server) registeRoute() {
 		classes.POST("/classes_members", s.classAddMembersEvent)
 		classes.DELETE("/classes_members", s.classDeleteMembersEvent)
 	}
+	milestone := s.engine.Group("/v1")
+	{
+		milestone.POST("/milestones", s.mustLogin, s.createMilestone)
+		milestone.GET("/milestones/:id", s.mustLogin, s.obtainMilestone)
+
+		milestone.PUT("/milestones/:id/occupy", s.mustLogin, s.occupyMilestone)
+		milestone.PUT("/milestones/:id", s.mustLogin, s.updateMilestone)
+
+		milestone.DELETE("/milestones", s.mustLogin, s.deleteMilestone)
+
+		milestone.GET("/milestones", s.mustLogin, s.searchMilestone)
+
+		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
+	}
 }
 
 // Ping godoc
