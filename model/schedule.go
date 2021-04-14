@@ -1431,13 +1431,13 @@ func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entit
 				log.Any("lessonPlanID", lessonPlanID))
 			return nil, err
 		}
-		materials := make([]*entity.ScheduleLessonPlanMaterial, len(contentList))
+		result.Materials = make([]*entity.ScheduleLessonPlanMaterial, len(contentList))
 		for i, item := range contentList {
 			materialItem := &entity.ScheduleLessonPlanMaterial{
 				ID:   item.ID,
 				Name: item.Name,
 			}
-			materials[i] = materialItem
+			result.Materials[i] = materialItem
 		}
 	}
 	return result, nil

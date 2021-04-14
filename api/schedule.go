@@ -1188,7 +1188,7 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules_popup/{schedule_id} [get]
+// @Router /schedules/{schedule_id}/popup [get]
 func (s *Server) getSchedulePopupByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
