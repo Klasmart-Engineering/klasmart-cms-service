@@ -512,7 +512,7 @@ type ScheduleBasicDataInput struct {
 	ClassID      string
 	ProgramID    string
 	LessonPlanID string
-	SubjectID    string
+	SubjectIDs   []string
 	TeacherIDs   []string
 	StudentIDs   []string
 }
@@ -539,7 +539,7 @@ type SchedulePlain struct {
 
 type ScheduleBasic struct {
 	Class          *ScheduleAccessibleUserView `json:"class"`
-	Subject        *ScheduleShortInfo          `json:"subject"`
+	Subjects       []*ScheduleShortInfo        `json:"subjects"`
 	Program        *ScheduleShortInfo          `json:"program"`
 	Members        []*ScheduleShortInfo        `json:"teachers"`
 	MemberTeachers []*ScheduleShortInfo        `json:"member_teachers"`

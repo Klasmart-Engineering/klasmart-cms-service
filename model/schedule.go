@@ -57,7 +57,7 @@ type IScheduleModel interface {
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
-	GetSchedulePopupByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error)
+	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1106,12 +1106,16 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 				studentIDs = append(studentIDs, relationItem.RelationID)
 			}
 		}
+		subjectIDs, err := GetScheduleRelationModel().GetSubjectIDs(ctx, operator, item.ID)
+		if err != nil {
+			return 0, nil, err
+		}
 		basicInfoInput[i] = &entity.ScheduleBasicDataInput{
 			ScheduleID:   item.ID,
 			ClassID:      item.ClassID,
 			ProgramID:    item.ProgramID,
 			LessonPlanID: item.LessonPlanID,
-			SubjectID:    item.SubjectID,
+			SubjectIDs:   subjectIDs,
 			TeacherIDs:   teacherIDs,
 			StudentIDs:   studentIDs,
 		}
@@ -1138,7 +1142,6 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 		if v, ok := basicInfo[item.ID]; ok {
 			viewData.ScheduleBasic = *v
 		}
-
 		result = append(result, viewData)
 	}
 
@@ -1299,8 +1302,8 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 		if item.ClassID != "" {
 			classIDs = append(classIDs, item.ClassID)
 		}
-		if item.SubjectID != "" {
-			subjectIDs = append(subjectIDs, item.SubjectID)
+		if len(item.SubjectIDs) != 0 {
+			subjectIDs = append(subjectIDs, item.SubjectIDs...)
 		}
 		if item.ProgramID != "" {
 			programIDs = append(programIDs, item.ProgramID)
@@ -1338,24 +1341,24 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 	classIDs = utils.SliceDeduplication(classIDs)
 	classMap, err := s.getClassInfoMapByClassIDs(ctx, op, classIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get class info error", log.Err(err), log.Strings("classIDs", classIDs))
+		log.Error(ctx, "get class info error", log.Err(err), log.Strings("classIDs", classIDs))
 		return nil, err
 	}
 
 	subjectMap, err = s.getSubjectsByIDs(ctx, op, subjectIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
+		log.Error(ctx, "get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 		return nil, err
 	}
 
 	programMap, err = s.getProgramsByIDs(ctx, op, programIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.Strings("programIDs", programIDs))
+		log.Error(ctx, "get program info error", log.Err(err), log.Strings("programIDs", programIDs))
 		return nil, err
 	}
 	lessonPlanMap, err = s.getLessonPlanByIDs(ctx, dbo.MustGetDB(ctx), lessonPlanIDs)
 	if err != nil {
-		log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Any("lessonPlanIDs", lessonPlanIDs))
+		log.Error(ctx, "get lesson plan info error", log.Err(err), log.Any("lessonPlanIDs", lessonPlanIDs))
 		return nil, err
 	}
 
@@ -1364,8 +1367,9 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 		if v, ok := classMap[item.ClassID]; ok {
 			scheduleBasic.Class = v
 		}
-		if v, ok := subjectMap[item.SubjectID]; ok {
-			scheduleBasic.Subject = v
+		scheduleBasic.Subjects = make([]*entity.ScheduleShortInfo, len(item.SubjectIDs))
+		for i, subID := range item.SubjectIDs {
+			scheduleBasic.Subjects[i] = subjectMap[subID]
 		}
 		if v, ok := programMap[item.ProgramID]; ok {
 			scheduleBasic.Program = v
@@ -1393,7 +1397,7 @@ func (s *scheduleModel) getLessonPlanByIDs(ctx context.Context, tx *dbo.DBContex
 		lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
 		lessonPlans, err := GetContentModel().GetContentNameByIDList(ctx, tx, lessonPlanIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
+			log.Error(ctx, "get lesson plan info error", log.Err(err), log.Strings("lessonPlanIDs", lessonPlanIDs))
 			return nil, err
 		}
 
@@ -1457,7 +1461,7 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator 
 		classService := external.GetClassServiceProvider()
 		classInfos, err := classService.BatchGet(ctx, operator, classIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetClassServiceProvider BatchGet error", log.Err(err), log.Strings("classIDs", classIDs))
+			log.Error(ctx, "GetClassServiceProvider BatchGet error", log.Err(err), log.Strings("classIDs", classIDs))
 			return nil, err
 		}
 		for _, item := range classInfos {
@@ -1478,7 +1482,7 @@ func (s *scheduleModel) getSubjectsByIDs(ctx context.Context, operator *entity.O
 		subjectIDs = utils.SliceDeduplication(subjectIDs)
 		subjectInfos, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, subjectIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetSubjectServiceProvider BatchGet error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
+			log.Error(ctx, "GetSubjectServiceProvider BatchGet error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 			return nil, err
 		}
 
@@ -1498,7 +1502,7 @@ func (s *scheduleModel) getProgramsByIDs(ctx context.Context, operator *entity.O
 		programIDs = utils.SliceDeduplication(programIDs)
 		programInfos, err := external.GetProgramServiceProvider().BatchGet(ctx, operator, programIDs)
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:GetProgramServiceProvider BatchGet error", log.Err(err), log.Strings("programIDs", programIDs))
+			log.Error(ctx, "GetProgramServiceProvider BatchGet error", log.Err(err), log.Strings("programIDs", programIDs))
 			return nil, err
 		}
 
@@ -1610,7 +1614,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 	if schedule.ProgramID != "" {
 		programMap, err := s.getProgramsByIDs(ctx, operator, []string{schedule.ProgramID})
 		if err != nil {
-			log.Error(ctx, "getBasicInfo:get program info error", log.Err(err), log.String("ProgramID", schedule.ProgramID))
+			log.Error(ctx, "get program info error", log.Err(err), log.String("ProgramID", schedule.ProgramID))
 			return nil, err
 		}
 		if item, ok := programMap[schedule.ProgramID]; ok {
@@ -2507,7 +2511,7 @@ func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, r
 	return result, nil
 }
 
-func (s *scheduleModel) GetSchedulePopupByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error) {
+func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error) {
 	schedule, err := s.getByIDFormDB(ctx, op, id)
 	if err != nil {
 		log.Error(ctx, "get by id from db error", log.Any("op", op), log.String("id", id))

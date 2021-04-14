@@ -1188,13 +1188,13 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/{schedule_id}/popup [get]
-func (s *Server) getSchedulePopupByID(c *gin.Context) {
+// @Router /schedules_view/{schedule_id} [get]
+func (s *Server) getScheduleViewByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	operator := s.getOperator(c)
 
-	result, err := model.GetScheduleModel().GetSchedulePopupByID(ctx, operator, id)
+	result, err := model.GetScheduleModel().GetScheduleViewByID(ctx, operator, id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
