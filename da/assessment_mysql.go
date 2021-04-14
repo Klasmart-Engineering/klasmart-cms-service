@@ -156,7 +156,7 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		}
 		t.Appendf("exists (select 1 from assessments_attendances"+
 			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
-			utils.SliceDeduplication(c.TeacherIDs))
+			utils.SliceDeduplication(c.AllowTeacherIDs))
 	}
 
 	if len(c.TeacherIDAndStatusPairs) > 0 {
