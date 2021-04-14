@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"net/url"
-
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"sync"
 	"time"
 
@@ -308,9 +306,12 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
-		//case entity.FileTypeDocument:
-		//	log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
-		//	materialItem.TypeName = entity.MaterialTypeH5P
+		case entity.FileTypeDocument:
+			log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
+			if mData.Source.Ext() != constant.LiveTokenDocumentPDF {
+				continue
+			}
+			materialItem.TypeName = entity.MaterialTypeH5P
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
 			continue
@@ -331,8 +332,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 				return nil, err
 			}
 			if mData.FileType == entity.FileTypeDocument {
-				escape := url.QueryEscape(sourceUrl)
-				sourceUrl = fmt.Sprintf("%s?src=%s", constant.LiveTokenDocumentUrlPrefix, escape)
+				sourceUrl = fmt.Sprintf("/assets/%s", mData.Source)
 			}
 			materialItem.URL = sourceUrl
 		}
