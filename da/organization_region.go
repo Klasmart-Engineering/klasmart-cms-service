@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type IOrganizationRegionDA interface{
+type IOrganizationRegionDA interface {
 	GetOrganizationByHeadquarter(ctx context.Context, db *dbo.DBContext, headquarterID string) ([]*entity.OrganizationRegion, error)
 }
 
@@ -29,10 +29,10 @@ func (cd *OrganizationRegionDA) GetOrganizationByHeadquarter(ctx context.Context
 }
 
 type OrganizationRegionCondition struct {
-	IDS           		[]string `json:"ids"`
-	HeadquarterIDs   	[]string `json:"headquarter_ids"`
+	IDS            []string `json:"ids"`
+	HeadquarterIDs []string `json:"headquarter_ids"`
 
-	Pager       		utils.Pager
+	Pager utils.Pager
 }
 
 func (s *OrganizationRegionCondition) GetConditions() ([]string, []interface{}) {
@@ -62,7 +62,6 @@ func (s *OrganizationRegionCondition) GetPager() *dbo.Pager {
 func (s *OrganizationRegionCondition) GetOrderBy() string {
 	return "create_at desc"
 }
-
 
 var (
 	orgRegionDA    IOrganizationRegionDA
