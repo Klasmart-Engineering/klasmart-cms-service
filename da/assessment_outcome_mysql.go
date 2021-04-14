@@ -92,7 +92,7 @@ func (*assessmentOutcomeDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.D
 	}
 	if err := tx.
 		Model(entity.AssessmentOutcome{}).
-		Where("assessment_id = ? and outcome_id = ?", assessmentID).
+		Where("assessment_id = ?", assessmentID).
 		Updates(changes).
 		Error; err != nil {
 		return err
