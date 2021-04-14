@@ -115,7 +115,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		studentIDs = append(studentIDs, item.StudentID)
 		teacherIDs = append(teacherIDs, item.TeacherIDs...)
 	}
-	studentNamesMap, err := external.GetAgeServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
+	studentNamesMap, err := external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs)
 	if err != nil {
 		log.Error(ctx, "m.getStudentNamesMap: get failed",
 			log.Err(err),

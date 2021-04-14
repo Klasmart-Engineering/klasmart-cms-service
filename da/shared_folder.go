@@ -55,6 +55,7 @@ func (sf *SharedFolderDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, req [
 		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
 			log.Err(err),
 			log.Any("items", matrix),
+			log.String("format", format),
 		)
 		return err
 	}

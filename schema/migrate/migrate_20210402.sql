@@ -27,3 +27,7 @@ ALTER TABLE assessments_attendances ADD (
     `role` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'role'
 );
 CREATE UNIQUE INDEX uq_assessments_attendances_assessment_id_attendance_id on assessments_attendances(assessment_id, attendance_id);
+
+DROP INDEX uq_assessments_contents_outcomes_assessment_id_content_id ON assessments_contents_outcomes;
+CREATE UNIQUE INDEX uq_assessments_contents_outcomes ON assessments_contents_outcomes(`assessment_id`, `content_id`, `outcome_id`);
+

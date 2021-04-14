@@ -677,7 +677,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 
 		cond := &da.ScheduleRelationCondition{
 			ScheduleID: sql.NullString{
-				String: newAssessmentID,
+				String: schedule.ID,
 				Valid:  true,
 			},
 			RelationIDs: entity.NullStrings{
