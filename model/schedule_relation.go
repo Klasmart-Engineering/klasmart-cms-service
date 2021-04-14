@@ -3,6 +3,8 @@ package model
 import (
 	"context"
 	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -20,9 +22,69 @@ type IScheduleRelationModel interface {
 	Count(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) (int, error)
 	HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error)
 	GetIDs(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]string, error)
+	GetUsers(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleUserRelation, error)
 }
 
 type scheduleRelationModel struct {
+}
+
+func (s *scheduleRelationModel) GetUsers(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleUserRelation, error) {
+	result := new(entity.ScheduleUserRelation)
+
+	_, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleCreateMyEvent,
+		external.ScheduleCreateMySchoolEvent,
+		external.ScheduleCreateEvent,
+	})
+	if err == constant.ErrInternalServer {
+		return nil, err
+	}
+	relations, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, op, scheduleID)
+	if err != nil {
+		log.Error(ctx, "get users by schedule id error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
+		return nil, err
+	}
+	teacherIDs := make([]string, 0, len(relations))
+	studentIDs := make([]string, 0, len(relations))
+	userIDs := make([]string, 0, len(relations))
+	for _, relationItem := range relations {
+		switch relationItem.RelationType {
+		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
+			teacherIDs = append(teacherIDs, relationItem.RelationID)
+			userIDs = append(userIDs, relationItem.RelationID)
+		case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
+			if err == nil {
+				studentIDs = append(studentIDs, relationItem.RelationID)
+				userIDs = append(userIDs, relationItem.RelationID)
+			}
+		}
+	}
+
+	userMap, err := external.GetUserServiceProvider().BatchGetMap(ctx, op, userIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Teachers = make([]*entity.ScheduleShortInfo, 0, len(teacherIDs))
+	for _, id := range teacherIDs {
+		if user, ok := userMap[id]; ok {
+			result.Teachers = append(result.Teachers, &entity.ScheduleShortInfo{
+				ID:   user.ID,
+				Name: user.Name,
+			})
+		}
+	}
+
+	result.Students = make([]*entity.ScheduleShortInfo, 0, len(studentIDs))
+	for _, id := range studentIDs {
+		if user, ok := userMap[id]; ok {
+			result.Students = append(result.Students, &entity.ScheduleShortInfo{
+				ID:   user.ID,
+				Name: user.Name,
+			})
+		}
+	}
+	return result, nil
 }
 
 func (s *scheduleRelationModel) HasScheduleByRelationIDs(ctx context.Context, op *entity.Operator, relationIDs []string) (bool, error) {

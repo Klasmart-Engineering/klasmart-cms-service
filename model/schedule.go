@@ -49,7 +49,7 @@ type IScheduleModel interface {
 	GetLessonPlanByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleShortInfo, error)
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
-	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error
+	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error)
 	GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error)
 	GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error)
 	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
@@ -57,9 +57,14 @@ type IScheduleModel interface {
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
+	GetSchedulePopupByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
+}
+
+func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error) {
+	panic("implement me")
 }
 
 func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error) {
@@ -1407,6 +1412,12 @@ func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entit
 		result.ID = lessonInfo.ID
 		result.Name = lessonInfo.Name
 
+		isAuth, err := s.VerifyLessonPlanAuthed(ctx, op, lessonPlanID)
+		if err != nil {
+			return nil, err
+		}
+		result.IsAuth = isAuth
+
 		contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), lessonPlanID, op)
 		if err == dbo.ErrRecordNotFound {
 			log.Error(ctx, "getMaterials:get content sub by id not found",
@@ -1577,22 +1588,6 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		return nil, err
 	}
 
-	relations, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, schedule.ID)
-	if err != nil {
-		log.Error(ctx, "get users by schedule id error", log.Err(err), log.Any("operator", operator), log.String("scheduleID", schedule.ID))
-		return nil, err
-	}
-	teacherIDs := make([]string, 0, len(relations))
-	studentIDs := make([]string, 0, len(relations))
-	for _, relationItem := range relations {
-		switch relationItem.RelationType {
-		case entity.ScheduleRelationTypeClassRosterTeacher, entity.ScheduleRelationTypeParticipantTeacher:
-			teacherIDs = append(teacherIDs, relationItem.RelationID)
-		case entity.ScheduleRelationTypeClassRosterStudent, entity.ScheduleRelationTypeParticipantStudent:
-			studentIDs = append(studentIDs, relationItem.RelationID)
-		}
-	}
-
 	if classID != "" {
 		classes, err := s.getClassInfoMapByClassIDs(ctx, operator, []string{classID})
 		if err != nil {
@@ -1752,6 +1747,7 @@ func (s *scheduleModel) getByIDFormCache(ctx context.Context, operator *entity.O
 	}
 	return cacheData, nil
 }
+
 func (s *scheduleModel) GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error) {
 	cacheData, err := s.getByIDFormCache(ctx, operator, id)
 	if err == nil {
@@ -2065,34 +2061,34 @@ func (s *scheduleModel) verifyData(ctx context.Context, operator *entity.Operato
 		return constant.ErrInvalidArgs
 	}
 	// verify lessPlan is valid
-	err = s.VerifyLessonPlanAuthed(ctx, operator, v.LessonPlanID)
-
+	_, err = s.VerifyLessonPlanAuthed(ctx, operator, v.LessonPlanID)
 	return err
 }
 
-func (s *scheduleModel) VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) error {
+func (s *scheduleModel) VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error) {
 	// verify lessPlan is valid
 	contentMap, err := GetAuthedContentRecordsModel().GetContentAuthByIDList(ctx, []string{lessonPlanID}, operator)
 	if err != nil {
-		log.Error(ctx, "verifyLessonPlanAuthed:GetAuthedContentRecordsModel.GetContentAuthByIDList error", log.Err(err),
+		log.Error(ctx, "GetAuthedContentRecordsModel.GetContentAuthByIDList error", log.Err(err),
 			log.String("lessonPlanID", lessonPlanID),
 			log.Any("operator", operator),
 		)
-		return err
+		return false, err
 	}
 	item, ok := contentMap[lessonPlanID]
 	if !ok {
-		log.Error(ctx, "verifyLessonPlanAuthed:lesson plan not found", log.Any("operator", operator), log.String("lessonPlanID", lessonPlanID))
-		return ErrScheduleLessonPlanUnAuthed
+		log.Error(ctx, "lesson plan not found", log.Any("operator", operator), log.String("lessonPlanID", lessonPlanID))
+		return false, ErrScheduleLessonPlanUnAuthed
 	}
 	if item == entity.ContentUnauthed {
-		log.Info(ctx, "verifyLessonPlanAuthed:lesson plan unAuthed", log.Any("operator", operator),
+		log.Info(ctx, "lesson plan unAuthed", log.Any("operator", operator),
 			log.Any("lessonInfo", item),
 			log.String("lessonPlanID", lessonPlanID),
 		)
-		return ErrScheduleLessonPlanUnAuthed
+		return false, ErrScheduleLessonPlanUnAuthed
 	}
-	return nil
+
+	return true, nil
 }
 
 func (s *scheduleModel) UpdateScheduleStatus(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string, status entity.ScheduleStatus) error {
@@ -2299,15 +2295,6 @@ func (s *scheduleModel) QueryScheduledDates(ctx context.Context, op *entity.Oper
 	return result, nil
 }
 
-func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error) {
-	schedule, err := s.getByIDFormDB(ctx, op, id)
-	if err != nil {
-		log.Error(ctx, "get by id from db error", log.Err(err), log.String("id", id))
-		return nil, err
-	}
-	return s.getLessonPlanAuthed(ctx, op, id, schedule.LessonPlanID)
-}
-
 func (s *scheduleModel) getLessonPlanAuthed(ctx context.Context, op *entity.Operator, scheduleID string, lessonPlanID string) (*entity.ScheduleRealTimeView, error) {
 	result := new(entity.ScheduleRealTimeView)
 	result.ID = scheduleID
@@ -2316,24 +2303,8 @@ func (s *scheduleModel) getLessonPlanAuthed(ctx context.Context, op *entity.Oper
 	}
 
 	// lesson plan real time info
-	err := s.VerifyLessonPlanAuthed(ctx, op, lessonPlanID)
-	switch err {
-	case nil:
-		result.LessonPlanIsAuth = true
-	case ErrScheduleLessonPlanUnAuthed:
-		log.Info(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
-			log.String("LessonPlanID", lessonPlanID),
-			log.Any("op", op),
-		)
-		result.LessonPlanIsAuth = false
-	default:
-		log.Error(ctx, "GetScheduleRealTimeStatus:lesson plan unAuthed",
-			log.String("LessonPlanID", lessonPlanID),
-			log.Any("op", op),
-			log.Err(err),
-		)
-		return nil, err
-	}
+	result.LessonPlanIsAuth, _ = s.VerifyLessonPlanAuthed(ctx, op, lessonPlanID)
+
 	return result, nil
 }
 
@@ -2531,6 +2502,94 @@ func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, r
 	for i, item := range scheduleList {
 		result[i] = item.ID
 	}
+
+	return result, nil
+}
+
+func (s *scheduleModel) GetSchedulePopupByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error) {
+	schedule, err := s.getByIDFormDB(ctx, op, id)
+	if err != nil {
+		log.Error(ctx, "get by id from db error", log.Any("op", op), log.String("id", id))
+		return nil, err
+	}
+
+	result := &entity.SchedulePopup{
+		ID:        schedule.ID,
+		Title:     schedule.Title,
+		StartAt:   schedule.StartAt,
+		EndAt:     schedule.EndAt,
+		ClassType: schedule.ClassType,
+		DueAt:     schedule.DueAt,
+		Status:    schedule.Status,
+		IsHomeFun: schedule.IsHomeFun,
+		IsHidden:  schedule.IsHidden,
+		RoomID:    schedule.ID,
+	}
+
+	// get role type
+	roleType, err := GetScheduleRelationModel().GetRelationTypeByScheduleID(ctx, op, schedule.ID)
+	if err != nil {
+		log.Error(ctx, "get relation type error", log.Any("op", op), log.Any("schedule", schedule), log.Err(err))
+		return nil, err
+	}
+	result.RoleType = roleType
+
+	// verify is exist feedback
+	existFeedback, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
+	if err != nil {
+		log.Error(ctx, "exist by schedule id error", log.Any("op", op), log.Any("schedule", schedule), log.Err(err))
+		return nil, err
+	}
+	result.ExistFeedback = existFeedback
+
+	if schedule.Attachment != "" {
+		var attachment entity.ScheduleShortInfo
+		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
+		if err != nil {
+			log.Error(ctx, "Unmarshal schedule.Attachment error", log.Err(err), log.String("schedule.Attachment", schedule.Attachment))
+			return nil, err
+		}
+		result.Attachment = attachment
+	}
+
+	classID, err := GetScheduleRelationModel().GetClassRosterID(ctx, op, schedule.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if classID != "" {
+		classes, err := s.getClassInfoMapByClassIDs(ctx, op, []string{classID})
+		if err != nil {
+			log.Error(ctx, "get class error", log.Err(err), log.String("classID", classID))
+			return nil, err
+		}
+		if item, ok := classes[classID]; ok {
+			result.Class = &entity.ScheduleShortInfo{
+				ID:   item.ID,
+				Name: item.Name,
+			}
+		}
+	}
+
+	if schedule.LessonPlanID != "" {
+		result.LessonPlan, err = s.getLessonPlanWithMaterial(ctx, op, schedule.LessonPlanID)
+		if err != nil {
+			log.Error(ctx, "get lesson plan with material error", log.Err(err), log.Any("schedule", schedule))
+			return nil, err
+		}
+	}
+	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+		EndAt:     result.EndAt,
+		DueAt:     result.DueAt,
+		ClassType: result.ClassType,
+	})
+
+	users, err := GetScheduleRelationModel().GetUsers(ctx, op, schedule.ID)
+	if err != nil {
+		return nil, err
+	}
+	result.Teachers = users.Teachers
+	result.Students = users.Students
 
 	return result, nil
 }

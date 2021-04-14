@@ -1190,5 +1190,19 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_popup/{schedule_id} [get]
 func (s *Server) getSchedulePopupByID(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, nil)
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	operator := s.getOperator(c)
+
+	result, err := model.GetScheduleModel().GetSchedulePopupByID(ctx, operator, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(ScheduleMessageDeleteOverlap))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
 }
