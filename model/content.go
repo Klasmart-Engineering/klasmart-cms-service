@@ -1409,6 +1409,10 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 			log.Err(err), log.String("cid", content.ID))
 		return "", ErrInvalidContentData
 	}
+	log.Info(ctx, "getContentProperties",
+		log.Any("contentProperties", contentProperties),
+		log.String("cid", content.ID))
+
 	contentProperties.ContentID = id
 	err = cm.doCreateContentProperties(ctx, tx, *contentProperties, false)
 	if err != nil {
@@ -1425,6 +1429,11 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 			log.Err(err), log.String("cid", content.ID))
 		return "", ErrInvalidContentData
 	}
+
+	log.Info(ctx, "getContentVisibilitySettings",
+		log.Any("contentVisibilitySettings", contentVisibilitySettings),
+		log.String("cid", content.ID))
+
 	err = cm.insertContentVisibilitySettings(ctx, tx, id, contentVisibilitySettings.VisibilitySettings)
 	if err != nil {
 		log.Warn(ctx, "insertContentVisibilitySettings failed",
