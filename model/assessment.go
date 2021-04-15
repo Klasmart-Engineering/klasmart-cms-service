@@ -200,7 +200,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 				ID:         plan.ContentID,
 				Name:       plan.ContentName,
 				Checked:    true,
-				OutcomeIDs: currentContentOutcomeMap[plan.ID],
+				OutcomeIDs: currentContentOutcomeMap[plan.ContentID],
 			}
 		}
 		for _, m := range materials {
