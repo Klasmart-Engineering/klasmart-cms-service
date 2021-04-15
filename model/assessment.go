@@ -209,7 +209,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 				Name:       m.ContentName,
 				Comment:    m.ContentComment,
 				Checked:    m.Checked,
-				OutcomeIDs: currentContentOutcomeMap[m.ID],
+				OutcomeIDs: currentContentOutcomeMap[m.ContentID],
 			})
 		}
 	}
