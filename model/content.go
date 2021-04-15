@@ -871,6 +871,37 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 			log.String("uid", op.UserID))
 		return "", err
 	}
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", content.ID))
+		return "", ErrInvalidContentData
+	}
+	contentProperties.ContentID = id
+	err = cm.doCreateContentProperties(ctx, tx, *contentProperties, false)
+	if err != nil {
+		log.Warn(ctx, "doCreateContentProperties failed",
+			log.Err(err),
+			log.Any("contentProperties", contentProperties),
+			log.String("cid", content.ID))
+		return "", err
+	}
+
+	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID))
+		return "", ErrInvalidContentData
+	}
+	err = cm.insertContentVisibilitySettings(ctx, tx, id, contentVisibilitySettings.VisibilitySettings)
+	if err != nil {
+		log.Warn(ctx, "insertContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID),
+			log.Strings("VisibilitySettings", contentVisibilitySettings.VisibilitySettings))
+		return "", ErrInvalidContentData
+	}
+
 	return id, nil
 }
 
@@ -1165,6 +1196,13 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		return ErrInvalidContentData
 	}
 
+	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID))
+		return ErrInvalidContentData
+	}
+
 	//create content data object
 	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
@@ -1193,19 +1231,20 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		}
 		//创建assets
 		req := entity.CreateContentRequest{
-			ContentType: entity.ContentTypeAssets,
-			Name:        content.Name,
-			Keywords:    append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
-			Description: content.Description,
-			Thumbnail:   "",
-			SuggestTime: 0,
-			Program:     contentProperties.Program,
-			Subject:     contentProperties.Subject,
-			Category:    contentProperties.Category,
-			SubCategory: contentProperties.SubCategory,
-			Age:         contentProperties.Age,
-			Grade:       contentProperties.Grade,
-			Data:        assetsDataJSON,
+			ContentType:  entity.ContentTypeAssets,
+			Name:         content.Name,
+			Keywords:     append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
+			Description:  content.Description,
+			Thumbnail:    "",
+			SuggestTime:  0,
+			Program:      contentProperties.Program,
+			Subject:      contentProperties.Subject,
+			Category:     contentProperties.Category,
+			SubCategory:  contentProperties.SubCategory,
+			Age:          contentProperties.Age,
+			Grade:        contentProperties.Grade,
+			PublishScope: contentVisibilitySettings.VisibilitySettings,
+			Data:         assetsDataJSON,
 		}
 		_, err = cm.CreateContent(ctx, tx, req, user)
 		if err != nil {
@@ -1363,7 +1402,36 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 		log.Error(ctx, "clone contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return "", err
 	}
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", content.ID))
+		return "", ErrInvalidContentData
+	}
+	contentProperties.ContentID = id
+	err = cm.doCreateContentProperties(ctx, tx, *contentProperties, false)
+	if err != nil {
+		log.Warn(ctx, "doCreateContentProperties failed",
+			log.Err(err),
+			log.Any("contentProperties", contentProperties),
+			log.String("cid", content.ID))
+		return "", err
+	}
 
+	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID))
+		return "", ErrInvalidContentData
+	}
+	err = cm.insertContentVisibilitySettings(ctx, tx, id, contentVisibilitySettings.VisibilitySettings)
+	if err != nil {
+		log.Warn(ctx, "insertContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID),
+			log.Strings("VisibilitySettings", contentVisibilitySettings.VisibilitySettings))
+		return "", ErrInvalidContentData
+	}
 	da.GetContentRedis().CleanContentCache(ctx, []string{id, obj.ID})
 	return id, nil
 }
@@ -2776,6 +2844,23 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	return ret, nil
 }
 
+func (cm *ContentModel) getContentVisibilitySettings(ctx context.Context, cid string) (*entity.ContentVisibilitySettings, error) {
+	contentVisibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), cid)
+	if err != nil {
+		log.Error(ctx, "GetContentVisibilitySettings",
+			log.Err(err),
+			log.String("id", cid))
+		return nil, err
+	}
+	res := &entity.ContentVisibilitySettings{
+		ContentID:          cid,
+		VisibilitySettings: contentVisibilitySettings,
+	}
+	log.Info(ctx, "ContentVisibilitySettings",
+		log.Strings("visibilitySettings", contentVisibilitySettings),
+		log.String("id", cid))
+	return res, nil
+}
 func (cm *ContentModel) getContentProperties(ctx context.Context, cid string) (*entity.ContentProperties, error) {
 	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), []string{cid})
 	if err != nil {

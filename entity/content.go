@@ -351,6 +351,10 @@ type ContentProperties struct {
 	Age         []string `json:"age"`
 	Grade       []string `json:"grade"`
 }
+type ContentVisibilitySettings struct {
+	ContentID          string   `json:"content_id"`
+	VisibilitySettings []string `json:"visibility_settings"`
+}
 
 type CreateContentRequest struct {
 	ContentType ContentType `json:"content_type"`
