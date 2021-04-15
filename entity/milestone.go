@@ -36,7 +36,7 @@ type Milestone struct {
 }
 
 func (Milestone) TableName() string {
-	return "milestones"
+	return MilestoneTable
 }
 
 func (ms Milestone) CollectAttach() []*Attach {

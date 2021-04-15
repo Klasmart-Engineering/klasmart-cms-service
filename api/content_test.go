@@ -109,7 +109,7 @@ func initOperator(orgID string, authTo string, authCode string) *entity.Operator
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("authority", "auth.kidsloop.net")
 	req.Header.Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)")
-	req.Header.Set("referer", "https://auth.kidsloop.net/?continue=https%3A%2F%2Fbeta-hub.kidsloop.net%2F%23%2Fadmin%2Fusers")
+	req.Header.Set("referer", "https://auth.kidsloop.net/?continue=https%3A%2F%2Fbeta-hub.kidsloop.net%2F%23%2Fadmin%2Forganizations")
 	resp, err = (&http.Client{}).Do(req)
 	if err != nil {
 		panic(err)

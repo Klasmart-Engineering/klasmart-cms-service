@@ -8,6 +8,9 @@ import (
 )
 
 func TestCreateOutcomeSet(t *testing.T) {
+	orgID := "8a31ebab-b879-4790-af99-ee4941a778b3"
+	setupMilestone()
+	op := initOperator(orgID, "", "")
 	req := OutcomeSetCreateView{
 		SetName: "math",
 	}
@@ -15,13 +18,8 @@ func TestCreateOutcomeSet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(string(data))
-	res := DoHttp(http.MethodPost, prefix+"/sets"+"?org_id=e85adc92-b91a-4794-a6c2-860885bd58be", string(data))
-	//request, err := http.NewRequest("POST", "https://hub-test.kidsloop.cn/v1/ecards", bytes.NewBuffer(data))
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//res, err := http.DefaultClient.Do(request)
+	url := fmt.Sprintf("%s/sets?org_id=%s", prefix, op.OrgID)
+	res := DoHttpWithOperator(http.MethodPost, op, url, string(data))
 	if err != nil {
 		t.Fatal(err)
 	}

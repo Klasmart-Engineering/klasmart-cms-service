@@ -88,6 +88,9 @@ const (
 	ShortcodeShowLength    = 5
 	ShortcodeMaxShowLength = 32
 	ShortcodeSpace         = ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom
+
+	ShortcodeOutcomeKind   = "outcomes"
+	ShortcodeMilestoneKind = "milestones"
 )
 
 const (

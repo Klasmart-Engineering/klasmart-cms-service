@@ -217,7 +217,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		}
 		err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, []string{ms.ID}, entity.MilestoneType, ms.CollectAttach())
 		if err != nil {
-			log.Error(ctx, "Update: ReplaceAttaches failed",
+			log.Error(ctx, "Update: Replace failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("milestone", ms))
@@ -304,7 +304,7 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 		}
 		err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, deleteIDs, entity.MilestoneType, nil)
 		if err != nil {
-			log.Error(ctx, "Delete: ReplaceAttaches failed",
+			log.Error(ctx, "Delete: Replace failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Strings("milestone", deleteIDs))

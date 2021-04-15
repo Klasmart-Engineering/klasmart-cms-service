@@ -18,6 +18,8 @@ type IMilestoneDA interface {
 
 	ReplaceAttaches(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string, masterType string, attaches []*entity.Attach) error
 	SearchAttaches(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string, masterType string) ([]*entity.Attach, error)
+
+	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) error
 }
 
 var milestoneDA *MilestoneSqlDA

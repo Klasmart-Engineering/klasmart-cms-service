@@ -9,7 +9,7 @@ import (
 )
 
 type IShortcodeDA interface {
-	Search(ctx context.Context, tx *dbo.DBContext, kind string, condition *ShortcodeCondition) ([]*entity.ShortcodeElement, error)
+	Search(ctx context.Context, tx *dbo.DBContext, table string, condition *ShortcodeCondition) ([]*entity.ShortcodeElement, error)
 }
 
 var _shortcodeOnce sync.Once

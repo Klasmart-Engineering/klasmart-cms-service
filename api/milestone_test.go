@@ -32,7 +32,6 @@ func setupMilestone() {
 		EndPoint: os.Getenv("ams_endpoint"),
 	}
 	config.Set(cfg)
-	initOperator("", "", "")
 	initDB()
 	initCache()
 }

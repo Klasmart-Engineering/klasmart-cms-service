@@ -2,6 +2,7 @@ package entity
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -50,10 +51,16 @@ type Outcome struct {
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"assumed" dynamoupdate:":asum"`
 
-	CreateAt int64  `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdateAt int64  `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeleteAt int64  `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
-	Sets     []*Set `gorm:"-" json:"sets"`
+	CreateAt      int64    `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt      int64    `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt      int64    `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	Sets          []*Set   `gorm:"-" json:"sets"`
+	Programs      []string `gorm:"-"`
+	Subjects      []string `gorm:"-"`
+	Categories    []string `gorm:"-"`
+	Subcategories []string `gorm:"-"`
+	Grades        []string `gorm:"-"`
+	Ages          []string `gorm:"-"`
 }
 
 func (Outcome) TableName() string {
@@ -64,6 +71,112 @@ func (oc Outcome) GetID() interface{} {
 	return oc.ID
 }
 
+func (oc *Outcome) CollectAttach() []*Attach {
+	attaches := make([]*Attach, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
+	offset := 0
+	for i := range oc.Programs {
+		attach := Attach{
+			MasterID:   oc.ID,
+			MasterType: OutcomeType,
+			AttachID:   oc.Programs[i],
+			AttachType: ProgramType,
+		}
+		attaches[i] = &attach
+	}
+	offset += len(oc.Programs)
+
+	for i := range oc.Subjects {
+		attach := Attach{
+			MasterID:   oc.ID,
+			MasterType: OutcomeType,
+			AttachID:   oc.Subjects[i],
+			AttachType: SubjectType,
+		}
+		attaches[i+offset] = &attach
+	}
+	offset += len(oc.Subjects)
+
+	for i := range oc.Categories {
+		attach := Attach{
+			MasterID:   oc.ID,
+			MasterType: OutcomeType,
+			AttachID:   oc.Categories[i],
+			AttachType: CategoryType,
+		}
+		attaches[i+offset] = &attach
+	}
+	offset += len(oc.Categories)
+
+	for i := range oc.Subcategories {
+		attach := Attach{
+			MasterID:   oc.ID,
+			MasterType: OutcomeType,
+			AttachID:   oc.Subcategories[i],
+			AttachType: SubcategoryType,
+		}
+		attaches[i+offset] = &attach
+	}
+	offset += len(oc.Subcategories)
+
+	for i := range oc.Grades {
+		attach := Attach{
+			MasterID:   oc.ID,
+			MasterType: OutcomeType,
+			AttachID:   oc.Grades[i],
+			AttachType: GradeType,
+		}
+		attaches[i+offset] = &attach
+	}
+	offset += len(oc.Grades)
+
+	for i := range oc.Ages {
+		attach := Attach{
+			MasterID:   oc.ID,
+			MasterType: OutcomeType,
+			AttachID:   oc.Ages[i],
+			AttachType: AgeType,
+		}
+		attaches[i+offset] = &attach
+	}
+	return attaches
+}
+
+func (oc *Outcome) FillAttach(attaches []*Attach) {
+	for i := range attaches {
+		switch attaches[i].AttachType {
+		case ProgramType:
+			oc.Programs = append(oc.Programs, attaches[i].AttachID)
+		case SubjectType:
+			oc.Subjects = append(oc.Subjects, attaches[i].AttachID)
+		case CategoryType:
+			oc.Categories = append(oc.Categories, attaches[i].AttachID)
+		case SubcategoryType:
+			oc.Subcategories = append(oc.Subcategories, attaches[i].AttachID)
+		case GradeType:
+			oc.Grades = append(oc.Grades, attaches[i].AttachID)
+		case AgeType:
+			oc.Ages = append(oc.Ages, attaches[i].AttachID)
+		}
+	}
+	if len(oc.Programs) > 0 {
+		oc.Program = strings.Join(oc.Programs, ",")
+	}
+	if len(oc.Subjects) > 0 {
+		oc.Subject = strings.Join(oc.Subjects, ",")
+	}
+	if len(oc.Developmental) > 0 {
+		oc.Developmental = strings.Join(oc.Categories, ",")
+	}
+	if len(oc.Skills) > 0 {
+		oc.Skills = strings.Join(oc.Subcategories, ",")
+	}
+	if len(oc.Grades) > 0 {
+		oc.Grade = strings.Join(oc.Grades, ",")
+	}
+	if len(oc.Ages) > 0 {
+		oc.Age = strings.Join(oc.Ages, ",")
+	}
+}
 func (oc *Outcome) Update(data *Outcome) {
 	if data.Name != "" {
 		oc.Name = data.Name

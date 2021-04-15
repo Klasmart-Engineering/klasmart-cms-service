@@ -24,7 +24,7 @@ func (scc ShortcodeCacheDA) shortcodeMapping(key string) string {
 type ShortcodeCacheDA struct{}
 
 func (scc ShortcodeCacheDA) SearchWithPatten(ctx context.Context, kind string, orgID string) ([]string, func(string) string, error) {
-	result, err := ro.MustGetRedis(ctx).Keys(scc.shortcodeRedisKey(kind, orgID, "*")).Result()
+	result, err := ro.MustGetRedis(ctx).Keys(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, "*")).Result()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -32,7 +32,7 @@ func (scc ShortcodeCacheDA) SearchWithPatten(ctx context.Context, kind string, o
 }
 
 func (scc ShortcodeCacheDA) Exists(ctx context.Context, kind string, orgID string, shortcode string) (bool, error) {
-	result, err := ro.MustGetRedis(ctx).Exists(scc.shortcodeRedisKey(kind, orgID, shortcode)).Result()
+	result, err := ro.MustGetRedis(ctx).Exists(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, shortcode)).Result()
 	if err != nil {
 		return false, err
 	}
@@ -43,11 +43,11 @@ func (scc ShortcodeCacheDA) Exists(ctx context.Context, kind string, orgID strin
 }
 
 func (scc ShortcodeCacheDA) Save(ctx context.Context, kind string, orgID string, shortcode string) error {
-	return ro.MustGetRedis(ctx).Set(scc.shortcodeRedisKey(kind, orgID, shortcode), shortcode, time.Hour).Err()
+	return ro.MustGetRedis(ctx).Set(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, shortcode), shortcode, time.Hour).Err()
 }
 
 func (scc ShortcodeCacheDA) Remove(ctx context.Context, kind string, orgID string, shortcode string) error {
-	return ro.MustGetRedis(ctx).Del(scc.shortcodeRedisKey(kind, orgID, shortcode)).Err()
+	return ro.MustGetRedis(ctx).Del(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, shortcode)).Err()
 }
 
 type IShortcodeCacheDA interface {

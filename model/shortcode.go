@@ -7,6 +7,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
@@ -26,7 +27,7 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	shortcodes, err := scm.search(ctx, tx, "kind", orgID)
+	shortcodes, err := scm.search(ctx, tx, kind, orgID)
 	if err != nil {
 		log.Error(ctx, "GenerateShortcode: search failed",
 			log.Err(err),
@@ -58,7 +59,15 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 }
 
 func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind string, orgID string) (map[string]struct{}, error) {
-	dbShortcodes, err := da.GetShortcodeDA().Search(ctx, tx, kind, &da.ShortcodeCondition{
+	var table string
+	if kind == constant.ShortcodeOutcomeKind {
+		table = entity.OutcomeTable
+	}
+	if kind == constant.ShortcodeMilestoneKind {
+		table = entity.MilestoneTable
+	}
+
+	dbShortcodes, err := da.GetShortcodeDA().Search(ctx, tx, table, &da.ShortcodeCondition{
 		OrgID: sql.NullString{String: orgID, Valid: true},
 	})
 	if err != nil {
@@ -88,15 +97,15 @@ func (scm ShortcodeModel) isCached(ctx context.Context, kind string, orgID strin
 	return da.GetShortcodeCacheDA().Exists(ctx, kind, orgID, shortcode)
 }
 
-func (scm ShortcodeModel) isOccupied(ctx context.Context, tx *dbo.DBContext, kind string, orgID string, ancestor string, shortcode string) (bool, error) {
-	shortcodes, err := da.GetShortcodeDA().Search(ctx, tx, kind, &da.ShortcodeCondition{
+func (scm ShortcodeModel) isOccupied(ctx context.Context, tx *dbo.DBContext, table string, orgID string, ancestor string, shortcode string) (bool, error) {
+	shortcodes, err := da.GetShortcodeDA().Search(ctx, tx, table, &da.ShortcodeCondition{
 		OrgID:         sql.NullString{String: orgID, Valid: true},
 		NotAncestorID: sql.NullString{String: ancestor, Valid: true},
 		Shortcode:     sql.NullString{String: shortcode, Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "isOccupied: Search failed",
-			log.String("kind", kind),
+			log.String("kind", table),
 			log.String("org", orgID),
 			log.String("shortcode", shortcode))
 		return false, err

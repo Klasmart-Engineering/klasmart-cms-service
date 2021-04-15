@@ -40,5 +40,17 @@ CREATE TABLE IF NOT EXISTS `milestones_attaches` (
     `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'created_at',
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'updated_at',
     `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
-    UNIQUE KEY `milestone_outcome_id_delete` (`master_id`, `attach_id`, `attach_type`,`master_type`,`delete_at`)
+    UNIQUE KEY `master_attach_delete` (`master_id`, `attach_id`, `attach_type`,`master_type`,`delete_at`)
+) COMMENT 'milestones_attaches' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+CREATE TABLE IF NOT EXISTS `outcomes_attaches` (
+     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT  'id',
+     `master_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'master resource',
+    `attach_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'attach resource',
+    `attach_type` varchar(30) NOT NULL DEFAULT "" COMMENT  'attach type',
+    `master_type` varchar(30) DEFAULT NULL COMMENT  'master type',
+    `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'created_at',
+    `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'updated_at',
+    `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
+    UNIQUE KEY `master_attach_delete` (`master_id`, `attach_id`, `attach_type`,`master_type`,`delete_at`)
 ) COMMENT 'milestones_attaches' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;

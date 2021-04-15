@@ -134,7 +134,7 @@ func (m MilestoneSqlDA) ReplaceAttaches(ctx context.Context, tx *dbo.DBContext, 
 		sql := fmt.Sprintf("delete from %s where master_id in (?) and master_type = ?", table)
 		err := tx.Exec(sql, milestoneIDs, masterType).Error
 		if err != nil {
-			log.Error(ctx, "ReplaceAttaches: exec del sql failed",
+			log.Error(ctx, "Replace: exec del sql failed",
 				log.Err(err),
 				log.Strings("milestone", milestoneIDs),
 				log.Any("attaches", attaches),
@@ -158,7 +158,7 @@ func (m MilestoneSqlDA) ReplaceAttaches(ctx context.Context, tx *dbo.DBContext, 
 		sql := fmt.Sprintf("insert into %s(master_id, attach_id, attach_type, master_type, create_at, update_at) (%s)", table, strings.Join(values, " union "))
 		err := tx.Exec(sql).Error
 		if err != nil {
-			log.Error(ctx, "ReplaceAttaches: exec insert sql failed",
+			log.Error(ctx, "Replace: exec insert sql failed",
 				log.Err(err),
 				log.Strings("milestone", milestoneIDs),
 				log.Any("attach", attaches),
@@ -180,6 +180,12 @@ func (m MilestoneSqlDA) SearchAttaches(ctx context.Context, tx *dbo.DBContext, m
 		return nil, err
 	}
 	return attaches, nil
+}
+func (m MilestoneSqlDA) UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) error {
+	if len(outcomeIDs) > 0 {
+		panic("implement me")
+	}
+	return nil
 }
 
 type MilestoneCondition struct {

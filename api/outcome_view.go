@@ -45,6 +45,13 @@ func (req OutcomeCreateView) outcome() (*entity.Outcome, error) {
 	outcome.Age = strings.Join(req.Age, ",")
 	outcome.Keywords = strings.Join(req.Keywords, ",")
 
+	outcome.Programs = req.Program
+	outcome.Subjects = req.Subject
+	outcome.Categories = req.Developmental
+	outcome.Subcategories = req.Skills
+	outcome.Grades = req.Grade
+	outcome.Ages = req.Age
+
 	outcome.Sets = make([]*entity.Set, len(req.Sets))
 	for i := range req.Sets {
 		set := &entity.Set{

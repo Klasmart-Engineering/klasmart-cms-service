@@ -806,6 +806,9 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	}
 }
 
+type ShortcodeRequest struct {
+	Kind string `json:"kind" form:"kind"`
+}
 type ShortcodeResponse struct {
 	Shortcode string `json:"shortcode" form:"shortcode"`
 }
@@ -816,6 +819,7 @@ type ShortcodeResponse struct {
 // @Description generate shortcode
 // @Accept json
 // @Produce json
+// @Param kind body ShortcodeRequest false "learning outcome"
 // @Success 200 {object} ShortcodeResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -825,6 +829,22 @@ type ShortcodeResponse struct {
 func (s *Server) generateShortcode(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
+
+	var data ShortcodeRequest
+	err := c.ShouldBindJSON(&data)
+	if err != nil && err.Error() != "EOF" {
+		log.Warn(ctx, "generateShortcode: ShouldBindJSON failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	if err != nil && err.Error() == "EOF" {
+		data.Kind = constant.ShortcodeOutcomeKind
+	}
+	if data.Kind != constant.ShortcodeOutcomeKind && data.Kind != constant.ShortcodeMilestoneKind {
+		log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
 	if err != nil {
@@ -837,7 +857,7 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	shortcode, err := model.GetShortcodeModel().Generate(ctx, dbo.MustGetDB(ctx), "kind", op.OrgID, "")
+	shortcode, err := model.GetShortcodeModel().Generate(ctx, dbo.MustGetDB(ctx), data.Kind, op.OrgID, "")
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &ShortcodeResponse{Shortcode: shortcode})
