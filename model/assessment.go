@@ -172,7 +172,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 			log.String("assessment_id", id),
 		)
 	} else {
-		contentIDs = append(contentIDs, plan.ID)
+		contentIDs = append(contentIDs, plan.ContentID)
 	}
 	if materials, err = da.GetAssessmentContentDA().GetMaterials(ctx, tx, id); err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetMaterials: get failed",
@@ -181,7 +181,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		)
 	} else {
 		for _, m := range materials {
-			contentIDs = append(contentIDs, m.ID)
+			contentIDs = append(contentIDs, m.ContentID)
 		}
 	}
 	if len(contentIDs) > 0 {
