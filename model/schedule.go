@@ -1106,7 +1106,7 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 				studentIDs = append(studentIDs, relationItem.RelationID)
 			}
 		}
-		subjectIDs, err := GetScheduleRelationModel().GetSubjectIDs(ctx, operator, item.ID)
+		subjectIDs, err := GetScheduleRelationModel().GetSubjectIDs(ctx, item.ID)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -2010,7 +2010,11 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 	}
 	result := new(entity.SchedulePlain)
 	result.Schedule = schedule
-
+	subjects, err := GetScheduleRelationModel().GetSubjectIDs(ctx, schedule.ID)
+	if err != nil {
+		return nil, err
+	}
+	result.SubjectIDs = subjects
 	return result, nil
 }
 
@@ -2422,16 +2426,23 @@ func (s *scheduleModel) GetPrograms(ctx context.Context, op *entity.Operator) ([
 	return result, nil
 }
 
-func (s *scheduleModel) getSubjectCondition(ctx context.Context, op *entity.Operator, programID string) (*da.ScheduleCondition, error) {
+func (s *scheduleModel) getSubjectCondition(ctx context.Context, op *entity.Operator, programID string) (*da.ScheduleRelationCondition, error) {
 	condition, err := s.getRelationCondition(ctx, op)
 	if err != nil {
 		return nil, err
 	}
-	condition.ProgramIDs = entity.NullStrings{
-		Strings: []string{programID},
-		Valid:   true,
+
+	relationCondition := &da.ScheduleRelationCondition{
+		ScheduleFilterSubject: &da.ScheduleFilterSubject{
+			ProgramID: sql.NullString{
+				String: programID,
+				Valid:  true,
+			},
+			OrgID:       condition.OrgID,
+			RelationIDs: condition.RelationIDs,
+		},
 	}
-	return condition, nil
+	return relationCondition, nil
 }
 
 func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error) {
@@ -2439,7 +2450,8 @@ func (s *scheduleModel) GetSubjects(ctx context.Context, op *entity.Operator, pr
 	if err != nil {
 		return nil, err
 	}
-	dbSubjectIDs, err := da.GetScheduleDA().GetSubjects(ctx, dbo.MustGetDB(ctx), condition)
+
+	dbSubjectIDs, err := da.GetScheduleRelationDA().GetRelationIDsByCondition(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
 		log.Error(ctx, "get subject ids from db error", log.Err(err), log.Any("condition", condition))
 		return nil, err

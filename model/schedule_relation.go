@@ -24,13 +24,13 @@ type IScheduleRelationModel interface {
 	GetIDs(ctx context.Context, op *entity.Operator, condition *da.ScheduleRelationCondition) ([]string, error)
 	GetUsers(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleUserRelation, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleShortInfo, error)
-	GetSubjectIDs(ctx context.Context, op *entity.Operator, scheduleID string) ([]string, error)
+	GetSubjectIDs(ctx context.Context, scheduleID string) ([]string, error)
 }
 
 type scheduleRelationModel struct {
 }
 
-func (s *scheduleRelationModel) GetSubjectIDs(ctx context.Context, op *entity.Operator, scheduleID string) ([]string, error) {
+func (s *scheduleRelationModel) GetSubjectIDs(ctx context.Context, scheduleID string) ([]string, error) {
 	var scheduleRelations []*entity.ScheduleRelation
 	relationCondition := da.ScheduleRelationCondition{
 		ScheduleID: sql.NullString{
@@ -56,7 +56,7 @@ func (s *scheduleRelationModel) GetSubjectIDs(ctx context.Context, op *entity.Op
 	return subjectIDs, nil
 }
 func (s *scheduleRelationModel) GetSubjects(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleShortInfo, error) {
-	subjectIDs, err := s.GetSubjectIDs(ctx, op, scheduleID)
+	subjectIDs, err := s.GetSubjectIDs(ctx, scheduleID)
 	if err != nil {
 		log.Error(ctx, "get subjects error", log.Err(err), log.Any("scheduleID", scheduleID))
 		return nil, err
