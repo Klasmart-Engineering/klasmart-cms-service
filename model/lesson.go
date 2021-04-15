@@ -232,7 +232,7 @@ func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID strin
 	return true, nil
 }
 
-func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
+func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -272,7 +272,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		data, ok := contentMap[l.MaterialId]
 		if ok {
-			material, _ := GetContentModel().ConvertContentObj(ctx, data, operator)
+			material, _ := GetContentModel().ConvertContentObj(ctx, tx, data, operator)
 			l.Material = material
 		}
 	})

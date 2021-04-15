@@ -1480,7 +1480,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *LessonData:
 			//存在子内容，则返回子内容
 			//if the content contains sub contents, return sub contents
-			content, err := cm.ConvertContentObj(ctx, obj, user)
+			content, err := cm.ConvertContentObj(ctx, tx, obj, user)
 			if err != nil {
 				log.Error(ctx, "can't parse contentdata", log.Err(err))
 				return nil, ErrParseContentDataFailed
@@ -1490,7 +1490,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, content, user)
+			err = v.PrepareResult(ctx, tx, content, user)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
@@ -1568,7 +1568,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *LessonData:
 		//存在子内容，则返回子内容
 		//if the content contains sub contents, return sub contents
-		content, err := cm.ConvertContentObj(ctx, obj, user)
+		content, err := cm.ConvertContentObj(ctx, tx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -1578,7 +1578,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
 		}
-		err = v.PrepareResult(ctx, content, user)
+		err = v.PrepareResult(ctx, tx, content, user)
 		if err != nil {
 			log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
@@ -1676,7 +1676,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 			log.Error(ctx, "can't read contentdata", log.Err(err))
 			return nil, err
 		}
-		content, err = cm.ConvertContentObj(ctx, obj, user)
+		content, err = cm.ConvertContentObj(ctx, tx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -1684,10 +1684,10 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 		da.GetContentRedis().SaveContentCache(ctx, content)
 	}
 	log.Info(ctx, "pre fill content details", log.Any("content", content))
-	return cm.fillContentDetails(ctx, content, user)
+	return cm.fillContentDetails(ctx, tx, content, user)
 }
 
-func (cm *ContentModel) fillContentDetails(ctx context.Context, content *entity.ContentInfo, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) fillContentDetails(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	//补全相关内容
 	//fill related data
 	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
@@ -1701,7 +1701,7 @@ func (cm *ContentModel) fillContentDetails(ctx context.Context, content *entity.
 		log.Error(ctx, "can't update contentdata version for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
 	}
-	err = contentData.PrepareResult(ctx, content, user)
+	err = contentData.PrepareResult(ctx, tx, content, user)
 	if err != nil {
 		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
@@ -2257,7 +2257,7 @@ func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBCon
 	if cachedContent != nil {
 		if cachedContent.LatestID == "" {
 			log.Info(ctx, "Cached latest content")
-			return cm.fillContentDetails(ctx, cachedContent, user)
+			return cm.fillContentDetails(ctx, tx, cachedContent, user)
 		} else {
 			log.Info(ctx, "Cached content not latest")
 			return cm.GetContentByID(ctx, tx, cachedContent.LatestID, user)
