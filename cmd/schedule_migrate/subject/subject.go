@@ -26,15 +26,11 @@ func main() {
 			ConnectionString: "",
 		},
 	}
-	operator := &entity.Operator{
-		Token: "test",
-	}
 
 	flag.StringVar(&cfg.DBConfig.ConnectionString, "dsn", "", `db connection string,required`)
-	flag.StringVar(&cfg.AMS.EndPoint, "ams", "", "AMS EndPoint,required")
 	flag.Parse()
 
-	if cfg.DBConfig.ConnectionString == "" || cfg.AMS.EndPoint == "" {
+	if cfg.DBConfig.ConnectionString == "" {
 		fmt.Println("Please enter params, --help")
 		return
 	}
@@ -51,7 +47,7 @@ func main() {
 		return
 	}
 	dbo.ReplaceGlobal(newDBO)
-	orgIDs, err := GetScheduleAboutOrgIDs(context.Background(), operator)
+	orgIDs, err := GetScheduleAboutOrgIDs(context.Background())
 	if err != nil {
 		log.Println("get schedule group by org error:", err)
 		return
@@ -71,11 +67,11 @@ func main() {
 		fmt.Scanln(&orgID)
 		if orgID == "all" {
 			for _, item := range orgIDs {
-				Migrate(item, operator)
+				Migrate(item)
 			}
 			break
 		}
-		err = Migrate(orgID, operator)
+		err = Migrate(orgID)
 		if err != nil {
 			continue
 		}
@@ -89,10 +85,10 @@ func main() {
 	}
 	fmt.Println("Completed!")
 }
-func Migrate(orgID string, operator *entity.Operator) error {
+func Migrate(orgID string) error {
 	fmt.Println(fmt.Sprintf("start migrate org(%s)", orgID))
 	time.Sleep(2 * time.Second)
-	total, err := StartMigrateByOrg(context.Background(), operator, orgID)
+	total, err := StartMigrateByOrg(context.Background(), orgID)
 	if err != nil {
 		log.Println("Start Migrate By Org error,", err)
 	}
@@ -102,7 +98,7 @@ func Migrate(orgID string, operator *entity.Operator) error {
 	return err
 }
 
-func GetScheduleAboutOrgIDs(ctx context.Context, op *entity.Operator) ([]string, error) {
+func GetScheduleAboutOrgIDs(ctx context.Context) ([]string, error) {
 	var data []*entity.Schedule
 	err := dbo.MustGetDB(ctx).Table(constant.TableNameSchedule).
 		Select("org_id").Group("org_id").Find(&data).Error
@@ -121,7 +117,7 @@ func GetScheduleAboutOrgIDs(ctx context.Context, op *entity.Operator) ([]string,
 	return orgIDs, nil
 }
 
-func StartMigrateByOrg(ctx context.Context, op *entity.Operator, orgID string) (int64, error) {
+func StartMigrateByOrg(ctx context.Context, orgID string) (int64, error) {
 	var scheduleList []*entity.Schedule
 	err := da.GetScheduleDA().Query(ctx, da.ScheduleCondition{
 		OrgID: sql.NullString{
@@ -180,7 +176,9 @@ func StartMigrateByOrg(ctx context.Context, op *entity.Operator, orgID string) (
 		log.Println("For this organisation, there is no data to be migrated")
 		return 0, nil
 	}
-
+	//for _, item := range relationInsertData {
+	//	log.Println(item.ScheduleID, ":", item.RelationID)
+	//}
 	rowCount, err := da.GetScheduleRelationDA().MultipleBatchInsert(ctx, dbo.MustGetDB(ctx), relationInsertData)
 	return rowCount, err
 }
