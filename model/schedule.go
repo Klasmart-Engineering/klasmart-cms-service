@@ -638,6 +638,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	return id.(string), nil
 }
 func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
+	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err := s.verifyData(ctx, op, &entity.ScheduleVerify{
 		ClassID:      viewData.ClassID,
@@ -812,7 +813,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 		)
 		return "", err
 	}
-
+	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err = s.verifyData(ctx, operator, &entity.ScheduleVerify{
 		ClassID:      viewData.ClassID,
