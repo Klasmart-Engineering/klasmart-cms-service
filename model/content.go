@@ -1403,15 +1403,15 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 		return "", err
 	}
 	//load content properties
-	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	contentProperties, err := cm.getContentProperties(ctx, cid)
 	if err != nil {
 		log.Warn(ctx, "getContentProperties failed",
-			log.Err(err), log.String("cid", content.ID))
+			log.Err(err), log.String("cid", cid))
 		return "", ErrInvalidContentData
 	}
 	log.Info(ctx, "getContentProperties",
 		log.Any("contentProperties", contentProperties),
-		log.String("cid", content.ID))
+		log.String("cid", cid))
 
 	contentProperties.ContentID = id
 	err = cm.doCreateContentProperties(ctx, tx, *contentProperties, false)
@@ -1419,25 +1419,25 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 		log.Warn(ctx, "doCreateContentProperties failed",
 			log.Err(err),
 			log.Any("contentProperties", contentProperties),
-			log.String("cid", content.ID))
+			log.String("cid", cid))
 		return "", err
 	}
 
-	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, content.ID)
+	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, cid)
 	if err != nil {
 		log.Warn(ctx, "getContentVisibilitySettings failed",
-			log.Err(err), log.String("cid", content.ID))
+			log.Err(err), log.String("cid", cid))
 		return "", ErrInvalidContentData
 	}
 
 	log.Info(ctx, "getContentVisibilitySettings",
 		log.Any("contentVisibilitySettings", contentVisibilitySettings),
-		log.String("cid", content.ID))
+		log.String("cid", cid))
 
 	err = cm.insertContentVisibilitySettings(ctx, tx, id, contentVisibilitySettings.VisibilitySettings)
 	if err != nil {
 		log.Warn(ctx, "insertContentVisibilitySettings failed",
-			log.Err(err), log.String("cid", content.ID),
+			log.Err(err), log.String("cid", cid),
 			log.Strings("VisibilitySettings", contentVisibilitySettings.VisibilitySettings))
 		return "", ErrInvalidContentData
 	}
