@@ -135,7 +135,7 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 		"checked":         args.Checked,
 	}
 	if err := tx.
-		Model(entity.AssessmentOutcome{}).
+		Model(entity.AssessmentContent{}).
 		Where("assessment_id = ? and content_id = ?", args.AssessmentID, args.ContentID).
 		Updates(changes).
 		Error; err != nil {
