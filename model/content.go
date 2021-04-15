@@ -1588,8 +1588,8 @@ func (cm *ContentModel) GetRawContentByIDList(ctx context.Context, tx *dbo.DBCon
 
 func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	content := da.GetContentRedis().GetContentCacheByID(ctx, cid)
-
 	if content == nil {
+		log.Info(ctx, "Not cached content by id")
 		obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 		if err == dbo.ErrRecordNotFound {
 			log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
@@ -1606,7 +1606,11 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 		}
 		da.GetContentRedis().SaveContentCache(ctx, content)
 	}
+	log.Info(ctx, "pre fill content details", log.Any("content", content))
+	return cm.fillContentDetails(ctx, content, user)
+}
 
+func (cm *ContentModel) fillContentDetails(ctx context.Context, content *entity.ContentInfo, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	//补全相关内容
 	//fill related data
 	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
@@ -1642,7 +1646,6 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 			ContentInfo: *content,
 		}, nil
 	}
-
 	return contentWithDetails[0], nil
 }
 
@@ -2175,11 +2178,14 @@ func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBCon
 	cachedContent := da.GetContentRedis().GetContentCacheByID(ctx, cid)
 	if cachedContent != nil {
 		if cachedContent.LatestID == "" {
-			return cm.GetContentByID(ctx, tx, cachedContent.ID, user)
+			log.Info(ctx, "Cached latest content")
+			return cm.fillContentDetails(ctx, cachedContent, user)
 		} else {
+			log.Info(ctx, "Cached content not latest")
 			return cm.GetContentByID(ctx, tx, cachedContent.LatestID, user)
 		}
 	}
+	log.Info(ctx, "Not cached latest content")
 
 	contentObj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
