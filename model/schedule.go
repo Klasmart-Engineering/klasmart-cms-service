@@ -57,7 +57,7 @@ type IScheduleModel interface {
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
-	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error)
+	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -2523,24 +2523,26 @@ func (s *scheduleModel) GetRosterClassNotStartScheduleIDs(ctx context.Context, r
 	return result, nil
 }
 
-func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.SchedulePopup, error) {
+func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error) {
 	schedule, err := s.getByIDFormDB(ctx, op, id)
 	if err != nil {
 		log.Error(ctx, "get by id from db error", log.Any("op", op), log.String("id", id))
 		return nil, err
 	}
 
-	result := &entity.SchedulePopup{
-		ID:        schedule.ID,
-		Title:     schedule.Title,
-		StartAt:   schedule.StartAt,
-		EndAt:     schedule.EndAt,
-		ClassType: schedule.ClassType,
-		DueAt:     schedule.DueAt,
-		Status:    schedule.Status,
-		IsHomeFun: schedule.IsHomeFun,
-		IsHidden:  schedule.IsHidden,
-		RoomID:    schedule.ID,
+	result := &entity.ScheduleViewDetail{
+		ID:           schedule.ID,
+		Title:        schedule.Title,
+		StartAt:      schedule.StartAt,
+		EndAt:        schedule.EndAt,
+		ClassType:    schedule.ClassType,
+		DueAt:        schedule.DueAt,
+		Status:       schedule.Status,
+		IsHomeFun:    schedule.IsHomeFun,
+		IsHidden:     schedule.IsHidden,
+		RoomID:       schedule.ID,
+		IsRepeat:     schedule.RepeatID != "",
+		LessonPlanID: schedule.LessonPlanID,
 	}
 
 	// get role type

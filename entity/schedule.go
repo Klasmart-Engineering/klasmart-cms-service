@@ -702,8 +702,11 @@ func (s ScheduleShowOption) IsValid() bool {
 	}
 }
 
-type SchedulePopup struct {
+type ScheduleViewDetail struct {
 	ID            string               `json:"id"`
+	IsRepeat      bool                 `json:"is_repeat"`
+	LessonPlanID  string               `json:"lesson_plan_id"`
+	ClassID       string               `json:"class_id"`
 	Title         string               `json:"title"`
 	Attachment    ScheduleShortInfo    `json:"attachment"`
 	StartAt       int64                `json:"start_at"`

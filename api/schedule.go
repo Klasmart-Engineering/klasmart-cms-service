@@ -1184,7 +1184,7 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 // @Produce json
 // @Param schedule_id path string true "schedule id"
 // @Tags schedule
-// @Success 200 {object} entity.SchedulePopup
+// @Success 200 {object} entity.ScheduleViewDetail
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
