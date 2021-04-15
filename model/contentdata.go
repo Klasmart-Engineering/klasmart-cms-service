@@ -55,6 +55,8 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entit
 			log.Strings("ids", contentIDs))
 		return nil, err
 	}
+	log.Info(ctx, "BatchGetByContentIDList result",
+		log.Any("contentProperties", contentProperties))
 
 	res := make([]*entity.ContentInfo, 0)
 	for _, obj := range objs {
@@ -108,7 +110,6 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entit
 				skills = append(skills, contentProperties[i].PropertyID)
 			}
 		}
-
 		if obj.Keywords != "" {
 			keywords = strings.Split(obj.Keywords, constant.StringArraySeparator)
 		}
@@ -119,6 +120,13 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entit
 			rejectReason = strings.Split(obj.RejectReason, constant.StringArraySeparator)
 		}
 
+		log.Info(ctx, "content properties",
+			log.String("program", program),
+			log.Strings("subjects", subjects),
+			log.Strings("developmentals", developmentals),
+			log.Strings("skills", skills),
+			log.Strings("ages", ages),
+			log.Strings("grades", grades))
 		cm := &entity.ContentInfo{
 			ID:                 obj.ID,
 			ContentType:        obj.ContentType,
