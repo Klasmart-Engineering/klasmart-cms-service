@@ -1157,7 +1157,7 @@ func (m *assessmentModel) getAssessmentContentOutcomeMap(ctx context.Context, tx
 	result := map[string]map[string][]string{}
 	for _, co := range assessmentContentOutcomes {
 		if result[co.AssessmentID] == nil {
-			result[co.AssessmentID] = map[string][]string{}
+			result[co.AssessmentID] = map[string][]string{co.ContentID: {co.OutcomeID}}
 		} else {
 			result[co.AssessmentID][co.ContentID] = append(result[co.AssessmentID][co.ContentID], co.OutcomeID)
 		}
