@@ -132,8 +132,8 @@ type IContentModel interface {
 	CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error)
 
 	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error)
-	ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
-	BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
+	ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
+	BatchConvertContentObj(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
 
 	PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
 	LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error)
@@ -326,7 +326,7 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
-	response, err := cm.BatchConvertContentObj(ctx, objs, user)
+	response, err := cm.BatchConvertContentObj(ctx, tx, objs, user)
 	if err != nil {
 		log.Error(ctx, "Can't parse contentdata, contentID: %v, error: %v", log.Any("objs", objs), log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -347,7 +347,7 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	response, err := cm.BatchConvertContentObj(ctx, objs, user)
+	response, err := cm.BatchConvertContentObj(ctx, tx, objs, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -1842,7 +1842,7 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
-	res, err := cm.BatchConvertContentObj(ctx, data, user)
+	res, err := cm.BatchConvertContentObj(ctx, tx, data, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Any("data", data), log.Err(err))
 		return nil, ErrReadContentFailed

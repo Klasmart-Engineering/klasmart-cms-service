@@ -31,15 +31,15 @@ func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entit
 	return contentData, nil
 }
 
-func (c *ContentModel) ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
-	res, err := c.BatchConvertContentObj(ctx, []*entity.Content{obj}, operator)
+func (c *ContentModel) ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
+	res, err := c.BatchConvertContentObj(ctx, tx, []*entity.Content{obj}, operator)
 	if err != nil {
 		return nil, err
 	}
 	return res[0], nil
 }
 
-func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
+func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
 	if len(objs) < 1 {
 		return nil, nil
 	}
@@ -48,7 +48,7 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entit
 		contentIDs[i] = objs[i].ID
 	}
 
-	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), contentIDs)
+	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, tx, contentIDs)
 	if err != nil {
 		log.Error(ctx, "BatchGetByContentIDList",
 			log.Err(err),
