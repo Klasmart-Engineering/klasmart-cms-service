@@ -2611,7 +2611,6 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	result.Teachers = users.Teachers
 	result.Students = users.Students
 
-	result.LiveToken, _ = GetLiveTokenModel().MakeScheduleLiveToken(ctx, op, schedule.ID, entity.LiveTokenTypeLive)
 	return result, nil
 }
 

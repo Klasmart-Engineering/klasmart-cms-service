@@ -723,5 +723,5 @@ type ScheduleViewDetail struct {
 	Teachers      []*ScheduleShortInfo `json:"teachers"`
 	Students      []*ScheduleShortInfo `json:"students"`
 	RoomID        string               `json:"room_id"`
-	LiveToken     string               `json:"live_token"`
+	//LiveToken     string               `json:"live_token"`
 }
