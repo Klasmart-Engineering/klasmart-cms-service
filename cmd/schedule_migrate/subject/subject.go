@@ -6,8 +6,8 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"log"
 	"os"
 	"time"
 
@@ -26,6 +26,7 @@ func main() {
 			ConnectionString: "",
 		},
 	}
+	ctx := context.Background()
 
 	flag.StringVar(&cfg.DBConfig.ConnectionString, "dsn", "", `db connection string,required`)
 	flag.Parse()
@@ -43,13 +44,13 @@ func main() {
 	option := dbo.WithConnectionString(cfg.DBConfig.ConnectionString)
 	newDBO, err := dbo.NewWithConfig(option)
 	if err != nil {
-		log.Println("connection mysql db error:", err)
+		log.Error(ctx, "dbo config error", log.Err(err))
 		return
 	}
 	dbo.ReplaceGlobal(newDBO)
 	orgIDs, err := GetScheduleAboutOrgIDs(context.Background())
 	if err != nil {
-		log.Println("get schedule group by org error:", err)
+		log.Error(ctx, "get org ids error", log.Err(err))
 		return
 	}
 	if len(orgIDs) <= 0 {
@@ -86,11 +87,12 @@ func main() {
 	fmt.Println("Completed!")
 }
 func Migrate(orgID string) error {
+	ctx := context.Background()
 	fmt.Println(fmt.Sprintf("start migrate org(%s)", orgID))
 	time.Sleep(2 * time.Second)
 	total, err := StartMigrateByOrg(context.Background(), orgID)
 	if err != nil {
-		log.Println("Start Migrate By Org error,", err)
+		log.Error(ctx, "migrate org error", log.String("orgID", orgID), log.Err(err))
 	}
 
 	fmt.Println(fmt.Sprintf("migrate org(%s) success,count:%d", orgID, total))
@@ -106,7 +108,7 @@ func GetScheduleAboutOrgIDs(ctx context.Context) ([]string, error) {
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
-		log.Println("GetScheduleAboutOrgList error ", err)
+		log.Error(ctx, "GetScheduleAboutOrgList error", log.Err(err))
 		return nil, err
 	}
 	orgIDs := make([]string, len(data))
@@ -126,7 +128,7 @@ func StartMigrateByOrg(ctx context.Context, orgID string) (int64, error) {
 		},
 	}, &scheduleList)
 	if err != nil {
-		log.Printf("query schedule by org error:%v,orgID:%s \n", err, orgID)
+		log.Error(ctx, "query schedule by org error", log.Err(err), log.String("orgID", orgID))
 		return 0, err
 	}
 
@@ -157,11 +159,10 @@ func StartMigrateByOrg(ctx context.Context, orgID string) (int64, error) {
 		}
 		count, err := da.GetScheduleRelationDA().Count(ctx, condition, &entity.ScheduleRelation{})
 		if err != nil {
-			log.Println("GetScheduleRelationDA.Count error,condition")
+			log.Error(ctx, "GetScheduleRelationDA error", log.Err(err), log.String("orgID", orgID))
 			return 0, err
 		}
 		if count > 0 {
-			log.Println("schedule relation record already exist,condition")
 			continue
 		}
 		relationInsertData = append(relationInsertData, &entity.ScheduleRelation{
@@ -173,12 +174,9 @@ func StartMigrateByOrg(ctx context.Context, orgID string) (int64, error) {
 	}
 
 	if len(relationInsertData) <= 0 {
-		log.Println("For this organisation, there is no data to be migrated")
+		log.Info(ctx, "For this organisation, there is no data to be migrated", log.Err(err), log.String("orgID", orgID))
 		return 0, nil
 	}
-	//for _, item := range relationInsertData {
-	//	log.Println(item.ScheduleID, ":", item.RelationID)
-	//}
 	rowCount, err := da.GetScheduleRelationDA().MultipleBatchInsert(ctx, dbo.MustGetDB(ctx), relationInsertData)
 	return rowCount, err
 }
