@@ -215,7 +215,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 	}
 
 	// fill room id and class name from schedule
-	schedule, err := GetScheduleModel().GetPlainByID(ctx, assessment.ScheduleID)
+	schedule, err := GetScheduleModel().GetVariableDataByID(ctx, operator, assessment.ScheduleID, nil)
 	if err != nil {
 		log.Error(ctx, "Get: GetScheduleModel().GetByID: get failed",
 			log.Err(err),

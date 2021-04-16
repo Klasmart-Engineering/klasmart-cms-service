@@ -1175,7 +1175,7 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 	case model.ErrScheduleLessonPlanUnAuthed:
 		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(ScheduleMessageDeleteOverlap))
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

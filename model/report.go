@@ -695,7 +695,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		scheduleIDs = append(scheduleIDs, a.ScheduleID)
 	}
 
-	schedules, err := GetScheduleModel().GetByIDs(ctx, operator, scheduleIDs)
+	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{Subject: true})
 	if err != nil {
 		log.Error(ctx, "GetStudentPerformanceReport: call GetScheduleDA().Query failed",
 			log.Err(err),
@@ -704,7 +704,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		)
 		return nil, err
 	}
-	schedulesMap := map[string]*entity.SchedulePlain{}
+	schedulesMap := map[string]*entity.ScheduleVariable{}
 	for _, s := range schedules {
 		schedulesMap[s.ID] = s
 	}
