@@ -29,8 +29,14 @@ const (
 	ScheduleRelationTypeClassRosterStudent ScheduleRelationType = "class_roster_student"
 	ScheduleRelationTypeParticipantTeacher ScheduleRelationType = "participant_teacher"
 	ScheduleRelationTypeParticipantStudent ScheduleRelationType = "participant_student"
+	ScheduleRelationTypeSubject            ScheduleRelationType = "Subject"
 )
 
 func (s ScheduleRelationType) String() string {
 	return string(s)
+}
+
+type ScheduleUserRelation struct {
+	Teachers []*ScheduleShortInfo
+	Students []*ScheduleShortInfo
 }

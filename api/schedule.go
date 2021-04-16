@@ -963,32 +963,6 @@ func (s *Server) getLessonPlans(c *gin.Context) {
 	}
 }
 
-// @Summary get schedule real-time status
-// @Description get schedule real-time status
-// @Tags schedule
-// @ID getScheduleRealTimeStatus
-// @Accept json
-// @Produce json
-// @Param schedule_id path string true "schedule id"
-// @Success 200 {object} entity.ScheduleRealTimeView
-// @Failure 404 {object} NotFoundResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /schedules/{schedule_id}/real_time [get]
-func (s Server) getScheduleRealTimeStatus(c *gin.Context) {
-	ctx := c.Request.Context()
-	id := c.Param("id")
-	op := s.getOperator(c)
-	result, err := model.GetScheduleModel().GetScheduleRealTimeStatus(ctx, op, id)
-	switch err {
-	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
-	case nil:
-		c.JSON(http.StatusOK, result)
-	default:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	}
-}
-
 // @Summary get schedule filter schools
 // @Description get get schedule filter schools
 // @Tags schedule
@@ -1172,6 +1146,36 @@ func (s *Server) getClassTypesInScheduleFilter(c *gin.Context) {
 		c.JSON(http.StatusOK, classTypes)
 	case constant.ErrForbidden:
 		c.JSON(http.StatusOK, []string{})
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary getSchedulePopupByID
+// @ID getSchedulePopupByID
+// @Description get schedule popup info by id
+// @Accept json
+// @Produce json
+// @Param schedule_id path string true "schedule id"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleViewDetail
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_view/{schedule_id} [get]
+func (s *Server) getScheduleViewByID(c *gin.Context) {
+	ctx := c.Request.Context()
+	id := c.Param("id")
+	operator := s.getOperator(c)
+
+	result, err := model.GetScheduleModel().GetScheduleViewByID(ctx, operator, id)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case model.ErrScheduleLessonPlanUnAuthed:
+		c.JSON(http.StatusBadRequest, L(ScheduleMessageLessonPlanInvalid))
+	case constant.ErrRecordNotFound:
+		c.JSON(http.StatusNotFound, L(ScheduleMessageDeleteOverlap))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

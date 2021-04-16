@@ -102,7 +102,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
-		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+		_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
 				log.Err(err),
@@ -146,7 +146,7 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		OrgID:     op.OrgID,
 		ClassType: entity.LiveClassTypeLive,
 	}
-	err := GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, contentID)
+	_, err := GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, contentID)
 	if err != nil {
 		log.Error(ctx, "MakeContentLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
 			log.Err(err),
