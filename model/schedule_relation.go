@@ -25,9 +25,55 @@ type IScheduleRelationModel interface {
 	GetUsers(ctx context.Context, op *entity.Operator, scheduleID string) (*entity.ScheduleUserRelation, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, scheduleID string) ([]*entity.ScheduleShortInfo, error)
 	GetSubjectIDs(ctx context.Context, scheduleID string) ([]string, error)
+	GetSubjectsByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleShortInfo, error)
 }
 
 type scheduleRelationModel struct {
+}
+
+func (s *scheduleRelationModel) GetSubjectsByScheduleIDs(ctx context.Context, op *entity.Operator, scheduleIDs []string) (map[string][]*entity.ScheduleShortInfo, error) {
+	var scheduleRelations []*entity.ScheduleRelation
+	relationCondition := da.ScheduleRelationCondition{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+		RelationTypes: entity.NullStrings{
+			Strings: []string{
+				string(entity.ScheduleRelationTypeSubject),
+			},
+			Valid: true,
+		},
+	}
+	err := da.GetScheduleRelationDA().Query(ctx, relationCondition, &scheduleRelations)
+	if err != nil {
+		log.Error(ctx, "get users relation error", log.Err(err), log.Any("relationCondition", relationCondition))
+		return nil, err
+	}
+	result := make(map[string][]*entity.ScheduleShortInfo)
+	subjectIDMap := make(map[string]bool)
+	subjectIDs := make([]string, 0, len(scheduleRelations))
+
+	for _, item := range scheduleRelations {
+		if _, ok := subjectIDMap[item.RelationID]; !ok {
+			subjectIDMap[item.RelationID] = true
+			subjectIDs = append(subjectIDs, item.RelationID)
+		}
+	}
+
+	subjectMap, err := GetScheduleModel().GetSubjectsBySubjectIDs(ctx, op, subjectIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range scheduleRelations {
+		if _, ok := result[item.ScheduleID]; !ok {
+			result[item.ScheduleID] = make([]*entity.ScheduleShortInfo, 0, len(scheduleRelations))
+		}
+
+		result[item.ScheduleID] = append(result[item.ScheduleID], subjectMap[item.RelationID])
+	}
+
+	return result, nil
 }
 
 func (s *scheduleRelationModel) GetSubjectIDs(ctx context.Context, scheduleID string) ([]string, error) {
