@@ -355,7 +355,7 @@ type ScheduleAddView struct {
 	OrgID                  string            `json:"org_id"`
 	StartAt                int64             `json:"start_at"`
 	EndAt                  int64             `json:"end_at"`
-	SubjectID              string            `json:"subject_id"`
+	SubjectIDs             []string          `json:"subject_ids"`
 	ProgramID              string            `json:"program_id"`
 	ClassType              ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
 	DueAt                  int64             `json:"due_at"`
@@ -391,7 +391,6 @@ func (s *ScheduleAddView) ToSchedule(ctx context.Context) (*Schedule, error) {
 		OrgID:           s.OrgID,
 		StartAt:         s.StartAt,
 		EndAt:           s.EndAt,
-		SubjectID:       s.SubjectID,
 		ProgramID:       s.ProgramID,
 		ClassType:       s.ClassType,
 		DueAt:           s.DueAt,
@@ -455,21 +454,20 @@ type ScheduleDateView struct {
 }
 
 type ScheduleDetailsView struct {
-	ID          string            `json:"id"`
-	Title       string            `json:"title"`
-	Attachment  ScheduleShortInfo `json:"attachment"`
-	OrgID       string            `json:"org_id"`
-	StartAt     int64             `json:"start_at"`
-	EndAt       int64             `json:"end_at"`
-	ClassType   ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	DueAt       int64             `json:"due_at"`
-	Description string            `json:"description"`
-	Version     int64             `json:"version"`
-	IsAllDay    bool              `json:"is_all_day"`
-	IsRepeat    bool              `json:"is_repeat"`
-	Repeat      RepeatOptions     `json:"repeat"`
-	Status      ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ScheduleBasic
+	ID                   string                        `json:"id"`
+	Title                string                        `json:"title"`
+	Attachment           ScheduleShortInfo             `json:"attachment"`
+	OrgID                string                        `json:"org_id"`
+	StartAt              int64                         `json:"start_at"`
+	EndAt                int64                         `json:"end_at"`
+	ClassType            ScheduleClassType             `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	DueAt                int64                         `json:"due_at"`
+	Description          string                        `json:"description"`
+	Version              int64                         `json:"version"`
+	IsAllDay             bool                          `json:"is_all_day"`
+	IsRepeat             bool                          `json:"is_repeat"`
+	Repeat               RepeatOptions                 `json:"repeat"`
+	Status               ScheduleStatus                `json:"status" enums:"NotStart,Started,Closed"`
 	RealTimeStatus       ScheduleRealTimeView          `json:"real_time_status"`
 	ClassRosterTeachers  []*ScheduleAccessibleUserView `json:"class_roster_teachers"`
 	ClassRosterStudents  []*ScheduleAccessibleUserView `json:"class_roster_students"`
@@ -479,6 +477,11 @@ type ScheduleDetailsView struct {
 	IsHomeFun            bool                          `json:"is_home_fun"`
 	RoleType             ScheduleRoleType              `json:"role_type" enums:"Student,Teacher,Unknown"`
 	ExistFeedback        bool                          `json:"exist_feedback"`
+	LessonPlan           *ScheduleLessonPlan           `json:"lesson_plan"`
+	Class                *ScheduleAccessibleUserView   `json:"class"`
+	Subjects             []*ScheduleShortInfo          `json:"subjects"`
+	Program              *ScheduleShortInfo            `json:"program"`
+	Teachers             []*ScheduleAccessibleUserView `json:"teachers"`
 }
 
 type ScheduleRoleType string
@@ -509,7 +512,7 @@ type ScheduleBasicDataInput struct {
 	ClassID      string
 	ProgramID    string
 	LessonPlanID string
-	SubjectID    string
+	SubjectIDs   []string
 	TeacherIDs   []string
 	StudentIDs   []string
 }
@@ -531,21 +534,35 @@ type ScheduleShortInfo struct {
 }
 type SchedulePlain struct {
 	*Schedule
-	RoomID string `json:"room_id"`
+	RoomID     string   `json:"room_id"`
+	SubjectIDs []string `json:"subject_ids"`
 }
 
 type ScheduleBasic struct {
 	Class          *ScheduleAccessibleUserView `json:"class"`
-	Subject        *ScheduleShortInfo          `json:"subject"`
+	Subjects       []*ScheduleShortInfo        `json:"subjects"`
 	Program        *ScheduleShortInfo          `json:"program"`
 	Members        []*ScheduleShortInfo        `json:"teachers"`
 	MemberTeachers []*ScheduleShortInfo        `json:"member_teachers"`
 	StudentCount   int                         `json:"student_count"`
 	LessonPlan     *ScheduleShortInfo          `json:"lesson_plan"`
 }
+
+type ScheduleLessonPlan struct {
+	ID        string                        `json:"id"`
+	Name      string                        `json:"name"`
+	IsAuth    bool                          `json:"is_auth"`
+	Materials []*ScheduleLessonPlanMaterial `json:"materials"`
+}
+
+type ScheduleLessonPlanMaterial struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type ScheduleVerify struct {
 	ClassID      string
-	SubjectID    string
+	SubjectIDs   []string
 	ProgramID    string
 	LessonPlanID string
 	ClassType    ScheduleClassType
@@ -632,6 +649,7 @@ type ScheduleRelationInput struct {
 	ClassRosterStudentIDs  []string
 	ParticipantsTeacherIDs []string
 	ParticipantsStudentIDs []string
+	SubjectIDs             []string
 }
 
 type ProcessScheduleDueAtInput struct {
@@ -684,5 +702,26 @@ func (s ScheduleShowOption) IsValid() bool {
 	}
 }
 
-type AMSInScheduleInput struct {
+type ScheduleViewDetail struct {
+	ID            string               `json:"id"`
+	IsRepeat      bool                 `json:"is_repeat"`
+	LessonPlanID  string               `json:"lesson_plan_id"`
+	ClassID       string               `json:"class_id"`
+	Title         string               `json:"title"`
+	Attachment    ScheduleShortInfo    `json:"attachment"`
+	StartAt       int64                `json:"start_at"`
+	EndAt         int64                `json:"end_at"`
+	ClassType     ScheduleClassType    `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	DueAt         int64                `json:"due_at"`
+	Status        ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
+	IsHidden      bool                 `json:"is_hidden"`
+	IsHomeFun     bool                 `json:"is_home_fun"`
+	RoleType      ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback bool                 `json:"exist_feedback"`
+	LessonPlan    *ScheduleLessonPlan  `json:"lesson_plan"`
+	Class         *ScheduleShortInfo   `json:"class"`
+	Teachers      []*ScheduleShortInfo `json:"teachers"`
+	Students      []*ScheduleShortInfo `json:"students"`
+	RoomID        string               `json:"room_id"`
+	//LiveToken     string               `json:"live_token"`
 }

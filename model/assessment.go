@@ -623,10 +623,11 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 			now           = time.Now().Unix()
 			classNameMap  map[string]string
 			newAssessment = entity.Assessment{
-				ID:           newAssessmentID,
-				ScheduleID:   args.ScheduleID,
-				ProgramID:    schedule.ProgramID,
-				SubjectID:    schedule.SubjectID,
+				ID:         newAssessmentID,
+				ScheduleID: args.ScheduleID,
+				ProgramID:  schedule.ProgramID,
+				// TODO: Medivh
+				//SubjectID:    schedule.SubjectID,
 				ClassLength:  args.ClassLength,
 				ClassEndTime: args.ClassEndTime,
 				CreateAt:     now,

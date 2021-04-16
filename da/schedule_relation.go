@@ -174,14 +174,21 @@ type NotStartCondition struct {
 	NotStart      sql.NullBool
 }
 
+type ScheduleFilterSubject struct {
+	ProgramID   sql.NullString
+	OrgID       sql.NullString
+	RelationIDs entity.NullStrings
+}
+
 type ScheduleRelationCondition struct {
-	ConflictCondition *ConflictCondition
-	ScheduleID        sql.NullString
-	RelationID        sql.NullString
-	RelationType      sql.NullString
-	RelationTypes     entity.NullStrings
-	RelationIDs       entity.NullStrings
-	NotStartCondition *NotStartCondition
+	ConflictCondition     *ConflictCondition
+	ScheduleID            sql.NullString
+	RelationID            sql.NullString
+	RelationType          sql.NullString
+	RelationTypes         entity.NullStrings
+	RelationIDs           entity.NullStrings
+	NotStartCondition     *NotStartCondition
+	ScheduleFilterSubject *ScheduleFilterSubject
 }
 
 //select * from schedules_relations where
@@ -274,6 +281,31 @@ and %s.schedule_id = %s.id)`,
 
 		wheres = append(wheres, sql)
 		params = append(params, time.Now().Unix(), notEditAt, c.NotStartCondition.RosterClassID.String, entity.ScheduleRelationTypeClassRosterClass.String())
+	}
+
+	if c.ScheduleFilterSubject != nil {
+		wheres = append(wheres, "relation_type = ?")
+		params = append(params, entity.ScheduleRelationTypeSubject)
+
+		if c.ScheduleFilterSubject.ProgramID.Valid {
+			sql := fmt.Sprintf(`
+exists(select 1 from %s where 
+org_id = ? 
+and program_id = ? 
+and (delete_at=0)
+and %s.schedule_id = %s.id)`,
+				constant.TableNameSchedule, constant.TableNameScheduleRelation, constant.TableNameSchedule)
+			wheres = append(wheres, sql)
+			params = append(params, c.ScheduleFilterSubject.OrgID.String, c.ScheduleFilterSubject.ProgramID.String)
+		}
+		if c.ScheduleFilterSubject.RelationIDs.Valid {
+			sql := fmt.Sprintf(`
+exists(select 1 from %s as b where b.relation_id in (?) and schedule_id = b.schedule_id) 
+`,
+				constant.TableNameScheduleRelation)
+			wheres = append(wheres, sql)
+			params = append(params, c.ScheduleFilterSubject.RelationIDs)
+		}
 	}
 
 	return wheres, params

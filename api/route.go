@@ -101,7 +101,6 @@ func (s Server) registeRoute() {
 		schedules.PUT("/schedules/:id/status", s.mustLogin, s.updateScheduleStatus)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
 		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
-		schedules.GET("/schedules/:id/real_time", s.mustLogin, s.getScheduleRealTimeStatus)
 		schedules.GET("/schedules_filter/schools", s.mustLogin, s.getSchoolInScheduleFilter)
 		schedules.GET("/schedules_filter/classes", s.mustLogin, s.getClassesInScheduleFilter)
 		schedules.PUT("/schedules/:id/show_option", s.mustLogin, s.updateScheduleShowOption)
@@ -109,6 +108,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
 		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
+		schedules.GET("/schedules_view/:id", s.mustLogin, s.getScheduleViewByID)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
