@@ -50,13 +50,14 @@ type IScheduleModel interface {
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error)
-	GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error)
 	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetSubjects(ctx context.Context, op *entity.Operator, programID string) ([]*entity.ScheduleShortInfo, error)
 	GetClassTypes(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
 	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
 	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
+	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
+	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1341,7 +1342,7 @@ func (s *scheduleModel) getBasicInfo(ctx context.Context, op *entity.Operator, i
 		return nil, err
 	}
 
-	subjectMap, err = s.getSubjectsByIDs(ctx, op, subjectIDs)
+	subjectMap, err = s.GetSubjectsBySubjectIDs(ctx, op, subjectIDs)
 	if err != nil {
 		log.Error(ctx, "get subject info error", log.Err(err), log.Strings("subjectIDs", subjectIDs))
 		return nil, err
@@ -1472,7 +1473,7 @@ func (s *scheduleModel) getClassInfoMapByClassIDs(ctx context.Context, operator 
 	return classMap, nil
 }
 
-func (s *scheduleModel) getSubjectsByIDs(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
+func (s *scheduleModel) GetSubjectsBySubjectIDs(ctx context.Context, operator *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error) {
 	var subjectMap = make(map[string]*entity.ScheduleShortInfo)
 	if len(subjectIDs) != 0 {
 		subjectIDs = utils.SliceDeduplication(subjectIDs)
@@ -2006,11 +2007,7 @@ func (s *scheduleModel) GetPlainByID(ctx context.Context, id string) (*entity.Sc
 	}
 	result := new(entity.SchedulePlain)
 	result.Schedule = schedule
-	subjects, err := GetScheduleRelationModel().GetSubjectIDs(ctx, schedule.ID)
-	if err != nil {
-		return nil, err
-	}
-	result.SubjectIDs = subjects
+
 	return result, nil
 }
 
@@ -2313,7 +2310,7 @@ func (s *scheduleModel) getLessonPlanAuthed(ctx context.Context, op *entity.Oper
 	return result, nil
 }
 
-func (s *scheduleModel) GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error) {
+func (s *scheduleModel) GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error) {
 	var scheduleList []*entity.Schedule
 	condition := &da.ScheduleCondition{
 		IDs: entity.NullStrings{
@@ -2326,10 +2323,28 @@ func (s *scheduleModel) GetByIDs(ctx context.Context, op *entity.Operator, ids [
 		log.Error(ctx, "get by ids error", log.Strings("ids", ids))
 		return nil, err
 	}
-	result := make([]*entity.SchedulePlain, len(scheduleList))
+
+	result := make([]*entity.ScheduleVariable, len(scheduleList))
 	for i, item := range scheduleList {
-		result[i] = &entity.SchedulePlain{Schedule: item}
+		plain := &entity.ScheduleVariable{
+			RoomID:   item.ID,
+			Schedule: item,
+		}
+		result[i] = plain
 	}
+	if include == nil {
+		return result, nil
+	}
+	if include.Subject {
+		scheduleSubjectMap, err := GetScheduleRelationModel().GetSubjectsByScheduleIDs(ctx, op, ids)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range result {
+			item.Subjects = scheduleSubjectMap[item.ID]
+		}
+	}
+
 	return result, nil
 }
 
@@ -2531,7 +2546,6 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		Title:        schedule.Title,
 		StartAt:      schedule.StartAt,
 		EndAt:        schedule.EndAt,
-		ClassType:    schedule.ClassType,
 		DueAt:        schedule.DueAt,
 		Status:       schedule.Status,
 		IsHomeFun:    schedule.IsHomeFun,
@@ -2539,6 +2553,10 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		RoomID:       schedule.ID,
 		IsRepeat:     schedule.RepeatID != "",
 		LessonPlanID: schedule.LessonPlanID,
+	}
+	result.ClassType = entity.ScheduleShortInfo{
+		ID:   schedule.ClassType.String(),
+		Name: schedule.ClassType.ToLabel().String(),
 	}
 
 	// get role type
@@ -2596,7 +2614,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 		EndAt:     result.EndAt,
 		DueAt:     result.DueAt,
-		ClassType: result.ClassType,
+		ClassType: schedule.ClassType,
 	})
 
 	users, err := GetScheduleRelationModel().GetUsers(ctx, op, schedule.ID)

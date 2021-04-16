@@ -189,6 +189,7 @@ type ScheduleRelationCondition struct {
 	RelationIDs           entity.NullStrings
 	NotStartCondition     *NotStartCondition
 	ScheduleFilterSubject *ScheduleFilterSubject
+	ScheduleIDs           entity.NullStrings
 }
 
 //select * from schedules_relations where
@@ -307,7 +308,10 @@ exists(select 1 from %s as b where b.relation_id in (?) and schedule_id = b.sche
 			params = append(params, c.ScheduleFilterSubject.RelationIDs)
 		}
 	}
-
+	if c.ScheduleIDs.Valid {
+		wheres = append(wheres, "schedule_ids in (?)")
+		params = append(params, c.ScheduleIDs.Strings)
+	}
 	return wheres, params
 }
 

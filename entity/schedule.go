@@ -266,15 +266,17 @@ func (s ScheduleClassType) String() string {
 }
 
 type Schedule struct {
-	ID              string            `gorm:"column:id;PRIMARY_KEY"`
-	Title           string            `gorm:"column:title;type:varchar(100)"`
-	ClassID         string            `gorm:"column:class_id;type:varchar(100)"`
-	LessonPlanID    string            `gorm:"column:lesson_plan_id;type:varchar(100)"`
-	OrgID           string            `gorm:"column:org_id;type:varchar(100)"`
-	StartAt         int64             `gorm:"column:start_at;type:bigint"`
-	EndAt           int64             `gorm:"column:end_at;type:bigint"`
-	Status          ScheduleStatus    `gorm:"column:status;type:varchar(100)"`
-	IsAllDay        bool              `gorm:"column:is_all_day;default:false"`
+	ID    string `gorm:"column:id;PRIMARY_KEY"`
+	Title string `gorm:"column:title;type:varchar(100)"`
+	// disabled
+	ClassID      string         `gorm:"column:class_id;type:varchar(100)"`
+	LessonPlanID string         `gorm:"column:lesson_plan_id;type:varchar(100)"`
+	OrgID        string         `gorm:"column:org_id;type:varchar(100)"`
+	StartAt      int64          `gorm:"column:start_at;type:bigint"`
+	EndAt        int64          `gorm:"column:end_at;type:bigint"`
+	Status       ScheduleStatus `gorm:"column:status;type:varchar(100)"`
+	IsAllDay     bool           `gorm:"column:is_all_day;default:false"`
+	// disabled
 	SubjectID       string            `gorm:"column:subject_id;type:varchar(100)"`
 	ProgramID       string            `gorm:"column:program_id;type:varchar(100)"`
 	ClassType       ScheduleClassType `gorm:"column:class_type;type:varchar(100)"`
@@ -534,8 +536,16 @@ type ScheduleShortInfo struct {
 }
 type SchedulePlain struct {
 	*Schedule
-	RoomID     string   `json:"room_id"`
-	SubjectIDs []string `json:"subject_ids"`
+}
+
+type ScheduleVariable struct {
+	*Schedule
+	RoomID   string               `json:"room_id"`
+	Subjects []*ScheduleShortInfo `json:"subjects"`
+}
+
+type ScheduleInclude struct {
+	Subject bool
 }
 
 type ScheduleBasic struct {
@@ -711,7 +721,7 @@ type ScheduleViewDetail struct {
 	Attachment    ScheduleShortInfo    `json:"attachment"`
 	StartAt       int64                `json:"start_at"`
 	EndAt         int64                `json:"end_at"`
-	ClassType     ScheduleClassType    `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	ClassType     ScheduleShortInfo    `json:"class_type"`
 	DueAt         int64                `json:"due_at"`
 	Status        ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
 	IsHidden      bool                 `json:"is_hidden"`
