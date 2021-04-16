@@ -128,62 +128,17 @@ func (m MilestoneSqlDA) BatchDelete(ctx context.Context, tx *dbo.DBContext, mile
 	return nil
 }
 
-func (m MilestoneSqlDA) ReplaceAttaches(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string, masterType string, attaches []*entity.Attach) error {
-	table := entity.AttachMilestoneTable
-	if len(milestoneIDs) > 0 {
-		sql := fmt.Sprintf("delete from %s where master_id in (?) and master_type = ?", table)
-		err := tx.Exec(sql, milestoneIDs, masterType).Error
+func (m MilestoneSqlDA) UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error {
+	if len(outcomeAncestors) > 0 {
+		sql := fmt.Sprintf("delete from %s  where outcome_ancestor in (?)", entity.Milestone{}.TableName())
+		err := tx.Exec(sql, outcomeAncestors).Error
 		if err != nil {
-			log.Error(ctx, "Replace: exec del sql failed",
+			log.Error(ctx, "UnbindOutcomes: exec sql failed",
 				log.Err(err),
-				log.Strings("milestone", milestoneIDs),
-				log.Any("attaches", attaches),
+				log.Strings("delete", outcomeAncestors),
 				log.String("sql", sql))
 			return err
 		}
-	}
-	if len(attaches) > 0 {
-		values := make([]string, len(attaches))
-		now := time.Now().Unix()
-		for i := range attaches {
-			tm := now + int64(i)
-			masterID := attaches[i].MasterID
-			masterType := attaches[i].MasterType
-			attachID := attaches[i].AttachID
-			attachType := attaches[i].AttachType
-			value := fmt.Sprintf("select '%s', '%s', '%s', '%s', %d, %d where not exists(select * from %s where master_id='%s' and master_type='%s' and attach_id='%s' and attach_type ='%s' and delete_at is null)",
-				masterID, attachID, attachType, masterType, tm, tm, table, masterID, masterType, attachID, attachType)
-			values[i] = value
-		}
-		sql := fmt.Sprintf("insert into %s(master_id, attach_id, attach_type, master_type, create_at, update_at) (%s)", table, strings.Join(values, " union "))
-		err := tx.Exec(sql).Error
-		if err != nil {
-			log.Error(ctx, "Replace: exec insert sql failed",
-				log.Err(err),
-				log.Strings("milestone", milestoneIDs),
-				log.Any("attach", attaches),
-				log.String("sql", sql))
-			return err
-		}
-	}
-	return nil
-}
-
-func (m MilestoneSqlDA) SearchAttaches(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string, masterType string) ([]*entity.Attach, error) {
-	table := entity.AttachMilestoneTable
-	sql := fmt.Sprintf("select * from %s where master_id in (?) and master_type = ? and delete_at is null order by update_at", table)
-	var attaches []*entity.Attach
-	err := tx.Raw(sql, milestoneIDs, masterType).Find(&attaches).Error
-	if err != nil {
-		log.Error(ctx, "SearchAttaches: exec sql failed",
-			log.String("sql", sql))
-		return nil, err
-	}
-	return attaches, nil
-}
-func (m MilestoneSqlDA) UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) error {
-	if len(outcomeIDs) > 0 {
-		panic("implement me")
 	}
 	return nil
 }
@@ -353,12 +308,12 @@ func (mso MilestoneOutcomeSqlDA) Replace(ctx context.Context, tx *dbo.DBContext,
 		for i := range milestonesOutcomes {
 			tm := now + int64(i)
 			milestoneID := milestonesOutcomes[i].MilestoneID
-			outcomeID := milestonesOutcomes[i].OutcomeID
-			value := fmt.Sprintf("select '%s', '%s', %d, %d where not exists(select * from %s where milestone_id='%s' and outcome_id='%s' and delete_at is null)",
-				milestoneID, outcomeID, tm, tm, table, milestoneID, outcomeID)
+			outcomeAncestor := milestonesOutcomes[i].OutcomeAncestor
+			value := fmt.Sprintf("select '%s', '%s', %d, %d where not exists(select * from %s where milestone_id='%s' and outcome_ancestor='%s' and delete_at is null)",
+				milestoneID, outcomeAncestor, tm, tm, table, milestoneID, outcomeAncestor)
 			values[i] = value
 		}
-		sql := fmt.Sprintf("insert into %s(milestone_id, outcome_id, create_at, update_at) (%s)", table, strings.Join(values, " union "))
+		sql := fmt.Sprintf("insert into %s(milestone_id, outcome_ancestor, create_at, update_at) (%s)", table, strings.Join(values, " union "))
 		err := tx.Exec(sql).Error
 		if err != nil {
 			log.Error(ctx, "Replace: exec insert sql failed",
@@ -370,4 +325,24 @@ func (mso MilestoneOutcomeSqlDA) Replace(ctx context.Context, tx *dbo.DBContext,
 		}
 	}
 	return nil
+}
+
+func (mso MilestoneOutcomeSqlDA) Count(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) (map[string]int, error) {
+	sql := fmt.Sprintf("select milestone_id, count(outcome_ancestor) as count from %s where milestone_id in (?) group by milestone_id", entity.MilestoneOutcome{}.TableName())
+	var results []*struct {
+		MilestoneID string `gorm:"column:milestone_id" json:"milestone_id"`
+		Count       int    `gorm:"column:count" json:"count"`
+	}
+	err := tx.Raw(sql, milestoneIDs).Find(&results).Error
+	if err != nil {
+		log.Error(ctx, "Count: exec sql failed",
+			log.Strings("milestone", milestoneIDs),
+			log.String("sql", sql))
+		return nil, err
+	}
+	counts := make(map[string]int)
+	for i := range results {
+		counts[results[i].MilestoneID] = results[i].Count
+	}
+	return counts, nil
 }

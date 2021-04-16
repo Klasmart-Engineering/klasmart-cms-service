@@ -2,7 +2,6 @@ package entity
 
 import (
 	"context"
-	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
@@ -14,7 +13,7 @@ type Milestone struct {
 	OrganizationID string `gorm:"column:organization_id" json:"organization_id"`
 	AuthorID       string `gorm:"column:author_id" json:"author_id"`
 	Description    string `gorm:"column:describe" json:"description"`
-	LoCounts       int    `gorm:"column:lo_counts" json:"lo_counts"`
+	LoCounts       int    `gorm:"-" json:"lo_counts"`
 
 	Status OutcomeStatus `gorm:"column:status" json:"status"`
 
@@ -36,7 +35,7 @@ type Milestone struct {
 }
 
 func (Milestone) TableName() string {
-	return MilestoneTable
+	return "milestones"
 }
 
 func (ms Milestone) CollectAttach() []*Attach {
@@ -168,8 +167,14 @@ func (ms Milestone) OrgAthPrgSbjCatSbcGrdAge(context context.Context, operator *
 	ctx = context
 	op = operator
 	for i := range ms.Outcomes {
-		// TODO: unfinished
-		fmt.Println(ms.Outcomes[i].Program)
+		orgIDs = append(orgIDs, ms.Outcomes[i].OrganizationID)
+		athIDs = append(athIDs, ms.Outcomes[i].AuthorID)
+		prgIDs = append(prgIDs, ms.Outcomes[i].Programs...)
+		sbjIDs = append(sbjIDs, ms.Outcomes[i].Subjects...)
+		catIDs = append(catIDs, ms.Outcomes[i].Categories...)
+		sbcIDs = append(sbcIDs, ms.Outcomes[i].Subcategories...)
+		grdIDs = append(grdIDs, ms.Outcomes[i].Grades...)
+		ageIDs = append(ageIDs, ms.Outcomes[i].Ages...)
 	}
 	orgIDs = append(orgIDs, ms.OrganizationID)
 	athIDs = append(athIDs, ms.AuthorID)
@@ -183,12 +188,12 @@ func (ms Milestone) OrgAthPrgSbjCatSbcGrdAge(context context.Context, operator *
 }
 
 type MilestoneOutcome struct {
-	ID          int    `gorm:"column:id;primary_key"`
-	MilestoneID string `gorm:"column:milestone_id" json:"milestone_id"`
-	OutcomeID   string `gorm:"column:outcome_id" json:"outcome_id"`
-	CreateAt    int64  `gorm:"column:create_at" json:"created_at"`
-	UpdateAt    int64  `gorm:"column:update_at" json:"updated_at"`
-	DeleteAt    int64  `gorm:"column:delete_at" json:"deleted_at"`
+	ID              int    `gorm:"column:id;primary_key"`
+	MilestoneID     string `gorm:"column:milestone_id" json:"milestone_id"`
+	OutcomeAncestor string `gorm:"column:outcome_ancestor" json:"outcome_ancestor"`
+	CreateAt        int64  `gorm:"column:create_at" json:"created_at"`
+	UpdateAt        int64  `gorm:"column:update_at" json:"updated_at"`
+	DeleteAt        int64  `gorm:"column:delete_at" json:"deleted_at"`
 }
 
 func (MilestoneOutcome) TableName() string {

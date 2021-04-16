@@ -49,9 +49,8 @@ func TestCreateMilestone(t *testing.T) {
 		SubcategoryIDs: []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
 		GradeIDs:       []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
 		AgeIDs:         []string{"bb7982cd-020f-4e1a-93fc-4a6874917f07"},
-		OutcomeIDs: []string{
-			"5f6840becc913614b8cd739a",
-			"5f684175cc913614b8cd73d9",
+		OutcomeAncestorIDs: []string{
+			"607905030e4404103a3f595d",
 		},
 	}
 	data, err := json.Marshal(req)
@@ -65,7 +64,7 @@ func TestCreateMilestone(t *testing.T) {
 func TestObtainMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones/"+"6074f99634e5e0808f47dc2e"+"?org_id="+op.OrgID, "")
+	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones/"+"607905db23b82681052ad541"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
@@ -81,7 +80,7 @@ func TestUpdateMilestone(t *testing.T) {
 		CategoryIDs:    []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
 		SubcategoryIDs: []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
 		GradeIDs:       []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
-		OutcomeIDs: []string{
+		OutcomeAncestorIDs: []string{
 			"5f6840becc913614b8cd739a",
 		},
 		Description: "Hello, Brilliant",

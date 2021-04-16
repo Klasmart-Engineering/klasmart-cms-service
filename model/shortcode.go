@@ -60,11 +60,11 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 
 func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind string, orgID string) (map[string]struct{}, error) {
 	var table string
-	if kind == constant.ShortcodeOutcomeKind {
-		table = entity.OutcomeTable
+	if kind == entity.KindOutcome {
+		table = entity.Outcome{}.TableName()
 	}
-	if kind == constant.ShortcodeMilestoneKind {
-		table = entity.MilestoneTable
+	if kind == entity.KindMileStone {
+		table = entity.Milestone{}.TableName()
 	}
 
 	dbShortcodes, err := da.GetShortcodeDA().Search(ctx, tx, table, &da.ShortcodeCondition{

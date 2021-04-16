@@ -318,3 +318,72 @@ func getOrganizationName(ctx context.Context, operator *entity.Operator, id stri
 	}
 	return names[0]
 }
+
+func buildOutcomeView(org, ath, prd, sbj, cat, sbc, grd, age map[string]string, outcome *entity.Outcome) *OutcomeView {
+	view := &OutcomeView{
+		OutcomeID:        outcome.ID,
+		OutcomeName:      outcome.Name,
+		AncestorID:       outcome.AncestorID,
+		Shortcode:        outcome.Shortcode,
+		Assumed:          outcome.Assumed,
+		SourceID:         outcome.SourceID,
+		LatestID:         outcome.LatestID,
+		LockedBy:         outcome.LockedBy,
+		AuthorID:         outcome.AuthorID,
+		OrganizationID:   outcome.OrganizationID,
+		AuthorName:       ath[outcome.AuthorID],
+		OrganizationName: org[outcome.OrganizationID],
+		PublishScope:     outcome.PublishScope,
+		PublishStatus:    string(outcome.PublishStatus),
+		Keywords:         strings.Split(outcome.Keywords, ","),
+		RejectReason:     outcome.RejectReason,
+		EstimatedTime:    outcome.EstimatedTime,
+		Description:      outcome.Description,
+		CreatedAt:        outcome.CreateAt,
+		UpdatedAt:        outcome.UpdateAt,
+	}
+	view.Program = make([]Program, len(outcome.Programs))
+	for k, id := range outcome.Programs {
+		view.Program[k].ProgramID = id
+		view.Program[k].ProgramName = prd[id]
+	}
+
+	view.Subject = make([]Subject, len(outcome.Subjects))
+	for k, id := range outcome.Subjects {
+		view.Subject[k].SubjectID = id
+		view.Subject[k].SubjectName = sbj[id]
+	}
+
+	view.Developmental = make([]Developmental, len(outcome.Categories))
+	for k, id := range outcome.Categories {
+		view.Developmental[k].DevelopmentalID = id
+		view.Developmental[k].DevelopmentalName = cat[id]
+	}
+
+	view.Skills = make([]Skill, len(outcome.Subcategories))
+	for k, id := range outcome.Subcategories {
+		view.Skills[k].SkillID = id
+		view.Skills[k].SkillName = sbc[id]
+	}
+
+	view.Age = make([]Age, len(outcome.Ages))
+	for k, id := range outcome.Ages {
+		view.Age[k].AgeID = id
+		view.Age[k].AgeName = age[id]
+	}
+
+	view.Grade = make([]Grade, len(outcome.Grades))
+	for k, id := range outcome.Grades {
+		view.Grade[k].GradeID = id
+		view.Grade[k].GradeName = grd[id]
+	}
+	view.Sets = make([]*OutcomeSetCreateView, len(outcome.Sets))
+	for i := range outcome.Sets {
+		set := OutcomeSetCreateView{
+			SetID:   outcome.Sets[i].ID,
+			SetName: outcome.Sets[i].Name,
+		}
+		view.Sets[i] = &set
+	}
+	return view
+}

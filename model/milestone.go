@@ -15,7 +15,7 @@ import (
 )
 
 type IMilestoneModel interface {
-	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeIDs []string) error
+	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error
 	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string) error
 	Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error
@@ -27,8 +27,8 @@ type IMilestoneModel interface {
 type MilestoneModel struct {
 }
 
-func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeIDs []string) error {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixMilestoneMute, op.OrgID)
+func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateMilestone: NewLock failed",
 			log.Err(err),
@@ -43,7 +43,6 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	milestone.AncestorID = milestone.ID
 	milestone.LatestID = milestone.ID
 	milestone.Status = "draft"
-	milestone.LoCounts = len(outcomeIDs)
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		occupied, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, milestone.AncestorID, milestone.Shortcode)
 		if err != nil {
@@ -64,11 +63,11 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeIDs))
-		for i := range outcomeIDs {
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
+		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
-				MilestoneID: milestone.ID,
-				OutcomeID:   outcomeIDs[i],
+				MilestoneID:     milestone.ID,
+				OutcomeAncestor: outcomeAncestors[i],
 			}
 			milestoneOutcomes[i] = &milestoneOutcome
 		}
@@ -80,7 +79,8 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, nil, entity.MilestoneType, milestone.CollectAttach())
+		//err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, nil, entity.MilestoneType, milestone.CollectAttach())
+		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachMilestoneTable, nil, entity.MilestoneType, milestone.CollectAttach())
 		return nil
 	})
 	da.GetShortcodeCacheDA().Remove(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
@@ -93,31 +93,42 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		var err error
 		milestone, err = da.GetMilestoneDA().GetByID(ctx, tx, milestoneID)
 		if err != nil {
-			// TODO
+			log.Error(ctx, "Obtain: GetByID failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("milestone", milestoneID))
 			return err
 		}
-		attaches, err := da.GetMilestoneDA().SearchAttaches(ctx, tx, []string{milestone.ID}, entity.MilestoneType)
+		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachMilestoneTable, []string{milestone.ID}, entity.MilestoneType)
 		if err != nil {
-			// TODO
+			log.Error(ctx, "Obtain: Search failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.String("milestone", milestoneID))
 			return err
 		}
 		milestone.FillAttach(attaches)
 		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().Search(ctx, tx, milestoneID)
 		bindLength := len(milestoneOutcomes)
 		if bindLength == 0 {
+			log.Info(ctx, "Obtain: no outcome bind",
+				log.String("milestone", milestoneID))
 			return nil
 		}
 
-		outcomeIDs := make([]string, bindLength)
+		outcomeAncestors := make([]string, bindLength)
 		for i := range milestoneOutcomes {
-			outcomeIDs[i] = milestoneOutcomes[i].OutcomeID
+			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
 		}
-		outcomes, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, op, tx, outcomeIDs)
+		outcomes, err := GetOutcomeModel().GetLatestOutcomesByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
-			// TODO
+			log.Error(ctx, "Obtain: GetLatestOutcomesByAncestors failed",
+				log.Err(err),
+				log.Strings("ancestors", outcomeAncestors))
 			return err
 		}
 		milestone.Outcomes = outcomes
+		milestone.LoCounts = len(outcomes)
 		return nil
 	})
 	if err != nil {
@@ -126,7 +137,17 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 	return milestone, nil
 }
 
-func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string) error {
+func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string) error {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "CreateMilestone: NewLock failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("milestone", milestone))
+		return err
+	}
+	locker.Lock()
+	defer locker.Unlock()
 	exists, err := GetShortcodeModel().isCached(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: isCached failed",
@@ -177,7 +198,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 
 		if ms.Shortcode != milestone.Shortcode {
 			ms.Shortcode = milestone.Shortcode
-			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.KindMileStone, op.OrgID, ms.AncestorID, ms.Shortcode)
+			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, ms.AncestorID, ms.Shortcode)
 			if err != nil {
 				log.Error(ctx, "Update: isOccupied failed",
 					log.Err(err),
@@ -199,11 +220,11 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			return err
 		}
 
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeIDs))
-		for i := range outcomeIDs {
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
+		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
-				MilestoneID: ms.ID,
-				OutcomeID:   outcomeIDs[i],
+				MilestoneID:     ms.ID,
+				OutcomeAncestor: outcomeAncestors[i],
 			}
 			milestoneOutcomes[i] = &milestoneOutcome
 		}
@@ -215,7 +236,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				log.Any("milestone", ms))
 			return err
 		}
-		err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, []string{ms.ID}, entity.MilestoneType, ms.CollectAttach())
+		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachOutcomeTable, []string{ms.ID}, entity.MilestoneType, ms.CollectAttach())
 		if err != nil {
 			log.Error(ctx, "Update: Replace failed",
 				log.Err(err),
@@ -302,7 +323,7 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
-		err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, deleteIDs, entity.MilestoneType, nil)
+		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachOutcomeTable, deleteIDs, entity.MilestoneType, nil)
 		if err != nil {
 			log.Error(ctx, "Delete: Replace failed",
 				log.Err(err),
@@ -355,9 +376,9 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			milestoneIDs[i] = milestones[i].ID
 		}
 
-		attaches, err := da.GetMilestoneDA().SearchAttaches(ctx, tx, milestoneIDs, entity.MilestoneType)
+		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachOutcomeTable, milestoneIDs, entity.MilestoneType)
 		if err != nil {
-			log.Error(ctx, "Search: SearchAttaches failed",
+			log.Error(ctx, "Search: Search failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Strings("milestone", milestoneIDs))
@@ -371,6 +392,17 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 				}
 			}
 		}
+		counts, err := da.GetMilestoneOutcomeDA().Count(ctx, tx, milestoneIDs)
+		if err != nil {
+			log.Error(ctx, "Search: Count failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Strings("milestone", milestoneIDs))
+			return err
+		}
+		for i := range milestones {
+			milestones[i].LoCounts = counts[milestones[i].ID]
+		}
 		return nil
 	})
 	if err != nil {
@@ -380,8 +412,18 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 }
 
 func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixMilestoneMute)
+	if err != nil {
+		log.Error(ctx, "Occupy: NewLock failed",
+			log.Err(err),
+			log.String("op", op.UserID),
+			log.String("milestone", milestoneID))
+		return nil, err
+	}
+	locker.Lock()
+	defer locker.Unlock()
 	var milestone *entity.Milestone
-	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		ms, err := da.GetMilestoneDA().GetByID(ctx, tx, milestoneID)
 		if err != nil {
 			log.Error(ctx, "Occupy: GetByID failed",
@@ -439,9 +481,9 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone_outcome", milestoneOutcomes))
 			return err
 		}
-		attaches, err := da.GetMilestoneDA().SearchAttaches(ctx, tx, []string{milestoneID}, entity.MilestoneType)
+		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachMilestoneTable, []string{milestoneID}, entity.MilestoneType)
 		if err != nil {
-			log.Error(ctx, "Occupy: SearchAttaches failed",
+			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("attach", attaches))
@@ -450,7 +492,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		for i := range attaches {
 			attaches[i].MasterID = milestone.ID
 		}
-		err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, nil, entity.MilestoneType, attaches)
+		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachMilestoneTable, nil, entity.MilestoneType, attaches)
 		if err != nil {
 			log.Error(ctx, "Occupy: ReplaceAttache failed",
 				log.Err(err),

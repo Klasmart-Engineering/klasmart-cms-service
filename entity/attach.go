@@ -22,7 +22,4 @@ const (
 const (
 	AttachMilestoneTable = "milestones_attaches"
 	AttachOutcomeTable   = "outcomes_attaches"
-
-	MilestoneTable = "milestones"
-	OutcomeTable   = "learning_outcomes"
 )

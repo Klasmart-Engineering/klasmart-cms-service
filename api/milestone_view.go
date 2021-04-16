@@ -49,13 +49,13 @@ type MilestoneView struct {
 	LatestID     string            `json:"latest_id,omitempty"`
 	OutcomeCount int               `json:"outcome_count,omitempty"`
 
-	ProgramIDs     []string `json:"program_ids,omitempty"`
-	SubjectIDs     []string `json:"subject_ids,omitempty"`
-	CategoryIDs    []string `json:"category_ids,omitempty"`
-	SubcategoryIDs []string `json:"subcategory_ids,omitempty"`
-	GradeIDs       []string `json:"grade_ids,omitempty"`
-	AgeIDs         []string `json:"age_ids,omitempty"`
-	OutcomeIDs     []string `json:"outcome_ids,omitempty"`
+	ProgramIDs         []string `json:"program_ids,omitempty"`
+	SubjectIDs         []string `json:"subject_ids,omitempty"`
+	CategoryIDs        []string `json:"category_ids,omitempty"`
+	SubcategoryIDs     []string `json:"subcategory_ids,omitempty"`
+	GradeIDs           []string `json:"grade_ids,omitempty"`
+	AgeIDs             []string `json:"age_ids,omitempty"`
+	OutcomeAncestorIDs []string `json:"outcome_ancestor_ids,omitempty"`
 }
 
 func (ms *MilestoneView) toMilestone(op *entity.Operator) *entity.Milestone {
@@ -140,35 +140,11 @@ func (ms *MilestoneView) fillAllKindsOfName(program, subject, category, subCateg
 	}
 }
 
-func fromMilestone(ctx context.Context, op *entity.Operator, milestone *entity.Milestone) (*MilestoneView, error) {
-	orgs, authors, prds, sbjs, cats, sbcs, grds, ages, err := external.GetOrganizationServiceProvider().
-		OrgAthPrgSjtCtgSubCtgGrdAge(milestone.OrgAthPrgSbjCatSbcGrdAge(ctx, op))
-	if err != nil {
-		return nil, err
+func (ms *MilestoneView) fillOutcomeView(org, author, program, subject, category, subCategory, grade, age map[string]string, outcome []*entity.Outcome) {
+	ms.Outcomes = make([]*OutcomeView, len(outcome))
+	for i := range outcome {
+		ms.Outcomes[i] = buildOutcomeView(org, author, program, subject, category, subCategory, grade, age, outcome[i])
 	}
-	milestoneView := MilestoneView{
-		MilestoneID: milestone.ID,
-		Name:        milestone.Name,
-		Shortcode:   milestone.Shortcode,
-		Organization: &OrganizationView{
-			OrganizationID:   milestone.OrganizationID,
-			OrganizationName: orgs[milestone.OrganizationID],
-		},
-		Author: &AuthorView{
-			AuthorID:   milestone.AuthorID,
-			AuthorName: authors[milestone.AuthorID],
-		},
-		CreateAt:    milestone.CreateAt,
-		Description: milestone.Description,
-		Status:      string(milestone.Status),
-		LockedBy:    milestone.LockedBy,
-		AncestorID:  milestone.AncestorID,
-		SourceID:    milestone.SourceID,
-		LatestID:    milestone.LatestID,
-		//Outcomes     []*OutcomeView    `json:"outcomes,omitempty"`
-	}
-	milestoneView.fillAllKindsOfName(prds, sbjs, cats, sbcs, grds, ages, milestone)
-	return &milestoneView, nil
 }
 
 type MilestoneList struct {
@@ -179,7 +155,7 @@ type MilestoneSearchResponse struct {
 	Milestones []*MilestoneView `json:"milestones"`
 }
 
-func fromMilestones(ctx context.Context, op *entity.Operator, total int, milestones []*entity.Milestone) (MilestoneSearchResponse, error) {
+func fromMilestones(ctx context.Context, op *entity.Operator, milestones []*entity.Milestone) ([]*MilestoneView, error) {
 	var orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
 	for i := range milestones {
 		ms := milestones[i]
@@ -206,12 +182,9 @@ func fromMilestones(ctx context.Context, op *entity.Operator, total int, milesto
 			log.Strings("subcategory", sbcIDs),
 			log.Strings("grade", grdIDs),
 			log.Strings("age", ageIDs))
-		return MilestoneSearchResponse{}, err
+		return nil, err
 	}
-	response := MilestoneSearchResponse{
-		Total:      total,
-		Milestones: make([]*MilestoneView, len(milestones)),
-	}
+	milestoneViews := make([]*MilestoneView, len(milestones))
 	for i := range milestones {
 		milestone := milestones[i]
 		milestoneView := MilestoneView{
@@ -236,7 +209,8 @@ func fromMilestones(ctx context.Context, op *entity.Operator, total int, milesto
 			LatestID:     milestone.LatestID,
 		}
 		milestoneView.fillAllKindsOfName(prds, sbjs, cats, sbcs, grds, ages, milestone)
-		response.Milestones[i] = &milestoneView
+		milestoneView.fillOutcomeView(orgs, authors, prds, sbjs, cats, sbcs, grds, ages, milestone.Outcomes)
+		milestoneViews[i] = &milestoneView
 	}
-	return response, nil
+	return milestoneViews, nil
 }

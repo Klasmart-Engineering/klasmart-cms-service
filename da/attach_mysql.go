@@ -57,12 +57,12 @@ func (a AttachSqlDA) Replace(ctx context.Context, tx *dbo.DBContext, table strin
 	return nil
 }
 
-func (a AttachSqlDA) SearchAttaches(ctx context.Context, tx *dbo.DBContext, table string, masterIDs []string, masterType string) ([]*entity.Attach, error) {
+func (a AttachSqlDA) Search(ctx context.Context, tx *dbo.DBContext, table string, masterIDs []string, masterType string) ([]*entity.Attach, error) {
 	sql := fmt.Sprintf("select * from %s where master_id in (?) and master_type = ? and delete_at is null order by update_at", table)
 	var attaches []*entity.Attach
 	err := tx.Raw(sql, masterIDs, masterType).Find(&attaches).Error
 	if err != nil {
-		log.Error(ctx, "SearchAttaches: exec sql failed",
+		log.Error(ctx, "Search: exec sql failed",
 			log.Err(err),
 			log.Strings("master", masterIDs),
 			log.String("type", masterType),

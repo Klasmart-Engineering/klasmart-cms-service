@@ -16,10 +16,7 @@ type IMilestoneDA interface {
 	BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs, hideIDs []string, ancestorLatest map[string]string) error
 	BatchDelete(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) error
 
-	ReplaceAttaches(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string, masterType string, attaches []*entity.Attach) error
-	SearchAttaches(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string, masterType string) ([]*entity.Attach, error)
-
-	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) error
+	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error
 }
 
 var milestoneDA *MilestoneSqlDA

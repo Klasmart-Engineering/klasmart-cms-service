@@ -25,7 +25,7 @@ func TestCreateOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	createView := OutcomeCreateView{
-		OutcomeName: "TestOutcomeXX",
+		OutcomeName: "Test Outcome XX",
 		Assumed:     true,
 		Program:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
 		Subject:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
@@ -36,7 +36,7 @@ func TestCreateOutcome(t *testing.T) {
 		Estimated:   30,
 		Keywords:    []string{"kyd001", "kyd002"},
 		Description: "Hello, Brilliant",
-		Shortcode:   "00004",
+		Shortcode:   "00001",
 		Sets: []*OutcomeSetCreateView{
 			{SetID: "6077b3a9809f75d51b5cb023"},
 		},
@@ -106,7 +106,7 @@ func TestQueryOutcome(t *testing.T) {
 func TestLockOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	outcomeID := "6077b4fda53cf8f7b6efcedc"
+	outcomeID := "607905030e4404103a3f595d"
 	url := fmt.Sprintf("%s/learning_outcomes/%s/lock?org_id=%s", prefix, outcomeID, op.OrgID)
 	res := DoHttpWithOperator(http.MethodPut, op, url, "")
 	fmt.Println(res)
@@ -115,7 +115,7 @@ func TestLockOutcome(t *testing.T) {
 func TestPublishOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	outcomeID := "6077b4fda53cf8f7b6efcedc"
+	outcomeID := "60790598b35b67a672d51683"
 	req := PublishOutcomeReq{
 		Scope: "1",
 	}
@@ -131,7 +131,7 @@ func TestPublishOutcome(t *testing.T) {
 func TestApproveOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	outcomeID := "6077b4fda53cf8f7b6efcedc"
+	outcomeID := "60790598b35b67a672d51683"
 	url := fmt.Sprintf("%s/learning_outcomes/%s/approve?org_id=%s", prefix, outcomeID, op.OrgID)
 	res := DoHttpWithOperator(http.MethodPut, op, url, "")
 	//res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/approve", "")
@@ -169,7 +169,7 @@ func TestGenerateShortcode(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	data, err := json.Marshal(ShortcodeRequest{
-		Kind: constant.ShortcodeOutcomeKind,
+		Kind: entity.KindOutcome,
 	})
 	if err != nil {
 		t.Fatal(err)

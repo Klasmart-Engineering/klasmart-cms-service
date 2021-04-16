@@ -34,7 +34,7 @@ func TestPullOutcomeSet(t *testing.T) {
 
 func TestBulkBindOutcomeSet(t *testing.T) {
 	req := BulkBindOutcomeSetRequest{
-		//OutcomeIDs: []string{"5f684175cc913614b8cd73d9", "5f684372cc913614b8cd7439"},
+		//OutcomeAncestorIDs: []string{"5f684175cc913614b8cd73d9", "5f684372cc913614b8cd7439"},
 		//SetIDs:     []string{"60583986fc229e722bead09a", "60583cfcf5808149b5cbe24c"},
 		OutcomeIDs: []string{"5f684175cc913614b8cd73d9", "5f684372cc913614b8cd7439"},
 		SetIDs:     []string{"60583986fc229e722bead09a", "60583cfcf5808149b5cbe24c"},

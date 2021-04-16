@@ -838,9 +838,9 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		return
 	}
 	if err != nil && err.Error() == "EOF" {
-		data.Kind = constant.ShortcodeOutcomeKind
+		data.Kind = entity.KindOutcome
 	}
-	if data.Kind != constant.ShortcodeOutcomeKind && data.Kind != constant.ShortcodeMilestoneKind {
+	if data.Kind != entity.KindOutcome && data.Kind != entity.KindMileStone {
 		log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return

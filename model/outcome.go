@@ -45,6 +45,7 @@ type IOutcomeModel interface {
 	GetLatestOutcomesByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
 
 	HasLockedOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
+	GetLatestOutcomesByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
 }
 
 type OutcomeModel struct {
@@ -60,7 +61,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		return
 	}
 
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, constant.ShortcodeOutcomeKind, operator.OrgID)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, operator.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: NewLock failed",
 			log.Err(err),
@@ -76,7 +77,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		outcome.AuthorID = operator.UserID
 		outcome.OrganizationID = operator.OrgID
 		outcome.PublishStatus = entity.OutcomeStatusDraft
-		exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.KindOutcome, operator.OrgID, outcome.AncestorID, outcome.Shortcode)
+		exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Outcome{}.TableName(), operator.OrgID, outcome.AncestorID, outcome.Shortcode)
 		if err != nil {
 			log.Error(ctx, "CreateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
 				log.Err(err),
@@ -110,7 +111,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		}
 		return nil
 	})
-	da.GetShortcodeCacheDA().Remove(ctx, constant.ShortcodeOutcomeKind, operator.OrgID, outcome.Shortcode)
+	da.GetShortcodeCacheDA().Remove(ctx, entity.KindOutcome, operator.OrgID, outcome.Shortcode)
 	if err != nil {
 		return err
 	}
@@ -129,9 +130,9 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			log.String("outcome_id", outcomeID))
 		return nil, err
 	}
-	attaches, err := da.GetAttachDA().SearchAttaches(ctx, tx, entity.AttachOutcomeTable, []string{outcomeID}, entity.OutcomeType)
+	attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachOutcomeTable, []string{outcomeID}, entity.OutcomeType)
 	if err != nil {
-		log.Error(ctx, "GetLearningOutcomeByID: SearchAttaches failed",
+		log.Error(ctx, "GetLearningOutcomeByID: Search failed",
 			log.Err(err),
 			log.String("op", operator.UserID),
 			log.String("outcome_id", outcomeID))
@@ -182,7 +183,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 		log.Error(ctx, "UpdateLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, constant.ShortcodeOutcomeKind, operator.OrgID)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, operator.OrgID)
 	if err != nil {
 		log.Error(ctx, "UpdateLearningOutcome: NewLock failed",
 			log.Err(err),
@@ -229,7 +230,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 		}
 
 		if data.Shortcode != outcome.Shortcode {
-			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.KindOutcome, operator.OrgID, data.AncestorID, outcome.Shortcode)
+			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Outcome{}.TableName(), operator.OrgID, data.AncestorID, outcome.Shortcode)
 			if err != nil {
 				log.Error(ctx, "UpdateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
 					log.Err(err),
@@ -316,7 +317,7 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, operator *ent
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, []string{outcome.ID})
+		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, []string{outcome.AncestorID})
 		if err != nil {
 			log.Error(ctx, "DeleteLearningOutcome: UnbindOutcomes failed",
 				log.String("op", operator.UserID),
@@ -493,9 +494,9 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 				log.Any("outcome", newVersion))
 			return err
 		}
-		attaches, err := da.GetAttachDA().SearchAttaches(ctx, tx, entity.AttachOutcomeTable, []string{outcome.ID}, entity.OutcomeType)
+		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachOutcomeTable, []string{outcome.ID}, entity.OutcomeType)
 		if err != nil {
-			log.Error(ctx, "LockLearningOutcome: CreateOutcome failed",
+			log.Error(ctx, "LockLearningOutcome: Search failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID),
 				log.Any("outcome", newVersion))
@@ -654,7 +655,8 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 				log.Any("perms", perms), log.Any("outcome", outcomes[0]))
 			return constant.ErrOperateNotAllowed
 		}
-		for _, o := range outcomes {
+		ancestorIDs := make([]string, len(outcomes))
+		for i, o := range outcomes {
 			err = ocm.deleteOutcome(ctx, operator, tx, o)
 			if err != nil {
 				log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
@@ -662,6 +664,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 					log.String("outcome_id", o.ID))
 				return err
 			}
+			ancestorIDs[i] = o.AncestorID
 		}
 
 		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachOutcomeTable, outcomeIDs, entity.OutcomeType, nil)
@@ -671,7 +674,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 				log.Strings("outcome_id", outcomeIDs))
 			return err
 		}
-		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, outcomeIDs)
+		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, ancestorIDs)
 		if err != nil {
 			log.Error(ctx, "BulkDelLearningOutcome: UnbindOutcomes failed",
 				log.String("op", operator.UserID),
@@ -1172,23 +1175,51 @@ func (ocm OutcomeModel) HasLockedOutcome(ctx context.Context, operator *entity.O
 	return false, nil
 }
 
+func (ocm OutcomeModel) GetLatestOutcomesByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestorIDs []string) (outcomes []*entity.Outcome, err error) {
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, outcomes, err = da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
+			AncestorIDs:   dbo.NullStrings{Strings: ancestorIDs, Valid: true},
+			PublishStatus: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished}, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByAncestors: SearchOutcome failed",
+				log.Err(err),
+				log.String("op", op.UserID),
+				log.Strings("ancestor", ancestorIDs))
+			return err
+		}
+		err = ocm.fillAttach(ctx, op, tx, outcomes)
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByAncestors: fillAttach failed",
+				log.Err(err),
+				log.String("op", op.UserID),
+				log.Strings("ancestor", ancestorIDs))
+			return err
+		}
+		return nil
+	})
+	return
+}
+
 func (ocm OutcomeModel) fillAttach(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomes []*entity.Outcome) error {
-	masterIDs := make([]string, len(outcomes))
-	for i := range outcomes {
-		masterIDs[i] = outcomes[i].ID
-	}
-	attaches, err := da.GetAttachDA().SearchAttaches(ctx, tx, entity.AttachOutcomeTable, masterIDs, entity.OutcomeType)
-	if err != nil {
-		log.Error(ctx, "GetLatestOutcomesByIDs: fillAttach failed",
-			log.Err(err),
-			log.String("op", operator.UserID),
-			log.Any("outcomes", outcomes))
-		return err
-	}
-	for i := range attaches {
-		for j := range outcomes {
-			outcomes[j].FillAttach([]*entity.Attach{attaches[i]})
-			break
+	if len(outcomes) > 0 {
+		masterIDs := make([]string, len(outcomes))
+		for i := range outcomes {
+			masterIDs[i] = outcomes[i].ID
+		}
+		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachOutcomeTable, masterIDs, entity.OutcomeType)
+		if err != nil {
+			log.Error(ctx, "fillAttach: Search failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.Any("outcomes", outcomes))
+			return err
+		}
+		for i := range attaches {
+			for j := range outcomes {
+				outcomes[j].FillAttach([]*entity.Attach{attaches[i]})
+				break
+			}
 		}
 	}
 	return nil

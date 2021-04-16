@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS `milestones` (
     `locked_by` VARCHAR(50) COMMENT 'who is editing',
     `source_id` VARCHAR(50) COMMENT 'previous version',
     `latest_id` VARCHAR(50) COMMENT 'latest version',
-    `lo_counts` INT NOT NULL DEFAULT  0 COMMENT 'learning outcome counts',
     `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'created_at',
     `update_at` BIGINT NOT NULL DEFAULT 0  COMMENT 'updated_at',
     `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
@@ -24,11 +23,11 @@ CREATE TABLE IF NOT EXISTS `milestones` (
 CREATE TABLE IF NOT EXISTS `milestones_outcomes` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT  'id',
     `milestone_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'milestone',
-    `outcome_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'outcome',
+    `outcome_ancestor` varchar(50) NOT NULL DEFAULT "" COMMENT  'outcome ancestor',
     `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'created_at',
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'updated_at',
     `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
-    UNIQUE KEY `milestone_outcome_id_delete` (`milestone_id`, `outcome_id`, `delete_at`)
+    UNIQUE KEY `milestone_ancestor_id_delete` (`milestone_id`, `outcome_ancestor`, `delete_at`)
 ) COMMENT 'milestones_outcomes' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 CREATE TABLE IF NOT EXISTS `milestones_attaches` (
