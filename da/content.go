@@ -196,7 +196,7 @@ func (s *ContentConditionInternal) GetConditions() ([]string, []interface{}) {
 	}
 
 	if len(s.Program) > 0 {
-		conditions = append(conditions, "(id in (SELECT content_id FROM cms_content_properties WHERE property_type=? AND property_id = ?))")
+		conditions = append(conditions, "(EXISTS (SELECT 1 FROM cms_content_properties WHERE property_type=? AND property_id = ? AND cms_content_properties.content_id=cms_contents.content_id))")
 		params = append(params, entity.ContentPropertyTypeProgram)
 		params = append(params, s.Program)
 	}

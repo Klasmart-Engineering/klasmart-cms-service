@@ -1733,7 +1733,7 @@ func (rm *reportModel) getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx cont
 	return rm.getAttendanceIDsExistMap(assessmentAttendances), nil
 }
 
-func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]*entity.SubContentsWithName, error) {
+func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]*SubContentsWithName, error) {
 	materialsMap, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, tx, lessonPlanIDs, operator)
 	switch {
 	case err == dbo.ErrRecordNotFound:
@@ -1752,7 +1752,7 @@ func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DB
 		return nil, err
 	}
 	var (
-		materials           []*entity.SubContentsWithName
+		materials           []*SubContentsWithName
 		materialIDsExistMap = map[string]bool{}
 	)
 	for _, items := range materialsMap {
@@ -1766,7 +1766,7 @@ func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DB
 		}
 	}
 	log.Debug(ctx, "getLessonPlanH5PMaterials: print materials", log.Any("materials", materials))
-	var result []*entity.SubContentsWithName
+	var result []*SubContentsWithName
 	for _, m := range materials {
 		if m == nil {
 			continue

@@ -82,6 +82,12 @@ var (
 	visiblePermissionPending   visiblePermission = "pending"
 )
 
+type SubContentsWithName struct {
+	ID   string      `json:"id"`
+	Name string      `json:"name"`
+	Data ContentData `json:"data"`
+}
+
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
@@ -102,8 +108,8 @@ type IContentModel interface {
 
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error)
-	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error)
+	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error)
+	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
@@ -131,7 +137,7 @@ type IContentModel interface {
 	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error)
 
-	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error)
+	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error)
 	ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
 	BatchConvertContentObj(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
 
@@ -1462,13 +1468,13 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	return nil
 }
 
-func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error) {
+func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error) {
 	objs, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.Strings("cids", cids))
 		return nil, err
 	}
-	contentInfoMap := make(map[string][]*entity.SubContentsWithName)
+	contentInfoMap := make(map[string][]*SubContentsWithName)
 	for _, obj := range objs {
 		cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 		if err != nil {
@@ -1495,7 +1501,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			ret := make([]*entity.SubContentsWithName, 0)
+			ret := make([]*SubContentsWithName, 0)
 			v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 				if l.Material != nil {
 					cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
@@ -1506,7 +1512,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 							log.Any("subContent", l.Material))
 						return
 					}
-					ret = append(ret, &entity.SubContentsWithName{
+					ret = append(ret, &SubContentsWithName{
 						ID:   l.Material.ID,
 						Name: l.Material.Name,
 						Data: cd0,
@@ -1517,7 +1523,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *MaterialData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*entity.SubContentsWithName{
+			ret := []*SubContentsWithName{
 				{
 					ID:   obj.ID,
 					Name: obj.Name,
@@ -1528,7 +1534,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *AssetsData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*entity.SubContentsWithName{
+			ret := []*SubContentsWithName{
 				{
 					ID:   obj.ID,
 					Name: obj.Name,
@@ -1542,7 +1548,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 	return contentInfoMap, nil
 }
 
-func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error) {
+func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
@@ -1583,7 +1589,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
 		}
-		ret := make([]*entity.SubContentsWithName, 0)
+		ret := make([]*SubContentsWithName, 0)
 		v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 			if l.Material != nil {
 				cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
@@ -1594,7 +1600,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 						log.Any("subContent", l.Material))
 					return
 				}
-				ret = append(ret, &entity.SubContentsWithName{
+				ret = append(ret, &SubContentsWithName{
 					ID:   l.Material.ID,
 					Name: l.Material.Name,
 					Data: cd0,
@@ -1605,7 +1611,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *MaterialData:
 		//若不存在子内容，则返回当前内容
 		//if sub contents is not exists, return current content
-		ret := []*entity.SubContentsWithName{
+		ret := []*SubContentsWithName{
 			{
 				ID:   cid,
 				Name: obj.Name,
@@ -1616,7 +1622,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *AssetsData:
 		//若不存在子内容，则返回当前内容
 		//if sub contents is not exists, return current content
-		ret := []*entity.SubContentsWithName{
+		ret := []*SubContentsWithName{
 			{
 				ID:   cid,
 				Name: obj.Name,

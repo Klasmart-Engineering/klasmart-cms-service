@@ -12,8 +12,21 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
-	var contentData entity.ContentData
+type ContentData interface {
+	Unmarshal(ctx context.Context, data string) error
+	Marshal(ctx context.Context) (string, error)
+
+	Validate(ctx context.Context, contentType entity.ContentType) error
+	PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error
+	PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error
+	PrepareVersion(ctx context.Context) error
+	SubContentIDs(ctx context.Context) []string
+
+	ReplaceContentIDs(ctx context.Context, IDMap map[string]string)
+}
+
+func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error) {
+	var contentData ContentData
 	switch contentType {
 	case entity.ContentTypePlan:
 		contentData = new(LessonData)

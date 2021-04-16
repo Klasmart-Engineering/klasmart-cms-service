@@ -1,10 +1,8 @@
 package entity
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"reflect"
 	"strings"
 
@@ -457,12 +455,6 @@ type ContentName struct {
 	ContentType ContentType `json:"content_type"`
 }
 
-type SubContentsWithName struct {
-	ID   string      `json:"id"`
-	Name string      `json:"name"`
-	Data ContentData `json:"data"`
-}
-
 //Content in folder
 type FolderContent struct {
 	ID              string      `json:"id"`
@@ -550,19 +542,6 @@ type ContentInfo struct {
 
 type ExtraDataInRequest struct {
 	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
-}
-
-type ContentData interface {
-	Unmarshal(ctx context.Context, data string) error
-	Marshal(ctx context.Context) (string, error)
-
-	Validate(ctx context.Context, contentType ContentType) error
-	PrepareResult(ctx context.Context, tx *dbo.DBContext, content *ContentInfo, operator *Operator) error
-	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
-	PrepareVersion(ctx context.Context) error
-	SubContentIDs(ctx context.Context) []string
-
-	ReplaceContentIDs(ctx context.Context, IDMap map[string]string)
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {
