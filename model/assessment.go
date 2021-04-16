@@ -215,7 +215,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 	}
 
 	// fill room id and class name from schedule
-	schedule, err := GetScheduleModel().GetVariableDataByID(ctx, operator, assessment.ScheduleID, nil)
+	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{assessment.ScheduleID}, nil)
 	if err != nil {
 		log.Error(ctx, "Get: GetScheduleModel().GetByID: get failed",
 			log.Err(err),
@@ -224,6 +224,12 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		)
 		return nil, err
 	}
+	if len(schedules) <= 0 {
+		log.Info(ctx, "schedule not found", log.String("schedule id", assessment.ScheduleID))
+		return nil, constant.ErrRecordNotFound
+	}
+	schedule := schedules[0]
+
 	result.RoomID = schedule.RoomID
 	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID})
 	if err != nil {

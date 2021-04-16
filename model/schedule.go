@@ -57,35 +57,10 @@ type IScheduleModel interface {
 	GetRosterClassNotStartScheduleIDs(ctx context.Context, rosterClassID string, userIDs []string) ([]string, error)
 	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
-	GetVariableDataByID(ctx context.Context, op *entity.Operator, id string, include *entity.ScheduleInclude) (*entity.ScheduleVariable, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
-}
-
-func (s *scheduleModel) GetVariableDataByID(ctx context.Context, op *entity.Operator, id string, include *entity.ScheduleInclude) (*entity.ScheduleVariable, error) {
-	schedule, err := s.GetPlainByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	result := new(entity.ScheduleVariable)
-	result.RoomID = schedule.ID
-	result.Schedule = schedule.Schedule
-	if include == nil {
-		return result, nil
-	}
-
-	if include.Subject {
-		subjects, err := GetScheduleRelationModel().GetSubjects(ctx, op, id)
-		if err != nil {
-			return nil, err
-		}
-		result.Subjects = subjects
-	}
-
-	return result, nil
 }
 
 func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error) {
