@@ -50,7 +50,6 @@ type IScheduleModel interface {
 	GetScheduleIDsByCondition(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, condition *entity.ScheduleIDsCondition) ([]string, error)
 	GetScheduleIDsByOrgID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, orgID string) ([]string, error)
 	VerifyLessonPlanAuthed(ctx context.Context, operator *entity.Operator, lessonPlanID string) (bool, error)
-	GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error)
 	GetByIDs(ctx context.Context, op *entity.Operator, ids []string) ([]*entity.SchedulePlain, error)
 	UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error)
 	GetPrograms(ctx context.Context, op *entity.Operator) ([]*entity.ScheduleShortInfo, error)
@@ -61,10 +60,6 @@ type IScheduleModel interface {
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
-}
-
-func (s *scheduleModel) GetScheduleRealTimeStatus(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleRealTimeView, error) {
-	panic("implement me")
 }
 
 func (s *scheduleModel) UpdateScheduleShowOption(ctx context.Context, op *entity.Operator, scheduleID string, option entity.ScheduleShowOption) (string, error) {
