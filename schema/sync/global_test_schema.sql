@@ -205,7 +205,7 @@ CREATE TABLE `cms_content_properties` (
   PRIMARY KEY (`id`),
   KEY `cms_content_properties_content_id_idx` (`content_id`),
   KEY `cms_content_properties_property_type_idx` (`property_type`)
-) ENGINE=InnoDB AUTO_INCREMENT=98731 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
+) ENGINE=InnoDB AUTO_INCREMENT=99312 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -222,7 +222,7 @@ CREATE TABLE `cms_content_visibility_settings` (
   PRIMARY KEY (`id`),
   KEY `cms_content_visibility_settings_content_id_idx` (`content_id`),
   KEY `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
-) ENGINE=InnoDB AUTO_INCREMENT=16458 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
+) ENGINE=InnoDB AUTO_INCREMENT=16539 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -544,6 +544,76 @@ CREATE TABLE `migrate_record` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `milestones`
+--
+
+DROP TABLE IF EXISTS `milestones`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `milestones` (
+  `id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'name',
+  `shortcode` char(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'shortcode',
+  `organization_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'org id',
+  `author_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'author id',
+  `status` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'status',
+  `describe` text COLLATE utf8mb4_unicode_ci COMMENT 'description',
+  `ancestor_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'ancestor',
+  `locked_by` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'who is editing',
+  `source_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'previous version',
+  `latest_id` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'latest version',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
+  PRIMARY KEY (`id`),
+  FULLTEXT KEY `fullindex_name_shortcode_describe` (`name`,`shortcode`,`describe`),
+  FULLTEXT KEY `fullindex_name` (`name`),
+  FULLTEXT KEY `fullindex_shortcode` (`shortcode`),
+  FULLTEXT KEY `fullindex_describe` (`describe`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='milestones';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `milestones_attaches`
+--
+
+DROP TABLE IF EXISTS `milestones_attaches`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `milestones_attaches` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `master_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'master resource',
+  `attach_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'attach resource',
+  `attach_type` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'attach type',
+  `master_type` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'master type',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `master_attach_delete` (`master_id`,`attach_id`,`attach_type`,`master_type`,`delete_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='milestones_attaches';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `milestones_outcomes`
+--
+
+DROP TABLE IF EXISTS `milestones_outcomes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `milestones_outcomes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `milestone_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'milestone',
+  `outcome_ancestor` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'outcome ancestor',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `milestone_ancestor_id_delete` (`milestone_id`,`outcome_ancestor`,`delete_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='milestones_outcomes';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `organizations_properties`
 --
 
@@ -584,6 +654,27 @@ CREATE TABLE `organizations_regions` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `outcomes_attaches`
+--
+
+DROP TABLE IF EXISTS `outcomes_attaches`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `outcomes_attaches` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `master_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'master resource',
+  `attach_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'attach resource',
+  `attach_type` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'attach type',
+  `master_type` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'master type',
+  `create_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'created_at',
+  `update_at` bigint(20) NOT NULL DEFAULT '0' COMMENT 'updated_at',
+  `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `master_attach_delete` (`master_id`,`attach_id`,`attach_type`,`master_type`,`delete_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_attaches';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `outcomes_attendances`
 --
 
@@ -618,7 +709,7 @@ CREATE TABLE `outcomes_sets` (
   `delete_at` bigint(20) DEFAULT NULL COMMENT 'deleted_at',
   PRIMARY KEY (`id`),
   UNIQUE KEY `outcome_set_id_delete` (`outcome_id`,`set_id`,`delete_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=1031 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
+) ENGINE=InnoDB AUTO_INCREMENT=1043 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='outcomes_sets';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -922,4 +1013,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-04-14 17:00:34
+-- Dump completed on 2021-04-17 17:00:34
