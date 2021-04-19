@@ -386,7 +386,6 @@ func (f *FolderModel) addSharedFolderAndAuthedContent(ctx context.Context, tx *d
 					OrgID:        sharedFolderPendingOrgsMap[folders[i].ID].AddOrgs[k],
 				})
 			}
-
 		}
 	}
 

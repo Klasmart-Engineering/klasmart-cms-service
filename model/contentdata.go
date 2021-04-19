@@ -12,8 +12,21 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
-	var contentData entity.ContentData
+type ContentData interface {
+	Unmarshal(ctx context.Context, data string) error
+	Marshal(ctx context.Context) (string, error)
+
+	Validate(ctx context.Context, contentType entity.ContentType) error
+	PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error
+	PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error
+	PrepareVersion(ctx context.Context) error
+	SubContentIDs(ctx context.Context) []string
+
+	ReplaceContentIDs(ctx context.Context, IDMap map[string]string)
+}
+
+func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error) {
+	var contentData ContentData
 	switch contentType {
 	case entity.ContentTypePlan:
 		contentData = new(LessonData)
@@ -31,15 +44,15 @@ func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entit
 	return contentData, nil
 }
 
-func (c *ContentModel) ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
-	res, err := c.BatchConvertContentObj(ctx, []*entity.Content{obj}, operator)
+func (c *ContentModel) ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
+	res, err := c.BatchConvertContentObj(ctx, tx, []*entity.Content{obj}, operator)
 	if err != nil {
 		return nil, err
 	}
 	return res[0], nil
 }
 
-func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
+func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
 	if len(objs) < 1 {
 		return nil, nil
 	}
@@ -48,13 +61,15 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entit
 		contentIDs[i] = objs[i].ID
 	}
 
-	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), contentIDs)
+	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, tx, contentIDs)
 	if err != nil {
 		log.Error(ctx, "BatchGetByContentIDList",
 			log.Err(err),
 			log.Strings("ids", contentIDs))
 		return nil, err
 	}
+	log.Info(ctx, "BatchGetByContentIDList result",
+		log.Any("contentProperties", contentProperties))
 
 	res := make([]*entity.ContentInfo, 0)
 	for _, obj := range objs {
@@ -108,7 +123,6 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entit
 				skills = append(skills, contentProperties[i].PropertyID)
 			}
 		}
-
 		if obj.Keywords != "" {
 			keywords = strings.Split(obj.Keywords, constant.StringArraySeparator)
 		}
@@ -119,6 +133,13 @@ func (c *ContentModel) BatchConvertContentObj(ctx context.Context, objs []*entit
 			rejectReason = strings.Split(obj.RejectReason, constant.StringArraySeparator)
 		}
 
+		log.Info(ctx, "content properties",
+			log.String("program", program),
+			log.Strings("subjects", subjects),
+			log.Strings("developmentals", developmentals),
+			log.Strings("skills", skills),
+			log.Strings("ages", ages),
+			log.Strings("grades", grades))
 		cm := &entity.ContentInfo{
 			ID:                 obj.ID,
 			ContentType:        obj.ContentType,
