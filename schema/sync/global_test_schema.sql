@@ -48,9 +48,9 @@ CREATE TABLE `assessments` (
   `id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
   `schedule_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'schedule id',
   `title` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'title',
-  `program_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'program id',
-  `subject_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'subject id',
-  `teacher_ids` json NOT NULL COMMENT 'teacher id',
+  `program_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'DEPRECATED: program id',
+  `subject_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT 'DEPRECATED: subject id',
+  `teacher_ids` json DEFAULT NULL COMMENT 'DEPRECATED: teacher ids',
   `class_length` int(11) NOT NULL COMMENT 'class length (util: minute)',
   `class_end_time` bigint(20) NOT NULL COMMENT 'class end time (unix seconds)',
   `complete_time` bigint(20) NOT NULL COMMENT 'complete time (unix seconds)',
@@ -205,7 +205,7 @@ CREATE TABLE `cms_content_properties` (
   PRIMARY KEY (`id`),
   KEY `cms_content_properties_content_id_idx` (`content_id`),
   KEY `cms_content_properties_property_type_idx` (`property_type`)
-) ENGINE=InnoDB AUTO_INCREMENT=99312 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
+) ENGINE=InnoDB AUTO_INCREMENT=99334 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content properties';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -222,7 +222,7 @@ CREATE TABLE `cms_content_visibility_settings` (
   PRIMARY KEY (`id`),
   KEY `cms_content_visibility_settings_content_id_idx` (`content_id`),
   KEY `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
-) ENGINE=InnoDB AUTO_INCREMENT=16539 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
+) ENGINE=InnoDB AUTO_INCREMENT=16543 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='cms content visibility settings';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1013,4 +1013,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-04-17 17:00:34
+-- Dump completed on 2021-04-19  3:32:57
