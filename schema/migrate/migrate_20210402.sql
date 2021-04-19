@@ -34,5 +34,3 @@ CREATE UNIQUE INDEX uq_assessments_contents_outcomes ON assessments_contents_out
 ALTER TABLE assessments MODIFY `program_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'DEPRECATED: program id';
 ALTER TABLE assessments MODIFY `subject_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'DEPRECATED: subject id';
 ALTER TABLE assessments MODIFY `teacher_ids` JSON NULL COMMENT 'DEPRECATED: teacher ids';
-
-废弃 assessments 表 programe_id、subject_Id 和 teacher_ids.
