@@ -309,7 +309,7 @@ exists(select 1 from %s as b where b.relation_id in (?) and schedule_id = b.sche
 		}
 	}
 	if c.ScheduleIDs.Valid {
-		wheres = append(wheres, "schedule_ids in (?)")
+		wheres = append(wheres, "schedule_id in (?)")
 		params = append(params, c.ScheduleIDs.Strings)
 	}
 	return wheres, params
