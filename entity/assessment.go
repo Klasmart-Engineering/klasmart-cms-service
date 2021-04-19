@@ -70,7 +70,6 @@ type AssessmentDetail struct {
 	Plan               AssessmentContentView    `json:"plan"`
 	Materials          []*AssessmentContentView `json:"materials"`
 	OutcomeAttendances []*OutcomeAttendances    `json:"outcome_attendances"`
-	NumberOfOutcomes   int                      `json:"number_of_outcomes"`
 }
 
 type OutcomeAttendances struct {

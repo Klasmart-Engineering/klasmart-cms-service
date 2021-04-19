@@ -112,9 +112,6 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		for _, o := range assessmentOutcomes {
 			assessmentOutcomeMap[o.OutcomeID] = *o
 			outcomeIDs = append(outcomeIDs, o.OutcomeID)
-			if o.Checked {
-				result.NumberOfOutcomes++
-			}
 		}
 		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, outcomeIDs); err != nil {
 			log.Error(ctx, "Get: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
@@ -433,14 +430,13 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 
 	// fill students and teachers
 	var (
-		assessmentAttendances    []*entity.AssessmentAttendance
-		assessmentAttendancesMap = map[string]*entity.AssessmentAttendance{}
-		studentIDs               []string
-		studentNameMap           map[string]string
-		assessmentStudentsMap    = map[string][]*entity.AssessmentAttendance{}
-		teacherIDs               []string
-		teacherNameMap           map[string]string
-		assessmentTeachersMap    = map[string][]*entity.AssessmentAttendance{}
+		assessmentAttendances []*entity.AssessmentAttendance
+		studentIDs            []string
+		studentNameMap        map[string]string
+		assessmentStudentsMap = map[string][]*entity.AssessmentAttendance{}
+		teacherIDs            []string
+		teacherNameMap        map[string]string
+		assessmentTeachersMap = map[string][]*entity.AssessmentAttendance{}
 	)
 	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
 		AssessmentIDs: assessmentIDs,
@@ -453,8 +449,8 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 		)
 		return nil, err
 	}
+	sort.Sort(AssessmentAttendanceOrderByOrigin(assessmentAttendances))
 	for _, a := range assessmentAttendances {
-		assessmentAttendancesMap[a.AttendanceID] = a
 		switch a.Role {
 		case entity.AssessmentAttendanceRoleStudent:
 			studentIDs = append(studentIDs, a.AttendanceID)
@@ -1525,6 +1521,28 @@ func (c *AssessmentPermissionChecker) HasP439(ctx context.Context) (bool, error)
 		return false, err
 	}
 	return hasP439, nil
+}
+
+// endregion
+
+// region order
+
+type AssessmentAttendanceOrderByOrigin []*entity.AssessmentAttendance
+
+func (a AssessmentAttendanceOrderByOrigin) Len() int {
+	return len(a)
+}
+
+func (a AssessmentAttendanceOrderByOrigin) Less(i, j int) bool {
+	if a[i].Origin == entity.AssessmentAttendanceOriginParticipants &&
+		a[j].Origin == entity.AssessmentAttendanceOriginClassRoaster {
+		return false
+	}
+	return true
+}
+
+func (a AssessmentAttendanceOrderByOrigin) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
 }
 
 // endregion
