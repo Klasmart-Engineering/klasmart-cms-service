@@ -31,3 +31,8 @@ CREATE UNIQUE INDEX uq_assessments_attendances_assessment_id_attendance_id on as
 DROP INDEX uq_assessments_contents_outcomes_assessment_id_content_id ON assessments_contents_outcomes;
 CREATE UNIQUE INDEX uq_assessments_contents_outcomes ON assessments_contents_outcomes(`assessment_id`, `content_id`, `outcome_id`);
 
+ALTER TABLE assessments MODIFY `program_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'DEPRECATED: program id';
+ALTER TABLE assessments MODIFY `subject_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'DEPRECATED: subject id';
+ALTER TABLE assessments MODIFY `teacher_ids` JSON NULL COMMENT 'DEPRECATED: teacher ids';
+
+废弃 assessments 表 programe_id、subject_Id 和 teacher_ids.
