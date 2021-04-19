@@ -112,9 +112,6 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		for _, o := range assessmentOutcomes {
 			assessmentOutcomeMap[o.OutcomeID] = *o
 			outcomeIDs = append(outcomeIDs, o.OutcomeID)
-			if o.Checked {
-				result.NumberOfOutcomes++
-			}
 		}
 		if outcomes, err = GetOutcomeModel().GetLearningOutcomesByIDs(ctx, operator, tx, outcomeIDs); err != nil {
 			log.Error(ctx, "Get: GetOutcomeModel().GetLearningOutcomesByIDs: get failed",
