@@ -21,7 +21,7 @@ func (Assessment) TableName() string {
 type AssessmentView struct {
 	*Assessment
 	Program  AssessmentProgram    `json:"program"`
-	Subjects []*AssessmentSubject `json:"subject"`
+	Subjects []*AssessmentSubject `json:"subjects"`
 	Teachers []*AssessmentTeacher `json:"teachers"`
 	Students []*AssessmentStudent `json:"students"`
 }
@@ -30,7 +30,7 @@ type AssessmentItem struct {
 	ID           string               `json:"id"`
 	Title        string               `json:"title"`
 	Program      AssessmentProgram    `json:"program"`
-	Subjects     []*AssessmentSubject `json:"subject"`
+	Subjects     []*AssessmentSubject `json:"subjects"`
 	Teachers     []*AssessmentTeacher `json:"teachers"`
 	ClassEndTime int64                `json:"class_end_time"`
 	CompleteTime int64                `json:"complete_time"`
@@ -62,7 +62,7 @@ type AssessmentDetail struct {
 	Teachers     []*AssessmentTeacher `json:"teachers"`
 	Students     []*AssessmentStudent `json:"students"`
 	Program      AssessmentProgram    `json:"program"`
-	Subjects     []*AssessmentSubject `json:"subject"`
+	Subjects     []*AssessmentSubject `json:"subjects"`
 	ClassEndTime int64                `json:"class_end_time"`
 	ClassLength  int                  `json:"class_length"`
 	RoomID       string               `json:"room_id"`
