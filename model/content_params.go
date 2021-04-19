@@ -14,7 +14,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string {
+func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d ContentData) string {
 	if c.ContentType == entity.ContentTypePlan {
 		return constant.SourceTypeLesson
 	}

@@ -705,15 +705,15 @@ func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content 
 	for i := range schools {
 		orgs = append(orgs, schools[i].ID)
 	}
+	visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
+	if err != nil {
+		log.Error(ctx, "GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", content.ID))
+		return false, err
+	}
 	log.Info(ctx, "user orgs with permission", log.Strings("orgs", orgs), log.String("permission", string(permission)), log.Any("user", op), log.Any("content", content))
 	for i := range orgs {
-		visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
-		if err != nil {
-			log.Error(ctx, "GetContentVisibilitySettings failed",
-				log.Err(err),
-				log.String("cid", content.ID))
-			return false, err
-		}
 		if utils.ContainsStr(visibilitySettings, orgs[i]) {
 			return true, nil
 		}

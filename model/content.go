@@ -82,6 +82,12 @@ var (
 	visiblePermissionPending   visiblePermission = "pending"
 )
 
+type SubContentsWithName struct {
+	ID   string      `json:"id"`
+	Name string      `json:"name"`
+	Data ContentData `json:"data"`
+}
+
 type IContentModel interface {
 	CreateContent(ctx context.Context, tx *dbo.DBContext, c entity.CreateContentRequest, operator *entity.Operator) (string, error)
 	UpdateContent(ctx context.Context, tx *dbo.DBContext, cid string, data entity.CreateContentRequest, user *entity.Operator) error
@@ -102,8 +108,8 @@ type IContentModel interface {
 
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
-	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error)
-	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error)
+	GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error)
+	GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error)
 
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
@@ -131,9 +137,9 @@ type IContentModel interface {
 	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error)
 
-	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error)
-	ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
-	BatchConvertContentObj(ctx context.Context, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
+	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error)
+	ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error)
+	BatchConvertContentObj(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error)
 
 	PublishContentWithAssetsTx(ctx context.Context, cid string, scope []string, user *entity.Operator) error
 	LockContentTx(ctx context.Context, cid string, user *entity.Operator) (string, error)
@@ -326,7 +332,7 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
-	response, err := cm.BatchConvertContentObj(ctx, objs, user)
+	response, err := cm.BatchConvertContentObj(ctx, tx, objs, user)
 	if err != nil {
 		log.Error(ctx, "Can't parse contentdata, contentID: %v, error: %v", log.Any("objs", objs), log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -347,7 +353,7 @@ func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBConte
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
-	response, err := cm.BatchConvertContentObj(ctx, objs, user)
+	response, err := cm.BatchConvertContentObj(ctx, tx, objs, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -871,6 +877,37 @@ func (cm *ContentModel) doCopyContent(ctx context.Context, tx *dbo.DBContext, co
 			log.String("uid", op.UserID))
 		return "", err
 	}
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", content.ID))
+		return "", ErrInvalidContentData
+	}
+	contentProperties.ContentID = id
+	err = cm.doCreateContentProperties(ctx, tx, *contentProperties, false)
+	if err != nil {
+		log.Warn(ctx, "doCreateContentProperties failed",
+			log.Err(err),
+			log.Any("contentProperties", contentProperties),
+			log.String("cid", content.ID))
+		return "", err
+	}
+
+	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID))
+		return "", ErrInvalidContentData
+	}
+	err = cm.insertContentVisibilitySettings(ctx, tx, id, contentVisibilitySettings.VisibilitySettings)
+	if err != nil {
+		log.Warn(ctx, "insertContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID),
+			log.Strings("VisibilitySettings", contentVisibilitySettings.VisibilitySettings))
+		return "", ErrInvalidContentData
+	}
+
 	return id, nil
 }
 
@@ -1165,6 +1202,13 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		return ErrInvalidContentData
 	}
 
+	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, content.ID)
+	if err != nil {
+		log.Warn(ctx, "getContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", content.ID))
+		return ErrInvalidContentData
+	}
+
 	//create content data object
 	cd, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
 	if err != nil {
@@ -1193,19 +1237,20 @@ func (cm *ContentModel) doPublishPlanWithAssets(ctx context.Context, tx *dbo.DBC
 		}
 		//创建assets
 		req := entity.CreateContentRequest{
-			ContentType: entity.ContentTypeAssets,
-			Name:        content.Name,
-			Keywords:    append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
-			Description: content.Description,
-			Thumbnail:   "",
-			SuggestTime: 0,
-			Program:     contentProperties.Program,
-			Subject:     contentProperties.Subject,
-			Category:    contentProperties.Category,
-			SubCategory: contentProperties.SubCategory,
-			Age:         contentProperties.Age,
-			Grade:       contentProperties.Grade,
-			Data:        assetsDataJSON,
+			ContentType:  entity.ContentTypeAssets,
+			Name:         content.Name,
+			Keywords:     append(utils.StringToStringArray(ctx, content.Keywords), constant.TeacherManualAssetsKeyword),
+			Description:  content.Description,
+			Thumbnail:    "",
+			SuggestTime:  0,
+			Program:      contentProperties.Program,
+			Subject:      contentProperties.Subject,
+			Category:     contentProperties.Category,
+			SubCategory:  contentProperties.SubCategory,
+			Age:          contentProperties.Age,
+			Grade:        contentProperties.Grade,
+			PublishScope: contentVisibilitySettings.VisibilitySettings,
+			Data:         assetsDataJSON,
 		}
 		_, err = cm.CreateContent(ctx, tx, req, user)
 		if err != nil {
@@ -1363,7 +1408,45 @@ func (cm *ContentModel) CloneContent(ctx context.Context, tx *dbo.DBContext, cid
 		log.Error(ctx, "clone contentdata failed", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
 		return "", err
 	}
+	//load content properties
+	contentProperties, err := cm.getContentProperties(ctx, cid)
+	if err != nil {
+		log.Warn(ctx, "getContentProperties failed",
+			log.Err(err), log.String("cid", cid))
+		return "", ErrInvalidContentData
+	}
+	log.Info(ctx, "getContentProperties",
+		log.Any("contentProperties", contentProperties),
+		log.String("cid", cid))
 
+	contentProperties.ContentID = id
+	err = cm.doCreateContentProperties(ctx, tx, *contentProperties, false)
+	if err != nil {
+		log.Warn(ctx, "doCreateContentProperties failed",
+			log.Err(err),
+			log.Any("contentProperties", contentProperties),
+			log.String("cid", cid))
+		return "", err
+	}
+
+	contentVisibilitySettings, err := cm.getContentVisibilitySettings(ctx, cid)
+	if err != nil {
+		log.Warn(ctx, "getContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", cid))
+		return "", ErrInvalidContentData
+	}
+
+	log.Info(ctx, "getContentVisibilitySettings",
+		log.Any("contentVisibilitySettings", contentVisibilitySettings),
+		log.String("cid", cid))
+
+	err = cm.insertContentVisibilitySettings(ctx, tx, id, contentVisibilitySettings.VisibilitySettings)
+	if err != nil {
+		log.Warn(ctx, "insertContentVisibilitySettings failed",
+			log.Err(err), log.String("cid", cid),
+			log.Strings("VisibilitySettings", contentVisibilitySettings.VisibilitySettings))
+		return "", ErrInvalidContentData
+	}
 	da.GetContentRedis().CleanContentCache(ctx, []string{id, obj.ID})
 	return id, nil
 }
@@ -1385,13 +1468,13 @@ func (cm *ContentModel) CheckContentAuthorization(ctx context.Context, tx *dbo.D
 	return nil
 }
 
-func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*entity.SubContentsWithName, error) {
+func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (map[string][]*SubContentsWithName, error) {
 	objs, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.Strings("cids", cids))
 		return nil, err
 	}
-	contentInfoMap := make(map[string][]*entity.SubContentsWithName)
+	contentInfoMap := make(map[string][]*SubContentsWithName)
 	for _, obj := range objs {
 		cd, err := cm.CreateContentData(ctx, obj.ContentType, obj.Data)
 		if err != nil {
@@ -1403,7 +1486,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *LessonData:
 			//存在子内容，则返回子内容
 			//if the content contains sub contents, return sub contents
-			content, err := cm.ConvertContentObj(ctx, obj, user)
+			content, err := cm.ConvertContentObj(ctx, tx, obj, user)
 			if err != nil {
 				log.Error(ctx, "can't parse contentdata", log.Err(err))
 				return nil, ErrParseContentDataFailed
@@ -1413,12 +1496,12 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 				log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			err = v.PrepareResult(ctx, content, user)
+			err = v.PrepareResult(ctx, tx, content, user)
 			if err != nil {
 				log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 				return nil, err
 			}
-			ret := make([]*entity.SubContentsWithName, 0)
+			ret := make([]*SubContentsWithName, 0)
 			v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 				if l.Material != nil {
 					cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
@@ -1429,7 +1512,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 							log.Any("subContent", l.Material))
 						return
 					}
-					ret = append(ret, &entity.SubContentsWithName{
+					ret = append(ret, &SubContentsWithName{
 						ID:   l.Material.ID,
 						Name: l.Material.Name,
 						Data: cd0,
@@ -1440,7 +1523,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *MaterialData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*entity.SubContentsWithName{
+			ret := []*SubContentsWithName{
 				{
 					ID:   obj.ID,
 					Name: obj.Name,
@@ -1451,7 +1534,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 		case *AssetsData:
 			//若不存在子内容，则返回当前内容
 			//if sub contents is not exists, return current content
-			ret := []*entity.SubContentsWithName{
+			ret := []*SubContentsWithName{
 				{
 					ID:   obj.ID,
 					Name: obj.Name,
@@ -1465,7 +1548,7 @@ func (cm *ContentModel) GetContentsSubContentsMapByIDList(ctx context.Context, t
 	return contentInfoMap, nil
 }
 
-func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*entity.SubContentsWithName, error) {
+func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) ([]*SubContentsWithName, error) {
 	obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err != nil {
 		log.Error(ctx, "can't read content", log.Err(err), log.String("cid", cid))
@@ -1491,7 +1574,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *LessonData:
 		//存在子内容，则返回子内容
 		//if the content contains sub contents, return sub contents
-		content, err := cm.ConvertContentObj(ctx, obj, user)
+		content, err := cm.ConvertContentObj(ctx, tx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
@@ -1501,12 +1584,12 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 			log.Error(ctx, "can't prepare version for sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
 		}
-		err = v.PrepareResult(ctx, content, user)
+		err = v.PrepareResult(ctx, tx, content, user)
 		if err != nil {
 			log.Error(ctx, "can't get sub contents", log.Err(err), log.Any("content", content))
 			return nil, err
 		}
-		ret := make([]*entity.SubContentsWithName, 0)
+		ret := make([]*SubContentsWithName, 0)
 		v.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 			if l.Material != nil {
 				cd0, err := cm.CreateContentData(ctx, l.Material.ContentType, l.Material.Data)
@@ -1517,7 +1600,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 						log.Any("subContent", l.Material))
 					return
 				}
-				ret = append(ret, &entity.SubContentsWithName{
+				ret = append(ret, &SubContentsWithName{
 					ID:   l.Material.ID,
 					Name: l.Material.Name,
 					Data: cd0,
@@ -1528,7 +1611,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *MaterialData:
 		//若不存在子内容，则返回当前内容
 		//if sub contents is not exists, return current content
-		ret := []*entity.SubContentsWithName{
+		ret := []*SubContentsWithName{
 			{
 				ID:   cid,
 				Name: obj.Name,
@@ -1539,7 +1622,7 @@ func (cm *ContentModel) GetContentSubContentsByID(ctx context.Context, tx *dbo.D
 	case *AssetsData:
 		//若不存在子内容，则返回当前内容
 		//if sub contents is not exists, return current content
-		ret := []*entity.SubContentsWithName{
+		ret := []*SubContentsWithName{
 			{
 				ID:   cid,
 				Name: obj.Name,
@@ -1588,8 +1671,8 @@ func (cm *ContentModel) GetRawContentByIDList(ctx context.Context, tx *dbo.DBCon
 
 func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	content := da.GetContentRedis().GetContentCacheByID(ctx, cid)
-
 	if content == nil {
+		log.Info(ctx, "Not cached content by id")
 		obj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 		if err == dbo.ErrRecordNotFound {
 			log.Error(ctx, "record not found", log.Err(err), log.String("cid", cid), log.String("uid", user.UserID))
@@ -1599,14 +1682,18 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 			log.Error(ctx, "can't read contentdata", log.Err(err))
 			return nil, err
 		}
-		content, err = cm.ConvertContentObj(ctx, obj, user)
+		content, err = cm.ConvertContentObj(ctx, tx, obj, user)
 		if err != nil {
 			log.Error(ctx, "can't parse contentdata", log.Err(err))
 			return nil, ErrParseContentDataFailed
 		}
 		da.GetContentRedis().SaveContentCache(ctx, content)
 	}
+	log.Info(ctx, "pre fill content details", log.Any("content", content))
+	return cm.fillContentDetails(ctx, tx, content, user)
+}
 
+func (cm *ContentModel) fillContentDetails(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	//补全相关内容
 	//fill related data
 	contentData, err := cm.CreateContentData(ctx, content.ContentType, content.Data)
@@ -1620,7 +1707,7 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 		log.Error(ctx, "can't update contentdata version for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
 	}
-	err = contentData.PrepareResult(ctx, content, user)
+	err = contentData.PrepareResult(ctx, tx, content, user)
 	if err != nil {
 		log.Error(ctx, "can't get contentdata for details", log.Err(err))
 		return nil, ErrParseContentDataDetailsFailed
@@ -1642,7 +1729,6 @@ func (cm *ContentModel) GetContentByID(ctx context.Context, tx *dbo.DBContext, c
 			ContentInfo: *content,
 		}, nil
 	}
-
 	return contentWithDetails[0], nil
 }
 
@@ -1762,7 +1848,7 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
 		return nil, ErrReadContentFailed
 	}
-	res, err := cm.BatchConvertContentObj(ctx, data, user)
+	res, err := cm.BatchConvertContentObj(ctx, tx, data, user)
 	if err != nil {
 		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Any("data", data), log.Err(err))
 		return nil, ErrReadContentFailed
@@ -2172,14 +2258,18 @@ func (cm *ContentModel) ContentDataCount(ctx context.Context, tx *dbo.DBContext,
 
 func (cm *ContentModel) GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error) {
 	var err error
+	log.Info(ctx, "GetVisibleContentByID")
 	cachedContent := da.GetContentRedis().GetContentCacheByID(ctx, cid)
 	if cachedContent != nil {
 		if cachedContent.LatestID == "" {
-			return cm.GetContentByID(ctx, tx, cachedContent.ID, user)
+			log.Info(ctx, "Cached latest content")
+			return cm.fillContentDetails(ctx, tx, cachedContent, user)
 		} else {
+			log.Info(ctx, "Cached content not latest")
 			return cm.GetContentByID(ctx, tx, cachedContent.LatestID, user)
 		}
 	}
+	log.Info(ctx, "Not cached latest content")
 
 	contentObj, err := da.GetContentDA().GetContentByID(ctx, tx, cid)
 	if err == dbo.ErrRecordNotFound {
@@ -2732,6 +2822,23 @@ func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Oper
 	return ret, nil
 }
 
+func (cm *ContentModel) getContentVisibilitySettings(ctx context.Context, cid string) (*entity.ContentVisibilitySettings, error) {
+	contentVisibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), cid)
+	if err != nil {
+		log.Error(ctx, "GetContentVisibilitySettings",
+			log.Err(err),
+			log.String("id", cid))
+		return nil, err
+	}
+	res := &entity.ContentVisibilitySettings{
+		ContentID:          cid,
+		VisibilitySettings: contentVisibilitySettings,
+	}
+	log.Info(ctx, "ContentVisibilitySettings",
+		log.Strings("visibilitySettings", contentVisibilitySettings),
+		log.String("id", cid))
+	return res, nil
+}
 func (cm *ContentModel) getContentProperties(ctx context.Context, cid string) (*entity.ContentProperties, error) {
 	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, dbo.MustGetDB(ctx), []string{cid})
 	if err != nil {
