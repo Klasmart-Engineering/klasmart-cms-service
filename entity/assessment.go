@@ -201,7 +201,7 @@ type AddAssessmentResult struct {
 type UpdateAssessmentArgs struct {
 	ID                 string                          `json:"id"`
 	Action             UpdateAssessmentAction          `json:"action" enums:"save,complete"`
-	AttendanceIDs      *[]string                       `json:"attendance_ids"`
+	StudentIDs         *[]string                       `json:"attendance_ids"`
 	OutcomeAttendances *[]UpdateOutcomeAttendancesArgs `json:"outcome_attendances"`
 	Materials          []UpdateAssessmentMaterialArgs  `json:"materials"`
 }

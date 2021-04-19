@@ -14,8 +14,8 @@ type IAssessmentAttendanceDA interface {
 	GetTeacherIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
 	GetStudentIDsByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]string, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentAttendance) error
-	UncheckByAssessmentID(ctx context.Context, db *dbo.DBContext, assessmentID string) error
-	BatchCheckByAssessmentIDAndAttendanceIDs(ctx context.Context, db *dbo.DBContext, assessmentID string, attendanceIDs []string) error
+	UncheckStudents(ctx context.Context, db *dbo.DBContext, assessmentID string) error
+	BatchCheck(ctx context.Context, db *dbo.DBContext, assessmentID string, attendanceIDs []string) error
 }
 
 var (
@@ -96,8 +96,8 @@ func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContex
 }
 
 // Uncheck all assessment attendances
-func (a *assessmentAttendanceDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
-	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ?", assessmentID).
+func (a *assessmentAttendanceDA) UncheckStudents(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ? and role = ?", assessmentID, entity.AssessmentAttendanceRoleStudent).
 		Update("checked", false).
 		Error; err != nil {
 		log.Error(ctx, "uncheck assessment attendance: update failed",
@@ -109,7 +109,7 @@ func (a *assessmentAttendanceDA) UncheckByAssessmentID(ctx context.Context, tx *
 	return nil
 }
 
-func (a *assessmentAttendanceDA) BatchCheckByAssessmentIDAndAttendanceIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, attendanceIDs []string) error {
+func (a *assessmentAttendanceDA) BatchCheck(ctx context.Context, tx *dbo.DBContext, assessmentID string, attendanceIDs []string) error {
 	if len(attendanceIDs) == 0 {
 		return nil
 	}

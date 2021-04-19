@@ -1028,15 +1028,15 @@ func (m *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		// update assessment attendance check property
-		if args.AttendanceIDs != nil {
-			if err := da.GetAssessmentAttendanceDA().UncheckByAssessmentID(ctx, tx, args.ID); err != nil {
+		if args.StudentIDs != nil {
+			if err := da.GetAssessmentAttendanceDA().UncheckStudents(ctx, tx, args.ID); err != nil {
 				log.Error(ctx, "update assessment: uncheck assessment attendance failed",
 					log.Err(err),
 					log.Any("args", args),
 				)
 				return err
 			}
-			if err := da.GetAssessmentAttendanceDA().BatchCheckByAssessmentIDAndAttendanceIDs(ctx, tx, args.ID, *args.AttendanceIDs); err != nil {
+			if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, *args.StudentIDs); err != nil {
 				log.Error(ctx, "update assessment: check assessment attendance failed",
 					log.Err(err),
 					log.Any("args", args),
@@ -1048,7 +1048,7 @@ func (m *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 		if args.OutcomeAttendances != nil {
 			// update assessment outcomes map
 			if err := da.GetAssessmentOutcomeDA().UncheckByAssessmentID(ctx, tx, args.ID); err != nil {
-				log.Error(ctx, "Update: da.GetAssessmentOutcomeDA().UncheckByAssessmentID: uncheck assessment outcome failed by assessment id",
+				log.Error(ctx, "Update: da.GetAssessmentOutcomeDA().UncheckStudents: uncheck assessment outcome failed by assessment id",
 					log.Err(err),
 					log.Any("args", args),
 					log.String("id", args.ID),
