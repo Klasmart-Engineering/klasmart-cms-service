@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `schedules_relations` (
     `relation_type` varchar(100) DEFAULT NULL COMMENT  'record_type',
     PRIMARY KEY (`id`),
     KEY `idx_schedule_id` (`schedule_id`),
-    KEY `idx_relation_id` (`relation_id`)
+    KEY `idx_relation_id` (`relation_id`),
     KEY `idx_schedule_id_relation_type` (`schedule_id`,`relation_type`)
 ) COMMENT 'schedules_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
@@ -358,7 +358,7 @@ CREATE TABLE `programs` (
     `delete_at` bigint(20) DEFAULT 0 COMMENT 'delete_at',
     PRIMARY KEY (`id`),
     KEY `idx_id_delete` (`id`,`delete_at`),
-    KEY `idx_org_type_delete_at` (`org_type`,`delete_at`)
+    KEY `idx_org_type_delete_at` (`org_type`,`delete_at`),
     KEY `idx_group_name_delete_at` (`group_name`,`delete_at`)
 ) COMMENT 'programs' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
@@ -492,7 +492,7 @@ CREATE TABLE IF NOT EXISTS `home_fun_studies` (
     `latest_feedback_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'latest feedback at (unix seconds)',
     `assess_feedback_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'assess feedback id',
     `assess_score` INT NOT NULL DEFAULT 0 COMMENT 'score',
-    `assess_comment` TEXT NOT NULL DEFAULT '' COMMENT 'text',
+    `assess_comment` TEXT NOT NULL COMMENT 'text',
     `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'create at (unix seconds)',
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'update at (unix seconds)',
     `delete_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'delete at (unix seconds)',
