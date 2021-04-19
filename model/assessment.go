@@ -87,7 +87,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 		Teachers:     view.Teachers,
 		Students:     view.Students,
 		Program:      view.Program,
-		Subject:      view.Subject,
+		Subjects:     view.Subjects,
 		ClassEndTime: assessment.ClassEndTime,
 		ClassLength:  assessment.ClassLength,
 	}
@@ -362,7 +362,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 			ID:           v.ID,
 			Title:        v.Title,
 			Program:      v.Program,
-			Subject:      v.Subject,
+			Subjects:     v.Subjects,
 			Teachers:     v.Teachers,
 			ClassEndTime: v.ClassEndTime,
 			CompleteTime: v.CompleteTime,
@@ -379,17 +379,32 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	var (
 		err           error
 		assessmentIDs []string
+		scheduleIDs   []string
+		schedules     []*entity.ScheduleVariable
+		scheduleMap   = map[string]*entity.ScheduleVariable{}
 		subjectIDs    []string
 		programIDs    []string
 	)
 	for _, a := range assessments {
 		assessmentIDs = append(assessmentIDs, a.ID)
-		if a.SubjectID != "" {
-			subjectIDs = append(subjectIDs, a.SubjectID)
+		scheduleIDs = append(scheduleIDs, a.ScheduleID)
+	}
+
+	if schedules, err = GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{Subject: true}); err != nil {
+		log.Error(ctx, "convertToAssessmentViews: GetScheduleModel().GetVariableDataByIDs: get failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.Strings("program_ids", programIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	for _, s := range schedules {
+		programIDs = append(programIDs, s.ProgramID)
+		for _, subject := range s.Subjects {
+			subjectIDs = append(subjectIDs, subject.ID)
 		}
-		if a.ProgramID != "" {
-			programIDs = append(programIDs, a.ProgramID)
-		}
+		scheduleMap[s.ID] = s
 	}
 
 	// fill program
@@ -405,16 +420,16 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	}
 
 	// fill subject
-	subjectNameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, subjectIDs)
-	if err != nil {
-		log.Error(ctx, "convertToAssessmentViews: external.GetSubjectServiceProvider().BatchGetNameMap: get failed",
-			log.Err(err),
-			log.Strings("assessment_ids", assessmentIDs),
-			log.Strings("subject_ids", subjectIDs),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
+	//subjectNameMap, err := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, subjectIDs)
+	//if err != nil {
+	//	log.Error(ctx, "convertToAssessmentViews: external.GetSubjectServiceProvider().BatchGetNameMap: get failed",
+	//		log.Err(err),
+	//		log.Strings("assessment_ids", assessmentIDs),
+	//		log.Strings("subject_ids", subjectIDs),
+	//		log.Any("operator", operator),
+	//	)
+	//	return nil, err
+	//}
 
 	// fill students and teachers
 	var (
@@ -470,16 +485,19 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 
 	var result []*entity.AssessmentView
 	for _, a := range assessments {
+		s := scheduleMap[a.ScheduleID]
 		v := entity.AssessmentView{
 			Assessment: a,
 			Program: entity.AssessmentProgram{
-				ID:   a.ProgramID,
-				Name: programNameMap[a.ProgramID],
+				ID:   s.ProgramID,
+				Name: programNameMap[s.ProgramID],
 			},
-			Subject: entity.AssessmentSubject{
-				ID:   a.SubjectID,
-				Name: subjectNameMap[a.SubjectID],
-			},
+		}
+		for _, subject := range s.Subjects {
+			v.Subjects = append(v.Subjects, &entity.AssessmentSubject{
+				ID:   subject.ID,
+				Name: subject.Name,
+			})
 		}
 		for _, t := range assessmentTeachersMap[a.ID] {
 			v.Teachers = append(v.Teachers, &entity.AssessmentTeacher{
@@ -631,7 +649,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 			newAssessment = entity.Assessment{
 				ID:         newAssessmentID,
 				ScheduleID: args.ScheduleID,
-				ProgramID:  schedule.ProgramID,
+				//ProgramID:  schedule.ProgramID,
 				// TODO: Medivh
 				//SubjectID:    schedule.SubjectID,
 				ClassLength:  args.ClassLength,

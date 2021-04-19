@@ -4,8 +4,6 @@ type Assessment struct {
 	ID           string           `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
 	ScheduleID   string           `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
 	Title        string           `gorm:"column:title;type:varchar(1024);not null" json:"title"`
-	ProgramID    string           `gorm:"column:program_id;type:varchar(64);not null" json:"program_id"`
-	SubjectID    string           `gorm:"column:subject_id;type:varchar(64);not null" json:"subject"`
 	ClassLength  int              `gorm:"column:class_length;type:int;not null" json:"class_length"`
 	ClassEndTime int64            `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
 	CompleteTime int64            `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
@@ -22,21 +20,21 @@ func (Assessment) TableName() string {
 
 type AssessmentView struct {
 	*Assessment
-	Program      AssessmentProgram   `json:"program"`
-	Subject      AssessmentSubject   `json:"subject"`
-	Teachers     []*AssessmentTeacher `json:"teachers"`
-	Students     []*AssessmentStudent `json:"students"`
+	Program  AssessmentProgram    `json:"program"`
+	Subjects []*AssessmentSubject `json:"subject"`
+	Teachers []*AssessmentTeacher `json:"teachers"`
+	Students []*AssessmentStudent `json:"students"`
 }
 
 type AssessmentItem struct {
-	ID           string              `json:"id"`
-	Title        string              `json:"title"`
-	Program      AssessmentProgram   `json:"program"`
-	Subject      AssessmentSubject   `json:"subject"`
+	ID           string               `json:"id"`
+	Title        string               `json:"title"`
+	Program      AssessmentProgram    `json:"program"`
+	Subjects     []*AssessmentSubject `json:"subject"`
 	Teachers     []*AssessmentTeacher `json:"teachers"`
-	ClassEndTime int64               `json:"class_end_time"`
-	CompleteTime int64               `json:"complete_time"`
-	Status       AssessmentStatus    `json:"status"`
+	ClassEndTime int64                `json:"class_end_time"`
+	CompleteTime int64                `json:"complete_time"`
+	Status       AssessmentStatus     `json:"status"`
 }
 
 type AssessmentStatus string
@@ -64,7 +62,7 @@ type AssessmentDetail struct {
 	Teachers     []*AssessmentTeacher `json:"teachers"`
 	Students     []*AssessmentStudent `json:"students"`
 	Program      AssessmentProgram    `json:"program"`
-	Subject      AssessmentSubject    `json:"subject"`
+	Subjects     []*AssessmentSubject `json:"subject"`
 	ClassEndTime int64                `json:"class_end_time"`
 	ClassLength  int                  `json:"class_length"`
 	RoomID       string               `json:"room_id"`
