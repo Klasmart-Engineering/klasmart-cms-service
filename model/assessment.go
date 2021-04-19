@@ -574,7 +574,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 	var (
 		latestContent   *entity.ContentInfoWithDetails
 		materialIDs     []string
-		materials       []*entity.SubContentsWithName
+		materials       []*SubContentsWithName
 		materialDetails []*entity.ContentInfoWithDetails
 		contents        []*entity.ContentInfoWithDetails
 	)
