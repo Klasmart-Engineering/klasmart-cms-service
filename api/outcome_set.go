@@ -17,8 +17,8 @@ import (
 // @Description Create learning outcome sets
 // @Accept json
 // @Produce json
-// @Param outcome body OutcomeSetCreateView true "create outcome set"
-// @Success 200 {object} OutcomeSetCreateView
+// @Param outcome body model.OutcomeSetCreateView true "create outcome set"
+// @Success 200 {object} model.OutcomeSetCreateView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 401 {object} UnAuthorizedResponse
 // @Failure 403 {object} ForbiddenResponse

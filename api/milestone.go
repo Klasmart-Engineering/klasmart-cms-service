@@ -16,8 +16,8 @@ import (
 // @Description Create milestone
 // @Accept json
 // @Produce json
-// @Param milestone body MilestoneView true "create milestone"
-// @Success 200 {object} MilestoneView
+// @Param milestone body model.MilestoneView true "create milestone"
+// @Success 200 {object} model.MilestoneView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 409 {object} ConflictResponse
@@ -70,7 +70,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param milestone_id path string true "milestone id"
-// @Success 200 {object} MilestoneView
+// @Success 200 {object} model.MilestoneView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -111,7 +111,7 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param milestone_id path string true "milestone id"
-// @Param milestone body MilestoneView true "milestone"
+// @Param milestone body model.MilestoneView true "milestone"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -169,7 +169,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 // @Description delete milestone
 // @Accept json
 // @Produce json
-// @Param milestones body MilestoneList true "delete milestone"
+// @Param milestones body model.MilestoneList true "delete milestone"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -224,7 +224,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} MilestoneSearchResponse
+// @Success 200 {object} model.MilestoneSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -284,7 +284,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param milestone_id path string true "milestone id"
-// @Success 200 {string} MilestoneView
+// @Success 200 {string} model.MilestoneView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -336,7 +336,7 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 // @Description publish milestone
 // @Accept json
 // @Produce json
-// @Param milestones body MilestoneList true "publish milestone"
+// @Param milestones body model.MilestoneList true "publish milestone"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse

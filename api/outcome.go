@@ -21,8 +21,8 @@ import (
 // @Description Create learning outcomes
 // @Accept json
 // @Produce json
-// @Param outcome body OutcomeCreateView true "create outcome"
-// @Success 200 {object} OutcomeCreateResponse
+// @Param outcome body model.OutcomeCreateView true "create outcome"
+// @Success 200 {object} model.OutcomeCreateResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -74,7 +74,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Success 200 {object} OutcomeView
+// @Success 200 {object} model.OutcomeView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -118,7 +118,7 @@ func (s *Server) getOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Param outcome body OutcomeCreateView true "learning outcome"
+// @Param outcome body model.OutcomeCreateView true "learning outcome"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -220,7 +220,7 @@ func (s *Server) deleteOutcome(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} OutcomeSearchResponse
+// @Success 200 {object} model.OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -289,7 +289,7 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Success 200 {string} OutcomeLockResponse
+// @Success 200 {string} model.OutcomeLockResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -342,7 +342,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Param PublishOutcomeRequest body PublishOutcomeReq false "publish scope"
+// @Param PublishOutcomeRequest body model.PublishOutcomeReq false "publish scope"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -437,7 +437,7 @@ func (s *Server) approveOutcome(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param outcome_id path string true "outcome id"
-// @Param OutcomeRejectReq body OutcomeRejectReq true "reject reason"
+// @Param OutcomeRejectReq body model.OutcomeRejectReq true "reject reason"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -489,7 +489,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 // @Description approve learning outcomes
 // @Accept json
 // @Produce json
-// @Param id_list body OutcomeIDList true "outcome id list"
+// @Param id_list body model.OutcomeIDList true "outcome id list"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -551,7 +551,7 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 // @Description reject learning outcomes
 // @Accept json
 // @Produce json
-// @Param bulk_reject_list body OutcomeBulkRejectRequest true "outcome id list"
+// @Param bulk_reject_list body model.OutcomeBulkRejectRequest true "outcome id list"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -613,7 +613,7 @@ func (s *Server) bulkRejectOutcome(c *gin.Context) {
 // @Description submit publish learning outcomes
 // @Accept json
 // @Produce json
-// @Param id_list body OutcomeIDList true "outcome id list"
+// @Param id_list body model.OutcomeIDList true "outcome id list"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -662,7 +662,7 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 // @Description bulk delete learning outcomes
 // @Accept json
 // @Produce json
-// @Param id_list body OutcomeIDList true "outcome id list"
+// @Param id_list body model.OutcomeIDList true "outcome id list"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -716,7 +716,7 @@ func (s *Server) bulkDeleteOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} OutcomeSearchResponse
+// @Success 200 {object} model.OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
@@ -783,7 +783,7 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
-// @Success 200 {object} OutcomeSearchResponse
+// @Success 200 {object} model.OutcomeSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
