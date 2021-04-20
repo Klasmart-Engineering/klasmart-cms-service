@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +20,7 @@ type IAssessmentDA interface {
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
 	BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]*entity.Assessment, error)
 	FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, ids []string) ([]string, error)
+	FilterCompletedAssessments(ctx context.Context, tx *dbo.DBContext, ids []string) ([]*entity.Assessment, error)
 }
 
 var (
@@ -111,125 +111,83 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 	return "delete_at = 0"
 }
 
-type QueryAssessmentsCondition struct {
-	Status                         *entity.AssessmentStatus                `json:"status"`
-	ScheduleIDs                    []string                                `json:"schedule_ids"`
-	TeacherIDs                     []string                                `json:"teacher_ids"`
-	TeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter `json:"teacher_assessment_status_filters"`
-	OrderBy                        *entity.ListAssessmentsOrderBy          `json:"order_by"`
-	Page                           int                                     `json:"page"`
-	PageSize                       int                                     `json:"page_size"`
+type QueryAssessmentConditions struct {
+	OrgID                   *string                                    `json:"org_id"`
+	Status                  *entity.AssessmentStatus                   `json:"status"`
+	ScheduleIDs             []string                                   `json:"schedule_ids"`
+	TeacherIDs              []string                                   `json:"teacher_ids"`
+	AllowTeacherIDs         []string                                   `json:"allow_teacher_ids"`
+	TeacherIDAndStatusPairs []*entity.AssessmentTeacherIDAndStatusPair `json:"teacher_id_and_status_pairs"`
+	ClassType               *entity.ScheduleClassType                  `json:"class_type"`
+	OrderBy                 *entity.ListAssessmentsOrderBy             `json:"order_by"`
+	Page                    int                                        `json:"page"`
+	PageSize                int                                        `json:"page_size"`
 }
 
-func (c *QueryAssessmentsCondition) Simple() {
-	c.TeacherIDs = utils.SliceDeduplication(c.TeacherIDs)
-	var newTeacherAssessmentStatusFilters []*entity.TeacherAssessmentStatusFilter
-	{
-		statusMap := map[string]*struct {
-			HasStatusInProgress bool
-			HasStatusComplete   bool
-		}{}
-		for _, item := range c.TeacherAssessmentStatusFilters {
-			if statusMap[item.TeacherID] == nil {
-				statusMap[item.TeacherID] = &struct {
-					HasStatusInProgress bool
-					HasStatusComplete   bool
-				}{}
-			}
-			switch item.Status {
-			case entity.AssessmentStatusComplete:
-				statusMap[item.TeacherID].HasStatusComplete = true
-			case entity.AssessmentStatusInProgress:
-				statusMap[item.TeacherID].HasStatusInProgress = true
-			}
-		}
-		for teacherID, status := range statusMap {
-			if status.HasStatusInProgress && status.HasStatusComplete {
-				continue
-			}
-			if !status.HasStatusInProgress && !status.HasStatusComplete {
-				continue
-			}
-			if status.HasStatusComplete {
-				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusComplete,
-				})
-			}
-			if status.HasStatusInProgress {
-				newTeacherAssessmentStatusFilters = append(newTeacherAssessmentStatusFilters, &entity.TeacherAssessmentStatusFilter{
-					TeacherID: teacherID,
-					Status:    entity.AssessmentStatusInProgress,
-				})
-			}
-		}
+func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
+	t := NewSQLTemplate("delete_at = 0")
+
+	if c.OrgID != nil {
+		t.Appendf("exists (select 1 from schedules"+
+			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
 	}
-	c.TeacherAssessmentStatusFilters = newTeacherAssessmentStatusFilters
-}
 
-func (c *QueryAssessmentsCondition) GetConditions() ([]string, []interface{}) {
-	c.Simple()
-
-	var (
-		formats []string
-		values  []interface{}
-	)
-
-	formats = append(formats, "delete_at = 0")
+	if c.ClassType != nil {
+		t.Appendf("exists (select 1 from schedules"+
+			" where class_type = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
+	}
 
 	if c.Status != nil {
-		formats = append(formats, "status = ?")
-		values = append(values, *c.Status)
+		t.Appendf("status = ?", *c.Status)
 	}
 
 	if c.TeacherIDs != nil {
 		if len(c.TeacherIDs) == 0 {
-			return []string{"1 = 2"}, nil
+			return FalseSQLTemplate().DBOConditions()
 		}
-		var (
-			partFormats = make([]string, 0, len(c.TeacherIDs))
-			partValues  = make([]interface{}, 0, len(c.TeacherIDs))
-		)
-		for _, teacherID := range c.TeacherIDs {
-			partFormats = append(partFormats, fmt.Sprintf("json_contains(teacher_ids, json_array(?))"))
-			partValues = append(partValues, teacherID)
-		}
-		formats = append(formats, "("+strings.Join(partFormats, " or ")+")")
-		values = append(values, partValues...)
+		t.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
+			utils.SliceDeduplication(c.TeacherIDs))
 	}
 
-	if len(c.TeacherAssessmentStatusFilters) > 0 {
-		var (
-			partFormats = make([]string, 0, len(c.TeacherAssessmentStatusFilters))
-			partValues  = make([]interface{}, 0, len(c.TeacherAssessmentStatusFilters)*2)
-		)
-		for _, item := range c.TeacherAssessmentStatusFilters {
-			partFormats = append(partFormats, fmt.Sprintf("(not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?)"))
-			partValues = append(partValues, item.TeacherID, item.TeacherID, string(item.Status))
+	if c.AllowTeacherIDs != nil {
+		if len(c.AllowTeacherIDs) == 0 {
+			return FalseSQLTemplate().DBOConditions()
 		}
-		formats = append(formats, "("+strings.Join(partFormats, " and ")+")")
-		values = append(values, partValues...)
+		t.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
+			utils.SliceDeduplication(c.AllowTeacherIDs))
+	}
+
+	if len(c.TeacherIDAndStatusPairs) > 0 {
+		t2 := NewSQLTemplate("")
+		for _, p := range c.TeacherIDAndStatusPairs {
+			t2.Appendf("(attendance_id = ? and assessments.status = ?)", p.TeacherID, p.Status)
+		}
+		format, values := t2.Or()
+		format = fmt.Sprintf("exists (select 1 from assessments_attendances "+
+			"where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and %s", format)
+		t.Appendf(format, values...)
 	}
 
 	if c.ScheduleIDs != nil {
 		if len(c.ScheduleIDs) == 0 {
-			return []string{"1 = 2"}, nil
+			return FalseSQLTemplate().DBOConditions()
 		}
-		formats = append(formats, "schedule_id in (?)")
-		values = append(values, c.ScheduleIDs)
+		t.Appendf("schedule_id in (?)", c.ScheduleIDs)
 	}
 
-	return formats, values
+	return t.DBOConditions()
 }
 
-func (c *QueryAssessmentsCondition) GetPager() *dbo.Pager {
+func (c *QueryAssessmentConditions) GetPager() *dbo.Pager {
 	return &dbo.Pager{
 		Page:     c.Page,
 		PageSize: c.PageSize,
 	}
 }
 
-func (c *QueryAssessmentsCondition) GetOrderBy() string {
+func (c *QueryAssessmentConditions) GetOrderBy() string {
 	if c.OrderBy == nil {
 		return ""
 	}
@@ -278,6 +236,23 @@ func (a *assessmentDA) FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo
 	result := make([]string, 0, len(items))
 	for _, item := range items {
 		result = append(result, item.ID)
+	}
+	return result, nil
+}
+
+func (a *assessmentDA) FilterCompletedAssessments(ctx context.Context, tx *dbo.DBContext, ids []string) ([]*entity.Assessment, error) {
+	var result []*entity.Assessment
+	if err := tx.Model(entity.Assessment{}).
+		Where("id in (?) and status = ?", ids, entity.AssessmentStatusComplete).
+		Find(&result).Error; err != nil {
+		log.Error(ctx, "call FilterCompletedAssessments failed",
+			log.Err(err),
+			log.Strings("ids", ids),
+		)
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, constant.ErrRecordNotFound
+		}
+		return nil, err
 	}
 	return result, nil
 }

@@ -46,7 +46,11 @@ func (s Server) registeRoute() {
 	{
 		content.POST("/contents", s.mustLogin, s.createContent)
 		content.POST("/contents/copy", s.mustLogin, s.copyContent)
+		//Inherent & unchangeable
 		content.GET("/contents/:content_id", s.mustLogin, s.getContent)
+		//Inherent & unchangeable
+		content.GET("/contents", s.mustLogin, s.queryContent)
+
 		content.PUT("/contents/:content_id", s.mustLogin, s.updateContent)
 		content.PUT("/contents/:content_id/lock", s.mustLogin, s.lockContent)
 		content.PUT("/contents/:content_id/publish", s.mustLogin, s.publishContent)
@@ -57,7 +61,6 @@ func (s Server) registeRoute() {
 		content.PUT("/contents_review/reject", s.mustLogin, s.rejectBulk)
 
 		content.DELETE("/contents/:content_id", s.mustLogin, s.deleteContent)
-		content.GET("/contents", s.mustLogin, s.queryContent)
 		content.GET("/contents/:content_id/statistics", s.mustLogin, s.contentDataCount)
 		content.GET("/contents_private", s.mustLogin, s.queryPrivateContent)
 		content.GET("/contents_pending", s.mustLogin, s.queryPendingContent)
@@ -68,9 +71,15 @@ func (s Server) registeRoute() {
 		content.DELETE("/contents_bulk", s.mustLogin, s.deleteContentBulk)
 
 		content.GET("/contents_resources", s.mustLogin, s.getUploadPath)
-		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getPath)
+		content.GET("/contents_resources/:resource_id", s.mustLoginWithoutOrgID, s.getContentResourcePath)
+		content.GET("/contents_resources/:resource_id/download", s.mustLoginWithoutOrgID, s.getDownloadPath)
 		content.GET("/contents/:content_id/live/token", s.mustLogin, s.getContentLiveToken)
 	}
+	h5pEvents := s.engine.Group("/v1")
+	{
+		h5pEvents.POST("/h5p/events", s.mustLogin, s.createH5PEvent)
+	}
+
 	authedContents := s.engine.Group("/v1")
 	{
 		authedContents.POST("/contents_auth", s.mustLogin, s.addAuthedContent)
@@ -90,10 +99,21 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_time_view", s.mustLogin, s.getScheduleTimeView)
 		schedules.GET("/schedules/:id/live/token", s.mustLogin, s.getScheduleLiveToken)
 		schedules.PUT("/schedules/:id/status", s.mustLogin, s.updateScheduleStatus)
-		schedules.GET("/schedules_participate/class", s.mustLogin, s.getParticipateClass)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
 		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
-		schedules.GET("/schedules/:id/real_time", s.mustLogin, s.getScheduleRealTimeStatus)
+		schedules.GET("/schedules_filter/schools", s.mustLogin, s.getSchoolInScheduleFilter)
+		schedules.GET("/schedules_filter/classes", s.mustLogin, s.getClassesInScheduleFilter)
+		schedules.PUT("/schedules/:id/show_option", s.mustLogin, s.updateScheduleShowOption)
+		schedules.GET("/schedules/:id/operator/newest_feedback", s.mustLogin, s.getScheduleNewestFeedbackByOperator)
+		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
+		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
+		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
+		schedules.GET("/schedules_view/:id", s.mustLogin, s.getScheduleViewByID)
+	}
+	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
+	{
+		scheduleFeedback.POST("", s.mustLogin, s.addScheduleFeedback)
+		scheduleFeedback.GET("", s.mustLogin, s.queryFeedback)
 	}
 
 	assessments := s.engine.Group("/v1")
@@ -103,13 +123,27 @@ func (s Server) registeRoute() {
 		assessments.POST("/assessments_for_test", s.mustLogin, s.addAssessmentForTest)
 		assessments.GET("/assessments/:id", s.mustLogin, s.getAssessmentDetail)
 		assessments.PUT("/assessments/:id", s.mustLogin, s.updateAssessment)
+
+	}
+
+	homeFunStudies := s.engine.Group("/v1")
+	{
+		homeFunStudies.GET("/home_fun_studies", s.mustLogin, s.listHomeFunStudies)
+		homeFunStudies.GET("/home_fun_studies/:id", s.mustLogin, s.getHomeFunStudy)
+		homeFunStudies.PUT("/home_fun_studies/:id/assess", s.mustLogin, s.assessHomeFunStudy)
 	}
 
 	reports := s.engine.Group("/v1")
 	{
-		reports.GET("/reports/students", s.mustLogin, s.listStudentsReport)
-		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentReport)
+		reports.GET("/reports/students", s.mustLogin, s.listStudentsAchievementReport)
+		reports.GET("/reports/students/:id", s.mustLogin, s.getStudentAchievementReport)
 		reports.GET("/reports/teachers/:id", s.mustLogin, s.getTeacherReport)
+
+		reports.GET("/reports/performance/students", s.mustLogin, s.listStudentsPerformanceReport)
+		reports.GET("/reports/performance/students/:id", s.mustLogin, s.getStudentPerformanceReport)
+
+		reports.GET("/reports/performance/h5p/students", s.mustLogin, s.listStudentsPerformanceH5PReport)
+		reports.GET("/reports/performance/h5p/students/:id", s.mustLogin, s.getStudentPerformanceH5PReport)
 	}
 
 	outcomes := s.engine.Group("/v1")
@@ -133,6 +167,7 @@ func (s Server) registeRoute() {
 
 		outcomes.GET("/private_learning_outcomes", s.mustLogin, s.queryPrivateOutcomes)
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
+		outcomes.POST("/shortcode", s.mustLogin, s.generateShortcode)
 	}
 
 	folders := s.engine.Group("/v1/folders")
@@ -161,70 +196,53 @@ func (s Server) registeRoute() {
 		crypto.GET("/h5p/jwt", s.mustLogin, s.generateH5pJWT)
 	}
 
-	ages := s.engine.Group("/v1/ages")
-	{
-		ages.GET("", s.mustLoginWithoutOrgID, s.getAge)
-		ages.GET("/:id", s.mustLoginWithoutOrgID, s.getAgeByID)
-		ages.POST("", s.mustLoginWithoutOrgID, s.addAge)
-		ages.PUT("/:id", s.mustLoginWithoutOrgID, s.updateAge)
-		ages.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteAge)
-	}
 	classTypes := s.engine.Group("/v1/class_types")
 	{
 		classTypes.GET("", s.mustLoginWithoutOrgID, s.getClassType)
 		classTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getClassTypeByID)
 	}
-	developmental := s.engine.Group("/v1/developmentals")
-	{
-		developmental.GET("", s.mustLoginWithoutOrgID, s.getDevelopmental)
-		developmental.GET("/:id", s.mustLoginWithoutOrgID, s.getDevelopmentalByID)
-		developmental.POST("", s.mustLoginWithoutOrgID, s.addDevelopmental)
-		developmental.PUT("/:id", s.mustLoginWithoutOrgID, s.updateDevelopmental)
-		developmental.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteDevelopmental)
-	}
-	grade := s.engine.Group("/v1/grades")
-	{
-		grade.GET("", s.mustLoginWithoutOrgID, s.getGrade)
-		grade.GET("/:id", s.mustLoginWithoutOrgID, s.getGradeByID)
-		grade.POST("", s.mustLoginWithoutOrgID, s.addGrade)
-		grade.PUT("/:id", s.mustLoginWithoutOrgID, s.updateGrade)
-		grade.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteGrade)
-	}
+
 	lessonTypes := s.engine.Group("/v1/lesson_types")
 	{
 		lessonTypes.GET("", s.mustLoginWithoutOrgID, s.getLessonType)
 		lessonTypes.GET("/:id", s.mustLoginWithoutOrgID, s.getLessonTypeByID)
 	}
+
+	programGroups := s.engine.Group("/v1/programs_groups")
+	{
+		programGroups.GET("", s.mustLoginWithoutOrgID, s.getProgramGroup)
+	}
+
 	programs := s.engine.Group("/v1/programs")
 	{
 		programs.GET("", s.mustLoginWithoutOrgID, s.getProgram)
-		programs.GET("/:id", s.mustLoginWithoutOrgID, s.getProgramByID)
-		programs.POST("", s.mustLoginWithoutOrgID, s.addProgram)
-		programs.PUT("/:id", s.mustLoginWithoutOrgID, s.updateProgram)
-		programs.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteProgram)
+	}
 
-		programs.PUT("/:id/ages", s.mustLoginWithoutOrgID, s.SetAge)
-		programs.PUT("/:id/grades", s.mustLoginWithoutOrgID, s.SetGrade)
-		programs.PUT("/:id/subjects", s.mustLoginWithoutOrgID, s.SetSubject)
-		programs.PUT("/:id/developments", s.mustLoginWithoutOrgID, s.SetDevelopmental)
-		programs.PUT("/:id/skills", s.mustLoginWithoutOrgID, s.SetSkill)
-	}
-	skills := s.engine.Group("/v1/skills")
-	{
-		skills.GET("", s.mustLoginWithoutOrgID, s.getSkill)
-		skills.GET("/:id", s.mustLoginWithoutOrgID, s.getSkillByID)
-		skills.POST("", s.mustLoginWithoutOrgID, s.addSkill)
-		skills.PUT("/:id", s.mustLoginWithoutOrgID, s.updateSkill)
-		skills.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteSkill)
-	}
 	subjects := s.engine.Group("/v1/subjects")
 	{
 		subjects.GET("", s.mustLoginWithoutOrgID, s.getSubject)
-		subjects.GET("/:id", s.mustLoginWithoutOrgID, s.getSubjectByID)
-		subjects.POST("", s.mustLoginWithoutOrgID, s.addSubject)
-		subjects.PUT("/:id", s.mustLoginWithoutOrgID, s.updateSubject)
-		subjects.DELETE("/:id", s.mustLoginWithoutOrgID, s.deleteSubject)
 	}
+
+	developmental := s.engine.Group("/v1/developmentals")
+	{
+		developmental.GET("", s.mustLoginWithoutOrgID, s.getDevelopmental)
+	}
+
+	skills := s.engine.Group("/v1/skills")
+	{
+		skills.GET("", s.mustLoginWithoutOrgID, s.getSkill)
+	}
+
+	ages := s.engine.Group("/v1/ages")
+	{
+		ages.GET("", s.mustLoginWithoutOrgID, s.getAge)
+	}
+
+	grade := s.engine.Group("/v1/grades")
+	{
+		grade.GET("", s.mustLoginWithoutOrgID, s.getGrade)
+	}
+
 	visibilitySettings := s.engine.Group("/v1/visibility_settings")
 	{
 		visibilitySettings.GET("", s.mustLogin, s.getVisibilitySetting)
@@ -239,6 +257,24 @@ func (s Server) registeRoute() {
 	organizationProperties := s.engine.Group("/v1/organizations_propertys")
 	{
 		organizationProperties.GET("/:id", s.mustLoginWithoutOrgID, s.getOrganizationPropertyByID)
+	}
+	organizationRegions := s.engine.Group("/v1/organizations_region")
+	{
+		organizationRegions.GET("", s.mustLoginWithoutOrgID, s.getOrganizationByHeadquarterForDetails)
+	}
+
+	learningOutcomeSet := s.engine.Group("/v1/sets")
+	{
+		learningOutcomeSet.POST("", s.mustLogin, s.createOutcomeSet)
+		learningOutcomeSet.POST("/bulk_bind", s.mustLogin, s.bulkBindOutcomeSet)
+		learningOutcomeSet.GET("", s.mustLogin, s.pullOutcomeSet)
+	}
+
+	classes := s.engine.Group("/v1")
+	{
+		// ams-class add members event
+		classes.POST("/classes_members", s.classAddMembersEvent)
+		classes.DELETE("/classes_members", s.classDeleteMembersEvent)
 	}
 }
 

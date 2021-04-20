@@ -10,12 +10,16 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type UserServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*User, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableUser, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
+	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
 }
 
@@ -66,9 +70,11 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 		return []*NullableUser{}, nil
 	}
 
+	_ids, indexMapping := utils.SliceDeduplicationMap(ids)
+
 	sb := new(strings.Builder)
 	sb.WriteString("query {")
-	for index, id := range ids {
+	for index, id := range _ids {
 		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {id:user_id name:user_name given_name family_name email avatar}\n", index, id)
 	}
 	sb.WriteString("}")
@@ -80,7 +86,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by ids failed", log.Err(err), log.Strings("ids", ids))
 		return nil, err
@@ -88,7 +94,7 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 
 	users := make([]*NullableUser, 0, len(data))
 	for index := range ids {
-		user := data[fmt.Sprintf("q%d", index)]
+		user := data[fmt.Sprintf("q%d", indexMapping[index])]
 		users = append(users, &NullableUser{
 			Valid: user != nil,
 			User:  user,
@@ -100,6 +106,34 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 		log.Any("users", users))
 
 	return users, nil
+}
+
+func (s AmsUserService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableUser, error) {
+	users, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*NullableUser{}, err
+	}
+
+	dict := make(map[string]*NullableUser, len(users))
+	for _, user := range users {
+		dict[user.ID] = user
+	}
+
+	return dict, nil
+}
+
+func (s AmsUserService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	users, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(users))
+	for _, user := range users {
+		dict[user.ID] = user.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error) {
@@ -136,7 +170,7 @@ func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, or
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "query users by keyword failed",
 			log.Err(err),
@@ -153,6 +187,56 @@ func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, or
 	log.Info(ctx, "query users by keyword success",
 		log.String("organizationID", organizationID),
 		log.String("keyword", keyword),
+		log.Any("users", users))
+
+	return users, nil
+}
+
+func (s AmsUserService) GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error) {
+	request := chlorine.NewRequest(`
+	query($organization_id: ID!) {
+		organization(organization_id: $organization_id) {
+		  memberships{
+			user{
+			  id: user_id
+			  name: user_name
+			  given_name
+			  family_name
+			  email
+			  avatar
+			}
+		  }
+		}
+	  }`, chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", organizationID)
+
+	data := &struct {
+		Organization struct {
+			Memberships []struct {
+				User *User `json:"user"`
+			} `json:"memberships"`
+		} `json:"organization"`
+	}{}
+
+	response := &chlorine.Response{
+		Data: data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "query users by org failed",
+			log.Err(err),
+			log.String("organizationID", organizationID))
+		return nil, err
+	}
+
+	users := make([]*User, 0, len(data.Organization.Memberships))
+	for _, member := range data.Organization.Memberships {
+		users = append(users, member.User)
+	}
+
+	log.Info(ctx, "query users by org success",
+		log.String("organizationID", organizationID),
 		log.Any("users", users))
 
 	return users, nil
@@ -177,7 +261,7 @@ func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, 
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "query users by keyword failed",
 			log.Err(err),

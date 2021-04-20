@@ -1,8 +1,6 @@
 package api
 
 import (
-	"context"
-	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,7 +27,7 @@ type CreateFolderResponse struct {
 	ID string `json:"id"`
 }
 type PublishContentRequest struct {
-	Scope string `json:"scope"`
+	Scope []string `json:"scope"`
 }
 
 // @Summary createContent
@@ -64,7 +62,8 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 
-	cid, err := model.GetContentModel().CreateContent(ctx, dbo.MustGetDB(ctx), data, op)
+	cid, err := model.GetContentModel().CreateContentTx(ctx, data, op)
+
 	switch err {
 	case model.ErrContentDataRequestSource:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
@@ -80,6 +79,8 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrSuggestTimeTooSmall:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorPlanDuration))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidSelectForm:
@@ -122,18 +123,12 @@ func (s *Server) copyContent(c *gin.Context) {
 	// 	return
 	// }
 	// //有permission，直接返回
-	// if hasPermission {
+	// //if user has no permission return
+	// if !hasPermission {
 	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
 	// 	return
 	// }
-	cid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		cid, err := model.GetContentModel().CopyContent(ctx, tx, data.ContentID, data.Deep, op)
-		if err != nil {
-			return "", err
-		}
-		return cid, nil
-	})
-
+	cid, err := model.GetContentModel().CopyContentTx(ctx, data.ContentID, data.Deep, op)
 	switch err {
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -167,17 +162,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	//isAuthor, err := model.GetContentModel().IsContentsOperatorByIDList(ctx, dbo.MustGetDB(ctx), ids.ID, op)
-	//if err != nil {
-	//	log.Error(ctx, "check author failed", log.Err(err))
-	//	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	//	return
-	//}
-	////不是作者，则检查权限
-	//if !isAuthor {
-	//
-	//}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, "", op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -187,13 +172,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := model.GetContentModel().PublishContentBulk(ctx, tx, ids.ID, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().PublishContentBulkTx(ctx, ids.ID, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, L(GeneralUnknown))
@@ -227,8 +206,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -238,7 +216,8 @@ func (s *Server) publishContent(c *gin.Context) {
 		return
 	}
 
-	err = model.GetContentModel().PublishContent(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
+	err = model.GetContentModel().PublishContentTx(ctx, cid, data.Scope, op)
+
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -272,7 +251,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, []string{cid}, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -281,8 +260,8 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
+	err = model.GetContentModel().PublishContentWithAssetsTx(ctx, cid, data.Scope, op)
 
-	err = model.GetContentModel().PublishContentWithAssets(ctx, dbo.MustGetDB(ctx), cid, data.Scope, op)
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -295,7 +274,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 
 // @Summary getContent
 // @ID getContentById
-// @Description get a content by id
+// @Description get a content by id (Inherent & unchangeable)
 // @Accept json
 // @Produce json
 // @Param content_id path string true "get content id"
@@ -381,6 +360,8 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrSuggestTimeTooSmall:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorPlanDuration))
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
@@ -439,14 +420,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		return
 	}
 
-	ncid, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		ncid, err := model.GetContentModel().LockContent(ctx, tx, cid, op)
-		if err != nil {
-			return nil, err
-		}
-		return ncid, nil
-	})
-
+	ncid, err := model.GetContentModel().LockContentTx(ctx, cid, op)
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
 		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
@@ -460,7 +434,7 @@ func (s *Server) lockContent(c *gin.Context) {
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidLockedContentPublishStatus:
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(LibraryContentLockedByMe))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": ncid,
@@ -502,13 +476,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err = model.GetContentModel().DeleteContentBulk(ctx, tx, ids.ID, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().DeleteContentBulkTx(ctx, ids.ID, op)
 
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
@@ -551,13 +519,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 		return
 	}
 
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		err := model.GetContentModel().DeleteContent(ctx, tx, cid, op)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	err = model.GetContentModel().DeleteContentTx(ctx, cid, op)
 
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
@@ -601,7 +563,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 
 // @Summary queryContent
 // @ID searchContents
-// @Description query content by condition
+// @Description query content by condition (Inherent & unchangeable)
 // @Accept json
 // @Produce json
 // @Param name query string false "search content name"
@@ -610,6 +572,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param scope query string false "search content scope"
 // @Param program_group query string false "search program group"
 // @Param program query string false "search content program"
+// @Param content_name query string false "search content name"
 // @Param path query string false "search content path"
 // @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -662,6 +625,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param name query string false "search content name"
 // @Param content_type query string false "search content type"
 // @Param program query string false "search content program"
+// @Param content_name query string false "search content name"
 // @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
@@ -707,6 +671,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 // @Param author query string false "search content author"
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
+// @Param content_name query string false "search content name"
 // @Param program query string false "search content program"
 // @Param program_group query string false "search program group"
 // @Param path query string false "search content path"
@@ -738,7 +703,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	}
 	author := c.Query("author")
 	total := 0
-	var results []*entity.FolderContent
+	var results []*entity.FolderContentData
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	} else {
@@ -767,6 +732,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param program query string false "search content program"
 // @Param program_group query string false "search program group"
+// @Param content_name query string false "search content name"
 // @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -819,6 +785,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param content_name query string false "search content name"
 // @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -885,19 +852,20 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	path := c.Query("path")
 	programGroup := c.Query("program_group")
 	condition := da.ContentCondition{
-		Author:  parseAuthor(c, op),
-		Org:     parseOrg(c, op),
-		DirPath: path,
-		OrderBy: da.NewContentOrderBy(c.Query("order_by")),
-		Pager:   utils.GetPager(c.Query("page"), c.Query("page_size")),
-		Name:    strings.TrimSpace(c.Query("name")),
+		Author:      parseAuthor(c, op),
+		Org:         parseOrg(c, op),
+		DirPath:     path,
+		OrderBy:     da.NewContentOrderBy(c.Query("order_by")),
+		Pager:       utils.GetPager(c.Query("page"), c.Query("page_size")),
+		Name:        strings.TrimSpace(c.Query("name")),
+		ContentName: strings.TrimSpace(c.Query("content_name")),
 	}
 	sourceType := c.Query("source_type")
 	//if len(keywords) > 0 {
 	//	condition.Name = keywords
 	//}
 	if contentTypeStr != "" {
-		contentTypeList := strings.Split(contentTypeStr, ",")
+		contentTypeList := strings.Split(contentTypeStr, constant.StringArraySeparator)
 		for i := range contentTypeList {
 			contentType, err := strconv.Atoi(contentTypeList[i])
 			if err != nil {
@@ -909,27 +877,22 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 		}
 	}
 	if scope != "" {
-		scopes := strings.Split(scope, ",")
-		condition.Scope = append(condition.Scope, scopes...)
+		scopes := strings.Split(scope, constant.StringArraySeparator)
+		condition.VisibilitySettings = append(condition.VisibilitySettings, scopes...)
 	}
 	if publish != "" {
 		condition.PublishStatus = append(condition.PublishStatus, publish)
 	}
 	if programs != "" {
-		program := strings.Split(programs, ",")
+		program := strings.Split(programs, constant.StringArraySeparator)
 		condition.Program = program
 	}
 	if programGroup != "" {
-		programs, err := model.GetProgramModel().Query(c.Request.Context(), &da.ProgramCondition{
-			GroupName: sql.NullString{
-				Valid: true,
-				String: programGroup,
-			},
-		})
-		if err != nil{
+		programs, err := model.GetProgramModel().GetByGroup(c.Request.Context(), op, programGroup)
+		if err != nil {
 			log.Error(c.Request.Context(), "get program by groups failed", log.Err(err),
 				log.String("group", programGroup))
-		}else if len(programs) > 0{
+		} else if len(programs) > 0 {
 			programIDs := make([]string, len(programs))
 			for i := range programs {
 				programIDs[i] = programs[i].ID

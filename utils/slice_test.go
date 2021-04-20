@@ -47,3 +47,30 @@ func TestFilterStrings(t *testing.T) {
 		})
 	}
 }
+
+func TestSliceDeduplicationMap(t *testing.T) {
+	origin := []string{"1", "2", "3", "4", "1", "2", "4", "3", "3", "3", "2", "1", "5", "3"}
+	wantSlice := []string{"1", "2", "3", "4", "5"}
+	wantMap := map[int]int{
+		0: 0, 4: 0, 11: 0,
+		1: 1, 5: 1, 10: 1,
+		2: 2, 7: 2, 8: 2, 9: 2, 13: 2,
+		3: 3, 6: 3,
+		12: 4,
+	}
+
+	resultSlice, resultMap := SliceDeduplicationMap(origin)
+	if !reflect.DeepEqual(resultSlice, wantSlice) {
+		t.Errorf("SliceDeduplicationMap() got = %+v, want %+v", resultSlice, wantSlice)
+	}
+
+	if !reflect.DeepEqual(resultMap, wantMap) {
+		t.Errorf("SliceDeduplicationMap() got = %+v, want %+v", resultMap, wantMap)
+	}
+}
+
+func TestSliceDeduplicationExcludeEmpty(t *testing.T) {
+	testData := []string{""}
+	result := SliceDeduplicationExcludeEmpty(testData)
+	t.Log(len(result))
+}

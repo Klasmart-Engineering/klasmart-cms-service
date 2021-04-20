@@ -15,6 +15,8 @@ import (
 type StudentServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*Student, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableStudent, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableStudent, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error)
 	GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Student, error)
@@ -82,6 +84,24 @@ func (s AmsStudentService) BatchGet(ctx context.Context, operator *entity.Operat
 	return students, nil
 }
 
+func (s AmsStudentService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableStudent, error) {
+	students, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*NullableStudent{}, err
+	}
+
+	dict := make(map[string]*NullableStudent, len(students))
+	for _, student := range students {
+		dict[student.ID] = student
+	}
+
+	return dict, nil
+}
+
+func (s AmsStudentService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	return GetUserServiceProvider().BatchGetNameMap(ctx, operator, ids)
+}
+
 func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error) {
 	q := `query ($classID: ID!){
 	class(class_id: $classID){
@@ -103,7 +123,7 @@ func (s AmsStudentService) GetByClassID(ctx context.Context, operator *entity.Op
 			Students *[]*Student `json:"students"`
 		}{Students: &payload}},
 	}
-	_, err := GetChlorine().Run(ctx, req, &res)
+	_, err := GetAmsClient().Run(ctx, req, &res)
 	if err != nil {
 		log.Error(ctx, "Run error", log.String("q", q), log.Any("res", res), log.Err(err))
 		return nil, err
@@ -141,7 +161,7 @@ func (s AmsStudentService) GetByClassIDs(ctx context.Context, operator *entity.O
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by class ids failed", log.Err(err), log.Strings("ids", classIDs))
 		return nil, err

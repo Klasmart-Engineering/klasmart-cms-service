@@ -14,6 +14,7 @@ type IOutcomeAttendanceDA interface {
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.OutcomeAttendance) error
 	BatchDeleteByAssessmentIDAndOutcomeIDs(ctx context.Context, tx *dbo.DBContext, assessmentID string, outcomeIDs []string) error
 	BatchGetByAssessmentIDs(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error)
+	BatchGetByAssessmentIDsAndAttendanceID(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, attendanceID string) ([]*entity.OutcomeAttendance, error)
 }
 
 var (
@@ -46,15 +47,15 @@ func (*outcomeAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 		return nil
 	}
 	columns := []string{"id", "assessment_id", "outcome_id", "attendance_id"}
-	var values [][]interface{}
+	var matrix [][]interface{}
 	for _, item := range items {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.AttendanceID})
+		matrix = append(matrix, []interface{}{item.ID, item.AssessmentID, item.OutcomeID, item.AttendanceID})
 	}
-	template := SQLBatchInsert(entity.OutcomeAttendance{}.TableName(), columns, values)
-	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {
+	format, values := SQLBatchInsert(entity.OutcomeAttendance{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values...).Error; err != nil {
 		log.Error(ctx, "batch insert outcomes_attendances: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
@@ -92,6 +93,24 @@ func (d *outcomeAttendanceDA) BatchGetByAssessmentIDs(ctx context.Context, tx *d
 		log.Error(ctx, "batch get outcome attendance by assessment ids: find failed",
 			log.Err(err),
 			log.Strings("assessment_ids", assessmentIDs),
+		)
+		return nil, err
+	}
+	return items, nil
+}
+
+func (d *outcomeAttendanceDA) BatchGetByAssessmentIDsAndAttendanceID(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, attendanceID string) ([]*entity.OutcomeAttendance, error) {
+	if len(assessmentIDs) == 0 || attendanceID == "" {
+		return nil, nil
+	}
+	var items []*entity.OutcomeAttendance
+	if err := tx.
+		Where("assessment_id in (?) and attendance_id = ?", assessmentIDs, attendanceID).
+		Find(&items).Error; err != nil {
+		log.Error(ctx, "BatchGetByAssessmentIDsAndAttendanceID: call Find failed",
+			log.Err(err),
+			log.Strings("assessment_ids", assessmentIDs),
+			log.String("attendance_id", attendanceID),
 		)
 		return nil, err
 	}

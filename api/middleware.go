@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -156,16 +157,24 @@ func (s Server) logger() gin.HandlerFunc {
 		// Process request
 		c.Next()
 
-		// login info is not exists before c.Next()
-
 		// add response fields
 		duration := time.Since(start)
 		fields = append(fields,
 			log.Any("operator", s.getOperator(c)),
-			log.String("session", c.GetHeader("Session")),
 			log.Int("size", c.Writer.Size()),
 			log.Int("status", c.Writer.Status()),
-			log.Duration("duration", duration))
+			log.Int64("duration", duration.Milliseconds()))
+
+		// log stopwatch durations
+		stopwatchMap, found := utils.GetStopwatches(c.Request.Context())
+		if found {
+			durations := make(map[string]int64, len(stopwatchMap))
+			for key, stopwatch := range stopwatchMap {
+				durations[key] = stopwatch.Duration().Milliseconds()
+			}
+
+			fields = append(fields, log.Any("durations", durations))
+		}
 
 		fn := log.Info
 		if duration > constant.FunctionExpirationLimit {
@@ -217,6 +226,15 @@ func (s Server) recovery() gin.HandlerFunc {
 				}
 			}
 		}()
+		c.Next()
+	}
+}
+
+func (s Server) contextStopwatch() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := utils.SetupStopwatch(c.Request.Context())
+		c.Request = c.Request.WithContext(ctx)
+
 		c.Next()
 	}
 }

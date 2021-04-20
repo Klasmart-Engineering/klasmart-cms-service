@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"encoding/json"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
@@ -21,6 +22,8 @@ type LessonData struct {
 	NextNode          []*LessonData       `json:"next"`
 	TeacherManual     string              `json:"teacher_manual"`
 	TeacherManualName string              `json:"teacher_manual_name"`
+
+	TeacherManualBatch []*entity.TeacherManualFile `json:"teacher_manual_batch"`
 }
 
 func (l *LessonData) Unmarshal(ctx context.Context, data string) error {
@@ -51,6 +54,9 @@ func (l *LessonData) lessonDataIterator(ctx context.Context, handleLessonData fu
 	return arr
 }
 
+func (l *LessonData) LessonDataIteratorLoop(ctx context.Context, handleLessonData func(ctx context.Context, l *LessonData)) {
+	l.lessonDataIteratorLoop(ctx, handleLessonData)
+}
 func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonData func(ctx context.Context, l *LessonData)) {
 	lessonDataList := make([]*LessonData, 0)
 	lessonDataList = append(lessonDataList, l)
@@ -67,9 +73,11 @@ func (l *LessonData) lessonDataIteratorLoop(ctx context.Context, handleLessonDat
 	}
 }
 func (h *LessonData) PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error {
-	h.TeacherManual = t.TeacherManual
-	h.TeacherManualName = t.TeacherManualName
+	h.TeacherManualBatch = t.TeacherManualBatch
 	h.Material = nil
+	//clear old data format
+	h.TeacherManual = ""
+	h.TeacherManualName = ""
 	return nil
 }
 func (l *LessonData) SubContentIDs(ctx context.Context) []string {
@@ -89,23 +97,56 @@ func (l *LessonData) ReplaceContentIDs(ctx context.Context, IDMap map[string]str
 	})
 }
 
+func (l2 *LessonData) checkTeacherManual(ctx context.Context, teacherManual string) error {
+	teacherManualPairs := strings.Split(teacherManual, constant.TeacherManualSeparator)
+	if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
+		log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", teacherManual),
+			log.String("partition", string(storage.TeacherManualStoragePartition)))
+		return ErrInvalidTeacherManual
+	}
+
+	_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, teacherManualPairs[1])
+	if !exist {
+		log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", teacherManual),
+			log.String("partition", string(storage.TeacherManualStoragePartition)))
+		return ErrTeacherManual
+	}
+	extensionPairs := strings.Split(teacherManual, ".")
+	extension := extensionPairs[len(extensionPairs)-1]
+	extension = strings.ToLower(extension)
+	ret := isArray(extension, constant.TeacherManualExtension)
+	if !ret {
+		log.Warn(ctx, "teacher_manual is extension is not supported",
+			log.String("TeacherManual", teacherManual),
+			log.String("extension", extension),
+			log.Strings("extensionPairs", extensionPairs),
+			log.Strings("expected", constant.TeacherManualExtension))
+		return ErrTeacherManualExtension
+	}
+	return nil
+}
+
 func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentType) error {
 	if contentType != entity.ContentTypePlan {
 		return ErrInvalidContentType
 	}
 	if l.TeacherManual != "" {
-		teacherManualPairs := strings.Split(l.TeacherManual, constant.TeacherManualSeparator)
-		if len(teacherManualPairs) < 2 || teacherManualPairs[0] != string(storage.TeacherManualStoragePartition) {
-			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
-				log.String("partition", string(storage.TeacherManualStoragePartition)))
-			return ErrInvalidTeacherManual
+		if l.TeacherManualName == "" {
+			log.Warn(ctx, "teacher_manual name is nil",
+				log.String("TeacherManual", l.TeacherManual),
+				log.String("Name", l.TeacherManualName),
+				log.Any("TeacherManualBatch", l.TeacherManualBatch))
+			return ErrTeacherManualNameNil
 		}
-
-		_, exist := storage.DefaultStorage().ExistFile(ctx, storage.TeacherManualStoragePartition, teacherManualPairs[1])
-		if !exist {
-			log.Warn(ctx, "teacher_manual is not exist in storage", log.String("TeacherManual", l.TeacherManual),
-				log.String("partition", string(storage.TeacherManualStoragePartition)))
-			return ErrTeacherManual
+		err := l.checkTeacherManual(ctx, l.TeacherManual)
+		if err != nil {
+			return err
+		}
+	}
+	for i := range l.TeacherManualBatch {
+		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].ID)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -170,8 +211,13 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 	return nil
 }
 
-func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error){
+func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error) {
 	orgInfo, err := GetOrganizationPropertyModel().GetOrDefault(ctx, orgID)
+	if err == dbo.ErrRecordNotFound {
+		log.Info(ctx, "org is not in head quarter",
+			log.Any("orgInfo", orgInfo))
+		return false, nil
+	}
 	if err != nil {
 		log.Warn(ctx, "parse get folder shared records params failed",
 			log.Err(err),
@@ -186,7 +232,7 @@ func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID strin
 	return true, nil
 }
 
-func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
+func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -198,7 +244,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 		return err
 	}
 
-	isHeadQuarter, err :=  l.isOrganizationHeadquarters(ctx, content.Org)
+	isHeadQuarter, err := l.isOrganizationHeadquarters(ctx, content.Org)
 	if err != nil {
 		return err
 	}
@@ -208,17 +254,16 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 		if err != nil {
 			return err
 		}
-	}else{
+	} else {
 		//if is head quarter, remove unpublished materials
 		newContentList := make([]*entity.Content, 0)
-		for i := range contentList{
+		for i := range contentList {
 			if contentList[i].PublishStatus == entity.ContentStatusPublished {
 				newContentList = append(newContentList, contentList[i])
 			}
 		}
 		contentList = newContentList
 	}
-
 
 	contentMap := make(map[string]*entity.Content)
 	for i := range contentList {
@@ -227,7 +272,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		data, ok := contentMap[l.MaterialId]
 		if ok {
-			material, _ := ConvertContentObj(ctx, data, operator)
+			material, _ := GetContentModel().ConvertContentObj(ctx, tx, data, operator)
 			l.Material = material
 		}
 	})
@@ -241,7 +286,7 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 	for i := range contentList {
 		if contentList[i].Org == operator.OrgID {
 			result = append(result, contentList[i])
-		}else{
+		} else {
 			pendingCheckAuthContents = append(pendingCheckAuthContents, contentList[i])
 			pendingCheckAuthIDs = append(pendingCheckAuthIDs, contentList[i].ID)
 		}
@@ -249,11 +294,11 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 	//if contains materials is not from org, check auth
 	if len(pendingCheckAuthContents) > 0 {
 		condition := da.AuthedContentCondition{
-			OrgIDs: []string{operator.OrgID, constant.ShareToAll},
+			OrgIDs:     []string{operator.OrgID, constant.ShareToAll},
 			ContentIDs: pendingCheckAuthIDs,
 		}
 		authRecords, err := da.GetAuthedContentRecordsDA().QueryAuthedContentRecords(ctx, dbo.MustGetDB(ctx), condition)
-		if err != nil{
+		if err != nil {
 			log.Error(ctx, "search auth content failed",
 				log.Err(err),
 				log.Any("condition", condition))
@@ -262,7 +307,7 @@ func (l *LessonData) filterMaterialsByPermission(ctx context.Context, contentLis
 		for i := range pendingCheckAuthContents {
 			for j := range authRecords {
 				if pendingCheckAuthContents[i].ID == authRecords[j].ContentID &&
-					pendingCheckAuthContents[i].PublishStatus == entity.ContentStatusPublished{
+					pendingCheckAuthContents[i].PublishStatus == entity.ContentStatusPublished {
 					result = append(result, pendingCheckAuthContents[i])
 					break
 				}

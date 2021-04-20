@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"strings"
 	"sync"
 	"time"
 
@@ -51,7 +50,11 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 			)
 			return "", ErrGoLiveTimeNotUp
 		}
-		if schedule.Status.GetScheduleStatus(schedule.EndAt) == entity.ScheduleStatusClosed {
+		if schedule.Status.GetScheduleStatus(entity.ScheduleStatusInput{
+			EndAt:     schedule.EndAt,
+			DueAt:     schedule.DueAt,
+			ClassType: schedule.ClassType,
+		}) == entity.ScheduleStatusClosed {
 			log.Warn(ctx, "MakeScheduleLiveToken:go live not allow",
 				log.Any("op", op),
 				log.Any("schedule", schedule),
@@ -88,7 +91,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Name = name
-	isTeacher, err := s.isTeacherByClass(ctx, op, schedule.ClassID)
+	isTeacher, err := s.isTeacherByScheduleID(ctx, op, scheduleID)
 	if err != nil {
 		log.Error(ctx, "MakeScheduleLiveToken:judge is teacher error",
 			log.Err(err),
@@ -96,10 +99,10 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	if schedule.ClassType == entity.ScheduleClassTypeTask {
+	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
-		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+		_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
 				log.Err(err),
@@ -107,7 +110,12 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 				log.Any("schedule", schedule))
 			return "", err
 		}
-		liveTokenInfo.Materials, err = s.getMaterials(ctx, op, schedule.LessonPlanID)
+		materialInput := &entity.MaterialInput{
+			ScheduleID: scheduleID,
+			TokenType:  tokenType,
+			ContentID:  schedule.LessonPlanID,
+		}
+		liveTokenInfo.Materials, err = s.getMaterials(ctx, op, materialInput)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:get material error",
 				log.Err(err),
@@ -138,7 +146,7 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		OrgID:     op.OrgID,
 		ClassType: entity.LiveClassTypeLive,
 	}
-	err := GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, contentID)
+	_, err := GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, contentID)
 	if err != nil {
 		log.Error(ctx, "MakeContentLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
 			log.Err(err),
@@ -163,7 +171,11 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		return "", err
 	}
 	liveTokenInfo.Teacher = isTeacher
-	liveTokenInfo.Materials, err = s.getMaterials(ctx, op, contentID)
+	materialInput := &entity.MaterialInput{
+		ContentID: contentID,
+		TokenType: entity.LiveTokenTypePreview,
+	}
+	liveTokenInfo.Materials, err = s.getMaterials(ctx, op, materialInput)
 	if err != nil {
 		log.Error(ctx, "MakeLivePreviewToken:get material error",
 			log.Err(err),
@@ -222,63 +234,52 @@ func (s *liveTokenModel) createJWT(ctx context.Context, liveTokenInfo entity.Liv
 	return token, nil
 }
 
-func (s *liveTokenModel) isTeacherByClass(ctx context.Context, op *entity.Operator, classID string) (bool, error) {
-	classTeacherMap, err := external.GetTeacherServiceProvider().GetByClasses(ctx, op, []string{classID})
+func (s *liveTokenModel) isTeacherByScheduleID(ctx context.Context, op *entity.Operator, scheduleID string) (bool, error) {
+	isTeacherPermission, err := s.isTeacherByPermission(ctx, op)
 	if err != nil {
-		log.Error(ctx, "isTeacherByClass:GetTeacherServiceProvider.GetByClasses error",
-			log.Err(err),
-			log.String("classID", classID),
-			log.Any("op", op),
-		)
+		log.Error(ctx, "get permissions error", log.Err(err), log.Any("op", op))
 		return false, err
 	}
-	teachers, ok := classTeacherMap[classID]
-	if !ok {
-		log.Info(ctx, "isTeacherByClass:No teacher under the class",
-			log.String("classID", classID),
-			log.Any("op", op),
-		)
+	if !isTeacherPermission {
+		log.Info(ctx, "has no teacher permission", log.Err(err), log.Any("op", op))
 		return false, nil
 	}
-	log.Debug(ctx, "isTeacherByClass:classTeacherMap info",
-		log.String("classID", classID),
-		log.Any("op", op),
-		log.Any("classTeacherMap", classTeacherMap),
-	)
-	for _, t := range teachers {
-		if t.ID == op.UserID {
-			return true, nil
-		}
+	isTeacher, err := GetScheduleRelationModel().IsTeacher(ctx, op, scheduleID)
+	if err != nil {
+		log.Error(ctx, "GetScheduleRelationModel.IsTeacher error", log.Err(err), log.Any("op", op), log.String("scheduleID", scheduleID))
+		return false, err
+	}
+	return isTeacher, nil
+}
+
+func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {
+	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.LiveClassTeacher,
+		external.LiveClassStudent,
+	})
+	if err != nil {
+		log.Error(ctx, "get permissions error", log.Err(err), log.Any("op", op))
+		return false, err
+	}
+	if permissionMap[external.LiveClassTeacher] {
+		return true, nil
 	}
 	return false, nil
 }
 
-func (s *liveTokenModel) isTeacherByPermission(ctx context.Context, op *entity.Operator) (bool, error) {
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.LiveClassTeacher)
-	if err != nil {
-		log.Error(ctx, "isTeacherByPermission:GetPermissionServiceProvider.HasOrganizationPermission error",
-			log.String("permission", external.LiveClassTeacher.String()),
-			log.Any("operator", op),
-			log.Err(err),
-		)
-		return false, err
-	}
-	return hasPermission, nil
-}
-
-func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, contentID string) ([]*entity.LiveMaterial, error) {
-	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), contentID, op)
+func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, input *entity.MaterialInput) ([]*entity.LiveMaterial, error) {
+	contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), input.ContentID, op)
 	log.Debug(ctx, "content data", log.Any("contentList", contentList))
 	if err == dbo.ErrRecordNotFound {
 		log.Error(ctx, "getMaterials:get content sub by id not found",
 			log.Err(err),
-			log.String("contentID", contentID))
+			log.Any("input", input))
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
 		log.Error(ctx, "getMaterials:get content sub by id error",
 			log.Err(err),
-			log.String("contentID", contentID))
+			log.Any("input", input))
 		return nil, err
 	}
 
@@ -304,26 +305,44 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeAudio
 		case entity.FileTypeVideo:
 			materialItem.TypeName = entity.MaterialTypeVideo
-		case entity.FileTypeH5p:
+		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
+			materialItem.TypeName = entity.MaterialTypeH5P
+		case entity.FileTypeDocument:
+			log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
+			if mData.Source.Ext() != constant.LiveTokenDocumentPDF {
+				continue
+			}
 			materialItem.TypeName = entity.MaterialTypeH5P
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
 			continue
 		}
 		// material url
-		if materialItem.TypeName == entity.MaterialTypeH5P {
+		switch mData.FileType {
+		case entity.FileTypeH5pExtend:
+			materialItem.URL = fmt.Sprintf("/h5pextend/index.html?org_id=%s&content_id=%s&schedule_id=%s&type=%s#/live-h5p", op.OrgID, item.ID, input.ScheduleID, input.TokenType)
+		case entity.FileTypeH5p:
 			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
-		} else {
-			materialItem.URL, err = GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
+		default:
+			sourceUrl, err := GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
 			if err != nil {
 				log.Error(ctx, "getMaterials:get resource path error",
 					log.Err(err),
-					log.String("contentID", contentID),
+					log.Any("input", input),
 					log.Any("mData", mData))
 				return nil, err
 			}
+			if mData.FileType == entity.FileTypeDocument {
+				source := string(mData.Source)
+				parts := strings.Split(source, "-")
+				if len(parts) != 2 {
+					log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+					return nil, constant.ErrInvalidArgs
+				}
+				sourceUrl = fmt.Sprintf("/assets/%s", parts[1])
+			}
+			materialItem.URL = sourceUrl
 		}
-
 		materials = append(materials, materialItem)
 	}
 	return materials, nil

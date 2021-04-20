@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"net/http"
 	"strings"
 
@@ -50,6 +51,8 @@ func (s *Server) createFolder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
 		})
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -93,6 +96,8 @@ func (s *Server) addFolderItem(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
 		})
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -113,8 +118,6 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	fid := c.Param("item_id")
-	err := model.GetFolderModel().RemoveItem(ctx, fid, op)
-
 	//check permission
 	hasPermission, err := model.GetFolderPermissionModel().CheckFolderOperatorPermission(ctx, op)
 	if err != nil {
@@ -126,9 +129,13 @@ func (s *Server) removeFolderItem(c *gin.Context) {
 		return
 	}
 
+	err = model.GetFolderModel().RemoveItem(ctx, fid, op)
+
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrFolderIsNotEmpty:
+		c.JSON(http.StatusNotAcceptable, L(FolderDeleteNoEmptyFolder))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -170,6 +177,8 @@ func (s *Server) removeFolderItemBulk(c *gin.Context) {
 	err = model.GetFolderModel().RemoveItemBulk(ctx, data.FolderIDs, op)
 
 	switch err {
+	case model.ErrFolderIsNotEmpty:
+		c.JSON(http.StatusNotAcceptable, L(FolderDeleteNoEmptyFolder))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -217,6 +226,8 @@ func (s *Server) updateFolderItem(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -260,6 +271,8 @@ func (s *Server) moveFolderItem(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	case model.ErrMoveToChild:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
@@ -305,6 +318,8 @@ func (s *Server) moveFolderItemBulk(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, "")
+	case model.ErrDuplicateFolderName:
+		c.JSON(http.StatusConflict, L(LibraryErrDuplicateFolderName))
 	case model.ErrMoveToChild:
 		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
 	default:
@@ -425,7 +440,6 @@ func (s *Server) getFolderItemByID(c *gin.Context) {
 	}
 }
 
-
 // @Summary shareFolders
 // @ID shareFolders
 // @Description share folders to org
@@ -451,7 +465,6 @@ func (s *Server) shareFolders(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-
 
 	var data entity.ShareFoldersRequest
 	err = c.ShouldBind(&data)
@@ -505,7 +518,7 @@ func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	folderIDs := strings.Split(folderIDsStr, ",")
+	folderIDs := strings.Split(folderIDsStr, constant.StringArraySeparator)
 	results, err := model.GetFolderModel().GetFoldersSharedRecords(ctx, folderIDs, op)
 	switch err {
 	case nil:
@@ -514,7 +527,6 @@ func (s *Server) getFoldersSharedRecords(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
-
 
 func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondition {
 	ctx := c.Request.Context()
@@ -547,9 +559,9 @@ func (s *Server) buildFolderCondition(c *gin.Context) *entity.SearchFolderCondit
 }
 
 type FolderItemsResponse struct {
-	Items []*entity.FolderItem `json:"items"`
+	Items []*entity.FolderItemInfo `json:"items"`
 }
 type FolderItemsResponseWithTotal struct {
-	Items []*entity.FolderItem `json:"items"`
-	Total int                  `json:"total"`
+	Items []*entity.FolderItemInfo `json:"items"`
+	Total int                      `json:"total"`
 }

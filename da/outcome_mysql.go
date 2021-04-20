@@ -31,7 +31,7 @@ type OutcomeCondition struct {
 	OrganizationID sql.NullString
 	SourceID       sql.NullString
 	FuzzyKey       sql.NullString
-	FuzzyAuthors   dbo.NullStrings
+	AuthorIDs      dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        OutcomeOrderBy `json:"order_by"`
@@ -42,21 +42,53 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
 	params := make([]interface{}, 0)
 
-	if c.FuzzyKey.Valid && !c.FuzzyAuthors.Valid {
-		wheres = append(wheres, "match(name, keywords, description, shortcode) against(? in boolean mode)")
+	if c.FuzzyKey.Valid {
+		clauses := []string{"match(name, keywords, description, shortcode) against(? in boolean mode)"}
 		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
+
+		if c.AuthorIDs.Valid {
+			clauses = append(clauses, fmt.Sprintf("(author_id in (%s))", c.AuthorIDs.SQLPlaceHolder()))
+			params = append(params, c.AuthorIDs.ToInterfaceSlice()...)
+		}
+
+		if c.IDs.Valid {
+			clauses = append(clauses, fmt.Sprintf("(id in (%s))", c.IDs.SQLPlaceHolder()))
+			params = append(params, c.IDs.ToInterfaceSlice()...)
+		}
+		wheres = append(wheres, fmt.Sprintf("(%s)", strings.Join(clauses, " or ")))
 	}
 
-	if c.FuzzyKey.Valid && c.FuzzyAuthors.Valid {
-		wheres = append(wheres, fmt.Sprintf("((match(name, keywords, description, shortcode) against(? in boolean mode)) or (id in (%s)))", c.FuzzyAuthors.SQLPlaceHolder()))
-		params = append(params, strings.TrimSpace(c.FuzzyKey.String))
-		params = append(params, c.FuzzyAuthors.ToInterfaceSlice()...)
-
+	if !c.FuzzyKey.Valid && c.AuthorIDs.Valid {
+		wheres = append(wheres, fmt.Sprintf("author_id in (%s)", c.AuthorIDs.SQLPlaceHolder()))
+		params = append(params, c.AuthorIDs.ToInterfaceSlice()...)
 	}
 
-	if c.IDs.Valid {
+	if !c.FuzzyKey.Valid && c.IDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("id in (%s)", c.IDs.SQLPlaceHolder()))
 		params = append(params, c.IDs.ToInterfaceSlice()...)
+	}
+
+	if c.Name.Valid {
+		wheres = append(wheres, "match(name) against(? in boolean mode)")
+		//wheres = append(wheres, "name=?")
+		params = append(params, c.Name.String)
+	}
+
+	if c.Shortcode.Valid {
+		wheres = append(wheres, "match(shortcode) against(? in boolean mode)")
+		params = append(params, c.Shortcode.String)
+	}
+
+	if c.Keywords.Valid {
+		wheres = append(wheres, "match(keywords) against(? in boolean mode)")
+		//wheres = append(wheres, "keywords=?")
+		params = append(params, c.Keywords.String)
+	}
+
+	if c.Description.Valid {
+		wheres = append(wheres, "match(description) against(? in boolean mode)")
+		//wheres = append(wheres, "description=?")
+		params = append(params, c.Description.String)
 	}
 
 	if c.PublishStatus.Valid {
@@ -97,18 +129,18 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 
 func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 	return &OutcomeCondition{
-		IDs:            dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
-		Name:           sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
-		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
-		Keywords:       sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
-		Shortcode:      sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-		PublishStatus:  dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
-		PublishScope:   sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
-		AuthorID:       sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
-		AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
+		IDs:           dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
+		Name:          sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
+		Description:   sql.NullString{String: condition.Description, Valid: condition.Description != ""},
+		Keywords:      sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
+		Shortcode:     sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
+		PublishStatus: dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
+		PublishScope:  sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
+		AuthorID:      sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
+		//AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
 		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
-		FuzzyAuthors:   dbo.NullStrings{Strings: condition.FuzzyAuthorIDs, Valid: len(condition.FuzzyAuthorIDs) > 0},
+		AuthorIDs:      dbo.NullStrings{Strings: condition.AuthorIDs, Valid: len(condition.AuthorIDs) > 0},
 		Assumed:        sql.NullBool{Bool: condition.Assumed == 1, Valid: condition.Assumed != -1},
 		OrderBy:        NewOrderBy(condition.OrderBy),
 		Pager:          NewPage(condition.Page, condition.PageSize),
@@ -192,7 +224,7 @@ func (c *OutcomeCondition) GetOrderBy() string {
 	}
 }
 
-func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	now := time.Now().Unix()
 	if outcome.CreateAt == 0 {
 		outcome.CreateAt = now
@@ -203,27 +235,26 @@ func (o OutcomeSqlDA) CreateOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	_, err = o.InsertTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "CreateOutcome: InsertTx failed", log.Err(err), log.Any("outcome", outcome))
+		return
 	}
 	if outcome.SourceID != "" && outcome.SourceID != constant.LockedByNoBody && outcome.SourceID != outcome.ID {
-		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID, outcome.SourceID})
+		GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID, outcome.SourceID})
 	} else {
-		GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
+		GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID})
 	}
 	return
 }
 
-func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
-	//now := time.Now().Unix()
-	//outcome.UpdateAt = now
+func (o OutcomeSqlDA) UpdateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	_, err = o.UpdateTx(ctx, tx, outcome)
 	if err != nil {
 		log.Error(ctx, "UpdateOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
-	GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
+	GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID})
 	return
 }
 
-func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
+func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
 	now := time.Now().Unix()
 	outcome.UpdateAt = now
 	outcome.DeleteAt = now
@@ -231,7 +262,7 @@ func (o OutcomeSqlDA) DeleteOutcome(ctx context.Context, tx *dbo.DBContext, outc
 	if err != nil {
 		log.Error(ctx, "DeleteOutcome: UpdateTx failed", log.Err(err), log.Any("outcome", outcome))
 	}
-	GetOutcomeRedis().CleanOutcomeCache(ctx, []string{outcome.ID})
+	GetOutcomeRedis().CleanOutcomeCache(ctx, op, []string{outcome.ID})
 	return
 }
 
@@ -247,13 +278,19 @@ func (o OutcomeSqlDA) GetOutcomeByID(ctx context.Context, tx *dbo.DBContext, id 
 		log.Error(ctx, "GetOutcomeByID: GetTx failed", log.Err(err), log.Any("outcome", outcome))
 		return nil, err
 	}
+	outcomeSet, err := GetOutcomeSetDA().SearchSetsByOutcome(ctx, tx, []string{outcome.ID})
+	if err != nil {
+		log.Error(ctx, "GetOutcomeByID: SearchSetsByOutcome failed", log.Err(err), log.Any("outcome", outcome))
+		return nil, err
+	}
+	outcome.Sets = outcomeSet[outcome.ID]
 	GetOutcomeRedis().SaveOutcomeCache(ctx, &outcome)
 	return &outcome, nil
 }
 
-func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
+func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, sourceID string) (*entity.Outcome, error) {
 	condition := OutcomeCondition{SourceID: sql.NullString{String: sourceID, Valid: true}}
-	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, &condition)
+	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, op, &condition)
 	if hits != nil && len(hits.OutcomeList) == 1 {
 		return hits.OutcomeList[0], nil
 	}
@@ -267,12 +304,12 @@ func (o OutcomeSqlDA) GetOutcomeBySourceID(ctx context.Context, tx *dbo.DBContex
 			log.String("source_id", sourceID))
 		return nil, err
 	}
-	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, &condition, &OutcomeListWithKey{1, []*entity.Outcome{&outcome}})
+	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, op, &condition, &OutcomeListWithKey{1, []*entity.Outcome{&outcome}})
 	return &outcome, nil
 }
 
-func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, condition *OutcomeCondition) (total int, outcomes []*entity.Outcome, err error) {
-	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, condition)
+func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *OutcomeCondition) (total int, outcomes []*entity.Outcome, err error) {
+	hits := GetOutcomeRedis().GetOutcomeCacheBySearchCondition(ctx, op, condition)
 	if hits != nil {
 		return hits.Total, hits.OutcomeList, nil
 	}
@@ -283,11 +320,26 @@ func (o OutcomeSqlDA) SearchOutcome(ctx context.Context, tx *dbo.DBContext, cond
 			log.Err(err),
 			log.Any("condition", condition))
 	}
-	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, condition, &OutcomeListWithKey{total, outcomes})
+	outcomeIDs := make([]string, len(outcomes))
+	for i := range outcomes {
+		outcomeIDs[i] = outcomes[i].ID
+	}
+	if len(outcomeIDs) > 0 {
+		outcomeSets, err := GetOutcomeSetDA().SearchSetsByOutcome(ctx, tx, outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "GetOutcomeByID: SearchSetsByOutcome failed", log.Err(err), log.Strings("outcome", outcomeIDs))
+			return 0, nil, err
+		}
+		for i := range outcomes {
+			outcomes[i].Sets = outcomeSets[outcomes[i].ID]
+		}
+	}
+
+	GetOutcomeRedis().SaveOutcomeCacheListBySearchCondition(ctx, op, condition, &OutcomeListWithKey{total, outcomes})
 	return
 }
 
-func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, oldHeader, newHeader string) error {
+func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, oldHeader, newHeader string) error {
 	sql := fmt.Sprintf("update %s set latest_id='%s' where latest_id='%s' and delete_at=0", entity.Outcome{}.TableName(), newHeader, oldHeader)
 	err := tx.Exec(sql).Error
 	if err != nil {
@@ -319,6 +371,6 @@ func (o OutcomeSqlDA) UpdateLatestHead(ctx context.Context, tx *dbo.DBContext, o
 	for i := range outcomes {
 		ids[i] = outcomes[i].ID
 	}
-	GetOutcomeRedis().CleanOutcomeCache(ctx, ids)
+	GetOutcomeRedis().CleanOutcomeCache(ctx, op, ids)
 	return nil
 }

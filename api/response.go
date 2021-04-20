@@ -14,51 +14,80 @@ const (
 	// Assessment
 	AssessMsgOneStudent   ResponseLabel = "assess_msg_one_student"
 	AssessMsgNoPermission ResponseLabel = "assess_msg_no_permission"
+	AssessMsgNewVersion   ResponseLabel = "assess_msg_new_version"
 
 	// Report
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
 
 	//Library
-	LibraryMsgContentLocked      ResponseLabel = "library_error_content_locked"
-	LibraryMsgContentDataInvalid ResponseLabel = "library_error_content_data_invalid"
+	LibraryMsgContentLocked       ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentDataInvalid  ResponseLabel = "library_error_content_data_invalid"
+	LibraryContentLockedByMe      ResponseLabel = "library_error_content_locked_by_me"
+	LibraryErrDuplicateFolderName ResponseLabel = "library_error_duplicate_folder_name"
+
+	LibraryErrorPlanDuration ResponseLabel = "library_error_plan_duration"
+
+	//Folder
+	FolderDeleteNoEmptyFolder ResponseLabel = "library_error_delete_folder"
 
 	// schedule
-	ScheduleMsgEditOverlap           ResponseLabel = "schedule_msg_edit_overlap"
-	ScheduleMsgDeleteOverlap         ResponseLabel = "schedule_msg_delete_overlap"
-	ScheduleMsgOverlap               ResponseLabel = "schedule_msg_overlap"
-	ScheduleMsgNoPermission          ResponseLabel = "schedule_msg_no_permission"
-	ScheduleMsgDeleteMissTime        ResponseLabel = "schedule_msg_delete_minutes"
-	ScheduleMsgEditMissTime          ResponseLabel = "schedule_msg_edit_minutes"
-	ScheduleMsgGoLiveTimeNotUp       ResponseLabel = "schedule_msg_start_minutes"
-	ScheduleMsgTimeExpired           ResponseLabel = "schedule_msg_time_expired"
-	ScheduleMsgLessonPlanInvalid     ResponseLabel = "schedule_msg_recall_lesson_plan"
-	ScheduleMsgDueDateEarlierEndDate ResponseLabel = "schedule_msg_due_date_earlier"
-	ScheduleMsgDueDateEarlierToDay   ResponseLabel = "schedule_msg_earlier_today"
+	ScheduleMessageEditOverlap           ResponseLabel = "schedule_msg_edit_overlap"
+	ScheduleMessageDeleteOverlap         ResponseLabel = "schedule_msg_delete_overlap"
+	ScheduleMessageOverlap               ResponseLabel = "schedule_msg_overlap"
+	ScheduleMessageNoPermission          ResponseLabel = "schedule_msg_no_permission"
+	ScheduleMessageDeleteMissTime        ResponseLabel = "schedule_msg_delete_minutes"
+	ScheduleMessageEditMissTime          ResponseLabel = "schedule_msg_edit_minutes"
+	ScheduleMessageGoLiveTimeNotUp       ResponseLabel = "schedule_msg_start_minutes"
+	ScheduleMessageTimeExpired           ResponseLabel = "schedule_msg_time_expired"
+	ScheduleMessageLessonPlanInvalid     ResponseLabel = "schedule_msg_recall_lesson_plan"
+	ScheduleMessageDueDateEarlierEndDate ResponseLabel = "schedule_msg_due_date_earlier"
+	ScheduleMessageDueDateEarlierToDay   ResponseLabel = "schedule_msg_earlier_today"
+	ScheduleMessageUsersConflict         ResponseLabel = "schedule_msg_users_conflict"
+	ScheduleMsgDeleteMissDueDate         ResponseLabel = "schedule_msg_delete_due_date"
+	ScheduleMsgEditMissDueDate           ResponseLabel = "schedule_msg_edit_due_date"
+	ScheduleMsgHidden                    ResponseLabel = "schedule_msg_hidden"
+	scheduleMsgHide                      ResponseLabel = "schedule_msg_hide"
+	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
+	ScheduleFeedbackCompleted            ResponseLabel = "schedule_msg_cannot_submit"
+
+	AssessMsgLockedLo       ResponseLabel = "assess_msg_locked_lo"
+	AssessMsgExistingSet    ResponseLabel = "assess_msg_existing_set"
+	AssessMsgExistShortcode ResponseLabel = "assess_msg_exist_short_code"
 )
 
 // L create response object with label
 func L(label ResponseLabel) interface{} {
-	return ErrorResponse{Label: label.String()}
+	return Response{Label: label.String()}
+}
+
+// D create response object with data
+func D(data interface{}) interface{} {
+	return Response{Data: data}
 }
 
 // LD create response object with label and data
-func LD(lable ResponseLabel, data interface{}) interface{} {
-	return ErrorResponse{Label: lable.String(), Data: data}
+func LD(label ResponseLabel, data interface{}) interface{} {
+	return Response{Label: label.String(), Data: data}
 }
 
-type ErrorResponse struct {
+type Response struct {
 	Label string      `json:"label,omitempty" example:"unknown"`
 	Data  interface{} `json:"data"`
 }
+type SuccessRequestResponse Response
 
-type BadRequestResponse ErrorResponse
+type BadRequestResponse Response
 
-type ForbiddenResponse ErrorResponse
+type ForbiddenResponse Response
 
-type NotFoundResponse ErrorResponse
+type NotFoundResponse Response
 
-type InternalServerErrorResponse ErrorResponse
+type InternalServerErrorResponse Response
 
-type ConflictResponse ErrorResponse
+type ConflictResponse Response
 
-type UnAuthorizedResponse ErrorResponse
+type UnAuthorizedResponse Response
+
+type IDResponse struct {
+	ID string `json:"id"`
+}

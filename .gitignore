@@ -15,3 +15,6 @@ cmd/add-assessments/add-assessments
 cmd/add-assessments/add-assessments.exe
 cmd/add-assessments/*.json
 schema/sync/.gitkeep
+cmd/intergrate_academic_profile/kidsloop_vn/kidsloop_vn
+cmd/intergrate_academic_profile/kidsloop_vn/*.sql
+cmd/assessment_migrate/assessment_migrate

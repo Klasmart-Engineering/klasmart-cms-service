@@ -3,14 +3,30 @@ package model
 import (
 	"context"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (entity.ContentData, error) {
-	var contentData entity.ContentData
+type ContentData interface {
+	Unmarshal(ctx context.Context, data string) error
+	Marshal(ctx context.Context) (string, error)
+
+	Validate(ctx context.Context, contentType entity.ContentType) error
+	PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error
+	PrepareSave(ctx context.Context, t entity.ExtraDataInRequest) error
+	PrepareVersion(ctx context.Context) error
+	SubContentIDs(ctx context.Context) []string
+
+	ReplaceContentIDs(ctx context.Context, IDMap map[string]string)
+}
+
+func (cm *ContentModel) CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error) {
+	var contentData ContentData
 	switch contentType {
 	case entity.ContentTypePlan:
 		contentData = new(LessonData)
@@ -28,93 +44,136 @@ func CreateContentData(ctx context.Context, contentType entity.ContentType, data
 	return contentData, nil
 }
 
-func ConvertContentObj(ctx context.Context, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
-	log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
-	contentData, err := CreateContentData(ctx, obj.ContentType, obj.Data)
+func (c *ContentModel) ConvertContentObj(ctx context.Context, tx *dbo.DBContext, obj *entity.Content, operator *entity.Operator) (*entity.ContentInfo, error) {
+	res, err := c.BatchConvertContentObj(ctx, tx, []*entity.Content{obj}, operator)
 	if err != nil {
 		return nil, err
 	}
-	teacherManual := ""
-	teacherManualName := ""
-	if obj.ContentType == entity.ContentTypePlan {
-		teacherManual = contentData.(*LessonData).TeacherManual
-		teacherManualName = contentData.(*LessonData).TeacherManualName
+	return res[0], nil
+}
+
+func (c *ContentModel) BatchConvertContentObj(ctx context.Context, tx *dbo.DBContext, objs []*entity.Content, operator *entity.Operator) ([]*entity.ContentInfo, error) {
+	if len(objs) < 1 {
+		return nil, nil
+	}
+	contentIDs := make([]string, len(objs))
+	for i := range objs {
+		contentIDs[i] = objs[i].ID
 	}
 
-	subjects := make([]string, 0)
-	developmentals := make([]string, 0)
-	skills := make([]string, 0)
-	ages := make([]string, 0)
-	grades := make([]string, 0)
-	keywords := make([]string, 0)
-	outcomes := make([]string, 0)
-	rejectReason := make([]string, 0)
-	if obj.Subject != "" {
-		subjects = strings.Split(obj.Subject, ",")
+	contentProperties, err := da.GetContentPropertyDA().BatchGetByContentIDList(ctx, tx, contentIDs)
+	if err != nil {
+		log.Error(ctx, "BatchGetByContentIDList",
+			log.Err(err),
+			log.Strings("ids", contentIDs))
+		return nil, err
 	}
-	if obj.Developmental != "" {
-		developmentals = strings.Split(obj.Developmental, ",")
-	}
-	if obj.Skills != "" {
-		skills = strings.Split(obj.Skills, ",")
-	}
-	if obj.Age != "" {
-		ages = strings.Split(obj.Age, ",")
-	}
-	if obj.Grade != "" {
-		grades = strings.Split(obj.Grade, ",")
-	}
-	if obj.Keywords != "" {
-		keywords = strings.Split(obj.Keywords, ",")
-	}
-	if obj.Outcomes != "" {
-		outcomes = strings.Split(obj.Outcomes, ",")
-	}
-	if obj.RejectReason != "" {
-		rejectReason = strings.Split(obj.RejectReason, ",")
-	}
-	//user, err := external.GetUserServiceProvider().Get(ctx, operator, obj.Author)
-	//authorName := ""
-	//if err != nil{
-	//	log.Warn(ctx, "get user info failed", log.Err(err), log.Any("obj", obj))
-	//}else{
-	//	authorName = user.Name
-	//}
+	log.Info(ctx, "BatchGetByContentIDList result",
+		log.Any("contentProperties", contentProperties))
 
-	cm := &entity.ContentInfo{
-		ID:            obj.ID,
-		ContentType:   obj.ContentType,
-		Name:          obj.Name,
-		Program:       obj.Program,
-		Subject:       subjects,
-		Developmental: developmentals,
-		Skills:        skills,
-		Age:           ages,
-		Grade:         grades,
-		Keywords:      keywords,
-		SourceType:		obj.SourceType,
-		SuggestTime:   obj.SuggestTime,
-		RejectReason:  rejectReason,
-		Remark: 	   obj.Remark,
-		Description:   obj.Description,
-		Thumbnail:     obj.Thumbnail,
-		Data:          obj.Data,
-		Extra:         obj.Extra,
-		Outcomes:      outcomes,
-		Author:        obj.Author,
-		TeacherManual: teacherManual,
-		TeacherManualName: teacherManualName,
-		Creator:		obj.Creator,
-		SelfStudy:     obj.SelfStudy.Bool(),
-		DrawActivity:  obj.DrawActivity.Bool(),
-		LessonType:    obj.LessonType,
-		Org:           obj.Org,
-		PublishScope:  obj.PublishScope,
-		PublishStatus: obj.PublishStatus,
-		Version:       obj.Version,
-		CreatedAt:     obj.CreateAt,
-		UpdatedAt:     obj.UpdateAt,
+	res := make([]*entity.ContentInfo, 0)
+	for _, obj := range objs {
+		log.Info(ctx, "Convert content object", log.String("extra", obj.Extra))
+		contentData, err := c.CreateContentData(ctx, obj.ContentType, obj.Data)
+		if err != nil {
+			log.Error(ctx, "CreateContentData",
+				log.Err(err),
+				log.Any("obj", obj))
+			return nil, err
+		}
+		teacherManuals := make([]*entity.TeacherManualFile, 0)
+		if obj.ContentType == entity.ContentTypePlan {
+			planData := contentData.(*LessonData)
+			if len(planData.TeacherManualBatch) > 0 {
+				teacherManuals = planData.TeacherManualBatch
+			} else if planData.TeacherManual != "" {
+				teacherManuals = []*entity.TeacherManualFile{{
+					ID:   planData.TeacherManual,
+					Name: planData.TeacherManualName,
+				}}
+			}
+		}
+
+		subjects := make([]string, 0)
+		developmentals := make([]string, 0)
+		skills := make([]string, 0)
+		ages := make([]string, 0)
+		grades := make([]string, 0)
+		keywords := make([]string, 0)
+		outcomes := make([]string, 0)
+		rejectReason := make([]string, 0)
+		program := ""
+
+		for i := range contentProperties {
+			if contentProperties[i].ContentID != obj.ID {
+				continue
+			}
+			switch contentProperties[i].PropertyType {
+			case entity.ContentPropertyTypeProgram:
+				program = contentProperties[i].PropertyID
+			case entity.ContentPropertyTypeSubject:
+				subjects = append(subjects, contentProperties[i].PropertyID)
+			case entity.ContentPropertyTypeCategory:
+				developmentals = append(developmentals, contentProperties[i].PropertyID)
+			case entity.ContentPropertyTypeAge:
+				ages = append(ages, contentProperties[i].PropertyID)
+			case entity.ContentPropertyTypeGrade:
+				grades = append(grades, contentProperties[i].PropertyID)
+			case entity.ContentPropertyTypeSubCategory:
+				skills = append(skills, contentProperties[i].PropertyID)
+			}
+		}
+		if obj.Keywords != "" {
+			keywords = strings.Split(obj.Keywords, constant.StringArraySeparator)
+		}
+		if obj.Outcomes != "" {
+			outcomes = strings.Split(obj.Outcomes, constant.StringArraySeparator)
+		}
+		if obj.RejectReason != "" {
+			rejectReason = strings.Split(obj.RejectReason, constant.StringArraySeparator)
+		}
+
+		log.Info(ctx, "content properties",
+			log.String("program", program),
+			log.Strings("subjects", subjects),
+			log.Strings("developmentals", developmentals),
+			log.Strings("skills", skills),
+			log.Strings("ages", ages),
+			log.Strings("grades", grades))
+		cm := &entity.ContentInfo{
+			ID:                 obj.ID,
+			ContentType:        obj.ContentType,
+			Name:               obj.Name,
+			Program:            program,
+			Subject:            subjects,
+			Category:           developmentals,
+			SubCategory:        skills,
+			Age:                ages,
+			Grade:              grades,
+			Keywords:           keywords,
+			SourceType:         obj.SourceType,
+			SuggestTime:        obj.SuggestTime,
+			RejectReason:       rejectReason,
+			Remark:             obj.Remark,
+			Description:        obj.Description,
+			Thumbnail:          obj.Thumbnail,
+			Data:               obj.Data,
+			Extra:              obj.Extra,
+			Outcomes:           outcomes,
+			Author:             obj.Author,
+			TeacherManualBatch: teacherManuals,
+			Creator:            obj.Creator,
+			SelfStudy:          obj.SelfStudy.Bool(),
+			DrawActivity:       obj.DrawActivity.Bool(),
+			LessonType:         obj.LessonType,
+			Org:                obj.Org,
+			PublishStatus:      obj.PublishStatus,
+			Version:            obj.Version,
+			CreatedAt:          obj.CreateAt,
+			UpdatedAt:          obj.UpdateAt,
+		}
+		res = append(res, cm)
 	}
 
-	return cm, nil
+	return res, nil
 }

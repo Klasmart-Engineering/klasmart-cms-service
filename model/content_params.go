@@ -14,7 +14,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d entity.ContentData) string {
+func (cm ContentModel) getSourceType(ctx context.Context, c entity.CreateContentRequest, d ContentData) string {
 	if c.ContentType == entity.ContentTypePlan {
 		return constant.SourceTypeLesson
 	}
@@ -55,7 +55,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	if c.Data == "" {
 		return nil, ErrNoContentData
 	}
-	cd, err := CreateContentData(ctx, c.ContentType, c.Data)
+	cd, err := cm.CreateContentData(ctx, c.ContentType, c.Data)
 	if err != nil {
 		log.Warn(ctx, "create content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
@@ -74,7 +74,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		return nil, err
 	}
 
-	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: c.TeacherManual, TeacherManualName: c.TeacherManualName})
+	err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManualBatch: c.TeacherManualBatch})
 	if err != nil {
 		log.Warn(ctx, "prepare save content data failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return nil, ErrInvalidContentData
@@ -88,13 +88,13 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 	c.Data = data
 
 	//get publishScope&authorName
-	publishScope := c.PublishScope
 
 	if c.SourceType == "" {
 		c.SourceType = cm.getSourceType(ctx, c, cd)
 	}
 
 	//若为asset，直接发布
+	//if the content is assets, publish immediately
 	if c.ContentType == entity.ContentTypeAssets {
 		publishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 		c.SelfStudy = false
@@ -110,13 +110,7 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		//ID:            utils.NewID(),
 		ContentType:   c.ContentType,
 		Name:          c.Name,
-		Program:       c.Program,
-		Subject:       strings.Join(c.Subject, ","),
-		Developmental: strings.Join(c.Developmental, ","),
-		Skills:        strings.Join(c.Skills, ","),
-		Age:           strings.Join(c.Age, ","),
-		Grade:         strings.Join(c.Grade, ","),
-		Keywords:      strings.Join(c.Keywords, ","),
+		Keywords:      strings.Join(c.Keywords, constant.StringArraySeparator),
 		Description:   c.Description,
 		Thumbnail:     c.Thumbnail,
 		SuggestTime:   c.SuggestTime,
@@ -126,12 +120,11 @@ func (cm ContentModel) prepareCreateContentParams(ctx context.Context, c entity.
 		DirPath:       path,
 		SelfStudy:     c.SelfStudy.Int(),
 		DrawActivity:  c.DrawActivity.Int(),
-		Outcomes:      strings.Join(c.Outcomes, ","),
+		Outcomes:      strings.Join(c.Outcomes, constant.StringArraySeparator),
 		Author:        operator.UserID,
 		Creator:       operator.UserID,
 		LockedBy:      constant.LockedByNoBody,
 		Org:           operator.OrgID,
-		PublishScope:  publishScope,
 		PublishStatus: publishStatus,
 		Version:       1,
 	}, nil
@@ -144,24 +137,6 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if data.ContentType > 0 && data.Data != "" {
 		content.ContentType = data.ContentType
 	}
-	if data.Program != "" {
-		content.Program = data.Program
-	}
-	if data.Subject != nil {
-		content.Subject = strings.Join(data.Subject, ",")
-	}
-	if data.Developmental != nil {
-		content.Developmental = strings.Join(data.Developmental, ",")
-	}
-	if data.Skills != nil {
-		content.Skills = strings.Join(data.Skills, ",")
-	}
-	if data.Age != nil {
-		content.Age = strings.Join(data.Age, ",")
-	}
-	if data.Grade != nil {
-		content.Grade = strings.Join(data.Grade, ",")
-	}
 	if data.Description != "" {
 		content.Description = data.Description
 	}
@@ -169,13 +144,13 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 		content.Thumbnail = data.Thumbnail
 	}
 	if data.Outcomes != nil {
-		content.Outcomes = strings.Join(data.Outcomes, ",")
+		content.Outcomes = strings.Join(data.Outcomes, constant.StringArraySeparator)
 	}
 	if data.Extra != "" {
 		content.Extra = data.Extra
 	}
 	if len(data.Keywords) > 0 {
-		content.Keywords = strings.Join(data.Keywords, ",")
+		content.Keywords = strings.Join(data.Keywords, constant.StringArraySeparator)
 	}
 	if data.SuggestTime > 0 {
 		content.SuggestTime = data.SuggestTime
@@ -192,13 +167,9 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 	if content.PublishStatus == entity.ContentStatusRejected {
 		content.PublishStatus = entity.ContentStatusDraft
 	}
-	//若已发布，不能修改publishScope
-	if content.PublishStatus == entity.ContentStatusDraft ||
-		content.PublishStatus == entity.ContentStatusRejected {
-		content.PublishScope = data.PublishScope
-	}
 
 	//Asset修改后直接发布
+	//if the content is assets, publish immediately after update
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.NewContentPublishStatus(entity.ContentStatusPublished)
 	}
@@ -209,7 +180,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 
 	//检查data
 	if data.Data != "" {
-		cd, err := CreateContentData(ctx, data.ContentType, data.Data)
+		cd, err := cm.CreateContentData(ctx, data.ContentType, data.Data)
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}
@@ -225,7 +196,7 @@ func (cm ContentModel) prepareUpdateContentParams(ctx context.Context, content *
 			log.Error(ctx, "can't update contentdata version for details", log.Err(err))
 			return nil, ErrParseContentDataDetailsFailed
 		}
-		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManual: data.TeacherManual, TeacherManualName: data.TeacherManualName})
+		err = cd.PrepareSave(ctx, entity.ExtraDataInRequest{TeacherManualBatch: data.TeacherManualBatch})
 		if err != nil {
 			return nil, ErrInvalidContentData
 		}
@@ -279,9 +250,11 @@ func (cm ContentModel) prepareCopyContentParams(ctx context.Context, content *en
 
 func (cm ContentModel) prepareDeleteContentParams(ctx context.Context, content *entity.Content, publishStatus entity.ContentPublishStatus, user *entity.Operator) *entity.Content {
 	//删除的时候不去掉路径信息
+	//delete the dir path info
 	// content.DirPath = constant.FolderRootPath
 
 	//assets则隐藏
+	//if content is assets, hide it
 	if content.ContentType.IsAsset() {
 		content.PublishStatus = entity.ContentStatusHidden
 		return content
@@ -320,12 +293,14 @@ func (cm *ContentModel) checkAndUpdateContentPath(ctx context.Context, tx *dbo.D
 		return err
 	}
 	//若路径不存在，则放到根目录
+	//if dir path is not exists, put it into root path
 	content.DirPath = contentPath
 	return nil
 }
 
 func (cm *ContentModel) preparePublishContent(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error {
 	//若content为archive，则直接发布
+	//if content is archived, publish it immediately
 	if content.PublishStatus == entity.ContentStatusArchive {
 		content.PublishStatus = entity.ContentStatusPublished
 		content.UpdateAt = time.Now().Unix()

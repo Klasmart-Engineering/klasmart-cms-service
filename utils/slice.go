@@ -16,7 +16,34 @@ func SliceDeduplication(s []string) []string {
 	return result
 }
 
+// SliceDeduplicationMap deduplicate slice, then return slice and mapping
+// if input slice ["1", "2", "3", "4", "1", "2", "4", "3", "3", "3", "2", "1", "5", "3"]
+// you will got slice ["1", "2", "3", "4", "5"]
+// and mapping {0:0, 1:1, 2:2, 3:3, 4:0, 5:1, 6:3, 7:2, 8:2, 9:2, 10:1, 11:0, 12:4, 13:2}
+func SliceDeduplicationMap(origin []string) ([]string, map[int]int) {
+	valueMap := make(map[string]int, len(origin))
+	indexMap := make(map[int]int, len(origin))
+	result := make([]string, 0, len(origin))
+
+	for index, value := range origin {
+		resultIndex, found := valueMap[value]
+		if !found {
+			result = append(result, value)
+			resultIndex = len(result) - 1
+			valueMap[value] = resultIndex
+
+		}
+
+		indexMap[index] = resultIndex
+	}
+
+	return result, indexMap
+}
+
 func ExcludeStrings(source []string, targets []string) []string {
+	if len(targets) == 0 {
+		return source
+	}
 	var result []string
 	for _, item := range source {
 		find := false
@@ -92,5 +119,21 @@ func IntersectAndDeduplicateStrSlice(slice1 []string, slice2 []string) []string 
 	for key, _ := range m2 {
 		result = append(result, key)
 	}
+	return result
+}
+
+func SliceDeduplicationExcludeEmpty(s []string) []string {
+	temp := make(map[string]bool)
+	for i := range s {
+		temp[s[i]] = true
+	}
+
+	result := make([]string, 0, len(temp))
+	for k, v := range temp {
+		if v && k != "" {
+			result = append(result, k)
+		}
+	}
+
 	return result
 }

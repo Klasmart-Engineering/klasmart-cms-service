@@ -15,6 +15,8 @@ import (
 type TeacherServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*Teacher, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableTeacher, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableTeacher, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*Teacher, error)
 	GetByOrganizations(ctx context.Context, operator *entity.Operator, organizationIDs []string) (map[string][]*Teacher, error)
 	GetBySchool(ctx context.Context, operator *entity.Operator, schoolID string) ([]*Teacher, error)
@@ -85,6 +87,24 @@ func (s AmsTeacherService) BatchGet(ctx context.Context, operator *entity.Operat
 	return teachers, nil
 }
 
+func (s AmsTeacherService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableTeacher, error) {
+	teachers, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*NullableTeacher{}, err
+	}
+
+	dict := make(map[string]*NullableTeacher, len(teachers))
+	for _, teacher := range teachers {
+		dict[teacher.ID] = teacher
+	}
+
+	return dict, nil
+}
+
+func (s AmsTeacherService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	return GetUserServiceProvider().BatchGetNameMap(ctx, operator, ids)
+}
+
 func (s AmsTeacherService) GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*Teacher, error) {
 	request := chlorine.NewRequest(`
 	query ($organization_id: ID!) {
@@ -111,7 +131,7 @@ func (s AmsTeacherService) GetByOrganization(ctx context.Context, operator *enti
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get teachers by org failed",
 			log.Err(err),
@@ -154,7 +174,7 @@ func (s AmsTeacherService) GetByOrganizations(ctx context.Context, operator *ent
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by organization ids failed", log.Err(err), log.Strings("ids", organizationIDs))
 		return nil, err
@@ -205,7 +225,7 @@ func (s AmsTeacherService) GetBySchool(ctx context.Context, operator *entity.Ope
 		Data: data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get teachers by school failed",
 			log.Err(err),
@@ -248,7 +268,7 @@ func (s AmsTeacherService) GetBySchools(ctx context.Context, operator *entity.Op
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by school ids failed", log.Err(err), log.Strings("ids", schoolIDs))
 		return nil, err
@@ -294,7 +314,7 @@ func (s AmsTeacherService) GetByClasses(ctx context.Context, operator *entity.Op
 		Data: &data,
 	}
 
-	_, err := GetChlorine().Run(ctx, request, response)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
 		log.Error(ctx, "get users by class ids failed", log.Err(err), log.Strings("ids", classIDs))
 		return nil, err

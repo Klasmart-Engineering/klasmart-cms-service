@@ -94,6 +94,10 @@ func (u *userSettingModel) GetByOperator(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 	if len(defaultSettings) <= 0 {
+		log.Error(ctx, "GetByOperator:GetUserSettingDA.Query defaultSettings not found",
+			log.Err(err),
+			log.Any("op", op),
+		)
 		return nil, constant.ErrRecordNotFound
 	}
 	defaultSetting := defaultSettings[0]

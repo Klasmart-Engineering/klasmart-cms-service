@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"strings"
 	"sync"
 	"time"
@@ -84,6 +85,7 @@ func (fda *FolderDA) BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBConte
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(fids) < 1 {
 		//若fids为空，则不更新
+		//if fids is nil, no need to update
 		return nil
 	}
 	fidsSQLParts := make([]string, len(fids))
@@ -92,7 +94,7 @@ func (fda *FolderDA) BatchReplaceFolderPath(ctx context.Context, tx *dbo.DBConte
 		fidsSQLParts[i] = "?"
 		params = append(params, fids[i])
 	}
-	fidsSQL := strings.Join(fidsSQLParts, ",")
+	fidsSQL := strings.Join(fidsSQLParts, constant.StringArraySeparator)
 
 	sql := fmt.Sprintf(`UPDATE cms_folder_items SET dir_path = replace(dir_path,?,?) WHERE id IN (%s)`, fidsSQL)
 	err := tx.Exec(sql, params...).Error
@@ -117,6 +119,7 @@ func (fda *FolderDA) BatchUpdateFolderPathPrefix(ctx context.Context, tx *dbo.DB
 	// err := tx.Model(entity.FolderItem{}).Where("id IN (?)", fids).Updates(map[string]interface{}{"path": path}).Error
 	if len(fids) < 1 {
 		//若fids为空，则不更新
+		//if fids is nil, no need to update
 		return nil
 	}
 
@@ -341,8 +344,9 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, s.Link)
 	}
 	if s.NameLike != "" {
-		conditions = append(conditions, "name like ?")
-		params = append(params, s.NameLike+"%")
+		condition := "match(name, description, keywords) against(? in boolean mode)"
+		conditions = append(conditions, condition)
+		params = append(params, s.NameLike)
 	}
 	if s.Name != "" {
 		conditions = append(conditions, "name = ?")
@@ -357,7 +361,7 @@ func (s *FolderCondition) GetConditions() ([]string, []interface{}) {
 		subCondition := make([]string, len(s.DirDescendantList))
 		for i := range s.DirDescendantList {
 			subCondition[i] = "dir_path like ?"
-			params = append(params, s.DirDescendantList[i] + "%")
+			params = append(params, s.DirDescendantList[i]+"%")
 		}
 		condition := "(" + strings.Join(subCondition, " or ") + ")"
 		conditions = append(conditions, condition)

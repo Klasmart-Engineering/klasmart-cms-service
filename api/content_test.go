@@ -7,11 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
-
-	"gitlab.badanamu.com.cn/calmisland/common-cn/common"
 
 	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -46,19 +43,19 @@ func initCache() {
 	}
 }
 
-func TestMain(m *testing.M) {
-	userSetup()
-	if os.Getenv("env") == "HTTP" {
-		common.Setenv(common.EnvHTTP)
-	} else {
-		common.Setenv(common.EnvLAMBDA)
-	}
-
-	log.Debug(context.TODO(), "init api server success")
-	server = NewServer()
-	code := m.Run()
-	os.Exit(code)
-}
+//func TestMain(m *testing.M) {
+//	userSetup()
+//	if os.Getenv("env") == "HTTP" {
+//		common.Setenv(common.EnvHTTP)
+//	} else {
+//		common.Setenv(common.EnvLAMBDA)
+//	}
+//
+//	log.Debug(context.TODO(), "init api server success")
+//	server = NewServer()
+//	code := m.Run()
+//	os.Exit(code)
+//}
 
 const url = ""
 const prefix = "/v1"

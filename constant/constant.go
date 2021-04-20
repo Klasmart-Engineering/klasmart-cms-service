@@ -6,9 +6,11 @@ import (
 )
 
 const (
-	KidsloopCN               = "CN"
-	TableNameSchedule        = "schedules"
-	TableNameScheduleTeacher = "schedules_teachers"
+	KidsloopCN                  = "CN"
+	TableNameSchedule           = "schedules"
+	TableNameScheduleFeedback   = "schedules_feedbacks"
+	TableNameScheduleRelation   = "schedules_relations"
+	TableNameFeedbackAssignment = "feedbacks_assignments"
 
 	TableNameAge               = "ages"
 	TableNameClassType         = "class_types"
@@ -21,6 +23,7 @@ const (
 	TableNameVisibilitySetting = "visibility_settings"
 	TableNameUserSetting       = "user_settings"
 
+	TableNameProgramGroup       = "programs_groups"
 	TableNameProgramAge         = "programs_ages"
 	TableNameProgramDevelopment = "programs_developments"
 	TableNameProgramGrade       = "programs_grades"
@@ -52,6 +55,8 @@ var (
 	ErrOperateNotAllowed = errors.New("operation not allowed")
 	ErrInternalServer    = errors.New("internal server error")
 	ErrForbidden         = errors.New("forbidden")
+	ErrHasLocked         = errors.New("has locked")
+	ErrOverflow          = errors.New("over flow")
 )
 
 const (
@@ -79,8 +84,10 @@ const (
 )
 
 const (
-	ShortcodeBaseCustom = 36
-	ShortcodeShowLength = 5
+	ShortcodeBaseCustom    = 36
+	ShortcodeShowLength    = 5
+	ShortcodeMaxShowLength = 32
+	ShortcodeSpace         = ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom
 )
 
 const (
@@ -93,10 +100,14 @@ const (
 	NoSearchItem = "{nothing}"
 	Self         = "{self}"
 
-	ShareToAll   = "{share_all}"
+	ShareToAll = "{share_all}"
 
-	TeacherManualSeparator = "-"
+	TeacherManualSeparator  = "-"
 	FolderItemLinkSeparator = "-"
+
+	TeacherManualAssetsKeyword = "Teacher Manual"
+
+	StringArraySeparator = ","
 )
 
 const (
@@ -121,4 +132,11 @@ const (
 const (
 	ScheduleAllowEditTime   = 15 * time.Minute
 	ScheduleAllowGoLiveTime = 15 * time.Minute
+)
+
+const (
+	// 150 * 3000
+	ScheduleRelationBatchInsertCount = 3000
+	// 750 * 800
+	ScheduleBatchInsertCount = 800
 )

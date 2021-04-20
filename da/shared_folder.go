@@ -43,18 +43,19 @@ func (sf *SharedFolderDA) BatchAdd(ctx context.Context, tx *dbo.DBContext, req [
 	columns := []string{
 		"id", "org_id", "folder_id", "creator", "create_at", "update_at",
 	}
-	var values [][]interface{}
+	var matrix [][]interface{}
 	for _, item := range req {
 		if item.ID == "" {
 			item.ID = utils.NewID()
 		}
-		values = append(values, []interface{}{item.ID, item.OrgID, item.FolderID, item.Creator, createAt, createAt})
+		matrix = append(matrix, []interface{}{item.ID, item.OrgID, item.FolderID, item.Creator, createAt, createAt})
 	}
-	template := SQLBatchInsert(entity.SharedFolderRecord{}.TableName(), columns, values)
-	if err := tx.Exec(template.Format, template.Values...).Error; err != nil {
+	format, values := SQLBatchInsert(entity.SharedFolderRecord{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values...).Error; err != nil {
 		log.Error(ctx, "batch insert cms_authed_contents: batch insert failed",
 			log.Err(err),
-			log.Any("items", values),
+			log.Any("items", matrix),
+			log.String("format", format),
 		)
 		return err
 	}

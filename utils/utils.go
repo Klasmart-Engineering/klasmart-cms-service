@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
+	"strings"
 	"unsafe"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -55,4 +56,43 @@ func str2Bs(str string) []byte {
 
 func bs2Str(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
+}
+
+var num2char = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+func NumToBHex(ctx context.Context, num int, n int, l int) (string, error) {
+	if n > len(num2char) || l > constant.ShortcodeMaxShowLength {
+		log.Error(ctx, "NumToBHex: n is overflow",
+			log.Int("num", num),
+			log.Int("base", n),
+			log.Int("length", l))
+		return "", constant.ErrOverflow
+	}
+	result := make([]uint8, l)
+	index := l
+	for i := 0; num != 0 && i < l; {
+		yu := num % n
+		index = l - 1 - i
+		result[index] = num2char[yu]
+		num = num / n
+		i++
+	}
+	for i := 0; i < index; i++ {
+		result[i] = num2char[0]
+	}
+	if num != 0 {
+		log.Error(ctx, "NumToBHex: num is overflow",
+			log.Int("num", num),
+			log.Int("base", n),
+			log.Int("length", l))
+		return "", constant.ErrOverflow
+	}
+	return strings.ToUpper(string(result[:l])), nil
+}
+
+func PaddingString(s string, l int) string {
+	if l <= len(s) {
+		return s
+	}
+	return strings.Repeat("0", l-len(s)) + s
 }
