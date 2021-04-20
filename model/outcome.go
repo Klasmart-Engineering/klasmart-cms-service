@@ -398,6 +398,47 @@ func (ocm OutcomeModel) fillIDsBySetName(ctx context.Context, op *entity.Operato
 	return nil
 }
 
+func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+	var err error
+	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, da.NewOutcomeCondition(condition))
+	if err != nil {
+		log.Error(ctx, "SearchLearningOutcome: SearchOutcome failed",
+			log.String("op", op.UserID),
+			log.Any("condition", condition))
+		return 0, nil, err
+	}
+	if len(outcomes) == 0 {
+		log.Info(ctx, "Search: not found",
+			log.Any("op", op),
+			log.Any("cond", condition))
+		return total, outcomes, nil
+	}
+	outcomeIDs := make([]string, len(outcomes))
+	for i := range outcomes {
+		outcomeIDs[i] = outcomes[i].ID
+	}
+
+	relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+		MasterIDs:  dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "Search: SearchTx failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Strings("outcome", outcomeIDs))
+		return 0, nil, err
+	}
+	outcomeRelations := make(map[string][]*entity.Relation)
+	for i := range relations {
+		outcomeRelations[relations[i].MasterID] = append(outcomeRelations[relations[i].MasterID], relations[i])
+	}
+	for _, outcome := range outcomes {
+		ocm.FillRelation(outcome, outcomeRelations[outcome.ID])
+	}
+	return total, outcomes, nil
+}
+
 func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	if condition.OrganizationID == "" {
 		condition.OrganizationID = user.OrgID
@@ -425,21 +466,20 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.
 		return 0, nil, err
 	}
 
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, user, tx, da.NewOutcomeCondition(condition))
-	if err != nil {
-		log.Error(ctx, "SearchLearningOutcome: SearchOutcome failed",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, err
-	}
-	err = ocm.fillRelation(ctx, user, tx, outcomes)
-	if err != nil {
-		log.Error(ctx, "SearchLearningOutcome: fillRelation failed",
-			log.Err(err),
-			log.String("op", user.UserID))
-		return 0, nil, err
-	}
-	return total, outcomes, nil
+	var total int
+	var outcomes []*entity.Outcome
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		total, outcomes, err = ocm.search(ctx, user, tx, condition)
+		if err != nil {
+			log.Error(ctx, "SearchLearningOutcome: search failed",
+				log.String("op", user.UserID),
+				log.Any("condition", condition))
+			return err
+		}
+		return nil
+	})
+	return total, outcomes, err
 }
 
 func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error) {
@@ -739,22 +779,20 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, user *entity.
 		return 0, nil, err
 	}
 
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, user, tx, da.NewOutcomeCondition(condition))
-	if err != nil {
-		log.Error(ctx, "SearchPrivateOutcomes: SearchOutcome failed",
-			log.Err(err),
-			log.String("op", user.UserID),
-			log.Any("outcome", ocm))
-		return 0, nil, err
-	}
-	err = ocm.fillRelation(ctx, user, tx, outcomes)
-	if err != nil {
-		log.Error(ctx, "SearchPrivateOutcomes: fillRelation failed",
-			log.Err(err),
-			log.String("op", user.UserID))
-		return 0, nil, err
-	}
-	return total, outcomes, nil
+	var total int
+	var outcomes []*entity.Outcome
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		total, outcomes, err = ocm.search(ctx, user, tx, condition)
+		if err != nil {
+			log.Error(ctx, "SearchLearningOutcome: search failed",
+				log.String("op", user.UserID),
+				log.Any("condition", condition))
+			return err
+		}
+		return nil
+	})
+	return total, outcomes, err
 }
 
 func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
@@ -787,22 +825,20 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.
 			log.Any("condition", condition))
 		return 0, nil, err
 	}
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, user, tx, da.NewOutcomeCondition(condition))
-	if err != nil {
-		log.Error(ctx, "SearchPendingOutcomes: SearchOutcome failed",
-			log.Err(err),
-			log.String("op", user.UserID),
-			log.Any("outcome", ocm))
-		return 0, nil, err
-	}
-	err = ocm.fillRelation(ctx, user, tx, outcomes)
-	if err != nil {
-		log.Error(ctx, "SearchPendingOutcomes: fillRelation failed",
-			log.Err(err),
-			log.String("op", user.UserID))
-		return 0, nil, err
-	}
-	return total, outcomes, nil
+	var total int
+	var outcomes []*entity.Outcome
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		total, outcomes, err = ocm.search(ctx, user, tx, condition)
+		if err != nil {
+			log.Error(ctx, "SearchLearningOutcome: search failed",
+				log.String("op", user.UserID),
+				log.Any("condition", condition))
+			return err
+		}
+		return nil
+	})
+	return total, outcomes, err
 }
 
 func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string) error {
@@ -1520,6 +1556,37 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.Relation {
 }
 
 func (ocm OutcomeModel) FillRelation(oc *entity.Outcome, relations []*entity.Relation) {
+	if len(relations) == 0 {
+		program := strings.TrimSpace(oc.Program)
+		if program != "" {
+			oc.Programs = strings.Split(program, entity.JoinComma)
+		}
+		subject := strings.TrimSpace(oc.Subject)
+		if subject != "" {
+			oc.Subjects = strings.Split(subject, entity.JoinComma)
+		}
+
+		category := strings.TrimSpace(oc.Developmental)
+		if category != "" {
+			oc.Categories = strings.Split(category, entity.JoinComma)
+		}
+
+		subcategories := strings.TrimSpace(oc.Skills)
+		if subcategories != "" {
+			oc.Subcategories = strings.Split(subcategories, entity.JoinComma)
+		}
+
+		grade := strings.TrimSpace(oc.Grade)
+		if grade != "" {
+			oc.Grades = strings.Split(grade, entity.JoinComma)
+		}
+
+		age := strings.TrimSpace(oc.Age)
+		if age != "" {
+			oc.Ages = strings.Split(age, entity.JoinComma)
+		}
+		return
+	}
 	for i := range relations {
 		switch relations[i].RelationType {
 		case entity.ProgramType:

@@ -214,14 +214,14 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 	organizationIDs, authorIDs, programIDs, subjectIDs, categoryIDs, subCategoryIDs, gradeIDs, ageIDs []string) (
 	organizations, authors, programs, subjects, categories, subcategories, grades, ages map[string]string, err error) {
 
-	_organizationIDs := utils.SliceDeduplication(organizationIDs)
-	_authorIDs := utils.SliceDeduplication(authorIDs)
-	_programIDs := utils.SliceDeduplication(programIDs)
-	_subjectIDs := utils.SliceDeduplication(subjectIDs)
-	_categoryIDs := utils.SliceDeduplication(categoryIDs)
-	_subcategoryIDs := utils.SliceDeduplication(subCategoryIDs)
-	_gradeIDs := utils.SliceDeduplication(gradeIDs)
-	_ageIDs := utils.SliceDeduplication(ageIDs)
+	_organizationIDs := utils.SliceDeduplicationExcludeEmpty(organizationIDs)
+	_authorIDs := utils.SliceDeduplicationExcludeEmpty(authorIDs)
+	_programIDs := utils.SliceDeduplicationExcludeEmpty(programIDs)
+	_subjectIDs := utils.SliceDeduplicationExcludeEmpty(subjectIDs)
+	_categoryIDs := utils.SliceDeduplicationExcludeEmpty(categoryIDs)
+	_subcategoryIDs := utils.SliceDeduplicationExcludeEmpty(subCategoryIDs)
+	_gradeIDs := utils.SliceDeduplicationExcludeEmpty(gradeIDs)
+	_ageIDs := utils.SliceDeduplicationExcludeEmpty(ageIDs)
 
 	ctxNew, cancel := context.WithCancel(ctx)
 	defer cancel()
