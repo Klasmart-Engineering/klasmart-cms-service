@@ -22,65 +22,68 @@ import (
 )
 
 func TestCreateOutcome(t *testing.T) {
-	createView := OutcomeCreateView{
-		OutcomeName:   "TestOutcomeYY",
-		Assumed:       true,
-		Program:       []string{"prg001", "pr002"},
-		Subject:       []string{"sbj001", "sbj002"},
-		Developmental: []string{"dvt001", "dvt002"},
-		Skills:        []string{"skl001", "skl002"},
-		Age:           []string{"age001", "age002"},
-		Grade:         []string{"grd001", "grd002"},
-		Estimated:     30,
-		Keywords:      []string{"kyd001", "kyd002"},
-		Description:   "some description",
-		Shortcode:     "003NZ",
-		Sets: []*OutcomeSetCreateView{
-			{SetID: "60583986fc229e722bead09a"},
-			{SetID: "60583cfcf5808149b5cbe24c"},
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	createView := model.OutcomeCreateView{
+		OutcomeName: "Test Outcome XX",
+		Assumed:     true,
+		Program:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
+		Subject:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
+		//Developmental: []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
+		//Skills:        []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
+		//Grade:         []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
+		//Age:           []string{"bb7982cd-020f-4e1a-93fc-4a6874917f07"},
+		Estimated:   30,
+		Keywords:    []string{"kyd001", "kyd002"},
+		Description: "Hello, Brilliant",
+		Shortcode:   "00001",
+		Sets: []*model.OutcomeSetCreateView{
+			{SetID: "6077b3a9809f75d51b5cb023"},
 		},
 	}
 	data, err := json.Marshal(createView)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(string(data))
-	res := DoHttp(http.MethodPost, prefix+"/learning_outcomes", string(data))
+	url := fmt.Sprintf("%s/learning_outcomes?org_id=%s", prefix, op.OrgID)
+	res := DoHttpWithOperator(http.MethodPost, op, url, string(data))
 	fmt.Println(res)
 }
 
 func TestGetOutcome(t *testing.T) {
-	outcomeID := "5f63016bacc44d2ec014a4e9"
-	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes/"+outcomeID, "")
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	outcomeID := "607e4a1e4225cb7dcdb55108"
+	url := fmt.Sprintf("%s/learning_outcomes/%s?org_id=%s", prefix, outcomeID, op.OrgID)
+	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
 }
 
 func TestUpdateOutcome(t *testing.T) {
-	createView := OutcomeCreateView{
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	outcomeID := "607e4a1e4225cb7dcdb55108"
+	createView := model.OutcomeCreateView{
 		OutcomeName:   "TestModifyOutcomeXX",
 		Assumed:       false,
-		Program:       []string{"Modify_prg001", "pr002"},
-		Subject:       []string{"Modify_sbj001", "sbj002"},
-		Developmental: []string{"Modify_dvt001"},
-		Skills:        []string{"Modify_skl001", "skl002"},
-		Age:           []string{"Modify_age001", "age002"},
-		Grade:         []string{"Modify_grd001", "grd002"},
+		Program:       []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
+		Subject:       []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
+		Developmental: []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
+		Skills:        []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
+		Grade:         []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
+		Age:           []string{"bb7982cd-020f-4e1a-93fc-4a6874917f07"},
 		Estimated:     45,
 		Keywords:      []string{"Modify_kyd001", "kyd002"},
 		Description:   "some description",
 		Shortcode:     "12345",
-		Sets: []*OutcomeSetCreateView{
-			{SetID: "60616c5c43c74caa2b16623c"},
-			{SetID: "60583cfcf5808149b5cbe24c"},
-		},
+		Sets:          []*model.OutcomeSetCreateView{},
 	}
 	data, err := json.Marshal(createView)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(string(data))
-	outcomeID := "60616800e7c9026bb00d1d6c"
-	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID, string(data))
+	url := fmt.Sprintf("%s/learning_outcomes/%s?org_id=%s", prefix, outcomeID, op.OrgID)
+	res := DoHttpWithOperator(http.MethodPut, op, url, string(data))
 	fmt.Println(res)
 }
 
@@ -91,42 +94,53 @@ func TestDeleteOutcome(t *testing.T) {
 }
 
 func TestQueryOutcome(t *testing.T) {
-	query := fmt.Sprintf("set_name=%s&assumed=%d", "math", 1)
-	res := DoHttp(http.MethodGet, prefix+"/learning_outcomes"+"?"+query, "")
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	//query := fmt.Sprintf("set_name=%s&assumed=%d", "math", 1)
+	query := fmt.Sprintf("search_key=%s", "12345")
+	url := fmt.Sprintf("%s/learning_outcomes?org_id=%s&%s", prefix, op.OrgID, query)
+	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
 }
 
 func TestLockOutcome(t *testing.T) {
-	// 5f603ac9c96f2c0decc55e56
-	outcomeID := "5f603a90029dfdc992fee14a"
-	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/lock", "")
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	outcomeID := "607905030e4404103a3f595d"
+	url := fmt.Sprintf("%s/learning_outcomes/%s/lock?org_id=%s", prefix, outcomeID, op.OrgID)
+	res := DoHttpWithOperator(http.MethodPut, op, url, "")
 	fmt.Println(res)
 }
 
 func TestPublishOutcome(t *testing.T) {
-	outcomeID := "5f63016bacc44d2ec014a4e9"
-	//data := "{\"a:1}"
-	//data := ""
-	req := PublishOutcomeReq{
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	outcomeID := "60790598b35b67a672d51683"
+	req := model.PublishOutcomeReq{
 		Scope: "1",
 	}
 	data, err := json.Marshal(&req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/publish", string(data))
+	url := fmt.Sprintf("%s/learning_outcomes/%s/publish?org_id=%s", prefix, outcomeID, op.OrgID)
+	res := DoHttpWithOperator(http.MethodPut, op, url, string(data))
 	fmt.Println(res)
 }
 
 func TestApproveOutcome(t *testing.T) {
-	outcomeID := "5f603a90029dfdc992fee14a"
-	res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/approve", "")
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	outcomeID := "60790598b35b67a672d51683"
+	url := fmt.Sprintf("%s/learning_outcomes/%s/approve?org_id=%s", prefix, outcomeID, op.OrgID)
+	res := DoHttpWithOperator(http.MethodPut, op, url, "")
+	//res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/approve", "")
 	fmt.Println(res)
 }
 
 func TestRejectOutcome(t *testing.T) {
 	outcomeID := "5f56def450275d71418a1d4b"
-	body := OutcomeRejectReq{RejectReason: "refuse"}
+	body := model.OutcomeRejectReq{RejectReason: "refuse"}
 	data, err := json.Marshal(&body)
 	if err != nil {
 		t.Fatal(err)
@@ -149,6 +163,20 @@ func TestQueryPrivateOutcome(t *testing.T) {
 
 func TestQueryPendingOutcome(t *testing.T) {
 
+}
+
+func TestGenerateShortcode(t *testing.T) {
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	data, err := json.Marshal(ShortcodeRequest{
+		Kind: entity.KindOutcome,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	url := fmt.Sprintf("%s/shortcode?org_id=%s", prefix, op.OrgID)
+	res := DoHttpWithOperator(http.MethodPost, op, url, string(data))
+	fmt.Println(res)
 }
 
 func TestGetLearningOutcomesByIDs(t *testing.T) {
