@@ -440,7 +440,6 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	)
 	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
 		AssessmentIDs: assessmentIDs,
-		Checked:       checkedStudents,
 	}, &assessmentAttendances); err != nil {
 		log.Error(ctx, "convertToAssessmentViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
 			log.Err(err),
@@ -453,8 +452,10 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	for _, a := range assessmentAttendances {
 		switch a.Role {
 		case entity.AssessmentAttendanceRoleStudent:
-			studentIDs = append(studentIDs, a.AttendanceID)
-			assessmentStudentsMap[a.AssessmentID] = append(assessmentStudentsMap[a.AssessmentID], a)
+			if checkedStudents == nil || *checkedStudents == a.Checked {
+				studentIDs = append(studentIDs, a.AttendanceID)
+				assessmentStudentsMap[a.AssessmentID] = append(assessmentStudentsMap[a.AssessmentID], a)
+			}
 		case entity.AssessmentAttendanceRoleTeacher:
 			teacherIDs = append(teacherIDs, a.AttendanceID)
 			assessmentTeachersMap[a.AssessmentID] = append(assessmentTeachersMap[a.AssessmentID], a)
@@ -515,6 +516,8 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 }
 
 func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
+	log.Debug(ctx, "add assessment args", log.Any("args", args), log.Any("operator", operator))
+
 	// check if assessment already exits
 	var assessments []entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
@@ -708,6 +711,16 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 		}
 		if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, cond); err != nil {
 			log.Error(ctx, "addAssessmentAttendances: GetScheduleRelationModel().GetByRelationIDs: get failed",
+				log.Err(err),
+				log.Any("attendance_ids", finalAttendanceIDs),
+				log.String("assessment_id", newAssessmentID),
+				log.Any("operator", operator),
+				log.Any("condition", cond),
+			)
+			return err
+		}
+		if len(scheduleRelations) == 0 {
+			log.Error(ctx, "Add: GetScheduleRelationModel().Query: not found any schedule relations",
 				log.Err(err),
 				log.Any("attendance_ids", finalAttendanceIDs),
 				log.String("assessment_id", newAssessmentID),
@@ -1027,21 +1040,23 @@ func (m *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 	}
 
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		// update assessment attendance check property
+		// update assessment students check property
 		if args.StudentIDs != nil {
 			if err := da.GetAssessmentAttendanceDA().UncheckStudents(ctx, tx, args.ID); err != nil {
-				log.Error(ctx, "update assessment: uncheck assessment attendance failed",
+				log.Error(ctx, "update: da.GetAssessmentAttendanceDA().UncheckStudents: uncheck failed",
 					log.Err(err),
 					log.Any("args", args),
 				)
 				return err
 			}
-			if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, *args.StudentIDs); err != nil {
-				log.Error(ctx, "update assessment: check assessment attendance failed",
-					log.Err(err),
-					log.Any("args", args),
-				)
-				return err
+			if args.StudentIDs != nil && len(*args.StudentIDs) > 0 {
+				if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, *args.StudentIDs); err != nil {
+					log.Error(ctx, "update: da.GetAssessmentAttendanceDA().BatchCheck: check failed",
+						log.Err(err),
+						log.Any("args", args),
+					)
+					return err
+				}
 			}
 		}
 
