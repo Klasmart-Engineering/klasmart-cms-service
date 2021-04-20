@@ -1,21 +1,15 @@
 package entity
 
-import (
-	"context"
-	"time"
-
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-)
-
 const (
 	OutcomeStatusDraft     = "draft"
 	OutcomeStatusPending   = "pending"
 	OutcomeStatusPublished = "published"
 	OutcomeStatusRejected  = "rejected"
 	OutcomeStatusHidden    = "hidden"
+)
+
+const (
+	JoinComma = ","
 )
 
 type OutcomeStatus string
@@ -50,10 +44,16 @@ type Outcome struct {
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"assumed" dynamoupdate:":asum"`
 
-	CreateAt int64  `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdateAt int64  `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeleteAt int64  `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
-	Sets     []*Set `gorm:"-" json:"sets"`
+	CreateAt      int64    `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt      int64    `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt      int64    `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	Sets          []*Set   `gorm:"-" json:"sets"`
+	Programs      []string `gorm:"-"`
+	Subjects      []string `gorm:"-"`
+	Categories    []string `gorm:"-"`
+	Subcategories []string `gorm:"-"`
+	Grades        []string `gorm:"-"`
+	Ages          []string `gorm:"-"`
 }
 
 func (Outcome) TableName() string {
@@ -62,128 +62,6 @@ func (Outcome) TableName() string {
 
 func (oc Outcome) GetID() interface{} {
 	return oc.ID
-}
-
-func (oc *Outcome) Update(data *Outcome) {
-	if data.Name != "" {
-		oc.Name = data.Name
-	}
-
-	oc.Assumed = data.Assumed
-	oc.Program = data.Program
-	oc.Subject = data.Subject
-	oc.Developmental = data.Developmental
-	oc.Skills = data.Skills
-	oc.Age = data.Age
-	oc.Grade = data.Grade
-	oc.EstimatedTime = data.EstimatedTime
-	oc.Keywords = data.Keywords
-	oc.Description = data.Description
-	oc.PublishStatus = OutcomeStatusDraft
-	oc.Shortcode = data.Shortcode
-	oc.Sets = data.Sets
-	oc.UpdateAt = time.Now().Unix()
-}
-
-func (oc *Outcome) Clone(op *Operator) Outcome {
-	now := time.Now().Unix()
-	return Outcome{
-		ID:            utils.NewID(),
-		AncestorID:    oc.AncestorID,
-		Shortcode:     oc.Shortcode,
-		Name:          oc.Name,
-		Program:       oc.Program,
-		Subject:       oc.Subject,
-		Developmental: oc.Developmental,
-		Skills:        oc.Skills,
-		Age:           oc.Age,
-		Grade:         oc.Grade,
-		Keywords:      oc.Keywords,
-		Description:   oc.Description,
-
-		EstimatedTime:  oc.EstimatedTime,
-		AuthorID:       op.UserID,
-		AuthorName:     oc.AuthorName,
-		OrganizationID: oc.OrganizationID,
-
-		PublishStatus: OutcomeStatusDraft,
-		PublishScope:  oc.PublishScope,
-		LatestID:      oc.LatestID,
-		Sets:          oc.Sets,
-
-		Version:  1,
-		SourceID: oc.ID,
-		Assumed:  oc.Assumed,
-
-		CreateAt: now,
-		UpdateAt: now,
-	}
-}
-
-func (oc *Outcome) SetStatus(ctx context.Context, status OutcomeStatus) error {
-	switch status {
-	case OutcomeStatusHidden:
-		if oc.allowedToHidden() {
-			oc.PublishStatus = OutcomeStatusHidden
-			return nil
-		}
-	case OutcomeStatusPending:
-		if oc.allowedToPending() {
-			oc.PublishStatus = OutcomeStatusPending
-			return nil
-		}
-	case OutcomeStatusPublished:
-		if oc.allowedToBeReviewed() {
-			oc.PublishStatus = OutcomeStatusPublished
-			return nil
-		}
-	case OutcomeStatusRejected:
-		if oc.allowedToBeReviewed() {
-			oc.PublishStatus = OutcomeStatusRejected
-			return nil
-		}
-	}
-	log.Error(ctx, "SetStatus failed",
-		log.Err(constant.ErrForbidden),
-		log.String("status", string(status)))
-	return constant.ErrForbidden
-}
-
-func (oc Outcome) allowedToArchive() bool {
-	switch oc.PublishStatus {
-	case OutcomeStatusPublished:
-		return true
-	}
-	return false
-}
-
-func (oc Outcome) allowedToAttachment() bool {
-	// TODO
-	return false
-}
-
-func (oc Outcome) allowedToPending() bool {
-	switch oc.PublishStatus {
-	case OutcomeStatusDraft, OutcomeStatusRejected:
-		return true
-	}
-	return false
-}
-
-func (oc Outcome) allowedToBeReviewed() bool {
-	switch oc.PublishStatus {
-	case OutcomeStatusPending:
-		return true
-	}
-	return false
-}
-
-func (oc Outcome) allowedToHidden() bool {
-	switch oc.PublishStatus {
-	case OutcomeStatusPublished:
-		return true
-	}
-	return false
 }
 
 type OutcomeCondition struct {
