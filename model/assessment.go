@@ -727,7 +727,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 				log.Any("operator", operator),
 				log.Any("condition", cond),
 			)
-			return err
+			return errors.New("add assessments: require schedule attendance")
 		}
 		if err = m.addAssessmentAttendances(ctx, tx, operator, newAssessmentID, scheduleRelations); err != nil {
 			log.Error(ctx, "Add: m.addAssessmentAttendances: add failed",
