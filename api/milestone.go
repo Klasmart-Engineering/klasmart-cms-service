@@ -343,7 +343,7 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 // @Failure 404 {object} NotFoundResponse
 // @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /milestones/publish [put]
+// @Router /milestones/publish [post]
 func (s *Server) publishMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
