@@ -30,7 +30,7 @@ import (
 func (s *Server) createOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data OutcomeCreateView
+	var data model.OutcomeCreateView
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "createOutcome: ShouldBind failed", log.Err(err))
@@ -49,7 +49,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	outcome, err := data.outcome()
+	outcome, err := data.ToOutcome()
 	if err != nil {
 		log.Warn(ctx, "createOutcome: outcome failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -59,7 +59,7 @@ func (s *Server) createOutcome(c *gin.Context) {
 	data.OutcomeID = outcome.ID
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, newOutcomeCreateResponse(ctx, op, &data, outcome))
+		c.JSON(http.StatusOK, model.NewCreateResponse(ctx, op, &data, outcome))
 	case constant.ErrConflict:
 		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	default:
@@ -100,7 +100,12 @@ func (s *Server) getOutcome(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, newOutcomeView(ctx, op, outcome))
+		views, err := model.FillOutcomeViews(ctx, op, []*entity.Outcome{outcome})
+		if err != nil {
+			log.Error(ctx, "getOutcome: FillOutcomeViews failed", log.Any("op", op), log.Any("outcome", outcome))
+			return
+		}
+		c.JSON(http.StatusOK, views[0])
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -125,7 +130,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	outcomeID := c.Param("id")
-	var data OutcomeCreateView
+	var data model.OutcomeCreateView
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: ShouldBind failed", log.Err(err))
@@ -133,7 +138,7 @@ func (s *Server) updateOutcome(c *gin.Context) {
 		return
 	}
 
-	outcome, err := data.outcomeWithID(outcomeID)
+	outcome, err := data.ToOutcomeWithID(outcomeID)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: outcome failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -263,7 +268,15 @@ func (s *Server) queryOutcomes(c *gin.Context) {
 	//case entity.ErrInvalidContentType:
 	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
+		response, err := model.NewSearchResponse(ctx, op, total, outcomes)
+		if err != nil {
+			log.Error(ctx, "queryOutcomes: NewSearchResponse failed",
+				log.Any("op", op),
+				log.Any("outcome", outcomes))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, response)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -316,7 +329,7 @@ func (s *Server) lockOutcome(c *gin.Context) {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, OutcomeLockResponse{newID})
+		c.JSON(http.StatusOK, model.OutcomeLockResponse{OutcomeID: newID})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -346,7 +359,7 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		return
 	}
 
-	var req PublishOutcomeReq
+	var req model.PublishOutcomeReq
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Warn(ctx, "publishOutcome: ShouldBindJSON failed", log.String("outcome_id", outcomeID),
@@ -435,7 +448,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	outcomeID := c.Param("id")
-	var reason OutcomeRejectReq
+	var reason model.OutcomeRejectReq
 	err := c.ShouldBindJSON(&reason)
 	if err != nil {
 		log.Warn(ctx, "rejectOutcome: ShouldBind failed", log.Err(err))
@@ -486,7 +499,7 @@ func (s *Server) rejectOutcome(c *gin.Context) {
 func (s *Server) bulkApproveOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data OutcomeIDList
+	var data model.OutcomeIDList
 	err := c.ShouldBindJSON(&data)
 	if err != nil || len(data.OutcomeIDs) == 0 {
 		log.Warn(ctx, "bulkApproveOutcome: ShouldBind failed", log.Any("req", data), log.Err(err))
@@ -548,7 +561,7 @@ func (s *Server) bulkApproveOutcome(c *gin.Context) {
 func (s *Server) bulkRejectOutcome(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data OutcomeBulkRejectRequest
+	var data model.OutcomeBulkRejectRequest
 	err := c.ShouldBindJSON(&data)
 	if err != nil || len(data.OutcomeIDs) == 0 {
 		log.Warn(ctx, "bulkRejectOutcome: ShouldBind failed", log.Any("req", data), log.Err(err))
@@ -739,7 +752,15 @@ func (s *Server) queryPrivateOutcomes(c *gin.Context) {
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
+		response, err := model.NewSearchResponse(ctx, op, total, outcomes)
+		if err != nil {
+			log.Error(ctx, "queryPrivateOutcomes: NewSearchResponse failed",
+				log.Any("op", op),
+				log.Any("outcome", outcomes))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, response)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -774,7 +795,7 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	var condition entity.OutcomeCondition
 	err := c.ShouldBindQuery(&condition)
 	if err != nil {
-		log.Warn(ctx, "queryPrivateOutcomes: ShouldBind failed", log.Err(err))
+		log.Warn(ctx, "queryPendingOutcomes: ShouldBind failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -800,14 +821,22 @@ func (s *Server) queryPendingOutcomes(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
-		c.JSON(http.StatusOK, newOutcomeSearchResponse(ctx, op, total, outcomes))
+		response, err := model.NewSearchResponse(ctx, op, total, outcomes)
+		if err != nil {
+			log.Error(ctx, "queryPendingOutcomes: NewSearchResponse failed",
+				log.Any("op", op),
+				log.Any("outcome", outcomes))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, response)
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
 
 type ShortcodeRequest struct {
-	Kind string `json:"kind" form:"kind"`
+	Kind entity.ShortcodeKind `json:"kind" form:"kind"`
 }
 type ShortcodeResponse struct {
 	Shortcode string `json:"shortcode" form:"shortcode"`

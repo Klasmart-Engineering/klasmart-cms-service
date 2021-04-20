@@ -16,7 +16,7 @@ import (
 type ShortcodeModel struct {
 }
 
-func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind string, orgID string, shortcode string) (string, error) {
+func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind entity.ShortcodeKind, orgID string, shortcode string) (string, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, kind, orgID)
 	if err != nil {
 		log.Error(ctx, "GenerateShortcode: NewLock failed",
@@ -40,7 +40,7 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 		if err != nil {
 			return "", err
 		}
-		if _, ok := shortcodes[value]; !ok && value != utils.PaddingString(shortcode, constant.ShortcodeShowLength) {
+		if !shortcodes[value] && value != utils.PaddingString(shortcode, constant.ShortcodeShowLength) {
 			err = scm.cacheIt(ctx, kind, orgID, value)
 			if err != nil {
 				log.Error(ctx, "GenerateShortcode: cacheIt failed",
@@ -58,7 +58,7 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 	return "", constant.ErrExceededLimit
 }
 
-func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind string, orgID string) (map[string]struct{}, error) {
+func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind entity.ShortcodeKind, orgID string) (map[string]bool, error) {
 	var table string
 	if kind == entity.KindOutcome {
 		table = entity.Outcome{}.TableName()
@@ -72,28 +72,28 @@ func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind st
 	})
 	if err != nil {
 		log.Error(ctx, "search: Search failed",
-			log.String("kind", kind),
+			log.String("kind", string(kind)),
 			log.String("org", orgID))
 		return nil, err
 	}
 	cachedShortcodes, f, err := da.GetShortcodeCacheDA().SearchWithPatten(ctx, kind, orgID)
 	if err != nil {
 		log.Error(ctx, "search: SearchWithPatten failed",
-			log.String("kind", kind),
+			log.String("kind", string(kind)),
 			log.String("org", orgID))
 		return nil, err
 	}
-	shortcodes := make(map[string]struct{})
+	shortcodes := make(map[string]bool)
 	for i := range dbShortcodes {
-		shortcodes[dbShortcodes[i].Shortcode] = struct{}{}
+		shortcodes[dbShortcodes[i].Shortcode] = true
 	}
 	for i := range cachedShortcodes {
-		shortcodes[f(cachedShortcodes[i])] = struct{}{}
+		shortcodes[f(cachedShortcodes[i])] = true
 	}
 	return shortcodes, nil
 }
 
-func (scm ShortcodeModel) isCached(ctx context.Context, kind string, orgID string, shortcode string) (bool, error) {
+func (scm ShortcodeModel) isCached(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) (bool, error) {
 	return da.GetShortcodeCacheDA().Exists(ctx, kind, orgID, shortcode)
 }
 
@@ -118,11 +118,11 @@ func (scm ShortcodeModel) isOccupied(ctx context.Context, tx *dbo.DBContext, tab
 	return false, nil
 }
 
-func (scm ShortcodeModel) cacheIt(ctx context.Context, kind string, orgID string, shortcode string) error {
+func (scm ShortcodeModel) cacheIt(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
 	return da.GetShortcodeCacheDA().Save(ctx, kind, orgID, shortcode)
 }
 
-func (scm ShortcodeModel) removeIt(ctx context.Context, kind string, orgID string, shortcode string) error {
+func (scm ShortcodeModel) removeIt(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
 	return da.GetShortcodeCacheDA().Remove(ctx, kind, orgID, shortcode)
 }
 

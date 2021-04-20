@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
+	"time"
 )
 
 type IMilestoneModel interface {
@@ -42,6 +43,8 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	milestone.SourceID = milestone.ID
 	milestone.AncestorID = milestone.ID
 	milestone.LatestID = milestone.ID
+	milestone.CreateAt = time.Now().Unix()
+	milestone.UpdateAt = milestone.CreateAt
 	milestone.Status = "draft"
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		occupied, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, milestone.AncestorID, milestone.Shortcode)
@@ -71,7 +74,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 			}
 			milestoneOutcomes[i] = &milestoneOutcome
 		}
-		err = da.GetMilestoneOutcomeDA().Replace(ctx, tx, nil, milestoneOutcomes)
+		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
 			log.Error(ctx, "CreateMilestone: Replace failed",
 				log.Err(err),
@@ -79,8 +82,14 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		//err = da.GetMilestoneDA().ReplaceAttaches(ctx, tx, nil, entity.MilestoneType, milestone.CollectAttach())
-		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachMilestoneTable, nil, entity.MilestoneType, milestone.CollectAttach())
+		err = da.GetMilestoneAttachDA().InsertTx(ctx, tx, m.CollectAttach(milestone))
+		if err != nil {
+			log.Error(ctx, "CreateMilestone: InsertTx failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("milestone", milestone))
+			return err
+		}
 		return nil
 	})
 	da.GetShortcodeCacheDA().Remove(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
@@ -99,7 +108,10 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 				log.String("milestone", milestoneID))
 			return err
 		}
-		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachMilestoneTable, []string{milestone.ID}, entity.MilestoneType)
+		attaches, err := da.GetMilestoneAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+			MasterIDs:  dbo.NullStrings{Strings: []string{milestoneID}, Valid: true},
+			MasterType: sql.NullString{String: entity.MilestoneType, Valid: true},
+		})
 		if err != nil {
 			log.Error(ctx, "Obtain: Search failed",
 				log.Err(err),
@@ -107,8 +119,8 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 				log.String("milestone", milestoneID))
 			return err
 		}
-		milestone.FillAttach(attaches)
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().Search(ctx, tx, milestoneID)
+		m.FillAttach(milestone, attaches)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
 		bindLength := len(milestoneOutcomes)
 		if bindLength == 0 {
 			log.Info(ctx, "Obtain: no outcome bind",
@@ -210,7 +222,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				return constant.ErrConflict
 			}
 		}
-		ms.Update(milestone)
+		m.UpdateMilestone(milestone, ms)
 		err = da.GetMilestoneDA().Update(ctx, tx, ms)
 		if err != nil {
 			log.Error(ctx, "Update: Update failed",
@@ -228,21 +240,36 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 			milestoneOutcomes[i] = &milestoneOutcome
 		}
-		err = da.GetMilestoneOutcomeDA().Replace(ctx, tx, []string{ms.ID}, milestoneOutcomes)
+		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.ID})
 		if err != nil {
-			log.Error(ctx, "Update: Replace failed",
+			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
 		}
-		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachOutcomeTable, []string{ms.ID}, entity.MilestoneType, ms.CollectAttach())
+		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
-			log.Error(ctx, "Update: Replace failed",
+			log.Error(ctx, "Update: InsertTx failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("milestone", milestoneOutcomes))
+			return err
+		}
+		err = da.GetMilestoneAttachDA().DeleteTx(ctx, tx, []string{ms.ID})
+		if err != nil {
+			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
+		}
+		err = da.GetMilestoneAttachDA().InsertTx(ctx, tx, m.CollectAttach(ms))
+		if err != nil {
+			log.Error(ctx, "Update: InsertTx failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("milestone", ms))
 		}
 		return nil
 	})
@@ -315,17 +342,18 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
-		err = da.GetMilestoneOutcomeDA().Replace(ctx, tx, deleteIDs, nil)
+		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
-			log.Error(ctx, "Delete: Replace failed",
+			log.Error(ctx, "Delete: DeleteTx failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
-		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachOutcomeTable, deleteIDs, entity.MilestoneType, nil)
+		//err = da.GetAttachDA().Replace(ctx, tx, entity.AttachOutcomeTable, deleteIDs, entity.MilestoneType, nil)
+		err = da.GetMilestoneAttachDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
-			log.Error(ctx, "Delete: Replace failed",
+			log.Error(ctx, "Delete: DeleteTx failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Strings("milestone", deleteIDs))
@@ -376,7 +404,10 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			milestoneIDs[i] = milestones[i].ID
 		}
 
-		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachOutcomeTable, milestoneIDs, entity.MilestoneType)
+		attaches, err := da.GetMilestoneAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			MasterType: sql.NullString{String: entity.MilestoneType, Valid: true},
+		})
 		if err != nil {
 			log.Error(ctx, "Search: Search failed",
 				log.Err(err),
@@ -387,12 +418,12 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 		for i := range attaches {
 			for j := range milestones {
 				if attaches[i].MasterID == milestones[j].ID {
-					milestones[j].FillAttach([]*entity.Attach{attaches[i]})
+					m.FillAttach(milestones[j], []*entity.Attach{attaches[i]})
 					break
 				}
 			}
 		}
-		counts, err := da.GetMilestoneOutcomeDA().Count(ctx, tx, milestoneIDs)
+		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, milestoneIDs)
 		if err != nil {
 			log.Error(ctx, "Search: Count failed",
 				log.Err(err),
@@ -438,7 +469,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				ID: ms.LockedBy,
 			}}
 		}
-		milestone, err = ms.Copy(op)
+		milestone, err = m.Copy(op, ms)
 		if err != nil {
 			log.Error(ctx, "Occupy: Copy failed",
 				log.Err(err),
@@ -462,7 +493,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("op", op),
 				log.Any("milestone", milestone))
 		}
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().Search(ctx, tx, milestoneID)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),
@@ -473,15 +504,18 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		for i := range milestoneOutcomes {
 			milestoneOutcomes[i].MilestoneID = milestone.ID
 		}
-		err = da.GetMilestoneOutcomeDA().Replace(ctx, tx, nil, milestoneOutcomes)
+		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
-			log.Error(ctx, "Occupy: Replace failed",
+			log.Error(ctx, "Occupy: InsertTx failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("milestone_outcome", milestoneOutcomes))
 			return err
 		}
-		attaches, err := da.GetAttachDA().Search(ctx, tx, entity.AttachMilestoneTable, []string{milestoneID}, entity.MilestoneType)
+		attaches, err := da.GetMilestoneAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+			MasterIDs:  dbo.NullStrings{Strings: []string{milestoneID}, Valid: true},
+			MasterType: sql.NullString{String: entity.MilestoneType, Valid: true},
+		})
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),
@@ -492,9 +526,9 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		for i := range attaches {
 			attaches[i].MasterID = milestone.ID
 		}
-		err = da.GetAttachDA().Replace(ctx, tx, entity.AttachMilestoneTable, nil, entity.MilestoneType, attaches)
+		err = da.GetMilestoneAttachDA().InsertTx(ctx, tx, attaches)
 		if err != nil {
-			log.Error(ctx, "Occupy: ReplaceAttache failed",
+			log.Error(ctx, "Occupy: InsertTx failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("attach", attaches))
@@ -550,14 +584,28 @@ func (m MilestoneModel) Publish(ctx context.Context, op *entity.Operator, IDs []
 				log.Strings("milestone", IDs))
 			return err
 		}
-		err = da.GetMilestoneDA().BatchPublish(ctx, tx, publishIDs, hideIDs, ancestorLatest)
+		err = da.GetMilestoneDA().BatchPublish(ctx, tx, publishIDs)
 		if err != nil {
 			log.Error(ctx, "Publish: BatchPublish failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("publish", publishIDs),
-				log.Strings("hidden", hideIDs),
-				log.Any("ancestor_latest", ancestorLatest))
+				log.Strings("publish", publishIDs))
+			return err
+		}
+		err = da.GetMilestoneDA().BatchHide(ctx, tx, hideIDs)
+		if err != nil {
+			log.Error(ctx, "Publish: BatchHide failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Strings("publish", publishIDs))
+			return err
+		}
+		err = da.GetMilestoneDA().BatchUpdateLatest(ctx, tx, ancestorLatest)
+		if err != nil {
+			log.Error(ctx, "Publish: BatchUpdateLatest failed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Strings("publish", publishIDs))
 			return err
 		}
 		return nil
@@ -578,4 +626,122 @@ func GetMilestoneModel() IMilestoneModel {
 		_milestoneModel = new(MilestoneModel)
 	})
 	return _milestoneModel
+}
+
+func (m MilestoneModel) CollectAttach(ms *entity.Milestone) []*entity.Attach {
+	attaches := make([]*entity.Attach, 0, len(ms.Programs)+len(ms.Subjects)+len(ms.Categories)+len(ms.Subcategories)+len(ms.Grades)+len(ms.Ages))
+	for i := range ms.Programs {
+		attach := entity.Attach{
+			MasterID:   ms.ID,
+			MasterType: entity.MilestoneType,
+			AttachID:   ms.Programs[i],
+			AttachType: entity.ProgramType,
+		}
+		attaches = append(attaches, &attach)
+	}
+
+	for i := range ms.Subjects {
+		attach := entity.Attach{
+			MasterID:   ms.ID,
+			MasterType: entity.MilestoneType,
+			AttachID:   ms.Subjects[i],
+			AttachType: entity.SubjectType,
+		}
+		attaches = append(attaches, &attach)
+	}
+
+	for i := range ms.Categories {
+		attach := entity.Attach{
+			MasterID:   ms.ID,
+			MasterType: entity.MilestoneType,
+			AttachID:   ms.Categories[i],
+			AttachType: entity.CategoryType,
+		}
+		attaches = append(attaches, &attach)
+	}
+
+	for i := range ms.Subcategories {
+		attach := entity.Attach{
+			MasterID:   ms.ID,
+			MasterType: entity.MilestoneType,
+			AttachID:   ms.Subcategories[i],
+			AttachType: entity.SubcategoryType,
+		}
+		attaches = append(attaches, &attach)
+	}
+
+	for i := range ms.Grades {
+		attach := entity.Attach{
+			MasterID:   ms.ID,
+			MasterType: entity.MilestoneType,
+			AttachID:   ms.Grades[i],
+			AttachType: entity.GradeType,
+		}
+		attaches = append(attaches, &attach)
+	}
+
+	for i := range ms.Ages {
+		attach := entity.Attach{
+			MasterID:   ms.ID,
+			MasterType: entity.MilestoneType,
+			AttachID:   ms.Ages[i],
+			AttachType: entity.AgeType,
+		}
+		attaches = append(attaches, &attach)
+	}
+	return attaches
+}
+
+func (m MilestoneModel) FillAttach(ms *entity.Milestone, attaches []*entity.Attach) {
+
+	for i := range attaches {
+		switch attaches[i].AttachType {
+		case entity.ProgramType:
+			ms.Programs = append(ms.Programs, attaches[i].AttachID)
+		case entity.SubjectType:
+			ms.Subjects = append(ms.Subjects, attaches[i].AttachID)
+		case entity.CategoryType:
+			ms.Categories = append(ms.Categories, attaches[i].AttachID)
+		case entity.SubcategoryType:
+			ms.Subcategories = append(ms.Subcategories, attaches[i].AttachID)
+		case entity.GradeType:
+			ms.Grades = append(ms.Grades, attaches[i].AttachID)
+		case entity.AgeType:
+			ms.Ages = append(ms.Ages, attaches[i].AttachID)
+		}
+	}
+}
+
+func (m *MilestoneModel) Copy(op *entity.Operator, ms *entity.Milestone) (*entity.Milestone, error) {
+	if ms.Status != entity.OutcomeStatusPublished {
+		return nil, constant.ErrOperateNotAllowed
+	}
+	milestone := &entity.Milestone{
+		ID:             utils.NewID(),
+		Name:           ms.Name,
+		Shortcode:      ms.Shortcode,
+		OrganizationID: op.OrgID,
+		AuthorID:       op.UserID,
+		Description:    ms.Description,
+		LoCounts:       ms.LoCounts,
+
+		Status: entity.OutcomeStatusDraft,
+
+		AncestorID: ms.AncestorID,
+		SourceID:   ms.ID,
+	}
+	milestone.SourceID = ms.ID
+	milestone.LatestID = milestone.ID
+	return milestone, nil
+}
+
+func (m *MilestoneModel) UpdateMilestone(milestone *entity.Milestone, ms *entity.Milestone) {
+	ms.Name = milestone.Name
+	ms.Description = milestone.Description
+	ms.Programs = milestone.Programs
+	ms.Subjects = milestone.Subjects
+	ms.Categories = milestone.Categories
+	ms.Subcategories = milestone.Subcategories
+	ms.Grades = milestone.Grades
+	ms.Ages = milestone.Ages
 }

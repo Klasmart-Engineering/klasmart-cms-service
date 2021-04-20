@@ -88,6 +88,8 @@ type ConflictResponse Response
 
 type UnAuthorizedResponse Response
 
+type NotAcceptResponse Response
+
 type IDResponse struct {
 	ID string `json:"id"`
 }

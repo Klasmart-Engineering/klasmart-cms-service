@@ -25,8 +25,8 @@ type OrganizationServiceProvider interface {
 	GetNameMapByOrganizationOrSchool(ctx context.Context, operator *entity.Operator, id []string) (map[string]string, error)
 	GetByPermission(ctx context.Context, operator *entity.Operator, permissionName PermissionName, options ...APOption) ([]*Organization, error)
 	GetByUserID(ctx context.Context, operator *entity.Operator, id string, options ...APOption) ([]*Organization, error)
-	OrgAthPrgSjtCtgSubCtgGrdAge(ctx context.Context, op *entity.Operator, orgIDs, athIDs, prgIDs, subIDs, ctgIDs, subCtgIDs, grdIDs, ageIDs []string) (
-		organization, author, program, subject, category, subCategory, grade, age map[string]string, err error)
+	//OrgAthPrgSjtCtgSubCtgGrdAge(ctx context.Context, op *entity.Operator, orgIDs, athIDs, prgIDs, subIDs, ctgIDs, subCtgIDs, grdIDs, ageIDs []string) (
+	//	organization, author, program, subject, category, subCategory, grade, age map[string]string, err error)
 }
 
 type Organization struct {
@@ -407,131 +407,131 @@ func (s AmsOrganizationService) GetByUserID(ctx context.Context, operator *entit
 	return orgs, nil
 }
 
-func (s AmsOrganizationService) OrgAthPrgSjtCtgSubCtgGrdAge(ctx context.Context, op *entity.Operator, orgIDs, athIDs, prgIDs, subIDs, ctgIDs, subCtgIDs, grdIDs, ageIDs []string) (
-	organization, author, program, subject, category, subCategory, grade, age map[string]string, err error) {
-
-	_orgIDs := utils.SliceDeduplication(orgIDs)
-	_athIDs := utils.SliceDeduplication(athIDs)
-	_prgIDs := utils.SliceDeduplication(prgIDs)
-	_subIDs := utils.SliceDeduplication(subIDs)
-	_ctgIDs := utils.SliceDeduplication(ctgIDs)
-	_subCtgIDs := utils.SliceDeduplication(subCtgIDs)
-	_grdIDs := utils.SliceDeduplication(grdIDs)
-	_ageIDs := utils.SliceDeduplication(ageIDs)
-
-	organization = make(map[string]string, len(_orgIDs))
-	author = make(map[string]string, len(_athIDs))
-	program = make(map[string]string, len(_prgIDs))
-	subject = make(map[string]string, len(_subIDs))
-	category = make(map[string]string, len(_ctgIDs))
-	subCategory = make(map[string]string, len(_subCtgIDs))
-	grade = make(map[string]string, len(_grdIDs))
-	age = make(map[string]string, len(_ageIDs))
-
-	if len(orgIDs) == 0 && len(athIDs) == 0 && len(prgIDs) == 0 && len(subIDs) == 0 && len(ctgIDs) == 0 && len(subCtgIDs) == 0 && len(grdIDs) == 0 && len(ageIDs) == 0 {
-		return
-	}
-
-	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _orgIDs {
-		fmt.Fprintf(sb, "org%d: organization(organization_id: \"%s\") {id:organization_id name:organization_name}\n", index, id)
-	}
-
-	for index, id := range _athIDs {
-		fmt.Fprintf(sb, "ath%d: user(user_id: \"%s\") {id:user_id name:full_name}\n", index, id)
-	}
-
-	for index, id := range _prgIDs {
-		fmt.Fprintf(sb, "prg%d: program(id: \"%s\") {id name}\n", index, id)
-	}
-
-	for index, id := range _subIDs {
-		fmt.Fprintf(sb, "sbj%d: subject(id: \"%s\") {id name}\n", index, id)
-	}
-
-	for index, id := range _ctgIDs {
-		fmt.Fprintf(sb, "ctg%d: category(id: \"%s\") {id name}\n", index, id)
-	}
-
-	for index, id := range _subCtgIDs {
-		fmt.Fprintf(sb, "sbc%d: subcategory(id: \"%s\") {id name}\n", index, id)
-	}
-
-	for index, id := range _grdIDs {
-		fmt.Fprintf(sb, "grd%d: grade(id: \"%s\") {id name}\n", index, id)
-	}
-
-	for index, id := range _ageIDs {
-		fmt.Fprintf(sb, "age%d: age_range(id: \"%s\") {id name}\n", index, id)
-	}
-	sb.WriteString("}")
-
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(op.Token))
-
-	type Value struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	data := map[string]*Value{}
-	response := &chlorine.Response{
-		Data: &data,
-	}
-
-	_, err = GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "OrgAthPrgSjtCtgSubCtgGrdAge: Run failed",
-			log.Err(err),
-			log.Any("operator", op),
-			log.Strings("program", prgIDs))
-		return
-	}
-
-	if len(response.Errors) > 0 {
-		log.Error(ctx, "OrgAthPrgSjtCtgSubCtgGrdAge: response error",
-			log.Err(response.Errors),
-			log.Any("operator", op),
-			log.Strings("program", prgIDs))
-		return
-	}
-
-	for k, v := range data {
-		switch k[:3] {
-		case "org":
-			if v != nil {
-				organization[v.ID] = v.Name
-			}
-		case "ath":
-			if v != nil {
-				author[v.ID] = v.Name
-			}
-		case "prg":
-			if v != nil {
-				program[v.ID] = v.Name
-			}
-		case "sbj":
-			if v != nil {
-				subject[v.ID] = v.Name
-			}
-		case "ctg":
-			if v != nil {
-				category[v.ID] = v.Name
-			}
-		case "sbc":
-			if v != nil {
-				subCategory[v.ID] = v.Name
-			}
-		case "grd":
-			if v != nil {
-				grade[v.ID] = v.Name
-			}
-		case "age":
-			if v != nil {
-				age[v.ID] = v.Name
-			}
-		}
-	}
-	log.Info(ctx, "OrgAthPrgSjtCtgSubCtgGrdAge: success",
-		log.Any("data", data))
-	return
-}
+//func (s AmsOrganizationService) OrgAthPrgSjtCtgSubCtgGrdAge(ctx context.Context, op *entity.Operator, orgIDs, athIDs, prgIDs, subIDs, ctgIDs, subCtgIDs, grdIDs, ageIDs []string) (
+//	organization, author, program, subject, category, subCategory, grade, age map[string]string, err error) {
+//
+//	_orgIDs := utils.SliceDeduplication(orgIDs)
+//	_athIDs := utils.SliceDeduplication(athIDs)
+//	_prgIDs := utils.SliceDeduplication(prgIDs)
+//	_subIDs := utils.SliceDeduplication(subIDs)
+//	_ctgIDs := utils.SliceDeduplication(ctgIDs)
+//	_subCtgIDs := utils.SliceDeduplication(subCtgIDs)
+//	_grdIDs := utils.SliceDeduplication(grdIDs)
+//	_ageIDs := utils.SliceDeduplication(ageIDs)
+//
+//	organization = make(map[string]string, len(_orgIDs))
+//	author = make(map[string]string, len(_athIDs))
+//	program = make(map[string]string, len(_prgIDs))
+//	subject = make(map[string]string, len(_subIDs))
+//	category = make(map[string]string, len(_ctgIDs))
+//	subCategory = make(map[string]string, len(_subCtgIDs))
+//	grade = make(map[string]string, len(_grdIDs))
+//	age = make(map[string]string, len(_ageIDs))
+//
+//	if len(orgIDs) == 0 && len(athIDs) == 0 && len(prgIDs) == 0 && len(subIDs) == 0 && len(ctgIDs) == 0 && len(subCtgIDs) == 0 && len(grdIDs) == 0 && len(ageIDs) == 0 {
+//		return
+//	}
+//
+//	sb := new(strings.Builder)
+//	sb.WriteString("query {")
+//	for index, id := range _orgIDs {
+//		fmt.Fprintf(sb, "org%d: organization(organization_id: \"%s\") {id:organization_id name:organization_name}\n", index, id)
+//	}
+//
+//	for index, id := range _athIDs {
+//		fmt.Fprintf(sb, "ath%d: user(user_id: \"%s\") {id:user_id name:full_name}\n", index, id)
+//	}
+//
+//	for index, id := range _prgIDs {
+//		fmt.Fprintf(sb, "prg%d: program(id: \"%s\") {id name}\n", index, id)
+//	}
+//
+//	for index, id := range _subIDs {
+//		fmt.Fprintf(sb, "sbj%d: subject(id: \"%s\") {id name}\n", index, id)
+//	}
+//
+//	for index, id := range _ctgIDs {
+//		fmt.Fprintf(sb, "ctg%d: category(id: \"%s\") {id name}\n", index, id)
+//	}
+//
+//	for index, id := range _subCtgIDs {
+//		fmt.Fprintf(sb, "sbc%d: subcategory(id: \"%s\") {id name}\n", index, id)
+//	}
+//
+//	for index, id := range _grdIDs {
+//		fmt.Fprintf(sb, "grd%d: grade(id: \"%s\") {id name}\n", index, id)
+//	}
+//
+//	for index, id := range _ageIDs {
+//		fmt.Fprintf(sb, "age%d: age_range(id: \"%s\") {id name}\n", index, id)
+//	}
+//	sb.WriteString("}")
+//
+//	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(op.Token))
+//
+//	type Value struct {
+//		ID   string `json:"id"`
+//		Name string `json:"name"`
+//	}
+//	data := map[string]*Value{}
+//	response := &chlorine.Response{
+//		Data: &data,
+//	}
+//
+//	_, err = GetAmsClient().Run(ctx, request, response)
+//	if err != nil {
+//		log.Error(ctx, "OrgAthPrgSjtCtgSubCtgGrdAge: Run failed",
+//			log.Err(err),
+//			log.Any("operator", op),
+//			log.Strings("program", prgIDs))
+//		return
+//	}
+//
+//	if len(response.Errors) > 0 {
+//		log.Error(ctx, "OrgAthPrgSjtCtgSubCtgGrdAge: response error",
+//			log.Err(response.Errors),
+//			log.Any("operator", op),
+//			log.Strings("program", prgIDs))
+//		return
+//	}
+//
+//	for k, v := range data {
+//		switch k[:3] {
+//		case "org":
+//			if v != nil {
+//				organization[v.ID] = v.Name
+//			}
+//		case "ath":
+//			if v != nil {
+//				author[v.ID] = v.Name
+//			}
+//		case "prg":
+//			if v != nil {
+//				program[v.ID] = v.Name
+//			}
+//		case "sbj":
+//			if v != nil {
+//				subject[v.ID] = v.Name
+//			}
+//		case "ctg":
+//			if v != nil {
+//				category[v.ID] = v.Name
+//			}
+//		case "sbc":
+//			if v != nil {
+//				subCategory[v.ID] = v.Name
+//			}
+//		case "grd":
+//			if v != nil {
+//				grade[v.ID] = v.Name
+//			}
+//		case "age":
+//			if v != nil {
+//				age[v.ID] = v.Name
+//			}
+//		}
+//	}
+//	log.Info(ctx, "OrgAthPrgSjtCtgSubCtgGrdAge: success",
+//		log.Any("data", data))
+//	return
+//}

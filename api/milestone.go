@@ -20,12 +20,13 @@ import (
 // @Success 200 {object} MilestoneView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
+// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /milestones [post]
 func (s *Server) createMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data MilestoneView
+	var data model.MilestoneView
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "createMilestone: ShouldBind failed", log.Err(err))
@@ -44,7 +45,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	milestone := data.toMilestone(op)
+	milestone := data.ToMilestone(op)
 	if err != nil {
 		log.Warn(ctx, "createMilestone: outcome failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -89,7 +90,7 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		views, err := fromMilestones(ctx, op, []*entity.Milestone{milestone})
+		views, err := model.FromMilestones(ctx, op, []*entity.Milestone{milestone})
 		if err != nil {
 			log.Error(ctx, "obtainMilestone: fromMilestones failed",
 				log.String("milestone", milestoneID),
@@ -122,7 +123,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	milestoneID := c.Param("id")
-	var data MilestoneView
+	var data model.MilestoneView
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "updateMilestone: ShouldBind failed", log.Err(err))
@@ -131,7 +132,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	}
 	data.MilestoneID = milestoneID
 
-	milestone := data.toMilestone(op)
+	milestone := data.ToMilestone(op)
 	if err != nil {
 		log.Warn(ctx, "updateMilestone: toMilestone failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -152,7 +153,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
-		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case constant.ErrConflict:
 		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	case nil:
@@ -173,13 +174,12 @@ func (s *Server) updateMilestone(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
-// @Failure 406 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /milestones/{milestone_id} [delete]
 func (s *Server) deleteMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data MilestoneList
+	var data model.MilestoneList
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "deleteMilestone: ShouldBind failed", log.Err(err))
@@ -197,7 +197,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 	err = model.GetMilestoneModel().Delete(ctx, op, perms, data.IDs)
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
-		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
 		return
 	}
 	switch err {
@@ -227,7 +227,6 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 // @Success 200 {object} MilestoneSearchResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /milestones [get]
 func (s *Server) searchMilestone(c *gin.Context) {
@@ -242,14 +241,16 @@ func (s *Server) searchMilestone(c *gin.Context) {
 	}
 
 	var hasPerm bool
+	var perm external.PermissionName
 	if condition.Status == entity.OutcomeStatusPublished {
-		hasPerm, err = external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewPublishedMilestone)
+		perm = external.ViewUnPublishedMilestone
 	} else {
-		hasPerm, err = external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ViewUnPublishedMilestone)
+		perm = external.ViewUnPublishedMilestone
 	}
 
+	hasPerm, err = external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, perm)
 	if err != nil {
-		log.Error(ctx, "searchMilestone: HasOrganizationPermission failed", log.Err(err), log.Any("op", op))
+		log.Error(ctx, "searchMilestone: HasOrganizationPermission failed", log.Err(err), log.String("perm", string(perm)), log.Any("op", op))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
@@ -261,12 +262,12 @@ func (s *Server) searchMilestone(c *gin.Context) {
 	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
 	switch err {
 	case nil:
-		views, err := fromMilestones(ctx, op, milestones)
+		views, err := model.FromMilestones(ctx, op, milestones)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
-		c.JSON(http.StatusOK, MilestoneSearchResponse{
+		c.JSON(http.StatusOK, model.MilestoneSearchResponse{
 			Total:      total,
 			Milestones: views,
 		})
@@ -287,7 +288,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
-// @Failure 406 {object} ForbiddenResponse
+// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /milestones/{milestone_id}/occupy [put]
 func (s *Server) occupyMilestone(c *gin.Context) {
@@ -314,7 +315,7 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 	milestone, err := model.GetMilestoneModel().Occupy(ctx, op, milestoneID)
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
-		c.JSON(http.StatusNotAcceptable, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+		c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
 		return
 	}
 	switch err {
@@ -323,7 +324,7 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
-		c.JSON(http.StatusOK, MilestoneView{MilestoneID: milestone.ID})
+		c.JSON(http.StatusOK, model.MilestoneView{MilestoneID: milestone.ID})
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -340,13 +341,14 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
+// @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /milestones/publish [put]
 func (s *Server) publishMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
-	var data MilestoneList
+	var data model.MilestoneList
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		log.Warn(ctx, "publishMilestone: ShouldBindJSON failed", log.Any("op", op))
@@ -381,7 +383,7 @@ func (s *Server) publishMilestone(c *gin.Context) {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentStatusToPublish:
-		c.JSON(http.StatusNotAcceptable, L(GeneralUnknown))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:

@@ -20,6 +20,22 @@ const (
 )
 
 const (
-	AttachMilestoneTable = "milestones_attaches"
-	AttachOutcomeTable   = "outcomes_attaches"
+	AttachMilestoneTable = "milestones_relations"
+	AttachOutcomeTable   = "outcomes_relations"
 )
+
+type MilestoneAttach struct {
+	Attach
+}
+
+func (MilestoneAttach) TableName() string {
+	return AttachMilestoneTable
+}
+
+type OutcomeAttach struct {
+	Attach
+}
+
+func (OutcomeAttach) TableName() string {
+	return AttachOutcomeTable
+}

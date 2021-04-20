@@ -13,7 +13,9 @@ type IMilestoneDA interface {
 	Search(ctx context.Context, tx *dbo.DBContext, condition *MilestoneCondition) (int, []*entity.Milestone, error)
 	GetByID(ctx context.Context, tx *dbo.DBContext, ID string) (*entity.Milestone, error)
 
-	BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs, hideIDs []string, ancestorLatest map[string]string) error
+	BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs []string) error
+	BatchHide(ctx context.Context, tx *dbo.DBContext, hideIDs []string) error
+	BatchUpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorLatest map[string]string) error
 	BatchDelete(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) error
 
 	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error

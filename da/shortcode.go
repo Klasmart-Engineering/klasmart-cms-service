@@ -14,11 +14,11 @@ type IShortcodeDA interface {
 
 var _shortcodeOnce sync.Once
 
-var _shortcodeDA *ShortcodeSqlDA
+var _shortcodeDA *ShortcodeMySqlDA
 
 func GetShortcodeDA() IShortcodeDA {
 	_shortcodeOnce.Do(func() {
-		_shortcodeDA = new(ShortcodeSqlDA)
+		_shortcodeDA = new(ShortcodeMySqlDA)
 	})
 	return _shortcodeDA
 }

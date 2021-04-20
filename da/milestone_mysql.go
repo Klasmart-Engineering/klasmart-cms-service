@@ -16,13 +16,6 @@ type MilestoneSqlDA struct {
 }
 
 func (m MilestoneSqlDA) Create(ctx context.Context, tx *dbo.DBContext, milestone *entity.Milestone) error {
-	now := time.Now().Unix()
-	if milestone.CreateAt == 0 {
-		milestone.CreateAt = now
-	}
-	if milestone.UpdateAt == 0 {
-		milestone.UpdateAt = now
-	}
 	_, err := m.InsertTx(ctx, tx, milestone)
 	if err != nil {
 		log.Error(ctx, "Create: InsertTx failed",
@@ -66,7 +59,7 @@ func (m MilestoneSqlDA) Search(ctx context.Context, tx *dbo.DBContext, condition
 	return total, milestones, nil
 }
 
-func (m MilestoneSqlDA) BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs, hideIDs []string, ancestorLatest map[string]string) error {
+func (m MilestoneSqlDA) BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs []string) error {
 	if len(publishIDs) > 0 {
 		sql := fmt.Sprintf("update %s set status = ?, update_at = ? where id in (?)", entity.Milestone{}.TableName())
 		err := tx.Exec(sql, entity.OutcomeStatusPublished, time.Now().Unix(), publishIDs).Error
@@ -78,17 +71,57 @@ func (m MilestoneSqlDA) BatchPublish(ctx context.Context, tx *dbo.DBContext, pub
 			return err
 		}
 	}
+	//if len(hideIDs) > 0 {
+	//	sql := fmt.Sprintf("update %s set status = ?, locked_by = ?, update_at = ? where id in (?)", entity.Milestone{}.TableName())
+	//	err := tx.Exec(sql, entity.OutcomeStatusHidden, "", time.Now().Unix(), hideIDs).Error
+	//	if err != nil {
+	//		log.Error(ctx, "BatchPublish: exec sql failed",
+	//			log.Err(err),
+	//			log.Strings("hide", hideIDs),
+	//			log.String("sql", sql))
+	//		return err
+	//	}
+	//}
+	//if len(ancestorLatest) > 0 {
+	//	var sb strings.Builder
+	//	fmt.Fprintf(&sb, "update %s set update_at= %d, latest_id = case ancestor_id ", entity.Milestone{}.TableName(), time.Now().Unix())
+	//	ancestorIDs := make([]string, len(ancestorLatest))
+	//	i := 0
+	//	for k, v := range ancestorLatest {
+	//		fmt.Fprintf(&sb, " when '%s' then '%s' ", k, v)
+	//		ancestorIDs[i] = k
+	//		i++
+	//	}
+	//	fmt.Fprintf(&sb, " end ")
+	//	fmt.Fprintf(&sb, " where ancestor_id in (?)")
+	//	sql := sb.String()
+	//	err := tx.Exec(sql, ancestorIDs).Error
+	//	if err != nil {
+	//		log.Error(ctx, "BatchPublish: exec sql failed",
+	//			log.Err(err),
+	//			log.String("sql", sql))
+	//		return err
+	//	}
+	//}
+	return nil
+}
+
+func (m MilestoneSqlDA) BatchHide(ctx context.Context, tx *dbo.DBContext, hideIDs []string) error {
 	if len(hideIDs) > 0 {
 		sql := fmt.Sprintf("update %s set status = ?, locked_by = ?, update_at = ? where id in (?)", entity.Milestone{}.TableName())
 		err := tx.Exec(sql, entity.OutcomeStatusHidden, "", time.Now().Unix(), hideIDs).Error
 		if err != nil {
-			log.Error(ctx, "BatchPublish: exec sql failed",
+			log.Error(ctx, "BatchHide: exec sql failed",
 				log.Err(err),
 				log.Strings("hide", hideIDs),
 				log.String("sql", sql))
 			return err
 		}
 	}
+	return nil
+}
+
+func (m MilestoneSqlDA) BatchUpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorLatest map[string]string) error {
 	if len(ancestorLatest) > 0 {
 		var sb strings.Builder
 		fmt.Fprintf(&sb, "update %s set update_at= %d, latest_id = case ancestor_id ", entity.Milestone{}.TableName(), time.Now().Unix())
@@ -173,17 +206,17 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, strings.TrimSpace(c.SearchKey.String))
 	}
 
-	if !c.SearchKey.Valid && c.Name.Valid {
+	if c.Name.Valid {
 		wheres = append(wheres, "match(name) against(? in boolean mode)")
 		params = append(params, strings.TrimSpace(c.Name.String))
 	}
 
-	if !c.SearchKey.Valid && c.Shortcode.Valid {
+	if c.Shortcode.Valid {
 		wheres = append(wheres, "match(shortcode) against(? in boolean mode)")
 		params = append(params, strings.TrimSpace(c.Shortcode.String))
 	}
 
-	if !c.SearchKey.Valid && c.Description.Valid {
+	if c.Description.Valid {
 		wheres = append(wheres, "match(`describe`) against(? in boolean mode)")
 		params = append(params, strings.TrimSpace(c.Description.String))
 	}
@@ -237,13 +270,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 type MilestoneOrderBy int
 
 const (
-	_ = iota
+	_ MilestoneOrderBy = iota
 	OrderByMilestoneName
 	OrderByMilestoneNameDesc
 	OrderByMilestoneCreatedAt
 	OrderByMilestoneCreatedAtDesc
-	OrderByMilestoneLOCounts
-	OrderByMilestoneLOCountsDesc
 )
 
 func (c *MilestoneCondition) GetPager() *dbo.Pager {
@@ -260,10 +291,6 @@ func (c *MilestoneCondition) GetOrderBy() string {
 		return "create_at"
 	case OrderByMilestoneCreatedAtDesc:
 		return "create_at desc"
-	case OrderByMilestoneLOCounts:
-		return "lo_count"
-	case OrderByMilestoneLOCountsDesc:
-		return "lo_count desc"
 	default:
 		return "update_at desc"
 	}
@@ -275,7 +302,7 @@ type MilestoneOutcomeSqlDA struct {
 	dbo.BaseDA
 }
 
-func (mso MilestoneOutcomeSqlDA) Search(ctx context.Context, tx *dbo.DBContext, milestoneID string) ([]*entity.MilestoneOutcome, error) {
+func (mso MilestoneOutcomeSqlDA) SearchTx(ctx context.Context, tx *dbo.DBContext, milestoneID string) ([]*entity.MilestoneOutcome, error) {
 	sql := "select distinct * from " + entity.MilestoneOutcome{}.TableName() + " where milestone_id = ? and delete_at is null order by update_at"
 	var mos []*entity.MilestoneOutcome
 	err := tx.Raw(sql, milestoneID).Find(&mos).Error
@@ -288,37 +315,40 @@ func (mso MilestoneOutcomeSqlDA) Search(ctx context.Context, tx *dbo.DBContext, 
 	return mos, nil
 }
 
-func (mso MilestoneOutcomeSqlDA) Replace(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string, milestonesOutcomes []*entity.MilestoneOutcome) error {
+func (mso MilestoneOutcomeSqlDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) error {
 	table := entity.MilestoneOutcome{}.TableName()
 	if len(milestoneIDs) > 0 {
 		sql := fmt.Sprintf("delete from %s where milestone_id in (?)", table)
 		err := tx.Exec(sql, milestoneIDs).Error
 		if err != nil {
-			log.Error(ctx, "Replace: exec del sql failed",
+			log.Error(ctx, "DeleteTx: exec del sql failed",
 				log.Err(err),
 				log.Strings("milestone", milestoneIDs),
-				log.Any("milestonesOutcomes", milestonesOutcomes),
 				log.String("sql", sql))
 			return err
 		}
 	}
+	return nil
+}
+func (mso MilestoneOutcomeSqlDA) InsertTx(ctx context.Context, tx *dbo.DBContext, milestonesOutcomes []*entity.MilestoneOutcome) error {
+	table := entity.MilestoneOutcome{}.TableName()
 	if len(milestonesOutcomes) > 0 {
-		values := make([]string, len(milestonesOutcomes))
+		values := make([][]interface{}, len(milestonesOutcomes))
 		now := time.Now().Unix()
 		for i := range milestonesOutcomes {
 			tm := now + int64(i)
-			milestoneID := milestonesOutcomes[i].MilestoneID
-			outcomeAncestor := milestonesOutcomes[i].OutcomeAncestor
-			value := fmt.Sprintf("select '%s', '%s', %d, %d where not exists(select * from %s where milestone_id='%s' and outcome_ancestor='%s' and delete_at is null)",
-				milestoneID, outcomeAncestor, tm, tm, table, milestoneID, outcomeAncestor)
-			values[i] = value
+			values[i] = []interface{}{
+				milestonesOutcomes[i].MilestoneID,
+				milestonesOutcomes[i].OutcomeAncestor,
+				tm,
+				tm,
+			}
 		}
-		sql := fmt.Sprintf("insert into %s(milestone_id, outcome_ancestor, create_at, update_at) (%s)", table, strings.Join(values, " union "))
-		err := tx.Exec(sql).Error
+		sql, results := SQLBatchInsert(table, []string{"milestone_id", "outcome_ancestor", "create_at", "update_at"}, values)
+		err := tx.Exec(sql, results...).Error
 		if err != nil {
-			log.Error(ctx, "Replace: exec insert sql failed",
+			log.Error(ctx, "InsertTx: exec insert sql failed",
 				log.Err(err),
-				log.Strings("milestone", milestoneIDs),
 				log.Any("milestonesOutcomes", milestonesOutcomes),
 				log.String("sql", sql))
 			return err
@@ -327,7 +357,7 @@ func (mso MilestoneOutcomeSqlDA) Replace(ctx context.Context, tx *dbo.DBContext,
 	return nil
 }
 
-func (mso MilestoneOutcomeSqlDA) Count(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) (map[string]int, error) {
+func (mso MilestoneOutcomeSqlDA) CountTx(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) (map[string]int, error) {
 	sql := fmt.Sprintf("select milestone_id, count(outcome_ancestor) as count from %s where milestone_id in (?) group by milestone_id", entity.MilestoneOutcome{}.TableName())
 	var results []*struct {
 		MilestoneID string `gorm:"column:milestone_id" json:"milestone_id"`

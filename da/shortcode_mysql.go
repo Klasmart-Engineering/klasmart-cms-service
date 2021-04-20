@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-type ShortcodeSqlDA struct {
+type ShortcodeMySqlDA struct {
 	dbo.BaseDA
 }
 
@@ -40,7 +40,7 @@ func (c *ShortcodeCondition) GetConditions() ([]string, []interface{}) {
 	return wheres, params
 }
 
-func (scd ShortcodeSqlDA) Search(ctx context.Context, tx *dbo.DBContext, table string, condition *ShortcodeCondition) ([]*entity.ShortcodeElement, error) {
+func (scd ShortcodeMySqlDA) Search(ctx context.Context, tx *dbo.DBContext, table string, condition *ShortcodeCondition) ([]*entity.ShortcodeElement, error) {
 	wheres, parameters := condition.GetConditions()
 	db := tx.Clone()
 	if len(wheres) > 0 {

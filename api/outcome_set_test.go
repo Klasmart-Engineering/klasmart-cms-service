@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 	"testing"
 )
@@ -11,7 +12,7 @@ func TestCreateOutcomeSet(t *testing.T) {
 	orgID := "8a31ebab-b879-4790-af99-ee4941a778b3"
 	setupMilestone()
 	op := initOperator(orgID, "", "")
-	req := OutcomeSetCreateView{
+	req := model.OutcomeSetCreateView{
 		SetName: "math",
 	}
 	data, err := json.Marshal(req)

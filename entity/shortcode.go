@@ -1,8 +1,10 @@
 package entity
 
+type ShortcodeKind string
+
 const (
-	KindMileStone = "milestones"
-	KindOutcome   = "outcomes"
+	KindMileStone ShortcodeKind = "milestones"
+	KindOutcome   ShortcodeKind = "outcomes"
 )
 
 type ShortcodeElement struct {

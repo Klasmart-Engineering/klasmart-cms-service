@@ -1,8 +1,11 @@
-package api
+package model
 
 import (
 	"context"
 	"errors"
+	//"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
+
+	//"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -29,7 +32,12 @@ type OutcomeCreateView struct {
 	Sets           []*OutcomeSetCreateView `json:"sets"`
 }
 
-func (req OutcomeCreateView) outcome() (*entity.Outcome, error) {
+type OutcomeSetCreateView struct {
+	SetID   string `json:"set_id" form:"set_id"`
+	SetName string `json:"set_name" form:"set_name"`
+}
+
+func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
 	outcome := entity.Outcome{
 		Name:          req.OutcomeName,
 		Assumed:       req.Assumed,
@@ -63,8 +71,8 @@ func (req OutcomeCreateView) outcome() (*entity.Outcome, error) {
 	return &outcome, nil
 }
 
-func (req OutcomeCreateView) outcomeWithID(outcomeID string) (*entity.Outcome, error) {
-	outcome, err := req.outcome()
+func (req OutcomeCreateView) ToOutcomeWithID(outcomeID string) (*entity.Outcome, error) {
+	outcome, err := req.ToOutcome()
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +111,7 @@ type OutcomeCreateResponse struct {
 	UpdatedAt        int64    `json:"updated_at"`
 }
 
-func newOutcomeCreateResponse(ctx context.Context, operator *entity.Operator, createView *OutcomeCreateView, outcome *entity.Outcome) OutcomeCreateResponse {
+func NewCreateResponse(ctx context.Context, operator *entity.Operator, createView *OutcomeCreateView, outcome *entity.Outcome) OutcomeCreateResponse {
 	return OutcomeCreateResponse{
 		OutcomeID:        outcome.ID,
 		OutcomeName:      createView.OutcomeName,
@@ -168,14 +176,44 @@ type OutcomeSearchResponse struct {
 	List  []*OutcomeView `json:"list"`
 }
 
-func newOutcomeSearchResponse(ctx context.Context, operator *entity.Operator, total int, outcomes []*entity.Outcome) (res OutcomeSearchResponse) {
-	res.Total = total
-	res.List = make([]*OutcomeView, len(outcomes))
-	for i := range outcomes {
-		view := newOutcomeView(ctx, operator, outcomes[i])
-		res.List[i] = &view
+func NewSearchResponse(ctx context.Context, op *entity.Operator, total int, outcomes []*entity.Outcome) (*OutcomeSearchResponse, error) {
+	views, err := FillOutcomeViews(ctx, op, outcomes)
+	if err != nil {
+		log.Error(ctx, "NewSearchResponse: NewSearchResponse failed",
+			log.Any("op", op),
+			log.Any("outcome", outcomes))
+		return nil, err
 	}
-	return
+	return &OutcomeSearchResponse{
+		Total: total,
+		List:  views,
+	}, nil
+}
+
+func FillOutcomeViews(ctx context.Context, operator *entity.Operator, outcomes []*entity.Outcome) ([]*OutcomeView, error) {
+	outcomeViews := make([]*OutcomeView, len(outcomes))
+	var orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs []string
+	for i := range outcomes {
+		orgIDs = append(orgIDs, outcomes[i].OrganizationID)
+		authIDs = append(authIDs, outcomes[i].AuthorID)
+		prgIDs = append(prgIDs, outcomes[i].Programs...)
+		sbjIDs = append(sbjIDs, outcomes[i].Subjects...)
+		catIDs = append(catIDs, outcomes[i].Categories...)
+		sbcIDs = append(sbcIDs, outcomes[i].Subcategories...)
+		grdIDs = append(grdIDs, outcomes[i].Grades...)
+		ageIDs = append(ageIDs, outcomes[i].Ages...)
+	}
+	orgs, authors, prds, sbjs, cats, sbcs, grds, ages, err := prepareAllNeededName(ctx, operator, orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs)
+	if err != nil {
+		log.Error(ctx, "fillOutcomeViews: prepareAllNeededName failed",
+			log.Err(err),
+			log.Any("outcome", outcomes))
+		return nil, err
+	}
+	for i := range outcomes {
+		outcomeViews[i] = buildOutcomeView(orgs, authors, prds, sbjs, cats, sbcs, grds, ages, outcomes[i])
+	}
+	return outcomeViews, nil
 }
 
 type OutcomeLockResponse struct {
@@ -222,85 +260,6 @@ type Age struct {
 type Grade struct {
 	GradeID   string `json:"grade_id"`
 	GradeName string `json:"grade_name"`
-}
-
-func newOutcomeView(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) OutcomeView {
-	view := OutcomeView{
-		OutcomeID:        outcome.ID,
-		OutcomeName:      outcome.Name,
-		AncestorID:       outcome.AncestorID,
-		Shortcode:        outcome.Shortcode,
-		Assumed:          outcome.Assumed,
-		SourceID:         outcome.SourceID,
-		LatestID:         outcome.LatestID,
-		LockedBy:         outcome.LockedBy,
-		AuthorID:         outcome.AuthorID,
-		AuthorName:       outcome.AuthorName,
-		OrganizationID:   outcome.OrganizationID,
-		OrganizationName: getOrganizationName(ctx, operator, outcome.OrganizationID),
-		PublishScope:     outcome.PublishScope,
-		PublishStatus:    string(outcome.PublishStatus),
-		Keywords:         strings.Split(outcome.Keywords, ","),
-		RejectReason:     outcome.RejectReason,
-		EstimatedTime:    outcome.EstimatedTime,
-		Description:      outcome.Description,
-		CreatedAt:        outcome.CreateAt,
-		UpdatedAt:        outcome.UpdateAt,
-	}
-
-	author, _ := external.GetUserServiceProvider().Get(ctx, operator, outcome.AuthorID)
-	view.AuthorName = author.Name
-	pIDs := strings.Split(outcome.Program, ",")
-	pNames, _ := external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, pIDs)
-	view.Program = make([]Program, len(pIDs))
-	for k, id := range pIDs {
-		view.Program[k].ProgramID = id
-		view.Program[k].ProgramName = pNames[id]
-	}
-	sIDs := strings.Split(outcome.Subject, ",")
-	sNames, _ := external.GetSubjectServiceProvider().BatchGetNameMap(ctx, operator, sIDs)
-	view.Subject = make([]Subject, len(sIDs))
-	for k, id := range sIDs {
-		view.Subject[k].SubjectID = id
-		view.Subject[k].SubjectName = sNames[id]
-	}
-	dIDs := strings.Split(outcome.Developmental, ",")
-	categoryNames, _ := external.GetCategoryServiceProvider().BatchGetNameMap(ctx, operator, dIDs)
-	view.Developmental = make([]Developmental, len(dIDs))
-	for k, id := range dIDs {
-		view.Developmental[k].DevelopmentalID = id
-		view.Developmental[k].DevelopmentalName = categoryNames[id]
-	}
-	skIDs := strings.Split(outcome.Skills, ",")
-	skNames, _ := external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, operator, skIDs)
-	view.Skills = make([]Skill, len(skIDs))
-	for k, id := range skIDs {
-		view.Skills[k].SkillID = id
-		view.Skills[k].SkillName = skNames[id]
-	}
-	aIDs := strings.Split(outcome.Age, ",")
-	aNames, _ := external.GetAgeServiceProvider().BatchGetNameMap(ctx, operator, aIDs)
-	view.Age = make([]Age, len(aIDs))
-	for k, id := range aIDs {
-		view.Age[k].AgeID = id
-		view.Age[k].AgeName = aNames[id]
-	}
-	gIDs := strings.Split(outcome.Grade, ",")
-	gNames, _ := external.GetGradeServiceProvider().BatchGetNameMap(ctx, operator, gIDs)
-	view.Grade = make([]Grade, len(gIDs))
-	for k, id := range gIDs {
-		view.Grade[k].GradeID = id
-		view.Grade[k].GradeName = gNames[id]
-	}
-	view.Sets = make([]*OutcomeSetCreateView, len(outcome.Sets))
-	for i := range outcome.Sets {
-		set := OutcomeSetCreateView{
-			SetID:   outcome.Sets[i].ID,
-			SetName: outcome.Sets[i].Name,
-		}
-		view.Sets[i] = &set
-	}
-	return view
 }
 
 func getOrganizationName(ctx context.Context, operator *entity.Operator, id string) (name string) {

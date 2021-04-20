@@ -24,7 +24,7 @@ import (
 func TestCreateOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	createView := OutcomeCreateView{
+	createView := model.OutcomeCreateView{
 		OutcomeName: "Test Outcome XX",
 		Assumed:     true,
 		Program:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
@@ -37,7 +37,7 @@ func TestCreateOutcome(t *testing.T) {
 		Keywords:    []string{"kyd001", "kyd002"},
 		Description: "Hello, Brilliant",
 		Shortcode:   "00001",
-		Sets: []*OutcomeSetCreateView{
+		Sets: []*model.OutcomeSetCreateView{
 			{SetID: "6077b3a9809f75d51b5cb023"},
 		},
 	}
@@ -53,7 +53,7 @@ func TestCreateOutcome(t *testing.T) {
 func TestGetOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	outcomeID := "6077b4fda53cf8f7b6efcedc"
+	outcomeID := "607e4a1e4225cb7dcdb55108"
 	url := fmt.Sprintf("%s/learning_outcomes/%s?org_id=%s", prefix, outcomeID, op.OrgID)
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
@@ -62,8 +62,8 @@ func TestGetOutcome(t *testing.T) {
 func TestUpdateOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	outcomeID := "6077b4fda53cf8f7b6efcedc"
-	createView := OutcomeCreateView{
+	outcomeID := "607e4a1e4225cb7dcdb55108"
+	createView := model.OutcomeCreateView{
 		OutcomeName:   "TestModifyOutcomeXX",
 		Assumed:       false,
 		Program:       []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
@@ -76,7 +76,7 @@ func TestUpdateOutcome(t *testing.T) {
 		Keywords:      []string{"Modify_kyd001", "kyd002"},
 		Description:   "some description",
 		Shortcode:     "12345",
-		Sets:          []*OutcomeSetCreateView{},
+		Sets:          []*model.OutcomeSetCreateView{},
 	}
 	data, err := json.Marshal(createView)
 	if err != nil {
@@ -116,7 +116,7 @@ func TestPublishOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	outcomeID := "60790598b35b67a672d51683"
-	req := PublishOutcomeReq{
+	req := model.PublishOutcomeReq{
 		Scope: "1",
 	}
 	data, err := json.Marshal(&req)
@@ -140,7 +140,7 @@ func TestApproveOutcome(t *testing.T) {
 
 func TestRejectOutcome(t *testing.T) {
 	outcomeID := "5f56def450275d71418a1d4b"
-	body := OutcomeRejectReq{RejectReason: "refuse"}
+	body := model.OutcomeRejectReq{RejectReason: "refuse"}
 	data, err := json.Marshal(&body)
 	if err != nil {
 		t.Fatal(err)

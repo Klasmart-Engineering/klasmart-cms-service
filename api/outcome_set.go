@@ -11,11 +11,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 )
 
-type OutcomeSetCreateView struct {
-	SetID   string `json:"set_id" form:"set_id"`
-	SetName string `json:"set_name" form:"set_name"`
-}
-
 // @ID createOutcomeSet
 // @Summary createOutcomeSet
 // @Tags outcome_set
@@ -33,7 +28,7 @@ type OutcomeSetCreateView struct {
 func (s *Server) createOutcomeSet(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	var data OutcomeSetCreateView
+	var data model.OutcomeSetCreateView
 	err := c.ShouldBindJSON(&data)
 	data.SetName = strings.TrimSpace(data.SetName)
 	if err != nil || data.SetName == "" {
@@ -81,7 +76,7 @@ type PullOutcomeSetRequest struct {
 	SetName string `json:"set_name" form:"set_name"`
 }
 type PullOutcomeSetResponse struct {
-	Sets []*OutcomeSetCreateView `json:"sets" form:"sets"`
+	Sets []*model.OutcomeSetCreateView `json:"sets" form:"sets"`
 }
 
 // @ID pullOutcomeSet
@@ -111,9 +106,9 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 	}
 	outcomeSets, err := model.GetOutcomeSetModel().PullOutcomeSet(ctx, op, request.SetName)
 	var response PullOutcomeSetResponse
-	response.Sets = make([]*OutcomeSetCreateView, len(outcomeSets))
+	response.Sets = make([]*model.OutcomeSetCreateView, len(outcomeSets))
 	for i := range outcomeSets {
-		set := OutcomeSetCreateView{
+		set := model.OutcomeSetCreateView{
 			SetID:   outcomeSets[i].ID,
 			SetName: outcomeSets[i].Name,
 		}

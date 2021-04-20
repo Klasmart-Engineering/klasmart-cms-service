@@ -3,17 +3,18 @@ package da
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"strings"
 	"sync"
 	"time"
 )
 
-func (scc ShortcodeCacheDA) shortcodeRedisKey(v ...string) string {
+func (scc ShortcodeRedisDA) shortcodeRedisKey(v ...string) string {
 	return strings.Join(v, ":")
 }
 
-func (scc ShortcodeCacheDA) shortcodeMapping(key string) string {
+func (scc ShortcodeRedisDA) shortcodeMapping(key string) string {
 	length := len(key)
 	if length >= constant.ShortcodeShowLength {
 		return key[length-constant.ShortcodeShowLength : length]
@@ -21,18 +22,18 @@ func (scc ShortcodeCacheDA) shortcodeMapping(key string) string {
 	return key
 }
 
-type ShortcodeCacheDA struct{}
+type ShortcodeRedisDA struct{}
 
-func (scc ShortcodeCacheDA) SearchWithPatten(ctx context.Context, kind string, orgID string) ([]string, func(string) string, error) {
-	result, err := ro.MustGetRedis(ctx).Keys(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, "*")).Result()
+func (scc ShortcodeRedisDA) SearchWithPatten(ctx context.Context, kind entity.ShortcodeKind, orgID string) ([]string, func(string) string, error) {
+	result, err := ro.MustGetRedis(ctx).Keys(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, string(kind), orgID, "*")).Result()
 	if err != nil {
 		return nil, nil, err
 	}
 	return result, scc.shortcodeMapping, nil
 }
 
-func (scc ShortcodeCacheDA) Exists(ctx context.Context, kind string, orgID string, shortcode string) (bool, error) {
-	result, err := ro.MustGetRedis(ctx).Exists(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, shortcode)).Result()
+func (scc ShortcodeRedisDA) Exists(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) (bool, error) {
+	result, err := ro.MustGetRedis(ctx).Exists(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, string(kind), orgID, shortcode)).Result()
 	if err != nil {
 		return false, err
 	}
@@ -42,29 +43,29 @@ func (scc ShortcodeCacheDA) Exists(ctx context.Context, kind string, orgID strin
 	return false, nil
 }
 
-func (scc ShortcodeCacheDA) Save(ctx context.Context, kind string, orgID string, shortcode string) error {
-	return ro.MustGetRedis(ctx).Set(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, shortcode), shortcode, time.Hour).Err()
+func (scc ShortcodeRedisDA) Save(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
+	return ro.MustGetRedis(ctx).Set(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, string(kind), orgID, shortcode), shortcode, time.Hour).Err()
 }
 
-func (scc ShortcodeCacheDA) Remove(ctx context.Context, kind string, orgID string, shortcode string) error {
-	return ro.MustGetRedis(ctx).Del(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, kind, orgID, shortcode)).Err()
+func (scc ShortcodeRedisDA) Remove(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
+	return ro.MustGetRedis(ctx).Del(scc.shortcodeRedisKey(RedisKeyPrefixShortcode, string(kind), orgID, shortcode)).Err()
 }
 
-type IShortcodeCacheDA interface {
-	SearchWithPatten(ctx context.Context, kind string, orgID string) ([]string, func(string) string, error)
-	Exists(ctx context.Context, kind string, orgID string, shortcode string) (bool, error)
-	Save(ctx context.Context, kind string, orgID string, shortcode string) error
-	Remove(ctx context.Context, kind string, orgID string, shortcode string) error
+type IShortcodeRedisDA interface {
+	SearchWithPatten(ctx context.Context, kind entity.ShortcodeKind, orgID string) ([]string, func(string) string, error)
+	Exists(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) (bool, error)
+	Save(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error
+	Remove(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error
 }
 
 var (
-	_shortcodeRedisDA     IShortcodeCacheDA
+	_shortcodeRedisDA     IShortcodeRedisDA
 	_shortcodeRedisDAOnce sync.Once
 )
 
-func GetShortcodeCacheDA() IShortcodeCacheDA {
+func GetShortcodeCacheDA() IShortcodeRedisDA {
 	_shortcodeRedisDAOnce.Do(func() {
-		_shortcodeRedisDA = &ShortcodeCacheDA{}
+		_shortcodeRedisDA = &ShortcodeRedisDA{}
 	})
 	return _shortcodeRedisDA
 }
