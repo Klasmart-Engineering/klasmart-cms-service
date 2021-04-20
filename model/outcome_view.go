@@ -45,13 +45,13 @@ func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
 		Description:   req.Description,
 		Shortcode:     req.Shortcode,
 	}
-	outcome.Program = strings.Join(req.Program, ",")
-	outcome.Subject = strings.Join(req.Subject, ",")
-	outcome.Developmental = strings.Join(req.Developmental, ",")
-	outcome.Skills = strings.Join(req.Skills, ",")
-	outcome.Grade = strings.Join(req.Grade, ",")
-	outcome.Age = strings.Join(req.Age, ",")
-	outcome.Keywords = strings.Join(req.Keywords, ",")
+	outcome.Program = strings.Join(req.Program, entity.JoinComma)
+	outcome.Subject = strings.Join(req.Subject, entity.JoinComma)
+	outcome.Developmental = strings.Join(req.Developmental, entity.JoinComma)
+	outcome.Skills = strings.Join(req.Skills, entity.JoinComma)
+	outcome.Grade = strings.Join(req.Grade, entity.JoinComma)
+	outcome.Age = strings.Join(req.Age, entity.JoinComma)
+	outcome.Keywords = strings.Join(req.Keywords, entity.JoinComma)
 
 	outcome.Programs = req.Program
 	outcome.Subjects = req.Subject

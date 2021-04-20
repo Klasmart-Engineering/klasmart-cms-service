@@ -175,7 +175,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /milestones/{milestone_id} [delete]
+// @Router /milestones [delete]
 func (s *Server) deleteMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
