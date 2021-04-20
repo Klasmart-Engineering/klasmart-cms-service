@@ -29,6 +29,8 @@ type IAssessmentModel interface {
 var (
 	assessmentModelInstance     IAssessmentModel
 	assessmentModelInstanceOnce = sync.Once{}
+
+	ErrNotFoundAttendance = errors.New("not found attendance")
 )
 
 func GetAssessmentModel() IAssessmentModel {
@@ -725,7 +727,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 				log.Any("operator", operator),
 				log.Any("condition", cond),
 			)
-			return errors.New("add assessments: require schedule attendance")
+			return ErrNotFoundAttendance
 		}
 		if err = m.addAssessmentAttendances(ctx, tx, operator, newAssessmentID, scheduleRelations); err != nil {
 			log.Error(ctx, "Add: m.addAssessmentAttendances: add failed",
