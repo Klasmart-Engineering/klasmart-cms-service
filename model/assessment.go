@@ -600,6 +600,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 			for _, m := range materials {
 				materialIDs = append(materialIDs, m.ID)
 			}
+			materialIDs = utils.SliceDeduplicationExcludeEmpty(materialIDs)
 			if materialDetails, err = GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), materialIDs, operator); err != nil {
 				log.Warn(ctx, "Add: GetContentModel().GetContentByIDList: get contents failed",
 					log.Err(err),
