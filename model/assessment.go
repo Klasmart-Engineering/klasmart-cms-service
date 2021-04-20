@@ -29,6 +29,8 @@ type IAssessmentModel interface {
 var (
 	assessmentModelInstance     IAssessmentModel
 	assessmentModelInstanceOnce = sync.Once{}
+
+	ErrNotFoundAttendance = errors.New("not found attendance")
 )
 
 func GetAssessmentModel() IAssessmentModel {
@@ -600,6 +602,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 			for _, m := range materials {
 				materialIDs = append(materialIDs, m.ID)
 			}
+			materialIDs = utils.SliceDeduplicationExcludeEmpty(materialIDs)
 			if materialDetails, err = GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), materialIDs, operator); err != nil {
 				log.Warn(ctx, "Add: GetContentModel().GetContentByIDList: get contents failed",
 					log.Err(err),
@@ -646,11 +649,8 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 			now           = time.Now().Unix()
 			classNameMap  map[string]string
 			newAssessment = entity.Assessment{
-				ID:         newAssessmentID,
-				ScheduleID: args.ScheduleID,
-				//ProgramID:  schedule.ProgramID,
-				// TODO: Medivh
-				//SubjectID:    schedule.SubjectID,
+				ID:           newAssessmentID,
+				ScheduleID:   args.ScheduleID,
 				ClassLength:  args.ClassLength,
 				ClassEndTime: args.ClassEndTime,
 				CreateAt:     now,
@@ -727,7 +727,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 				log.Any("operator", operator),
 				log.Any("condition", cond),
 			)
-			return err
+			return ErrNotFoundAttendance
 		}
 		if err = m.addAssessmentAttendances(ctx, tx, operator, newAssessmentID, scheduleRelations); err != nil {
 			log.Error(ctx, "Add: m.addAssessmentAttendances: add failed",
