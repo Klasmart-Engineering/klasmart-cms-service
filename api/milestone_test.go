@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"net/http"
 	"os"
@@ -146,15 +145,4 @@ func TestOccupyMilestone(t *testing.T) {
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"60769e209a3cad38f7ae4d0a/occupy"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
-}
-
-func f(attach interface{}) {
-	//fmt.Println(attach.TableName())
-	fmt.Println(attach)
-}
-
-func TestAttach(t *testing.T) {
-	var milestoneAttach entity.MilestoneAttach
-	f(milestoneAttach)
-	fmt.Println(milestoneAttach.TableName())
 }

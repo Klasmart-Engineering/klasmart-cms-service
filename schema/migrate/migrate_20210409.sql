@@ -30,26 +30,26 @@ CREATE TABLE IF NOT EXISTS `milestones_outcomes` (
     UNIQUE KEY `milestone_ancestor_id_delete` (`milestone_id`, `outcome_ancestor`, `delete_at`)
 ) COMMENT 'milestones_outcomes' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
-CREATE TABLE IF NOT EXISTS `milestones_attaches` (
+CREATE TABLE IF NOT EXISTS `milestones_relations` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT  'id',
     `master_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'master resource',
-    `attach_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'attach resource',
-    `attach_type` varchar(30) NOT NULL DEFAULT "" COMMENT  'attach type',
+    `relation_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'relation resource',
+    `relation_type` varchar(30) NOT NULL DEFAULT "" COMMENT  'relation type',
     `master_type` varchar(30) DEFAULT NULL COMMENT  'master type',
     `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'created_at',
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'updated_at',
     `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
-    UNIQUE KEY `master_attach_delete` (`master_id`, `attach_id`, `attach_type`,`master_type`,`delete_at`)
+    UNIQUE KEY `master_relation_delete` (`master_id`, `relation_id`, `relation_type`,`master_type`,`delete_at`)
 ) COMMENT 'milestones_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
-CREATE TABLE IF NOT EXISTS `outcomes_attaches` (
-     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT  'id',
-     `master_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'master resource',
-    `attach_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'attach resource',
-    `attach_type` varchar(30) NOT NULL DEFAULT "" COMMENT  'attach type',
+CREATE TABLE IF NOT EXISTS `outcomes_relations` (
+    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT  'id',
+    `master_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'master resource',
+    `relation_id` varchar(50) NOT NULL DEFAULT "" COMMENT  'relation resource',
+    `relation_type` varchar(30) NOT NULL DEFAULT "" COMMENT  'relation type',
     `master_type` varchar(30) DEFAULT NULL COMMENT  'master type',
     `create_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'created_at',
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'updated_at',
     `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
-    UNIQUE KEY `master_attach_delete` (`master_id`, `attach_id`, `attach_type`,`master_type`,`delete_at`)
+    UNIQUE KEY `master_relation_delete` (`master_id`, `relation_id`, `relation_type`,`master_type`,`delete_at`)
 ) COMMENT 'outcomes_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;

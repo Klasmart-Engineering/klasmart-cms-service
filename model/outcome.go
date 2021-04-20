@@ -104,7 +104,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 				log.Any("outcome", outcome))
 			return err
 		}
-		err = da.GetOutcomeAttachDA().InsertTx(ctx, tx, ocm.CollectAttach(outcome))
+		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
 		if err != nil {
 			log.Error(ctx, "CreateLearningOutcome: InsertTx failed",
 				log.String("op", operator.UserID),
@@ -132,9 +132,9 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			log.String("outcome_id", outcomeID))
 		return nil, err
 	}
-	attaches, err := da.GetOutcomeAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+	relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
 		MasterIDs:  dbo.NullStrings{Strings: []string{outcomeID}, Valid: true},
-		MasterType: sql.NullString{String: entity.OutcomeType, Valid: true},
+		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "GetLearningOutcomeByID: Search failed",
@@ -142,7 +142,7 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			log.String("op", operator.UserID),
 			log.String("outcome_id", outcomeID))
 	}
-	ocm.FillAttach(outcome, attaches)
+	ocm.FillRelation(outcome, relations)
 	return outcome, nil
 }
 
@@ -264,14 +264,14 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 				log.Any("data", outcome))
 			return err
 		}
-		err = da.GetOutcomeAttachDA().DeleteTx(ctx, tx, []string{outcome.ID})
+		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, []string{outcome.ID})
 		if err != nil {
 			log.Error(ctx, "UpdateLearningOutcome: DeleteTx failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
-		err = da.GetOutcomeAttachDA().InsertTx(ctx, tx, ocm.CollectAttach(outcome))
+		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
 		if err != nil {
 			log.Error(ctx, "UpdateLearningOutcome: InsertTx failed",
 				log.String("op", operator.UserID),
@@ -322,7 +322,7 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, operator *ent
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = da.GetOutcomeAttachDA().DeleteTx(ctx, tx, []string{outcome.ID})
+		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, []string{outcome.ID})
 		if err != nil {
 			log.Error(ctx, "DeleteLearningOutcome: DeleteTx failed",
 				log.String("op", operator.UserID),
@@ -432,9 +432,9 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.
 			log.Any("condition", condition))
 		return 0, nil, err
 	}
-	err = ocm.fillAttach(ctx, user, tx, outcomes)
+	err = ocm.fillRelation(ctx, user, tx, outcomes)
 	if err != nil {
-		log.Error(ctx, "SearchLearningOutcome: fillAttach failed",
+		log.Error(ctx, "SearchLearningOutcome: fillRelation failed",
 			log.Err(err),
 			log.String("op", user.UserID))
 		return 0, nil, err
@@ -506,9 +506,9 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 				log.Any("outcome", newVersion))
 			return err
 		}
-		attaches, err := da.GetOutcomeAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{outcome.ID}, Valid: true},
-			MasterType: sql.NullString{String: entity.OutcomeType, Valid: true},
+			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "LockLearningOutcome: SearchTx failed",
@@ -517,10 +517,10 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 				log.Any("outcome", newVersion))
 			return err
 		}
-		for i := range attaches {
-			attaches[i].MasterID = newVersion.ID
+		for i := range relations {
+			relations[i].MasterID = newVersion.ID
 		}
-		err = da.GetOutcomeAttachDA().InsertTx(ctx, tx, attaches)
+		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, relations)
 		if err != nil {
 			log.Error(ctx, "LockLearningOutcome: InsertTx failed",
 				log.String("op", operator.UserID),
@@ -682,7 +682,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 			ancestorIDs[i] = o.AncestorID
 		}
 
-		err = da.GetOutcomeAttachDA().DeleteTx(ctx, tx, outcomeIDs)
+		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, outcomeIDs)
 		if err != nil {
 			log.Error(ctx, "BulkDelLearningOutcome: DeleteTx failed",
 				log.String("op", operator.UserID),
@@ -747,9 +747,9 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, user *entity.
 			log.Any("outcome", ocm))
 		return 0, nil, err
 	}
-	err = ocm.fillAttach(ctx, user, tx, outcomes)
+	err = ocm.fillRelation(ctx, user, tx, outcomes)
 	if err != nil {
-		log.Error(ctx, "SearchPrivateOutcomes: fillAttach failed",
+		log.Error(ctx, "SearchPrivateOutcomes: fillRelation failed",
 			log.Err(err),
 			log.String("op", user.UserID))
 		return 0, nil, err
@@ -795,9 +795,9 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.
 			log.Any("outcome", ocm))
 		return 0, nil, err
 	}
-	err = ocm.fillAttach(ctx, user, tx, outcomes)
+	err = ocm.fillRelation(ctx, user, tx, outcomes)
 	if err != nil {
-		log.Error(ctx, "SearchPendingOutcomes: fillAttach failed",
+		log.Error(ctx, "SearchPendingOutcomes: fillRelation failed",
 			log.Err(err),
 			log.String("op", user.UserID))
 		return 0, nil, err
@@ -1049,9 +1049,9 @@ func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, operator *
 			log.Any("outcome", ocm))
 		return nil, err
 	}
-	err = ocm.fillAttach(ctx, operator, tx, outcomes)
+	err = ocm.fillRelation(ctx, operator, tx, outcomes)
 	if err != nil {
-		log.Error(ctx, "GetLearningOutcomesByIDs: fillAttach failed",
+		log.Error(ctx, "GetLearningOutcomesByIDs: fillRelation failed",
 			log.Err(err),
 			log.String("op", operator.UserID))
 		return nil, err
@@ -1099,9 +1099,9 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, operator *en
 			outcomes = []*entity.Outcome{}
 		} else {
 			outcomes = otcs2
-			err = ocm.fillAttach(ctx, operator, tx, outcomes)
+			err = ocm.fillRelation(ctx, operator, tx, outcomes)
 			if err != nil {
-				log.Error(ctx, "GetLatestOutcomesByIDs: fillAttach failed",
+				log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
 					log.Err(err),
 					log.String("op", operator.UserID))
 				return err
@@ -1150,9 +1150,9 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, ope
 				log.Strings("outcome_ids", cond2.IDs.Strings))
 			return constant.ErrRecordNotFound
 		} else {
-			err = ocm.fillAttach(ctx, operator, tx, otcs2)
+			err = ocm.fillRelation(ctx, operator, tx, otcs2)
 			if err != nil {
-				log.Error(ctx, "GetLatestOutcomesByIDs: fillAttach failed",
+				log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
 					log.Err(err),
 					log.String("op", operator.UserID))
 				return err
@@ -1203,9 +1203,9 @@ func (ocm OutcomeModel) GetLatestOutcomesByAncestors(ctx context.Context, op *en
 				log.Strings("ancestor", ancestorIDs))
 			return err
 		}
-		err = ocm.fillAttach(ctx, op, tx, outcomes)
+		err = ocm.fillRelation(ctx, op, tx, outcomes)
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByAncestors: fillAttach failed",
+			log.Error(ctx, "GetLatestOutcomesByAncestors: fillRelation failed",
 				log.Err(err),
 				log.String("op", op.UserID),
 				log.Strings("ancestor", ancestorIDs))
@@ -1216,26 +1216,26 @@ func (ocm OutcomeModel) GetLatestOutcomesByAncestors(ctx context.Context, op *en
 	return
 }
 
-func (ocm OutcomeModel) fillAttach(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomes []*entity.Outcome) error {
+func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomes []*entity.Outcome) error {
 	if len(outcomes) > 0 {
 		masterIDs := make([]string, len(outcomes))
 		for i := range outcomes {
 			masterIDs[i] = outcomes[i].ID
 		}
-		attaches, err := da.GetOutcomeAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: masterIDs, Valid: true},
-			MasterType: sql.NullString{String: entity.OutcomeType, Valid: true},
+			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "fillAttach: Search failed",
+			log.Error(ctx, "fillRelation: Search failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.Any("outcomes", outcomes))
 			return err
 		}
-		for i := range attaches {
+		for i := range relations {
 			for j := range outcomes {
-				ocm.FillAttach(outcomes[j], []*entity.Attach{attaches[i]})
+				ocm.FillRelation(outcomes[j], []*entity.Relation{relations[i]})
 				break
 			}
 		}
@@ -1455,85 +1455,85 @@ func GetOutcomeModel() IOutcomeModel {
 	return _outcomeModel
 }
 
-func (ocm OutcomeModel) CollectAttach(oc *entity.Outcome) []*entity.Attach {
-	attaches := make([]*entity.Attach, 0, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
+func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.Relation {
+	relations := make([]*entity.Relation, 0, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
 	for i := range oc.Programs {
-		attach := entity.Attach{
-			MasterID:   oc.ID,
-			MasterType: entity.OutcomeType,
-			AttachID:   oc.Programs[i],
-			AttachType: entity.ProgramType,
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Programs[i],
+			RelationType: entity.ProgramType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range oc.Subjects {
-		attach := entity.Attach{
-			MasterID:   oc.ID,
-			MasterType: entity.OutcomeType,
-			AttachID:   oc.Subjects[i],
-			AttachType: entity.SubjectType,
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Subjects[i],
+			RelationType: entity.SubjectType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range oc.Categories {
-		attach := entity.Attach{
-			MasterID:   oc.ID,
-			MasterType: entity.OutcomeType,
-			AttachID:   oc.Categories[i],
-			AttachType: entity.CategoryType,
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Categories[i],
+			RelationType: entity.CategoryType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range oc.Subcategories {
-		attach := entity.Attach{
-			MasterID:   oc.ID,
-			MasterType: entity.OutcomeType,
-			AttachID:   oc.Subcategories[i],
-			AttachType: entity.SubcategoryType,
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Subcategories[i],
+			RelationType: entity.SubcategoryType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range oc.Grades {
-		attach := entity.Attach{
-			MasterID:   oc.ID,
-			MasterType: entity.OutcomeType,
-			AttachID:   oc.Grades[i],
-			AttachType: entity.GradeType,
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Grades[i],
+			RelationType: entity.GradeType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range oc.Ages {
-		attach := entity.Attach{
-			MasterID:   oc.ID,
-			MasterType: entity.OutcomeType,
-			AttachID:   oc.Ages[i],
-			AttachType: entity.AgeType,
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Ages[i],
+			RelationType: entity.AgeType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
-	return attaches
+	return relations
 }
 
-func (ocm OutcomeModel) FillAttach(oc *entity.Outcome, attaches []*entity.Attach) {
-	for i := range attaches {
-		switch attaches[i].AttachType {
+func (ocm OutcomeModel) FillRelation(oc *entity.Outcome, relations []*entity.Relation) {
+	for i := range relations {
+		switch relations[i].RelationType {
 		case entity.ProgramType:
-			oc.Programs = append(oc.Programs, attaches[i].AttachID)
+			oc.Programs = append(oc.Programs, relations[i].RelationID)
 		case entity.SubjectType:
-			oc.Subjects = append(oc.Subjects, attaches[i].AttachID)
+			oc.Subjects = append(oc.Subjects, relations[i].RelationID)
 		case entity.CategoryType:
-			oc.Categories = append(oc.Categories, attaches[i].AttachID)
+			oc.Categories = append(oc.Categories, relations[i].RelationID)
 		case entity.SubcategoryType:
-			oc.Subcategories = append(oc.Subcategories, attaches[i].AttachID)
+			oc.Subcategories = append(oc.Subcategories, relations[i].RelationID)
 		case entity.GradeType:
-			oc.Grades = append(oc.Grades, attaches[i].AttachID)
+			oc.Grades = append(oc.Grades, relations[i].RelationID)
 		case entity.AgeType:
-			oc.Ages = append(oc.Ages, attaches[i].AttachID)
+			oc.Ages = append(oc.Ages, relations[i].RelationID)
 		}
 	}
 	if len(oc.Programs) > 0 {

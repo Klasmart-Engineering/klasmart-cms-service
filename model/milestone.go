@@ -82,7 +82,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		err = da.GetMilestoneAttachDA().InsertTx(ctx, tx, m.CollectAttach(milestone))
+		err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, m.CollectRelation(milestone))
 		if err != nil {
 			log.Error(ctx, "CreateMilestone: InsertTx failed",
 				log.Err(err),
@@ -108,9 +108,9 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 				log.String("milestone", milestoneID))
 			return err
 		}
-		attaches, err := da.GetMilestoneAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{milestoneID}, Valid: true},
-			MasterType: sql.NullString{String: entity.MilestoneType, Valid: true},
+			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "Obtain: Search failed",
@@ -119,7 +119,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 				log.String("milestone", milestoneID))
 			return err
 		}
-		m.FillAttach(milestone, attaches)
+		m.FillRelation(milestone, relations)
 		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
 		bindLength := len(milestoneOutcomes)
 		if bindLength == 0 {
@@ -256,7 +256,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				log.Any("milestone", milestoneOutcomes))
 			return err
 		}
-		err = da.GetMilestoneAttachDA().DeleteTx(ctx, tx, []string{ms.ID})
+		err = da.GetMilestoneRelationDA().DeleteTx(ctx, tx, []string{ms.ID})
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
@@ -264,7 +264,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				log.Any("milestone", ms))
 			return err
 		}
-		err = da.GetMilestoneAttachDA().InsertTx(ctx, tx, m.CollectAttach(ms))
+		err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, m.CollectRelation(ms))
 		if err != nil {
 			log.Error(ctx, "Update: InsertTx failed",
 				log.Err(err),
@@ -350,8 +350,8 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
-		//err = da.GetAttachDA().Replace(ctx, tx, entity.AttachOutcomeTable, deleteIDs, entity.MilestoneType, nil)
-		err = da.GetMilestoneAttachDA().DeleteTx(ctx, tx, deleteIDs)
+		//err = da.GetRelationDA().Replace(ctx, tx, entity.OutcomeRelationTable, deleteIDs, entity.MilestoneType, nil)
+		err = da.GetMilestoneRelationDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
 				log.Err(err),
@@ -404,9 +404,9 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			milestoneIDs[i] = milestones[i].ID
 		}
 
-		attaches, err := da.GetMilestoneAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
-			MasterType: sql.NullString{String: entity.MilestoneType, Valid: true},
+			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "Search: Search failed",
@@ -415,10 +415,10 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 				log.Strings("milestone", milestoneIDs))
 			return err
 		}
-		for i := range attaches {
+		for i := range relations {
 			for j := range milestones {
-				if attaches[i].MasterID == milestones[j].ID {
-					m.FillAttach(milestones[j], []*entity.Attach{attaches[i]})
+				if relations[i].MasterID == milestones[j].ID {
+					m.FillRelation(milestones[j], []*entity.Relation{relations[i]})
 					break
 				}
 			}
@@ -512,26 +512,26 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone_outcome", milestoneOutcomes))
 			return err
 		}
-		attaches, err := da.GetMilestoneAttachDA().SearchTx(ctx, tx, &da.AttachCondition{
+		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
 			MasterIDs:  dbo.NullStrings{Strings: []string{milestoneID}, Valid: true},
-			MasterType: sql.NullString{String: entity.MilestoneType, Valid: true},
+			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Any("attach", attaches))
+				log.Any("relation", relations))
 			return err
 		}
-		for i := range attaches {
-			attaches[i].MasterID = milestone.ID
+		for i := range relations {
+			relations[i].MasterID = milestone.ID
 		}
-		err = da.GetMilestoneAttachDA().InsertTx(ctx, tx, attaches)
+		err = da.GetMilestoneRelationDA().InsertTx(ctx, tx, relations)
 		if err != nil {
 			log.Error(ctx, "Occupy: InsertTx failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Any("attach", attaches))
+				log.Any("relation", relations))
 			return err
 		}
 		return nil
@@ -628,86 +628,86 @@ func GetMilestoneModel() IMilestoneModel {
 	return _milestoneModel
 }
 
-func (m MilestoneModel) CollectAttach(ms *entity.Milestone) []*entity.Attach {
-	attaches := make([]*entity.Attach, 0, len(ms.Programs)+len(ms.Subjects)+len(ms.Categories)+len(ms.Subcategories)+len(ms.Grades)+len(ms.Ages))
+func (m MilestoneModel) CollectRelation(ms *entity.Milestone) []*entity.Relation {
+	relations := make([]*entity.Relation, 0, len(ms.Programs)+len(ms.Subjects)+len(ms.Categories)+len(ms.Subcategories)+len(ms.Grades)+len(ms.Ages))
 	for i := range ms.Programs {
-		attach := entity.Attach{
-			MasterID:   ms.ID,
-			MasterType: entity.MilestoneType,
-			AttachID:   ms.Programs[i],
-			AttachType: entity.ProgramType,
+		relation := entity.Relation{
+			MasterID:     ms.ID,
+			MasterType:   entity.MilestoneType,
+			RelationID:   ms.Programs[i],
+			RelationType: entity.ProgramType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range ms.Subjects {
-		attach := entity.Attach{
-			MasterID:   ms.ID,
-			MasterType: entity.MilestoneType,
-			AttachID:   ms.Subjects[i],
-			AttachType: entity.SubjectType,
+		relation := entity.Relation{
+			MasterID:     ms.ID,
+			MasterType:   entity.MilestoneType,
+			RelationID:   ms.Subjects[i],
+			RelationType: entity.SubjectType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range ms.Categories {
-		attach := entity.Attach{
-			MasterID:   ms.ID,
-			MasterType: entity.MilestoneType,
-			AttachID:   ms.Categories[i],
-			AttachType: entity.CategoryType,
+		relation := entity.Relation{
+			MasterID:     ms.ID,
+			MasterType:   entity.MilestoneType,
+			RelationID:   ms.Categories[i],
+			RelationType: entity.CategoryType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range ms.Subcategories {
-		attach := entity.Attach{
-			MasterID:   ms.ID,
-			MasterType: entity.MilestoneType,
-			AttachID:   ms.Subcategories[i],
-			AttachType: entity.SubcategoryType,
+		relation := entity.Relation{
+			MasterID:     ms.ID,
+			MasterType:   entity.MilestoneType,
+			RelationID:   ms.Subcategories[i],
+			RelationType: entity.SubcategoryType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range ms.Grades {
-		attach := entity.Attach{
-			MasterID:   ms.ID,
-			MasterType: entity.MilestoneType,
-			AttachID:   ms.Grades[i],
-			AttachType: entity.GradeType,
+		relation := entity.Relation{
+			MasterID:     ms.ID,
+			MasterType:   entity.MilestoneType,
+			RelationID:   ms.Grades[i],
+			RelationType: entity.GradeType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
 
 	for i := range ms.Ages {
-		attach := entity.Attach{
-			MasterID:   ms.ID,
-			MasterType: entity.MilestoneType,
-			AttachID:   ms.Ages[i],
-			AttachType: entity.AgeType,
+		relation := entity.Relation{
+			MasterID:     ms.ID,
+			MasterType:   entity.MilestoneType,
+			RelationID:   ms.Ages[i],
+			RelationType: entity.AgeType,
 		}
-		attaches = append(attaches, &attach)
+		relations = append(relations, &relation)
 	}
-	return attaches
+	return relations
 }
 
-func (m MilestoneModel) FillAttach(ms *entity.Milestone, attaches []*entity.Attach) {
+func (m MilestoneModel) FillRelation(ms *entity.Milestone, relations []*entity.Relation) {
 
-	for i := range attaches {
-		switch attaches[i].AttachType {
+	for i := range relations {
+		switch relations[i].RelationType {
 		case entity.ProgramType:
-			ms.Programs = append(ms.Programs, attaches[i].AttachID)
+			ms.Programs = append(ms.Programs, relations[i].RelationID)
 		case entity.SubjectType:
-			ms.Subjects = append(ms.Subjects, attaches[i].AttachID)
+			ms.Subjects = append(ms.Subjects, relations[i].RelationID)
 		case entity.CategoryType:
-			ms.Categories = append(ms.Categories, attaches[i].AttachID)
+			ms.Categories = append(ms.Categories, relations[i].RelationID)
 		case entity.SubcategoryType:
-			ms.Subcategories = append(ms.Subcategories, attaches[i].AttachID)
+			ms.Subcategories = append(ms.Subcategories, relations[i].RelationID)
 		case entity.GradeType:
-			ms.Grades = append(ms.Grades, attaches[i].AttachID)
+			ms.Grades = append(ms.Grades, relations[i].RelationID)
 		case entity.AgeType:
-			ms.Ages = append(ms.Ages, attaches[i].AttachID)
+			ms.Ages = append(ms.Ages, relations[i].RelationID)
 		}
 	}
 }
