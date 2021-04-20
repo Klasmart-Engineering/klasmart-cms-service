@@ -1557,12 +1557,34 @@ func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.Relation {
 
 func (ocm OutcomeModel) FillRelation(oc *entity.Outcome, relations []*entity.Relation) {
 	if len(relations) == 0 {
-		oc.Programs = strings.Split(oc.Program, entity.JoinComma)
-		oc.Subjects = strings.Split(oc.Subject, entity.JoinComma)
-		oc.Categories = strings.Split(oc.Developmental, entity.JoinComma)
-		oc.Subcategories = strings.Split(oc.Skills, entity.JoinComma)
-		oc.Grades = strings.Split(oc.Grade, entity.JoinComma)
-		oc.Ages = strings.Split(oc.Age, entity.JoinComma)
+		program := strings.TrimSpace(oc.Program)
+		if program != "" {
+			oc.Programs = strings.Split(program, entity.JoinComma)
+		}
+		subject := strings.TrimSpace(oc.Subject)
+		if subject != "" {
+			oc.Subjects = strings.Split(subject, entity.JoinComma)
+		}
+
+		category := strings.TrimSpace(oc.Developmental)
+		if category != "" {
+			oc.Categories = strings.Split(category, entity.JoinComma)
+		}
+
+		subcategories := strings.TrimSpace(oc.Skills)
+		if subcategories != "" {
+			oc.Subcategories = strings.Split(subcategories, entity.JoinComma)
+		}
+
+		grade := strings.TrimSpace(oc.Grade)
+		if grade != "" {
+			oc.Grades = strings.Split(grade, entity.JoinComma)
+		}
+
+		age := strings.TrimSpace(oc.Age)
+		if age != "" {
+			oc.Ages = strings.Split(age, entity.JoinComma)
+		}
 		return
 	}
 	for i := range relations {
