@@ -157,9 +157,12 @@ create table assessments_attendances (
     `assessment_id` varchar(64) not null comment 'assessment id',
     `attendance_id` varchar(64) not null comment 'attendance id',
     `checked` boolean not null comment 'checked',
+    `origin` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'origin',
+    `role` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'role'
     primary key (`id`),
     key `assessments_attendances_assessment_id` (`assessment_id`),
-    key `assessments_attendances_attendance_id` (`attendance_id`)
+    key `assessments_attendances_attendance_id` (`attendance_id`),
+    UNIQUE uq_assessments_attendances_assessment_id_attendance_id_role (assessment_id, attendance_id, role)
 ) comment 'assessment and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 create table assessments_outcomes (
@@ -168,6 +171,7 @@ create table assessments_outcomes (
     `outcome_id` varchar(64) not null comment 'outcome id',
     `skip` boolean not null comment 'skip',
     `none_achieved` boolean not null comment 'none achieved',
+    `checked` boolean NOT NULL DEFAULT true COMMENT 'checked',
     primary key (`id`),
     key `assessments_outcomes_assessment_id` (`assessment_id`),
     key `assessments_outcomes_outcome_id` (`outcome_id`)
