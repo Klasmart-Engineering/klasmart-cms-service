@@ -265,7 +265,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 	}
 	args.ID = id
 
-	if args.AttendanceIDs != nil && len(*args.AttendanceIDs) == 0 {
+	if args.StudentIDs != nil && len(*args.StudentIDs) == 0 {
 		c.JSON(http.StatusBadRequest, L(AssessMsgOneStudent))
 		return
 	}
