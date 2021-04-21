@@ -305,7 +305,7 @@ exists(select 1 from %s as b where b.relation_id in (?) and schedule_id = b.sche
 `,
 				constant.TableNameScheduleRelation)
 			wheres = append(wheres, sql)
-			params = append(params, c.ScheduleFilterSubject.RelationIDs)
+			params = append(params, c.ScheduleFilterSubject.RelationIDs.Strings)
 		}
 	}
 	if c.ScheduleIDs.Valid {
