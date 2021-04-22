@@ -16,6 +16,8 @@ import (
 type UserServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*User, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableUser, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableUser, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
@@ -104,6 +106,34 @@ func (s AmsUserService) BatchGet(ctx context.Context, operator *entity.Operator,
 		log.Any("users", users))
 
 	return users, nil
+}
+
+func (s AmsUserService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableUser, error) {
+	users, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*NullableUser{}, err
+	}
+
+	dict := make(map[string]*NullableUser, len(users))
+	for _, user := range users {
+		dict[user.ID] = user
+	}
+
+	return dict, nil
+}
+
+func (s AmsUserService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	users, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(users))
+	for _, user := range users {
+		dict[user.ID] = user.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsUserService) Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error) {

@@ -125,10 +125,10 @@ CREATE TABLE `learning_outcomes` (
     KEY `index_publish_status` (`publish_status`),
     KEY `index_source_id` (`source_id`),
     FULLTEXT INDEX `fullindex_name_description_keywords_shortcode` (
-        `name`,
-        `keywords`,
-        `description`,
-        `shortcode`
+ `name`,
+ `keywords`,
+ `description`,
+ `shortcode`
     )
 ) COMMENT 'outcomes table' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
@@ -136,9 +136,9 @@ create table `assessments` (
     `id` varchar(64) not null comment 'id',
     `schedule_id` varchar(64) not null comment 'schedule id',
     `title` varchar(1024) not null comment 'title',
-    `program_id` varchar(64) not null comment 'program id',
-    `subject_id` varchar(64) not null comment 'subject id',
-    `teacher_ids` json not null comment 'teacher id',
+    `program_id` varchar(64) null default '' comment 'DEPRECATED: program id',
+    `subject_id` varchar(64) null default '' comment 'DEPRECATED: subject id',
+    `teacher_ids` json null comment 'DEPRECATED: teacher ids',
     `class_length` int not null comment 'class length (util: minute)',
     `class_end_time` bigint not null comment 'class end time (unix seconds)',
     `complete_time` bigint not null comment 'complete time (unix seconds)',
@@ -157,9 +157,12 @@ create table assessments_attendances (
     `assessment_id` varchar(64) not null comment 'assessment id',
     `attendance_id` varchar(64) not null comment 'attendance id',
     `checked` boolean not null comment 'checked',
+    `origin` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'origin',
+    `role` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'role'
     primary key (`id`),
     key `assessments_attendances_assessment_id` (`assessment_id`),
-    key `assessments_attendances_attendance_id` (`attendance_id`)
+    key `assessments_attendances_attendance_id` (`attendance_id`),
+    UNIQUE uq_assessments_attendances_assessment_id_attendance_id_role (assessment_id, attendance_id, role)
 ) comment 'assessment and attendance map' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 create table assessments_outcomes (
@@ -168,6 +171,7 @@ create table assessments_outcomes (
     `outcome_id` varchar(64) not null comment 'outcome id',
     `skip` boolean not null comment 'skip',
     `none_achieved` boolean not null comment 'none achieved',
+    `checked` boolean NOT NULL DEFAULT true COMMENT 'checked',
     primary key (`id`),
     key `assessments_outcomes_assessment_id` (`assessment_id`),
     key `assessments_outcomes_outcome_id` (`outcome_id`)
@@ -502,9 +506,50 @@ CREATE TABLE IF NOT EXISTS `home_fun_studies` (
     `update_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'update at (unix seconds)',
     `delete_at` BIGINT NOT NULL DEFAULT 0 COMMENT 'delete at (unix seconds)',
     PRIMARY KEY (`id`),
-    KEY `home_fun_studies_schedule_id` (schedule_id),
-    KEY `home_fun_studies_status` (status),
-    KEY `home_fun_studies_latest_feedback_at` (latest_feedback_at),
-    KEY `home_fun_studies_complete_at` (complete_at),
-    KEY `home_fun_studies_schedule_id_and_student_id` (schedule_id, student_id)
+    KEY `idx_home_fun_studies_schedule_id` (schedule_id),
+    KEY `idx_home_fun_studies_status` (status),
+    KEY `idx_home_fun_studies_latest_feedback_at` (latest_feedback_at),
+    KEY `idx_home_fun_studies_complete_at` (complete_at),
+    UNIQUE KEY `uq_home_fun_studies_schedule_id_and_student_id` (schedule_id, student_id)
 ) COMMENT 'home_fun_studies' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE `cms_content_visibility_settings` (
+   `id` int AUTO_INCREMENT PRIMARY KEY ,
+   `content_id` varchar(50) NOT NULL DEFAULT '' comment 'content id',
+   `visibility_setting` varchar(50) NOT NULL DEFAULT '' comment 'visibility setting',
+   key `cms_content_visibility_settings_content_id_idx` (`content_id`),
+   key `cms_content_visibility_settings_visibility_settings_idx` (`visibility_setting`)
+) comment 'cms content visibility settings' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+
+CREATE TABLE `cms_content_properties` (
+     `id` int AUTO_INCREMENT  PRIMARY KEY,
+     `content_id` varchar(50) NOT NULL DEFAULT '' comment 'content id',
+     `property_type` int NOT NULL DEFAULT 0 comment 'property type',
+     `property_id` varchar(50) NOT NULL DEFAULT '' comment 'property id',
+     `sequence` int NOT NULL DEFAULT 0 comment 'sequence',
+     key `cms_content_properties_content_id_idx` (`content_id`),
+     key `cms_content_properties_property_type_idx` (`property_type`)
+) comment 'cms content properties' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE assessments_contents (
+    `id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'id',
+    `assessment_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'assessment id',
+    `content_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'content id',
+    `content_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'content name',
+    `content_type` INT NOT NULL DEFAULT 0 COMMENT 'content type',
+    `content_comment` TEXT NOT NULL COMMENT 'content comment',
+    `checked` BOOLEAN NOT NULL DEFAULT true COMMENT 'checked',
+    PRIMARY KEY (`id`),
+    UNIQUE `uq_assessments_contents_assessment_id_content_id` (`assessment_id`, `content_id`),
+    KEY `idx_assessments_contents_assessment_id` (`assessment_id`)
+)  COMMENT 'assessment and outcome map' DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_UNICODE_CI;
+
+CREATE TABLE assessments_contents_outcomes (
+    `id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'id',
+    `assessment_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'assessment id',
+    `content_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'content id',
+    `outcome_id` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'outcome id',
+    PRIMARY KEY (`id`),
+    UNIQUE `uq_assessments_contents_outcomes` (`assessment_id`, `content_id`, `outcome_id`)
+) COMMENT 'assessment content and outcome map' DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_UNICODE_CI;

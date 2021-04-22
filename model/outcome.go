@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"database/sql"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,9 +45,9 @@ type IOutcomeModel interface {
 	BulkRejectLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error
 
 	GetLatestOutcomesByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
-	GenerateShortcode(ctx context.Context, tx *dbo.DBContext, orgID string, shortcode string) (string, error)
 
 	HasLockedOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
+	GetLatestOutcomesByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
 }
 
 type OutcomeModel struct {
@@ -61,7 +63,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		return
 	}
 
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, operator.OrgID)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, operator.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateLearningOutcome: NewLock failed",
 			log.Err(err),
@@ -77,7 +79,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		outcome.AuthorID = operator.UserID
 		outcome.OrganizationID = operator.OrgID
 		outcome.PublishStatus = entity.OutcomeStatusDraft
-		exists, err := da.GetOutcomeDA().IsShortcodeExistInDBWithOtherAncestor(ctx, tx, operator.OrgID, outcome.AncestorID, outcome.Shortcode)
+		exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Outcome{}.TableName(), operator.OrgID, outcome.AncestorID, outcome.Shortcode)
 		if err != nil {
 			log.Error(ctx, "CreateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
 				log.Err(err),
@@ -102,8 +104,16 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 				log.Any("outcome", outcome))
 			return err
 		}
+		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
+		if err != nil {
+			log.Error(ctx, "CreateLearningOutcome: InsertTx failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
 		return nil
 	})
+	da.GetShortcodeCacheDA().Remove(ctx, entity.KindOutcome, operator.OrgID, outcome.Shortcode)
 	if err != nil {
 		return err
 	}
@@ -122,6 +132,17 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			log.String("outcome_id", outcomeID))
 		return nil, err
 	}
+	relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+		MasterIDs:  dbo.NullStrings{Strings: []string{outcomeID}, Valid: true},
+		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "GetLearningOutcomeByID: Search failed",
+			log.Err(err),
+			log.String("op", operator.UserID),
+			log.String("outcome_id", outcomeID))
+	}
+	ocm.FillRelation(outcome, relations)
 	return outcome, nil
 }
 
@@ -167,7 +188,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 		log.Error(ctx, "UpdateLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, operator.OrgID)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, operator.OrgID)
 	if err != nil {
 		log.Error(ctx, "UpdateLearningOutcome: NewLock failed",
 			log.Err(err),
@@ -177,7 +198,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := da.GetOutcomeDA().IsShortcodeExistInRedis(ctx, operator.OrgID, outcome.Shortcode)
+	exists, err := GetShortcodeModel().isCached(ctx, entity.KindOutcome, operator.OrgID, outcome.Shortcode)
 	if err != nil {
 		log.Error(ctx, "UpdateLearningOutcome: IsShortcodeExistInRedis failed",
 			log.Err(err),
@@ -214,7 +235,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 		}
 
 		if data.Shortcode != outcome.Shortcode {
-			exists, err := da.GetOutcomeDA().IsShortcodeExistInDBWithOtherAncestor(ctx, tx, operator.OrgID, data.AncestorID, outcome.Shortcode)
+			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Outcome{}.TableName(), operator.OrgID, data.AncestorID, outcome.Shortcode)
 			if err != nil {
 				log.Error(ctx, "UpdateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
 					log.Err(err),
@@ -227,7 +248,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 			}
 		}
 
-		data.Update(outcome)
+		ocm.UpdateOutcome(outcome, data)
 		err = ocm.updateOutcomeSet(ctx, operator, tx, outcome.ID, outcome.Sets)
 		if err != nil {
 			log.Error(ctx, "UpdateLearningOutcome: updateOutcomeSet failed",
@@ -241,6 +262,20 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 			log.Error(ctx, "UpdateLearningOutcome: UpdateOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("data", outcome))
+			return err
+		}
+		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, []string{outcome.ID})
+		if err != nil {
+			log.Error(ctx, "UpdateLearningOutcome: DeleteTx failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
+		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
+		if err != nil {
+			log.Error(ctx, "UpdateLearningOutcome: InsertTx failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
 			return err
 		}
 		return nil
@@ -283,6 +318,20 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, operator *ent
 		err = da.GetOutcomeSetDA().DeleteBoundOutcomeSet(ctx, tx, outcome.ID)
 		if err != nil {
 			log.Error(ctx, "DeleteLearningOutcome: deleteOutcome failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
+		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, []string{outcome.ID})
+		if err != nil {
+			log.Error(ctx, "DeleteLearningOutcome: DeleteTx failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
+		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, []string{outcome.AncestorID})
+		if err != nil {
+			log.Error(ctx, "DeleteLearningOutcome: UnbindOutcomes failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
@@ -349,6 +398,47 @@ func (ocm OutcomeModel) fillIDsBySetName(ctx context.Context, op *entity.Operato
 	return nil
 }
 
+func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+	var err error
+	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, da.NewOutcomeCondition(condition))
+	if err != nil {
+		log.Error(ctx, "SearchLearningOutcome: SearchOutcome failed",
+			log.String("op", op.UserID),
+			log.Any("condition", condition))
+		return 0, nil, err
+	}
+	if len(outcomes) == 0 {
+		log.Info(ctx, "Search: not found",
+			log.Any("op", op),
+			log.Any("cond", condition))
+		return total, outcomes, nil
+	}
+	outcomeIDs := make([]string, len(outcomes))
+	for i := range outcomes {
+		outcomeIDs[i] = outcomes[i].ID
+	}
+
+	relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+		MasterIDs:  dbo.NullStrings{Strings: outcomeIDs, Valid: true},
+		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "Search: SearchTx failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Strings("outcome", outcomeIDs))
+		return 0, nil, err
+	}
+	outcomeRelations := make(map[string][]*entity.Relation)
+	for i := range relations {
+		outcomeRelations[relations[i].MasterID] = append(outcomeRelations[relations[i].MasterID], relations[i])
+	}
+	for _, outcome := range outcomes {
+		ocm.FillRelation(outcome, outcomeRelations[outcome.ID])
+	}
+	return total, outcomes, nil
+}
+
 func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	if condition.OrganizationID == "" {
 		condition.OrganizationID = user.OrgID
@@ -376,14 +466,20 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.
 		return 0, nil, err
 	}
 
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, user, tx, da.NewOutcomeCondition(condition))
-	if err != nil {
-		log.Error(ctx, "SearchLearningOutcome: DeleteOutcome failed",
-			log.String("op", user.UserID),
-			log.Any("condition", condition))
-		return 0, nil, err
-	}
-	return total, outcomes, nil
+	var total int
+	var outcomes []*entity.Outcome
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		total, outcomes, err = ocm.search(ctx, user, tx, condition)
+		if err != nil {
+			log.Error(ctx, "SearchLearningOutcome: search failed",
+				log.String("op", user.UserID),
+				log.Any("condition", condition))
+			return err
+		}
+		return nil
+	})
+	return total, outcomes, err
 }
 
 func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error) {
@@ -434,7 +530,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 		if err != nil {
 			return err
 		}
-		newVersion = outcome.Clone(operator)
+		newVersion = ocm.Clone(operator, outcome)
 		err = GetOutcomeSetModel().BindByOutcome(ctx, operator, tx, &newVersion)
 		if err != nil {
 			log.Error(ctx, "LockLearningOutcome: BindByOutcome failed",
@@ -445,6 +541,28 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 		err = da.GetOutcomeDA().CreateOutcome(ctx, operator, tx, &newVersion)
 		if err != nil {
 			log.Error(ctx, "LockLearningOutcome: CreateOutcome failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID),
+				log.Any("outcome", newVersion))
+			return err
+		}
+		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+			MasterIDs:  dbo.NullStrings{Strings: []string{outcome.ID}, Valid: true},
+			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "LockLearningOutcome: SearchTx failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID),
+				log.Any("outcome", newVersion))
+			return err
+		}
+		for i := range relations {
+			relations[i].MasterID = newVersion.ID
+		}
+		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, relations)
+		if err != nil {
+			log.Error(ctx, "LockLearningOutcome: InsertTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID),
 				log.Any("outcome", newVersion))
@@ -471,7 +589,7 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, operator *en
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(ctx, entity.OutcomeStatusPending)
+		err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusPending)
 		if err != nil {
 			log.Error(ctx, "PublishLearningOutcome: SetStatus failed",
 				log.String("op", operator.UserID),
@@ -532,7 +650,7 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, operator *en
 			return ErrResourceNotFound
 		}
 		for _, o := range outcomes {
-			err = o.SetStatus(ctx, entity.OutcomeStatusPublished)
+			err = ocm.SetStatus(ctx, o, entity.OutcomeStatusPublished)
 			if err != nil {
 				log.Error(ctx, "BulkPubLearningOutcome: SetStatus failed",
 					log.String("op", operator.UserID),
@@ -592,7 +710,8 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 				log.Any("perms", perms), log.Any("outcome", outcomes[0]))
 			return constant.ErrOperateNotAllowed
 		}
-		for _, o := range outcomes {
+		ancestorIDs := make([]string, len(outcomes))
+		for i, o := range outcomes {
 			err = ocm.deleteOutcome(ctx, operator, tx, o)
 			if err != nil {
 				log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
@@ -600,6 +719,22 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 					log.String("outcome_id", o.ID))
 				return err
 			}
+			ancestorIDs[i] = o.AncestorID
+		}
+
+		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, outcomeIDs)
+		if err != nil {
+			log.Error(ctx, "BulkDelLearningOutcome: DeleteTx failed",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_id", outcomeIDs))
+			return err
+		}
+		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, ancestorIDs)
+		if err != nil {
+			log.Error(ctx, "BulkDelLearningOutcome: UnbindOutcomes failed",
+				log.String("op", operator.UserID),
+				log.Strings("outcome_id", outcomeIDs))
+			return err
 		}
 		return nil
 	})
@@ -644,15 +779,20 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, user *entity.
 		return 0, nil, err
 	}
 
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, user, tx, da.NewOutcomeCondition(condition))
-	if err != nil {
-		log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
-			log.Err(err),
-			log.String("op", user.UserID),
-			log.Any("outcome", ocm))
-		return 0, nil, err
-	}
-	return total, outcomes, nil
+	var total int
+	var outcomes []*entity.Outcome
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		total, outcomes, err = ocm.search(ctx, user, tx, condition)
+		if err != nil {
+			log.Error(ctx, "SearchLearningOutcome: search failed",
+				log.String("op", user.UserID),
+				log.Any("condition", condition))
+			return err
+		}
+		return nil
+	})
+	return total, outcomes, err
 }
 
 func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
@@ -685,15 +825,20 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.
 			log.Any("condition", condition))
 		return 0, nil, err
 	}
-	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, user, tx, da.NewOutcomeCondition(condition))
-	if err != nil {
-		log.Error(ctx, "SearchPendingOutcomes: SearchOutcome failed",
-			log.Err(err),
-			log.String("op", user.UserID),
-			log.Any("outcome", ocm))
-		return 0, nil, err
-	}
-	return total, outcomes, nil
+	var total int
+	var outcomes []*entity.Outcome
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		total, outcomes, err = ocm.search(ctx, user, tx, condition)
+		if err != nil {
+			log.Error(ctx, "SearchLearningOutcome: search failed",
+				log.String("op", user.UserID),
+				log.Any("condition", condition))
+			return err
+		}
+		return nil
+	})
+	return total, outcomes, err
 }
 
 func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string) error {
@@ -721,7 +866,7 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, operator *en
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(ctx, entity.OutcomeStatusPublished)
+		err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusPublished)
 		if err != nil {
 			log.Error(ctx, "ApproveLearningOutcome: SetStatus failed",
 				log.String("op", operator.UserID),
@@ -785,7 +930,7 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, operator *ent
 				log.String("outcome_id", outcomeID))
 			return err
 		}
-		err = outcome.SetStatus(ctx, entity.OutcomeStatusRejected)
+		err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusRejected)
 		outcome.RejectReason = reason
 		if err != nil {
 			log.Error(ctx, "RejectLearningOutcome: SetStatus failed",
@@ -836,7 +981,7 @@ func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, operator
 			return err
 		}
 		for _, outcome := range outcomes {
-			err = outcome.SetStatus(ctx, entity.OutcomeStatusPublished)
+			err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusPublished)
 			if err != nil {
 				log.Error(ctx, "BulkApproveLearningOutcome: SetStatus failed",
 					log.String("op", operator.UserID),
@@ -903,7 +1048,7 @@ func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, operator 
 			return err
 		}
 		for _, outcome := range outcomes {
-			err = outcome.SetStatus(ctx, entity.OutcomeStatusRejected)
+			err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusRejected)
 			outcome.RejectReason = reason
 			if err != nil {
 				log.Error(ctx, "BulkRejectLearningOutcome: SetStatus failed",
@@ -938,6 +1083,13 @@ func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, operator *
 			log.Err(err),
 			log.String("op", operator.UserID),
 			log.Any("outcome", ocm))
+		return nil, err
+	}
+	err = ocm.fillRelation(ctx, operator, tx, outcomes)
+	if err != nil {
+		log.Error(ctx, "GetLearningOutcomesByIDs: fillRelation failed",
+			log.Err(err),
+			log.String("op", operator.UserID))
 		return nil, err
 	}
 	return outcomes, nil
@@ -983,6 +1135,13 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, operator *en
 			outcomes = []*entity.Outcome{}
 		} else {
 			outcomes = otcs2
+			err = ocm.fillRelation(ctx, operator, tx, outcomes)
+			if err != nil {
+				log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
+					log.Err(err),
+					log.String("op", operator.UserID))
+				return err
+			}
 		}
 		return nil
 	})
@@ -1027,6 +1186,13 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, ope
 				log.Strings("outcome_ids", cond2.IDs.Strings))
 			return constant.ErrRecordNotFound
 		} else {
+			err = ocm.fillRelation(ctx, operator, tx, otcs2)
+			if err != nil {
+				log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
+					log.Err(err),
+					log.String("op", operator.UserID))
+				return err
+			}
 			latests = make(map[string]*entity.Outcome, len(otcs1))
 			for _, o := range otcs1 {
 				for _, l := range otcs2 {
@@ -1058,6 +1224,59 @@ func (ocm OutcomeModel) HasLockedOutcome(ctx context.Context, operator *entity.O
 		}
 	}
 	return false, nil
+}
+
+func (ocm OutcomeModel) GetLatestOutcomesByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestorIDs []string) (outcomes []*entity.Outcome, err error) {
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		_, outcomes, err = da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
+			AncestorIDs:   dbo.NullStrings{Strings: ancestorIDs, Valid: true},
+			PublishStatus: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished}, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByAncestors: SearchOutcome failed",
+				log.Err(err),
+				log.String("op", op.UserID),
+				log.Strings("ancestor", ancestorIDs))
+			return err
+		}
+		err = ocm.fillRelation(ctx, op, tx, outcomes)
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByAncestors: fillRelation failed",
+				log.Err(err),
+				log.String("op", op.UserID),
+				log.Strings("ancestor", ancestorIDs))
+			return err
+		}
+		return nil
+	})
+	return
+}
+
+func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomes []*entity.Outcome) error {
+	if len(outcomes) > 0 {
+		masterIDs := make([]string, len(outcomes))
+		for i := range outcomes {
+			masterIDs[i] = outcomes[i].ID
+		}
+		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+			MasterIDs:  dbo.NullStrings{Strings: masterIDs, Valid: true},
+			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "fillRelation: Search failed",
+				log.Err(err),
+				log.String("op", operator.UserID),
+				log.Any("outcomes", outcomes))
+			return err
+		}
+		for i := range relations {
+			for j := range outcomes {
+				ocm.FillRelation(outcomes[j], []*entity.Relation{relations[i]})
+				break
+			}
+		}
+	}
+	return nil
 }
 
 func (ocm OutcomeModel) lockOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
@@ -1157,7 +1376,7 @@ func (ocm OutcomeModel) hideParent(ctx context.Context, op *entity.Operator, tx 
 		return
 	}
 	parent.LockedBy = constant.LockedByNoBody
-	err = parent.SetStatus(ctx, entity.OutcomeStatusHidden)
+	err = ocm.SetStatus(ctx, parent, entity.OutcomeStatusHidden)
 	if err != nil {
 		log.Error(ctx, "hideParent: SetStatus failed",
 			log.Any("outcome", parent))
@@ -1270,4 +1489,257 @@ func GetOutcomeModel() IOutcomeModel {
 		_outcomeModel = new(OutcomeModel)
 	})
 	return _outcomeModel
+}
+
+func (ocm OutcomeModel) CollectRelation(oc *entity.Outcome) []*entity.Relation {
+	relations := make([]*entity.Relation, 0, len(oc.Programs)+len(oc.Subjects)+len(oc.Categories)+len(oc.Subcategories)+len(oc.Grades)+len(oc.Ages))
+	for i := range oc.Programs {
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Programs[i],
+			RelationType: entity.ProgramType,
+		}
+		relations = append(relations, &relation)
+	}
+
+	for i := range oc.Subjects {
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Subjects[i],
+			RelationType: entity.SubjectType,
+		}
+		relations = append(relations, &relation)
+	}
+
+	for i := range oc.Categories {
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Categories[i],
+			RelationType: entity.CategoryType,
+		}
+		relations = append(relations, &relation)
+	}
+
+	for i := range oc.Subcategories {
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Subcategories[i],
+			RelationType: entity.SubcategoryType,
+		}
+		relations = append(relations, &relation)
+	}
+
+	for i := range oc.Grades {
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Grades[i],
+			RelationType: entity.GradeType,
+		}
+		relations = append(relations, &relation)
+	}
+
+	for i := range oc.Ages {
+		relation := entity.Relation{
+			MasterID:     oc.ID,
+			MasterType:   entity.OutcomeType,
+			RelationID:   oc.Ages[i],
+			RelationType: entity.AgeType,
+		}
+		relations = append(relations, &relation)
+	}
+	return relations
+}
+
+func (ocm OutcomeModel) FillRelation(oc *entity.Outcome, relations []*entity.Relation) {
+	if len(relations) == 0 {
+		program := strings.TrimSpace(oc.Program)
+		if program != "" {
+			oc.Programs = strings.Split(program, entity.JoinComma)
+		}
+		subject := strings.TrimSpace(oc.Subject)
+		if subject != "" {
+			oc.Subjects = strings.Split(subject, entity.JoinComma)
+		}
+
+		category := strings.TrimSpace(oc.Developmental)
+		if category != "" {
+			oc.Categories = strings.Split(category, entity.JoinComma)
+		}
+
+		subcategories := strings.TrimSpace(oc.Skills)
+		if subcategories != "" {
+			oc.Subcategories = strings.Split(subcategories, entity.JoinComma)
+		}
+
+		grade := strings.TrimSpace(oc.Grade)
+		if grade != "" {
+			oc.Grades = strings.Split(grade, entity.JoinComma)
+		}
+
+		age := strings.TrimSpace(oc.Age)
+		if age != "" {
+			oc.Ages = strings.Split(age, entity.JoinComma)
+		}
+		return
+	}
+	for i := range relations {
+		switch relations[i].RelationType {
+		case entity.ProgramType:
+			oc.Programs = append(oc.Programs, relations[i].RelationID)
+		case entity.SubjectType:
+			oc.Subjects = append(oc.Subjects, relations[i].RelationID)
+		case entity.CategoryType:
+			oc.Categories = append(oc.Categories, relations[i].RelationID)
+		case entity.SubcategoryType:
+			oc.Subcategories = append(oc.Subcategories, relations[i].RelationID)
+		case entity.GradeType:
+			oc.Grades = append(oc.Grades, relations[i].RelationID)
+		case entity.AgeType:
+			oc.Ages = append(oc.Ages, relations[i].RelationID)
+		}
+	}
+	if len(oc.Programs) > 0 {
+		oc.Program = strings.Join(oc.Programs, entity.JoinComma)
+	}
+	if len(oc.Subjects) > 0 {
+		oc.Subject = strings.Join(oc.Subjects, entity.JoinComma)
+	}
+	if len(oc.Developmental) > 0 {
+		oc.Developmental = strings.Join(oc.Categories, entity.JoinComma)
+	}
+	if len(oc.Skills) > 0 {
+		oc.Skills = strings.Join(oc.Subcategories, entity.JoinComma)
+	}
+	if len(oc.Grades) > 0 {
+		oc.Grade = strings.Join(oc.Grades, entity.JoinComma)
+	}
+	if len(oc.Ages) > 0 {
+		oc.Age = strings.Join(oc.Ages, entity.JoinComma)
+	}
+}
+func (ocm OutcomeModel) UpdateOutcome(data *entity.Outcome, oc *entity.Outcome) {
+	if data.Name != "" {
+		oc.Name = data.Name
+	}
+
+	oc.Assumed = data.Assumed
+	oc.Program = data.Program
+	oc.Subject = data.Subject
+	oc.Developmental = data.Developmental
+	oc.Skills = data.Skills
+	oc.Age = data.Age
+	oc.Grade = data.Grade
+	oc.EstimatedTime = data.EstimatedTime
+	oc.Keywords = data.Keywords
+	oc.Description = data.Description
+	oc.PublishStatus = entity.OutcomeStatusDraft
+	oc.Shortcode = data.Shortcode
+	oc.Sets = data.Sets
+	oc.UpdateAt = time.Now().Unix()
+}
+
+func (ocm OutcomeModel) Clone(op *entity.Operator, oc *entity.Outcome) entity.Outcome {
+	now := time.Now().Unix()
+	return entity.Outcome{
+		ID:            utils.NewID(),
+		AncestorID:    oc.AncestorID,
+		Shortcode:     oc.Shortcode,
+		Name:          oc.Name,
+		Program:       oc.Program,
+		Subject:       oc.Subject,
+		Developmental: oc.Developmental,
+		Skills:        oc.Skills,
+		Age:           oc.Age,
+		Grade:         oc.Grade,
+		Keywords:      oc.Keywords,
+		Description:   oc.Description,
+
+		EstimatedTime:  oc.EstimatedTime,
+		AuthorID:       op.UserID,
+		AuthorName:     oc.AuthorName,
+		OrganizationID: oc.OrganizationID,
+
+		PublishStatus: entity.OutcomeStatusDraft,
+		PublishScope:  oc.PublishScope,
+		LatestID:      oc.LatestID,
+		Sets:          oc.Sets,
+
+		Version:  1,
+		SourceID: oc.ID,
+		Assumed:  oc.Assumed,
+
+		CreateAt: now,
+		UpdateAt: now,
+	}
+}
+
+func (ocm OutcomeModel) SetStatus(ctx context.Context, oc *entity.Outcome, status entity.OutcomeStatus) error {
+	switch status {
+	case entity.OutcomeStatusHidden:
+		if ocm.allowedToHidden(oc) {
+			oc.PublishStatus = entity.OutcomeStatusHidden
+			return nil
+		}
+	case entity.OutcomeStatusPending:
+		if ocm.allowedToPending(oc) {
+			oc.PublishStatus = entity.OutcomeStatusPending
+			return nil
+		}
+	case entity.OutcomeStatusPublished:
+		if ocm.allowedToBeReviewed(oc) {
+			oc.PublishStatus = entity.OutcomeStatusPublished
+			return nil
+		}
+	case entity.OutcomeStatusRejected:
+		if ocm.allowedToBeReviewed(oc) {
+			oc.PublishStatus = entity.OutcomeStatusRejected
+			return nil
+		}
+	}
+	log.Error(ctx, "SetStatus failed",
+		log.Err(constant.ErrForbidden),
+		log.String("status", string(status)))
+	return constant.ErrForbidden
+}
+
+func (ocm OutcomeModel) allowedToArchive(oc *entity.Outcome) bool {
+	switch oc.PublishStatus {
+	case entity.OutcomeStatusPublished:
+		return true
+	}
+	return false
+}
+
+func (ocm OutcomeModel) allowedToAttachment(oc *entity.Outcome) bool {
+	// TODO
+	return false
+}
+
+func (ocm OutcomeModel) allowedToPending(oc *entity.Outcome) bool {
+	switch oc.PublishStatus {
+	case entity.OutcomeStatusDraft, entity.OutcomeStatusRejected:
+		return true
+	}
+	return false
+}
+
+func (ocm OutcomeModel) allowedToBeReviewed(oc *entity.Outcome) bool {
+	switch oc.PublishStatus {
+	case entity.OutcomeStatusPending:
+		return true
+	}
+	return false
+}
+
+func (ocm OutcomeModel) allowedToHidden(oc *entity.Outcome) bool {
+	switch oc.PublishStatus {
+	case entity.OutcomeStatusPublished:
+		return true
+	}
+	return false
 }

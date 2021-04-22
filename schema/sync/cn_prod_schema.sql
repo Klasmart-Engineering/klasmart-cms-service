@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 5.7.32, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 5.7.33, for Linux (x86_64)
 --
 -- Host: 127.0.0.1    Database: kidsloop2
 -- ------------------------------------------------------
@@ -200,7 +200,7 @@ CREATE TABLE `cms_contents` (
   KEY `content_latest_id` (`latest_id`),
   KEY `idx_cms_contents_publish_scope` (`publish_scope`),
   KEY `idx_cms_contents_publish_status` (`publish_status`),
-  FULLTEXT KEY `content_name_description_keywords_author_index` (`content_name`,`keywords`,`description`)
+  FULLTEXT KEY `content_name_description_keywords_index` (`content_name`,`keywords`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='内容表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -297,6 +297,35 @@ CREATE TABLE `developments_skills` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ecards`
+--
+
+DROP TABLE IF EXISTS `ecards`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ecards` (
+  `card_id` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'card id',
+  `password` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'card password',
+  `card_type` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'card type',
+  `duration` int DEFAULT NULL COMMENT 'duration',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'description',
+  `status` int NOT NULL DEFAULT '0' COMMENT 'cart status',
+  `active_at` bigint DEFAULT NULL COMMENT 'active_at',
+  `active_user_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'activated by user',
+  `active_org_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'activated in org',
+  `expire_at` bigint DEFAULT NULL COMMENT 'expired at',
+  `create_at` bigint DEFAULT NULL COMMENT 'created_at',
+  `update_at` bigint DEFAULT NULL COMMENT 'updated_at',
+  `delete_at` bigint DEFAULT NULL COMMENT 'deleted_at',
+  `create_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'created by user',
+  `update_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'updated by user',
+  `delete_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'deleted by user',
+  PRIMARY KEY (`card_id`),
+  UNIQUE KEY `unique_password` (`password`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ecards table';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `grades`
 --
 
@@ -316,6 +345,35 @@ CREATE TABLE `grades` (
   PRIMARY KEY (`id`),
   KEY `idx_id_delete` (`id`,`delete_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='grades';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `h5p_events`
+--
+
+DROP TABLE IF EXISTS `h5p_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `h5p_events` (
+  `id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `verb_id` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'verb_id',
+  `schedule_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
+  `lesson_plan_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'lesson_plan_id',
+  `material_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'material_id',
+  `play_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'play_id',
+  `user_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'user_id',
+  `local_content_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'local_content_id',
+  `local_library_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'local_library_name',
+  `event_time` bigint DEFAULT '0' COMMENT 'event_time',
+  `local_library_version` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'local_library_version',
+  `extends` json DEFAULT NULL COMMENT 'extends',
+  `create_at` bigint DEFAULT '0' COMMENT 'created_at',
+  PRIMARY KEY (`id`),
+  KEY `idx_verb_id` (`verb_id`),
+  KEY `idx_lesson_plan_id` (`lesson_plan_id`),
+  KEY `idx_local_library_name` (`local_library_name`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='h5p_events';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -558,6 +616,25 @@ CREATE TABLE `schedules` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `schedules_relations`
+--
+
+DROP TABLE IF EXISTS `schedules_relations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `schedules_relations` (
+  `id` varchar(256) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'id',
+  `schedule_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'schedule_id',
+  `relation_id` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT 'relation_id',
+  `relation_type` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'relation_type',
+  PRIMARY KEY (`id`),
+  KEY `idx_schedule_id` (`schedule_id`),
+  KEY `idx_relation_id` (`relation_id`),
+  KEY `idx_schedule_id_relation_type` (`schedule_id`,`relation_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='schedules_relations';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `skills`
 --
 
@@ -677,4 +754,4 @@ CREATE TABLE `visibility_settings` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-12-30  7:57:57
+-- Dump completed on 2021-04-19 17:00:46

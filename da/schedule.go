@@ -26,7 +26,7 @@ type IScheduleDA interface {
 	UpdateProgram(ctx context.Context, tx *sql.Tx, orgID string, oldProgramID string, newProgramID string) error
 	UpdateSubject(ctx context.Context, tx *sql.Tx, orgID string, oldSubjectID string, oldProgramID string, newSubjectID string) error
 	GetPrograms(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
-	GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
+	//GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 	GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error)
 }
 
@@ -59,31 +59,32 @@ func (s *scheduleDA) GetPrograms(ctx context.Context, tx *dbo.DBContext, conditi
 	log.Debug(ctx, "ProgramIDs", log.Strings("ProgramIDs", result))
 	return result, nil
 }
-func (s *scheduleDA) GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
-	wheres, parameters := condition.GetConditions()
-	whereSql := strings.Join(wheres, " and ")
-	var scheduleList []*entity.Schedule
-	err := tx.Table(constant.TableNameSchedule).Select("distinct subject_id").Where(whereSql, parameters...).Find(&scheduleList).Error
-	if gorm.IsRecordNotFoundError(err) {
-		return nil, constant.ErrRecordNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "get programs ids from db error",
-			log.Err(err),
-			log.Any("condition", condition),
-		)
-		return nil, err
-	}
-	var result = make([]string, 0, len(scheduleList))
-	for _, item := range scheduleList {
-		if item.SubjectID == "" {
-			continue
-		}
-		result = append(result, item.SubjectID)
-	}
-	log.Debug(ctx, "SubjectIDs", log.Strings("SubjectIDs", result))
-	return result, nil
-}
+
+//func (s *scheduleDA) GetSubjects(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
+//	wheres, parameters := condition.GetConditions()
+//	whereSql := strings.Join(wheres, " and ")
+//	var scheduleList []*entity.Schedule
+//	err := tx.Table(constant.TableNameSchedule).Select("distinct subject_id").Where(whereSql, parameters...).Find(&scheduleList).Error
+//	if gorm.IsRecordNotFoundError(err) {
+//		return nil, constant.ErrRecordNotFound
+//	}
+//	if err != nil {
+//		log.Error(ctx, "get programs ids from db error",
+//			log.Err(err),
+//			log.Any("condition", condition),
+//		)
+//		return nil, err
+//	}
+//	var result = make([]string, 0, len(scheduleList))
+//	for _, item := range scheduleList {
+//		if item.SubjectID == "" {
+//			continue
+//		}
+//		result = append(result, item.SubjectID)
+//	}
+//	log.Debug(ctx, "SubjectIDs", log.Strings("SubjectIDs", result))
+//	return result, nil
+//}
 func (s *scheduleDA) GetClassTypes(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]string, error) {
 	wheres, parameters := condition.GetConditions()
 	whereSql := strings.Join(wheres, " and ")
@@ -144,7 +145,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 			item.EndAt,
 			item.Status,
 			item.IsAllDay,
-			item.SubjectID,
+			//item.SubjectID,
 			item.ProgramID,
 			item.ClassType,
 			item.DueAt,
@@ -163,7 +164,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 			item.IsHidden,
 		})
 	}
-	sql := SQLBatchInsert(constant.TableNameSchedule, []string{
+	format, values := SQLBatchInsert(constant.TableNameSchedule, []string{
 		"`id`",
 		"`title`",
 		"`class_id`",
@@ -173,7 +174,7 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 		"`end_at`",
 		"`status`",
 		"`is_all_day`",
-		"`subject_id`",
+		//"`subject_id`",
 		"`program_id`",
 		"`class_type`",
 		"`due_at`",
@@ -191,9 +192,9 @@ func (s *scheduleDA) BatchInsert(ctx context.Context, dbContext *dbo.DBContext, 
 		"`is_home_fun`",
 		"`is_hidden`",
 	}, data)
-	execResult := dbContext.Exec(sql.Format, sql.Values...)
+	execResult := dbContext.Exec(format, values...)
 	if execResult.Error != nil {
-		logger.Error(ctx, "db exec sql error", log.Any("sql", sql), log.Err(execResult.Error))
+		logger.Error(ctx, "db exec sql error", log.Any("format", format), log.Any("values", values), log.Err(execResult.Error))
 		return 0, execResult.Error
 	}
 	return execResult.RowsAffected, nil
@@ -299,6 +300,24 @@ func GetScheduleDA() IScheduleDA {
 	return _scheduleDA
 }
 
+func NewNotStartScheduleCondition(classRosterID string, userIDs []string) *ScheduleCondition {
+	condition := &ScheduleCondition{
+		RosterClassID: sql.NullString{
+			String: classRosterID,
+			Valid:  classRosterID != "",
+		},
+		NotStart: sql.NullBool{
+			Bool:  true,
+			Valid: true,
+		},
+		RelationIDs: entity.NullStrings{
+			Strings: userIDs,
+			Valid:   len(userIDs) > 0,
+		},
+	}
+	return condition
+}
+
 type ScheduleCondition struct {
 	IDs                      entity.NullStrings
 	OrgID                    sql.NullString
@@ -321,6 +340,8 @@ type ScheduleCondition struct {
 	ClassTypes               entity.NullStrings
 	DueToEq                  sql.NullInt64
 	AnyTime                  sql.NullBool
+	RosterClassID            sql.NullString
+	NotStart                 sql.NullBool
 
 	OrderBy ScheduleOrderBy
 	Pager   dbo.Pager
@@ -406,8 +427,10 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.SubjectIDs.Valid {
-		wheres = append(wheres, fmt.Sprintf("subject_id in (%s)", c.SubjectIDs.SQLPlaceHolder()))
-		params = append(params, c.SubjectIDs.ToInterfaceSlice()...)
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id in (?) and relation_type = ? and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.SubjectIDs.Strings, entity.ScheduleRelationTypeSubject)
 	}
 	if c.ProgramIDs.Valid {
 		wheres = append(wheres, fmt.Sprintf("program_id in (%s)", c.ProgramIDs.SQLPlaceHolder()))
@@ -446,6 +469,18 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 	}
 	if c.AnyTime.Valid {
 		wheres = append(wheres, "due_at=0 and start_at=0 and end_at=0")
+	}
+
+	if c.RosterClassID.Valid {
+		sql := fmt.Sprintf("exists(select 1 from %s where relation_id = ? and relation_type = ? and %s.id = %s.schedule_id)",
+			constant.TableNameScheduleRelation, constant.TableNameSchedule, constant.TableNameScheduleRelation)
+		wheres = append(wheres, sql)
+		params = append(params, c.RosterClassID.String, entity.ScheduleRelationTypeClassRosterClass)
+	}
+	if c.NotStart.Valid {
+		notEditAt := time.Now().Add(constant.ScheduleAllowEditTime).Unix()
+		wheres = append(wheres, " ((due_at=0 and start_at=0 and end_at=0) || (start_at = 0 and due_at > ?) || (start_at > ?)) ")
+		params = append(params, time.Now().Unix(), notEditAt)
 	}
 
 	if c.DeleteAt.Valid {

@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -47,6 +46,13 @@ const (
 
 	ContentAuthed   ContentAuth = 1
 	ContentUnauthed ContentAuth = 2
+
+	ContentPropertyTypeProgram     ContentPropertyType = 1
+	ContentPropertyTypeSubject     ContentPropertyType = 2
+	ContentPropertyTypeCategory    ContentPropertyType = 3
+	ContentPropertyTypeAge         ContentPropertyType = 4
+	ContentPropertyTypeGrade       ContentPropertyType = 5
+	ContentPropertyTypeSubCategory ContentPropertyType = 6
 )
 
 var (
@@ -59,6 +65,8 @@ var (
 
 type ContentPublishStatus string
 type ContentType int
+
+type ContentPropertyType int
 
 type FileType int
 
@@ -204,19 +212,35 @@ func ContentLink(id string) string {
 	return string(FolderFileTypeContent) + "-" + id
 }
 
+type ContentVisibilitySetting struct {
+	ID                int    `gorm:"type:int;PRIMARY_KEY;AUTO_INCREMENT"`
+	ContentID         string `gorm:"type:char(50);NOT NULL;column:content_id"`
+	VisibilitySetting string `gorm:"type:char(50);NOT NULL;column:visibility_setting;index"`
+}
+
+func (ContentVisibilitySetting) TableName() string {
+	return "cms_content_visibility_settings"
+}
+
+type ContentProperty struct {
+	ID           int                 `gorm:"type:int;AUTO_INCREMENT;PRIMARY_KEY"`
+	PropertyType ContentPropertyType `gorm:"type:int;column:property_type"`
+	ContentID    string              `gorm:"type: varchar(50);column:content_id"`
+	PropertyID   string              `gorm:"type: varchar(50);column:property_id"`
+	Sequence     int                 `gorm:"type: index;column:sequence"`
+}
+
+func (ContentProperty) TableName() string {
+	return "cms_content_properties"
+}
+
 type Content struct {
-	ID            string      `gorm:"type:varchar(50);PRIMARY_KEY;AUTO_INCREMENT"`
-	ContentType   ContentType `gorm:"type:int;NOT NULL; column:content_type"`
-	Name          string      `gorm:"type:varchar(255);NOT NULL;column:content_name"`
-	Program       string      `gorm:"type:varchar(1024);NOT NULL;column:program"`
-	Subject       string      `gorm:"type:varchar(1024);NOT NULL;column:subject"`
-	Developmental string      `gorm:"type:varchar(1024);NOT NULL;column:developmental"`
-	Skills        string      `gorm:"type:varchar(1024);NOT NULL;column:skills"`
-	Age           string      `gorm:"type:varchar(1024);NOT NULL;column:age"`
-	Grade         string      `gorm:"type:varchar(1024);NOT NULL;column:grade"`
-	Keywords      string      `gorm:"type:text;NOT NULL;column:keywords"`
-	Description   string      `gorm:"type:text;NOT NULL;column:description"`
-	Thumbnail     string      `gorm:"type:text;NOT NULL;column:thumbnail"`
+	ID          string      `gorm:"type:varchar(50);PRIMARY_KEY"`
+	ContentType ContentType `gorm:"type:int;NOT NULL; column:content_type"`
+	Name        string      `gorm:"type:varchar(255);NOT NULL;column:content_name"`
+	Keywords    string      `gorm:"type:text;NOT NULL;column:keywords"`
+	Description string      `gorm:"type:text;NOT NULL;column:description"`
+	Thumbnail   string      `gorm:"type:text;NOT NULL;column:thumbnail"`
 
 	SourceType string `gorm:"type:varchar(256); column:source_type"`
 
@@ -233,7 +257,6 @@ type Content struct {
 	DrawActivity BoolTinyInt `gorm:"type:tinyint;NOT NULL;column:draw_activity"`
 	LessonType   string      `gorm:"type:varchar(100);column:lesson_type"`
 
-	PublishScope  string               `gorm:"type:varchar(50);NOT NULL;column:publish_scope;index"`
 	PublishStatus ContentPublishStatus `gorm:"type:varchar(16);NOT NULL;column:publish_status;index"`
 
 	RejectReason string `gorm:"type:varchar(255);NOT NULL;column:reject_reason"`
@@ -318,20 +341,34 @@ type CopyContentRequest struct {
 	Deep      bool   `json:"deep"`
 }
 
+type ContentProperties struct {
+	ContentID   string   `json:"content_id"`
+	Program     string   `json:"program"`
+	Subject     []string `json:"subject"`
+	Category    []string `json:"developmental"`
+	SubCategory []string `json:"skills"`
+	Age         []string `json:"age"`
+	Grade       []string `json:"grade"`
+}
+type ContentVisibilitySettings struct {
+	ContentID          string   `json:"content_id"`
+	VisibilitySettings []string `json:"visibility_settings"`
+}
+
 type CreateContentRequest struct {
-	ContentType   ContentType `json:"content_type"`
-	SourceType    string      `json:"source_type"`
-	Name          string      `json:"name"`
-	Program       string      `json:"program"`
-	Subject       []string    `json:"subject"`
-	Developmental []string    `json:"developmental"`
-	Skills        []string    `json:"skills"`
-	Age           []string    `json:"age"`
-	Grade         []string    `json:"grade"`
-	Keywords      []string    `json:"keywords"`
-	Description   string      `json:"description"`
-	Thumbnail     string      `json:"thumbnail"`
-	SuggestTime   int         `json:"suggest_time"`
+	ContentType ContentType `json:"content_type"`
+	SourceType  string      `json:"source_type"`
+	Name        string      `json:"name"`
+	Program     string      `json:"program"`
+	Subject     []string    `json:"subject"`
+	Category    []string    `json:"developmental"`
+	SubCategory []string    `json:"skills"`
+	Age         []string    `json:"age"`
+	Grade       []string    `json:"grade"`
+	Keywords    []string    `json:"keywords"`
+	Description string      `json:"description"`
+	Thumbnail   string      `json:"thumbnail"`
+	SuggestTime int         `json:"suggest_time"`
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
@@ -339,7 +376,7 @@ type CreateContentRequest struct {
 
 	Outcomes []string `json:"outcomes"`
 
-	PublishScope string `json:"publish_scope"`
+	PublishScope []string `json:"publish_scope"`
 
 	Data  string `json:"data"`
 	Extra string `json:"extra"`
@@ -364,7 +401,7 @@ func (c CreateContentRequest) Validate() error {
 	if c.Name == "" {
 		return ErrRequireContentName
 	}
-	if c.PublishScope == "" {
+	if len(c.PublishScope) == 0 {
 		return ErrRequirePublishScope
 	}
 	if c.Thumbnail != "" {
@@ -387,22 +424,22 @@ type ContentInfoWithDetailsResponse struct {
 }
 
 type FolderContentInfoWithDetailsResponse struct {
-	Total       int              `json:"total"`
+	Total       int                  `json:"total"`
 	ContentList []*FolderContentData `json:"list"`
 }
 
 type ContentInfoWithDetails struct {
 	ContentInfo
-	ContentTypeName   string   `json:"content_type_name"`
-	ProgramName       string   `json:"program_name"`
-	SubjectName       []string `json:"subject_name"`
-	DevelopmentalName []string `json:"developmental_name"`
-	SkillsName        []string `json:"skills_name"`
-	AgeName           []string `json:"age_name"`
-	GradeName         []string `json:"grade_name"`
-	OrgName           string   `json:"org_name"`
-	PublishScopeName  string   `json:"publish_scope_name"`
-	LessonTypeName    string   `json:"lesson_type_name"`
+	ContentTypeName  string   `json:"content_type_name"`
+	ProgramName      string   `json:"program_name"`
+	SubjectName      []string `json:"subject_name"`
+	CategoryName     []string `json:"developmental_name"`
+	SubCategoryName  []string `json:"skills_name"`
+	AgeName          []string `json:"age_name"`
+	GradeName        []string `json:"grade_name"`
+	OrgName          string   `json:"org_name"`
+	PublishScopeName []string `json:"publish_scope_name"`
+	LessonTypeName   string   `json:"lesson_type_name"`
 
 	//AuthorName string `json:"author_name"`
 	CreatorName string `json:"creator_name"`
@@ -416,12 +453,6 @@ type ContentName struct {
 	ID          string      `json:"id"`
 	Name        string      `json:"name"`
 	ContentType ContentType `json:"content_type"`
-}
-
-type SubContentsWithName struct {
-	ID   string      `json:"id"`
-	Name string      `json:"name"`
-	Data ContentData `json:"data"`
 }
 
 //Content in folder
@@ -443,14 +474,13 @@ type FolderContent struct {
 	UpdateAt        int         `json:"update_at"`
 }
 
-
 //Content in folder
 type FolderContentData struct {
 	ID              string      `json:"id"`
 	ContentName     string      `json:"name"`
 	ContentType     ContentType `json:"content_type"`
 	Description     string      `json:"description"`
-	Keywords        []string      `json:"keywords"`
+	Keywords        []string    `json:"keywords"`
 	Author          string      `json:"author"`
 	ItemsCount      int         `json:"items_count"`
 	PublishStatus   string      `json:"publish_status"`
@@ -464,22 +494,22 @@ type FolderContentData struct {
 }
 
 type ContentInfo struct {
-	ID            string      `json:"id"`
-	ContentType   ContentType `json:"content_type"`
-	Name          string      `json:"name"`
-	Program       string      `json:"program"`
-	Subject       []string    `json:"subject"`
-	Developmental []string    `json:"developmental"`
-	Skills        []string    `json:"skills"`
-	Age           []string    `json:"age"`
-	Grade         []string    `json:"grade"`
-	Keywords      []string    `json:"keywords"`
-	Description   string      `json:"description"`
-	Thumbnail     string      `json:"thumbnail"`
-	Version       int64       `json:"version"`
-	SuggestTime   int         `json:"suggest_time"`
-	SourceType    string      `json:"source_type"`
-	AuthorName    string      `json:"author_name"`
+	ID          string      `json:"id"`
+	ContentType ContentType `json:"content_type"`
+	Name        string      `json:"name"`
+	Program     string      `json:"program"`
+	Subject     []string    `json:"subject"`
+	Category    []string    `json:"developmental"`
+	SubCategory []string    `json:"skills"`
+	Age         []string    `json:"age"`
+	Grade       []string    `json:"grade"`
+	Keywords    []string    `json:"keywords"`
+	Description string      `json:"description"`
+	Thumbnail   string      `json:"thumbnail"`
+	Version     int64       `json:"version"`
+	SuggestTime int         `json:"suggest_time"`
+	SourceType  string      `json:"source_type"`
+	AuthorName  string      `json:"author_name"`
 
 	SelfStudy    TinyIntBool `json:"self_study"`
 	DrawActivity TinyIntBool `json:"draw_activity"`
@@ -499,11 +529,11 @@ type ContentInfo struct {
 	//TeacherManual     []string `json:"teacher_manual"`
 	//Name []string `json:"teacher_manual_name"`
 	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
-	Author  string `json:"author"`
-	Creator string `json:"creator"`
-	Org     string `json:"org"`
+	Author             string               `json:"author"`
+	Creator            string               `json:"creator"`
+	Org                string               `json:"org"`
 
-	PublishScope  string               `json:"publish_scope"`
+	PublishScope  []string             `json:"publish_scope"`
 	PublishStatus ContentPublishStatus `json:"publish_status"`
 
 	CreatedAt int64 `json:"created_at"`
@@ -511,20 +541,7 @@ type ContentInfo struct {
 }
 
 type ExtraDataInRequest struct {
-	TeacherManualBatch     []*TeacherManualFile `json:"teacher_manual_batch"`
-}
-
-type ContentData interface {
-	Unmarshal(ctx context.Context, data string) error
-	Marshal(ctx context.Context) (string, error)
-
-	Validate(ctx context.Context, contentType ContentType) error
-	PrepareResult(ctx context.Context, content *ContentInfo, operator *Operator) error
-	PrepareSave(ctx context.Context, t ExtraDataInRequest) error
-	PrepareVersion(ctx context.Context) error
-	SubContentIDs(ctx context.Context) []string
-
-	ReplaceContentIDs(ctx context.Context, IDMap map[string]string)
+	TeacherManualBatch []*TeacherManualFile `json:"teacher_manual_batch"`
 }
 
 func (cInfo *ContentInfo) SetStatus(status ContentPublishStatus) error {

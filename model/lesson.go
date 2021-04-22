@@ -112,7 +112,7 @@ func (l2 *LessonData) checkTeacherManual(ctx context.Context, teacherManual stri
 		return ErrTeacherManual
 	}
 	extensionPairs := strings.Split(teacherManual, ".")
-	extension := extensionPairs[len(extensionPairs) - 1]
+	extension := extensionPairs[len(extensionPairs)-1]
 	extension = strings.ToLower(extension)
 	ret := isArray(extension, constant.TeacherManualExtension)
 	if !ret {
@@ -139,17 +139,16 @@ func (l *LessonData) Validate(ctx context.Context, contentType entity.ContentTyp
 			return ErrTeacherManualNameNil
 		}
 		err := l.checkTeacherManual(ctx, l.TeacherManual)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
 	for i := range l.TeacherManualBatch {
 		err := l.checkTeacherManual(ctx, l.TeacherManualBatch[i].ID)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}
-
 
 	//暂时不做检查
 	//检查material合法性
@@ -214,6 +213,11 @@ func (l *LessonData) PrepareVersion(ctx context.Context) error {
 
 func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID string) (bool, error) {
 	orgInfo, err := GetOrganizationPropertyModel().GetOrDefault(ctx, orgID)
+	if err == dbo.ErrRecordNotFound {
+		log.Info(ctx, "org is not in head quarter",
+			log.Any("orgInfo", orgInfo))
+		return false, nil
+	}
 	if err != nil {
 		log.Warn(ctx, "parse get folder shared records params failed",
 			log.Err(err),
@@ -228,7 +232,7 @@ func (l *LessonData) isOrganizationHeadquarters(ctx context.Context, orgID strin
 	return true, nil
 }
 
-func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
+func (l *LessonData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error {
 	materialList := make([]string, 0)
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		materialList = append(materialList, l.MaterialId)
@@ -268,7 +272,7 @@ func (l *LessonData) PrepareResult(ctx context.Context, content *entity.ContentI
 	l.lessonDataIteratorLoop(ctx, func(ctx context.Context, l *LessonData) {
 		data, ok := contentMap[l.MaterialId]
 		if ok {
-			material, _ := ConvertContentObj(ctx, data, operator)
+			material, _ := GetContentModel().ConvertContentObj(ctx, tx, data, operator)
 			l.Material = material
 		}
 	})

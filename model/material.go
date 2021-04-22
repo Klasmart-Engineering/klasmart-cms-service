@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -14,12 +15,12 @@ var (
 	ErrContentDataRequestSource = errors.New("material require source")
 	ErrInvalidSourceExt         = errors.New("invalid source extension")
 
-	ErrTeacherManual        = errors.New("teacher manual resource is not exist")
-	ErrTeacherManualExtension        = errors.New("teacher manual extension is not supported")
-	ErrInvalidTeacherManual = errors.New("invalid teacher manual")
+	ErrTeacherManual          = errors.New("teacher manual resource is not exist")
+	ErrTeacherManualExtension = errors.New("teacher manual extension is not supported")
+	ErrInvalidTeacherManual   = errors.New("invalid teacher manual")
 
-	ErrTeacherManualBatchNameNil        = errors.New("teacher manual batch names is null")
-	ErrTeacherManualNameNil        = errors.New("teacher manual names is null")
+	ErrTeacherManualBatchNameNil = errors.New("teacher manual batch names is null")
+	ErrTeacherManualNameNil      = errors.New("teacher manual names is null")
 )
 
 func NewMaterialData() *MaterialData {
@@ -106,6 +107,6 @@ func (h *MaterialData) PrepareVersion(ctx context.Context) error {
 }
 func (l *MaterialData) ReplaceContentIDs(ctx context.Context, IDMap map[string]string) {
 }
-func (h *MaterialData) PrepareResult(ctx context.Context, content *entity.ContentInfo, operator *entity.Operator) error {
+func (h *MaterialData) PrepareResult(ctx context.Context, tx *dbo.DBContext, content *entity.ContentInfo, operator *entity.Operator) error {
 	return nil
 }

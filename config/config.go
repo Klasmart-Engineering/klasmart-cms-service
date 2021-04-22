@@ -95,8 +95,9 @@ type CDNConfig struct {
 }
 
 type ScheduleConfig struct {
-	MaxRepeatYear   int           `json:"max_repeat_year" yaml:"max_repeat_year"`
-	CacheExpiration time.Duration `yaml:"cache_expiration"`
+	MaxRepeatYear    int           `json:"max_repeat_year" yaml:"max_repeat_year"`
+	CacheExpiration  time.Duration `yaml:"cache_expiration"`
+	ClassEventSecret interface{}   `json:"class_event_secret"`
 }
 
 type LiveTokenConfig struct {
@@ -277,6 +278,17 @@ func loadScheduleEnvConfig(ctx context.Context) {
 	} else {
 		config.Schedule.CacheExpiration = cacheExpiration
 	}
+
+	//publicKeyPath := os.Getenv("ams_class_event_jwt_public_key_path")
+	//content, err := ioutil.ReadFile(publicKeyPath)
+	//if err != nil {
+	//	log.Panic(ctx, "load schedule config: load public key failed", log.Err(err), log.String("public_key_path", publicKeyPath))
+	//}
+	//key, err := jwt.ParseRSAPublicKeyFromPEM(content)
+	//if err != nil {
+	//	log.Panic(ctx, "load schedule config: ParseRSAPublicKeyFromPEM failed", log.Err(err))
+	//}
+	//config.Schedule.ClassEventSecret = key
 }
 
 func loadDBEnvConfig(ctx context.Context) {

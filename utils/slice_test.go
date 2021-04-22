@@ -70,7 +70,7 @@ func TestSliceDeduplicationMap(t *testing.T) {
 }
 
 func TestSliceDeduplicationExcludeEmpty(t *testing.T) {
-	testData := []string{"", "1", "1", "2", "3", "2", ""}
+	testData := []string{""}
 	result := SliceDeduplicationExcludeEmpty(testData)
-	t.Log(result)
+	t.Log(len(result))
 }

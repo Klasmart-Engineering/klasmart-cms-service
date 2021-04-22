@@ -101,7 +101,6 @@ func (s Server) registeRoute() {
 		schedules.PUT("/schedules/:id/status", s.mustLogin, s.updateScheduleStatus)
 		schedules.GET("/schedules_lesson_plans", s.mustLogin, s.getLessonPlans)
 		schedules.GET("/schedules_time_view/dates", s.mustLogin, s.getScheduledDates)
-		schedules.GET("/schedules/:id/real_time", s.mustLogin, s.getScheduleRealTimeStatus)
 		schedules.GET("/schedules_filter/schools", s.mustLogin, s.getSchoolInScheduleFilter)
 		schedules.GET("/schedules_filter/classes", s.mustLogin, s.getClassesInScheduleFilter)
 		schedules.PUT("/schedules/:id/show_option", s.mustLogin, s.updateScheduleShowOption)
@@ -109,6 +108,7 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/programs", s.mustLogin, s.getProgramsInScheduleFilter)
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
 		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
+		schedules.GET("/schedules_view/:id", s.mustLogin, s.getScheduleViewByID)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
@@ -268,6 +268,27 @@ func (s Server) registeRoute() {
 		learningOutcomeSet.POST("", s.mustLogin, s.createOutcomeSet)
 		learningOutcomeSet.POST("/bulk_bind", s.mustLogin, s.bulkBindOutcomeSet)
 		learningOutcomeSet.GET("", s.mustLogin, s.pullOutcomeSet)
+	}
+
+	classes := s.engine.Group("/v1")
+	{
+		// ams-class add members event
+		classes.POST("/classes_members", s.classAddMembersEvent)
+		classes.DELETE("/classes_members", s.classDeleteMembersEvent)
+	}
+	milestone := s.engine.Group("/v1")
+	{
+		milestone.POST("/milestones", s.mustLogin, s.createMilestone)
+		milestone.GET("/milestones/:id", s.mustLogin, s.obtainMilestone)
+
+		milestone.PUT("/milestones/:id/occupy", s.mustLogin, s.occupyMilestone)
+		milestone.PUT("/milestones/:id", s.mustLogin, s.updateMilestone)
+
+		milestone.DELETE("/milestones", s.mustLogin, s.deleteMilestone)
+
+		milestone.GET("/milestones", s.mustLogin, s.searchMilestone)
+
+		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
 	}
 }
 

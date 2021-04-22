@@ -563,5 +563,5 @@ type FolderItemsResponse struct {
 }
 type FolderItemsResponseWithTotal struct {
 	Items []*entity.FolderItemInfo `json:"items"`
-	Total int                  `json:"total"`
+	Total int                      `json:"total"`
 }

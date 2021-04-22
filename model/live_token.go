@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"net/url"
-
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"strings"
 	"sync"
 	"time"
 
@@ -103,7 +102,7 @@ func (s *liveTokenModel) MakeScheduleLiveToken(ctx context.Context, op *entity.O
 	if schedule.ClassType == entity.ScheduleClassTypeTask || (schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun) {
 		liveTokenInfo.Materials = make([]*entity.LiveMaterial, 0)
 	} else {
-		err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
+		_, err = GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, schedule.LessonPlanID)
 		if err != nil {
 			log.Error(ctx, "MakeScheduleLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
 				log.Err(err),
@@ -147,7 +146,7 @@ func (s *liveTokenModel) MakeContentLiveToken(ctx context.Context, op *entity.Op
 		OrgID:     op.OrgID,
 		ClassType: entity.LiveClassTypeLive,
 	}
-	err := GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, contentID)
+	_, err := GetScheduleModel().VerifyLessonPlanAuthed(ctx, op, contentID)
 	if err != nil {
 		log.Error(ctx, "MakeContentLiveToken:GetScheduleModel.VerifyLessonPlanAuthed error",
 			log.Err(err),
@@ -308,9 +307,12 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeVideo
 		case entity.FileTypeH5p, entity.FileTypeH5pExtend:
 			materialItem.TypeName = entity.MaterialTypeH5P
-		//case entity.FileTypeDocument:
-		//	log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
-		//	materialItem.TypeName = entity.MaterialTypeH5P
+		case entity.FileTypeDocument:
+			log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
+			if mData.Source.Ext() != constant.LiveTokenDocumentPDF {
+				continue
+			}
+			materialItem.TypeName = entity.MaterialTypeH5P
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
 			continue
@@ -331,8 +333,13 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 				return nil, err
 			}
 			if mData.FileType == entity.FileTypeDocument {
-				escape := url.QueryEscape(sourceUrl)
-				sourceUrl = fmt.Sprintf("%s?src=%s", constant.LiveTokenDocumentUrlPrefix, escape)
+				source := string(mData.Source)
+				parts := strings.Split(source, "-")
+				if len(parts) != 2 {
+					log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+					return nil, constant.ErrInvalidArgs
+				}
+				sourceUrl = fmt.Sprintf("/assets/%s", parts[1])
 			}
 			materialItem.URL = sourceUrl
 		}

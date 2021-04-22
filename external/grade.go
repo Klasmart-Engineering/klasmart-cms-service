@@ -14,6 +14,8 @@ import (
 
 type GradeServiceProvider interface {
 	BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*Grade, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Grade, error)
+	BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error)
 	GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, options ...APOption) ([]*Grade, error)
 }
@@ -83,6 +85,34 @@ func (s AmsGradeService) BatchGet(ctx context.Context, operator *entity.Operator
 		log.Any("grades", grades))
 
 	return grades, nil
+}
+
+func (s AmsGradeService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*Grade, error) {
+	grades, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]*Grade{}, err
+	}
+
+	dict := make(map[string]*Grade, len(grades))
+	for _, grade := range grades {
+		dict[grade.ID] = grade
+	}
+
+	return dict, nil
+}
+
+func (s AmsGradeService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
+	grades, err := s.BatchGet(ctx, operator, ids)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	dict := make(map[string]string, len(grades))
+	for _, grade := range grades {
+		dict[grade.ID] = grade.Name
+	}
+
+	return dict, nil
 }
 
 func (s AmsGradeService) GetByProgram(ctx context.Context, operator *entity.Operator, programID string, options ...APOption) ([]*Grade, error) {
