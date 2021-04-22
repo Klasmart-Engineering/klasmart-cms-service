@@ -29,6 +29,7 @@ type PermissionSet struct {
 
 //HasPermission check whether the user has the permission of PermissionSet
 func (p PermissionSet) HasPermission(ctx context.Context, operator entity.Operator) error {
+	//TODO: Please implements the function
 	return ErrHasNoPermission
 }
 
@@ -52,4 +53,9 @@ type IContentPermissionTable interface {
 	GetViewPermissionSets(ctx context.Context, req []*ContentProfile) ([]*PermissionSet, error)
 	//GetRemovePermissionSets Get permission set list when a user want to remove contents
 	GetRemovePermissionSets(ctx context.Context, req []*ContentProfile) ([]*PermissionSet, error)
+}
+
+func NewContentPermissionTable() IContentPermissionTable {
+	//TODO: Please implements the function
+	return nil
 }
