@@ -28,16 +28,18 @@ var (
 	prefix          string
 	granteeID       string
 	workerCount     int
+	dryrun          bool
 )
 
 func init() {
-	flag.StringVar(&bucket, "b", "", "Bucket name,required.")
-	flag.StringVar(&region, "r", "", "Region name,required.")
-	flag.StringVar(&accessKeyID, "a", "", "S3 access key ID,required.")
-	flag.StringVar(&secretAccessKey, "s", "", "S3 secret access key,required.")
+	flag.StringVar(&bucket, "b", "", "Bucket name, required.")
+	flag.StringVar(&region, "r", "", "Region name, required.")
+	flag.StringVar(&accessKeyID, "a", "", "S3 access key ID, required.")
+	flag.StringVar(&secretAccessKey, "s", "", "S3 secret access key, required.")
 	flag.StringVar(&prefix, "p", "", "Query objects prefix.")
 	flag.StringVar(&granteeID, "g", "", "Grantee AWS account ID.")
 	flag.IntVar(&workerCount, "w", 0, "Worker pool size,default is runtime.NumCPU().")
+	flag.BoolVar(&dryrun, "d", true, "Change the behavior of the program, if value is 'true', only query and not fix acl, default is true.")
 
 	if granteeID == "" {
 		granteeID = defaultGranteeID
@@ -60,7 +62,8 @@ func main() {
 		log.String("SecretAccessKey", secretAccessKey),
 		log.String("Prefix", prefix),
 		log.String("GranteeID", granteeID),
-		log.Int("WorkerCount", workerCount))
+		log.Int("WorkerCount", workerCount),
+		log.Bool("Dryrun", dryrun))
 
 	svc, err := NewS3Client(ctx, accessKeyID, secretAccessKey, region)
 	if err != nil {
@@ -101,6 +104,11 @@ func main() {
 
 					log.Info(ctx, "Put object acl", log.String("Key", objKey))
 					atomic.AddUint32(&publicAccessObjCount, 1)
+
+					if dryrun {
+						continue
+					}
+
 					err := PutObjectACL(ctx, svc, bucket, objKey, granteeID)
 					if err == nil {
 						atomic.AddUint32(&fixedAclObjCount, 1)
