@@ -2035,6 +2035,14 @@ func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx
 	pendingAddScopes := cm.checkDiff(ctx, alreadyScopes, scope)
 	pendingDeleteScopes := cm.checkDiff(ctx, scope, alreadyScopes)
 
+	log.Info(ctx,
+		"BatchRefreshContentVisibilitySettings",
+		log.String("cid", cid),
+		log.Strings("alreadyScopes", alreadyScopes),
+		log.Strings("scope", scope),
+		log.Strings("pendingDeleteScopes", pendingDeleteScopes),
+		log.Strings("pendingAddScopes", pendingAddScopes))
+
 	err = da.GetContentDA().BatchDeleteContentVisibilitySettings(ctx, tx, cid, pendingDeleteScopes)
 	if err != nil {
 		log.Error(ctx,
@@ -2046,6 +2054,7 @@ func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx
 			log.Strings("pendingDeleteScopes", pendingDeleteScopes))
 		return err
 	}
+
 	err = da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, pendingAddScopes)
 	if err != nil {
 		log.Error(ctx,
