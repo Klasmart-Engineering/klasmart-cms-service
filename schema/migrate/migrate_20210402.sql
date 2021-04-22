@@ -33,6 +33,7 @@ ALTER TABLE assessments_attendances ADD (
 CREATE UNIQUE INDEX uq_assessments_attendances_assessment_id_attendance_id_role on assessments_attendances(assessment_id, attendance_id, role);
 
 /* assessments */
-ALTER TABLE assessments MODIFY `program_id` VARCHAR(64) NULL DEFAULT '' COMMENT 'DEPRECATED: program id';
-ALTER TABLE assessments MODIFY `subject_id` VARCHAR(64) NULL DEFAULT '' COMMENT 'DEPRECATED: subject id';
-ALTER TABLE assessments MODIFY `teacher_ids` JSON NULL COMMENT 'DEPRECATED: teacher ids';
+ALTER TABLE `assessments`
+MODIFY `program_id` VARCHAR(64) NULL DEFAULT '' COMMENT 'DEPRECATED: program id',
+MODIFY `subject_id` VARCHAR(64) NULL DEFAULT '' COMMENT 'DEPRECATED: subject id',
+MODIFY `teacher_ids` JSON NULL COMMENT 'DEPRECATED: teacher ids';
