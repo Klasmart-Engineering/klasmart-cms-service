@@ -574,6 +574,9 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 		return "", nil
 	}
 
+	// fix: materials permission
+	operator.OrgID = schedule.OrgID
+
 	// get contents
 	var (
 		latestContent   *entity.ContentInfoWithDetails
