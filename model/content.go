@@ -227,7 +227,7 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	//If scope changed, refresh visibility settings
-	if scope != nil {
+	if scope != nil && len(scope) > 0 {
 		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, scope)
 		if err != nil {
 			log.Error(ctx, "refreshContentVisibilitySettings failed",
