@@ -329,6 +329,9 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		)
 		return nil, err
 	}
+	if len(assessments) == 0 {
+		return nil, nil
+	}
 
 	// get assessment list total
 	var total int
@@ -374,7 +377,10 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 }
 
 func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, checkedStudents *bool) ([]*entity.AssessmentView, error) {
-	//
+	if len(assessments) == 0 {
+		return nil, nil
+	}
+
 	var (
 		err           error
 		assessmentIDs []string
@@ -441,7 +447,10 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 		assessmentTeachersMap = map[string][]*entity.AssessmentAttendance{}
 	)
 	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
-		AssessmentIDs: assessmentIDs,
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
 	}, &assessmentAttendances); err != nil {
 		log.Error(ctx, "convertToAssessmentViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
 			log.Err(err),
