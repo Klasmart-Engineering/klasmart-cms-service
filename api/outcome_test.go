@@ -27,8 +27,8 @@ func TestCreateOutcome(t *testing.T) {
 	createView := model.OutcomeCreateView{
 		OutcomeName: "Test Outcome XX",
 		Assumed:     true,
-		Program:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
-		Subject:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
+		//Program:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
+		//Subject:     []string{"5e9Z201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f7939aa3-4fb8-84f0-68a2ab920d5a"},
 		//Developmental: []string{"b4cd42b8-a09b-4f66-a03a-b9f6b6f69895", "fa8ff09d-9062-4955-9b20-5fa20757f1d9"},
 		//Skills:        []string{"d50cff7c-b0c7-43be-8ec7-877fa4c9a6fb", "49e73e4f-8ffc-47e3-9b87-0f9686d361d7"},
 		//Grade:         []string{"3ee3fd4c-6208-494f-9551-d48fabc4f42a"},
