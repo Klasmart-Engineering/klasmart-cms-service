@@ -1,5 +1,7 @@
 package utils
 
+import "strings"
+
 func SliceDeduplication(s []string) []string {
 	temp := make(map[string]bool)
 	for i := range s {
@@ -136,4 +138,8 @@ func SliceDeduplicationExcludeEmpty(s []string) []string {
 	}
 
 	return result
+}
+
+func ParseURLQueryArray(s string) []string {
+	return SliceDeduplicationExcludeEmpty(strings.Split(s, ","))
 }

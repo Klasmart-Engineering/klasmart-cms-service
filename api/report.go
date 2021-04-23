@@ -2,13 +2,15 @@ package api
 
 import (
 	"database/sql"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"net/http"
+	"strconv"
 )
 
 // @Summary list student report
@@ -275,5 +277,61 @@ func (s *Server) getStudentPerformanceH5PReport(ctx *gin.Context) {
 		ctx.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
 	default:
 		ctx.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary list teaching load report
+// @Description list teaching load report
+// @Tags reports
+// @ID listTeachingLoadReport
+// @Accept json
+// @Produce json
+// @Param school_id query string false "school_id"
+// @Param teacher_ids query string false "teacher_ids"
+// @Param class_ids query string false "class_ids"
+// @Param time_offset query string true "time_offset"
+// @Param page query integer false "page"
+// @Param size query integer false "size"
+// @Success 200 {object} entity.ReportListTeachingLoadResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /reports/teaching_loading [get]
+func (s *Server) listTeachingLoadReport(c *gin.Context) {
+	ctx := c.Request.Context()
+	operator := s.getOperator(c)
+	args := entity.ReportListTeachingLoadArgs{
+		SchoolID:   c.Query("school_id"),
+		TeacherIDs: utils.ParseURLQueryArray("teacher_ids"),
+		ClassIDs:   utils.ParseURLQueryArray("class_ids"),
+	}
+	if s := c.Query("time_offset"); s != "" {
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			log.Error(c, "listTeachingLoadReport: strconv.Atoi: convert failed",
+				log.Err(err),
+				log.String("time_offset", s),
+				log.Any("operator", operator),
+			)
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
+		args.TimeOffset = v
+	} else {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("size"))
+
+	result, err := model.GetReportModel().ListTeachingLoadReport(ctx, dbo.MustGetDB(ctx), operator, args)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ReportMsgNoPermission))
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

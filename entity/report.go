@@ -1,6 +1,9 @@
 package entity
 
-import "strings"
+import (
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"strings"
+)
 
 type StudentsAchievementReportResponse struct {
 	Items         []*StudentAchievementReportItem `json:"items"`
@@ -362,3 +365,29 @@ type GetTeachingHoursReportResultItem struct {
 }
 
 // endregion activities
+
+type ReportListTeachingLoadArgs struct {
+	SchoolID   string    `json:"school_id"`
+	TeacherIDs []string  `json:"teacher_ids"`
+	ClassIDs   []string  `json:"class_ids"`
+	TimeOffset int       `json:"time_offset"`
+	Pager      dbo.Pager `json:"pager"`
+}
+
+type ReportListTeachingLoadResult struct {
+	Items []ReportListTeachingLoadItem `json:"items"`
+	Total int                          `json:"total"`
+}
+
+type ReportListTeachingLoadItem struct {
+	TeacherID   string                           `json:"teacher_id"`
+	TeacherName string                           `json:"teacher_name"`
+	Durations   []ReportListTeachingLoadDuration `json:"durations"`
+}
+
+type ReportListTeachingLoadDuration struct {
+	StartAt int64 `json:"start_at"`
+	EndAt   int64 `json:"end_at"`
+	Online  int64 `json:"online"`
+	Offline int64 `json:"offline"`
+}
