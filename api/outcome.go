@@ -49,9 +49,14 @@ func (s *Server) createOutcome(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	outcome, err := data.ToOutcome()
+	outcome, err := data.ToOutcome(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "createOutcome: outcome failed", log.Err(err))
+		log.Warn(ctx, "createOutcome: ToOutcome failed", log.Err(err))
+		invalidErr, ok := err.(*model.ErrValidFailed)
+		if ok {
+			c.JSON(http.StatusBadRequest, LD(GeneralUnknown, invalidErr.Error()))
+			return
+		}
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -138,9 +143,14 @@ func (s *Server) updateOutcome(c *gin.Context) {
 		return
 	}
 
-	outcome, err := data.ToOutcomeWithID(outcomeID)
+	outcome, err := data.ToOutcomeWithID(ctx, op, outcomeID)
 	if err != nil {
 		log.Warn(ctx, "updateOutcome: outcome failed", log.Err(err))
+		invalidErr, ok := err.(*model.ErrValidFailed)
+		if ok {
+			c.JSON(http.StatusBadRequest, LD(GeneralUnknown, invalidErr.Error()))
+			return
+		}
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}

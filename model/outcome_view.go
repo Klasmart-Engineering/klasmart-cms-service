@@ -3,9 +3,7 @@ package model
 import (
 	"context"
 	"errors"
-	//"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 
-	//"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -13,6 +11,14 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
+
+type ErrValidFailed struct {
+	Msg string
+}
+
+func (e *ErrValidFailed) Error() string {
+	return e.Msg
+}
 
 type OutcomeCreateView struct {
 	OutcomeID      string                  `json:"outcome_id"`
@@ -37,7 +43,7 @@ type OutcomeSetCreateView struct {
 	SetName string `json:"set_name" form:"set_name"`
 }
 
-func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
+func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator) (*entity.Outcome, error) {
 	outcome := entity.Outcome{
 		Name:          req.OutcomeName,
 		Assumed:       req.Assumed,
@@ -45,6 +51,18 @@ func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
 		Description:   req.Description,
 		Shortcode:     req.Shortcode,
 	}
+
+	if len(req.Program) == 0 || len(req.Subject) == 0 {
+		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
+		return nil, &ErrValidFailed{Msg: "program and subject is required"}
+	}
+	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
+		req.Program, req.Subject, req.Developmental, req.Skills, req.Grade, req.Age)
+	if err != nil {
+		log.Error(ctx, "ToOutcome: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", req))
+		return nil, err
+	}
+
 	outcome.Program = strings.Join(req.Program, entity.JoinComma)
 	outcome.Subject = strings.Join(req.Subject, entity.JoinComma)
 	outcome.Developmental = strings.Join(req.Developmental, entity.JoinComma)
@@ -71,8 +89,8 @@ func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
 	return &outcome, nil
 }
 
-func (req OutcomeCreateView) ToOutcomeWithID(outcomeID string) (*entity.Outcome, error) {
-	outcome, err := req.ToOutcome()
+func (req OutcomeCreateView) ToOutcomeWithID(ctx context.Context, op *entity.Operator, outcomeID string) (*entity.Outcome, error) {
+	outcome, err := req.ToOutcome(ctx, op)
 	if err != nil {
 		return nil, err
 	}
