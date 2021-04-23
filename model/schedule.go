@@ -2647,6 +2647,7 @@ func (s *scheduleModel) GetTeachingLoad(ctx context.Context, op *entity.Operator
 			durationItem.StartAt = input.TimeRanges[i].StartAt
 			durationItem.EndAt = input.TimeRanges[i].EndAt
 			durationItem.Duration = duration
+			resultItem.Durations = append(resultItem.Durations, durationItem)
 		}
 		result = append(result, resultItem)
 	}
