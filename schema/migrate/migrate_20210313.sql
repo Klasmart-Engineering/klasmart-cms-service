@@ -37,6 +37,7 @@ CREATE TABLE `organizations_regions` (
 
 -- INSERT INTO `organizations_regions` (`id`, `headquarter`, `organization_id`, `create_at`, `update_at`) VALUES
 -- ('5fb24528993e7591084c2c18', '6cac91e6-0ef2-4be6-9df7-6ea77f7c1928', 'c0ecdf39-4e20-4f68-88e3-20df10af8b94', 1615963300, 1615963300);
+-- Business sql for VN HQ
 INSERT INTO `organizations_regions` (`id`, `headquarter`, `organization_id`, `create_at`, `update_at`) VALUES
 ('5fb24528993e7591084c2c46', '9d42af2a-d943-4bb7-84d8-9e2e28b0e290', '281e49c6-a1f8-4d5e-83f2-0cf76700601c', 1615963415, 1615963415);
 

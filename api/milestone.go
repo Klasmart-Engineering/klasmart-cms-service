@@ -53,6 +53,12 @@ func (s *Server) createMilestone(c *gin.Context) {
 	}
 	err = model.GetMilestoneModel().Create(ctx, op, milestone, data.OutcomeAncestorIDs)
 	data.MilestoneID = milestone.ID
+	if err != nil {
+		log.Error(ctx, "createMilestone: Create failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("request", data))
+	}
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, milestone)
@@ -86,6 +92,12 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 	}
 	milestone, err := model.GetMilestoneModel().Obtain(ctx, op, milestoneID)
 
+	if err != nil {
+		log.Error(ctx, "obtainMilestone: Obtain failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("milestone", milestoneID))
+	}
 	switch err {
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -147,6 +159,13 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		return
 	}
 	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, data.OutcomeAncestorIDs)
+	if err != nil {
+		log.Error(ctx, "updateMilestone: Update failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("milestone", milestoneID),
+			log.Any("request", data))
+	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
@@ -199,6 +218,12 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 	if ok {
 		c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
 		return
+	}
+	if err != nil {
+		log.Error(ctx, "deleteMilestone: Delete failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Strings("milestone", data.IDs))
 	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
@@ -260,6 +285,12 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		return
 	}
 	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
+	if err != nil {
+		log.Error(ctx, "searchMilestone: Search failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("request", condition))
+	}
 	switch err {
 	case nil:
 		views, err := model.FromMilestones(ctx, op, milestones)
@@ -313,6 +344,12 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 		return
 	}
 	milestone, err := model.GetMilestoneModel().Occupy(ctx, op, milestoneID)
+	if err != nil {
+		log.Error(ctx, "occupyMilestone: Occupy failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("milestone", milestoneID))
+	}
 	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 	if ok {
 		c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))

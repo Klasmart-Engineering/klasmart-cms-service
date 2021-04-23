@@ -914,8 +914,11 @@ func (rm *reportModel) getCheckedAssessmentAttendance(ctx context.Context, tx *d
 		checked = true
 	)
 	if err := da.GetAssessmentAttendanceDA().QueryTx(ctx, tx, &da.QueryAssessmentAttendanceConditions{
-		AssessmentIDs: assessmentIDs,
-		Checked:       &checked,
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
+		Checked: &checked,
 	}, &result); err != nil {
 		log.Error(ctx, "getCheckedAssessmentAttendance: query assessment attendances failed",
 			log.Err(err),

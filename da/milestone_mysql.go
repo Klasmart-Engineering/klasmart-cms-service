@@ -163,7 +163,7 @@ func (m MilestoneSqlDA) BatchDelete(ctx context.Context, tx *dbo.DBContext, mile
 
 func (m MilestoneSqlDA) UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error {
 	if len(outcomeAncestors) > 0 {
-		sql := fmt.Sprintf("delete from %s  where outcome_ancestor in (?)", entity.Milestone{}.TableName())
+		sql := fmt.Sprintf("delete from %s  where outcome_ancestor in (?)", entity.MilestoneOutcome{}.TableName())
 		err := tx.Exec(sql, outcomeAncestors).Error
 		if err != nil {
 			log.Error(ctx, "UnbindOutcomes: exec sql failed",

@@ -97,7 +97,7 @@ func TestQueryOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	//query := fmt.Sprintf("set_name=%s&assumed=%d", "math", 1)
-	query := fmt.Sprintf("search_key=%s", "12345")
+	query := fmt.Sprintf("search_key=%s&publish_status=%s", "12345", "draft")
 	url := fmt.Sprintf("%s/learning_outcomes?org_id=%s&%s", prefix, op.OrgID, query)
 	res := DoHttpWithOperator(http.MethodGet, op, url, "")
 	fmt.Println(res)
