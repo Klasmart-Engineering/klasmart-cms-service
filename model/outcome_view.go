@@ -72,37 +72,6 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		return nil, err
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
-	validID := regexp.MustCompile(`^[a-z0-9A-Z]{8}-[a-z0-9A-Z]{4}-([a-z0-9A-Z]){4}-[a-z0-9A-Z]{4}-[a-z0-9A-Z]{12}$`)
-	for i := range req.Program {
-		if !validID.MatchString(req.Program[i]) {
-			return nil, &ErrValidFailed{Msg: req.Program[i] + " not correct"}
-		}
-	}
-	for i := range req.Subject {
-		if !validID.MatchString(req.Subject[i]) {
-			return nil, &ErrValidFailed{Msg: req.Subject[i] + " not correct"}
-		}
-	}
-	for i := range req.Developmental {
-		if !validID.MatchString(req.Developmental[i]) {
-			return nil, &ErrValidFailed{Msg: req.Developmental[i] + " not correct"}
-		}
-	}
-	for i := range req.Skills {
-		if !validID.MatchString(req.Skills[i]) {
-			return nil, &ErrValidFailed{Msg: req.Skills[i] + " not correct"}
-		}
-	}
-	for i := range req.Grade {
-		if !validID.MatchString(req.Grade[i]) {
-			return nil, &ErrValidFailed{Msg: req.Grade[i] + " not correct"}
-		}
-	}
-	for i := range req.Age {
-		if !validID.MatchString(req.Age[i]) {
-			return nil, &ErrValidFailed{Msg: req.Age[i] + " not correct"}
-		}
-	}
 
 	outcome.Program = strings.Join(req.Program, entity.JoinComma)
 	outcome.Subject = strings.Join(req.Subject, entity.JoinComma)

@@ -45,26 +45,22 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	milestone := data.ToMilestone(op)
+	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "createMilestone: outcome failed", log.Err(err))
+		log.Warn(ctx, "createMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	err = model.GetMilestoneModel().Create(ctx, op, milestone, data.OutcomeAncestorIDs)
 	data.MilestoneID = milestone.ID
-	if err != nil {
-		log.Error(ctx, "createMilestone: Create failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.Any("request", data))
-	}
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, milestone)
 	case constant.ErrConflict:
+		log.Warn(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	default:
+		log.Error(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -92,14 +88,9 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 	}
 	milestone, err := model.GetMilestoneModel().Obtain(ctx, op, milestoneID)
 
-	if err != nil {
-		log.Error(ctx, "obtainMilestone: Obtain failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.String("milestone", milestoneID))
-	}
 	switch err {
 	case model.ErrResourceNotFound:
+		log.Warn(ctx, "obtainMilestone: Obtain failed", log.Any("op", op), log.String("milestone", milestoneID))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:
 		views, err := model.FromMilestones(ctx, op, []*entity.Milestone{milestone})
@@ -112,6 +103,7 @@ func (s *Server) obtainMilestone(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, views[0])
 	default:
+		log.Error(ctx, "obtainMilestone: Obtain failed", log.String("milestone", milestoneID))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -144,9 +136,9 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	}
 	data.MilestoneID = milestoneID
 
-	milestone := data.ToMilestone(op)
+	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "updateMilestone: toMilestone failed", log.Err(err))
+		log.Warn(ctx, "updateMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -159,25 +151,23 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		return
 	}
 	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, data.OutcomeAncestorIDs)
-	if err != nil {
-		log.Error(ctx, "updateMilestone: Update failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.String("milestone", milestoneID),
-			log.Any("request", data))
-	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
+		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case model.ErrResourceNotFound:
+		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
+		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case constant.ErrConflict:
+		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
+		log.Error(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -213,24 +203,22 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
+
 	err = model.GetMilestoneModel().Delete(ctx, op, perms, data.IDs)
-	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
-	if ok {
-		c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
-		return
-	}
-	if err != nil {
-		log.Error(ctx, "deleteMilestone: Delete failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.Strings("milestone", data.IDs))
-	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
+		log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
+		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+		if ok {
+			log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
+			c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+			return
+		}
+		log.Error(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -285,16 +273,11 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		return
 	}
 	total, milestones, err := model.GetMilestoneModel().Search(ctx, op, &condition)
-	if err != nil {
-		log.Error(ctx, "searchMilestone: Search failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.Any("request", condition))
-	}
 	switch err {
 	case nil:
 		views, err := model.FromMilestones(ctx, op, milestones)
 		if err != nil {
+			log.Error(ctx, "searchMilestone: Search failed", log.Any("op", op), log.Any("req", condition))
 			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 			return
 		}
@@ -303,7 +286,7 @@ func (s *Server) searchMilestone(c *gin.Context) {
 			Milestones: views,
 		})
 	default:
-		log.Error(ctx, "searchMilestone: Search failed", log.Err(err), log.Any("op", op), log.Any("cond", condition))
+		log.Error(ctx, "searchMilestone: Search failed", log.Any("op", op), log.Any("req", condition))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -344,17 +327,6 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 		return
 	}
 	milestone, err := model.GetMilestoneModel().Occupy(ctx, op, milestoneID)
-	if err != nil {
-		log.Error(ctx, "occupyMilestone: Occupy failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.String("milestone", milestoneID))
-	}
-	lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
-	if ok {
-		c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
-		return
-	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
@@ -363,6 +335,13 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, model.MilestoneView{MilestoneID: milestone.ID})
 	default:
+		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+		if ok {
+			log.Warn(ctx, "occupyMilestone: Occupy failed", log.Any("op", op), log.String("req", milestoneID))
+			c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+			return
+		}
+		log.Error(ctx, "occupyMilestone: Occupy failed", log.Any("op", op), log.String("req", milestoneID))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
@@ -407,23 +386,91 @@ func (s *Server) publishMilestone(c *gin.Context) {
 
 	err = model.GetMilestoneModel().Publish(ctx, op, data.IDs)
 
-	if err != nil {
-		log.Error(ctx, "publishMilestone: Publish failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.Strings("milestone", data.IDs))
-	}
-
 	switch err {
 	case model.ErrNoAuth:
+		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case model.ErrResourceNotFound:
+		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentStatusToPublish:
+		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
+		log.Error(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @ID saveAndPublishMilestone
+// @Summary save and publish milestone
+// @Tags milestone
+// @Description publish milestone
+// @Accept json
+// @Produce json
+// @Param milestone_id path string true "milestone id"
+// @Param milestone body model.MilestoneView true "milestone"
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 409 {object} ConflictResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /milestones/{milestone_id}/save_publish [post]
+func (s *Server) saveAndPublishMilestone(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	milestoneID := c.Param("id")
+	var data model.MilestoneView
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		log.Warn(ctx, "saveAndPublishMilestone: ShouldBind failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	data.MilestoneID = milestoneID
+
+	milestone, err := data.ToMilestone(ctx, op)
+	if err != nil {
+		log.Warn(ctx, "saveAndPublishMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.CreateMilestone,
+	})
+	if err != nil {
+		log.Error(ctx, "saveAndPublishMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	err = model.GetMilestoneModel().SaveAndPublish(ctx, op, perms, milestone, data.OutcomeAncestorIDs)
+	if err != nil {
+		log.Error(ctx, "saveAndPublishMilestone: Update failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("milestone", milestoneID),
+			log.Any("request", data))
+	}
+	switch err {
+	case constant.ErrOperateNotAllowed:
+		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case model.ErrResourceNotFound:
+		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrInvalidPublishStatus:
+		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
+	case constant.ErrConflict:
+		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
+		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
+	case nil:
+		c.JSON(http.StatusOK, "ok")
+	default:
+		log.Error(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

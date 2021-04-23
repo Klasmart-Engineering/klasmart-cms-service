@@ -60,7 +60,7 @@ type MilestoneView struct {
 	OutcomeAncestorIDs []string `json:"outcome_ancestor_ids,omitempty"`
 }
 
-func (ms *MilestoneView) ToMilestone(op *entity.Operator) *entity.Milestone {
+func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
 	milestone := &entity.Milestone{
 		ID:             ms.MilestoneID,
 		Name:           ms.Name,
@@ -83,7 +83,20 @@ func (ms *MilestoneView) ToMilestone(op *entity.Operator) *entity.Milestone {
 		Grades:        ms.GradeIDs,
 		Ages:          ms.AgeIDs,
 	}
-	return milestone
+	if len(ms.ProgramIDs) == 0 || len(ms.SubjectIDs) == 0 {
+		log.Warn(ctx, "ToMilestone: program and subject is required", log.Any("op", op), log.Any("milestone", ms))
+		return nil, &ErrValidFailed{Msg: "program and subject is required"}
+	}
+	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
+		ms.ProgramIDs, ms.SubjectIDs, ms.CategoryIDs, ms.SubcategoryIDs, ms.GradeIDs, ms.AgeIDs)
+	if err != nil {
+		log.Error(ctx, "ToMilestone: prepareAllNeededName failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("milestone", ms))
+		return nil, err
+	}
+	return milestone, nil
 }
 
 func (ms *MilestoneView) FillAllKindsOfName(program, subject, category, subCategory, grade, age map[string]string, milestone *entity.Milestone) {
