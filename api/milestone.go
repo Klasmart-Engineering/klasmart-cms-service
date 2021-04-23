@@ -418,7 +418,7 @@ func (s *Server) publishMilestone(c *gin.Context) {
 // @Failure 404 {object} NotFoundResponse
 // @Failure 409 {object} ConflictResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /milestones/{milestone_id}/save_publish [post]
+// @Router /milestones/{milestone_id}/save_publish [put]
 func (s *Server) saveAndPublishMilestone(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)

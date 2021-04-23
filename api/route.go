@@ -289,7 +289,7 @@ func (s Server) registeRoute() {
 		milestone.GET("/milestones", s.mustLogin, s.searchMilestone)
 
 		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
-		milestone.POST("/milestones/:id/save_publish", s.mustLogin, s.saveAndPublishMilestone)
+		milestone.PUT("/milestones/:id/save_publish", s.mustLogin, s.saveAndPublishMilestone)
 	}
 }
 
