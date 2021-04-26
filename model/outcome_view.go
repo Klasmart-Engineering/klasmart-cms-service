@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"regexp"
 
 	"strings"
 
@@ -19,6 +20,9 @@ type ErrValidFailed struct {
 func (e *ErrValidFailed) Error() string {
 	return e.Msg
 }
+
+var shortcode3Validate = regexp.MustCompile(`^[A-Z0-9]{3}$`)
+var shortcode5Validate = regexp.MustCompile(`^[A-Z0-9]{5}$`)
 
 type OutcomeCreateView struct {
 	OutcomeID      string                  `json:"outcome_id"`
@@ -55,6 +59,11 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 	if len(req.Program) == 0 || len(req.Subject) == 0 {
 		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
+	}
+
+	if !shortcode3Validate.MatchString(req.Shortcode) && !shortcode5Validate.MatchString(req.Shortcode) {
+		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
+		return nil, &ErrValidFailed{Msg: "shortcode mismatch"}
 	}
 	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
 		req.Program, req.Subject, req.Developmental, req.Skills, req.Grade, req.Age)

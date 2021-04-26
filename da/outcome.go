@@ -22,11 +22,11 @@ type IOutcomeDA interface {
 
 var _outcomeOnce sync.Once
 
-var outcomeDA *OutcomeSqlDA
+var outcomeDA *OutcomeSQLDA
 
 func GetOutcomeDA() IOutcomeDA {
 	_outcomeOnce.Do(func() {
-		outcomeDA = new(OutcomeSqlDA)
+		outcomeDA = new(OutcomeSQLDA)
 	})
 	return outcomeDA
 }

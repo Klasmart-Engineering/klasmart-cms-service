@@ -21,23 +21,23 @@ type IMilestoneDA interface {
 	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error
 }
 
-var milestoneDA *MilestoneSqlDA
+var milestoneDA *MilestoneSQLDA
 
 var _milestoneOnce sync.Once
 
 func GetMilestoneDA() IMilestoneDA {
 	_milestoneOnce.Do(func() {
-		milestoneDA = new(MilestoneSqlDA)
+		milestoneDA = new(MilestoneSQLDA)
 	})
 	return milestoneDA
 }
 
-var milestoneOutcomeDA *MilestoneOutcomeSqlDA
+var milestoneOutcomeDA *MilestoneOutcomeSQLDA
 var _milestoneOutcomeOnce sync.Once
 
-func GetMilestoneOutcomeDA() *MilestoneOutcomeSqlDA {
+func GetMilestoneOutcomeDA() *MilestoneOutcomeSQLDA {
 	_milestoneOutcomeOnce.Do(func() {
-		milestoneOutcomeDA = new(MilestoneOutcomeSqlDA)
+		milestoneOutcomeDA = new(MilestoneOutcomeSQLDA)
 	})
 	return milestoneOutcomeDA
 }

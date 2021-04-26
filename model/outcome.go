@@ -518,12 +518,11 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 			if copyValue.PublishStatus == entity.OutcomeStatusDraft {
 				newVersion = *copyValue
 				return nil
-			} else {
-				log.Error(ctx, "LockLearningOutcome: copyValue status not draft",
-					log.String("op", operator.UserID),
-					log.Any("copy", copyValue))
-				return NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 			}
+			log.Error(ctx, "LockLearningOutcome: copyValue status not draft",
+				log.String("op", operator.UserID),
+				log.Any("copy", copyValue))
+			return NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
 		}
 
 		err = ocm.lockOutcome(ctx, operator, tx, outcome)
@@ -1185,21 +1184,20 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, ope
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", cond2.IDs.Strings))
 			return constant.ErrRecordNotFound
-		} else {
-			err = ocm.fillRelation(ctx, operator, tx, otcs2)
-			if err != nil {
-				log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
-					log.Err(err),
-					log.String("op", operator.UserID))
-				return err
-			}
-			latests = make(map[string]*entity.Outcome, len(otcs1))
-			for _, o := range otcs1 {
-				for _, l := range otcs2 {
-					if o.LatestID == l.ID {
-						latests[l.ID] = l
-						break
-					}
+		}
+		err = ocm.fillRelation(ctx, operator, tx, otcs2)
+		if err != nil {
+			log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
+				log.Err(err),
+				log.String("op", operator.UserID))
+			return err
+		}
+		latests = make(map[string]*entity.Outcome, len(otcs1))
+		for _, o := range otcs1 {
+			for _, l := range otcs2 {
+				if o.LatestID == l.ID {
+					latests[l.ID] = l
+					break
 				}
 			}
 		}
