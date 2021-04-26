@@ -18,7 +18,7 @@ import (
 type IOutcomeRedis interface {
 	SaveOutcomeCacheList(ctx context.Context, outcomes []*entity.Outcome)
 	SaveOutcomeCacheListBySearchCondition(ctx context.Context, op *entity.Operator, condition dbo.Conditions, c *OutcomeListWithKey)
-	GetOutcomeCacheByIdList(ctx context.Context, IDs []string) ([]string, []*entity.Outcome)
+	GetOutcomeCacheByIDList(ctx context.Context, IDs []string) ([]string, []*entity.Outcome)
 	GetOutcomeCacheBySearchCondition(ctx context.Context, op *entity.Operator, condition dbo.Conditions) *OutcomeListWithKey
 
 	SaveOutcomeCache(ctx context.Context, outcome *entity.Outcome)
@@ -88,7 +88,7 @@ func (r *OutcomeRedis) GetOutcomeCacheByID(ctx context.Context, ID string) *enti
 	if !config.Get().RedisConfig.OpenCache {
 		return nil
 	}
-	_, res := r.GetOutcomeCacheByIdList(ctx, []string{ID})
+	_, res := r.GetOutcomeCacheByIDList(ctx, []string{ID})
 	if len(res) > 0 {
 		return res[0]
 	}
@@ -116,7 +116,7 @@ func (r *OutcomeRedis) SaveOutcomeCacheListBySearchCondition(ctx context.Context
 	//}()
 }
 
-func (r *OutcomeRedis) GetOutcomeCacheByIdList(ctx context.Context, IDs []string) ([]string, []*entity.Outcome) {
+func (r *OutcomeRedis) GetOutcomeCacheByIDList(ctx context.Context, IDs []string) ([]string, []*entity.Outcome) {
 	if !config.Get().RedisConfig.OpenCache {
 		return IDs, nil
 	}

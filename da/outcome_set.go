@@ -21,13 +21,13 @@ type IOutcomeSetDA interface {
 	IsSetExist(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, name string) (bool, error)
 }
 
-var outcomeSetDA *SetSqlDA
+var outcomeSetDA *SetSQLDA
 
 var _outcomeSetOnce sync.Once
 
 func GetOutcomeSetDA() IOutcomeSetDA {
 	_outcomeSetOnce.Do(func() {
-		outcomeSetDA = new(SetSqlDA)
+		outcomeSetDA = new(SetSQLDA)
 	})
 	return outcomeSetDA
 }
