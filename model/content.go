@@ -242,7 +242,7 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 	return nil
 }
 
-func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest) error {
+func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, op *entity.Operator) error {
 	if c.LessonType != "" {
 		_, err := GetLessonTypeModel().GetByID(ctx, c.LessonType)
 		if err != nil {
@@ -266,6 +266,12 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		return ErrInvalidSelectForm
 	}
 
+	_, _, _, _, _, _, _, _, err = prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
+		[]string{c.Program}, c.Subject, c.Category, c.SubCategory, c.Grade, c.Age)
+	if err != nil {
+		log.Error(ctx, "checkContentInfo: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", c))
+		return err
+	}
 	return nil
 }
 
@@ -390,7 +396,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		c.PublishScope = []string{operator.OrgID}
 	}
 
-	err := cm.checkContentInfo(ctx, c)
+	err := cm.checkContentInfo(ctx, c, operator)
 	if err != nil {
 		log.Warn(ctx, "check content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return "", err
@@ -467,7 +473,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 		return ErrInvalidContentType
 	}
 
-	err := cm.checkContentInfo(ctx, data)
+	err := cm.checkContentInfo(ctx, data, user)
 	if err != nil {
 		return err
 	}
