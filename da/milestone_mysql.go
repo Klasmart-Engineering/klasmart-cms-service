@@ -284,15 +284,15 @@ func (c *MilestoneCondition) GetPager() *dbo.Pager {
 func (c *MilestoneCondition) GetOrderBy() string {
 	switch c.OrderBy {
 	case OrderByMilestoneName:
-		return "name"
+		return "type desc, name"
 	case OrderByMilestoneNameDesc:
-		return "name desc"
+		return "type desc, name desc"
 	case OrderByMilestoneCreatedAt:
-		return "create_at"
+		return "type desc, create_at"
 	case OrderByMilestoneCreatedAtDesc:
-		return "create_at desc"
+		return "type desc, create_at desc"
 	default:
-		return "update_at desc"
+		return "type desc, update_at desc"
 	}
 }
 
@@ -302,17 +302,64 @@ type MilestoneOutcomeSQLDA struct {
 	dbo.BaseDA
 }
 
-func (mso MilestoneOutcomeSQLDA) SearchTx(ctx context.Context, tx *dbo.DBContext, milestoneID string) ([]*entity.MilestoneOutcome, error) {
-	sql := "select distinct * from " + entity.MilestoneOutcome{}.TableName() + " where milestone_id = ? and delete_at is null order by update_at"
-	var mos []*entity.MilestoneOutcome
-	err := tx.Raw(sql, milestoneID).Find(&mos).Error
+type MilestoneOutcomeCondition struct {
+	MilestoneID      sql.NullString
+	MilestoneIDs     dbo.NullStrings
+	OutcomeAncestor  sql.NullString
+	OutcomeAncestors dbo.NullStrings
+	IncludeDeleted   bool
+	OrderBy          MilestoneOrderBy `json:"order_by"`
+	Pager            dbo.Pager
+}
+
+func (c *MilestoneOutcomeCondition) GetConditions() ([]string, []interface{}) {
+	wheres := make([]string, 0)
+	params := make([]interface{}, 0)
+
+	if c.MilestoneID.Valid {
+		wheres = append(wheres, "milestone_id = ?")
+		params = append(params, c.MilestoneID.String)
+	}
+
+	if c.MilestoneIDs.Valid {
+		wheres = append(wheres, "milestone_id in (?)")
+		params = append(params, c.MilestoneIDs.Strings)
+	}
+
+	if c.OutcomeAncestor.Valid {
+		wheres = append(wheres, "outcome_ancestor = ?")
+		params = append(params, c.OutcomeAncestor.String)
+	}
+
+	if c.OutcomeAncestors.Valid {
+		wheres = append(wheres, "outcome_ancestor in (?)")
+		params = append(params, c.OutcomeAncestors.Strings)
+	}
+
+	if !c.IncludeDeleted {
+		wheres = append(wheres, "delete_at=0")
+	}
+	return wheres, params
+}
+
+func (c *MilestoneOutcomeCondition) GetPager() *dbo.Pager {
+	return &c.Pager
+}
+
+func (c *MilestoneOutcomeCondition) GetOrderBy() string {
+	return "update_at desc"
+}
+
+func (mso MilestoneOutcomeSqlDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *MilestoneOutcomeCondition) ([]*entity.MilestoneOutcome, error) {
+	var result []*entity.MilestoneOutcome
+	_, err := mso.BaseDA.PageTx(ctx, tx, condition, &result)
 	if err != nil {
-		log.Error(ctx, "Search: exec sql failed",
-			log.String("sql", sql),
-			log.String("milestone", milestoneID))
+		log.Error(ctx, "SearchTx: PageTx failed",
+			log.Err(err),
+			log.Any("condition", condition))
 		return nil, err
 	}
-	return mos, nil
+	return result, nil
 }
 
 func (mso MilestoneOutcomeSQLDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) error {

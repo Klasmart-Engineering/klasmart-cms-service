@@ -30,6 +30,7 @@ type AuthorView struct {
 }
 
 type MilestoneView struct {
+<<<<<<< HEAD
 	MilestoneID  string            `json:"milestone_id,omitempty"`
 	Name         string            `json:"milestone_name,omitempty"`
 	Shortcode    string            `json:"shortcode,omitempty"`
@@ -50,6 +51,29 @@ type MilestoneView struct {
 	SourceID     string            `json:"source_id,omitempty"`
 	LatestID     string            `json:"latest_id,omitempty"`
 	OutcomeCount int               `json:"outcome_count,omitempty"`
+=======
+	MilestoneID  string               `json:"milestone_id,omitempty"`
+	Name         string               `json:"milestone_name,omitempty"`
+	Shortcode    string               `json:"shortcode,omitempty"`
+	Type         entity.MilestoneKind `json:"type"`
+	Organization *OrganizationView    `json:"organization,omitempty"`
+	Author       *AuthorView          `json:"organization,omitempty"`
+	Outcomes     []*OutcomeView       `json:"outcomes,omitempty"`
+	CreateAt     int64                `json:"create_at,omitempty"`
+	Program      []*Program           `json:"program,omitempty"`
+	Subject      []*Subject           `json:"subject,omitempty"`
+	Category     []*Category          `json:"category,omitempty"`
+	SubCategory  []*SubCategory       `json:"sub_category,omitempty"`
+	Age          []*Age               `json:"age,omitempty"`
+	Grade        []*Grade             `json:"grade,omitempty"`
+	Description  string               `json:"description,omitempty"`
+	Status       string               `json:"status,omitempty"`
+	LockedBy     string               `json:"locked_by,omitempty"`
+	AncestorID   string               `json:"ancestor_id,omitempty"`
+	SourceID     string               `json:"source_id,omitempty"`
+	LatestID     string               `json:"latest_id,omitempty"`
+	OutcomeCount int                  `json:"outcome_count,omitempty"`
+>>>>>>> feat(NKL-776): general milestone
 
 	ProgramIDs         []string `json:"program_ids,omitempty"`
 	SubjectIDs         []string `json:"subject_ids,omitempty"`
@@ -68,6 +92,7 @@ func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (
 		OrganizationID: op.OrgID,
 		AuthorID:       op.UserID,
 		Description:    ms.Description,
+		Type:           ms.Type,
 
 		Status: entity.OutcomeStatus(ms.Status),
 

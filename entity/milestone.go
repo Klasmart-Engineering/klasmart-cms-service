@@ -1,13 +1,14 @@
 package entity
 
 type Milestone struct {
-	ID             string `gorm:"column:id;primary_key" json:"milestone_id"`
-	Name           string `gorm:"column:name" json:"milestone_name"`
-	Shortcode      string `gorm:"column:shortcode" json:"shortcode"`
-	OrganizationID string `gorm:"column:organization_id" json:"organization_id"`
-	AuthorID       string `gorm:"column:author_id" json:"author_id"`
-	Description    string `gorm:"column:describe" json:"description"`
-	LoCounts       int    `gorm:"-" json:"lo_counts"`
+	ID             string        `gorm:"column:id;primary_key" json:"milestone_id"`
+	Name           string        `gorm:"column:name" json:"milestone_name"`
+	Shortcode      string        `gorm:"column:shortcode" json:"shortcode"`
+	OrganizationID string        `gorm:"column:organization_id" json:"organization_id"`
+	AuthorID       string        `gorm:"column:author_id" json:"author_id"`
+	Description    string        `gorm:"column:describe" json:"description"`
+	LoCounts       int           `gorm:"-" json:"lo_counts"`
+	Type           MilestoneKind `gorm:"-" json:"type"`
 
 	Status OutcomeStatus `gorm:"column:status" json:"status"`
 
@@ -27,6 +28,13 @@ type Milestone struct {
 	Ages          []string   `gorm:"-"`
 	Outcomes      []*Outcome `gorm:"-" json:"outcomes"`
 }
+
+type MilestoneKind int
+
+const (
+	CustomMilestoneType  MilestoneKind = 0
+	GeneralMilestoneType MilestoneKind = 1
+)
 
 func (Milestone) TableName() string {
 	return "milestones"

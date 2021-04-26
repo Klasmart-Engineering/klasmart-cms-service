@@ -121,29 +121,67 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 	return
 }
 
-func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (*entity.Outcome, error) {
-	outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
-	if err == dbo.ErrRecordNotFound {
-		return nil, ErrResourceNotFound
-	}
-	if err != nil {
-		log.Error(ctx, "GetLearningOutcomeByID: GetOutcomeByID failed",
-			log.String("op", operator.UserID),
-			log.String("outcome_id", outcomeID))
-		return nil, err
-	}
-	relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
-		MasterIDs:  dbo.NullStrings{Strings: []string{outcomeID}, Valid: true},
-		MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (outcome *entity.Outcome, err error) {
+
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		outcome, err = da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
+		if err == dbo.ErrRecordNotFound {
+			log.Warn(ctx, "GetLearningOutcomeByID: not found",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return ErrResourceNotFound
+		}
+		if err != nil {
+			log.Error(ctx, "GetLearningOutcomeByID: GetOutcomeByID failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
+		relations, err := da.GetOutcomeRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
+			MasterIDs:  dbo.NullStrings{Strings: []string{outcomeID}, Valid: true},
+			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "GetLearningOutcomeByID: SearchTx failed",
+				log.String("op", operator.UserID),
+				log.String("outcome_id", outcomeID))
+			return err
+		}
+		ocm.FillRelation(outcome, relations)
+
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "GetLearningOutcomeByID: SearchTx failed",
+				log.String("op", operator.UserID),
+				log.String("outcome", outcomeID))
+			return err
+		}
+		milestoneIDs := make([]string, len(milestoneOutcomes))
+		for i := range milestoneOutcomes {
+			milestoneIDs[i] = milestoneOutcomes[i].MilestoneID
+		}
+		if len(milestoneIDs) == 0 {
+			log.Warn(ctx, "GetLearningOutcomeByID: haven't bind milestone",
+				log.String("op", operator.UserID),
+				log.String("outcome", outcomeID))
+			return nil
+		}
+		_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+			IDs: dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "GetLearningOutcomeByID: Search failed",
+				log.String("op", operator.UserID),
+				log.String("outcome", outcomeID))
+			return err
+		}
+		outcome.Milestones = milestones
+		return nil
 	})
-	if err != nil {
-		log.Error(ctx, "GetLearningOutcomeByID: Search failed",
-			log.Err(err),
-			log.String("op", operator.UserID),
-			log.String("outcome_id", outcomeID))
-	}
-	ocm.FillRelation(outcome, relations)
-	return outcome, nil
+	return
 }
 
 func (ocm OutcomeModel) updateOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeID string, sets []*entity.Set) error {

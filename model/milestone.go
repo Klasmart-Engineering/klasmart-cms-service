@@ -121,7 +121,9 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			return err
 		}
 		m.FillRelation(milestone, relations)
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
+		})
 		bindLength := len(milestoneOutcomes)
 		if bindLength == 0 {
 			log.Info(ctx, "Obtain: no outcome bind",
@@ -494,7 +496,9 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("op", op),
 				log.Any("milestone", milestone))
 		}
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
+		})
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),
