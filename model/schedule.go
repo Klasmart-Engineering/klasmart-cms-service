@@ -58,7 +58,7 @@ type IScheduleModel interface {
 	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
-	GetTeachingLoad(ctx context.Context, op *entity.Operator, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error)
+	GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -2628,7 +2628,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	return result, nil
 }
 
-func (s *scheduleModel) GetTeachingLoad(ctx context.Context, op *entity.Operator, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error) {
+func (s *scheduleModel) GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error) {
 	condition := da.NewScheduleTeachLoadCondition(input)
 	teachLoads, err := da.GetScheduleDA().GetTeachLoadByCondition(ctx, dbo.MustGetDB(ctx), condition)
 	if err != nil {
