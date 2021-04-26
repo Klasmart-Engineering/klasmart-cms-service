@@ -308,13 +308,6 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 		return nil, constant.ErrInvalidArgs
 	}
 	result := make([]*ScheduleTeachLoadDBResult, 0, len(condition.TeachLoadTeacherIDs.Strings))
-	//for _, teacherID := range condition.TeachLoadTeacherIDs.Strings {
-	//	item := &ScheduleTeachLoadDBResult{
-	//		TeacherID: teacherID,
-	//		Durations: make([]int64, 0, len(condition.TeachLoadTimeRanges)),
-	//	}
-	//	result = append(result,)
-	//}
 	wheres, parameters := condition.GetConditions()
 	whereSql := strings.Join(wheres, " and ")
 
