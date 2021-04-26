@@ -32,6 +32,7 @@ type OutcomeCondition struct {
 	SourceID       sql.NullString
 	FuzzyKey       sql.NullString
 	AuthorIDs      dbo.NullStrings
+	AncestorIDs    dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        OutcomeOrderBy `json:"order_by"`
@@ -114,6 +115,11 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 	if c.SourceID.Valid {
 		wheres = append(wheres, "source_id=?")
 		params = append(params, c.SourceID.String)
+	}
+
+	if c.AncestorIDs.Valid {
+		wheres = append(wheres, "ancestor_id in (?)")
+		params = append(params, c.AncestorIDs.Strings)
 	}
 
 	if c.Assumed.Valid {

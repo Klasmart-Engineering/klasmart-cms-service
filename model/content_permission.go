@@ -524,14 +524,12 @@ func (s *ContentPermissionModel) checkCMSPermissionBatchForMultiple(ctx context.
 	}
 
 	//if scope is multiple, only has org permission can do it
-	if len(scope) > 1 {
-		for i := range orgIdList {
-			if orgIdList[i].ID == op.OrgID {
-				return true, nil
-			}
+	for i := range orgIdList {
+		if orgIdList[i].ID == op.OrgID {
+			return true, nil
 		}
-		return false, nil
 	}
+
 	for i := range scope {
 		flag := false
 		for j := range orgIdList {
@@ -696,12 +694,29 @@ func (s *ContentPermissionModel) checkHasAnyOrgPermission(ctx context.Context, p
 }
 
 func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content *entity.Content, permission external.PermissionName, op *entity.Operator) (bool, error) {
+	os, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permission)
+	if err != nil {
+		log.Error(ctx, "get permission orgs os failed", log.Err(err))
+		return false, err
+	}
+	for i := range os {
+		if os[i].ID == op.OrgID {
+			log.Info(ctx, "user has org permission",
+				log.Any("orgs", os),
+				log.String("permission", string(permission)),
+				log.Any("user", op),
+				log.Any("content", content))
+			return true, nil
+		}
+	}
+
 	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil {
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return false, err
 	}
-	orgs := []string{op.OrgID}
+
+	orgs := []string{}
 	for i := range schools {
 		orgs = append(orgs, schools[i].ID)
 	}
@@ -712,7 +727,12 @@ func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content 
 			log.String("cid", content.ID))
 		return false, err
 	}
-	log.Info(ctx, "user orgs with permission", log.Strings("orgs", orgs), log.String("permission", string(permission)), log.Any("user", op), log.Any("content", content))
+	log.Info(ctx, "user orgs with permission",
+		log.Strings("orgs", orgs),
+		log.String("permission", string(permission)),
+		log.Strings("visibilitySettings", visibilitySettings),
+		log.Any("user", op),
+		log.Any("content", content))
 	for i := range orgs {
 		if utils.ContainsStr(visibilitySettings, orgs[i]) {
 			return true, nil

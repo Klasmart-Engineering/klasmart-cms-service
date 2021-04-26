@@ -227,7 +227,7 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	//If scope changed, refresh visibility settings
-	if scope != nil {
+	if scope != nil && len(scope) > 0 {
 		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, scope)
 		if err != nil {
 			log.Error(ctx, "refreshContentVisibilitySettings failed",
@@ -2035,17 +2035,14 @@ func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx
 	pendingAddScopes := cm.checkDiff(ctx, alreadyScopes, scope)
 	pendingDeleteScopes := cm.checkDiff(ctx, scope, alreadyScopes)
 
-	err = da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, pendingAddScopes)
-	if err != nil {
-		log.Error(ctx,
-			"BatchCreateContentVisibilitySettings failed",
-			log.Err(err),
-			log.String("cid", cid),
-			log.Strings("alreadyScopes", alreadyScopes),
-			log.Strings("scope", scope),
-			log.Strings("pendingAddScopes", pendingAddScopes))
-		return err
-	}
+	log.Info(ctx,
+		"BatchRefreshContentVisibilitySettings",
+		log.String("cid", cid),
+		log.Strings("alreadyScopes", alreadyScopes),
+		log.Strings("scope", scope),
+		log.Strings("pendingDeleteScopes", pendingDeleteScopes),
+		log.Strings("pendingAddScopes", pendingAddScopes))
+
 	err = da.GetContentDA().BatchDeleteContentVisibilitySettings(ctx, tx, cid, pendingDeleteScopes)
 	if err != nil {
 		log.Error(ctx,
@@ -2055,6 +2052,18 @@ func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx
 			log.Strings("alreadyScopes", alreadyScopes),
 			log.Strings("scope", scope),
 			log.Strings("pendingDeleteScopes", pendingDeleteScopes))
+		return err
+	}
+
+	err = da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, pendingAddScopes)
+	if err != nil {
+		log.Error(ctx,
+			"BatchCreateContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("alreadyScopes", alreadyScopes),
+			log.Strings("scope", scope),
+			log.Strings("pendingAddScopes", pendingAddScopes))
 		return err
 	}
 	return nil

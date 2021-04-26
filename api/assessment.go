@@ -147,6 +147,8 @@ func (s *Server) addAssessment(c *gin.Context) {
 			log.String("new_id", newID),
 		)
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
@@ -183,6 +185,8 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),

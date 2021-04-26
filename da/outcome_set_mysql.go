@@ -216,16 +216,17 @@ func (o SetSqlDA) BulkBindOutcomeSet(ctx context.Context, op *entity.Operator, t
 func (o SetSqlDA) BindOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeSets []*entity.OutcomeSet) error {
 	now := time.Now().Unix()
 	table := entity.OutcomeSet{}.TableName()
-	values := make([]string, len(outcomeSets))
+	values := make([][]interface{}, len(outcomeSets))
 	for i := range outcomeSets {
-		outcomeID := outcomeSets[i].OutcomeID
-		setID := outcomeSets[i].SetID
-		value := fmt.Sprintf("select '%s', '%s', %d, %d where not exists(select * from %s where outcome_id='%s' and set_id='%s' and delete_at is null)",
-			outcomeID, setID, now, now, table, outcomeID, setID)
-		values[i] = value
+		values[i] = []interface{}{
+			outcomeSets[i].OutcomeID,
+			outcomeSets[i].SetID,
+			now + int64(i),
+			now + int64(i),
+		}
 	}
-	sql := fmt.Sprintf("insert into %s(outcome_id, set_id, create_at, update_at) (%s)", table, strings.Join(values, " union "))
-	err := tx.Exec(sql).Error
+	sql, result := SQLBatchInsert(table, []string{"outcome_id", "set_id", "create_at", "update_at"}, values)
+	err := tx.Exec(sql, result...).Error
 	if err != nil {
 		log.Error(ctx, "BindOutcomeSet: failed",
 			log.Err(err),

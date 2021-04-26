@@ -86,4 +86,12 @@ const (
 	AssessmentViewOrgInProgressAssessments425          PermissionName = "view_org_in_progress_assessments_425"
 	AssessmentViewSchoolCompletedAssessments426        PermissionName = "view_school_completed_assessments_426"
 	AssessmentViewSchoolInProgressAssessments427       PermissionName = "view_school_in_progress_assessments_427"
+
+	ViewUnPublishedMilestone   PermissionName = "view_unpublished_milestone_417"
+	ViewPublishedMilestone     PermissionName = "view_published_milestone_418"
+	CreateMilestone            PermissionName = "create_milestone_422"
+	EditUnpublishedMilestone   PermissionName = "edit_unpublished_milestone_440"
+	EditPublishedMilestone     PermissionName = "edit_published_milestone_441"
+	DeleteUnpublishedMilestone PermissionName = "delete_unpublished_milestone_449"
+	DeletePublishedMilestone   PermissionName = "delete_published_milestone_450"
 )

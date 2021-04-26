@@ -95,7 +95,7 @@ func (*assessmentAttendanceDA) BatchInsert(ctx context.Context, tx *dbo.DBContex
 	return nil
 }
 
-// Uncheck all assessment attendances
+// Uncheck assessment all students
 func (a *assessmentAttendanceDA) UncheckStudents(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
 	if err := tx.Model(&entity.AssessmentAttendance{}).Where("assessment_id = ? and role = ?", assessmentID, entity.AssessmentAttendanceRoleStudent).
 		Update("checked", false).
@@ -127,15 +127,15 @@ func (a *assessmentAttendanceDA) BatchCheck(ctx context.Context, tx *dbo.DBConte
 }
 
 type QueryAssessmentAttendanceConditions struct {
-	AssessmentIDs []string
+	AssessmentIDs entity.NullStrings
 	Role          *entity.AssessmentAttendanceRole
 	Checked       *bool
 }
 
 func (c *QueryAssessmentAttendanceConditions) GetConditions() ([]string, []interface{}) {
 	t := NewSQLTemplate("")
-	if len(c.AssessmentIDs) > 0 {
-		t.Appendf("assessment_id in (?)", c.AssessmentIDs)
+	if c.AssessmentIDs.Valid {
+		t.Appendf("assessment_id in (?)", c.AssessmentIDs.Strings)
 	}
 	if c.Role != nil {
 		t.Appendf("role = ?", *c.Role)
