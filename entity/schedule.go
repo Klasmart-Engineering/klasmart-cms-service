@@ -735,3 +735,26 @@ type ScheduleViewDetail struct {
 	RoomID        string               `json:"room_id"`
 	//LiveToken     string               `json:"live_token"`
 }
+
+type ScheduleTeachingLoadInput struct {
+	OrgID      string
+	ClassIDs   []string
+	TeacherIDs []string
+	TimeRanges []*ScheduleTimeRange
+}
+type ScheduleTimeRange struct {
+	StartAt int64
+	EndAt   int64
+}
+
+type ScheduleTeachingLoadView struct {
+	TeacherID string
+	ClassType ScheduleClassType
+	Durations []*ScheduleTeachingDuration
+}
+
+type ScheduleTeachingDuration struct {
+	StartAt  int64
+	EndAt    int64
+	Duration int64
+}

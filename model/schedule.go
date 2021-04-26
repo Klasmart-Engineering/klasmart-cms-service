@@ -58,6 +58,7 @@ type IScheduleModel interface {
 	GetScheduleViewByID(ctx context.Context, op *entity.Operator, id string) (*entity.ScheduleViewDetail, error)
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
+	GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -2624,6 +2625,32 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	result.Teachers = users.Teachers
 	result.Students = users.Students
 
+	return result, nil
+}
+
+func (s *scheduleModel) GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error) {
+	condition := da.NewScheduleTeachLoadCondition(input)
+	teachLoads, err := da.GetScheduleDA().GetTeachLoadByCondition(ctx, dbo.MustGetDB(ctx), condition)
+	if err != nil {
+		log.Error(ctx, "get teach load condition", log.Err(err), log.Any("input", input), log.Any("condition", condition))
+		return nil, err
+	}
+	result := make([]*entity.ScheduleTeachingLoadView, 0, len(teachLoads))
+	for _, loadItem := range teachLoads {
+		resultItem := &entity.ScheduleTeachingLoadView{
+			TeacherID: loadItem.TeacherID,
+			ClassType: loadItem.ClassType,
+			Durations: make([]*entity.ScheduleTeachingDuration, 0, len(input.TimeRanges)),
+		}
+		for i, duration := range loadItem.Durations {
+			durationItem := new(entity.ScheduleTeachingDuration)
+			durationItem.StartAt = input.TimeRanges[i].StartAt
+			durationItem.EndAt = input.TimeRanges[i].EndAt
+			durationItem.Duration = duration
+			resultItem.Durations = append(resultItem.Durations, durationItem)
+		}
+		result = append(result, resultItem)
+	}
 	return result, nil
 }
 
