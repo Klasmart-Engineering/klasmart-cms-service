@@ -391,3 +391,8 @@ type ReportListTeachingLoadDuration struct {
 	Online  int64 `json:"online"`
 	Offline int64 `json:"offline"`
 }
+
+const (
+	ListTeachingLoadReportOptionAll        = "all"
+	ListTeachingLoadReportOptionNoAssigned = "no_assigned"
+)

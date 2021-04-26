@@ -2065,8 +2065,116 @@ func (rm *reportModel) getActivityFlashCards(materialID string, meta string, eve
 // region teaching report
 
 func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadResult, error) {
-	// TODO: Medivh
-	// args preprocess: translate "all" and paging
+	if len(args.TeacherIDs) == 0 {
+		log.Error(ctx, "ListTeachingLoadReport: require teacher ids",
+			log.Any("operator", operator),
+			log.Any("args", args),
+		)
+		return nil, constant.ErrInvalidArgs
+	}
+
+	if args.TeacherIDs[0] == entity.ListTeachingLoadReportOptionAll {
+		args.TeacherIDs = nil
+		switch args.SchoolID {
+		case "":
+			log.Error(ctx, "ListTeachingLoadReport: require school id",
+				log.Any("operator", operator),
+				log.Any("args", args),
+			)
+			return nil, constant.ErrInvalidArgs
+		case entity.ListTeachingLoadReportOptionAll:
+			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
+			if err != nil {
+				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetByOrganization: require teacher ids",
+					log.Err(err),
+					log.Any("operator", operator),
+					log.Any("args", args),
+				)
+				return nil, err
+			}
+			for _, t := range teachers {
+				args.TeacherIDs = append(args.TeacherIDs, t.ID)
+			}
+		case entity.ListTeachingLoadReportOptionNoAssigned:
+			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
+			if err != nil {
+				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetByOrganization: get failed",
+					log.Err(err),
+					log.Any("operator", operator),
+					log.Any("args", args),
+				)
+				return nil, err
+			}
+			var teacherIDs []string
+			for _, t := range teachers {
+				teacherIDs = append(teacherIDs, t.ID)
+			}
+			userSchoolsMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, operator, operator.OrgID, teacherIDs)
+			if err != nil {
+				log.Error(ctx, "ListTeachingLoadReport: external.GetSchoolServiceProvider().BatchGet: batch get failed",
+					log.Err(err),
+					log.Any("operator", operator),
+					log.Any("args", args),
+				)
+				return nil, err
+			}
+			for tid, schools := range userSchoolsMap {
+				if len(schools) == 0 {
+					args.TeacherIDs = append(args.TeacherIDs, tid)
+				}
+			}
+		default:
+			teachers, err := external.GetTeacherServiceProvider().GetBySchool(ctx, operator, args.SchoolID)
+			if err != nil {
+				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetBySchool: get failed",
+					log.Err(err),
+					log.String("school_id", args.SchoolID),
+					log.Any("operator", operator),
+					log.Any("args", args),
+				)
+				return nil, err
+			}
+			args.TeacherIDs = nil
+			for _, t := range teachers {
+				args.TeacherIDs = append(args.TeacherIDs, t.ID)
+			}
+		}
+	} else if len(args.TeacherIDs) == 1 {
+		if len(args.ClassIDs) > 0 && args.ClassIDs[0] == entity.ListTeachingLoadReportOptionAll {
+			args.ClassIDs = nil
+			classes, err := external.GetClassServiceProvider().GetByUserID(ctx, operator, args.TeacherIDs[0])
+			if err != nil {
+				log.Error(ctx, "ListTeachingLoadReport: external.GetClassServiceProvider().GetByUserID: get failed",
+					log.Err(err),
+					log.String("teacher_id", args.TeacherIDs[0]),
+					log.Any("operator", operator),
+					log.Any("args", args),
+				)
+			}
+			for _, c := range classes {
+				args.ClassIDs = append(args.ClassIDs, c.ID)
+			}
+		}
+	}
+
+	// permission check
+	checker := NewAssessmentPermissionChecker(operator)
+	if err := checker.SearchAllPermissions(ctx); err != nil {
+		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAllPermissions: search failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("args", args),
+		)
+		return nil, err
+	}
+	if !checker.CheckTeacherIDs(args.TeacherIDs) {
+		log.Error(ctx, "ListTeachingLoadReport: check failed",
+			log.Strings("teacher_ids", args.TeacherIDs),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, constant.ErrForbidden
+	}
 
 	// prepend time ranges
 	var (
