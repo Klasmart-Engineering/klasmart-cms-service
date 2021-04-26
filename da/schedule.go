@@ -304,7 +304,8 @@ type ScheduleTeachLoadDBResult struct {
 //FROM `schedules` inner join  schedules_relations on (schedules.id = schedules_relations.schedule_id) WHERE (org_id = '72e47ef0-92bf-4429-a06f-2014e3d3df4b' and class_type in ('OfflineClass','OnlineClass') and exists(select 1 from schedules_relations where relation_id in ('5751555a-cc18-4662-9ae5-a5ad90569f79','49b3be6a-d139-4f82-9b77-0acc89525d3f') and relation_type in ('class_roster_class','participant_class') and schedules.id = schedules_relations.schedule_id) and schedules_relations.relation_id in ('4fde6e1b-8efe-58e9-a404-51fb98ebf9b8','42098862-28b1-5417-9800-3b89e557a2b9') and (delete_at=0))
 //GROUP BY schedules_relations.relation_id,schedules.class_type
 func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBContext, condition *ScheduleCondition) ([]*ScheduleTeachLoadDBResult, error) {
-	if len(condition.TeachLoadTimeRanges) <= 0 {
+	if len(condition.TeachLoadTimeRanges) <= 0 || len(condition.TeachLoadTeacherIDs.Strings) <= 0 {
+		log.Info(ctx, "params invalid", log.Any("condition", condition))
 		return nil, constant.ErrInvalidArgs
 	}
 	result := make([]*ScheduleTeachLoadDBResult, 0, len(condition.TeachLoadTeacherIDs.Strings))
@@ -347,6 +348,9 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 		Rows()
 
 	if gorm.IsRecordNotFoundError(err) {
+		log.Error(ctx, "get teach load not found from db",
+			log.Err(err),
+			log.Any("condition", condition))
 		return nil, constant.ErrRecordNotFound
 	}
 	if err != nil {
@@ -357,7 +361,20 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 		return nil, err
 	}
 	defer rows.Close()
-	cols, _ := rows.Columns()
+	cols, err := rows.Columns()
+	if err != nil {
+		log.Error(ctx, "rows columns error",
+			log.Err(err),
+			log.Any("condition", condition),
+		)
+	}
+	if len(cols) < 3 {
+		log.Error(ctx, "rows columns is invalid",
+			log.Strings("cols", cols),
+			log.Any("condition", condition),
+		)
+		return nil, constant.ErrInternalServer
+	}
 	values := make([][]byte, len(cols))
 	scans := make([]interface{}, len(cols))
 	for i := range values {
@@ -369,9 +386,7 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 			log.Error(ctx, "rows scan error", log.Any("condition", condition), log.Err(err))
 			return nil, err
 		}
-		if len(values) < 2 {
-			continue
-		}
+
 		loadItem := new(ScheduleTeachLoadDBResult)
 		loadItem.TeacherID = string(values[0])
 
