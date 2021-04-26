@@ -34,7 +34,7 @@ type MilestoneView struct {
 	Name         string            `json:"milestone_name,omitempty"`
 	Shortcode    string            `json:"shortcode,omitempty"`
 	Organization *OrganizationView `json:"organization,omitempty"`
-	Author       *AuthorView       `json:"organization,omitempty"`
+	Author       *AuthorView       `json:"author,omitempty"`
 	Outcomes     []*OutcomeView    `json:"outcomes,omitempty"`
 	CreateAt     int64             `json:"create_at,omitempty"`
 	Program      []*Program        `json:"program,omitempty"`
