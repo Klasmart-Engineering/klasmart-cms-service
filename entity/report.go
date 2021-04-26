@@ -375,14 +375,14 @@ type ReportListTeachingLoadArgs struct {
 }
 
 type ReportListTeachingLoadResult struct {
-	Items []ReportListTeachingLoadItem `json:"items"`
-	Total int                          `json:"total"`
+	Items []*ReportListTeachingLoadItem `json:"items"`
+	Total int                           `json:"total"`
 }
 
 type ReportListTeachingLoadItem struct {
-	TeacherID   string                           `json:"teacher_id"`
-	TeacherName string                           `json:"teacher_name"`
-	Durations   []ReportListTeachingLoadDuration `json:"durations"`
+	TeacherID   string                            `json:"teacher_id"`
+	TeacherName string                            `json:"teacher_name"`
+	Durations   []*ReportListTeachingLoadDuration `json:"durations"`
 }
 
 type ReportListTeachingLoadDuration struct {

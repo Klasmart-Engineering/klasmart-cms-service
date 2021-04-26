@@ -2065,7 +2065,107 @@ func (rm *reportModel) getActivityFlashCards(materialID string, meta string, eve
 // region teaching report
 
 func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadResult, error) {
-	panic("implement me")
+	// TODO: Medivh
+	// args preprocess: translate "all" and paging
+
+	// prepend time ranges
+	var (
+		ranges     []*entity.ScheduleTimeRange
+		now        = time.Now().In(time.FixedZone("", args.TimeOffset))
+		start, end = utils.BeginOfDay(now), utils.EndOfDay(now)
+	)
+	for i := 0; i < 7; i++ {
+		ranges = append(ranges, &entity.ScheduleTimeRange{
+			StartAt: start.Unix(),
+			EndAt:   end.Unix(),
+		})
+		start = start.Add(24 * time.Hour)
+		end = end.Add(24 * time.Hour)
+	}
+
+	// call schedule module
+	input := entity.ScheduleTeachingLoadInput{
+		OrgID:      operator.OrgID,
+		ClassIDs:   args.ClassIDs,
+		TeacherIDs: args.TeacherIDs,
+		TimeRanges: ranges,
+	}
+	loads, err := GetScheduleModel().GetTeachingLoad(ctx, &input)
+	if err != nil {
+		log.Error(ctx, "ListTeachingLoadReport: GetScheduleModel().GetTeachingLoad: get failed",
+			log.Err(err),
+			log.Any("input", input),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	// batch get teacher name map
+	teacherNameMap, err := external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, args.TeacherIDs)
+	if err != nil {
+		log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().BatchGetNameMap: batch get failed",
+			log.Err(err),
+			log.Any("teacher_ids", args.TeacherIDs),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	// build duration map
+	type durationKey struct {
+		TeacherID string
+		ClassType entity.ScheduleClassType
+		StartAt   int64
+		EndAt     int64
+	}
+	durationsMap := map[durationKey]int64{}
+	for _, l := range loads {
+		for _, d := range l.Durations {
+			durationsMap[durationKey{
+				TeacherID: l.TeacherID,
+				ClassType: l.ClassType,
+				StartAt:   d.StartAt,
+				EndAt:     d.EndAt,
+			}] = d.Duration
+		}
+	}
+
+	// mapping result
+	r := entity.ReportListTeachingLoadResult{
+		Items: nil,
+		Total: len(loads),
+	}
+	for _, l := range loads {
+		item := entity.ReportListTeachingLoadItem{
+			TeacherID:   l.TeacherID,
+			TeacherName: teacherNameMap[l.TeacherID],
+		}
+		for _, r := range ranges {
+			online := durationsMap[durationKey{
+				TeacherID: l.TeacherID,
+				ClassType: entity.ScheduleClassTypeOnlineClass,
+				StartAt:   r.StartAt,
+				EndAt:     r.EndAt,
+			}]
+			offline := durationsMap[durationKey{
+				TeacherID: l.TeacherID,
+				ClassType: entity.ScheduleClassTypeOfflineClass,
+				StartAt:   r.StartAt,
+				EndAt:     r.EndAt,
+			}]
+			item.Durations = append(item.Durations, &entity.ReportListTeachingLoadDuration{
+				StartAt: r.StartAt,
+				EndAt:   r.EndAt,
+				Online:  online,
+				Offline: offline,
+			})
+		}
+		r.Items = append(r.Items)
+	}
+
+	return &r, nil
 }
 
 // endregion
