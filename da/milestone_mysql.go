@@ -350,7 +350,7 @@ func (c *MilestoneOutcomeCondition) GetOrderBy() string {
 	return "update_at desc"
 }
 
-func (mso MilestoneOutcomeSqlDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *MilestoneOutcomeCondition) ([]*entity.MilestoneOutcome, error) {
+func (mso MilestoneOutcomeSQLDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *MilestoneOutcomeCondition) ([]*entity.MilestoneOutcome, error) {
 	var result []*entity.MilestoneOutcome
 	_, err := mso.BaseDA.PageTx(ctx, tx, condition, &result)
 	if err != nil {
