@@ -8,7 +8,7 @@ type Milestone struct {
 	AuthorID       string        `gorm:"column:author_id" json:"author_id"`
 	Description    string        `gorm:"column:describe" json:"description"`
 	LoCounts       int           `gorm:"-" json:"lo_counts"`
-	Type           MilestoneKind `gorm:"-" json:"type"`
+	Type           MilestoneKind `gorm:"column:type" json:"type"`
 
 	Status OutcomeStatus `gorm:"column:status" json:"status"`
 

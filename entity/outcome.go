@@ -54,7 +54,7 @@ type Outcome struct {
 	Subcategories []string     `gorm:"-"`
 	Grades        []string     `gorm:"-"`
 	Ages          []string     `gorm:"-"`
-	Milestones    []*Milestone `gorm:"-"`
+	Milestones    []*Milestone `gorm:"-" json:"milestones"`
 }
 
 func (Outcome) TableName() string {
