@@ -447,13 +447,6 @@ func (s *Server) saveAndPublishMilestone(c *gin.Context) {
 		return
 	}
 	err = model.GetMilestoneModel().SaveAndPublish(ctx, op, perms, milestone, data.OutcomeAncestorIDs)
-	if err != nil {
-		log.Error(ctx, "saveAndPublishMilestone: Update failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.String("milestone", milestoneID),
-			log.Any("request", data))
-	}
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))

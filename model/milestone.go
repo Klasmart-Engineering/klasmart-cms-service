@@ -659,7 +659,7 @@ func (m MilestoneModel) SaveAndPublish(ctx context.Context, op *entity.Operator,
 		}
 		switch ms.Status {
 		case entity.OutcomeStatusDraft:
-			if !perms[external.EditUnpublishedMilestone] {
+			if !perms[external.CreateMilestone] {
 				log.Error(ctx, "SaveAndPublish: perm failed",
 					log.Err(err),
 					log.Any("perms", perms),
@@ -668,6 +668,10 @@ func (m MilestoneModel) SaveAndPublish(ctx context.Context, op *entity.Operator,
 				return constant.ErrOperateNotAllowed
 			}
 		default:
+			log.Warn(ctx, "SaveAndPublish: status not allowed",
+				log.Err(err),
+				log.Any("op", op),
+				log.Any("milestone", ms))
 			return constant.ErrOperateNotAllowed
 		}
 
@@ -682,6 +686,10 @@ func (m MilestoneModel) SaveAndPublish(ctx context.Context, op *entity.Operator,
 				return err
 			}
 			if exists {
+				log.Warn(ctx, "SaveAndPublish: isOccupied",
+					log.Err(err),
+					log.Any("op", op),
+					log.Any("milestone", ms))
 				return constant.ErrConflict
 			}
 		}
@@ -750,6 +758,7 @@ func (m MilestoneModel) SaveAndPublish(ctx context.Context, op *entity.Operator,
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("milestone", ms))
+			return err
 		}
 		return nil
 	})
