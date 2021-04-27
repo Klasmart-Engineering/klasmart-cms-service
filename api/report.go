@@ -302,8 +302,8 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 	operator := s.getOperator(c)
 	args := entity.ReportListTeachingLoadArgs{
 		SchoolID:   c.Query("school_id"),
-		TeacherIDs: utils.ParseURLQueryArray("teacher_ids"),
-		ClassIDs:   utils.ParseURLQueryArray("class_ids"),
+		TeacherIDs: utils.ParseURLQueryArray(c.Query("teacher_ids")),
+		ClassIDs:   utils.ParseURLQueryArray(c.Query("class_ids")),
 	}
 	if s := c.Query("time_offset"); s != "" {
 		v, err := strconv.Atoi(s)
