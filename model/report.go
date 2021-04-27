@@ -2229,7 +2229,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 		return nil, err
 	}
 
-	// build duration map
+	// build duration map and teacher load map
 	type durationKey struct {
 		TeacherID string
 		ClassType entity.ScheduleClassType
@@ -2237,7 +2237,9 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 		EndAt     int64
 	}
 	durationsMap := make(map[durationKey]int64, len(loads)*constant.ReportTeachingLoadDays)
+	teacherLoadMap := make(map[string]*entity.ScheduleTeachingLoadView, len(args.TeacherIDs))
 	for _, l := range loads {
+		teacherLoadMap[l.TeacherID] = l
 		for _, d := range l.Durations {
 			durationsMap[durationKey{
 				TeacherID: l.TeacherID,
@@ -2253,7 +2255,11 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 		Items: nil,
 		Total: len(loads),
 	}
-	for _, l := range loads {
+	for _, tid := range args.TeacherIDs {
+		l := teacherLoadMap[tid]
+		if l == nil {
+			l = &entity.ScheduleTeachingLoadView{TeacherID: tid}
+		}
 		item := entity.ReportListTeachingLoadItem{
 			TeacherID:   l.TeacherID,
 			TeacherName: teacherNameMap[l.TeacherID],
