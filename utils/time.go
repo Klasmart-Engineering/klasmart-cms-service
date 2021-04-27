@@ -64,26 +64,6 @@ func EndOfDayByTime(t time.Time, la *time.Location) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, la)
 }
 
-func BeginOfDay(t ...time.Time) time.Time {
-	var finalT time.Time
-	if len(t) > 0 {
-		finalT = t[0]
-	} else {
-		finalT = time.Now()
-	}
-	return time.Date(finalT.Year(), finalT.Month(), finalT.Day(), 0, 0, 0, 0, finalT.Location())
-}
-
-func EndOfDay(t ...time.Time) time.Time {
-	var finalT time.Time
-	if len(t) > 0 {
-		finalT = t[0]
-	} else {
-		finalT = time.Now()
-	}
-	return time.Date(finalT.Year(), finalT.Month(), finalT.Day(), 23, 59, 59, 999, finalT.Location())
-}
-
 func TodayZero(t time.Time) time.Time {
 	_, offset := t.Zone()
 	duration := time.Second * time.Duration(offset)

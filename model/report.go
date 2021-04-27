@@ -2179,8 +2179,9 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 	// prepend time ranges
 	var (
 		ranges     []*entity.ScheduleTimeRange
-		now        = time.Now().In(time.FixedZone("", args.TimeOffset))
-		start, end = utils.BeginOfDay(now), utils.EndOfDay(now)
+		loc        = time.FixedZone("report_teaching_load", args.TimeOffset)
+		now        = time.Now()
+		start, end = utils.BeginOfDayByTime(now, loc), utils.EndOfDayByTime(now, loc)
 	)
 	for i := 0; i < constant.ReportTeachingLoadDays; i++ {
 		ranges = append(ranges, &entity.ScheduleTimeRange{
