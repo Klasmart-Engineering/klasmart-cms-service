@@ -2156,6 +2156,9 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 			}
 		}
 	}
+	if len(args.ClassIDs) > 0 && args.ClassIDs[0] == entity.ListTeachingLoadReportOptionAll {
+		args.ClassIDs = nil
+	}
 
 	// permission check
 	checker := NewReportPermissionChecker(operator)
