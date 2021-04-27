@@ -27,6 +27,7 @@ var (
 	ErrInvalidContentData                = errors.New("invalid content data")
 	ErrMarshalContentDataFailed          = errors.New("marshal content data failed")
 	ErrInvalidPublishStatus              = errors.New("invalid publish status")
+	ErrPlanHasArchivedMaterials          = errors.New("plan has archived materials")
 	ErrInvalidLockedContentPublishStatus = errors.New("invalid locked content publish status")
 	ErrInvalidContentStatusToPublish     = errors.New("content status is invalid to publish")
 	ErrNoContent                         = errors.New("no content")
@@ -105,6 +106,7 @@ type IContentModel interface {
 	GetLatestContentIDByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]string, error)
 	GetPastContentIDByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetRawContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error)
+	GetRawContentByIDListWithVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentWithVisibilitySettings, error)
 
 	GetContentNameByID(ctx context.Context, tx *dbo.DBContext, cid string) (*entity.ContentName, error)
 	GetContentNameByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentName, error)
@@ -597,19 +599,21 @@ func (cm *ContentModel) UpdateContentPublishStatus(ctx context.Context, tx *dbo.
 		log.Error(ctx, "update contentdata scope failed", log.Err(err))
 		return ErrUpdateContentFailed
 	}
-	//更新Folder信息
-	//update folder info
-	err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), operator)
-	if err != nil {
-		return err
-	}
 
-	if status == entity.ContentStatusPublished && content.SourceID != "" {
-		//处理source content
-		//handle with source content
-		err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
+	if status == entity.ContentStatusPublished {
+		//更新Folder信息
+		//update folder info
+		err = GetFolderModel().AddOrUpdateOrgFolderItem(ctx, tx, entity.FolderPartitionMaterialAndPlans, content.DirPath, entity.ContentLink(content.ID), operator)
 		if err != nil {
 			return err
+		}
+		if content.SourceID != "" {
+			//处理source content
+			//handle with source content
+			err = cm.handleSourceContent(ctx, tx, content.ID, content.SourceID)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1655,6 +1659,23 @@ func (cm *ContentModel) GetContentNameByID(ctx context.Context, tx *dbo.DBContex
 		ContentType: obj.ContentType,
 	}, nil
 }
+func (cm *ContentModel) GetRawContentByIDListWithVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.ContentWithVisibilitySettings, error) {
+	contentList, err := cm.GetRawContentByIDList(ctx, tx, cids)
+	if err != nil {
+		return nil, err
+	}
+	visibilitySettings, err := cm.buildVisibilitySettingsMapByRawContent(ctx, contentList)
+	if err != nil {
+		log.Error(ctx, "buildVisibilitySettingsMapByRawContent failed", log.Err(err), log.Any("contentList", contentList))
+		return nil, err
+	}
+	ret := make([]*entity.ContentWithVisibilitySettings, len(contentList))
+	for i := range contentList {
+		ret[i] = &entity.ContentWithVisibilitySettings{Content: *contentList[i]}
+		ret[i].VisibilitySettings = visibilitySettings[ret[i].ID]
+	}
+	return ret, nil
+}
 
 func (cm *ContentModel) GetRawContentByIDList(ctx context.Context, tx *dbo.DBContext, cids []string) ([]*entity.Content, error) {
 	obj, err := da.GetContentDA().GetContentByIDList(ctx, tx, cids)
@@ -2421,7 +2442,7 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 		if children[i].PublishStatus != entity.ContentStatusPublished &&
 			children[i].PublishStatus != entity.ContentStatusHidden {
 			log.Warn(ctx, "check children status failed", log.Any("content", children[i]))
-			return ErrInvalidPublishStatus
+			return ErrPlanHasArchivedMaterials
 		}
 	}
 	//TODO:For authed content => update check for authed content list
@@ -2430,6 +2451,29 @@ func (cm *ContentModel) checkPublishContentChildren(ctx context.Context, c *enti
 }
 
 func (cm *ContentModel) buildVisibilitySettingsMap(ctx context.Context, contentList []*entity.ContentInfo) (map[string][]string, error) {
+	contentIDs := make([]string, len(contentList))
+	for i := range contentList {
+		contentIDs[i] = contentList[i].ID
+	}
+
+	visibilitySettings, err := da.GetContentDA().SearchContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), &da.ContentVisibilitySettingsCondition{
+		ContentIDs: contentIDs,
+	})
+	if err != nil {
+		log.Error(ctx, "GetContentVisibilitySettings failed",
+			log.Err(err),
+			log.Any("contentList", contentList))
+		return nil, err
+	}
+
+	ret := make(map[string][]string)
+	for i := range visibilitySettings {
+		ret[visibilitySettings[i].ContentID] = append(ret[visibilitySettings[i].ContentID], visibilitySettings[i].VisibilitySetting)
+	}
+	return ret, nil
+}
+
+func (cm *ContentModel) buildVisibilitySettingsMapByRawContent(ctx context.Context, contentList []*entity.Content) (map[string][]string, error) {
 	contentIDs := make([]string, len(contentList))
 	for i := range contentList {
 		contentIDs[i] = contentList[i].ID
