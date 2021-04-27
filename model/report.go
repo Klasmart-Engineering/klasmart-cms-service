@@ -2182,7 +2182,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 		now        = time.Now().In(time.FixedZone("", args.TimeOffset))
 		start, end = utils.BeginOfDay(now), utils.EndOfDay(now)
 	)
-	for i := 0; i < 7; i++ {
+	for i := 0; i < constant.ReportTeachingLoadDays; i++ {
 		ranges = append(ranges, &entity.ScheduleTimeRange{
 			StartAt: start.Unix(),
 			EndAt:   end.Unix(),
@@ -2228,7 +2228,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 		StartAt   int64
 		EndAt     int64
 	}
-	durationsMap := map[durationKey]int64{}
+	durationsMap := make(map[durationKey]int64, len(loads)*constant.ReportTeachingLoadDays)
 	for _, l := range loads {
 		for _, d := range l.Durations {
 			durationsMap[durationKey{
