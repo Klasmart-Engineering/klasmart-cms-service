@@ -2181,7 +2181,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 	var (
 		ranges     []*entity.ScheduleTimeRange
 		loc        = time.FixedZone("report_teaching_load", args.TimeOffset)
-		now        = time.Now().In(time.UTC)
+		now        = time.Now()
 		start, end = utils.BeginOfDayByTime(now, loc), utils.EndOfDayByTime(now, loc)
 	)
 	for i := 0; i < constant.ReportTeachingLoadDays; i++ {
@@ -2189,8 +2189,8 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 			StartAt: start.Unix(),
 			EndAt:   end.Unix(),
 		})
-		start = start.Add(24 * time.Hour)
-		end = end.Add(24 * time.Hour)
+		start = start.AddDate(0, 0, 1)
+		end = end.AddDate(0, 0, 1)
 	}
 
 	// call schedule module
