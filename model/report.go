@@ -2164,6 +2164,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("args", args),
+			log.Any("checker", checker),
 		)
 		return nil, err
 	} else if !ok {
