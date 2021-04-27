@@ -2181,7 +2181,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 	var (
 		ranges     []*entity.ScheduleTimeRange
 		loc        = time.FixedZone("report_teaching_load", args.TimeOffset)
-		now        = time.Now()
+		now        = time.Now().In(time.UTC)
 		start, end = utils.BeginOfDayByTime(now, loc), utils.EndOfDayByTime(now, loc)
 	)
 	for i := 0; i < constant.ReportTeachingLoadDays; i++ {
@@ -2200,6 +2200,9 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 		TeacherIDs: args.TeacherIDs,
 		TimeRanges: ranges,
 	}
+	log.Debug(ctx, "ListTeachingLoadReport: print call schedule args",
+		log.Any("input", input),
+	)
 	loads, err := GetScheduleModel().GetTeachingLoad(ctx, &input)
 	if err != nil {
 		log.Error(ctx, "ListTeachingLoadReport: GetScheduleModel().GetTeachingLoad: get failed",
