@@ -2172,6 +2172,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 			log.Strings("teacher_ids", args.TeacherIDs),
 			log.Any("args", args),
 			log.Any("operator", operator),
+			log.Any("checker", checker),
 		)
 		return nil, constant.ErrForbidden
 	}
