@@ -2253,7 +2253,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 	// mapping result
 	r := entity.ReportListTeachingLoadResult{
 		Items: nil,
-		Total: len(loads),
+		Total: len(args.TeacherIDs),
 	}
 	for _, tid := range args.TeacherIDs {
 		l := teacherLoadMap[tid]
