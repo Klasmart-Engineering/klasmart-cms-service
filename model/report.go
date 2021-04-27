@@ -2284,7 +2284,7 @@ func (rm *reportModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBCon
 				Offline: offline,
 			})
 		}
-		r.Items = append(r.Items)
+		r.Items = append(r.Items, &item)
 	}
 
 	return &r, nil
