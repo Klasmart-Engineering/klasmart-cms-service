@@ -213,7 +213,6 @@ func ContentLink(id string) string {
 }
 
 type ContentVisibilitySetting struct {
-	ID                int    `gorm:"type:int;PRIMARY_KEY;AUTO_INCREMENT"`
 	ContentID         string `gorm:"type:char(50);NOT NULL;column:content_id"`
 	VisibilitySetting string `gorm:"type:char(50);NOT NULL;column:visibility_setting;index"`
 }
@@ -223,7 +222,6 @@ func (ContentVisibilitySetting) TableName() string {
 }
 
 type ContentProperty struct {
-	ID           int                 `gorm:"type:int;AUTO_INCREMENT;PRIMARY_KEY"`
 	PropertyType ContentPropertyType `gorm:"type:int;column:property_type"`
 	ContentID    string              `gorm:"type: varchar(50);column:content_id"`
 	PropertyID   string              `gorm:"type: varchar(50);column:property_id"`
@@ -232,6 +230,11 @@ type ContentProperty struct {
 
 func (ContentProperty) TableName() string {
 	return "cms_content_properties"
+}
+
+type ContentWithVisibilitySettings struct {
+	Content
+	VisibilitySettings []string
 }
 
 type Content struct {
