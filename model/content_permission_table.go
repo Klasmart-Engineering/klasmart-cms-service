@@ -64,7 +64,7 @@ func (p PermissionSet) HasPermission(ctx context.Context, operator *entity.Opera
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, p.Permissions)
 	if err != nil {
-		log.Error(ctx, "HasOrganizationPermissions failed",
+		log.Warn(ctx, "HasOrganizationPermissions failed",
 			log.Any("operator", operator),
 			log.Any("permissions", p.Permissions),
 			log.Err(err))
@@ -94,7 +94,7 @@ func (p PermissionSets) HasPermission(ctx context.Context, operator *entity.Oper
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissions)
 	if err != nil {
-		log.Error(ctx, "HasOrganizationPermissions failed",
+		log.Warn(ctx, "HasOrganizationPermissions failed",
 			log.Any("operator", operator),
 			log.Any("permissions", permissions),
 			log.Err(err))
@@ -146,7 +146,7 @@ func (p PermissionSetsList) HasPermission(ctx context.Context, operator *entity.
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissions)
 	if err != nil {
-		log.Error(ctx, "HasOrganizationPermissions failed",
+		log.Warn(ctx, "HasOrganizationPermissions failed",
 			log.Any("operator", operator),
 			log.Any("permissions", permissions),
 			log.Err(err))
@@ -254,19 +254,23 @@ func (c *ContentPermissionTable) loadContentPermissionDict() {
 
 func (c *ContentPermissionTable) GetCreatePermissionSets(ctx context.Context, req ContentProfile) (IPermissionSet, error) {
 	if v, ok := c.createPermissionDict[req]; ok {
-		log.Info(ctx, "get create permission", log.Any("permissionSets", v))
 		return PermissionSets(v), nil
 	}
 
+	log.Warn(context.TODO(), "undefined permission",
+		log.Any("ContentType", req),
+		log.Err(ErrUndefinedPermission))
 	return nil, ErrUndefinedPermission
 }
 
 func (c *ContentPermissionTable) GetEditPermissionSets(ctx context.Context, req ContentProfile) (IPermissionSet, error) {
 	if v, ok := c.editPermissionDict[req]; ok {
-		log.Info(ctx, "get edit permission", log.Any("permissionSets", v))
 		return PermissionSets(v), nil
 	}
 
+	log.Warn(context.TODO(), "undefined permission",
+		log.Any("ContentType", req),
+		log.Err(ErrUndefinedPermission))
 	return nil, ErrUndefinedPermission
 }
 
@@ -278,6 +282,9 @@ func (c *ContentPermissionTable) GetPublishPermissionSets(ctx context.Context, r
 		key := *req[i]
 		if _, ok := set[key]; !ok {
 			if _, ok := c.publishPermissionDict[key]; !ok {
+				log.Warn(context.TODO(), "undefined permission",
+					log.Any("ContentType", key),
+					log.Err(ErrUndefinedPermission))
 				return nil, ErrUndefinedPermission
 			}
 
@@ -297,6 +304,9 @@ func (c *ContentPermissionTable) GetViewPermissionSets(ctx context.Context, req 
 		key := *req[i]
 		if _, ok := set[key]; !ok {
 			if _, ok := c.viewPermissionDict[key]; !ok {
+				log.Warn(context.TODO(), "undefined permission",
+					log.Any("ContentType", key),
+					log.Err(ErrUndefinedPermission))
 				return nil, ErrUndefinedPermission
 			}
 
@@ -316,6 +326,9 @@ func (c *ContentPermissionTable) GetRemovePermissionSets(ctx context.Context, re
 		key := *req[i]
 		if _, ok := set[key]; !ok {
 			if _, ok := c.removePermissionDict[key]; !ok {
+				log.Warn(context.TODO(), "undefined permission",
+					log.Any("ContentType", key),
+					log.Err(ErrUndefinedPermission))
 				return nil, ErrUndefinedPermission
 			}
 
