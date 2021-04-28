@@ -21,6 +21,7 @@ type UserServiceProvider interface {
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
+	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type User struct {
@@ -270,4 +271,9 @@ func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, 
 	}
 
 	return data.NewUser.UserID, nil
+}
+
+func (s AmsUserService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
+	// TODO
+	return nil, nil
 }
