@@ -267,9 +267,13 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 			}
 		}
 	}
+
 	if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
 		args.ClassIDs = nil
 	}
+
+	args.TeacherIDs = utils.SliceDeduplicationExcludeEmpty(args.TeacherIDs)
+	args.ClassIDs = utils.SliceDeduplicationExcludeEmpty(args.ClassIDs)
 
 	return args, nil
 }
