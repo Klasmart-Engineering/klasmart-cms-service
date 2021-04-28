@@ -323,7 +323,7 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 	}
 	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("size"))
 
-	result, err := model.GetReportModel().ListTeachingLoadReport(ctx, dbo.MustGetDB(ctx), operator, args)
+	result, err := model.GetReportTeachingLoadModel().ListTeachingLoadReport(ctx, dbo.MustGetDB(ctx), operator, &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
