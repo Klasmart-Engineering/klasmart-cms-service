@@ -385,6 +385,20 @@ type ReportListTeachingLoadItem struct {
 	Durations   []*ReportListTeachingLoadDuration `json:"durations"`
 }
 
+type ReportListTeachingLoadItemsSortByTeacherName []*ReportListTeachingLoadItem
+
+func (r ReportListTeachingLoadItemsSortByTeacherName) Len() int {
+	return len(r)
+}
+
+func (r ReportListTeachingLoadItemsSortByTeacherName) Less(i, j int) bool {
+	return r[i].TeacherName < r[j].TeacherName
+}
+
+func (r ReportListTeachingLoadItemsSortByTeacherName) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
+}
+
 type ReportListTeachingLoadDuration struct {
 	StartAt int64 `json:"start_at"`
 	EndAt   int64 `json:"end_at"`

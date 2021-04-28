@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -171,6 +172,8 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		}
 		r.Items = append(r.Items, &item)
 	}
+
+	sort.Sort(entity.ReportListTeachingLoadItemsSortByTeacherName(r.Items))
 
 	return &r, nil
 }
