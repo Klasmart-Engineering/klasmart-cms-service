@@ -220,6 +220,7 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 			for _, t := range teachers {
 				teacherIDs = append(teacherIDs, t.ID)
 			}
+			teacherIDs = utils.SliceDeduplicationExcludeEmpty(teacherIDs)
 			userSchoolsMap, err := external.GetSchoolServiceProvider().GetByUsers(ctx, operator, operator.OrgID, teacherIDs)
 			if err != nil {
 				log.Error(ctx, "ListTeachingLoadReport: external.GetSchoolServiceProvider().BatchGet: batch get failed",
