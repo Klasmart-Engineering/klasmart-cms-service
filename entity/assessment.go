@@ -183,6 +183,17 @@ type ListAssessmentsResult struct {
 	Items []*AssessmentItem `json:"items"`
 }
 
+type QueryAssessmentsSummaryArgs struct {
+	Status      *AssessmentStatus  `json:"status"`
+	TeacherName *string            `json:"teacher_name"`
+	ClassType   *ScheduleClassType `json:"class_type"`
+}
+
+type AssessmentsSummary struct {
+	Complete   int `json:"complete"`
+	InProgress int `json:"in_progress"`
+}
+
 type AddAssessmentArgs struct {
 	ScheduleID    string   `json:"schedule_id"`
 	AttendanceIDs []string `json:"attendance_ids"`

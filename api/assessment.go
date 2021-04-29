@@ -24,6 +24,7 @@ import (
 // @Produce json
 // @Param status query string false "status search"
 // @Param teacher_name query string false "teacher name fuzzy search"
+// @Param class_type query string false "class type"
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)
 // @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
@@ -94,6 +95,69 @@ func (s *Server) listAssessments(c *gin.Context) {
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),
 			log.Any("cmd", cmd),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+}
+
+// @Summary get assessments summary
+// @Description get assessments summary
+// @Tags assessments
+// @ID getAssessmentsSummary
+// @Accept json
+// @Produce json
+// @Param status query string false "status search"
+// @Param teacher_name query string false "teacher name fuzzy search"
+// @Param class_type query string false "class type"
+// @Success 200 {object} entity.AssessmentsSummary
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments_summary [get]
+func (s *Server) getAssessmentsSummary(c *gin.Context) {
+	ctx := c.Request.Context()
+	args := entity.QueryAssessmentsSummaryArgs{}
+	status := c.Query("status")
+	if status != "" {
+		status := entity.ListAssessmentsStatus(status)
+		if !status.Valid() {
+			log.Info(ctx, "getAssessmentsSummary: invalid list assessments status",
+				log.String("status", string(status)),
+			)
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
+		if status != entity.ListAssessmentsStatusAll {
+			temp := status.AssessmentStatus()
+			args.Status = &temp
+		}
+	}
+	teacherName := c.Query("teacher_name")
+	if teacherName != "" {
+		args.TeacherName = &teacherName
+	}
+	classType := c.Query("class_type")
+	if classType != "" {
+		tmp := entity.ScheduleClassType(classType)
+		args.ClassType = &tmp
+	}
+	operator := s.getOperator(c)
+	if operator.OrgID == "" {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
+		log.Error(ctx, "list assessments: list failed",
+			log.Err(err),
+			log.Any("args", args),
 		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return

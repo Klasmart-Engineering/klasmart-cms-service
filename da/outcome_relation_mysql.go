@@ -7,26 +7,26 @@ import (
 	"sync"
 )
 
-type OutcomeRelationSqlDA struct {
+type OutcomeRelationSQLDA struct {
 	dbo.BaseDA
 }
 
-func (OutcomeRelationSqlDA) TableName() string {
+func (OutcomeRelationSQLDA) TableName() string {
 	return entity.OutcomeRelationTable
 }
-func (OutcomeRelationSqlDA) MasterType() entity.RelationType {
+func (OutcomeRelationSQLDA) MasterType() entity.RelationType {
 	return entity.OutcomeType
 }
 
-func (mas OutcomeRelationSqlDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, masterIDs []string) error {
+func (mas OutcomeRelationSQLDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, masterIDs []string) error {
 	return GetRelationDA().DeleteTx(ctx, tx, mas.TableName(), mas.MasterType(), masterIDs)
 }
 
-func (mas OutcomeRelationSqlDA) InsertTx(ctx context.Context, tx *dbo.DBContext, relations []*entity.Relation) error {
+func (mas OutcomeRelationSQLDA) InsertTx(ctx context.Context, tx *dbo.DBContext, relations []*entity.Relation) error {
 	return GetRelationDA().InsertTx(ctx, tx, mas.TableName(), relations)
 }
 
-func (mas OutcomeRelationSqlDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *RelationCondition) ([]*entity.Relation, error) {
+func (mas OutcomeRelationSQLDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *RelationCondition) ([]*entity.Relation, error) {
 	var relation []*entity.OutcomeRelation
 	_, err := GetRelationDA().BaseDA.PageTx(ctx, tx, condition, &relation)
 	if err != nil {
@@ -39,12 +39,12 @@ func (mas OutcomeRelationSqlDA) SearchTx(ctx context.Context, tx *dbo.DBContext,
 	return relations, nil
 }
 
-var outcomeRelationDA *OutcomeRelationSqlDA
+var outcomeRelationDA *OutcomeRelationSQLDA
 var _outcomeRelationDAOnce sync.Once
 
-func GetOutcomeRelationDA() *OutcomeRelationSqlDA {
+func GetOutcomeRelationDA() *OutcomeRelationSQLDA {
 	_outcomeRelationDAOnce.Do(func() {
-		outcomeRelationDA = new(OutcomeRelationSqlDA)
+		outcomeRelationDA = new(OutcomeRelationSQLDA)
 	})
 	return outcomeRelationDA
 }

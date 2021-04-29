@@ -23,6 +23,7 @@ type TeacherServiceProvider interface {
 	GetBySchools(ctx context.Context, operator *entity.Operator, schoolIDs []string) (map[string][]*Teacher, error)
 	GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Teacher, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Teacher, error)
+	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type Teacher struct {
@@ -353,4 +354,8 @@ func (s AmsTeacherService) Query(ctx context.Context, operator *entity.Operator,
 	}
 
 	return teachers, nil
+}
+
+func (s AmsTeacherService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
+	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
 }

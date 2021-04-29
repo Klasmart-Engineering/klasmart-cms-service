@@ -45,7 +45,7 @@ type reportModel struct{}
 
 // region assessment
 
-func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error) {
+func (m *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsAchievementReportRequest) (*entity.StudentsAchievementReportResponse, error) {
 	{
 		if !req.Status.Valid() {
 			log.Error(ctx, "list students report: invalid status", log.Any("req", req))
@@ -67,7 +67,7 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 			log.Error(ctx, "list students report: require lesson plan id", log.Any("req", req))
 			return nil, constant.ErrInvalidArgs
 		}
-		allowed, err := rm.hasReportPermission(ctx, operator, req.TeacherID)
+		allowed, err := m.hasReportPermission(ctx, operator, req.TeacherID)
 		if err != nil {
 			log.Error(ctx, "list students report: check report report permission failed",
 				log.Any("req", req),
@@ -84,7 +84,7 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 		}
 	}
 
-	students, err := rm.getStudentsInClass(ctx, operator, req.ClassID)
+	students, err := m.getStudentsInClass(ctx, operator, req.ClassID)
 	if err != nil {
 		log.Error(ctx, "list students report: get students",
 			log.Err(err),
@@ -94,7 +94,7 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 		return nil, err
 	}
 
-	assessmentIDs, err := rm.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
+	assessmentIDs, err := m.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "list student report: get assessment ids failed",
 			log.Err(err),
@@ -104,7 +104,7 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 		return nil, err
 	}
 
-	assessmentAttendances, err := rm.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "list student report: get checked assessment attendance failed",
 			log.Err(err),
@@ -132,7 +132,7 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 		return nil, err
 	}
 
-	outcomeAttendances, err := rm.getOutcomeAttendances(ctx, tx, assessmentIDs)
+	outcomeAttendances, err := m.getOutcomeAttendances(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "list student report: call getOutcomeAttendances failed",
 			log.Err(err),
@@ -143,7 +143,7 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 		return nil, err
 	}
 
-	tr, err := rm.makeLatestOutcomeIDsTranslator(ctx, tx, operator, rm.getOutcomeIDs(assessmentOutcomes))
+	tr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, m.getOutcomeIDs(assessmentOutcomes))
 	if err != nil {
 		log.Error(ctx, "list student report: make latest outcome ids translator failed",
 			log.Err(err),
@@ -154,11 +154,11 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 		return nil, err
 	}
 
-	attendanceIDExistsMap := rm.getAttendanceIDsExistMap(assessmentAttendances)
-	attendanceID2OutcomeIDsMap := rm.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	achievedAttendanceID2OutcomeIDsMap := rm.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
-	skipAttendanceID2OutcomeIDsMap := rm.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	notAchievedAttendanceID2OutcomeIDsMap := rm.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
+	attendanceIDExistsMap := m.getAttendanceIDsExistMap(assessmentAttendances)
+	attendanceID2OutcomeIDsMap := m.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
+	achievedAttendanceID2OutcomeIDsMap := m.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
+	skipAttendanceID2OutcomeIDsMap := m.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
+	notAchievedAttendanceID2OutcomeIDsMap := m.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
 	log.Debug(ctx, "ListStudentsReport: print all map",
 		log.Any("attendance_id_exists_map", attendanceIDExistsMap),
 		log.Any("attendance_id_2_outcome_ids_map", attendanceID2OutcomeIDsMap),
@@ -195,7 +195,7 @@ func (rm *reportModel) ListStudentsReport(ctx context.Context, tx *dbo.DBContext
 	return &result, nil
 }
 
-func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error) {
+func (m *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentAchievementReportRequest) (*entity.StudentAchievementReportResponse, error) {
 	{
 		if req.ClassID == "" {
 			log.Error(ctx, "get student detail report: require class id", log.Any("req", req))
@@ -213,7 +213,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 			log.Error(ctx, "get student detail report: require student id", log.Any("req", req))
 			return nil, constant.ErrInvalidArgs
 		}
-		allowed, err := rm.hasReportPermission(ctx, operator, req.TeacherID)
+		allowed, err := m.hasReportPermission(ctx, operator, req.TeacherID)
 		if err != nil {
 			log.Error(ctx, "get student detail report: check report report permission failed",
 				log.Any("operator", operator),
@@ -230,7 +230,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		}
 	}
 
-	student, err := rm.getStudentInClass(ctx, operator, req.ClassID, req.StudentID)
+	student, err := m.getStudentInClass(ctx, operator, req.ClassID, req.StudentID)
 	if err != nil {
 		log.Error(ctx, "list students report: call getStudentInClass failed",
 			log.Err(err),
@@ -240,7 +240,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	assessmentIDs, err := rm.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
+	assessmentIDs, err := m.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get student detail report: get assessment ids failed",
 			log.Err(err),
@@ -268,7 +268,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	assessmentAttendances, err := rm.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: get checked assessment attendances failed",
 			log.Err(err),
@@ -279,7 +279,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	outcomeAttendances, err := rm.getOutcomeAttendances(ctx, tx, assessmentIDs)
+	outcomeAttendances, err := m.getOutcomeAttendances(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: call getOutcomeAttendances failed",
 			log.Err(err),
@@ -290,9 +290,9 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	outcomeIDs := rm.getOutcomeIDs(assessmentOutcomes)
+	outcomeIDs := m.getOutcomeIDs(assessmentOutcomes)
 
-	outcomesMap, err := rm.getOutcomesMap(ctx, tx, operator, outcomeIDs)
+	outcomesMap, err := m.getOutcomesMap(ctx, tx, operator, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: get outcomes map failed",
 			log.Err(err),
@@ -303,7 +303,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	tr, err := rm.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
+	tr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "get student detail report: make latest outcome ids translator failed",
 			log.Err(err),
@@ -324,11 +324,11 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 
-	attendanceIDExistsMap := rm.getAttendanceIDsExistMap(assessmentAttendances)
-	attendanceID2OutcomeIDsMap := rm.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	achievedAttendanceID2OutcomeIDsMap := rm.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
-	skipAttendanceID2OutcomeIDsMap := rm.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	notAchievedAttendanceID2OutcomeIDsMap := rm.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
+	attendanceIDExistsMap := m.getAttendanceIDsExistMap(assessmentAttendances)
+	attendanceID2OutcomeIDsMap := m.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
+	achievedAttendanceID2OutcomeIDsMap := m.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
+	skipAttendanceID2OutcomeIDsMap := m.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
+	notAchievedAttendanceID2OutcomeIDsMap := m.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
 	log.Debug(ctx, "GetStudentReport: print all map",
 		log.Any("attendance_id_exists_map", attendanceIDExistsMap),
 		log.Any("attendance_id_2_outcome_ids_map", attendanceID2OutcomeIDsMap),
@@ -381,7 +381,7 @@ func (rm *reportModel) GetStudentReport(ctx context.Context, tx *dbo.DBContext, 
 	return &result, nil
 }
 
-func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherID string) (*entity.TeacherReport, error) {
+func (m *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, teacherID string) (*entity.TeacherReport, error) {
 	var assessmentIDs []string
 	{
 		var assessments []*entity.Assessment
@@ -419,8 +419,8 @@ func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, 
 			return nil, err
 		}
 
-		outcomeIDs := rm.getOutcomeIDs(assessmentOutcomes)
-		oidTr, err := rm.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
+		outcomeIDs := m.getOutcomeIDs(assessmentOutcomes)
+		oidTr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
 		if err != nil {
 			log.Error(ctx, "GetTeacherReport: make latest outcome ids translator failed",
 				log.Err(err),
@@ -474,7 +474,7 @@ func (rm *reportModel) GetTeacherReport(ctx context.Context, tx *dbo.DBContext, 
 	return result, nil
 }
 
-func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceReportRequest) (*entity.ListStudentsPerformanceReportResponse, error) {
+func (m *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceReportRequest) (*entity.ListStudentsPerformanceReportResponse, error) {
 	{
 		if req.ClassID == "" {
 			log.Error(ctx, "ListStudentsPerformanceReport: require class id",
@@ -497,7 +497,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 			)
 			return nil, constant.ErrInvalidArgs
 		}
-		allowed, err := rm.hasReportPermission(ctx, operator, req.TeacherID)
+		allowed, err := m.hasReportPermission(ctx, operator, req.TeacherID)
 		if err != nil {
 			log.Error(ctx, "ListStudentsPerformanceReport: check report report permission failed",
 				log.Any("operator", operator),
@@ -514,7 +514,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		}
 	}
 
-	students, err := rm.getStudentsInClass(ctx, operator, req.ClassID)
+	students, err := m.getStudentsInClass(ctx, operator, req.ClassID)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceReport: call getStudentsInClass failed",
 			log.Err(err),
@@ -524,7 +524,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		return nil, err
 	}
 
-	assessmentIDs, err := rm.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
+	assessmentIDs, err := m.getCompletedAssessmentIDs(ctx, tx, operator, req.ClassID, req.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceReport: call getCompletedAssessmentIDs failed",
 			log.Err(err),
@@ -534,7 +534,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		return nil, err
 	}
 
-	assessmentAttendances, err := rm.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceReport: call getCheckedAssessmentAttendance failed",
 			log.Err(err),
@@ -563,7 +563,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		return nil, err
 	}
 
-	outcomeAttendances, err := rm.getOutcomeAttendances(ctx, tx, assessmentIDs)
+	outcomeAttendances, err := m.getOutcomeAttendances(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceReport: call getOutcomeAttendances failed",
 			log.Err(err),
@@ -574,7 +574,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		return nil, err
 	}
 
-	outcomeNamesMap, err := rm.getOutcomeNamesMap(ctx, tx, operator, rm.getOutcomeIDs(assessmentOutcomes))
+	outcomeNamesMap, err := m.getOutcomeNamesMap(ctx, tx, operator, m.getOutcomeIDs(assessmentOutcomes))
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceReport: call getOutcomeNamesMap failed",
 			log.Err(err),
@@ -592,7 +592,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		return names
 	}
 
-	trLatestOutcomeIDs, err := rm.makeLatestOutcomeIDsTranslator(ctx, tx, operator, rm.getOutcomeIDs(assessmentOutcomes))
+	trLatestOutcomeIDs, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, m.getOutcomeIDs(assessmentOutcomes))
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceReport: call makeLatestOutcomeIDsTranslator failed",
 			log.Err(err),
@@ -603,11 +603,11 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 		return nil, err
 	}
 
-	attendanceIDExistsMap := rm.getAttendanceIDsExistMap(assessmentAttendances)
-	attendanceID2OutcomeIDsMap := rm.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	achievedAttendanceID2OutcomeIDsMap := rm.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
-	skipAttendanceID2OutcomeIDsMap := rm.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
-	notAchievedAttendanceID2OutcomeIDsMap := rm.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
+	attendanceIDExistsMap := m.getAttendanceIDsExistMap(assessmentAttendances)
+	attendanceID2OutcomeIDsMap := m.getAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
+	achievedAttendanceID2OutcomeIDsMap := m.getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances)
+	skipAttendanceID2OutcomeIDsMap := m.getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances, assessmentOutcomes)
+	notAchievedAttendanceID2OutcomeIDsMap := m.getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap)
 	log.Debug(ctx, "ListStudentsPerformanceReport: print all map",
 		log.Any("attendance_id_exists_map", attendanceIDExistsMap),
 		log.Any("attendance_id_2_outcome_ids_map", attendanceID2OutcomeIDsMap),
@@ -634,7 +634,7 @@ func (rm *reportModel) ListStudentsPerformanceReport(ctx context.Context, tx *db
 	return &result, nil
 }
 
-func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentPerformanceReportRequest) (*entity.GetStudentPerformanceReportResponse, error) {
+func (m *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.GetStudentPerformanceReportRequest) (*entity.GetStudentPerformanceReportResponse, error) {
 	{
 		if req.ClassID == "" {
 			log.Error(ctx, "GetStudentPerformanceReport: require class id", log.Any("req", req))
@@ -652,7 +652,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 			log.Error(ctx, "GetStudentPerformanceReport: require student id", log.Any("req", req))
 			return nil, constant.ErrInvalidArgs
 		}
-		allowed, err := rm.hasReportPermission(ctx, operator, req.TeacherID)
+		allowed, err := m.hasReportPermission(ctx, operator, req.TeacherID)
 		if err != nil {
 			log.Error(ctx, "GetStudentPerformanceReport: check report report permission failed",
 				log.Any("operator", operator),
@@ -669,7 +669,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		}
 	}
 
-	student, err := rm.getStudentInClass(ctx, operator, req.ClassID, req.StudentID)
+	student, err := m.getStudentInClass(ctx, operator, req.ClassID, req.StudentID)
 	if err != nil {
 		log.Error(ctx, "GetStudentPerformanceReport: call getStudentInClass failed",
 			log.Err(err),
@@ -679,7 +679,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		return nil, err
 	}
 
-	assessments, err := rm.getCompletedAssessments(ctx, tx, operator, req.ClassID, req.LessonPlanID)
+	assessments, err := m.getCompletedAssessments(ctx, tx, operator, req.ClassID, req.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "GetStudentPerformanceReport: call getCompletedAssessments failed",
 			log.Err(err),
@@ -727,7 +727,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		return nil, err
 	}
 
-	assessmentAttendances, err := rm.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
+	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "GetStudentPerformanceReport: call getCheckedAssessmentAttendance failed",
 			log.Err(err),
@@ -749,8 +749,8 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		return nil, err
 	}
 
-	outcomeIDs := rm.getOutcomeIDs(assessmentOutcomes)
-	outcomeNamesMap, err := rm.getOutcomeNamesMap(ctx, tx, operator, outcomeIDs)
+	outcomeIDs := m.getOutcomeIDs(assessmentOutcomes)
+	outcomeNamesMap, err := m.getOutcomeNamesMap(ctx, tx, operator, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "GetStudentPerformanceReport: call getOutcomeNamesMap failed",
 			log.Err(err),
@@ -768,7 +768,7 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		return names
 	}
 
-	tr, err := rm.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
+	tr, err := m.makeLatestOutcomeIDsTranslator(ctx, tx, operator, outcomeIDs)
 	if err != nil {
 		log.Error(ctx, "GetStudentPerformanceReport: call makeLatestOutcomeIDsTranslator failed",
 			log.Err(err),
@@ -779,11 +779,11 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 		return nil, err
 	}
 
-	assessmentID2OutcomeIDsMap := rm.getAssessmentID2OutcomeIDsMap(assessmentOutcomes)
-	attendanceIDExistsMap := rm.getAttendanceIDsExistMap(assessmentAttendances)
-	achievedAssessmentID2OutcomeIDsMap := rm.getAchievedAssessmentID2OutcomeIDsMap(student.ID, assessmentOutcomes, outcomeAttendances)
-	skipAssessmentID2OutcomeIDsMap := rm.getSkipAssessmentID2OutcomeIDsMap(student.ID, assessmentAttendances, assessmentOutcomes)
-	notAchievedAssessmentID2OutcomeIDsMap := rm.getNotAchievedAssessmentID2OutcomeIDsMap(assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap)
+	assessmentID2OutcomeIDsMap := m.getAssessmentID2OutcomeIDsMap(assessmentOutcomes)
+	attendanceIDExistsMap := m.getAttendanceIDsExistMap(assessmentAttendances)
+	achievedAssessmentID2OutcomeIDsMap := m.getAchievedAssessmentID2OutcomeIDsMap(student.ID, assessmentOutcomes, outcomeAttendances)
+	skipAssessmentID2OutcomeIDsMap := m.getSkipAssessmentID2OutcomeIDsMap(student.ID, assessmentAttendances, assessmentOutcomes)
+	notAchievedAssessmentID2OutcomeIDsMap := m.getNotAchievedAssessmentID2OutcomeIDsMap(assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap)
 	log.Debug(ctx, "GetStudentPerformanceReport: print all map",
 		log.Any("assessmentID2OutcomeIDsMap", assessmentID2OutcomeIDsMap),
 		log.Any("attendance_id_exists_map", attendanceIDExistsMap),
@@ -814,8 +814,8 @@ func (rm *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.
 	return &result, nil
 }
 
-func (rm *reportModel) getCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
-	ids, err := rm.getAssessmentIDs(ctx, tx, operator, classID, lessonPlanID)
+func (m *reportModel) getCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
+	ids, err := m.getAssessmentIDs(ctx, tx, operator, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids failed",
 			log.Err(err),
@@ -836,8 +836,8 @@ func (rm *reportModel) getCompletedAssessmentIDs(ctx context.Context, tx *dbo.DB
 	return result, nil
 }
 
-func (rm *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]*entity.Assessment, error) {
-	ids, err := rm.getAssessmentIDs(ctx, tx, operator, classID, lessonPlanID)
+func (m *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]*entity.Assessment, error) {
+	ids, err := m.getAssessmentIDs(ctx, tx, operator, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "getCompletedAssessments: call getAssessmentIDs failed",
 			log.Err(err),
@@ -861,8 +861,8 @@ func (rm *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBCo
 	return result, nil
 }
 
-func (rm *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
-	scheduleIDs, err := rm.getScheduleIDs(ctx, tx, operator, classID, lessonPlanID)
+func (m *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
+	scheduleIDs, err := m.getScheduleIDs(ctx, tx, operator, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "get assessment ids: get schedule ids failed",
 			log.Err(err),
@@ -886,7 +886,7 @@ func (rm *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, 
 	return result, nil
 }
 
-func (rm *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
+func (m *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
 	log.Debug(ctx, "get schedule ids: before call GetScheduleModel().Query()")
 	result, err := GetScheduleModel().GetScheduleIDsByCondition(ctx, tx, operator, &entity.ScheduleIDsCondition{
 		ClassID:      classID,
@@ -906,7 +906,7 @@ func (rm *reportModel) getScheduleIDs(ctx context.Context, tx *dbo.DBContext, op
 	return result, nil
 }
 
-func (rm *reportModel) getCheckedAssessmentAttendance(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentAttendance, error) {
+func (m *reportModel) getCheckedAssessmentAttendance(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.AssessmentAttendance, error) {
 	var (
 		result  []*entity.AssessmentAttendance
 		checked = true
@@ -939,7 +939,7 @@ func (rm *reportModel) getCheckedAssessmentAttendance(ctx context.Context, tx *d
 //	return result, nil
 //}
 
-func (rm *reportModel) getOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error) {
+func (m *reportModel) getOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string) ([]*entity.OutcomeAttendance, error) {
 	result, err := da.GetOutcomeAttendanceDA().BatchGetByAssessmentIDs(ctx, tx, assessmentIDs)
 	if err != nil {
 		log.Error(ctx, "getOutcomeAttendances: call BatchGetByAssessmentIDs failed",
@@ -951,7 +951,7 @@ func (rm *reportModel) getOutcomeAttendances(ctx context.Context, tx *dbo.DBCont
 	return result, nil
 }
 
-func (rm *reportModel) getOutcomeIDs(assessmentOutcomes []*entity.AssessmentOutcome) []string {
+func (m *reportModel) getOutcomeIDs(assessmentOutcomes []*entity.AssessmentOutcome) []string {
 	result := make([]string, 0, len(assessmentOutcomes))
 	for _, v := range assessmentOutcomes {
 		result = append(result, v.OutcomeID)
@@ -993,7 +993,7 @@ func (rm *reportModel) getOutcomeNamesMap(ctx context.Context, tx *dbo.DBContext
 	return m, nil
 }
 
-func (rm *reportModel) getAttendanceIDsExistMap(assessmentAttendances []*entity.AssessmentAttendance) map[string]bool {
+func (m *reportModel) getAttendanceIDsExistMap(assessmentAttendances []*entity.AssessmentAttendance) map[string]bool {
 	result := make(map[string]bool, len(assessmentAttendances))
 	for _, assessmentAttendance := range assessmentAttendances {
 		result[assessmentAttendance.AttendanceID] = true
@@ -1001,7 +1001,7 @@ func (rm *reportModel) getAttendanceIDsExistMap(assessmentAttendances []*entity.
 	return result
 }
 
-func (rm *reportModel) getAttendanceID2AssessmentOutcomesMap(assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]*entity.AssessmentOutcome {
+func (m *reportModel) getAttendanceID2AssessmentOutcomesMap(assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]*entity.AssessmentOutcome {
 	result := map[string][]*entity.AssessmentOutcome{}
 
 	var attendanceID2AssessmentIDsMap = map[string][]string{}
@@ -1023,8 +1023,8 @@ func (rm *reportModel) getAttendanceID2AssessmentOutcomesMap(assessmentAttendanc
 	return result
 }
 
-func (rm *reportModel) getAttendanceID2OutcomeIDsMap(assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
-	attendanceID2AssessmentOutcomesMap := rm.getAttendanceID2AssessmentOutcomesMap(assessmentAttendances, assessmentOutcomes)
+func (m *reportModel) getAttendanceID2OutcomeIDsMap(assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
+	attendanceID2AssessmentOutcomesMap := m.getAttendanceID2AssessmentOutcomesMap(assessmentAttendances, assessmentOutcomes)
 	result := map[string][]string{}
 	for attendanceID, assessmentOutcomes := range attendanceID2AssessmentOutcomesMap {
 		for _, assessmentOutcome := range assessmentOutcomes {
@@ -1037,7 +1037,7 @@ func (rm *reportModel) getAttendanceID2OutcomeIDsMap(assessmentAttendances []*en
 	return result
 }
 
-func (rm *reportModel) getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances []*entity.OutcomeAttendance) map[string][]string {
+func (m *reportModel) getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances []*entity.OutcomeAttendance) map[string][]string {
 	result := map[string][]string{}
 	for _, outcomeAttendance := range outcomeAttendances {
 		result[outcomeAttendance.AttendanceID] = append(result[outcomeAttendance.AttendanceID], outcomeAttendance.OutcomeID)
@@ -1048,8 +1048,8 @@ func (rm *reportModel) getAchievedAttendanceID2OutcomeIDsMap(outcomeAttendances 
 	return result
 }
 
-func (rm *reportModel) getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
-	attendanceID2AssessmentOutcomesMap := rm.getAttendanceID2AssessmentOutcomesMap(assessmentAttendances, assessmentOutcomes)
+func (m *reportModel) getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
+	attendanceID2AssessmentOutcomesMap := m.getAttendanceID2AssessmentOutcomesMap(assessmentAttendances, assessmentOutcomes)
 	result := map[string][]string{}
 	for attendanceID, assessmentOutcomes := range attendanceID2AssessmentOutcomesMap {
 		skipOutcomeIDsMap := map[string]bool{}
@@ -1071,7 +1071,7 @@ func (rm *reportModel) getSkipAttendanceID2OutcomeIDsMap(assessmentAttendances [
 	return result
 }
 
-func (rm *reportModel) getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap map[string][]string) map[string][]string {
+func (m *reportModel) getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2OutcomeIDsMap, achievedAttendanceID2OutcomeIDsMap, skipAttendanceID2OutcomeIDsMap map[string][]string) map[string][]string {
 	result := map[string][]string{}
 	for attendanceID, outcomeIDs := range attendanceID2OutcomeIDsMap {
 		var excludeOutcomeIDs []string
@@ -1082,7 +1082,7 @@ func (rm *reportModel) getNotAchievedAttendanceID2OutcomeIDsMap(attendanceID2Out
 	return result
 }
 
-func (rm *reportModel) getAssessmentID2OutcomeIDsMap(assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
+func (m *reportModel) getAssessmentID2OutcomeIDsMap(assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
 	result := map[string][]string{}
 	for _, ao := range assessmentOutcomes {
 		result[ao.AssessmentID] = append(result[ao.AssessmentID], ao.OutcomeID)
@@ -1090,7 +1090,7 @@ func (rm *reportModel) getAssessmentID2OutcomeIDsMap(assessmentOutcomes []*entit
 	return result
 }
 
-func (rm *reportModel) getAchievedAssessmentID2OutcomeIDsMap(attendanceID string, assessmentOutcomes []*entity.AssessmentOutcome, outcomeAttendances []*entity.OutcomeAttendance) map[string][]string {
+func (m *reportModel) getAchievedAssessmentID2OutcomeIDsMap(attendanceID string, assessmentOutcomes []*entity.AssessmentOutcome, outcomeAttendances []*entity.OutcomeAttendance) map[string][]string {
 	achievedOutcomeIDsMap := map[string]map[string]bool{}
 	for _, oa := range outcomeAttendances {
 		if oa.AttendanceID != attendanceID {
@@ -1114,8 +1114,8 @@ func (rm *reportModel) getAchievedAssessmentID2OutcomeIDsMap(attendanceID string
 	return result
 }
 
-func (rm *reportModel) getSkipAssessmentID2OutcomeIDsMap(attendanceID string, assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
-	attendanceID2AssessmentOutcomesMap := rm.getAttendanceID2AssessmentOutcomesMap(assessmentAttendances, assessmentOutcomes)
+func (m *reportModel) getSkipAssessmentID2OutcomeIDsMap(attendanceID string, assessmentAttendances []*entity.AssessmentAttendance, assessmentOutcomes []*entity.AssessmentOutcome) map[string][]string {
+	attendanceID2AssessmentOutcomesMap := m.getAttendanceID2AssessmentOutcomesMap(assessmentAttendances, assessmentOutcomes)
 	assessmentOutcomes = attendanceID2AssessmentOutcomesMap[attendanceID]
 	result := map[string][]string{}
 	for _, ao := range assessmentOutcomes {
@@ -1126,7 +1126,7 @@ func (rm *reportModel) getSkipAssessmentID2OutcomeIDsMap(attendanceID string, as
 	return result
 }
 
-func (rm *reportModel) getNotAchievedAssessmentID2OutcomeIDsMap(assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap map[string][]string) map[string][]string {
+func (m *reportModel) getNotAchievedAssessmentID2OutcomeIDsMap(assessmentID2OutcomeIDsMap, achievedAssessmentID2OutcomeIDsMap, skipAssessmentID2OutcomeIDsMap map[string][]string) map[string][]string {
 	result := map[string][]string{}
 	for assessmentID, outcomeIDs := range assessmentID2OutcomeIDsMap {
 		var excludeOutcomeIDs []string
@@ -1167,8 +1167,8 @@ func (rm *reportModel) makeLatestOutcomeIDsTranslator(ctx context.Context, tx *d
 	}, nil
 }
 
-func (rm *reportModel) hasReportPermission(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
-	checkP603, err := rm.checkPermission603(ctx, operator, teacherID)
+func (m *reportModel) hasReportPermission(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+	checkP603, err := m.checkPermission603(ctx, operator, teacherID)
 	if err != nil {
 		return false, err
 	}
@@ -1177,10 +1177,10 @@ func (rm *reportModel) hasReportPermission(ctx context.Context, operator *entity
 	}
 
 	optionalCheckers := []func(context.Context, *entity.Operator, string) (bool, error){
-		rm.checkPermission614,
-		rm.checkPermission610,
-		rm.checkPermission611,
-		rm.checkPermission612,
+		m.checkPermission614,
+		m.checkPermission610,
+		m.checkPermission611,
+		m.checkPermission612,
 	}
 	for _, check := range optionalCheckers {
 		ok, err := check(ctx, operator, teacherID)
@@ -1195,7 +1195,7 @@ func (rm *reportModel) hasReportPermission(ctx context.Context, operator *entity
 	return false, nil
 }
 
-func (rm *reportModel) checkPermission603(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+func (m *reportModel) checkPermission603(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP603, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportTeacherReports603)
 	if err != nil {
 		log.Error(ctx, "check permission 603 failed",
@@ -1211,7 +1211,7 @@ func (rm *reportModel) checkPermission603(ctx context.Context, operator *entity.
 	return false, nil
 }
 
-func (rm *reportModel) checkPermission614(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+func (m *reportModel) checkPermission614(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP614, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewMyReports614)
 	if err != nil {
 		log.Error(ctx, "check permission 614 failed",
@@ -1227,7 +1227,7 @@ func (rm *reportModel) checkPermission614(ctx context.Context, operator *entity.
 	return false, nil
 }
 
-func (rm *reportModel) checkPermission610(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+func (m *reportModel) checkPermission610(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP610, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewReports610)
 	if err != nil {
 		log.Error(ctx, "check permission 610 failed",
@@ -1281,7 +1281,7 @@ func (rm *reportModel) checkPermission610(ctx context.Context, operator *entity.
 	return false, nil
 }
 
-func (rm *reportModel) checkPermission611(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+func (m *reportModel) checkPermission611(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP611, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewMySchoolReports611)
 	if err != nil {
 		log.Error(ctx, "check permission 611 failed",
@@ -1323,7 +1323,7 @@ func (rm *reportModel) checkPermission611(ctx context.Context, operator *entity.
 	return false, nil
 }
 
-func (rm *reportModel) checkPermission612(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
+func (m *reportModel) checkPermission612(ctx context.Context, operator *entity.Operator, teacherID string) (bool, error) {
 	hasP612, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.ReportViewMyOrganizationsReports612)
 	if err != nil {
 		log.Error(ctx, "check permission 612 failed",
@@ -1358,7 +1358,7 @@ func (rm *reportModel) checkPermission612(ctx context.Context, operator *entity.
 	return false, nil
 }
 
-func (rm *reportModel) getStudentsInClass(ctx context.Context, operator *entity.Operator, classID string) ([]*external.Student, error) {
+func (m *reportModel) getStudentsInClass(ctx context.Context, operator *entity.Operator, classID string) ([]*external.Student, error) {
 	result, err := external.GetStudentServiceProvider().GetByClassID(ctx, operator, classID)
 	if err != nil {
 		log.Error(ctx, "getStudentsInClass: call GetByClassID failed",
@@ -1371,8 +1371,8 @@ func (rm *reportModel) getStudentsInClass(ctx context.Context, operator *entity.
 	return result, nil
 }
 
-func (rm *reportModel) getStudentInClass(ctx context.Context, operator *entity.Operator, classID string, studentID string) (*external.Student, error) {
-	students, err := rm.getStudentsInClass(ctx, operator, classID)
+func (m *reportModel) getStudentInClass(ctx context.Context, operator *entity.Operator, classID string, studentID string) (*external.Student, error) {
+	students, err := m.getStudentsInClass(ctx, operator, classID)
 	if err != nil {
 		log.Error(ctx, "getStudentInClass: call getStudentsInClass failed",
 			log.Err(err),
@@ -1393,7 +1393,7 @@ func (rm *reportModel) getStudentInClass(ctx context.Context, operator *entity.O
 
 // region h5p
 
-func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceH5PReportRequest) (*entity.ListStudentsPerformanceH5PReportResponse, error) {
+func (m *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, req entity.ListStudentsPerformanceH5PReportRequest) (*entity.ListStudentsPerformanceH5PReportResponse, error) {
 	{
 		if req.ClassID == "" {
 			log.Error(ctx, "ListStudentsPerformanceH5PReport: require class id", log.Any("req", req))
@@ -1407,7 +1407,7 @@ func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx 
 			log.Error(ctx, "ListStudentsPerformanceH5PReport: require lesson plan id", log.Any("req", req))
 			return nil, constant.ErrInvalidArgs
 		}
-		allowed, err := rm.hasReportPermission(ctx, operator, req.TeacherID)
+		allowed, err := m.hasReportPermission(ctx, operator, req.TeacherID)
 		if err != nil {
 			log.Error(ctx, "ListStudentsPerformanceH5PReport: check report report permission failed",
 				log.Any("req", req),
@@ -1438,7 +1438,7 @@ func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx 
 	finalLessonPlainIDs = append(finalLessonPlainIDs, req.LessonPlanID)
 	finalLessonPlainIDs = append(finalLessonPlainIDs, pastLessonPlanIDs...)
 
-	materialIDs, err := rm.getLessonPlanH5PMaterialIDs(ctx, tx, operator, finalLessonPlainIDs)
+	materialIDs, err := m.getLessonPlanH5PMaterialIDs(ctx, tx, operator, finalLessonPlainIDs)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceH5PReport: call getLessonPlanH5PMaterialIDs failed",
 			log.Err(err),
@@ -1448,7 +1448,7 @@ func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx 
 		return nil, err
 	}
 
-	students, err := rm.getStudentsInClass(ctx, operator, req.ClassID)
+	students, err := m.getStudentsInClass(ctx, operator, req.ClassID)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceH5PReport: call getStudentsInClass failed",
 			log.Err(err),
@@ -1464,7 +1464,7 @@ func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx 
 		studentNamesMap[s.ID] = s.Name
 	}
 
-	attendanceIDsExistMap, err := rm.getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx, tx, operator, req.ClassID, req.LessonPlanID)
+	attendanceIDsExistMap, err := m.getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx, tx, operator, req.ClassID, req.LessonPlanID)
 	if err != nil {
 		log.Error(ctx, "ListStudentsPerformanceH5PReport: call getAttendanceIDsExistMapByClassIDAndLessonPlanID failed",
 			log.Err(err),
@@ -1492,7 +1492,7 @@ func (rm *reportModel) ListStudentsPerformanceH5PReport(ctx context.Context, tx 
 		)
 		return nil, err
 	}
-	usersSpentTimeMap := rm.calculateUsersSpentTimeMap(events)
+	usersSpentTimeMap := m.calculateUsersSpentTimeMap(events)
 
 	r := entity.ListStudentsPerformanceH5PReportResponse{}
 	for uid, spentTime := range usersSpentTimeMap {
@@ -1747,8 +1747,8 @@ func (rm *reportModel) calculateUsersSpentTimeMap(events []*entity.H5PEvent) map
 	return r
 }
 
-func (rm *reportModel) getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) (map[string]bool, error) {
-	aids, err := rm.getCompletedAssessmentIDs(ctx, tx, operator, classID, lessonPlanID)
+func (m *reportModel) getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) (map[string]bool, error) {
+	aids, err := m.getCompletedAssessmentIDs(ctx, tx, operator, classID, lessonPlanID)
 	if err != nil {
 		log.Error(ctx, "getAttendanceIDsExistMapByClassIDAndLessonPlanID: call getCompletedAssessmentIDs failed",
 			log.Err(err),
@@ -1758,7 +1758,7 @@ func (rm *reportModel) getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx cont
 		)
 		return nil, err
 	}
-	assessmentAttendances, err := rm.getCheckedAssessmentAttendance(ctx, tx, aids)
+	assessmentAttendances, err := m.getCheckedAssessmentAttendance(ctx, tx, aids)
 	if err != nil {
 		log.Error(ctx, "getAttendanceIDsExistMapByClassIDAndLessonPlanID: call getCheckedAssessmentAttendance failed",
 			log.Err(err),
@@ -1768,10 +1768,10 @@ func (rm *reportModel) getAttendanceIDsExistMapByClassIDAndLessonPlanID(ctx cont
 		)
 		return nil, err
 	}
-	return rm.getAttendanceIDsExistMap(assessmentAttendances), nil
+	return m.getAttendanceIDsExistMap(assessmentAttendances), nil
 }
 
-func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]*SubContentsWithName, error) {
+func (m *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]*SubContentsWithName, error) {
 	materialsMap, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, tx, lessonPlanIDs, operator)
 	switch {
 	case err == dbo.ErrRecordNotFound:
@@ -1817,8 +1817,8 @@ func (rm *reportModel) getLessonPlanH5PMaterials(ctx context.Context, tx *dbo.DB
 	return result, nil
 }
 
-func (rm *reportModel) getLessonPlanH5PMaterialIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]string, error) {
-	materials, err := rm.getLessonPlanH5PMaterials(ctx, tx, operator, lessonPlanIDs)
+func (m *reportModel) getLessonPlanH5PMaterialIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) ([]string, error) {
+	materials, err := m.getLessonPlanH5PMaterials(ctx, tx, operator, lessonPlanIDs)
 	if err != nil {
 		log.Error(ctx, "getLessonPlanH5PMaterialIDs: call GetContentSubContentsByID failed",
 			log.Err(err),
@@ -1834,7 +1834,7 @@ func (rm *reportModel) getLessonPlanH5PMaterialIDs(ctx context.Context, tx *dbo.
 	return result, nil
 }
 
-func (rm *reportModel) getActivityImageSequencing(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityImageSequencing, error) {
+func (m *reportModel) getActivityImageSequencing(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityImageSequencing, error) {
 	r := entity.ActivityImageSequencing{CardsNumber: int(gjson.Get(meta, constant.H5PGJSONPathSequenceImagesCardsNumber).Int())}
 
 	playID2EventsMap := map[string][]*entity.H5PEvent{}
@@ -1889,7 +1889,7 @@ func (rm *reportModel) getActivityImageSequencing(materialID string, meta string
 	return &r, nil
 }
 
-func (rm *reportModel) getActivityMemoryGame(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityMemoryGame, error) {
+func (m *reportModel) getActivityMemoryGame(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityMemoryGame, error) {
 	r := entity.ActivityMemoryGame{PairsNumber: int(gjson.Get(meta, constant.H5PGJSONPathMemoryGamePairsNumber).Int())}
 
 	playID2EventsMap := map[string][]*entity.H5PEvent{}
@@ -1950,7 +1950,7 @@ func (rm *reportModel) getActivityMemoryGame(materialID string, meta string, eve
 	return &r, nil
 }
 
-func (rm *reportModel) getActivityImagePair(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityImagePair, error) {
+func (m *reportModel) getActivityImagePair(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityImagePair, error) {
 	r := entity.ActivityImagePair{ParisNumber: int(gjson.Get(meta, constant.H5PGJSONPathImagePairPairsNumber).Int())}
 
 	playID2EventsMap := map[string][]*entity.H5PEvent{}
@@ -2005,7 +2005,7 @@ func (rm *reportModel) getActivityImagePair(materialID string, meta string, even
 	return &r, nil
 }
 
-func (rm *reportModel) getActivityFlashCards(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityFlashCards, error) {
+func (m *reportModel) getActivityFlashCards(materialID string, meta string, events []*entity.H5PEvent) (*entity.ActivityFlashCards, error) {
 	r := entity.ActivityFlashCards{CardsNumber: int(gjson.Get(meta, constant.H5PGJSONPathFlashCardsCardsNumber).Int())}
 
 	playID2EventsMap := map[string][]*entity.H5PEvent{}

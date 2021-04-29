@@ -7,26 +7,26 @@ import (
 	"sync"
 )
 
-type MilestoneRelationSqlDA struct {
+type MilestoneRelationSQLDA struct {
 	dbo.BaseDA
 }
 
-func (MilestoneRelationSqlDA) TableName() string {
+func (MilestoneRelationSQLDA) TableName() string {
 	return entity.MilestoneRelationTable
 }
-func (MilestoneRelationSqlDA) MasterType() entity.RelationType {
+func (MilestoneRelationSQLDA) MasterType() entity.RelationType {
 	return entity.MilestoneType
 }
 
-func (mas MilestoneRelationSqlDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, masterIDs []string) error {
+func (mas MilestoneRelationSQLDA) DeleteTx(ctx context.Context, tx *dbo.DBContext, masterIDs []string) error {
 	return GetRelationDA().DeleteTx(ctx, tx, mas.TableName(), mas.MasterType(), masterIDs)
 }
 
-func (mas MilestoneRelationSqlDA) InsertTx(ctx context.Context, tx *dbo.DBContext, relations []*entity.Relation) error {
+func (mas MilestoneRelationSQLDA) InsertTx(ctx context.Context, tx *dbo.DBContext, relations []*entity.Relation) error {
 	return GetRelationDA().InsertTx(ctx, tx, mas.TableName(), relations)
 }
 
-func (mas MilestoneRelationSqlDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *RelationCondition) ([]*entity.Relation, error) {
+func (mas MilestoneRelationSQLDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *RelationCondition) ([]*entity.Relation, error) {
 	var relation []*entity.MilestoneRelation
 	_, err := GetRelationDA().BaseDA.PageTx(ctx, tx, condition, &relation)
 	if err != nil {
@@ -39,12 +39,12 @@ func (mas MilestoneRelationSqlDA) SearchTx(ctx context.Context, tx *dbo.DBContex
 	return relations, nil
 }
 
-var milestoneRelationDA *MilestoneRelationSqlDA
+var milestoneRelationDA *MilestoneRelationSQLDA
 var _milestoneRelationDAOnce sync.Once
 
-func GetMilestoneRelationDA() *MilestoneRelationSqlDA {
+func GetMilestoneRelationDA() *MilestoneRelationSQLDA {
 	_milestoneRelationDAOnce.Do(func() {
-		milestoneRelationDA = new(MilestoneRelationSqlDA)
+		milestoneRelationDA = new(MilestoneRelationSQLDA)
 	})
 	return milestoneRelationDA
 }
