@@ -142,15 +142,17 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
-		external.EditUnpublishedMilestone, external.EditPublishedMilestone,
-	})
+	permName := []external.PermissionName{external.EditUnpublishedMilestone, external.EditPublishedMilestone}
+	if data.WithPublish {
+		permName = append(permName, external.CreateMilestone)
+	}
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, permName)
 	if err != nil {
-		log.Error(ctx, "updateMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
+		log.Error(ctx, "updateMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("perm", permName), log.Any("data", data), log.Err(err))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
-	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, data.OutcomeAncestorIDs)
+	err = model.GetMilestoneModel().Update(ctx, op, perms, milestone, data.OutcomeAncestorIDs, data.WithPublish)
 	switch err {
 	case constant.ErrOperateNotAllowed:
 		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
@@ -234,6 +236,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 // @Param description query string false "search by description"
 // @Param shortcode query string false "search by shortcode"
 // @Param status query string false "search by publish_status" Enums(draft, published)
+// @Param author_id query string false "search by author"
 // @Param page query integer false "page"
 // @Param page_size query integer false "page size"
 // @Param order_by query string false "order by" Enums(name, -name, created_at, -created_at, updated_at, -updated_at)
@@ -251,6 +254,10 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		log.Warn(ctx, "searchMilestone: ShouldBind failed", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
+	}
+
+	if condition.Status != entity.OutcomeStatusPublished && condition.AuthorID == "" {
+		condition.AuthorID = op.UserID
 	}
 
 	var hasPerm bool
@@ -400,70 +407,6 @@ func (s *Server) publishMilestone(c *gin.Context) {
 		c.JSON(http.StatusOK, "ok")
 	default:
 		log.Error(ctx, "publishMilestone: Publish failed", log.Any("op", op), log.Strings("req", data.IDs))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	}
-}
-
-// @ID saveAndPublishMilestone
-// @Summary save and publish milestone
-// @Tags milestone
-// @Description publish milestone
-// @Accept json
-// @Produce json
-// @Param milestone_id path string true "milestone id"
-// @Param milestone body model.MilestoneView true "milestone"
-// @Success 200 {string} string "ok"
-// @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} ForbiddenResponse
-// @Failure 404 {object} NotFoundResponse
-// @Failure 409 {object} ConflictResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /milestones/{milestone_id}/save_publish [put]
-func (s *Server) saveAndPublishMilestone(c *gin.Context) {
-	ctx := c.Request.Context()
-	op := s.getOperator(c)
-	milestoneID := c.Param("id")
-	var data model.MilestoneView
-	err := c.ShouldBindJSON(&data)
-	if err != nil {
-		log.Warn(ctx, "saveAndPublishMilestone: ShouldBind failed", log.Err(err))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	data.MilestoneID = milestoneID
-
-	milestone, err := data.ToMilestone(ctx, op)
-	if err != nil {
-		log.Warn(ctx, "saveAndPublishMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
-		external.CreateMilestone,
-	})
-	if err != nil {
-		log.Error(ctx, "saveAndPublishMilestone: HasOrganizationPermission failed", log.Any("op", op), log.Any("data", data), log.Err(err))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	err = model.GetMilestoneModel().SaveAndPublish(ctx, op, perms, milestone, data.OutcomeAncestorIDs)
-	switch err {
-	case constant.ErrOperateNotAllowed:
-		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
-	case model.ErrResourceNotFound:
-		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case model.ErrInvalidPublishStatus:
-		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusConflict, L(GeneralUnknown))
-	case constant.ErrConflict:
-		log.Warn(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
-	case nil:
-		c.JSON(http.StatusOK, "ok")
-	default:
-		log.Error(ctx, "saveAndPublishMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

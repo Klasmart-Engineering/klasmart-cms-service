@@ -51,6 +51,7 @@ type MilestoneView struct {
 	SourceID     string               `json:"source_id,omitempty"`
 	LatestID     string               `json:"latest_id,omitempty"`
 	OutcomeCount int                  `json:"outcome_count,omitempty"`
+	WithPublish  bool                 `json:"with_publish,omitempty"`
 
 	ProgramIDs         []string `json:"program_ids,omitempty"`
 	SubjectIDs         []string `json:"subject_ids,omitempty"`
