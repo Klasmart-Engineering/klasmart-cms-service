@@ -74,7 +74,6 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		req.Program, req.Subject, req.Developmental, req.Skills, req.Grade, req.Age)
 	if err != nil {
 		log.Error(ctx, "ToOutcome: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", req))
-		return nil, err
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
 

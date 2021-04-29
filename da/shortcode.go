@@ -9,7 +9,7 @@ import (
 )
 
 type IShortcodeDA interface {
-	Search(ctx context.Context, tx *dbo.DBContext, table string, condition *ShortcodeCondition) ([]*entity.ShortcodeElement, error)
+	Search(ctx context.Context, tx *dbo.DBContext, kind IShortcodeKind, condition *ShortcodeCondition) ([]*entity.ShortcodeElement, error)
 }
 
 var _shortcodeOnce sync.Once
@@ -21,4 +21,8 @@ func GetShortcodeDA() IShortcodeDA {
 		_shortcodeDA = new(ShortcodeMySqlDA)
 	})
 	return _shortcodeDA
+}
+
+type IShortcodeKind interface {
+	Kind() entity.ShortcodeKind
 }

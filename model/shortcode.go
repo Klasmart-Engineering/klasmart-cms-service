@@ -14,10 +14,13 @@ import (
 )
 
 type ShortcodeModel struct {
+	Kind da.IShortcodeKind
 }
 
-func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind entity.ShortcodeKind, orgID string, shortcode string) (string, error) {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, kind, orgID)
+type BaseShortcodeModel struct{}
+
+func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, orgID string, shortcode string) (string, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, scm.Kind.Kind(), orgID)
 	if err != nil {
 		log.Error(ctx, "GenerateShortcode: NewLock failed",
 			log.Err(err),
@@ -27,7 +30,7 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	shortcodes, err := scm.search(ctx, tx, kind, orgID)
+	shortcodes, err := scm.search(ctx, tx, orgID)
 	if err != nil {
 		log.Error(ctx, "GenerateShortcode: search failed",
 			log.Err(err),
@@ -41,7 +44,7 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 			return "", err
 		}
 		if !shortcodes[value] && value != utils.PaddingString(shortcode, constant.ShortcodeShowLength) {
-			err = scm.cacheIt(ctx, kind, orgID, value)
+			err = scm.cacheIt(ctx, orgID, value)
 			if err != nil {
 				log.Error(ctx, "GenerateShortcode: cacheIt failed",
 					log.String("org", orgID),
@@ -58,28 +61,19 @@ func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind 
 	return "", constant.ErrExceededLimit
 }
 
-func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind entity.ShortcodeKind, orgID string) (map[string]bool, error) {
-	var table string
-	if kind == entity.KindOutcome {
-		table = entity.Outcome{}.TableName()
-	}
-	if kind == entity.KindMileStone {
-		table = entity.Milestone{}.TableName()
-	}
+func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, orgID string) (map[string]bool, error) {
 
-	dbShortcodes, err := da.GetShortcodeDA().Search(ctx, tx, table, &da.ShortcodeCondition{
+	dbShortcodes, err := da.GetShortcodeDA().Search(ctx, tx, scm.Kind, &da.ShortcodeCondition{
 		OrgID: sql.NullString{String: orgID, Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "search: Search failed",
-			log.String("kind", string(kind)),
 			log.String("org", orgID))
 		return nil, err
 	}
-	cachedShortcodes, f, err := da.GetShortcodeCacheDA().SearchWithPatten(ctx, kind, orgID)
+	cachedShortcodes, f, err := da.GetShortcodeCacheDA().SearchWithPatten(ctx, scm.Kind.Kind(), orgID)
 	if err != nil {
 		log.Error(ctx, "search: SearchWithPatten failed",
-			log.String("kind", string(kind)),
 			log.String("org", orgID))
 		return nil, err
 	}
@@ -93,19 +87,18 @@ func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind en
 	return shortcodes, nil
 }
 
-func (scm ShortcodeModel) isCached(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) (bool, error) {
-	return da.GetShortcodeCacheDA().Exists(ctx, kind, orgID, shortcode)
+func (scm ShortcodeModel) isCached(ctx context.Context, orgID string, shortcode string) (bool, error) {
+	return da.GetShortcodeCacheDA().Exists(ctx, scm.Kind.Kind(), orgID, shortcode)
 }
 
-func (scm ShortcodeModel) isOccupied(ctx context.Context, tx *dbo.DBContext, table string, orgID string, ancestor string, shortcode string) (bool, error) {
-	shortcodes, err := da.GetShortcodeDA().Search(ctx, tx, table, &da.ShortcodeCondition{
+func (scm ShortcodeModel) isOccupied(ctx context.Context, tx *dbo.DBContext, orgID string, ancestor string, shortcode string) (bool, error) {
+	shortcodes, err := da.GetShortcodeDA().Search(ctx, tx, scm.Kind, &da.ShortcodeCondition{
 		OrgID:         sql.NullString{String: orgID, Valid: true},
 		NotAncestorID: sql.NullString{String: ancestor, Valid: true},
 		Shortcode:     sql.NullString{String: shortcode, Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "isOccupied: Search failed",
-			log.String("kind", table),
 			log.String("org", orgID),
 			log.String("shortcode", shortcode))
 		return false, err
@@ -118,22 +111,48 @@ func (scm ShortcodeModel) isOccupied(ctx context.Context, tx *dbo.DBContext, tab
 	return false, nil
 }
 
-func (scm ShortcodeModel) cacheIt(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
-	return da.GetShortcodeCacheDA().Save(ctx, kind, orgID, shortcode)
+func (scm ShortcodeModel) cacheIt(ctx context.Context, orgID string, shortcode string) error {
+	return da.GetShortcodeCacheDA().Save(ctx, scm.Kind.Kind(), orgID, shortcode)
 }
 
-func (scm ShortcodeModel) removeIt(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
-	return da.GetShortcodeCacheDA().Remove(ctx, kind, orgID, shortcode)
+func (scm ShortcodeModel) removeIt(ctx context.Context, orgID string, shortcode string) error {
+	return da.GetShortcodeCacheDA().Remove(ctx, scm.Kind.Kind(), orgID, shortcode)
+}
+
+type MilestoneShortcodeModel struct{}
+
+func (MilestoneShortcodeModel) Kind() entity.ShortcodeKind {
+	return entity.KindMileStone
 }
 
 var (
-	_shortcodeModel     *ShortcodeModel
-	_shortcodeModelOnce sync.Once
+	_milestoneShortcodeModel     *ShortcodeModel
+	_milestoneShortcodeModelOnce sync.Once
 )
 
-func GetShortcodeModel() *ShortcodeModel {
-	_shortcodeModelOnce.Do(func() {
-		_shortcodeModel = new(ShortcodeModel)
+func GetMilestoneShortcodeModel() *ShortcodeModel {
+	_milestoneShortcodeModelOnce.Do(func() {
+		_milestoneShortcodeModel = new(ShortcodeModel)
+		_milestoneShortcodeModel.Kind = new(MilestoneShortcodeModel)
 	})
-	return _shortcodeModel
+	return _milestoneShortcodeModel
+}
+
+type LearningOutcomeShortcodeModel struct{}
+
+func (LearningOutcomeShortcodeModel) Kind() entity.ShortcodeKind {
+	return entity.KindOutcome
+}
+
+var (
+	_learningOutcomeShortcodeModel     *ShortcodeModel
+	_learningOutcomeShortcodeModelOnce sync.Once
+)
+
+func GetLearningOutcomeShortcodeModel() *ShortcodeModel {
+	_milestoneShortcodeModelOnce.Do(func() {
+		_learningOutcomeShortcodeModel = new(ShortcodeModel)
+		_learningOutcomeShortcodeModel.Kind = new(LearningOutcomeShortcodeModel)
+	})
+	return _learningOutcomeShortcodeModel
 }

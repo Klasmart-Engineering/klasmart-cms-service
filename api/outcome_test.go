@@ -187,7 +187,7 @@ func TestGetLearningOutcomesByIDs(t *testing.T) {
 	}
 	ctx := context.Background()
 	ids := []string{"5f5726af0944d7c38e20696f"}
-	outcomes, err := model.GetOutcomeModel().GetLearningOutcomesByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
+	outcomes, err := model.GetOutcomeModel().GetByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestGetLatestOutcomesByIDs(t *testing.T) {
 	ctx := context.Background()
 	//ids := []string{"5f5726af0944d7c38e20696f"}
 	ids := []string{}
-	outcomes, err := model.GetOutcomeModel().GetLatestOutcomesByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
+	outcomes, err := model.GetOutcomeModel().GetLatestByIDs(ctx, op, dbo.MustGetDB(ctx), ids)
 	if err != nil {
 		t.Fatal(err)
 	}

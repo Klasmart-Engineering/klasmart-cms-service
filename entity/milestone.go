@@ -29,11 +29,11 @@ type Milestone struct {
 	Outcomes      []*Outcome `gorm:"-" json:"outcomes"`
 }
 
-type MilestoneKind int
+type MilestoneKind string
 
 const (
-	CustomMilestoneType  MilestoneKind = 0
-	GeneralMilestoneType MilestoneKind = 1
+	CustomMilestoneType  MilestoneKind = "normal"
+	GeneralMilestoneType MilestoneKind = "general"
 )
 
 func (Milestone) TableName() string {

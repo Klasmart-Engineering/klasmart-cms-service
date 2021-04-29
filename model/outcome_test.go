@@ -58,7 +58,7 @@ func TestOutcomeModel_GetLearningOutcomeByID(t *testing.T) {
 func TestGenerateShortcode(t *testing.T) {
 	setup()
 	ctx := context.TODO()
-	shortcode, err := GetShortcodeModel().Generate(ctx, dbo.MustGetDB(ctx), entity.KindOutcome, "org-1", "")
+	shortcode, err := GetLearningOutcomeShortcodeModel().Generate(ctx, dbo.MustGetDB(ctx), "8a31ebab-b879-4790-af99-ee4941a778b3", "")
 	if err != nil {
 		t.Fatal(err)
 	}

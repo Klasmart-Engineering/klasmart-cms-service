@@ -20,44 +20,44 @@ import (
 )
 
 type IOutcomeModel interface {
-	CreateLearningOutcome(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
-	GetLearningOutcomeByID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (*entity.Outcome, error)
-	UpdateLearningOutcome(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
-	DeleteLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string) error
-	SearchLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	Create(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
+	Get(ctx context.Context, operator *entity.Operator, outcomeID string) (*entity.Outcome, error)
+	Update(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error
+	Delete(ctx context.Context, operator *entity.Operator, outcomeID string) error
+	Search(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
-	LockLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error)
+	Lock(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error)
 
-	PublishLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string, scope string) error
-	BulkPubLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, scope string) error
-	BulkDelLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) error
+	Publish(ctx context.Context, operator *entity.Operator, outcomeID string, scope string) error
+	BulkPublish(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, scope string) error
+	BulkDelete(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) error
 
-	SearchPrivateOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
-	SearchPendingOutcomes(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPrivate(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
+	SearchPending(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error)
 
-	GetLearningOutcomesByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
-	GetLatestOutcomesByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
+	GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
+	GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error)
 
-	ApproveLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string) error
-	RejectLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string, reason string) error
+	Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error
+	Reject(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string, reason string) error
 
-	BulkApproveLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
-	BulkRejectLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error
+	BulkApprove(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error
+	BulkReject(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error
 
-	GetLatestOutcomesByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
+	GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (map[string]*entity.Outcome, error)
 
-	HasLockedOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
-	GetLatestOutcomesByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
+	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
+	GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
 }
 
 type OutcomeModel struct {
 }
 
-func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) (err error) {
+func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) (err error) {
 	// outcome get value from api lay, this lay add some information
 	outcome.AuthorName, err = ocm.getAuthorNameByID(ctx, operator, operator.UserID)
 	if err != nil {
-		log.Error(ctx, "CreateLearningOutcome: getAuthorNameByID failed",
+		log.Error(ctx, "Create: getAuthorNameByID failed",
 			log.String("op", outcome.AuthorID),
 			log.Any("outcome", outcome))
 		return
@@ -65,7 +65,7 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, operator.OrgID)
 	if err != nil {
-		log.Error(ctx, "CreateLearningOutcome: NewLock failed",
+		log.Error(ctx, "Create: NewLock failed",
 			log.Err(err),
 			log.Any("op", operator),
 			log.Any("outcome", outcome))
@@ -79,9 +79,9 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		outcome.AuthorID = operator.UserID
 		outcome.OrganizationID = operator.OrgID
 		outcome.PublishStatus = entity.OutcomeStatusDraft
-		exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Outcome{}.TableName(), operator.OrgID, outcome.AncestorID, outcome.Shortcode)
+		exists, err := GetLearningOutcomeShortcodeModel().isOccupied(ctx, tx, operator.OrgID, outcome.AncestorID, outcome.Shortcode)
 		if err != nil {
-			log.Error(ctx, "CreateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
+			log.Error(ctx, "Create: IsShortcodeExistInDBWithOtherAncestor failed",
 				log.Err(err),
 				log.Any("op", operator),
 				log.Any("outcome", outcome))
@@ -92,21 +92,21 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 		}
 		err = GetOutcomeSetModel().BindByOutcome(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "CreateLearningOutcome: BindByOutcome failed",
+			log.Error(ctx, "Create: BindByOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
 		err = da.GetOutcomeDA().CreateOutcome(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "CreateLearningOutcome: CreateOutcome failed",
+			log.Error(ctx, "Create: CreateOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
 		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
 		if err != nil {
-			log.Error(ctx, "CreateLearningOutcome: InsertTx failed",
+			log.Error(ctx, "Create: InsertTx failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
@@ -121,19 +121,19 @@ func (ocm OutcomeModel) CreateLearningOutcome(ctx context.Context, operator *ent
 	return
 }
 
-func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (outcome *entity.Outcome, err error) {
+func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outcomeID string) (outcome *entity.Outcome, err error) {
 
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
 		outcome, err = da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err == dbo.ErrRecordNotFound {
-			log.Warn(ctx, "GetLearningOutcomeByID: not found",
+			log.Warn(ctx, "Get: not found",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "GetLearningOutcomeByID: GetOutcomeByID failed",
+			log.Error(ctx, "Get: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
@@ -143,7 +143,7 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "GetLearningOutcomeByID: SearchTx failed",
+			log.Error(ctx, "Get: SearchTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
@@ -154,7 +154,7 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "GetLearningOutcomeByID: SearchTx failed",
+			log.Error(ctx, "Get: SearchTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome", outcomeID))
 			return err
@@ -164,7 +164,7 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			milestoneIDs[i] = milestoneOutcomes[i].MilestoneID
 		}
 		if len(milestoneIDs) == 0 {
-			log.Warn(ctx, "GetLearningOutcomeByID: haven't bind milestone",
+			log.Warn(ctx, "Get: haven't bind milestone",
 				log.String("op", operator.UserID),
 				log.String("outcome", outcomeID))
 			return nil
@@ -173,7 +173,7 @@ func (ocm OutcomeModel) GetLearningOutcomeByID(ctx context.Context, operator *en
 			IDs: dbo.NullStrings{Strings: milestoneIDs, Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "GetLearningOutcomeByID: Search failed",
+			log.Error(ctx, "Get: Search failed",
 				log.String("op", operator.UserID),
 				log.String("outcome", outcomeID))
 			return err
@@ -217,18 +217,18 @@ func (ocm OutcomeModel) updateOutcomeSet(ctx context.Context, op *entity.Operato
 	return nil
 }
 
-func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error {
+func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) error {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
 		external.EditMyUnpublishedLearningOutcome,
 		external.EditOrgUnpublishedLearningOutcome,
 	})
 	if err != nil {
-		log.Error(ctx, "UpdateLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
+		log.Error(ctx, "Update:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, operator.OrgID)
 	if err != nil {
-		log.Error(ctx, "UpdateLearningOutcome: NewLock failed",
+		log.Error(ctx, "Update: NewLock failed",
 			log.Err(err),
 			log.Any("op", operator),
 			log.Any("outcome", outcome))
@@ -236,9 +236,9 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel().isCached(ctx, entity.KindOutcome, operator.OrgID, outcome.Shortcode)
+	exists, err := GetLearningOutcomeShortcodeModel().isCached(ctx, operator.OrgID, outcome.Shortcode)
 	if err != nil {
-		log.Error(ctx, "UpdateLearningOutcome: IsShortcodeExistInRedis failed",
+		log.Error(ctx, "Update: IsShortcodeExistInRedis failed",
 			log.Err(err),
 			log.Any("op", operator),
 			log.Any("outcome", outcome))
@@ -253,29 +253,29 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 			return ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "UpdateLearningOutcome: GetOutcomeByID failed",
+			log.Error(ctx, "Update: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.Any("data", data))
 			return err
 		}
 		if !allowEditOutcome(ctx, operator, perms, data) {
-			log.Warn(ctx, "UpdateLearningOutcome: no permission",
+			log.Warn(ctx, "Update: no permission",
 				log.Any("op", operator),
 				log.Any("perms", perms),
 				log.Any("data", data))
 			return constant.ErrOperateNotAllowed
 		}
 		if data.PublishStatus != entity.OutcomeStatusDraft && data.PublishStatus != entity.OutcomeStatusRejected {
-			log.Error(ctx, "UpdateLearningOutcome: publish status not allowed edit",
+			log.Error(ctx, "Update: publish status not allowed edit",
 				log.String("op", operator.UserID),
 				log.Any("data", data))
 			return ErrInvalidPublishStatus
 		}
 
 		if data.Shortcode != outcome.Shortcode {
-			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Outcome{}.TableName(), operator.OrgID, data.AncestorID, outcome.Shortcode)
+			exists, err := GetLearningOutcomeShortcodeModel().isOccupied(ctx, tx, operator.OrgID, data.AncestorID, outcome.Shortcode)
 			if err != nil {
-				log.Error(ctx, "UpdateLearningOutcome: IsShortcodeExistInDBWithOtherAncestor failed",
+				log.Error(ctx, "Update: IsShortcodeExistInDBWithOtherAncestor failed",
 					log.Err(err),
 					log.Any("op", operator),
 					log.Any("outcome", outcome))
@@ -289,7 +289,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 		ocm.UpdateOutcome(outcome, data)
 		err = ocm.updateOutcomeSet(ctx, operator, tx, outcome.ID, outcome.Sets)
 		if err != nil {
-			log.Error(ctx, "UpdateLearningOutcome: updateOutcomeSet failed",
+			log.Error(ctx, "Update: updateOutcomeSet failed",
 				log.String("op", operator.UserID),
 				log.Any("data", outcome))
 			return err
@@ -297,21 +297,21 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 		// because of cache, follow statements need be at last
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, operator, tx, data)
 		if err != nil {
-			log.Error(ctx, "UpdateLearningOutcome: UpdateOutcome failed",
+			log.Error(ctx, "Update: UpdateOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("data", outcome))
 			return err
 		}
 		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, []string{outcome.ID})
 		if err != nil {
-			log.Error(ctx, "UpdateLearningOutcome: DeleteTx failed",
+			log.Error(ctx, "Update: DeleteTx failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
 		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, ocm.CollectRelation(outcome))
 		if err != nil {
-			log.Error(ctx, "UpdateLearningOutcome: InsertTx failed",
+			log.Error(ctx, "Update: InsertTx failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
@@ -321,7 +321,7 @@ func (ocm OutcomeModel) UpdateLearningOutcome(ctx context.Context, operator *ent
 	return err
 }
 
-func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string) error {
+func (ocm OutcomeModel) Delete(ctx context.Context, operator *entity.Operator, outcomeID string) error {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
 		external.DeleteMyUnpublishedLearningOutcome,
 		external.DeleteOrgUnpublishedLearningOutcome,
@@ -330,46 +330,46 @@ func (ocm OutcomeModel) DeleteLearningOutcome(ctx context.Context, operator *ent
 		external.DeletePublishedLearningOutcome,
 	})
 	if err != nil {
-		log.Error(ctx, "DeleteLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
+		log.Error(ctx, "Delete:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err != nil && err != dbo.ErrRecordNotFound {
-			log.Error(ctx, "DeleteLearningOutcome: no permission",
+			log.Error(ctx, "Delete: no permission",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
 		}
 		if !allowDeleteOutcome(ctx, operator, perms, outcome) {
-			log.Warn(ctx, "DeleteLearningOutcome: no permission", log.Any("op", operator),
+			log.Warn(ctx, "Delete: no permission", log.Any("op", operator),
 				log.Any("perms", perms), log.Any("outcome", outcome))
 			return constant.ErrOperateNotAllowed
 		}
 		err = ocm.deleteOutcome(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "DeleteLearningOutcome: deleteOutcome failed",
+			log.Error(ctx, "Delete: deleteOutcome failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
 		}
 		err = da.GetOutcomeSetDA().DeleteBoundOutcomeSet(ctx, tx, outcome.ID)
 		if err != nil {
-			log.Error(ctx, "DeleteLearningOutcome: deleteOutcome failed",
+			log.Error(ctx, "Delete: deleteOutcome failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
 		}
 		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, []string{outcome.ID})
 		if err != nil {
-			log.Error(ctx, "DeleteLearningOutcome: DeleteTx failed",
+			log.Error(ctx, "Delete: DeleteTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
 		}
 		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, []string{outcome.AncestorID})
 		if err != nil {
-			log.Error(ctx, "DeleteLearningOutcome: UnbindOutcomes failed",
+			log.Error(ctx, "Delete: UnbindOutcomes failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
@@ -440,7 +440,7 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 	var err error
 	total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, da.NewOutcomeCondition(condition))
 	if err != nil {
-		log.Error(ctx, "SearchLearningOutcome: SearchOutcome failed",
+		log.Error(ctx, "Search: SearchOutcome failed",
 			log.String("op", op.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err
@@ -477,7 +477,7 @@ func (ocm OutcomeModel) search(ctx context.Context, op *entity.Operator, tx *dbo
 	return total, outcomes, nil
 }
 
-func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+func (ocm OutcomeModel) Search(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	if condition.OrganizationID == "" {
 		condition.OrganizationID = user.OrgID
 	}
@@ -491,14 +491,14 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.
 
 	err := ocm.fillAuthorIDs(ctx, user, condition)
 	if err != nil {
-		log.Error(ctx, "SearchLearningOutcome: fillAuthorIDs failed",
+		log.Error(ctx, "Search: fillAuthorIDs failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err
 	}
 	err = ocm.fillIDsBySetName(ctx, user, condition)
 	if err != nil {
-		log.Error(ctx, "SearchLearningOutcome: fillIDsBySetName failed",
+		log.Error(ctx, "Search: fillIDsBySetName failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err
@@ -510,7 +510,7 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.
 		var err error
 		total, outcomes, err = ocm.search(ctx, user, tx, condition)
 		if err != nil {
-			log.Error(ctx, "SearchLearningOutcome: search failed",
+			log.Error(ctx, "Search: search failed",
 				log.String("op", user.UserID),
 				log.Any("condition", condition))
 			return err
@@ -520,10 +520,10 @@ func (ocm OutcomeModel) SearchLearningOutcome(ctx context.Context, user *entity.
 	return total, outcomes, err
 }
 
-func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error) {
+func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string) (string, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeLock)
 	if err != nil {
-		log.Error(ctx, "LockLearningOutcome: NewLock failed",
+		log.Error(ctx, "Lock: NewLock failed",
 			log.Err(err),
 			log.String("op", operator.UserID),
 			log.String("outcome_id", outcomeID))
@@ -538,7 +538,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 			return ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "LockLearningOutcome: GetOutcomeByID failed",
+			log.Error(ctx, "Lock: GetOutcomeByID failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
@@ -548,7 +548,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 		if outcome.LockedBy == operator.UserID {
 			copyValue, err := da.GetOutcomeDA().GetOutcomeBySourceID(ctx, operator, tx, outcomeID)
 			if err != nil {
-				log.Error(ctx, "LockLearningOutcome: GetOutcomeBySourceID failed",
+				log.Error(ctx, "Lock: GetOutcomeBySourceID failed",
 					log.String("op", operator.UserID),
 					log.String("outcome_id", outcomeID))
 				return err
@@ -557,7 +557,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 				newVersion = *copyValue
 				return nil
 			}
-			log.Error(ctx, "LockLearningOutcome: copyValue status not draft",
+			log.Error(ctx, "Lock: copyValue status not draft",
 				log.String("op", operator.UserID),
 				log.Any("copy", copyValue))
 			return NewErrContentAlreadyLocked(ctx, outcome.LockedBy, operator)
@@ -570,14 +570,14 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 		newVersion = ocm.Clone(operator, outcome)
 		err = GetOutcomeSetModel().BindByOutcome(ctx, operator, tx, &newVersion)
 		if err != nil {
-			log.Error(ctx, "LockLearningOutcome: BindByOutcome failed",
+			log.Error(ctx, "Lock: BindByOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
 		err = da.GetOutcomeDA().CreateOutcome(ctx, operator, tx, &newVersion)
 		if err != nil {
-			log.Error(ctx, "LockLearningOutcome: CreateOutcome failed",
+			log.Error(ctx, "Lock: CreateOutcome failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID),
 				log.Any("outcome", newVersion))
@@ -588,7 +588,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 			MasterType: sql.NullString{String: string(entity.OutcomeType), Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "LockLearningOutcome: SearchTx failed",
+			log.Error(ctx, "Lock: SearchTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID),
 				log.Any("outcome", newVersion))
@@ -599,7 +599,7 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 		}
 		err = da.GetOutcomeRelationDA().InsertTx(ctx, tx, relations)
 		if err != nil {
-			log.Error(ctx, "LockLearningOutcome: InsertTx failed",
+			log.Error(ctx, "Lock: InsertTx failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID),
 				log.Any("outcome", newVersion))
@@ -614,27 +614,27 @@ func (ocm OutcomeModel) LockLearningOutcome(ctx context.Context, operator *entit
 	return newVersion.ID, nil
 }
 
-func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string, scope string) error {
+func (ocm OutcomeModel) Publish(ctx context.Context, operator *entity.Operator, outcomeID string, scope string) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err == dbo.ErrRecordNotFound {
 			err = ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "PublishLearningOutcome: GetOutcomeByID failed",
+			log.Error(ctx, "Publish: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
 		}
 		err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusPending)
 		if err != nil {
-			log.Error(ctx, "PublishLearningOutcome: SetStatus failed",
+			log.Error(ctx, "Publish: SetStatus failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return ErrInvalidContentStatusToPublish
 		}
 		if outcome.PublishScope != "" && outcome.PublishScope != scope {
-			log.Error(ctx, "PublishLearningOutcome: scope mismatch",
+			log.Error(ctx, "Publish: scope mismatch",
 				log.String("op", operator.UserID),
 				log.String("scope", scope),
 				log.Any("outcome", outcome))
@@ -644,7 +644,7 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, operator *en
 		outcome.UpdateAt = time.Now().Unix()
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "PublishLearningOutcome: UpdateOutcome failed",
+			log.Error(ctx, "Publish: UpdateOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
@@ -657,11 +657,11 @@ func (ocm OutcomeModel) PublishLearningOutcome(ctx context.Context, operator *en
 	return err
 }
 
-func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, scope string) error {
+func (ocm OutcomeModel) BulkPublish(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string, scope string) error {
 	if scope == "" {
 		//scopeID, _, err := ocm.getRootOrganizationByAuthorID(ctx, operator.UserID)
 		//if err != nil {
-		//	log.Error(ctx, "PublishLearningOutcome: getRootOrganizationByAuthorID failed",
+		//	log.Error(ctx, "Publish: getRootOrganizationByAuthorID failed",
 		//		log.String("op", operator.UserID),
 		//		log.Strings("outcome_ids", outcomeIDs))
 		//}
@@ -673,14 +673,14 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, operator *en
 		}
 		total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &condition)
 		if err != nil {
-			log.Error(ctx, "BulkPubLearningOutcome: SearchOutcome failed",
+			log.Error(ctx, "BulkPublish: SearchOutcome failed",
 				log.String("op", operator.UserID),
 				log.Int("total", total),
 				log.Strings("outcome_id", outcomeIDs))
 			return err
 		}
 		if total == 0 {
-			log.Warn(ctx, "BulkPubLearningOutcome: SearchOutcome failed",
+			log.Warn(ctx, "BulkPublish: SearchOutcome failed",
 				log.String("op", operator.UserID),
 				log.Int("total", total),
 				log.Strings("outcome_id", outcomeIDs))
@@ -689,13 +689,13 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, operator *en
 		for _, o := range outcomes {
 			err = ocm.SetStatus(ctx, o, entity.OutcomeStatusPublished)
 			if err != nil {
-				log.Error(ctx, "BulkPubLearningOutcome: SetStatus failed",
+				log.Error(ctx, "BulkPublish: SetStatus failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", o))
 				return ErrInvalidContentStatusToPublish
 			}
 			if o.PublishScope != "" && o.PublishScope != scope {
-				log.Error(ctx, "PublishLearningOutcome: scope mismatch",
+				log.Error(ctx, "Publish: scope mismatch",
 					log.String("op", operator.UserID),
 					log.String("scope", scope),
 					log.Any("outcome", o))
@@ -703,7 +703,7 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, operator *en
 			}
 			err = da.GetOutcomeDA().UpdateOutcome(ctx, operator, tx, o)
 			if err != nil {
-				log.Error(ctx, "BulkPubLearningOutcome: UpdateOutcome failed",
+				log.Error(ctx, "BulkPublish: UpdateOutcome failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", o))
 				return err
@@ -717,7 +717,7 @@ func (ocm OutcomeModel) BulkPubLearningOutcome(ctx context.Context, operator *en
 	return err
 }
 
-func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) error {
+func (ocm OutcomeModel) BulkDelete(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) error {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, []external.PermissionName{
 		external.DeleteMyUnpublishedLearningOutcome,
 		external.DeleteOrgUnpublishedLearningOutcome,
@@ -726,7 +726,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 		external.DeletePublishedLearningOutcome,
 	})
 	if err != nil {
-		log.Error(ctx, "BulkDelLearningOutcome:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
+		log.Error(ctx, "BulkDelete:HasOrganizationPermissions failed", log.Any("op", operator), log.Err(err))
 		return err
 	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
@@ -735,7 +735,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 		}
 		total, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &condition)
 		if err != nil {
-			log.Error(ctx, "BulkDelLearningOutcome: SearchOutcome failed",
+			log.Error(ctx, "BulkDelete: SearchOutcome failed",
 				log.String("op", operator.UserID),
 				log.Int("total", total),
 				log.Strings("outcome_ids", outcomeIDs))
@@ -743,7 +743,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 		}
 
 		if len(outcomes) > 0 && !allowDeleteOutcome(ctx, operator, perms, outcomes[0]) {
-			log.Warn(ctx, "BulkDelLearningOutcome: no permission", log.Any("op", operator),
+			log.Warn(ctx, "BulkDelete: no permission", log.Any("op", operator),
 				log.Any("perms", perms), log.Any("outcome", outcomes[0]))
 			return constant.ErrOperateNotAllowed
 		}
@@ -751,7 +751,7 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 		for i, o := range outcomes {
 			err = ocm.deleteOutcome(ctx, operator, tx, o)
 			if err != nil {
-				log.Error(ctx, "BulkDelLearningOutcome: DeleteOutcome failed",
+				log.Error(ctx, "BulkDelete: DeleteOutcome failed",
 					log.String("op", operator.UserID),
 					log.String("outcome_id", o.ID))
 				return err
@@ -761,14 +761,14 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 
 		err = da.GetOutcomeRelationDA().DeleteTx(ctx, tx, outcomeIDs)
 		if err != nil {
-			log.Error(ctx, "BulkDelLearningOutcome: DeleteTx failed",
+			log.Error(ctx, "BulkDelete: DeleteTx failed",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_id", outcomeIDs))
 			return err
 		}
 		err = da.GetMilestoneDA().UnbindOutcomes(ctx, tx, ancestorIDs)
 		if err != nil {
-			log.Error(ctx, "BulkDelLearningOutcome: UnbindOutcomes failed",
+			log.Error(ctx, "BulkDelete: UnbindOutcomes failed",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_id", outcomeIDs))
 			return err
@@ -781,20 +781,20 @@ func (ocm OutcomeModel) BulkDelLearningOutcome(ctx context.Context, operator *en
 	return err
 }
 
-func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+func (ocm OutcomeModel) SearchPrivate(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, user, []external.PermissionName{
 		external.ViewMyUnpublishedLearningOutcome,  // my draft & my rejected
 		external.ViewOrgUnpublishedLearningOutcome, // org draft & org waiting for approved & org rejected
 		external.ViewMyPendingLearningOutcome,      // my waiting for approved
 	})
 	if err != nil {
-		log.Error(ctx, "SearchPrivateOutcomes: HasOrganizationPermissions failed",
+		log.Error(ctx, "SearchPrivate: HasOrganizationPermissions failed",
 			log.Any("op", user), log.Err(err))
 		return 0, nil, constant.ErrInternalServer
 	}
 	condition.OrganizationID = user.OrgID
 	if !allowSearchPrivate(ctx, user, perms, condition) {
-		log.Warn(ctx, "SearchPrivateOutcomes: no permission",
+		log.Warn(ctx, "SearchPrivate: no permission",
 			log.Any("op", user),
 			log.Any("perms", perms),
 			log.Any("cond", condition))
@@ -803,14 +803,14 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, user *entity.
 
 	err = ocm.fillAuthorIDs(ctx, user, condition)
 	if err != nil {
-		log.Error(ctx, "SearchPrivateOutcomes: fillAuthorIDs failed",
+		log.Error(ctx, "SearchPrivate: fillAuthorIDs failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err
 	}
 	err = ocm.fillIDsBySetName(ctx, user, condition)
 	if err != nil {
-		log.Error(ctx, "SearchPrivateOutcomes: fillIDsBySetName failed",
+		log.Error(ctx, "SearchPrivate: fillIDsBySetName failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err
@@ -822,7 +822,7 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, user *entity.
 		var err error
 		total, outcomes, err = ocm.search(ctx, user, tx, condition)
 		if err != nil {
-			log.Error(ctx, "SearchLearningOutcome: search failed",
+			log.Error(ctx, "Search: search failed",
 				log.String("op", user.UserID),
 				log.Any("condition", condition))
 			return err
@@ -832,9 +832,9 @@ func (ocm OutcomeModel) SearchPrivateOutcomes(ctx context.Context, user *entity.
 	return total, outcomes, err
 }
 
-func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
+func (ocm OutcomeModel) SearchPending(ctx context.Context, user *entity.Operator, tx *dbo.DBContext, condition *entity.OutcomeCondition) (int, []*entity.Outcome, error) {
 	if condition.PublishStatus != entity.OutcomeStatusPending {
-		log.Warn(ctx, "SearchPendingOutcomes: SearchPendingOutcomes failed",
+		log.Warn(ctx, "SearchPending: SearchPending failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, ErrBadRequest
@@ -842,7 +842,7 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.
 	// as there is no level,orgID is the same as [user.OrgID]
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, user, external.ViewOrgPendingLearningOutcome)
 	if !hasPerm {
-		log.Warn(ctx, "SearchPendingOutcomes: no permission",
+		log.Warn(ctx, "SearchPending: no permission",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, constant.ErrOperateNotAllowed
@@ -850,14 +850,14 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.
 	condition.PublishScope = user.OrgID
 	err = ocm.fillAuthorIDs(ctx, user, condition)
 	if err != nil {
-		log.Error(ctx, "SearchPendingOutcomes: fillAuthorIDs failed",
+		log.Error(ctx, "SearchPending: fillAuthorIDs failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err
 	}
 	err = ocm.fillIDsBySetName(ctx, user, condition)
 	if err != nil {
-		log.Error(ctx, "SearchPendingOutcomes: fillIDsBySetName failed",
+		log.Error(ctx, "SearchPending: fillIDsBySetName failed",
 			log.String("op", user.UserID),
 			log.Any("condition", condition))
 		return 0, nil, err
@@ -868,7 +868,7 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.
 		var err error
 		total, outcomes, err = ocm.search(ctx, user, tx, condition)
 		if err != nil {
-			log.Error(ctx, "SearchLearningOutcome: search failed",
+			log.Error(ctx, "Search: search failed",
 				log.String("op", user.UserID),
 				log.Any("condition", condition))
 			return err
@@ -878,10 +878,10 @@ func (ocm OutcomeModel) SearchPendingOutcomes(ctx context.Context, user *entity.
 	return total, outcomes, err
 }
 
-func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeID string) error {
+func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, outcomeID string) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
 	if err != nil {
-		log.Error(ctx, "ApproveLearningOutcome: NewLock failed",
+		log.Error(ctx, "Approve: NewLock failed",
 			log.Err(err),
 			log.String("op", operator.UserID),
 			log.String("outcome_id", outcomeID))
@@ -892,20 +892,20 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, operator *en
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err == dbo.ErrRecordNotFound || gorm.IsRecordNotFoundError(err) {
-			log.Warn(ctx, "ApproveLearningOutcome: GetOutcomeByID failed",
+			log.Warn(ctx, "Approve: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "ApproveLearningOutcome: GetOutcomeByID failed",
+			log.Error(ctx, "Approve: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
 		}
 		err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusPublished)
 		if err != nil {
-			log.Error(ctx, "ApproveLearningOutcome: SetStatus failed",
+			log.Error(ctx, "Approve: SetStatus failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return ErrInvalidPublishStatus
@@ -915,21 +915,21 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, operator *en
 		}
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "ApproveLearningOutcome: UpdateOutcome failed",
+			log.Error(ctx, "Approve: UpdateOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
 		err = ocm.hideParent(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "ApproveLearningOutcome: hideParent failed",
+			log.Error(ctx, "Approve: hideParent failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
 		}
 		err = ocm.updateLatestToHead(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "ApproveLearningOutcome: updateLatestToHead failed",
+			log.Error(ctx, "Approve: updateLatestToHead failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
@@ -942,10 +942,10 @@ func (ocm OutcomeModel) ApproveLearningOutcome(ctx context.Context, operator *en
 	return err
 }
 
-func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string, reason string) error {
+func (ocm OutcomeModel) Reject(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeID string, reason string) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview)
 	if err != nil {
-		log.Error(ctx, "RejectLearningOutcome: NewLock failed",
+		log.Error(ctx, "Reject: NewLock failed",
 			log.Err(err),
 			log.String("op", operator.UserID),
 			log.String("outcome_id", outcomeID))
@@ -956,13 +956,13 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, operator *ent
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		outcome, err := da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
 		if err == dbo.ErrRecordNotFound || gorm.IsRecordNotFoundError(err) {
-			log.Warn(ctx, "RejectLearningOutcome: GetOutcomeByID failed",
+			log.Warn(ctx, "Reject: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "RejectLearningOutcome: GetOutcomeByID failed",
+			log.Error(ctx, "Reject: GetOutcomeByID failed",
 				log.String("op", operator.UserID),
 				log.String("outcome_id", outcomeID))
 			return err
@@ -970,14 +970,14 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, operator *ent
 		err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusRejected)
 		outcome.RejectReason = reason
 		if err != nil {
-			log.Error(ctx, "RejectLearningOutcome: SetStatus failed",
+			log.Error(ctx, "Reject: SetStatus failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return ErrInvalidPublishStatus
 		}
 		err = da.GetOutcomeDA().UpdateOutcome(ctx, operator, tx, outcome)
 		if err != nil {
-			log.Error(ctx, "RejectLearningOutcome: UpdateOutcome failed",
+			log.Error(ctx, "Reject: UpdateOutcome failed",
 				log.String("op", operator.UserID),
 				log.Any("outcome", outcome))
 			return err
@@ -990,11 +990,11 @@ func (ocm OutcomeModel) RejectLearningOutcome(ctx context.Context, operator *ent
 	return err
 }
 
-func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error {
+func (ocm OutcomeModel) BulkApprove(ctx context.Context, operator *entity.Operator, outcomeIDs []string) error {
 	for _, o := range outcomeIDs {
 		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview, o)
 		if err != nil {
-			log.Error(ctx, "RejectLearningOutcome: NewLock failed",
+			log.Error(ctx, "Reject: NewLock failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.String("outcome_id", o))
@@ -1006,13 +1006,13 @@ func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, operator
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &da.OutcomeCondition{IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true}})
 		if len(outcomes) == 0 {
-			log.Warn(ctx, "BulkApproveLearningOutcome: SearchOutcome failed",
+			log.Warn(ctx, "BulkApprove: SearchOutcome failed",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			return ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "BulkApproveLearningOutcome: SearchOutcome failed",
+			log.Error(ctx, "BulkApprove: SearchOutcome failed",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			return err
@@ -1020,7 +1020,7 @@ func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, operator
 		for _, outcome := range outcomes {
 			err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusPublished)
 			if err != nil {
-				log.Error(ctx, "BulkApproveLearningOutcome: SetStatus failed",
+				log.Error(ctx, "BulkApprove: SetStatus failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return ErrInvalidPublishStatus
@@ -1030,21 +1030,21 @@ func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, operator
 			}
 			err = da.GetOutcomeDA().UpdateOutcome(ctx, operator, tx, outcome)
 			if err != nil {
-				log.Error(ctx, "BulkApproveLearningOutcome: UpdateOutcome failed",
+				log.Error(ctx, "BulkApprove: UpdateOutcome failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return err
 			}
 			err = ocm.hideParent(ctx, operator, tx, outcome)
 			if err != nil {
-				log.Error(ctx, "BulkApproveLearningOutcome: hideParent failed",
+				log.Error(ctx, "BulkApprove: hideParent failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return err
 			}
 			err = ocm.updateLatestToHead(ctx, operator, tx, outcome)
 			if err != nil {
-				log.Error(ctx, "BulkApproveLearningOutcome: updateLatestToHead failed",
+				log.Error(ctx, "BulkApprove: updateLatestToHead failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return err
@@ -1057,11 +1057,11 @@ func (ocm OutcomeModel) BulkApproveLearningOutcome(ctx context.Context, operator
 	}
 	return err
 }
-func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error {
+func (ocm OutcomeModel) BulkReject(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error {
 	for _, o := range outcomeIDs {
 		locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixOutcomeReview, o)
 		if err != nil {
-			log.Error(ctx, "RejectLearningOutcome: NewLock failed",
+			log.Error(ctx, "Reject: NewLock failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.String("outcome_id", o))
@@ -1073,13 +1073,13 @@ func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, operator 
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &da.OutcomeCondition{IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true}})
 		if len(outcomes) == 0 {
-			log.Warn(ctx, "BulkRejectLearningOutcome: SearchOutcome failed",
+			log.Warn(ctx, "BulkReject: SearchOutcome failed",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			return ErrResourceNotFound
 		}
 		if err != nil {
-			log.Error(ctx, "BulkRejectLearningOutcome: SearchOutcome failed",
+			log.Error(ctx, "BulkReject: SearchOutcome failed",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			return err
@@ -1088,14 +1088,14 @@ func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, operator 
 			err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusRejected)
 			outcome.RejectReason = reason
 			if err != nil {
-				log.Error(ctx, "BulkRejectLearningOutcome: SetStatus failed",
+				log.Error(ctx, "BulkReject: SetStatus failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return ErrInvalidPublishStatus
 			}
 			err = da.GetOutcomeDA().UpdateOutcome(ctx, operator, tx, outcome)
 			if err != nil {
-				log.Error(ctx, "BulkRejectLearningOutcome: UpdateOutcome failed",
+				log.Error(ctx, "BulkReject: UpdateOutcome failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return err
@@ -1109,14 +1109,14 @@ func (ocm OutcomeModel) BulkRejectLearningOutcome(ctx context.Context, operator 
 	return err
 }
 
-func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error) {
+func (ocm OutcomeModel) GetByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) ([]*entity.Outcome, error) {
 	condition := da.OutcomeCondition{
 		IDs:            dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 		IncludeDeleted: true,
 	}
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &condition)
 	if err != nil {
-		log.Error(ctx, "GetLearningOutcomesByIDs: SearchOutcome failed",
+		log.Error(ctx, "GetByIDs: SearchOutcome failed",
 			log.Err(err),
 			log.String("op", operator.UserID),
 			log.Any("outcome", ocm))
@@ -1124,7 +1124,7 @@ func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, operator *
 	}
 	err = ocm.fillRelation(ctx, operator, tx, outcomes)
 	if err != nil {
-		log.Error(ctx, "GetLearningOutcomesByIDs: fillRelation failed",
+		log.Error(ctx, "GetByIDs: fillRelation failed",
 			log.Err(err),
 			log.String("op", operator.UserID))
 		return nil, err
@@ -1132,21 +1132,21 @@ func (ocm OutcomeModel) GetLearningOutcomesByIDs(ctx context.Context, operator *
 	return outcomes, nil
 }
 
-func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (outcomes []*entity.Outcome, err error) {
+func (ocm OutcomeModel) GetLatestByIDs(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (outcomes []*entity.Outcome, err error) {
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		cond1 := da.OutcomeCondition{
 			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 		}
 		total, otcs1, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			return err
 		}
 		if total == 0 {
-			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			outcomes = []*entity.Outcome{}
@@ -1159,14 +1159,14 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, operator *en
 		cond2.IDs.Valid = true
 		total, otcs2, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", cond2.IDs.Strings))
 			return err
 		}
 		if total == 0 {
-			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", cond2.IDs.Strings))
 			outcomes = []*entity.Outcome{}
@@ -1174,7 +1174,7 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, operator *en
 			outcomes = otcs2
 			err = ocm.fillRelation(ctx, operator, tx, outcomes)
 			if err != nil {
-				log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
+				log.Error(ctx, "GetLatestByIDs: fillRelation failed",
 					log.Err(err),
 					log.String("op", operator.UserID))
 				return err
@@ -1185,21 +1185,21 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDs(ctx context.Context, operator *en
 	return
 }
 
-func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (latests map[string]*entity.Outcome, err error) {
+func (ocm OutcomeModel) GetLatestByIDsMapResult(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (latests map[string]*entity.Outcome, err error) {
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		cond1 := da.OutcomeCondition{
 			IDs: dbo.NullStrings{Strings: outcomeIDs, Valid: true},
 		}
 		total, otcs1, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond1)
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			return err
 		}
 		if total == 0 {
-			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", outcomeIDs))
 			return constant.ErrRecordNotFound
@@ -1211,21 +1211,21 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, ope
 		cond2.IDs.Valid = true
 		total, otcs2, err := da.GetOutcomeDA().SearchOutcome(ctx, operator, tx, &cond2)
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByIDs: SearchOutcome failed",
+			log.Error(ctx, "GetLatestByIDs: SearchOutcome failed",
 				log.Err(err),
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", cond2.IDs.Strings))
 			return err
 		}
 		if total == 0 {
-			log.Debug(ctx, "GetLatestOutcomesByIDs: SearchOutcome return empty",
+			log.Debug(ctx, "GetLatestByIDs: SearchOutcome return empty",
 				log.String("op", operator.UserID),
 				log.Strings("outcome_ids", cond2.IDs.Strings))
 			return constant.ErrRecordNotFound
 		}
 		err = ocm.fillRelation(ctx, operator, tx, otcs2)
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByIDs: fillRelation failed",
+			log.Error(ctx, "GetLatestByIDs: fillRelation failed",
 				log.Err(err),
 				log.String("op", operator.UserID))
 			return err
@@ -1244,7 +1244,7 @@ func (ocm OutcomeModel) GetLatestOutcomesByIDsMapResult(ctx context.Context, ope
 	return
 }
 
-func (ocm OutcomeModel) HasLockedOutcome(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error) {
+func (ocm OutcomeModel) HasLocked(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error) {
 	if len(outcomeIDs) == 0 {
 		return false, nil
 	}
@@ -1262,14 +1262,14 @@ func (ocm OutcomeModel) HasLockedOutcome(ctx context.Context, operator *entity.O
 	return false, nil
 }
 
-func (ocm OutcomeModel) GetLatestOutcomesByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestorIDs []string) (outcomes []*entity.Outcome, err error) {
+func (ocm OutcomeModel) GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestorIDs []string) (outcomes []*entity.Outcome, err error) {
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, outcomes, err = da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
 			AncestorIDs:   dbo.NullStrings{Strings: ancestorIDs, Valid: true},
 			PublishStatus: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished}, Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByAncestors: SearchOutcome failed",
+			log.Error(ctx, "GetLatestByAncestors: SearchOutcome failed",
 				log.Err(err),
 				log.String("op", op.UserID),
 				log.Strings("ancestor", ancestorIDs))
@@ -1277,7 +1277,7 @@ func (ocm OutcomeModel) GetLatestOutcomesByAncestors(ctx context.Context, op *en
 		}
 		err = ocm.fillRelation(ctx, op, tx, outcomes)
 		if err != nil {
-			log.Error(ctx, "GetLatestOutcomesByAncestors: fillRelation failed",
+			log.Error(ctx, "GetLatestByAncestors: fillRelation failed",
 				log.Err(err),
 				log.String("op", op.UserID),
 				log.Strings("ancestor", ancestorIDs))

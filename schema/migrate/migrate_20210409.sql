@@ -54,4 +54,5 @@ CREATE TABLE IF NOT EXISTS `outcomes_relations` (
     UNIQUE KEY `master_relation_delete` (`master_id`, `relation_id`, `relation_type`,`master_type`,`delete_at`)
 ) COMMENT 'outcomes_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
-alter table milestones add type int default 0 comment 'milestone type';
+alter table milestones drop column type;
+alter table milestones add type varchar(10) default 'normal' comment 'milestone type';

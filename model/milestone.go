@@ -48,7 +48,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	milestone.UpdateAt = milestone.CreateAt
 	milestone.Status = "draft"
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		occupied, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, milestone.AncestorID, milestone.Shortcode)
+		occupied, err := GetMilestoneShortcodeModel().isOccupied(ctx, tx, op.OrgID, milestone.AncestorID, milestone.Shortcode)
 		if err != nil {
 			log.Error(ctx, "CreateMilestone: isOccupied failed",
 				log.Err(err),
@@ -114,20 +114,20 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "Obtain: Search failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.String("milestone", milestoneID))
+			log.Error(ctx, "Obtain: Search failed", log.Any("op", op), log.String("milestone", milestoneID))
 			return err
 		}
 		m.FillRelation(milestone, relations)
 		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
 			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
 		})
+		if err != nil {
+			log.Error(ctx, "Obtain: SearchTx failed", log.Any("op", op), log.String("milestone", milestoneID))
+			return err
+		}
 		bindLength := len(milestoneOutcomes)
 		if bindLength == 0 {
-			log.Info(ctx, "Obtain: no outcome bind",
-				log.String("milestone", milestoneID))
+			log.Info(ctx, "Obtain: no outcome bind", log.String("milestone", milestoneID))
 			return nil
 		}
 
@@ -135,9 +135,9 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		for i := range milestoneOutcomes {
 			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
 		}
-		outcomes, err := GetOutcomeModel().GetLatestOutcomesByAncestors(ctx, op, tx, outcomeAncestors)
+		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
-			log.Error(ctx, "Obtain: GetLatestOutcomesByAncestors failed",
+			log.Error(ctx, "Obtain: GetLatestByAncestors failed",
 				log.Err(err),
 				log.Strings("ancestors", outcomeAncestors))
 			return err
@@ -146,10 +146,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		milestone.LoCounts = len(outcomes)
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return milestone, nil
+	return milestone, err
 }
 
 func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string) error {
@@ -163,7 +160,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel().isCached(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
+	exists, err := GetMilestoneShortcodeModel().isCached(ctx, op.OrgID, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: isCached failed",
 			log.Err(err),
@@ -213,7 +210,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 
 		if ms.Shortcode != milestone.Shortcode {
 			ms.Shortcode = milestone.Shortcode
-			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, ms.AncestorID, ms.Shortcode)
+			exists, err := GetMilestoneShortcodeModel().isOccupied(ctx, tx, op.OrgID, ms.AncestorID, ms.Shortcode)
 			if err != nil {
 				log.Error(ctx, "Update: isOccupied failed",
 					log.Err(err),
@@ -276,10 +273,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.Milestone, perms map[external.PermissionName]bool) ([]string, error) {
@@ -353,7 +347,6 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
-		//err = da.GetRelationDA().Replace(ctx, tx, entity.OutcomeRelationTable, deleteIDs, entity.MilestoneType, nil)
 		err = da.GetMilestoneRelationDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
@@ -632,7 +625,7 @@ func (m MilestoneModel) SaveAndPublish(ctx context.Context, op *entity.Operator,
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel().isCached(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
+	exists, err := GetMilestoneShortcodeModel().isCached(ctx, op.OrgID, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "SaveAndPublish: isCached failed",
 			log.Err(err),
@@ -677,7 +670,7 @@ func (m MilestoneModel) SaveAndPublish(ctx context.Context, op *entity.Operator,
 
 		if ms.Shortcode != milestone.Shortcode {
 			ms.Shortcode = milestone.Shortcode
-			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, ms.AncestorID, ms.Shortcode)
+			exists, err := GetMilestoneShortcodeModel().isOccupied(ctx, tx, op.OrgID, ms.AncestorID, ms.Shortcode)
 			if err != nil {
 				log.Error(ctx, "SaveAndPublish: isOccupied failed",
 					log.Err(err),
