@@ -17,11 +17,11 @@ type HasPermissionResponse map[external.PermissionName]bool
 // @Description has organization permission
 // @Accept json
 // @Produce json
-// @Param permission_name query string false "permission_name separated by commas"
+// @Param permission_name path string true "permission_name separated by commas"
 // @Tags permission
 // @Success 200 {object} HasPermissionResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /organization_permissions [get]
+// @Router /organization_permissions/{permission_name} [get]
 func (s *Server) hasOrganizationPermissions(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
