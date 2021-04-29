@@ -19,22 +19,6 @@ func NewReportPermissionChecker(operator *entity.Operator) *ReportPermissionChec
 }
 
 func (c *ReportPermissionChecker) CheckTeachers(ctx context.Context, teacherIDs []string) (bool, error) {
-	ok, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, c.Operator, external.ReportTeacherReports603)
-	if err != nil {
-		log.Error(ctx, "CheckTeachers: c.Check603: check failed",
-			log.Err(err),
-			log.Any("operator", c.Operator),
-		)
-		return false, err
-	}
-	if !ok {
-		log.Error(ctx, "CheckTeachers: c.Check603: check failed",
-			log.Err(err),
-			log.Any("operator", c.Operator),
-		)
-		return false, nil
-	}
-
 	permissions := []external.PermissionName{
 		external.ReportTeacherReports603,
 		external.ReportViewReports610,
@@ -45,6 +29,9 @@ func (c *ReportPermissionChecker) CheckTeachers(ctx context.Context, teacherIDs 
 	permissionsMap, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, c.Operator, permissions)
 	if err != nil {
 		return false, err
+	}
+	if !permissionsMap[external.ReportTeacherReports603] {
+		return false, nil
 	}
 	if permissionsMap[external.ReportViewReports610] || permissionsMap[external.ReportViewMyOrganizationsReports612] {
 		if err := c.SearchOrg(ctx); err != nil {
