@@ -823,22 +823,23 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	}
 
 	// update schedule
+	relationInput := &entity.ScheduleRelationInput{
+		ScheduleID:             viewData.ID,
+		ClassRosterClassID:     viewData.ClassID,
+		ClassRosterTeacherIDs:  viewData.ClassRosterTeacherIDs,
+		ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
+		ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
+		ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
+		SubjectIDs:             viewData.SubjectIDs,
+	}
+	relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
+	if err != nil {
+		return "", err
+	}
+
 	var id string
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		relationInput := &entity.ScheduleRelationInput{
-			ScheduleID:             viewData.ID,
-			ClassRosterClassID:     viewData.ClassID,
-			ClassRosterTeacherIDs:  viewData.ClassRosterTeacherIDs,
-			ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
-			ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
-			ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
-			SubjectIDs:             viewData.SubjectIDs,
-		}
 		var err error
-		relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
-		if err != nil {
-			return err
-		}
 		// delete schedule
 		if err = s.deleteScheduleTx(ctx, tx, operator, schedule, viewData.EditType); err != nil {
 			log.Error(ctx, "update schedule: delete failed",
