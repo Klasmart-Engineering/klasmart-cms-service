@@ -143,3 +143,29 @@ func SliceDeduplicationExcludeEmpty(s []string) []string {
 func ParseURLQueryArray(s string) []string {
 	return SliceDeduplicationExcludeEmpty(strings.Split(s, ","))
 }
+
+func HasIntersection(ss1 []string, ss2 []string) bool {
+	for _, s1 := range ss1 {
+		for _, s2 := range ss2 {
+			if s1 == s2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func HasSubset(parent []string, children []string) bool {
+	for _, s1 := range parent {
+		ok := false
+		for _, s2 := range children {
+			if s1 == s2 {
+				ok = true
+			}
+		}
+		if !ok {
+			return false
+		}
+	}
+	return true
+}

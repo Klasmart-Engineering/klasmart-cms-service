@@ -36,7 +36,7 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 	// clean args
 	var err error
 	if args, err = m.cleanListTeachingLoadReportArgs(ctx, tx, operator, args); err != nil {
-		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachersPermission: search failed",
+		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachers: search failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("args", args),
@@ -46,9 +46,9 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 
 	// permission check
 	checker := NewReportPermissionChecker(operator)
-	ok, err := checker.CheckTeachersPermission(ctx, args.TeacherIDs)
+	ok, err := checker.CheckTeachers(ctx, args.TeacherIDs)
 	if err != nil {
-		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachersPermission: search failed",
+		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachers: search failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("args", args),
@@ -57,7 +57,7 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		return nil, err
 	}
 	if !ok {
-		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachersPermission: check failed",
+		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachers: check failed",
 			log.Strings("teacher_ids", args.TeacherIDs),
 			log.Any("args", args),
 			log.Any("operator", operator),
