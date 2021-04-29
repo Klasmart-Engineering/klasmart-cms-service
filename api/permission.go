@@ -36,6 +36,12 @@ func (s *Server) hasOrganizationPermissions(c *gin.Context) {
 
 	permissions := make([]external.PermissionName, len(permissionNames))
 	for index, permissionName := range permissionNames {
+		if permissionName == "" {
+			log.Info(ctx, "permission name is invalid", log.String("permission_name", c.Query("permission_name")))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
+
 		permissions[index] = external.PermissionName(permissionName)
 	}
 
