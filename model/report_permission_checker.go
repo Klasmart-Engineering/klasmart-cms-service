@@ -10,8 +10,7 @@ import (
 
 type ReportPermissionChecker struct {
 	Operator        *entity.Operator
-	Permissions     []external.PermissionName
-	allowTeacherIDs []string
+	AllowTeacherIDs []string
 }
 
 func NewReportPermissionChecker(operator *entity.Operator) *ReportPermissionChecker {
@@ -55,7 +54,7 @@ func (c *ReportPermissionChecker) CheckTeachers(ctx context.Context, teacherIDs 
 		c.SearchMe(ctx)
 	}
 
-	return utils.HasSubset(c.allowTeacherIDs, teacherIDs), nil
+	return utils.HasSubset(c.AllowTeacherIDs, teacherIDs), nil
 }
 
 func (c *ReportPermissionChecker) SearchOrg(ctx context.Context) error {
@@ -68,7 +67,7 @@ func (c *ReportPermissionChecker) SearchOrg(ctx context.Context) error {
 		return err
 	}
 	for _, t := range teachers {
-		c.allowTeacherIDs = append(c.allowTeacherIDs, t.ID)
+		c.AllowTeacherIDs = append(c.AllowTeacherIDs, t.ID)
 	}
 
 	return nil
@@ -97,12 +96,12 @@ func (c *ReportPermissionChecker) SearchSchool(ctx context.Context) error {
 	}
 	for _, teachers := range schoolTeachersMap {
 		for _, t := range teachers {
-			c.allowTeacherIDs = append(c.allowTeacherIDs, t.ID)
+			c.AllowTeacherIDs = append(c.AllowTeacherIDs, t.ID)
 		}
 	}
 	return nil
 }
 
 func (c *ReportPermissionChecker) SearchMe(ctx context.Context) {
-	c.allowTeacherIDs = append(c.allowTeacherIDs, c.Operator.UserID)
+	c.AllowTeacherIDs = append(c.AllowTeacherIDs, c.Operator.UserID)
 }
