@@ -31,7 +31,6 @@ var (
 
 type IScheduleModel interface {
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
-	AddTx(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
@@ -618,21 +617,6 @@ func (s *scheduleModel) prepareScheduleRelationUpdateData(ctx context.Context, o
 }
 
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
-	id, err := s.AddTx(ctx, op, viewData)
-	if err != nil {
-		log.Error(ctx, "add schedule error",
-			log.Err(err),
-			log.Any("viewData", viewData),
-		)
-		return "", err
-	}
-	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
-	if err != nil {
-		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
-	}
-	return id, nil
-}
-func (s *scheduleModel) AddTx(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err := s.verifyData(ctx, op, &entity.ScheduleVerify{
@@ -683,6 +667,10 @@ func (s *scheduleModel) AddTx(ctx context.Context, op *entity.Operator, viewData
 		return scheduleID, nil
 	})
 
+	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
+	if err != nil {
+		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
+	}
 	return id.(string), nil
 }
 
