@@ -20,6 +20,7 @@ type StudentServiceProvider interface {
 	GetByClassID(ctx context.Context, operator *entity.Operator, classID string) ([]*Student, error)
 	GetByClassIDs(ctx context.Context, operator *entity.Operator, classIDs []string) (map[string][]*Student, error)
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*Student, error)
+	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type Student struct {
@@ -200,4 +201,8 @@ func (s AmsStudentService) Query(ctx context.Context, operator *entity.Operator,
 	}
 
 	return students, nil
+}
+
+func (s AmsStudentService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
+	return GetUserServiceProvider().FilterByPermission(ctx, operator, userIDs, permissionName)
 }
