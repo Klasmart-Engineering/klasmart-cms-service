@@ -17,18 +17,19 @@ type HasPermissionResponse map[external.PermissionName]bool
 // @Description has organization permission
 // @Accept json
 // @Produce json
-// @Param permission_name path string true "permission_name separated by commas"
+// @Param permission_name query string true "permission_name separated by commas"
 // @Tags permission
 // @Success 200 {object} HasPermissionResponse
+// @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /organization_permissions/{permission_name} [get]
+// @Router /organization_permissions [get]
 func (s *Server) hasOrganizationPermissions(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
 
-	permissionNames := strings.Split(c.Param("permission_name"), constant.StringArraySeparator)
+	permissionNames := strings.Split(c.Query("permission_name"), constant.StringArraySeparator)
 	if len(permissionNames) == 0 {
-		log.Info(ctx, "permission name is invalid", log.String("permission_name", c.Param("permission_name")))
+		log.Info(ctx, "permission name is invalid", log.String("permission_name", c.Query("permission_name")))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -41,14 +42,14 @@ func (s *Server) hasOrganizationPermissions(c *gin.Context) {
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissions)
 	switch err {
 	case nil:
-		log.Error(ctx, "check permission success",
-			log.String("permission_name", c.Param("permission_name")),
+		log.Info(ctx, "check permission success",
+			log.String("permission_name", c.Query("permission_name")),
 			log.Any("hasPermission", hasPermission))
 		c.JSON(http.StatusOK, HasPermissionResponse(hasPermission))
 	default:
 		log.Error(ctx, "check permission failed",
 			log.Err(err),
-			log.String("permission_name", c.Param("permission_name")))
+			log.String("permission_name", c.Query("permission_name")))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
