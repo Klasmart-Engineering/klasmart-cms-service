@@ -31,7 +31,7 @@ var (
 
 type IScheduleModel interface {
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
-	AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
+	AddTx(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
@@ -618,9 +618,7 @@ func (s *scheduleModel) prepareScheduleRelationUpdateData(ctx context.Context, o
 }
 
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
-	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		return s.AddTx(ctx, tx, op, viewData)
-	})
+	id, err := s.AddTx(ctx, op, viewData)
 	if err != nil {
 		log.Error(ctx, "add schedule error",
 			log.Err(err),
@@ -632,9 +630,9 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	if err != nil {
 		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
-	return id.(string), nil
+	return id, nil
 }
-func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
+func (s *scheduleModel) AddTx(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err := s.verifyData(ctx, op, &entity.ScheduleVerify{
@@ -672,17 +670,20 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		log.Error(ctx, "prepareScheduleRelationAddData error", log.Err(err), log.Any("op", op), log.Any("relationInput", relationInput))
 		return "", err
 	}
+	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location, relations)
+		if err != nil {
+			log.Error(ctx, "add schedule: error",
+				log.Err(err),
+				log.Any("viewData", viewData),
+				log.Any("schedule", schedule),
+			)
+			return "", err
+		}
+		return scheduleID, nil
+	})
 
-	scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location, relations)
-	if err != nil {
-		log.Error(ctx, "add schedule: error",
-			log.Err(err),
-			log.Any("viewData", viewData),
-			log.Any("schedule", schedule),
-		)
-		return "", err
-	}
-	return scheduleID, nil
+	return id.(string), nil
 }
 
 func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) (string, error) {
