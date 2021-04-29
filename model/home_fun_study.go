@@ -228,27 +228,6 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 	for _, t := range teachers {
 		teacherNames = append(teacherNames, t.Name)
 	}
-	var subjectName string
-	if study.SubjectID != "" {
-		subjects, err := external.GetSubjectServiceProvider().BatchGet(ctx, operator, []string{study.SubjectID})
-		if err != nil {
-			log.Error(ctx, "Get: external.GetSubjectServiceProvider().BatchGet: get subject failed",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.String("subject_id", study.SubjectID),
-			)
-			return nil, err
-		}
-		if len(subjects) == 0 {
-			log.Error(ctx, "Get: external.GetSubCategoryServiceProvider().BatchGet: not found subject",
-				log.Err(err),
-				log.Any("operator", operator),
-				log.String("subject_id", study.SubjectID),
-			)
-			return nil, err
-		}
-		subjectName = subjects[0].Name
-	}
 
 	result := &entity.GetHomeFunStudyResult{
 		ID:               study.ID,
@@ -258,7 +237,6 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		TeacherNames:     teacherNames,
 		StudentID:        study.StudentID,
 		StudentName:      studentName,
-		SubjectName:      subjectName,
 		Status:           study.Status,
 		DueAt:            study.DueAt,
 		CompleteAt:       study.CompleteAt,
@@ -377,7 +355,6 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			Title:            title,
 			TeacherIDs:       args.TeacherIDs,
 			StudentID:        args.StudentID,
-			SubjectID:        args.SubjectID,
 			Status:           entity.AssessmentStatusInProgress,
 			DueAt:            args.DueAt,
 			LatestFeedbackID: args.LatestFeedbackID,

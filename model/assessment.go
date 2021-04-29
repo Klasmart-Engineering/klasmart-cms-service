@@ -22,6 +22,7 @@ type IAssessmentModel interface {
 	GetPlain(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.Assessment, error)
 	Get(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
+	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
 	Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	Update(ctx context.Context, operator *entity.Operator, args entity.UpdateAssessmentArgs) error
 }
@@ -374,6 +375,102 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	}
 
 	return &result, nil
+}
+
+func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error) {
+	// check permission
+	var (
+		checker = NewAssessmentPermissionChecker(operator)
+		err     error
+	)
+	if err = checker.SearchAllPermissions(ctx); err != nil {
+		log.Error(ctx, "List: checker.SearchAllPermissions: search failed",
+			log.Any("operator", operator),
+			log.Any("args", args),
+		)
+		return nil, err
+	}
+	if !checker.CheckStatus(args.Status) {
+		return nil, constant.ErrForbidden
+	}
+
+	// get assessment list
+	var (
+		assessments []*entity.Assessment
+		cond        = da.QueryAssessmentConditions{
+			OrgID:                   &operator.OrgID,
+			Status:                  args.Status,
+			AllowTeacherIDs:         checker.AllowTeacherIDs(),
+			TeacherIDAndStatusPairs: checker.AllowPairs(),
+			ClassType:               args.ClassType,
+		}
+		teachers    []*external.Teacher
+		scheduleIDs []string
+	)
+	if args.TeacherName != nil {
+		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, *args.TeacherName); err != nil {
+			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
+				log.Err(err),
+				log.String("org_id", operator.OrgID),
+				log.String("teacher_name", *args.TeacherName),
+				log.Any("args", args),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+		log.Debug(ctx, "List: external.GetTeacherServiceProvider().Query: query success",
+			log.String("org_id", operator.OrgID),
+			log.String("teacher_name", *args.TeacherName),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		if len(teachers) > 0 {
+			for _, item := range teachers {
+				cond.TeacherIDs = append(cond.TeacherIDs, item.ID)
+			}
+		} else {
+			cond.TeacherIDs = []string{}
+		}
+	}
+	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {
+		log.Error(ctx, "List: GetScheduleModel().GetScheduleIDsByOrgID: get failed",
+			log.Err(err),
+			log.String("org_id", operator.OrgID),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	if scheduleIDs == nil {
+		cond.ScheduleIDs = []string{}
+	} else {
+		cond.ScheduleIDs = append(cond.ScheduleIDs, scheduleIDs...)
+	}
+
+	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
+		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
+			log.Err(err),
+			log.Any("cond", cond),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	if len(assessments) == 0 {
+		return nil, nil
+	}
+
+	r := entity.AssessmentsSummary{}
+	for _, a := range assessments {
+		switch a.Status {
+		case entity.AssessmentStatusComplete:
+			r.Complete++
+		case entity.AssessmentStatusInProgress:
+			r.InProgress++
+		}
+	}
+
+	return &r, nil
 }
 
 func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, checkedStudents *bool) ([]*entity.AssessmentView, error) {

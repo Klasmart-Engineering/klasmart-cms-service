@@ -124,6 +124,7 @@ func (s Server) registeRoute() {
 		assessments.GET("/assessments/:id", s.mustLogin, s.getAssessmentDetail)
 		assessments.PUT("/assessments/:id", s.mustLogin, s.updateAssessment)
 
+		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
 	}
 
 	homeFunStudies := s.engine.Group("/v1")
@@ -144,6 +145,8 @@ func (s Server) registeRoute() {
 
 		reports.GET("/reports/performance/h5p/students", s.mustLogin, s.listStudentsPerformanceH5PReport)
 		reports.GET("/reports/performance/h5p/students/:id", s.mustLogin, s.getStudentPerformanceH5PReport)
+
+		reports.GET("/reports/teaching_loading", s.mustLogin, s.listTeachingLoadReport)
 	}
 
 	outcomes := s.engine.Group("/v1")
