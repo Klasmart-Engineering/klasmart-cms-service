@@ -144,7 +144,7 @@ func ParseURLQueryArray(s string) []string {
 	return SliceDeduplicationExcludeEmpty(strings.Split(s, ","))
 }
 
-func HasIntersection(ss1 []string, ss2 []string) bool {
+func HasIntersection(ss1, ss2 []string) bool {
 	for _, s1 := range ss1 {
 		for _, s2 := range ss2 {
 			if s1 == s2 {
@@ -155,12 +155,13 @@ func HasIntersection(ss1 []string, ss2 []string) bool {
 	return false
 }
 
-func HasSubset(parent []string, children []string) bool {
-	for _, s1 := range parent {
+func HasSubset(parent, children []string) bool {
+	for _, s1 := range children {
 		ok := false
-		for _, s2 := range children {
+		for _, s2 := range parent {
 			if s1 == s2 {
 				ok = true
+				break
 			}
 		}
 		if !ok {
