@@ -106,16 +106,16 @@ func initOperator(orgID string, authTo string, authCode string) *entity.Operator
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Set("origin", "https://auth.kidsloop.net")
+	//req.Header.Set("origin", "https://auth.kidsloop.net")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(":authority", "auth.kidsloop.net")
-	req.Header.Set(":path", "/transfer")
-	req.Header.Set(":scheme", "https")
-	req.Header.Set(":method", "POST")
+	req.Header.Set("authority", "auth.kidsloop.net")
+	req.Header.Set("accept", "application/json")
+	//req.Header.Set("path", "/transfer")
+	//req.Header.Set("scheme", "https")
+	req.Header.Set("method", "POST")
 	req.Header.Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36")
 	req.Header.Set("referer", "https://auth.kidsloop.net/?continue=https%3A%2F%2Fbeta-hub.kidsloop.net%2F%23%2Fadmin%2Forganizations")
 	req.Header.Set("cookie", "_ga=GA1.2.489381037.1617355818; locale=en; privacy=true")
-	//req.Header.Set("cookie", "_ga=GA1.2.489381037.1617355818; locale=en; privacy=true")
 	resp, err = (&http.Client{}).Do(req)
 	op := &entity.Operator{
 		OrgID: orgID,

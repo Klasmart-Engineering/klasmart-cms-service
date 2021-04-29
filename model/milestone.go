@@ -18,7 +18,7 @@ import (
 type IMilestoneModel interface {
 	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error
 	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
-	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string) error
+	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string, toPublish bool) error
 	Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error
 	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error)
 	Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
@@ -47,7 +47,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	milestone.UpdateAt = milestone.CreateAt
 	milestone.Status = "draft"
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		occupied, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, milestone.AncestorID, milestone.Shortcode)
+		occupied, err := GetMilestoneShortcodeModel().isOccupied(ctx, tx, op.OrgID, milestone.AncestorID, milestone.Shortcode)
 		if err != nil {
 			log.Error(ctx, "CreateMilestone: isOccupied failed",
 				log.Err(err),
@@ -113,18 +113,20 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "Obtain: Search failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.String("milestone", milestoneID))
+			log.Error(ctx, "Obtain: Search failed", log.Any("op", op), log.String("milestone", milestoneID))
 			return err
 		}
 		m.FillRelation(milestone, relations)
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "Obtain: SearchTx failed", log.Any("op", op), log.String("milestone", milestoneID))
+			return err
+		}
 		bindLength := len(milestoneOutcomes)
 		if bindLength == 0 {
-			log.Info(ctx, "Obtain: no outcome bind",
-				log.String("milestone", milestoneID))
+			log.Info(ctx, "Obtain: no outcome bind", log.String("milestone", milestoneID))
 			return nil
 		}
 
@@ -132,9 +134,9 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		for i := range milestoneOutcomes {
 			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
 		}
-		outcomes, err := GetOutcomeModel().GetLatestOutcomesByAncestors(ctx, op, tx, outcomeAncestors)
+		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
-			log.Error(ctx, "Obtain: GetLatestOutcomesByAncestors failed",
+			log.Error(ctx, "Obtain: GetLatestByAncestors failed",
 				log.Err(err),
 				log.Strings("ancestors", outcomeAncestors))
 			return err
@@ -143,13 +145,10 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		milestone.LoCounts = len(outcomes)
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return milestone, nil
+	return milestone, err
 }
 
-func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string) error {
+func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateMilestone: NewLock failed",
@@ -160,7 +159,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel().isCached(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
+	exists, err := GetMilestoneShortcodeModel().isCached(ctx, op.OrgID, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: isCached failed",
 			log.Err(err),
@@ -185,21 +184,31 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				ID: ms.LockedBy,
 			}}
 		}
+
+		if toPublish && !perms[external.CreateMilestone] {
+			log.Warn(ctx, "Update: perm failed",
+				log.Any("perms", perms),
+				log.Bool("to_publish", toPublish),
+				log.Any("op", op),
+				log.Any("milestone", ms))
+			return constant.ErrOperateNotAllowed
+		}
+
 		switch ms.Status {
 		case entity.OutcomeStatusDraft:
 			if !perms[external.EditUnpublishedMilestone] {
-				log.Error(ctx, "Update: perm failed",
-					log.Err(err),
+				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
+					log.Bool("to_publish", toPublish),
 					log.Any("op", op),
 					log.Any("milestone", ms))
 				return constant.ErrOperateNotAllowed
 			}
 		case entity.OutcomeStatusPublished:
 			if !perms[external.EditPublishedMilestone] {
-				log.Error(ctx, "Update: perm failed",
-					log.Err(err),
+				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
+					log.Bool("to_publish", toPublish),
 					log.Any("op", op),
 					log.Any("milestone", ms))
 				return constant.ErrOperateNotAllowed
@@ -210,10 +219,11 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 
 		if ms.Shortcode != milestone.Shortcode {
 			ms.Shortcode = milestone.Shortcode
-			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, ms.AncestorID, ms.Shortcode)
+			exists, err := GetMilestoneShortcodeModel().isOccupied(ctx, tx, op.OrgID, ms.AncestorID, ms.Shortcode)
 			if err != nil {
 				log.Error(ctx, "Update: isOccupied failed",
 					log.Err(err),
+					log.Bool("to_publish", toPublish),
 					log.Any("op", op),
 					log.Any("milestone", ms))
 				return err
@@ -223,13 +233,38 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 		}
 		m.UpdateMilestone(milestone, ms)
+		if toPublish {
+			ms.Status = entity.OutcomeStatusPublished
+		}
 		err = da.GetMilestoneDA().Update(ctx, tx, ms)
 		if err != nil {
 			log.Error(ctx, "Update: Update failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
+		}
+
+		if toPublish {
+			err = da.GetMilestoneDA().BatchHide(ctx, tx, []string{milestone.SourceID})
+			if err != nil {
+				log.Error(ctx, "Update: BatchHide failed",
+					log.Bool("to_publish", toPublish),
+					log.Any("op", op),
+					log.Any("milestone", ms))
+				return err
+			}
+			ancestorLatest := make(map[string]string)
+			ancestorLatest[ms.AncestorID] = ms.ID
+			err = da.GetMilestoneDA().BatchUpdateLatest(ctx, tx, ancestorLatest)
+			if err != nil {
+				log.Error(ctx, "Update: BatchUpdateLatest failed",
+					log.Bool("to_publish", toPublish),
+					log.Any("op", op),
+					log.Any("milestone", ancestorLatest))
+				return err
+			}
 		}
 
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
@@ -244,6 +279,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
@@ -252,6 +288,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		if err != nil {
 			log.Error(ctx, "Update: InsertTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", milestoneOutcomes))
 			return err
@@ -260,6 +297,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
@@ -268,15 +306,13 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		if err != nil {
 			log.Error(ctx, "Update: InsertTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.Milestone, perms map[external.PermissionName]bool) ([]string, error) {
@@ -350,7 +386,6 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
-		//err = da.GetRelationDA().Replace(ctx, tx, entity.OutcomeRelationTable, deleteIDs, entity.MilestoneType, nil)
 		err = da.GetMilestoneRelationDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
@@ -493,7 +528,9 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("op", op),
 				log.Any("milestone", milestone))
 		}
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
+		})
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),

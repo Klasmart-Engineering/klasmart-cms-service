@@ -44,16 +44,17 @@ type Outcome struct {
 	LatestID     string `gorm:"type:varchar(255);NOT NULL;column:latest_id" dynamodbav:"latest_id" json:"latest_id" dynamoupdate:":lsi"`
 	Assumed      bool   `gorm:"type:tinyint(255);NOT NULL;column:assumed" dynamodbav:"assumed" json:"assumed" dynamoupdate:":asum"`
 
-	CreateAt      int64    `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
-	UpdateAt      int64    `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
-	DeleteAt      int64    `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
-	Sets          []*Set   `gorm:"-" json:"sets"`
-	Programs      []string `gorm:"-"`
-	Subjects      []string `gorm:"-"`
-	Categories    []string `gorm:"-"`
-	Subcategories []string `gorm:"-"`
-	Grades        []string `gorm:"-"`
-	Ages          []string `gorm:"-"`
+	CreateAt      int64        `gorm:"type:bigint;NOT NULL;column:create_at" dynamodbav:"created_at" json:"created_at" dynamoupdate:":ca"`
+	UpdateAt      int64        `gorm:"type:bigint;NOT NULL;column:update_at" dynamodbav:"updated_at" json:"updated_at" dynamoupdate:":ua"`
+	DeleteAt      int64        `gorm:"type:bigint;column:delete_at" dynamodbav:"deleted_at" json:"deleted_at" dynamoupdate:":da"`
+	Sets          []*Set       `gorm:"-" json:"sets"`
+	Programs      []string     `gorm:"-"`
+	Subjects      []string     `gorm:"-"`
+	Categories    []string     `gorm:"-"`
+	Subcategories []string     `gorm:"-"`
+	Grades        []string     `gorm:"-"`
+	Ages          []string     `gorm:"-"`
+	Milestones    []*Milestone `gorm:"-" json:"milestones"`
 }
 
 func (Outcome) TableName() string {
