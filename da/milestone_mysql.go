@@ -337,7 +337,7 @@ func (c *MilestoneOutcomeCondition) GetConditions() ([]string, []interface{}) {
 	}
 
 	if !c.IncludeDeleted {
-		wheres = append(wheres, "delete_at=0")
+		wheres = append(wheres, "delete_at is null")
 	}
 	return wheres, params
 }

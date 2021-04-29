@@ -36,14 +36,14 @@ type MilestoneView struct {
 	Type         entity.MilestoneKind `json:"type"`
 	Organization *OrganizationView    `json:"organization,omitempty"`
 	Author       *AuthorView          `json:"author,omitempty"`
-	Outcomes     []*OutcomeView       `json:"outcomes,omitempty"`
+	Outcomes     []*OutcomeView       `json:"outcomes"`
 	CreateAt     int64                `json:"create_at,omitempty"`
-	Program      []*Program           `json:"program,omitempty"`
-	Subject      []*Subject           `json:"subject,omitempty"`
-	Category     []*Category          `json:"category,omitempty"`
-	SubCategory  []*SubCategory       `json:"sub_category,omitempty"`
-	Age          []*Age               `json:"age,omitempty"`
-	Grade        []*Grade             `json:"grade,omitempty"`
+	Program      []*Program           `json:"program"`
+	Subject      []*Subject           `json:"subject"`
+	Category     []*Category          `json:"category"`
+	SubCategory  []*SubCategory       `json:"sub_category"`
+	Age          []*Age               `json:"age"`
+	Grade        []*Grade             `json:"grade"`
 	Description  string               `json:"description,omitempty"`
 	Status       string               `json:"status,omitempty"`
 	LockedBy     string               `json:"locked_by,omitempty"`
