@@ -17,7 +17,7 @@ type HasPermissionResponse map[external.PermissionName]bool
 // @Description has organization permission
 // @Accept json
 // @Produce json
-// @Param permission_name query string false "permission_name"
+// @Param permission_name query string false "permission_name separated by commas"
 // @Tags permission
 // @Success 200 {object} HasPermissionResponse
 // @Failure 500 {object} InternalServerErrorResponse
