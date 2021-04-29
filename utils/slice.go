@@ -156,9 +156,9 @@ func HasIntersection(ss1 []string, ss2 []string) bool {
 }
 
 func HasSubset(parent []string, children []string) bool {
-	for _, s1 := range parent {
+	for _, s1 := range children {
 		ok := false
-		for _, s2 := range children {
+		for _, s2 := range parent {
 			if s1 == s2 {
 				ok = true
 			}

@@ -53,7 +53,6 @@ func (c *ReportPermissionChecker) CheckTeachers(ctx context.Context, teacherIDs 
 	if permissionsMap[external.ReportViewMyReports614] {
 		c.SearchMe(ctx)
 	}
-
 	return utils.HasSubset(c.AllowTeacherIDs, teacherIDs), nil
 }
 
@@ -69,7 +68,6 @@ func (c *ReportPermissionChecker) SearchOrg(ctx context.Context) error {
 	for _, t := range teachers {
 		c.AllowTeacherIDs = append(c.AllowTeacherIDs, t.ID)
 	}
-
 	return nil
 }
 
