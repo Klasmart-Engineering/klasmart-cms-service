@@ -328,11 +328,9 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		)
 		return nil, err
 	}
-	if scheduleIDs == nil {
-		cond.ScheduleIDs.Valid = false
-	} else {
-		cond.ScheduleIDs.Valid = true
-		cond.ScheduleIDs.Strings = append(cond.ScheduleIDs.Strings, scheduleIDs...)
+	cond.ScheduleIDs = entity.NullStrings{
+		Strings: scheduleIDs,
+		Valid:   true,
 	}
 	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
@@ -464,11 +462,9 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		)
 		return nil, err
 	}
-	if scheduleIDs == nil {
-		cond.ScheduleIDs.Valid = false
-	} else {
-		cond.ScheduleIDs.Valid = true
-		cond.ScheduleIDs.Strings = append(cond.ScheduleIDs.Strings, scheduleIDs...)
+	cond.ScheduleIDs = entity.NullStrings{
+		Strings: scheduleIDs,
+		Valid:   true,
 	}
 
 	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
