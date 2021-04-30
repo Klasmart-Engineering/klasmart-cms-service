@@ -296,7 +296,7 @@ func (s Server) registeRoute() {
 
 	organizationPermissions := s.engine.Group("/v1/organization_permissions")
 	{
-		organizationPermissions.GET("", s.mustLogin, s.hasOrganizationPermissions)
+		organizationPermissions.POST("", s.mustLogin, s.hasOrganizationPermissions)
 	}
 }
 
