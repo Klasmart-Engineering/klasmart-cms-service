@@ -1180,3 +1180,266 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @Summary postScheduleTimeView
+// @ID postScheduleTimeView
+// @Description post schedule time view
+// @Accept json
+// @Produce json
+// @Param queryData body entity.ScheduleTimeViewQuery true "schedule data to query"
+// @Tags schedule
+// @Success 200 {object} entity.ScheduleListView
+// @Failure 400 {object} BadRequestResponse
+// @Failure 404 {object} NotFoundResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_time_view [post]
+func (s *Server) postScheduleTimeView(c *gin.Context) {
+	op := s.getOperator(c)
+	ctx := c.Request.Context()
+
+	data := new(entity.ScheduleTimeViewQuery)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "update schedule: should bind body failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
+	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.Any("data", data), log.Any("loc", loc))
+
+	condition, err := s.prepareScheduleTimeViewCondition(ctx, data, op, loc)
+	switch err {
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	case constant.ErrInternalServer:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetScheduleModel().Query(ctx, op, condition, loc)
+	if err == nil {
+		c.JSON(http.StatusOK, result)
+		return
+	}
+	if err == constant.ErrRecordNotFound {
+		log.Info(ctx, "record not found", log.Any("condition", condition))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		return
+	}
+	log.Debug(ctx, "getScheduleTimeView error", log.Err(err), log.Any("condition", condition), log.Any("condition", condition), log.Any("data", data))
+	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+}
+
+// @Summary postScheduledDates
+// @ID postScheduledDates
+// @Description get schedules dates(format:2006-01-02)
+// @Accept json
+// @Produce json
+// @Param queryData body entity.ScheduleTimeViewQuery true "schedule data to query"
+// @Tags schedule
+// @Success 200 {array}  string
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /schedules_time_view/dates [post]
+func (s *Server) postScheduledDates(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+	data := new(entity.ScheduleTimeViewQuery)
+	if err := c.ShouldBind(data); err != nil {
+		log.Info(ctx, "update schedule: should bind body failed", log.Err(err))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
+	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.Any("data", data), log.Any("loc", loc))
+
+	condition, err := s.prepareScheduleTimeViewCondition(ctx, data, op, loc)
+	switch err {
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
+		return
+	case constant.ErrInternalServer:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, op, condition, loc)
+	if err != nil {
+		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (s *Server) prepareScheduleTimeViewCondition(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) (*da.ScheduleCondition, error) {
+	permissionMap, err := model.GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewSchoolCalendar,
+		external.ScheduleViewMyCalendar,
+	})
+	if err == constant.ErrForbidden {
+		log.Info(ctx, "request info",
+			log.Any("query", query),
+			log.Any("op", op),
+			log.Any("loc", loc),
+		)
+		return nil, constant.ErrForbidden
+	}
+	if err != nil {
+		log.Info(ctx, "request info",
+			log.Any("query", query),
+			log.Any("op", op),
+			log.Any("loc", loc),
+		)
+		return nil, constant.ErrInternalServer
+	}
+
+	viewType := query.ViewType
+	condition := new(da.ScheduleCondition)
+	if viewType != entity.ScheduleViewTypeFullView.String() {
+		timeAt := query.TimeAt
+		var (
+			start int64
+			end   int64
+		)
+		switch entity.ScheduleViewType(viewType) {
+		case entity.ScheduleViewTypeDay:
+			start = utils.TodayZeroByTimeStamp(timeAt, loc).Unix()
+			end = utils.TodayEndByTimeStamp(timeAt, loc).Unix()
+		case entity.ScheduleViewTypeWorkweek:
+			start, end = utils.FindWorkWeekTimeRange(timeAt, loc)
+		case entity.ScheduleViewTypeWeek:
+			start, end = utils.FindWeekTimeRange(timeAt, loc)
+		case entity.ScheduleViewTypeMonth:
+			start, end = utils.FindMonthRange(timeAt, loc)
+		case entity.ScheduleViewTypeYear:
+			start = utils.StartOfYearByTimeStamp(timeAt, loc).Unix()
+			end = utils.EndOfYearByTimeStamp(timeAt, loc).Unix()
+		default:
+			log.Info(ctx, "request info",
+				log.Any("query", query),
+				log.Any("op", op),
+				log.Any("loc", loc),
+			)
+			return nil, constant.ErrInvalidArgs
+		}
+		startAndEndTimeViewRange := make([]sql.NullInt64, 2)
+		startAndEndTimeViewRange[0] = sql.NullInt64{
+			Valid: start >= 0,
+			Int64: start,
+		}
+		startAndEndTimeViewRange[1] = sql.NullInt64{
+			Valid: end >= 0,
+			Int64: end,
+		}
+		condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
+	}
+
+	relationIDs := make([]string, 0)
+	condition.SubjectIDs = entity.NullStrings{
+		Strings: query.SubjectIDs,
+		Valid:   len(query.SubjectIDs) > 0,
+	}
+	condition.ProgramIDs = entity.NullStrings{
+		Strings: query.ProgramIDs,
+		Valid:   len(query.ProgramIDs) > 0,
+	}
+	condition.ClassTypes = entity.NullStrings{
+		Strings: query.ClassTypes,
+		Valid:   len(query.ClassTypes) > 0,
+	}
+	condition.OrderBy = da.NewScheduleOrderBy(query.OrderBy)
+	condition.OrgID = sql.NullString{
+		String: op.OrgID,
+		Valid:  true,
+	}
+	schoolIDs := entity.NullStrings{
+		Strings: query.SchoolIDs,
+		Valid:   len(query.SchoolIDs) > 0,
+	}
+	classIDs := entity.NullStrings{
+		Strings: query.ClassIDs,
+		Valid:   len(query.ClassIDs) > 0,
+	}
+	relationIDs = append(relationIDs, schoolIDs.Strings...)
+	relationIDs = append(relationIDs, classIDs.Strings...)
+	hasUndefinedClass := false
+	for _, classID := range classIDs.Strings {
+		if classID == entity.ScheduleFilterUndefinedClass {
+			hasUndefinedClass = true
+			break
+		}
+	}
+	if hasUndefinedClass {
+		userInfo, err := model.GetSchedulePermissionModel().GetOnlyUnderOrgUsers(ctx, op)
+		if err != nil {
+			log.Error(ctx, "GetSchedulePermissionModel.GetOnlyUnderOrgUsers error",
+				log.Err(err),
+				log.Any("op", op),
+			)
+			return nil, constant.ErrInternalServer
+		}
+		for _, item := range userInfo {
+			relationIDs = append(relationIDs, item.ID)
+		}
+	}
+
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   len(relationIDs) > 0,
+		}
+	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
+		if len(relationIDs) == 0 {
+			schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
+			if err != nil {
+				log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("permission", external.ScheduleViewSchoolCalendar.String()),
+				)
+				log.Info(ctx, "request info",
+					log.Any("query", query),
+					log.Any("op", op),
+					log.Any("loc", loc),
+				)
+				return nil, constant.ErrInternalServer
+			}
+			for _, item := range schoolList {
+				relationIDs = append(relationIDs, item.ID)
+			}
+		}
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   true,
+		}
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		condition.RelationID = sql.NullString{
+			String: op.UserID,
+			Valid:  true,
+		}
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   len(relationIDs) > 0,
+		}
+	}
+	condition.AnyTime = sql.NullBool{
+		Bool:  query.Anytime,
+		Valid: query.Anytime,
+	}
+	log.Debug(ctx, "condition info",
+		log.String("viewType", viewType),
+		log.Any("condition", condition),
+	)
+	return condition, nil
+}
