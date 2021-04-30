@@ -630,8 +630,8 @@ func (c ScheduleCondition) GetConditions() ([]string, []interface{}) {
 		})
 	}
 	if c.TeachLoadTeacherIDs.Valid {
-		sql := fmt.Sprintf("%s.relation_id in (?) and relation_type in (?)",
-			constant.TableNameScheduleRelation)
+		sql := fmt.Sprintf("%s.relation_id in (?) and %s.relation_type in (?)",
+			constant.TableNameScheduleRelation, constant.TableNameScheduleRelation)
 		wheres = append(wheres, sql)
 		params = append(params, c.TeachLoadTeacherIDs.Strings,
 			[]string{
