@@ -2,13 +2,15 @@ package api
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
+
+type HasPermissionRequest struct {
+	PermissionNames []external.PermissionName `json:"permission_name"`
+}
 
 type HasPermissionResponse map[external.PermissionName]bool
 
@@ -17,32 +19,38 @@ type HasPermissionResponse map[external.PermissionName]bool
 // @Description has organization permission
 // @Accept json
 // @Produce json
-// @Param permission_name query string true "permission_name separated by commas"
+// @Param PermissionNames body HasPermissionRequest true "permission names"
 // @Tags permission
 // @Success 200 {object} HasPermissionResponse
 // @Failure 400 {object} BadRequestResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /organization_permissions [get]
+// @Router /organization_permissions [post]
 func (s *Server) hasOrganizationPermissions(c *gin.Context) {
 	ctx := c.Request.Context()
 	operator := s.getOperator(c)
 
-	permissionNames := strings.Split(c.Query("permission_name"), constant.StringArraySeparator)
-	if len(permissionNames) == 0 {
-		log.Info(ctx, "permission name is invalid", log.String("permission_name", c.Query("permission_name")))
+	request := &HasPermissionRequest{}
+	if err := c.ShouldBind(&request); err != nil {
+		log.Info(ctx, "invalid check organization permission request", log.Err(err))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
-	permissions := make([]external.PermissionName, len(permissionNames))
-	for index, permissionName := range permissionNames {
-		if permissionName == "" {
+	if len(request.PermissionNames) == 0 {
+		log.Info(ctx, "invalid check organization permission request", log.String("permission_name", c.Query("permission_name")))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	permissions := make([]external.PermissionName, len(request.PermissionNames))
+	for index, permissionName := range request.PermissionNames {
+		if permissionName.String() == "" {
 			log.Info(ctx, "permission name is invalid", log.String("permission_name", c.Query("permission_name")))
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return
 		}
 
-		permissions[index] = external.PermissionName(permissionName)
+		permissions[index] = permissionName
 	}
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissions)
