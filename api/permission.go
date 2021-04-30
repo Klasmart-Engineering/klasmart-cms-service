@@ -9,7 +9,7 @@ import (
 )
 
 type HasPermissionRequest struct {
-	PermissionNames []external.PermissionName `json:"permission_name"`
+	PermissionNames []external.PermissionName `json:"permission_name" swaggertype:"array,string"`
 }
 
 type HasPermissionResponse map[external.PermissionName]bool
