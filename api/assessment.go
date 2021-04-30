@@ -36,7 +36,7 @@ import (
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	cmd := entity.QueryAssessmentsArgs{}
+	args := entity.QueryAssessmentsArgs{}
 	{
 		status := c.Query("status")
 		if status != "" {
@@ -49,14 +49,19 @@ func (s *Server) listAssessments(c *gin.Context) {
 				return
 			}
 			if status != entity.ListAssessmentsStatusAll {
-				temp := status.AssessmentStatus()
-				cmd.Status = &temp
+				args.Status = entity.NullAssessmentStatus{
+					Value: status.AssessmentStatus(),
+					Valid: true,
+				}
 			}
 		}
 
 		teacherName := c.Query("teacher_name")
 		if teacherName != "" {
-			cmd.TeacherName = &teacherName
+			args.TeacherName = entity.NullString{
+				String: teacherName,
+				Valid:  true,
+			}
 		}
 
 		orderBy := c.Query("order_by")
@@ -69,23 +74,29 @@ func (s *Server) listAssessments(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 				return
 			}
-			cmd.OrderBy = &orderBy
+			args.OrderBy = entity.NullListAssessmentsOrderBy{
+				Value: orderBy,
+				Valid: true,
+			}
 		} else {
-			orderBy := entity.ListAssessmentsOrderByClassEndTimeDesc
-			cmd.OrderBy = &orderBy
+			args.OrderBy = entity.NullListAssessmentsOrderBy{
+				Value: entity.ListAssessmentsOrderByClassEndTimeDesc,
+				Valid: true,
+			}
 		}
 
-		pager := utils.GetDboPager(c.Query("page"), c.Query("page_size"))
-		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
+		args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 
 		classType := c.Query("class_type")
 		if classType != "" {
-			tmp := entity.ScheduleClassType(classType)
-			cmd.ClassType = &tmp
+			args.ClassType = entity.NullScheduleClassType{
+				Value: entity.ScheduleClassType(classType),
+				Valid: true,
+			}
 		}
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
+	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -94,7 +105,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 	default:
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),
-			log.Any("cmd", cmd),
+			log.Any("cmd", args),
 		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -129,18 +140,25 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 			return
 		}
 		if status != entity.ListAssessmentsStatusAll {
-			temp := status.AssessmentStatus()
-			args.Status = &temp
+			args.Status = entity.NullAssessmentStatus{
+				Value: status.AssessmentStatus(),
+				Valid: true,
+			}
 		}
 	}
 	teacherName := c.Query("teacher_name")
 	if teacherName != "" {
-		args.TeacherName = &teacherName
+		args.TeacherName = entity.NullString{
+			String: teacherName,
+			Valid:  true,
+		}
 	}
 	classType := c.Query("class_type")
 	if classType != "" {
-		tmp := entity.ScheduleClassType(classType)
-		args.ClassType = &tmp
+		args.ClassType = entity.NullScheduleClassType{
+			Value: entity.ScheduleClassType(classType),
+			Valid: true,
+		}
 	}
 	operator := s.getOperator(c)
 	if operator.OrgID == "" {

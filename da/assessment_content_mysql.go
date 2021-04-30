@@ -35,13 +35,16 @@ type assessmentContentDA struct {
 }
 
 func (d *assessmentContentDA) GetPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error) {
-	var (
-		plans       []*entity.AssessmentContent
-		contentType = entity.ContentType(entity.ContentTypePlan)
-	)
+	var plans []*entity.AssessmentContent
 	if err := d.QueryTx(ctx, tx, &QueryAssessmentContentConditions{
-		AssessmentID: &assessmentID,
-		ContentType:  &contentType,
+		AssessmentID: entity.NullString{
+			String: assessmentID,
+			Valid:  true,
+		},
+		ContentType: entity.NullContentType{
+			Value: entity.ContentTypePlan,
+			Valid: true,
+		},
 	}, &plans); err != nil {
 		return nil, err
 	}
@@ -52,13 +55,16 @@ func (d *assessmentContentDA) GetPlan(ctx context.Context, tx *dbo.DBContext, as
 }
 
 func (d *assessmentContentDA) GetMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]*entity.AssessmentContent, error) {
-	var (
-		materials   []*entity.AssessmentContent
-		contentType = entity.ContentType(entity.ContentTypeMaterial)
-	)
+	var materials []*entity.AssessmentContent
 	if err := d.QueryTx(ctx, tx, &QueryAssessmentContentConditions{
-		AssessmentID: &assessmentID,
-		ContentType:  &contentType,
+		AssessmentID: entity.NullString{
+			String: assessmentID,
+			Valid:  true,
+		},
+		ContentType: entity.NullContentType{
+			Value: entity.ContentTypeMaterial,
+			Valid: true,
+		},
 	}, &materials); err != nil {
 		return nil, err
 	}
@@ -149,28 +155,25 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 }
 
 type QueryAssessmentContentConditions struct {
-	AssessmentID *string
-	ContentIDs   []string
-	ContentType  *entity.ContentType
-	Checked      *bool
+	AssessmentID entity.NullString
+	ContentIDs   entity.NullStrings
+	ContentType  entity.NullContentType
+	Checked      entity.NullBool
 }
 
 func (c *QueryAssessmentContentConditions) GetConditions() ([]string, []interface{}) {
 	t := NewSQLTemplate("")
-	if c.AssessmentID != nil {
-		t.Appendf("assessment_id = ?", *c.AssessmentID)
+	if c.AssessmentID.Valid {
+		t.Appendf("assessment_id = ?", c.AssessmentID.String)
 	}
-	if c.ContentIDs != nil {
-		if len(c.ContentIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
-		t.Appendf("content_id in (?)", c.ContentIDs)
+	if c.ContentIDs.Valid {
+		t.Appendf("content_id in (?)", c.ContentIDs.Strings)
 	}
-	if c.ContentType != nil {
-		t.Appendf("content_type = ?", *c.ContentType)
+	if c.ContentType.Valid {
+		t.Appendf("content_type = ?", c.ContentType.Value)
 	}
-	if c.Checked != nil {
-		t.Appendf("checked = ?", *c.Checked)
+	if c.Checked.Valid {
+		t.Appendf("checked = ?", c.Checked.Bool)
 	}
 	return t.DBOConditions()
 }

@@ -1,6 +1,9 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+import (
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+)
 
 type HomeFunStudy struct {
 	ID         string                   `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
@@ -79,12 +82,16 @@ func (ob ListHomeFunStudiesOrderBy) Valid() bool {
 	return false
 }
 
+type NullListHomeFunStudiesOrderBy struct {
+	Value ListHomeFunStudiesOrderBy
+	Valid bool
+}
+
 type ListHomeFunStudiesArgs struct {
-	Query    string                     `json:"query"`
-	Status   *AssessmentStatus          `json:"status"`
-	OrderBy  *ListHomeFunStudiesOrderBy `json:"order_by"`
-	Page     int                        `json:"page"`
-	PageSize int                        `json:"page_size"`
+	Query   string                        `json:"query"`
+	Status  NullAssessmentStatus          `json:"status"`
+	OrderBy NullListHomeFunStudiesOrderBy `json:"order_by"`
+	Pager   dbo.Pager                     `json:"pager"`
 }
 
 type ListHomeFunStudiesResult struct {
