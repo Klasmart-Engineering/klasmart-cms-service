@@ -44,6 +44,15 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		return nil, err
 	}
 
+	if len(args.TeacherIDs) == 0 {
+		log.Error(ctx, "ListTeachingLoadReport: not found teachers",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("args", args),
+		)
+		return nil, nil
+	}
+
 	// permission check
 	checker := NewReportPermissionChecker(operator)
 	ok, err := checker.CheckTeachers(ctx, args.TeacherIDs)
@@ -254,25 +263,9 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 				args.TeacherIDs = append(args.TeacherIDs, t.ID)
 			}
 		}
-	} else if len(args.TeacherIDs) == 1 {
-		if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
-			classes, err := external.GetClassServiceProvider().GetByUserID(ctx, operator, args.TeacherIDs[0])
-			if err != nil {
-				log.Error(ctx, "ListTeachingLoadReport: external.GetClassServiceProvider().GetByUserID: get failed",
-					log.Err(err),
-					log.String("teacher_id", args.TeacherIDs[0]),
-					log.Any("operator", operator),
-					log.Any("args", args),
-				)
-			}
-			args.ClassIDs = make([]string, 0, len(classes))
-			for _, c := range classes {
-				args.ClassIDs = append(args.ClassIDs, c.ID)
-			}
-		}
 	}
 
-	if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+	if len(args.TeacherIDs) > 0 || (len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll)) {
 		args.ClassIDs = nil
 	}
 
