@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"time"
 )
@@ -71,38 +73,6 @@ func (m MilestoneSQLDA) BatchPublish(ctx context.Context, tx *dbo.DBContext, pub
 			return err
 		}
 	}
-	//if len(hideIDs) > 0 {
-	//	sql := fmt.Sprintf("update %s set status = ?, locked_by = ?, update_at = ? where id in (?)", entity.Milestone{}.TableName())
-	//	err := tx.Exec(sql, entity.OutcomeStatusHidden, "", time.Now().Unix(), hideIDs).Error
-	//	if err != nil {
-	//		log.Error(ctx, "BatchPublish: exec sql failed",
-	//			log.Err(err),
-	//			log.Strings("hide", hideIDs),
-	//			log.String("sql", sql))
-	//		return err
-	//	}
-	//}
-	//if len(ancestorLatest) > 0 {
-	//	var sb strings.Builder
-	//	fmt.Fprintf(&sb, "update %s set update_at= %d, latest_id = case ancestor_id ", entity.Milestone{}.TableName(), time.Now().Unix())
-	//	ancestorIDs := make([]string, len(ancestorLatest))
-	//	i := 0
-	//	for k, v := range ancestorLatest {
-	//		fmt.Fprintf(&sb, " when '%s' then '%s' ", k, v)
-	//		ancestorIDs[i] = k
-	//		i++
-	//	}
-	//	fmt.Fprintf(&sb, " end ")
-	//	fmt.Fprintf(&sb, " where ancestor_id in (?)")
-	//	sql := sb.String()
-	//	err := tx.Exec(sql, ancestorIDs).Error
-	//	if err != nil {
-	//		log.Error(ctx, "BatchPublish: exec sql failed",
-	//			log.Err(err),
-	//			log.String("sql", sql))
-	//		return err
-	//	}
-	//}
 	return nil
 }
 
@@ -174,6 +144,59 @@ func (m MilestoneSQLDA) UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, o
 		}
 	}
 	return nil
+}
+
+func (m MilestoneSQLDA) findGap(ctx context.Context, tx *dbo.DBContext, num int) (gap int, err error) {
+	if num >= constant.ShortcodeSpace-1 {
+		log.Warn(ctx, "findGap: overflow", log.Int("num", num))
+		return 0, constant.ErrOverflow
+	}
+
+	limit := constant.ShortcodeFindStep
+	var shortcode string
+	shortcode, err = utils.NumToBHex(ctx, num, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+	if err != nil {
+		log.Debug(ctx, "NumToBHex failed", log.Int("num", num))
+		return
+	}
+	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=5 limit %d", entity.Milestone{}.TableName(), limit)
+	var milestones []*entity.Milestone
+	err = tx.Raw(sql, shortcode).Find(&milestones).Error
+	if err != nil {
+		log.Error(ctx, "FindGap: exec failed", log.Err(err), log.Int("num", num), log.String("shortcode", shortcode))
+		return
+	}
+	mapShortcodes := make(map[int]bool)
+	for i := range milestones {
+		short, err := utils.BHexToNum(ctx, milestones[i].Shortcode)
+		if err != nil {
+			log.Debug(ctx, "findGap: BHexToNum failed", log.Any("milestone", milestones), log.Int("index", i))
+			return 0, err
+		}
+		mapShortcodes[short] = true
+	}
+
+	for i := 0; i < limit; i++ {
+		gap = num + i
+		if !mapShortcodes[gap] && gap < constant.ShortcodeSpace {
+			return
+		}
+	}
+
+	log.Info(ctx, "findGap: no gap after num", log.Int("num", num))
+	return m.findGap(ctx, tx, gap)
+}
+
+func (m MilestoneSQLDA) FindGap(ctx context.Context, num int) (gap int, err error) {
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		res, err := m.findGap(ctx, tx, num)
+		if err != nil {
+			return err
+		}
+		gap = res
+		return nil
+	})
+	return
 }
 
 type MilestoneCondition struct {

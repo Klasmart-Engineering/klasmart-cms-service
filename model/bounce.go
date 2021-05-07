@@ -87,7 +87,7 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 	locker, e := mutex.NewLock(ctx, da.RedisKeyPrefixVerifyCodeLock, machine.lockKey())
 	if e != nil {
 		err = e
-		log.Error(ctx, "next: NewLock failed", log.Err(err))
+		log.Error(ctx, "gap: NewLock failed", log.Err(err))
 		return
 	}
 	locker.Lock()
@@ -96,19 +96,19 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 	client, e := ro.GetRedis(ctx)
 	if e != nil {
 		err = e
-		log.Error(ctx, "next: GetRedis failed", log.Err(err))
+		log.Error(ctx, "gap: GetRedis failed", log.Err(err))
 		return
 	}
 	_, err = client.RPush(machine.codeKey, time.Now().Unix()).Result()
 	if err != nil {
-		log.Error(ctx, "next: RPush failed", log.Err(err))
+		log.Error(ctx, "gap: RPush failed", log.Err(err))
 		return
 	}
 
 	sendTimeUnixList, e := client.LRange(machine.codeKey, 0, int64(machine.counts)).Result()
 	if e != nil {
 		err = e
-		log.Error(ctx, "next: LRange failed", log.Err(err))
+		log.Error(ctx, "gap: LRange failed", log.Err(err))
 		return
 	}
 
@@ -121,7 +121,7 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 		tmUnix, e := strconv.ParseInt(tmUnixStr, 10, 64)
 		if e != nil {
 			err = fmt.Errorf("parse sendTime err %v ", e)
-			log.Error(ctx, "next: ParseInt failed", log.Err(err))
+			log.Error(ctx, "gap: ParseInt failed", log.Err(err))
 			return
 		}
 
@@ -134,14 +134,14 @@ func (machine *Bubble) next(ctx context.Context) (err error) {
 	}
 	if expiredCount == 0 {
 		err = constant.ErrExceededLimit
-		log.Error(ctx, "next: exceed", log.Err(err))
+		log.Error(ctx, "gap: exceed", log.Err(err))
 		return err
 	}
 
 	// remain [expiredCount,s.maxTimes-1]
 	_, err = client.LTrim(machine.codeKey, int64(expiredCount), int64(machine.counts)).Result()
 	if err != nil {
-		log.Error(ctx, "next: LTrim failed", log.Err(err))
+		log.Error(ctx, "gap: LTrim failed", log.Err(err))
 		return
 	}
 

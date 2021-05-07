@@ -48,9 +48,59 @@ type IOutcomeModel interface {
 
 	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
 	GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
+
+	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
+	IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor, shortcode string) (bool, error)
 }
 
 type OutcomeModel struct {
+}
+
+func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindOutcome, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "CreateMilestone: NewLock failed",
+			log.Err(err),
+			log.Any("op", op))
+		return "", err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	shortcodeModel := GetShortcodeModel(ctx, op, entity.KindOutcome)
+	gap, err := da.GetOutcomeDA().FindGap(ctx, shortcodeModel.cursor+1)
+	if err != nil {
+		log.Debug(ctx, "Generate: FindGap failed", log.Any("op", op), log.Int("cursor", shortcodeModel.cursor))
+	}
+	shortcode, err := utils.NumToBHex(ctx, gap, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+	if err != nil {
+		log.Debug(ctx, "Generate: NumToBHex failed", log.Any("op", op), log.Int("gap", gap))
+		return "", err
+	}
+	err = shortcodeModel.Cache(ctx, op, gap, shortcode)
+	if err != nil {
+		log.Error(ctx, "Generate: Set failed", log.Err(err), log.Any("op", op), log.Int("gap", shortcodeModel.cursor), log.Int("gap", gap))
+		return "", err
+	}
+	return shortcode, nil
+}
+
+func (ocm OutcomeModel) IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor string, shortcode string) (bool, error) {
+	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
+		Shortcode:      sql.NullString{String: shortcode, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "IsShortcodeExists: Search failed",
+			log.String("org", op.OrgID),
+			log.String("shortcode", shortcode))
+		return false, err
+	}
+	for i := range milestones {
+		if ancestor != milestones[i].AncestorID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) (err error) {
@@ -79,7 +129,7 @@ func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, o
 		outcome.AuthorID = operator.UserID
 		outcome.OrganizationID = operator.OrgID
 		outcome.PublishStatus = entity.OutcomeStatusDraft
-		exists, err := GetLearningOutcomeShortcodeModel().isOccupied(ctx, tx, operator.OrgID, outcome.AncestorID, outcome.Shortcode)
+		exists, err := ocm.IsShortcodeExists(ctx, operator, tx, outcome.AncestorID, outcome.Shortcode)
 		if err != nil {
 			log.Error(ctx, "Create: IsShortcodeExistInDBWithOtherAncestor failed",
 				log.Err(err),
@@ -113,7 +163,7 @@ func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, o
 		}
 		return nil
 	})
-	da.GetShortcodeCacheDA().Remove(ctx, entity.KindOutcome, operator.OrgID, outcome.Shortcode)
+	GetShortcodeModel(ctx, operator, entity.KindOutcome).Remove(ctx, operator, outcome.Shortcode)
 	if err != nil {
 		return err
 	}
@@ -236,9 +286,9 @@ func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, o
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetLearningOutcomeShortcodeModel().isCached(ctx, operator.OrgID, outcome.Shortcode)
+	exists, err := GetShortcodeModel(ctx, operator, entity.KindOutcome).IsCached(ctx, operator, outcome.Shortcode)
 	if err != nil {
-		log.Error(ctx, "Update: IsShortcodeExistInRedis failed",
+		log.Error(ctx, "Update: IsCached failed",
 			log.Err(err),
 			log.Any("op", operator),
 			log.Any("outcome", outcome))
@@ -273,9 +323,9 @@ func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, o
 		}
 
 		if data.Shortcode != outcome.Shortcode {
-			exists, err := GetLearningOutcomeShortcodeModel().isOccupied(ctx, tx, operator.OrgID, data.AncestorID, outcome.Shortcode)
+			exists, err := ocm.IsShortcodeExists(ctx, operator, tx, data.AncestorID, outcome.Shortcode)
 			if err != nil {
-				log.Error(ctx, "Update: IsShortcodeExistInDBWithOtherAncestor failed",
+				log.Error(ctx, "Update: IsShortcodeExists failed",
 					log.Err(err),
 					log.Any("op", operator),
 					log.Any("outcome", outcome))

@@ -18,6 +18,10 @@ func setup() {
 	config.Set(&config.Config{
 		DBConfig: config.DBConfig{
 			ConnectionString: os.Getenv("connection_string"),
+			MaxOpenConns:     8,
+			MaxIdleConns:     8,
+			ShowLog:          true,
+			ShowSQL:          true,
 		},
 		RedisConfig: config.RedisConfig{
 			OpenCache: true,
@@ -28,7 +32,7 @@ func setup() {
 	})
 	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
 		dbConf := config.Get().DBConfig
-		c.ShowLog = true
+		c.ShowLog = dbConf.ShowLog
 		c.ShowSQL = dbConf.ShowSQL
 		c.MaxIdleConns = dbConf.MaxIdleConns
 		c.MaxOpenConns = dbConf.MaxOpenConns
@@ -45,6 +49,13 @@ func setup() {
 	})
 }
 
+func initOperator() *entity.Operator {
+	return &entity.Operator{
+		OrgID:  "8a31ebab-b879-4790-af99-ee4941a778b3",
+		UserID: "2013e53e-52dd-5e1c-af0b-b503e31c8a59",
+	}
+}
+
 func TestOutcomeModel_GetLearningOutcomeByID(t *testing.T) {
 	setup()
 	ctx := context.TODO()
@@ -58,7 +69,7 @@ func TestOutcomeModel_GetLearningOutcomeByID(t *testing.T) {
 func TestGenerateShortcode(t *testing.T) {
 	setup()
 	ctx := context.TODO()
-	shortcode, err := GetLearningOutcomeShortcodeModel().Generate(ctx, dbo.MustGetDB(ctx), "8a31ebab-b879-4790-af99-ee4941a778b3", "")
+	shortcode, err := GetOutcomeModel().GenerateShortcode(ctx, initOperator())
 	if err != nil {
 		t.Fatal(err)
 	}

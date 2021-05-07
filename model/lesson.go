@@ -19,7 +19,7 @@ type LessonData struct {
 	Condition         string              `json:"condition"`
 	MaterialId        string              `json:"materialId"`
 	Material          *entity.ContentInfo `json:"material"`
-	NextNode          []*LessonData       `json:"next"`
+	NextNode          []*LessonData       `json:"gap"`
 	TeacherManual     string              `json:"teacher_manual"`
 	TeacherManualName string              `json:"teacher_manual_name"`
 

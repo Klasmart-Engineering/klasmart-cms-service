@@ -1,14 +1,14 @@
 package entity
 
 type Milestone struct {
-	ID             string        `gorm:"column:id;primary_key" json:"milestone_id"`
-	Name           string        `gorm:"column:name" json:"milestone_name"`
-	Shortcode      string        `gorm:"column:shortcode" json:"shortcode"`
-	OrganizationID string        `gorm:"column:organization_id" json:"organization_id"`
-	AuthorID       string        `gorm:"column:author_id" json:"author_id"`
-	Description    string        `gorm:"column:describe" json:"description"`
-	LoCounts       int           `gorm:"-" json:"lo_counts"`
-	Type           MilestoneKind `gorm:"column:type" json:"type"`
+	ID             string          `gorm:"column:id;primary_key" json:"milestone_id"`
+	Name           string          `gorm:"column:name" json:"milestone_name"`
+	Shortcode      string          `gorm:"column:shortcode" json:"shortcode"`
+	OrganizationID string          `gorm:"column:organization_id" json:"organization_id"`
+	AuthorID       string          `gorm:"column:author_id" json:"author_id"`
+	Description    string          `gorm:"column:describe" json:"description"`
+	LoCounts       int             `gorm:"-" json:"lo_counts"`
+	Type           TypeOfMilestone `gorm:"column:type" json:"type"`
 
 	Status OutcomeStatus `gorm:"column:status" json:"status"`
 
@@ -29,11 +29,11 @@ type Milestone struct {
 	Outcomes      []*Outcome `gorm:"-" json:"outcomes"`
 }
 
-type MilestoneKind string
+type TypeOfMilestone string
 
 const (
-	CustomMilestoneType  MilestoneKind = "normal"
-	GeneralMilestoneType MilestoneKind = "general"
+	CustomMilestoneType  TypeOfMilestone = "normal"
+	GeneralMilestoneType TypeOfMilestone = "general"
 )
 
 func (Milestone) TableName() string {
