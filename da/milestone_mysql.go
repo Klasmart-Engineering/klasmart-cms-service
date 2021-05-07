@@ -91,6 +91,21 @@ func (m MilestoneSQLDA) BatchHide(ctx context.Context, tx *dbo.DBContext, hideID
 	return nil
 }
 
+func (m MilestoneSQLDA) BatchUnLock(ctx context.Context, tx *dbo.DBContext, unLockIDs []string) error {
+	if len(unLockIDs) > 0 {
+		sql := fmt.Sprintf("update %s set locked_by = ?, update_at = ? where id in (?)", entity.Milestone{}.TableName())
+		err := tx.Exec(sql, "", time.Now().Unix(), unLockIDs).Error
+		if err != nil {
+			log.Error(ctx, "BatchUnLock: exec sql failed",
+				log.Err(err),
+				log.Strings("un_lock", unLockIDs),
+				log.String("sql", sql))
+			return err
+		}
+	}
+	return nil
+}
+
 func (m MilestoneSQLDA) BatchUpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorLatest map[string]string) error {
 	if len(ancestorLatest) > 0 {
 		var sb strings.Builder

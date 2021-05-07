@@ -51,7 +51,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetMilestoneModel().Create(ctx, op, milestone, data.OutcomeAncestorIDs)
+	err = model.GetMilestoneModel().Create(ctx, op, milestone, data.OutcomeAncestorIDs, data.WithPublish)
 	data.MilestoneID = milestone.ID
 	switch err {
 	case nil:

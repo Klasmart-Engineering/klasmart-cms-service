@@ -16,7 +16,7 @@ import (
 )
 
 type IMilestoneModel interface {
-	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error
+	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error
 	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string, toPublish bool) error
 	Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error
@@ -78,7 +78,7 @@ func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 	return false, nil
 }
 
-func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error {
+func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateMilestone: NewLock failed",
@@ -95,7 +95,10 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	milestone.LatestID = milestone.ID
 	milestone.CreateAt = time.Now().Unix()
 	milestone.UpdateAt = milestone.CreateAt
-	milestone.Status = "draft"
+	milestone.Status = entity.OutcomeStatusDraft
+	if toPublish {
+		milestone.Status = entity.OutcomeStatusPublished
+	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		exists, err := m.IsShortcodeExists(ctx, op, tx, milestone.AncestorID, milestone.Shortcode)
 		if err != nil {
@@ -143,7 +146,6 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 		return nil
 	})
 	GetShortcodeModel(ctx, op, entity.KindMileStone).Remove(ctx, op, milestone.Shortcode)
-	//da.GetShortcodeCacheDA().Remove(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
 	return err
 }
 
@@ -405,6 +407,15 @@ func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.M
 	return milestoneIDs, nil
 }
 
+func (m MilestoneModel) needUnLocked(ctx context.Context, milestones []*entity.Milestone) (unLocked []string) {
+	for i := range milestones {
+		if milestones[i].SourceID != "" && milestones[i].SourceID != milestones[i].ID {
+			unLocked = append(unLocked, milestones[i].SourceID)
+		}
+	}
+	return
+}
+
 func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
@@ -429,6 +440,16 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
+
+		err = da.GetMilestoneDA().BatchUnLock(ctx, tx, m.needUnLocked(ctx, milestones))
+		if err != nil {
+			log.Debug(ctx, "Delete: BatchUnLock failed",
+				log.Any("op", op),
+				log.Strings("ids", IDs),
+				log.Any("milestone", milestones))
+			return err
+		}
+
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
@@ -437,6 +458,7 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
+
 		err = da.GetMilestoneRelationDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
