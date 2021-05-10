@@ -2,18 +2,14 @@ package model
 
 import (
 	"context"
-	"fmt"
-	"github.com/go-redis/redis"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/ro"
-	"time"
 )
 
 type ShortcodeModel struct {
 	kind   entity.ShortcodeKind
 	cursor int
-	client *redis.Client
 }
 
 func (scm *ShortcodeModel) Cursor(ctx context.Context, op *entity.Operator) int {
@@ -21,19 +17,9 @@ func (scm *ShortcodeModel) Cursor(ctx context.Context, op *entity.Operator) int 
 }
 
 func (scm *ShortcodeModel) Cache(ctx context.Context, op *entity.Operator, cursor int, shortcode string) error {
-	err := scm.client.Set(scm.cursorKey(ctx, op), cursor, -1).Err()
+	err := da.GetShortcodeRedis(ctx).Cache(ctx, op, string(scm.kind), cursor, shortcode)
 	if err != nil {
-		log.Error(ctx, "Cache cursor failed",
-			log.Err(err),
-			log.Any("op", op),
-			log.Int("cursor", cursor),
-			log.String("shortcode", shortcode))
-		return err
-	}
-	err = scm.client.Set(scm.shortcodeKey(ctx, op, shortcode), shortcode, time.Hour).Err()
-	if err != nil {
-		log.Error(ctx, "Cache shortcode failed",
-			log.Err(err),
+		log.Debug(ctx, "Cache: redis access failed",
 			log.Any("op", op),
 			log.Int("cursor", cursor),
 			log.String("shortcode", shortcode))
@@ -44,22 +30,18 @@ func (scm *ShortcodeModel) Cache(ctx context.Context, op *entity.Operator, curso
 }
 
 func (scm *ShortcodeModel) IsCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error) {
-	result, err := scm.client.Exists(scm.shortcodeKey(ctx, op, shortcode)).Result()
+	exists, err := da.GetShortcodeRedis(ctx).IsCached(ctx, op, string(scm.kind), shortcode)
 	if err != nil {
-		log.Error(ctx, "IsCached: redis access failed",
-			log.Err(err),
+		log.Debug(ctx, "IsCached: redis access failed",
 			log.Any("op", op),
 			log.String("shortcode", shortcode))
 		return false, err
 	}
-	if result == 1 {
-		return true, nil
-	}
-	return false, nil
+	return exists, nil
 }
 
 func (scm *ShortcodeModel) Remove(ctx context.Context, op *entity.Operator, shortcode string) error {
-	err := scm.client.Del(scm.shortcodeKey(ctx, op, shortcode)).Err()
+	err := da.GetShortcodeRedis(ctx).Remove(ctx, op, string(scm.kind), shortcode)
 	if err != nil {
 		log.Error(ctx, "Remove: redis access failed",
 			log.Err(err),
@@ -70,32 +52,20 @@ func (scm *ShortcodeModel) Remove(ctx context.Context, op *entity.Operator, shor
 	return nil
 }
 
-func (scm *ShortcodeModel) cursorKey(ctx context.Context, op *entity.Operator) string {
-	return fmt.Sprintf("%s:%s:cursor:shortcode", op.OrgID, string(scm.kind))
-}
-
-func (scm *ShortcodeModel) shortcodeKey(ctx context.Context, op *entity.Operator, shortcode string) string {
-	return fmt.Sprintf("%s:%s:shortcode:%s", op.OrgID, string(scm.kind), shortcode)
-}
 
 var shortcodeFactory = make(map[entity.ShortcodeKind]*ShortcodeModel)
 
 func GetShortcodeModel(ctx context.Context, op *entity.Operator, kind entity.ShortcodeKind) *ShortcodeModel {
 	if _, ok := shortcodeFactory[kind]; !ok {
 		scm := &ShortcodeModel{kind: kind}
-		scm.client = ro.MustGetRedis(ctx)
-		cursor, err := scm.client.Get(scm.cursorKey(ctx, op)).Int()
+		var err error
+		scm.cursor, err = da.GetShortcodeRedis(ctx).Get(ctx, op, string(kind))
 		if err != nil {
-			if err.Error() != "redis: nil" {
-				log.Error(ctx, "GetShortcodeModel: redis access failed",
-					log.Err(err),
-					log.Any("op", op),
-					log.String("kind", string(kind)))
-				return nil
-			}
-			cursor = -1
+			log.Debug(ctx, "GetShortcodeModel: redis access failed",
+				log.Any("op", op),
+				log.String("kind", string(kind)))
+			return nil
 		}
-		scm.cursor = cursor
 		shortcodeFactory[kind] = scm
 	}
 	return shortcodeFactory[kind]

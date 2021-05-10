@@ -35,9 +35,9 @@ func (ses AwsSesModel) SendEmail(ctx context.Context, recipient string, title st
 		"From":    {m.FormatAddress(ses.SenderAddress, ses.SenderName)},
 		"To":      {recipient},
 		"Subject": {title},
-		// Comment or remove the gap line if you are not using a configuration set
+		// Comment or remove the next line if you are not using a configuration set
 		//"X-SES-CONFIGURATION-SET": {ConfigSet},
-		// Comment or remove the gap line if you are not using custom tags
+		// Comment or remove the next line if you are not using custom tags
 		"X-SES-MESSAGE-TAGS": {"genre=test,genre2=test2"},
 	})
 

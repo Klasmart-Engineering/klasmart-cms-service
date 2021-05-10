@@ -70,6 +70,7 @@ func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, op *entity.Operat
 	gap, err := da.GetOutcomeDA().FindGap(ctx, shortcodeModel.cursor+1)
 	if err != nil {
 		log.Debug(ctx, "Generate: FindGap failed", log.Any("op", op), log.Int("cursor", shortcodeModel.cursor))
+		return "", err
 	}
 	shortcode, err := utils.NumToBHex(ctx, gap, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
 	if err != nil {

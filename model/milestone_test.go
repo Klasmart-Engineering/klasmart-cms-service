@@ -40,7 +40,7 @@ func TestMilestoneModel_Create(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = GetMilestoneModel().Create(ctx, op, milestone, req.OutcomeAncestorIDs)
+	err = GetMilestoneModel().Create(ctx, op, milestone, req.OutcomeAncestorIDs, false)
 	if err != nil {
 		t.Fatal(err)
 	}

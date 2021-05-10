@@ -134,19 +134,18 @@ var indMap = map[byte]int{
 func BHexToNum(ctx context.Context, hexString string) (int, error) {
 	length := len(hexString)
 	ind := 0
-	for i := 0; i < length; i++ {
-		power := 1
-		for j := 0; j < length-1-i; j++ {
-			power *= constant.ShortcodeBaseCustom
-		}
-		if value, ok := indMap[hexString[i]]; ok {
-			ind += value * power
-		} else {
+	power := 1
+	for i := length-1; i>=0; i-- {
+		var value int
+		var ok bool
+		if value, ok = indMap[hexString[i]]; !ok {
 			log.Error(ctx, "BHexToNum: failed",
 				log.String("hex", hexString),
 				log.Int("index", i))
 			return 0, errors.New("not exist")
 		}
+		ind += value * power
+		power *= constant.ShortcodeBaseCustom
 	}
 	return ind, nil
 }
