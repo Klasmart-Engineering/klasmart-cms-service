@@ -167,21 +167,20 @@ func (m MilestoneSQLDA) findGap(ctx context.Context, tx *dbo.DBContext, num int)
 		return 0, constant.ErrOverflow
 	}
 
-	limit := constant.ShortcodeFindStep
 	var shortcode string
 	shortcode, err = utils.NumToBHex(ctx, num, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
 	if err != nil {
 		log.Debug(ctx, "NumToBHex failed", log.Int("num", num))
 		return
 	}
-	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=5 limit %d", entity.Milestone{}.TableName(), limit)
+	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=? limit %d", entity.Milestone{}.TableName(),  constant.ShortcodeFindStep)
 	var milestones []*entity.Milestone
-	err = tx.Raw(sql, shortcode).Find(&milestones).Error
+	err = tx.Raw(sql, shortcode, constant.ShortcodeShowLength).Find(&milestones).Error
 	if err != nil {
 		log.Error(ctx, "FindGap: exec failed", log.Err(err), log.Int("num", num), log.String("shortcode", shortcode))
 		return
 	}
-	mapShortcodes := make(map[int]bool)
+	mapShortcodes := make(map[int]bool, constant.ShortcodeFindStep)
 	for i := range milestones {
 		short, err := utils.BHexToNum(ctx, milestones[i].Shortcode)
 		if err != nil {
@@ -191,7 +190,7 @@ func (m MilestoneSQLDA) findGap(ctx context.Context, tx *dbo.DBContext, num int)
 		mapShortcodes[short] = true
 	}
 
-	for i := 0; i < limit; i++ {
+	for i := 0; i < constant.ShortcodeFindStep; i++ {
 		gap = num + i
 		if !mapShortcodes[gap] && gap < constant.ShortcodeSpace {
 			return
