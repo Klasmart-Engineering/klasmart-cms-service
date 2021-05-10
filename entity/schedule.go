@@ -228,6 +228,11 @@ func (s ScheduleClassType) ToLabel() ScheduleClassTypeLabel {
 	return ScheduleClassTypeLabelInvalid
 }
 
+type NullScheduleClassType struct {
+	Value ScheduleClassType
+	Valid bool
+}
+
 type ScheduleClassTypeLabel string
 
 const (

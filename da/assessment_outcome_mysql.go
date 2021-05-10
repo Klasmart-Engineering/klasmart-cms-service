@@ -101,21 +101,18 @@ func (*assessmentOutcomeDA) UncheckByAssessmentID(ctx context.Context, tx *dbo.D
 }
 
 type QueryAssessmentOutcomeConditions struct {
-	AssessmentIDs []string `json:"assessment_ids"`
-	Checked       *bool    `json:"checked"`
+	AssessmentIDs entity.NullStrings `json:"assessment_ids"`
+	Checked       entity.NullBool    `json:"checked"`
 }
 
 func (c *QueryAssessmentOutcomeConditions) GetConditions() ([]string, []interface{}) {
 	b := NewSQLTemplate("")
 
-	if c.AssessmentIDs != nil {
-		if len(c.AssessmentIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
-		b.Appendf("assessment_id in (?)", c.AssessmentIDs)
+	if c.AssessmentIDs.Valid {
+		b.Appendf("assessment_id in (?)", c.AssessmentIDs.Strings)
 	}
-	if c.Checked != nil {
-		b.Appendf("checked = ?", *c.Checked)
+	if c.Checked.Valid {
+		b.Appendf("checked = ?", c.Checked.Bool)
 	}
 
 	return b.DBOConditions()

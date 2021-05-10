@@ -55,16 +55,21 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		)
 		return nil, err
 	}
-	if !checker.CheckStatus(args.Status) {
+	if args.Status.Valid && !checker.CheckStatus(args.Status.Value) {
 		return nil, constant.ErrForbidden
 	}
 	cond := da.QueryHomeFunStudyCondition{
-		Status:          args.Status,
-		OrderBy:         args.OrderBy,
-		AllowTeacherIDs: checker.AllowTeacherIDs(),
-		AllowPairs:      checker.AllowPairs(),
-		Page:            args.Page,
-		PageSize:        args.PageSize,
+		Status:  args.Status,
+		OrderBy: args.OrderBy,
+		AllowTeacherIDs: entity.NullStrings{
+			Strings: checker.allowTeacherIDs,
+			Valid:   true,
+		},
+		AllowPairs: entity.NullAssessmentTeacherIDAndStatusPairs{
+			Values: checker.AllowPairs(),
+			Valid:  len(checker.AllowPairs()) > 0,
+		},
+		Pager: args.Pager,
 	}
 	teachers, err := external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
 	if err != nil {
@@ -76,8 +81,11 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		)
 		return nil, err
 	}
-	for _, t := range teachers {
-		cond.TeacherIDs = append(cond.TeacherIDs, t.ID)
+	if len(teachers) > 0 {
+		cond.TeacherIDs.Valid = true
+		for _, t := range teachers {
+			cond.TeacherIDs.Values = append(cond.TeacherIDs.Values, t.ID)
+		}
 	}
 	students, err := external.GetStudentServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
 	if err != nil {
@@ -89,8 +97,11 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		)
 		return nil, err
 	}
-	for _, s := range students {
-		cond.StudentIDs = append(cond.StudentIDs, s.ID)
+	if len(students) > 0 {
+		cond.StudentIDs.Valid = true
+		for _, s := range students {
+			cond.StudentIDs.Strings = append(cond.StudentIDs.Strings, s.ID)
+		}
 	}
 
 	var (
@@ -183,7 +194,7 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 		)
 		return nil, err
 	}
-	if !checker.CheckStatus(&study.Status) {
+	if study.Status.Valid() && !checker.CheckStatus(study.Status) {
 		log.Error(ctx, "Get: checker.CheckStatus: status not allowed",
 			log.Any("operator", operator),
 			log.String("id", id),
@@ -270,9 +281,18 @@ func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Opera
 
 func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error) {
 	cond := da.QueryHomeFunStudyCondition{
-		OrgID:      &operator.OrgID,
-		ScheduleID: &scheduleID,
-		StudentIDs: []string{studentID},
+		OrgID: entity.NullString{
+			String: operator.OrgID,
+			Valid:  true,
+		},
+		ScheduleID: entity.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+		StudentIDs: entity.NullStrings{
+			Strings: []string{studentID},
+			Valid:   true,
+		},
 	}
 	var studies []*entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Query(ctx, &cond, &studies); err != nil {
@@ -294,8 +314,14 @@ func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, ope
 
 func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error {
 	cond := da.QueryHomeFunStudyCondition{
-		ScheduleID: &args.ScheduleID,
-		StudentIDs: []string{args.StudentID},
+		ScheduleID: entity.NullString{
+			String: args.ScheduleID,
+			Valid:  true,
+		},
+		StudentIDs: entity.NullStrings{
+			Strings: []string{args.StudentID},
+			Valid:   true,
+		},
 	}
 	var studies []*entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().QueryTx(ctx, tx, &cond, &studies); err != nil {

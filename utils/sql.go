@@ -20,3 +20,8 @@ func (a *SQLJSONStringArray) Scan(src interface{}) error {
 	}
 	return nil
 }
+
+type NullSQLJSONStringArray struct {
+	Values SQLJSONStringArray
+	Valid  bool
+}
