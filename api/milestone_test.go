@@ -73,8 +73,8 @@ func TestUpdateMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	req := model.MilestoneView{
-		Name:           "name02",
-		Shortcode:      "00001",
+		Name:           "name07",
+		Shortcode:      "00007",
 		Organization:   &model.OrganizationView{OrganizationID: op.OrgID},
 		ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
 		SubjectIDs:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
@@ -85,12 +85,13 @@ func TestUpdateMilestone(t *testing.T) {
 			"607e4a1e4225cb7dcdb55108",
 		},
 		Description: "Hello, Brilliant",
+		WithPublish: true,
 	}
 	data, err := json.Marshal(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/607e4f4c9a752f785251dcef"+"?org_id="+op.OrgID, string(data))
+	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/6099f4871551d2f217b77b7c"+"?org_id="+op.OrgID, string(data))
 	fmt.Println(res)
 }
 
@@ -112,11 +113,11 @@ func TestSearchMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	queryCondition := []string{
-		"search_key=name01",
+		//"search_key=name01",
 		//"name=name01",
 		//"description=math",
 		//"shortcode=00001",
-		"status=draft",
+		"status=published",
 		"page=0",
 		"page_size=0",
 		"order_by=created_at",
@@ -130,7 +131,7 @@ func TestPublishMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	req := model.MilestoneList{
-		IDs: []string{"6076aede7fe2f93d2b6851af"},
+		IDs: []string{"6099f3e7868940d397a82033"},
 	}
 	data, err := json.Marshal(req)
 	if err != nil {
@@ -143,6 +144,6 @@ func TestPublishMilestone(t *testing.T) {
 func TestOccupyMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"60769e209a3cad38f7ae4d0a/occupy"+"?org_id="+op.OrgID, "")
+	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"6099f3e7868940d397a82033/occupy"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }

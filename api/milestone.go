@@ -55,6 +55,9 @@ func (s *Server) createMilestone(c *gin.Context) {
 	data.MilestoneID = milestone.ID
 	switch err {
 	case nil:
+		if data.WithPublish {
+			c.JSON(http.StatusOK, "ok")
+		}
 		c.JSON(http.StatusOK, milestone)
 	case constant.ErrConflict:
 		log.Warn(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
@@ -256,15 +259,17 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		return
 	}
 
+	if condition.OrganizationID == "" {
+		condition.OrganizationID = op.OrgID
+	}
+
 	if condition.Status != entity.OutcomeStatusPublished && condition.AuthorID == "" {
 		condition.AuthorID = op.UserID
 	}
 
 	var hasPerm bool
-	var perm external.PermissionName
+	perm := external.ViewUnPublishedMilestone
 	if condition.Status == entity.OutcomeStatusPublished {
-		perm = external.ViewUnPublishedMilestone
-	} else {
 		perm = external.ViewUnPublishedMilestone
 	}
 

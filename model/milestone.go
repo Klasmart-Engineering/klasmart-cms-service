@@ -300,8 +300,8 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			return err
 		}
 
-		if toPublish {
-			err = da.GetMilestoneDA().BatchHide(ctx, tx, []string{milestone.SourceID})
+		if toPublish && ms.SourceID != ms.ID {
+			err = da.GetMilestoneDA().BatchHide(ctx, tx, []string{ms.SourceID})
 			if err != nil {
 				log.Error(ctx, "Update: BatchHide failed",
 					log.Bool("to_publish", toPublish),
