@@ -316,7 +316,7 @@ func (s *scheduleDA) GetTeachLoadByCondition(ctx context.Context, tx *dbo.DBCont
 	sql.WriteString(fmt.Sprintf("%s.relation_id,%s.class_type,", constant.TableNameScheduleRelation, constant.TableNameSchedule))
 	for i, item := range condition.TeachLoadTimeRanges {
 		sql.WriteString(fmt.Sprintf(`
-		sum((case (start_at > %d and end_at<%d) when 1 then end_at-start_at else 
+		sum((case (start_at >= %d and end_at<=%d) when 1 then end_at-start_at else 
 		if ((start_at<%d and end_at>%d),end_at-%d, 
 			if ((start_at<%d and end_at>%d),%d-start_at, 0)
 		) end))  as %s%d 	
@@ -449,6 +449,10 @@ func NewScheduleTeachLoadCondition(input *entity.ScheduleTeachingLoadInput) *Sch
 		OrgID: sql.NullString{
 			String: input.OrgID,
 			Valid:  true,
+		},
+		RelationSchoolIDs: entity.NullStrings{
+			Strings: input.SchoolIDs,
+			Valid:   len(input.SchoolIDs) > 0,
 		},
 		RelationClassIDs: entity.NullStrings{
 			Strings: input.ClassIDs,

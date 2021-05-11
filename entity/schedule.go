@@ -743,6 +743,7 @@ type ScheduleViewDetail struct {
 
 type ScheduleTeachingLoadInput struct {
 	OrgID      string
+	SchoolIDs  []string
 	ClassIDs   []string
 	TeacherIDs []string
 	TimeRanges []*ScheduleTimeRange
@@ -762,4 +763,20 @@ type ScheduleTeachingDuration struct {
 	StartAt  int64
 	EndAt    int64
 	Duration int64
+}
+
+type ScheduleTimeViewQuery struct {
+	ViewType       string   `json:"view_type"`
+	TimeAt         int64    `json:"time_at"`
+	TimeZoneOffset int      `json:"time_zone_offset"`
+	SchoolIDs      []string `json:"school_ids"`
+	TeacherIDs     []string `json:"teacher_ids"`
+	ClassIDs       []string `json:"class_ids"`
+	SubjectIDs     []string `json:"subject_ids"`
+	ProgramIDs     []string `json:"program_ids"`
+	ClassTypes     []string `json:"class_types"`
+	StartAtGe      int64    `json:"start_at_ge"`
+	EndAtLe        int64    `json:"end_at_le"`
+	Anytime        bool     `json:"anytime"`
+	OrderBy        string   `json:"order_by"`
 }

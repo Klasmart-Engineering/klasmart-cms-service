@@ -109,6 +109,9 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
 		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
 		schedules.GET("/schedules_view/:id", s.mustLogin, s.getScheduleViewByID)
+
+		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
+		schedules.POST("/schedules_time_view", s.mustLogin, s.postScheduleTimeView)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
