@@ -1,13 +1,14 @@
 package entity
 
 type Milestone struct {
-	ID             string `gorm:"column:id;primary_key" json:"milestone_id"`
-	Name           string `gorm:"column:name" json:"milestone_name"`
-	Shortcode      string `gorm:"column:shortcode" json:"shortcode"`
-	OrganizationID string `gorm:"column:organization_id" json:"organization_id"`
-	AuthorID       string `gorm:"column:author_id" json:"author_id"`
-	Description    string `gorm:"column:describe" json:"description"`
-	LoCounts       int    `gorm:"-" json:"lo_counts"`
+	ID             string          `gorm:"column:id;primary_key" json:"milestone_id"`
+	Name           string          `gorm:"column:name" json:"milestone_name"`
+	Shortcode      string          `gorm:"column:shortcode" json:"shortcode"`
+	OrganizationID string          `gorm:"column:organization_id" json:"organization_id"`
+	AuthorID       string          `gorm:"column:author_id" json:"author_id"`
+	Description    string          `gorm:"column:describe" json:"description"`
+	LoCounts       int             `gorm:"-" json:"lo_counts"`
+	Type           TypeOfMilestone `gorm:"column:type" json:"type"`
 
 	Status OutcomeStatus `gorm:"column:status" json:"status"`
 
@@ -27,6 +28,13 @@ type Milestone struct {
 	Ages          []string   `gorm:"-"`
 	Outcomes      []*Outcome `gorm:"-" json:"outcomes"`
 }
+
+type TypeOfMilestone string
+
+const (
+	CustomMilestoneType  TypeOfMilestone = "normal"
+	GeneralMilestoneType TypeOfMilestone = "general"
+)
 
 func (Milestone) TableName() string {
 	return "milestones"
@@ -51,7 +59,7 @@ type MilestoneCondition struct {
 	Name           string   `json:"name" form:"name"`
 	Description    string   `json:"description" form:"description"`
 	Shortcode      string   `json:"shortcode" form:"shortcode"`
-	AuthorID       string   `json:"-" form:"-"`
+	AuthorID       string   `json:"user_id" form:"user_id"`
 	AuthorName     string   `json:"author_name" form:"author_name"`
 	Page           string   `json:"page" form:"page"`
 	PageSize       string   `json:"page_size" form:"page_size"`

@@ -47,6 +47,11 @@ type OutcomeSetCreateView struct {
 	SetName string `json:"set_name" form:"set_name"`
 }
 
+type Milestone struct {
+	MilestoneID   string `json:"milestone_id" form:"milestone_id"`
+	MilestoneName string `json:"milestone_name" form:"milestone_name"`
+}
+
 func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator) (*entity.Outcome, error) {
 	outcome := entity.Outcome{
 		Name:          req.OutcomeName,
@@ -69,7 +74,7 @@ func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator)
 		req.Program, req.Subject, req.Developmental, req.Skills, req.Grade, req.Age)
 	if err != nil {
 		log.Error(ctx, "ToOutcome: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", req))
-		return nil, err
+		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
 
 	outcome.Program = strings.Join(req.Program, entity.JoinComma)
@@ -196,6 +201,7 @@ type OutcomeView struct {
 	CreatedAt        int64                   `json:"created_at"`
 	UpdatedAt        int64                   `json:"update_at"`
 	Sets             []*OutcomeSetCreateView `json:"sets"`
+	Milestones       []*Milestone            `json:"milestones"`
 }
 
 type OutcomeSearchResponse struct {
@@ -370,6 +376,13 @@ func buildOutcomeView(org, ath, prd, sbj, cat, sbc, grd, age map[string]string, 
 			SetName: outcome.Sets[i].Name,
 		}
 		view.Sets[i] = &set
+	}
+	view.Milestones = make([]*Milestone, len(outcome.Milestones))
+	for i := range outcome.Milestones {
+		view.Milestones[i] = &Milestone{
+			MilestoneID:   outcome.Milestones[i].ID,
+			MilestoneName: outcome.Milestones[i].Name,
+		}
 	}
 	return view
 }

@@ -293,6 +293,11 @@ func (s Server) registeRoute() {
 
 		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
 	}
+
+	organizationPermissions := s.engine.Group("/v1/organization_permissions")
+	{
+		organizationPermissions.POST("", s.mustLogin, s.hasOrganizationPermissions)
+	}
 }
 
 // Ping godoc

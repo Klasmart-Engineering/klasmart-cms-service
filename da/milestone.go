@@ -15,10 +15,13 @@ type IMilestoneDA interface {
 
 	BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs []string) error
 	BatchHide(ctx context.Context, tx *dbo.DBContext, hideIDs []string) error
+	BatchUnLock(ctx context.Context, tx *dbo.DBContext, unLockIDs []string) error
 	BatchUpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorLatest map[string]string) error
 	BatchDelete(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) error
 
 	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error
+
+	FindGap(ctx context.Context, num int) (int, error)
 }
 
 var milestoneDA *MilestoneSQLDA

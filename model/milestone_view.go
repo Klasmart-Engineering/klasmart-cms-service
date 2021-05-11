@@ -30,26 +30,28 @@ type AuthorView struct {
 }
 
 type MilestoneView struct {
-	MilestoneID  string            `json:"milestone_id,omitempty"`
-	Name         string            `json:"milestone_name,omitempty"`
-	Shortcode    string            `json:"shortcode,omitempty"`
-	Organization *OrganizationView `json:"organization,omitempty"`
-	Author       *AuthorView       `json:"author,omitempty"`
-	Outcomes     []*OutcomeView    `json:"outcomes,omitempty"`
-	CreateAt     int64             `json:"create_at,omitempty"`
-	Program      []*Program        `json:"program,omitempty"`
-	Subject      []*Subject        `json:"subject,omitempty"`
-	Category     []*Category       `json:"category,omitempty"`
-	SubCategory  []*SubCategory    `json:"sub_category,omitempty"`
-	Age          []*Age            `json:"age,omitempty"`
-	Grade        []*Grade          `json:"grade,omitempty"`
-	Description  string            `json:"description,omitempty"`
-	Status       string            `json:"status,omitempty"`
-	LockedBy     string            `json:"locked_by,omitempty"`
-	AncestorID   string            `json:"ancestor_id,omitempty"`
-	SourceID     string            `json:"source_id,omitempty"`
-	LatestID     string            `json:"latest_id,omitempty"`
-	OutcomeCount int               `json:"outcome_count,omitempty"`
+	MilestoneID  string                 `json:"milestone_id,omitempty"`
+	Name         string                 `json:"milestone_name,omitempty"`
+	Shortcode    string                 `json:"shortcode,omitempty"`
+	Type         entity.TypeOfMilestone `json:"type"`
+	Organization *OrganizationView      `json:"organization,omitempty"`
+	Author       *AuthorView            `json:"author,omitempty"`
+	Outcomes     []*OutcomeView         `json:"outcomes"`
+	CreateAt     int64                  `json:"create_at,omitempty"`
+	Program      []*Program             `json:"program"`
+	Subject      []*Subject             `json:"subject"`
+	Category     []*Category            `json:"category"`
+	SubCategory  []*SubCategory         `json:"sub_category"`
+	Age          []*Age                 `json:"age"`
+	Grade        []*Grade               `json:"grade"`
+	Description  string                 `json:"description,omitempty"`
+	Status       string                 `json:"status,omitempty"`
+	LockedBy     string                 `json:"locked_by,omitempty"`
+	AncestorID   string                 `json:"ancestor_id,omitempty"`
+	SourceID     string                 `json:"source_id,omitempty"`
+	LatestID     string                 `json:"latest_id,omitempty"`
+	OutcomeCount int                    `json:"outcome_count,omitempty"`
+	WithPublish  bool                   `json:"with_publish,omitempty"`
 
 	ProgramIDs         []string `json:"program_ids,omitempty"`
 	SubjectIDs         []string `json:"subject_ids,omitempty"`
@@ -60,7 +62,7 @@ type MilestoneView struct {
 	OutcomeAncestorIDs []string `json:"outcome_ancestor_ids,omitempty"`
 }
 
-func (ms *MilestoneView) ToMilestone(op *entity.Operator) *entity.Milestone {
+func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
 	milestone := &entity.Milestone{
 		ID:             ms.MilestoneID,
 		Name:           ms.Name,
@@ -68,6 +70,7 @@ func (ms *MilestoneView) ToMilestone(op *entity.Operator) *entity.Milestone {
 		OrganizationID: op.OrgID,
 		AuthorID:       op.UserID,
 		Description:    ms.Description,
+		Type:           ms.Type,
 
 		Status: entity.OutcomeStatus(ms.Status),
 
@@ -83,7 +86,20 @@ func (ms *MilestoneView) ToMilestone(op *entity.Operator) *entity.Milestone {
 		Grades:        ms.GradeIDs,
 		Ages:          ms.AgeIDs,
 	}
-	return milestone
+	if len(ms.ProgramIDs) == 0 || len(ms.SubjectIDs) == 0 {
+		log.Warn(ctx, "ToMilestone: program and subject is required", log.Any("op", op), log.Any("milestone", ms))
+		return nil, &ErrValidFailed{Msg: "program and subject is required"}
+	}
+	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
+		ms.ProgramIDs, ms.SubjectIDs, ms.CategoryIDs, ms.SubcategoryIDs, ms.GradeIDs, ms.AgeIDs)
+	if err != nil {
+		log.Error(ctx, "ToMilestone: prepareAllNeededName failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("milestone", ms))
+		return nil, err
+	}
+	return milestone, nil
 }
 
 func (ms *MilestoneView) FillAllKindsOfName(program, subject, category, subCategory, grade, age map[string]string, milestone *entity.Milestone) {
@@ -183,6 +199,7 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 			MilestoneID: milestone.ID,
 			Name:        milestone.Name,
 			Shortcode:   milestone.Shortcode,
+			Type:        milestone.Type,
 			Organization: &OrganizationView{
 				OrganizationID:   milestone.OrganizationID,
 				OrganizationName: orgs[milestone.OrganizationID],
@@ -251,7 +268,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 			var ero error
 			authors, ero = external.GetUserServiceProvider().BatchGetNameMap(ctx, op, _authorIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetUserServiceProvider failed", log.Err(ero), log.Strings("org", _authorIDs))
+				log.Error(ctx, "prepareAllNeededName: GetUserServiceProvider failed", log.Err(ero), log.Strings("author", _authorIDs))
 				err = ero
 				cancel()
 			}
@@ -267,7 +284,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 			var ero error
 			programs, ero = external.GetProgramServiceProvider().BatchGetNameMap(ctx, op, _programIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetProgramServiceProvider failed", log.Err(ero), log.Strings("org", _programIDs))
+				log.Error(ctx, "prepareAllNeededName: GetProgramServiceProvider failed", log.Err(ero), log.Strings("program", _programIDs))
 				err = ero
 				cancel()
 			}
@@ -283,7 +300,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 			var ero error
 			subjects, ero = external.GetSubjectServiceProvider().BatchGetNameMap(ctx, op, _subjectIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetSubjectServiceProvider failed", log.Err(ero), log.Strings("org", _subjectIDs))
+				log.Error(ctx, "prepareAllNeededName: GetSubjectServiceProvider failed", log.Err(ero), log.Strings("subject", _subjectIDs))
 				err = ero
 				cancel()
 			}
@@ -299,7 +316,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 			var ero error
 			categories, ero = external.GetCategoryServiceProvider().BatchGetNameMap(ctx, op, _categoryIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetCategoryServiceProvider failed", log.Err(ero), log.Strings("org", _categoryIDs))
+				log.Error(ctx, "prepareAllNeededName: GetCategoryServiceProvider failed", log.Err(ero), log.Strings("category", _categoryIDs))
 				err = ero
 				cancel()
 			}
@@ -315,7 +332,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 			var ero error
 			subcategories, ero = external.GetSubCategoryServiceProvider().BatchGetNameMap(ctx, op, _subcategoryIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetSubCategoryServiceProvider failed", log.Err(ero), log.Strings("org", _subcategoryIDs))
+				log.Error(ctx, "prepareAllNeededName: GetSubCategoryServiceProvider failed", log.Err(ero), log.Strings("subcategory", _subcategoryIDs))
 				err = ero
 				cancel()
 			}
@@ -331,7 +348,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 			var ero error
 			grades, ero = external.GetGradeServiceProvider().BatchGetNameMap(ctx, op, _gradeIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetGradeServiceProvider failed", log.Err(ero), log.Strings("org", _gradeIDs))
+				log.Error(ctx, "prepareAllNeededName: GetGradeServiceProvider failed", log.Err(ero), log.Strings("grade", _gradeIDs))
 				err = ero
 				cancel()
 			}
@@ -348,7 +365,7 @@ func prepareAllNeededName(ctx context.Context, op *entity.Operator,
 			var ero error
 			ages, ero = external.GetAgeServiceProvider().BatchGetNameMap(ctx, op, _ageIDs)
 			if ero != nil {
-				log.Error(ctx, "prepareAllNeededName: GetAgeServiceProvider failed", log.Err(ero), log.Strings("org", _ageIDs))
+				log.Error(ctx, "prepareAllNeededName: GetAgeServiceProvider failed", log.Err(ero), log.Strings("age", _ageIDs))
 				err = ero
 				cancel()
 			}

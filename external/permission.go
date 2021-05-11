@@ -2,6 +2,8 @@ package external
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"text/template"
 
@@ -11,6 +13,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 type PermissionServiceProvider interface {
@@ -134,64 +137,57 @@ func (s AmsPermissionService) HasSchoolPermission(ctx context.Context, operator 
 	return data.User.SchoolMembership.CheckAllowed, nil
 }
 
-func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissions []PermissionName) (map[PermissionName]bool, error) {
-	if len(permissions) == 0 {
+func (s AmsPermissionService) HasOrganizationPermissions(ctx context.Context, operator *entity.Operator, permissionNames []PermissionName) (map[PermissionName]bool, error) {
+	if len(permissionNames) == 0 {
 		return map[PermissionName]bool{}, nil
 	}
 
-	raw := `
-query($user_id: ID! $organization_id: ID!) {
-	user(user_id: $user_id) {
-		membership(organization_id: $organization_id) {
-			{{range $i, $e := .}}
-			{{$e}}: checkAllowed(permission_name: "{{$e}}")
-			{{end}}
-		}
+	pns := make([]string, len(permissionNames))
+	for index, permissionName := range permissionNames {
+		pns[index] = permissionName.String()
 	}
-}
-`
 
-	temp, err := template.New("Permissions").Parse(raw)
-	if err != nil {
-		log.Error(ctx, "temp error", log.String("raw", raw), log.Err(err))
-		return nil, err
+	_permissionNames, indexMapping := utils.SliceDeduplicationMap(pns)
+
+	sb := new(strings.Builder)
+	sb.WriteString("query($user_id: ID! $organization_id: ID!) {user(user_id: $user_id) {membership(organization_id: $organization_id) {")
+	for index, permissionName := range _permissionNames {
+		fmt.Fprintf(sb, "q%d: checkAllowed(permission_name: \"%s\")\n", index, permissionName)
 	}
-	buf := buffer.Buffer{}
-	err = temp.Execute(&buf, permissions)
-	if err != nil {
-		log.Error(ctx, "temp execute failed", log.String("raw", raw), log.Err(err))
-		return nil, err
-	}
-	req := chlorine.NewRequest(buf.String())
-	req.Var("user_id", operator.UserID)
-	req.Var("organization_id", operator.OrgID)
-	payload := make(map[PermissionName]bool, len(permissions))
-	res := chlorine.Response{
+	sb.WriteString("}}}")
+
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	request.Var("user_id", operator.UserID)
+	request.Var("organization_id", operator.OrgID)
+
+	data := make(map[PermissionName]bool, len(permissionNames))
+	response := &chlorine.Response{
 		Data: &struct {
 			User struct {
 				Membership map[PermissionName]bool `json:"membership"`
 			} `json:"user"`
 		}{struct {
 			Membership map[PermissionName]bool `json:"membership"`
-		}{Membership: payload}},
+		}{Membership: data}},
 	}
 
-	_, err = GetAmsClient().Run(ctx, req, &res)
+	_, err := GetAmsClient().Run(ctx, request, response)
 	if err != nil {
-		log.Error(ctx, "Run error", log.String("q", buf.String()), log.Any("res", res), log.Err(err))
+		log.Error(ctx, "check org permissions success failed", log.Err(err), log.Any("permissionNames", permissionNames))
 		return nil, err
 	}
-	if len(res.Errors) > 0 {
-		log.Error(ctx, "Res error", log.String("q", buf.String()), log.Any("res", res), log.Err(res.Errors))
-		return nil, res.Errors
+
+	permissions := make(map[PermissionName]bool, len(data))
+	for index, permissionName := range permissionNames {
+		permissions[permissionName] = data[PermissionName(fmt.Sprintf("q%d", indexMapping[index]))]
 	}
 
 	log.Info(ctx, "check org permissions success",
 		log.Any("operator", operator),
-		log.Any("permissions", permissions),
-		log.Any("hasPermission", payload))
+		log.Any("permissionNames", permissionNames),
+		log.Any("permissions", permissions))
 
-	return payload, nil
+	return permissions, nil
 }
 
 func (s AmsPermissionService) HasAnyOrganizationPermission(ctx context.Context, operator *entity.Operator, orgIDs []string, permissionName PermissionName) (bool, error) {

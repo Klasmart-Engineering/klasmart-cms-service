@@ -2700,7 +2700,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	for i := range contentList {
 		outcomeIDs = append(outcomeIDs, contentList[i].Outcomes...)
 	}
-	//outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, user)
+	//outcomeEntities, err := GetOutcomeModel().GetLatestByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, user)
 	//if err != nil {
 	//	log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIDs), log.String("uid", user.UserID))
 	//}
@@ -2735,7 +2735,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		outcomeEntities := make([]*entity.Outcome, 0)
 		if outComes {
-			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomesByIDs(ctx, user, dbo.MustGetDB(ctx), contentList[i].Outcomes)
+			outcomeEntities, err = GetOutcomeModel().GetLatestByIDs(ctx, user, dbo.MustGetDB(ctx), contentList[i].Outcomes)
 			if err != nil {
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
@@ -2774,7 +2774,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 }
 
 func (cm *ContentModel) getOutcomes(ctx context.Context, pickIDs []string, user *entity.Operator) []*entity.Outcome {
-	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, user, dbo.MustGetDB(ctx), pickIDs)
+	outcomeEntities, err := GetOutcomeModel().GetLatestByIDs(ctx, user, dbo.MustGetDB(ctx), pickIDs)
 	if err != nil {
 		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", pickIDs), log.String("uid", user.UserID))
 	}

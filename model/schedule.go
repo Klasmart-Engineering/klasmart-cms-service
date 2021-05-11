@@ -31,7 +31,6 @@ var (
 
 type IScheduleModel interface {
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
-	AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
 	Query(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
@@ -618,23 +617,6 @@ func (s *scheduleModel) prepareScheduleRelationUpdateData(ctx context.Context, o
 }
 
 func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
-	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		return s.AddTx(ctx, tx, op, viewData)
-	})
-	if err != nil {
-		log.Error(ctx, "add schedule error",
-			log.Err(err),
-			log.Any("viewData", viewData),
-		)
-		return "", err
-	}
-	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
-	if err != nil {
-		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
-	}
-	return id.(string), nil
-}
-func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error) {
 	viewData.SubjectIDs = utils.SliceDeduplicationExcludeEmpty(viewData.SubjectIDs)
 	// verify data
 	err := s.verifyData(ctx, op, &entity.ScheduleVerify{
@@ -672,17 +654,24 @@ func (s *scheduleModel) AddTx(ctx context.Context, tx *dbo.DBContext, op *entity
 		log.Error(ctx, "prepareScheduleRelationAddData error", log.Err(err), log.Any("op", op), log.Any("relationInput", relationInput))
 		return "", err
 	}
+	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
+		scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location, relations)
+		if err != nil {
+			log.Error(ctx, "add schedule: error",
+				log.Err(err),
+				log.Any("viewData", viewData),
+				log.Any("schedule", schedule),
+			)
+			return "", err
+		}
+		return scheduleID, nil
+	})
 
-	scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location, relations)
+	err = da.GetScheduleRedisDA().Clean(ctx, op.OrgID)
 	if err != nil {
-		log.Error(ctx, "add schedule: error",
-			log.Err(err),
-			log.Any("viewData", viewData),
-			log.Any("schedule", schedule),
-		)
-		return "", err
+		log.Warn(ctx, "clean schedule cache error", log.String("orgID", op.OrgID), log.Err(err))
 	}
-	return scheduleID, nil
+	return id.(string), nil
 }
 
 func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) (string, error) {
@@ -834,22 +823,23 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 	}
 
 	// update schedule
+	relationInput := &entity.ScheduleRelationInput{
+		ScheduleID:             viewData.ID,
+		ClassRosterClassID:     viewData.ClassID,
+		ClassRosterTeacherIDs:  viewData.ClassRosterTeacherIDs,
+		ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
+		ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
+		ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
+		SubjectIDs:             viewData.SubjectIDs,
+	}
+	relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
+	if err != nil {
+		return "", err
+	}
+
 	var id string
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		relationInput := &entity.ScheduleRelationInput{
-			ScheduleID:             viewData.ID,
-			ClassRosterClassID:     viewData.ClassID,
-			ClassRosterTeacherIDs:  viewData.ClassRosterTeacherIDs,
-			ClassRosterStudentIDs:  viewData.ClassRosterStudentIDs,
-			ParticipantsTeacherIDs: viewData.ParticipantsTeacherIDs,
-			ParticipantsStudentIDs: viewData.ParticipantsStudentIDs,
-			SubjectIDs:             viewData.SubjectIDs,
-		}
 		var err error
-		relations, err := s.prepareScheduleRelationUpdateData(ctx, operator, relationInput)
-		if err != nil {
-			return err
-		}
 		// delete schedule
 		if err = s.deleteScheduleTx(ctx, tx, operator, schedule, viewData.EditType); err != nil {
 			log.Error(ctx, "update schedule: delete failed",
