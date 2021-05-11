@@ -51,14 +51,25 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	err = model.GetMilestoneModel().Create(ctx, op, milestone, data.OutcomeAncestorIDs)
+	err = model.GetMilestoneModel().Create(ctx, op, milestone, data.OutcomeAncestorIDs, data.WithPublish)
 	data.MilestoneID = milestone.ID
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, milestone)
+		if data.WithPublish {
+			c.JSON(http.StatusOK, "ok")
+			return
+		}
+		views, err := model.FromMilestones(ctx, op, []*entity.Milestone{milestone})
+		if err != nil {
+			log.Error(ctx, "createMilestone: fromMilestones failed",
+				log.Any("milestones", views))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, views[0])
 	case constant.ErrConflict:
 		log.Warn(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
+		c.JSON(http.StatusConflict, L(AssessMsgMilestoneExistShortcode))
 	default:
 		log.Error(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -165,7 +176,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case constant.ErrConflict:
 		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
+		c.JSON(http.StatusConflict, L(AssessMsgMilestoneExistShortcode))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -256,15 +267,17 @@ func (s *Server) searchMilestone(c *gin.Context) {
 		return
 	}
 
+	if condition.OrganizationID == "" {
+		condition.OrganizationID = op.OrgID
+	}
+
 	if condition.Status != entity.OutcomeStatusPublished && condition.AuthorID == "" {
 		condition.AuthorID = op.UserID
 	}
 
 	var hasPerm bool
-	var perm external.PermissionName
+	perm := external.ViewUnPublishedMilestone
 	if condition.Status == entity.OutcomeStatusPublished {
-		perm = external.ViewUnPublishedMilestone
-	} else {
 		perm = external.ViewUnPublishedMilestone
 	}
 

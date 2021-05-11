@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-playground/assert/v2"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -106,4 +107,35 @@ func TestTemp(t *testing.T) {
 	end2 := TodayEndByTimeStamp(now.Unix(), time.Local)
 	t.Log(end2)
 	t.Log(loc)
+}
+
+func TestEndOfDayByTime(t *testing.T) {
+	type args struct {
+		t  time.Time
+		la *time.Location
+	}
+	tests := []struct {
+		name string
+		args args
+		want time.Time
+	}{
+		{
+			name: "t1",
+			args: args{
+				t:  time.Now(),
+				la: time.FixedZone("report_teaching_load", 8),
+			},
+			want: time.Time{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := EndOfDayByTime(tt.args.t, tt.args.la).AddDate(0, 0, 1); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("EndOfDayByTime() = %v, want %v", got, tt.want)
+				t.Log(got.Unix())
+			} else {
+				t.Log(got.Unix())
+			}
+		})
+	}
 }

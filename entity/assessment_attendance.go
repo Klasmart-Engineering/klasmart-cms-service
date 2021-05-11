@@ -44,3 +44,8 @@ func (a AssessmentAttendanceRole) Valid() bool {
 		return false
 	}
 }
+
+type NullAssessmentAttendanceRole struct {
+	Value AssessmentAttendanceRole
+	Valid bool
+}

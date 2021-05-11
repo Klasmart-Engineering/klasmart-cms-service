@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"unsafe"
 
@@ -88,6 +89,65 @@ func NumToBHex(ctx context.Context, num int, n int, l int) (string, error) {
 		return "", constant.ErrOverflow
 	}
 	return strings.ToUpper(string(result[:l])), nil
+}
+
+var indMap = map[byte]int{
+	48: 0, // '0'
+	49: 1, // '1'
+	50: 2, // '0'
+	51: 3, // '1'
+	52: 4, // '0'
+	53: 5, // '1'
+	54: 6, // '0'
+	55: 7, // '1'
+	56: 8, // '0'
+	57: 9, // '1'
+
+	65: 10, // 'A'
+	66: 11, // 'B'
+	67: 12, // 'C'
+	68: 13, // 'D'
+	69: 14, // 'E'
+	70: 15, // 'F'
+	71: 16, // 'G'
+	72: 17, // 'H'
+	73: 18, // 'I'
+	74: 19, // 'J'
+	75: 20, // 'K'
+	76: 21, // 'L'
+	77: 22, // 'M'
+	78: 23, // 'N'
+	79: 24, // 'O'
+	80: 25, // 'P'
+	81: 26, // 'Q'
+	82: 27, // 'R'
+	83: 28, // 'S'
+	84: 29, // 'T'
+	85: 30, // 'U'
+	86: 31, // 'V'
+	87: 32, // 'W'
+	88: 33, // 'X'
+	89: 34, // 'Y'
+	90: 35, // 'Z'
+}
+
+func BHexToNum(ctx context.Context, hexString string) (int, error) {
+	length := len(hexString)
+	ind := 0
+	power := 1
+	for i := length-1; i>=0; i-- {
+		var value int
+		var ok bool
+		if value, ok = indMap[hexString[i]]; !ok {
+			log.Error(ctx, "BHexToNum: failed",
+				log.String("hex", hexString),
+				log.Int("index", i))
+			return 0, errors.New("not exist")
+		}
+		ind += value * power
+		power *= constant.ShortcodeBaseCustom
+	}
+	return ind, nil
 }
 
 func PaddingString(s string, l int) string {

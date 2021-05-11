@@ -98,7 +98,10 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 	// fill outcome attendances
 	var assessmentOutcomes []*entity.AssessmentOutcome
 	if err := da.GetAssessmentOutcomeDA().QueryTx(ctx, tx, &da.QueryAssessmentOutcomeConditions{
-		AssessmentIDs: []string{id},
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{id},
+			Valid:   true,
+		},
 	}, &assessmentOutcomes); err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentOutcomeDA().GetListByAssessmentID: get list failed",
 			log.Err(err),
@@ -262,7 +265,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		)
 		return nil, err
 	}
-	if !checker.CheckStatus(args.Status) {
+	if !checker.CheckStatus(args.Status.Value) {
 		return nil, constant.ErrForbidden
 	}
 
@@ -270,24 +273,32 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
-			OrgID:                   &operator.OrgID,
-			Status:                  args.Status,
-			AllowTeacherIDs:         checker.AllowTeacherIDs(),
-			TeacherIDAndStatusPairs: checker.AllowPairs(),
-			ClassType:               args.ClassType,
-			OrderBy:                 args.OrderBy,
-			Page:                    args.Page,
-			PageSize:                args.PageSize,
+			OrgID: entity.NullString{
+				String: operator.OrgID,
+				Valid:  true,
+			},
+			Status: args.Status,
+			AllowTeacherIDs: entity.NullStrings{
+				Strings: checker.allowTeacherIDs,
+				Valid:   true,
+			},
+			TeacherIDAndStatusPairs: entity.NullAssessmentTeacherIDAndStatusPairs{
+				Values: checker.AllowPairs(),
+				Valid:  len(checker.AllowPairs()) > 0,
+			},
+			ClassType: args.ClassType,
+			OrderBy:   args.OrderBy,
+			Pager:     args.Pager,
 		}
 		teachers    []*external.Teacher
 		scheduleIDs []string
 	)
-	if args.TeacherName != nil {
-		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, *args.TeacherName); err != nil {
+	if args.TeacherName.Valid {
+		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
 			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
 				log.Err(err),
 				log.String("org_id", operator.OrgID),
-				log.String("teacher_name", *args.TeacherName),
+				log.String("teacher_name", args.TeacherName.String),
 				log.Any("args", args),
 				log.Any("operator", operator),
 			)
@@ -295,16 +306,17 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		}
 		log.Debug(ctx, "List: external.GetTeacherServiceProvider().Query: query success",
 			log.String("org_id", operator.OrgID),
-			log.String("teacher_name", *args.TeacherName),
+			log.String("teacher_name", args.TeacherName.String),
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
 		if len(teachers) > 0 {
+			cond.TeacherIDs.Valid = true
 			for _, item := range teachers {
-				cond.TeacherIDs = append(cond.TeacherIDs, item.ID)
+				cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
 			}
 		} else {
-			cond.TeacherIDs = []string{}
+			cond.TeacherIDs.Valid = false
 		}
 	}
 	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {
@@ -316,10 +328,9 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 		)
 		return nil, err
 	}
-	if scheduleIDs == nil {
-		cond.ScheduleIDs = []string{}
-	} else {
-		cond.ScheduleIDs = append(cond.ScheduleIDs, scheduleIDs...)
+	cond.ScheduleIDs = entity.NullStrings{
+		Strings: scheduleIDs,
+		Valid:   true,
 	}
 	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
@@ -390,7 +401,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		)
 		return nil, err
 	}
-	if !checker.CheckStatus(args.Status) {
+	if args.Status.Valid && !checker.CheckStatus(args.Status.Value) {
 		return nil, constant.ErrForbidden
 	}
 
@@ -398,21 +409,30 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
-			OrgID:                   &operator.OrgID,
-			Status:                  args.Status,
-			AllowTeacherIDs:         checker.AllowTeacherIDs(),
-			TeacherIDAndStatusPairs: checker.AllowPairs(),
-			ClassType:               args.ClassType,
+			OrgID: entity.NullString{
+				String: operator.OrgID,
+				Valid:  true,
+			},
+			Status: args.Status,
+			AllowTeacherIDs: entity.NullStrings{
+				Strings: checker.AllowTeacherIDs(),
+				Valid:   true,
+			},
+			TeacherIDAndStatusPairs: entity.NullAssessmentTeacherIDAndStatusPairs{
+				Values: checker.allowPairs,
+				Valid:  len(checker.allowPairs) > 0,
+			},
+			ClassType: args.ClassType,
 		}
 		teachers    []*external.Teacher
 		scheduleIDs []string
 	)
-	if args.TeacherName != nil {
-		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, *args.TeacherName); err != nil {
+	if args.TeacherName.Valid {
+		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
 			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
 				log.Err(err),
 				log.String("org_id", operator.OrgID),
-				log.String("teacher_name", *args.TeacherName),
+				log.String("teacher_name", args.TeacherName.String),
 				log.Any("args", args),
 				log.Any("operator", operator),
 			)
@@ -420,16 +440,17 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		}
 		log.Debug(ctx, "List: external.GetTeacherServiceProvider().Query: query success",
 			log.String("org_id", operator.OrgID),
-			log.String("teacher_name", *args.TeacherName),
+			log.String("teacher_name", args.TeacherName.String),
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
 		if len(teachers) > 0 {
+			cond.TeacherIDs.Valid = true
 			for _, item := range teachers {
-				cond.TeacherIDs = append(cond.TeacherIDs, item.ID)
+				cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
 			}
 		} else {
-			cond.TeacherIDs = []string{}
+			cond.TeacherIDs.Valid = false
 		}
 	}
 	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {
@@ -441,10 +462,9 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		)
 		return nil, err
 	}
-	if scheduleIDs == nil {
-		cond.ScheduleIDs = []string{}
-	} else {
-		cond.ScheduleIDs = append(cond.ScheduleIDs, scheduleIDs...)
+	cond.ScheduleIDs = entity.NullStrings{
+		Strings: scheduleIDs,
+		Valid:   true,
 	}
 
 	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
@@ -632,8 +652,14 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 	// check if assessment already exits
 	var assessments []entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
-		OrgID:       &operator.OrgID,
-		ScheduleIDs: []string{args.ScheduleID},
+		OrgID: entity.NullString{
+			String: operator.OrgID,
+			Valid:  true,
+		},
+		ScheduleIDs: entity.NullStrings{
+			Strings: []string{args.ScheduleID},
+			Valid:   true,
+		},
 	}, &assessments); err != nil {
 		log.Error(ctx, "Add: da.GetAssessmentDA().Query: query failed",
 			log.Err(err),
@@ -1290,8 +1316,14 @@ func (m *assessmentModel) generateTitle(classEndTime int64, className string, le
 func (m *assessmentModel) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
 	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
 	cond := da.QueryAssessmentContentOutcomeConditions{
-		AssessmentIDs: assessmentIDs,
-		ContentIDs:    contentIDs,
+		AssessmentIDs: entity.NullStrings{
+			Strings: assessmentIDs,
+			Valid:   true,
+		},
+		ContentIDs: entity.NullStrings{
+			Strings: contentIDs,
+			Valid:   true,
+		},
 	}
 	if err := da.GetAssessmentContentOutcomeDA().QueryTx(ctx, tx, &cond, &assessmentContentOutcomes); err != nil {
 		log.Error(ctx, "getAssessmentContentOutcomeMap: da.GetAssessmentContentOutcomeDA().QueryTx: get failed",
@@ -1621,16 +1653,13 @@ func (c *AssessmentPermissionChecker) CheckTeacherIDs(ids []string) bool {
 	return false
 }
 
-func (c *AssessmentPermissionChecker) CheckStatus(s *entity.AssessmentStatus) bool {
-	if s == nil {
-		return true
-	}
+func (c *AssessmentPermissionChecker) CheckStatus(s entity.AssessmentStatus) bool {
 	if !s.Valid() {
 		return true
 	}
 	allow := c.AllowStatuses()
 	for _, a := range allow {
-		if a == *s {
+		if a == s {
 			return true
 		}
 	}

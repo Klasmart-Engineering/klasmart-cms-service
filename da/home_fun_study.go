@@ -28,42 +28,41 @@ type homeFunStudyDA struct {
 }
 
 type QueryHomeFunStudyCondition struct {
-	OrgID           *string                                    `json:"org_id"`
-	ScheduleID      *string                                    `json:"schedule_id"`
-	TeacherIDs      utils.SQLJSONStringArray                   `json:"teacher_ids"`
-	StudentIDs      []string                                   `json:"student_ids"`
-	Status          *entity.AssessmentStatus                   `json:"status"`
-	OrderBy         *entity.ListHomeFunStudiesOrderBy          `json:"order_by"`
-	AllowTeacherIDs []string                                   `json:"allow_teacher_ids"`
-	AllowPairs      []*entity.AssessmentTeacherIDAndStatusPair `json:"allow_pairs"`
-	Page            int                                        `json:"page"`
-	PageSize        int                                        `json:"page_size"`
+	OrgID           entity.NullString                            `json:"org_id"`
+	ScheduleID      entity.NullString                            `json:"schedule_id"`
+	TeacherIDs      utils.NullSQLJSONStringArray                 `json:"teacher_ids"`
+	StudentIDs      entity.NullStrings                           `json:"student_ids"`
+	Status          entity.NullAssessmentStatus                  `json:"status"`
+	OrderBy         entity.NullListHomeFunStudiesOrderBy         `json:"order_by"`
+	AllowTeacherIDs entity.NullStrings                           `json:"allow_teacher_ids"`
+	AllowPairs      entity.NullAssessmentTeacherIDAndStatusPairs `json:"allow_pairs"`
+	Pager           dbo.Pager                                    `json:"pager"`
 }
 
 func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 	b := NewSQLTemplate("delete_at = 0")
 
-	if c.OrgID != nil {
+	if c.OrgID.Valid {
 		b.Appendf("exists (select 1 from schedules"+
-			" where org_id = ? and delete_at = 0 and home_fun_studies.schedule_id = schedules.id)", c.OrgID)
+			" where org_id = ? and delete_at = 0 and home_fun_studies.schedule_id = schedules.id)", c.OrgID.String)
 	}
 
-	if c.ScheduleID != nil {
-		b.Appendf("schedule_id = ?", c.ScheduleID)
+	if c.ScheduleID.Valid {
+		b.Appendf("schedule_id = ?", c.ScheduleID.String)
 	}
 
-	if c.TeacherIDs != nil || c.StudentIDs != nil {
+	if c.TeacherIDs.Valid || c.StudentIDs.Valid {
 		flag := false
 		t2 := NewSQLTemplate("")
-		if len(c.TeacherIDs) > 0 {
-			teacherIDs := utils.SliceDeduplication(c.TeacherIDs)
+		if len(c.TeacherIDs.Values) > 0 {
+			teacherIDs := utils.SliceDeduplication(c.TeacherIDs.Values)
 			for _, teacherID := range teacherIDs {
 				t2.Appendf("json_contains(teacher_ids, json_array(?))", teacherID)
 				flag = true
 			}
 		}
-		if len(c.StudentIDs) > 0 {
-			t2.Appendf("student_id in (?)", c.StudentIDs)
+		if len(c.StudentIDs.Strings) > 0 {
+			t2.Appendf("student_id in (?)", c.StudentIDs.Strings)
 			flag = true
 		}
 		if !flag {
@@ -72,15 +71,12 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 		b.AppendResult(t2.Or())
 	}
 
-	if c.Status != nil {
-		b.Appendf("status = ?", *c.Status)
+	if c.Status.Valid {
+		b.Appendf("status = ?", c.Status.Value)
 	}
 
-	if c.AllowTeacherIDs != nil {
-		if len(c.AllowTeacherIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
-		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs)
+	if c.AllowTeacherIDs.Valid {
+		allowTeacherIDs := utils.SliceDeduplication(c.AllowTeacherIDs.Strings)
 		t2 := NewSQLTemplate("")
 		for _, tid := range allowTeacherIDs {
 			t2.Appendf("json_contains(teacher_ids, json_array(?))", tid)
@@ -88,26 +84,25 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 		b.AppendResult(t2.Or())
 	}
 
-	for _, pair := range c.AllowPairs {
-		b.Appendf("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
-			pair.TeacherID, pair.TeacherID, string(pair.Status))
+	if c.AllowPairs.Valid {
+		for _, pair := range c.AllowPairs.Values {
+			b.Appendf("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
+				pair.TeacherID, pair.TeacherID, string(pair.Status))
+		}
 	}
 
 	return b.DBOConditions()
 }
 
 func (c *QueryHomeFunStudyCondition) GetPager() *dbo.Pager {
-	return &dbo.Pager{
-		Page:     c.Page,
-		PageSize: c.PageSize,
-	}
+	return &c.Pager
 }
 
 func (c *QueryHomeFunStudyCondition) GetOrderBy() string {
-	if c.OrderBy == nil {
+	if !c.OrderBy.Valid {
 		return ""
 	}
-	switch *c.OrderBy {
+	switch c.OrderBy.Value {
 	case entity.ListHomeFunStudiesOrderByCompleteAt:
 		return "complete_at"
 	case entity.ListHomeFunStudiesOrderByCompleteAtDesc:

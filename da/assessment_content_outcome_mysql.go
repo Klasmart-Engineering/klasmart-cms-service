@@ -54,23 +54,17 @@ func (*assessmentContentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBCo
 }
 
 type QueryAssessmentContentOutcomeConditions struct {
-	AssessmentIDs []string
-	ContentIDs    []string
+	AssessmentIDs entity.NullStrings
+	ContentIDs    entity.NullStrings
 }
 
 func (c *QueryAssessmentContentOutcomeConditions) GetConditions() ([]string, []interface{}) {
 	t := NewSQLTemplate("")
-	if c.AssessmentIDs != nil {
-		if len(c.AssessmentIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
-		t.Appendf("assessment_id in (?)", c.AssessmentIDs)
+	if c.AssessmentIDs.Valid {
+		t.Appendf("assessment_id in (?)", c.AssessmentIDs.Strings)
 	}
-	if c.ContentIDs != nil {
-		if len(c.ContentIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
-		t.Appendf("content_id in (?)", c.ContentIDs)
+	if c.ContentIDs.Valid {
+		t.Appendf("content_id in (?)", c.ContentIDs.Strings)
 	}
 	return t.DBOConditions()
 }

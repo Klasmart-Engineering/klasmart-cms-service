@@ -201,7 +201,7 @@ type OutcomeView struct {
 	CreatedAt        int64                   `json:"created_at"`
 	UpdatedAt        int64                   `json:"update_at"`
 	Sets             []*OutcomeSetCreateView `json:"sets"`
-	Milestones       []*Milestone
+	Milestones       []*Milestone            `json:"milestones"`
 }
 
 type OutcomeSearchResponse struct {

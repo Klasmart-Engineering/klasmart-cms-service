@@ -128,8 +128,8 @@ func (a *assessmentAttendanceDA) BatchCheck(ctx context.Context, tx *dbo.DBConte
 
 type QueryAssessmentAttendanceConditions struct {
 	AssessmentIDs entity.NullStrings
-	Role          *entity.AssessmentAttendanceRole
-	Checked       *bool
+	Role          entity.NullAssessmentAttendanceRole
+	Checked       entity.NullBool
 }
 
 func (c *QueryAssessmentAttendanceConditions) GetConditions() ([]string, []interface{}) {
@@ -137,11 +137,11 @@ func (c *QueryAssessmentAttendanceConditions) GetConditions() ([]string, []inter
 	if c.AssessmentIDs.Valid {
 		t.Appendf("assessment_id in (?)", c.AssessmentIDs.Strings)
 	}
-	if c.Role != nil {
-		t.Appendf("role = ?", *c.Role)
+	if c.Role.Valid {
+		t.Appendf("role = ?", c.Role.Value)
 	}
-	if c.Checked != nil {
-		t.Appendf("checked = ?", *c.Checked)
+	if c.Checked.Valid {
+		t.Appendf("checked = ?", c.Checked.Bool)
 	}
 	return t.DBOConditions()
 }

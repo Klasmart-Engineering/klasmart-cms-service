@@ -17,18 +17,30 @@ func TestURLSig(t *testing.T) {
 }
 
 func TestNumToBHex(t *testing.T) {
-	result, err := NumToBHex(context.TODO(), 60466175, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println(result)
 	for i := 0; i < constant.ShortcodeSpace; i++ {
 		res, err := NumToBHex(context.TODO(), i, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if i%10000 == 0 {
-			fmt.Println(i, res)
+		ind, err := BHexToNum(context.TODO(), res)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ind != i {
+			t.Fatalf("i:%d, ind:%d\n", i, ind)
 		}
 	}
+}
+
+func TestBHexToNum(t *testing.T) {
+	result, err := NumToBHex(context.TODO(), 60466175, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(result)
+	ind, err := BHexToNum(context.TODO(), result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(ind)
 }
