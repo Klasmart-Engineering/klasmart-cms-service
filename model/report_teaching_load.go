@@ -188,6 +188,13 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 }
 
 func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadArgs, error) {
+	if args.SchoolID == "" {
+		log.Error(ctx, "ListTeachingLoadReport: require school id",
+			log.Any("operator", operator),
+			log.Any("args", args),
+		)
+		return nil, constant.ErrInvalidArgs
+	}
 	if len(args.TeacherIDs) == 0 {
 		log.Error(ctx, "ListTeachingLoadReport: require teacher ids",
 			log.Any("operator", operator),
@@ -195,17 +202,15 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 		)
 		return nil, constant.ErrInvalidArgs
 	}
+	if len(args.TeacherIDs) > 1 {
+		args.ClassIDs = nil
+	}
 
-	if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
-		args.TeacherIDs = nil
-		switch args.SchoolID {
-		case "":
-			log.Error(ctx, "ListTeachingLoadReport: require school id",
-				log.Any("operator", operator),
-				log.Any("args", args),
-			)
-			return nil, constant.ErrInvalidArgs
-		case string(entity.ListTeachingLoadReportOptionAll):
+	switch args.SchoolID {
+	case string(entity.ListTeachingLoadReportOptionAll):
+		args.SchoolID = ""
+		if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+			args.TeacherIDs = nil
 			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 			if err != nil {
 				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetByOrganization: require teacher ids",
@@ -218,7 +223,30 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 			for _, t := range teachers {
 				args.TeacherIDs = append(args.TeacherIDs, t.ID)
 			}
-		case string(entity.ListTeachingLoadReportOptionNoAssigned):
+		} else if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+			args.ClassIDs = nil
+			classes, err := external.GetClassServiceProvider().GetByUserID(ctx, operator, args.TeacherIDs[0])
+			if err != nil {
+				return nil, err
+			}
+			for _, c := range classes {
+				args.ClassIDs = append(args.ClassIDs, c.ID)
+			}
+			m, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, []string{operator.OrgID})
+			if err != nil {
+				return nil, err
+			}
+			orgClassIDs := make([]string, 0, len(classes))
+			for _, cc := range m {
+				for _, c := range cc {
+					orgClassIDs = append(orgClassIDs, c.ID)
+				}
+			}
+			args.ClassIDs = utils.IntersectAndDeduplicateStrSlice(args.ClassIDs, orgClassIDs)
+		}
+	case string(entity.ListTeachingLoadReportOptionNoAssigned):
+		args.SchoolID = ""
+		if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
 			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 			if err != nil {
 				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetByOrganization: get failed",
@@ -247,7 +275,20 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 					args.TeacherIDs = append(args.TeacherIDs, tid)
 				}
 			}
-		default:
+		} else if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+			args.ClassIDs = nil
+			classes, err := external.GetClassServiceProvider().GetByUserID(ctx, operator, args.TeacherIDs[0])
+			if err != nil {
+				return nil, err
+			}
+			for _, c := range classes {
+				args.ClassIDs = append(args.ClassIDs, c.ID)
+			}
+			// TODO: Medivh
+		}
+	default:
+		if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+			args.TeacherIDs = nil
 			teachers, err := external.GetTeacherServiceProvider().GetBySchool(ctx, operator, args.SchoolID)
 			if err != nil {
 				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetBySchool: get failed",
@@ -262,11 +303,27 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 			for _, t := range teachers {
 				args.TeacherIDs = append(args.TeacherIDs, t.ID)
 			}
+		} else if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+			args.ClassIDs = nil
+			classes, err := external.GetClassServiceProvider().GetByUserID(ctx, operator, args.TeacherIDs[0])
+			if err != nil {
+				return nil, err
+			}
+			for _, c := range classes {
+				args.ClassIDs = append(args.ClassIDs, c.ID)
+			}
+			m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, []string{args.SchoolID})
+			if err != nil {
+				return nil, err
+			}
+			schoolClassIDs := make([]string, 0, len(classes))
+			for _, cc := range m {
+				for _, c := range cc {
+					schoolClassIDs = append(schoolClassIDs, c.ID)
+				}
+			}
+			args.ClassIDs = utils.IntersectAndDeduplicateStrSlice(args.ClassIDs, schoolClassIDs)
 		}
-	}
-
-	if len(args.TeacherIDs) > 1 || (len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll)) {
-		args.ClassIDs = nil
 	}
 
 	args.TeacherIDs = utils.SliceDeduplicationExcludeEmpty(args.TeacherIDs)
