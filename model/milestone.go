@@ -551,6 +551,24 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 	return count, milestones, nil
 }
 
+func (m MilestoneModel) getBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Milestone, error) {
+	_, res, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		SourceID: sql.NullString{String: sourceID, Valid: true},
+		Status:   sql.NullString{String: entity.OutcomeStatusDraft, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "getBySourceID: failed",
+			log.String("source_id", sourceID))
+		return nil, err
+	}
+	if len(res) != 1 {
+		log.Debug(ctx, "getBySourceID: error",
+			log.Any("milestones", res))
+		return nil, constant.ErrInternalServer
+	}
+	return res[0], nil
+}
+
 func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixMilestoneMute)
 	if err != nil {
@@ -572,6 +590,18 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.String("milestone", milestoneID))
 			return err
 		}
+
+		if ms.LockedBy == op.UserID {
+			milestone, err = m.getBySourceID(ctx, tx, ms.ID)
+			if err != nil {
+				log.Debug(ctx, "Occupy: getBySourceID failed",
+					log.Any("op", op),
+					log.Any("milestone", ms))
+				return err
+			}
+			return nil
+		}
+
 		if ms.LockedBy != "" {
 			log.Warn(ctx, "Occupy: already locked", log.Any("milestone", ms))
 			return &ErrContentAlreadyLocked{LockedBy: &external.User{
@@ -647,9 +677,6 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
 	return milestone, nil
 }
 
@@ -827,6 +854,7 @@ func (m *MilestoneModel) Copy(op *entity.Operator, ms *entity.Milestone) (*entit
 	if ms.Status != entity.OutcomeStatusPublished {
 		return nil, constant.ErrOperateNotAllowed
 	}
+	now := time.Now().Unix()
 	milestone := &entity.Milestone{
 		ID:             utils.NewID(),
 		Name:           ms.Name,
@@ -840,6 +868,8 @@ func (m *MilestoneModel) Copy(op *entity.Operator, ms *entity.Milestone) (*entit
 
 		AncestorID: ms.AncestorID,
 		SourceID:   ms.ID,
+		CreateAt:   now,
+		UpdateAt:   now,
 	}
 	milestone.SourceID = ms.ID
 	milestone.LatestID = milestone.ID

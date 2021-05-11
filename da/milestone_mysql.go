@@ -218,6 +218,7 @@ type MilestoneCondition struct {
 	IDs         dbo.NullStrings
 	AncestorID  sql.NullString
 	AncestorIDs dbo.NullStrings
+	SourceID    sql.NullString
 	Description sql.NullString
 	Name        sql.NullString
 	Shortcode   sql.NullString
@@ -276,6 +277,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if c.AncestorIDs.Valid {
 		wheres = append(wheres, "ancestor_id in (?)")
 		params = append(params, c.AncestorIDs.Strings)
+	}
+
+	if c.SourceID.Valid {
+		wheres = append(wheres, "source_id = ?")
+		params = append(params, c.SourceID.String)
 	}
 
 	if c.AuthorID.Valid {

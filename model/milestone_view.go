@@ -63,6 +63,9 @@ type MilestoneView struct {
 }
 
 func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
+	if ms.Type == "" {
+		ms.Type = entity.CustomMilestoneType
+	}
 	milestone := &entity.Milestone{
 		ID:             ms.MilestoneID,
 		Name:           ms.Name,
