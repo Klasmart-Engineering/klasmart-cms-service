@@ -743,6 +743,7 @@ type ScheduleViewDetail struct {
 
 type ScheduleTeachingLoadInput struct {
 	OrgID      string
+	SchoolIDs  []string
 	ClassIDs   []string
 	TeacherIDs []string
 	TimeRanges []*ScheduleTimeRange

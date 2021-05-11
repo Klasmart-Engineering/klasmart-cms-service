@@ -153,36 +153,16 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgUsers(ctx context.Context, op *
 }
 
 func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) ([]*entity.ScheduleFilterClass, error) {
-	orgClassMap, err := external.GetClassServiceProvider().GetByOrganizationIDs(ctx, op, []string{op.OrgID})
+	classInfos, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, op, op.OrgID)
 	if err != nil {
-		log.Error(ctx, "GetClassServiceProvider.GetByOrganizationIDs error", log.Any("op", op))
-		return nil, err
+		log.Error(ctx, "get only under org classes error", log.Any("op", op))
+		return nil,err
 	}
-	orgClassList, ok := orgClassMap[op.OrgID]
-	if !ok || len(orgClassList) <= 0 {
-		log.Info(ctx, "no classes under the organization", log.Any("op", op))
-		return nil, constant.ErrRecordNotFound
-	}
-	orgClassIDs := make([]string, len(orgClassList))
-	for i, item := range orgClassList {
-		orgClassIDs[i] = item.ID
-	}
-	classSchoolMap, err := external.GetSchoolServiceProvider().GetByClasses(ctx, op, orgClassIDs)
-	if err != nil {
-		log.Error(ctx, "GetSchoolServiceProvider.GetByClasses error", log.Any("op", op), log.Strings("orgClassIDs", orgClassIDs))
-		return nil, err
-	}
-
-	underOrgClassIDs := make([]string, 0)
-	for key, schools := range classSchoolMap {
-		if len(schools) == 0 {
-			underOrgClassIDs = append(underOrgClassIDs, key)
+	underOrgClassIDs := make([]string, 0, len(classInfos))
+	for _, classItem := range classInfos {
+		if classItem.Valid {
+			underOrgClassIDs = append(underOrgClassIDs, classItem.ID)
 		}
-	}
-	classInfos, err := external.GetClassServiceProvider().BatchGet(ctx, op, underOrgClassIDs)
-	if err != nil {
-		log.Error(ctx, "GetClassServiceProvider.BatchGet error", log.Any("op", op), log.Strings("underOrgClassIDs", underOrgClassIDs))
-		return nil, err
 	}
 
 	var result []*entity.ScheduleFilterClass

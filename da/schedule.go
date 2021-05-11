@@ -450,6 +450,10 @@ func NewScheduleTeachLoadCondition(input *entity.ScheduleTeachingLoadInput) *Sch
 			String: input.OrgID,
 			Valid:  true,
 		},
+		RelationSchoolIDs: entity.NullStrings{
+			Strings: input.SchoolIDs,
+			Valid:   len(input.SchoolIDs) > 0,
+		},
 		RelationClassIDs: entity.NullStrings{
 			Strings: input.ClassIDs,
 			Valid:   len(input.ClassIDs) > 0,
