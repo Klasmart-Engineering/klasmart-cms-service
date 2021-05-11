@@ -606,7 +606,7 @@ func (s *Server) getScheduleTimeView(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().Query(ctx, op, condition, loc)
+	result, err := model.GetScheduleModel().QueryByCondition(ctx, op, condition, loc)
 	if err == nil {
 		c.JSON(http.StatusOK, result)
 		return
@@ -651,7 +651,7 @@ func (s *Server) getScheduledDates(c *gin.Context) {
 	if err != nil {
 		return
 	}
-	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, op, condition, loc)
+	result, err := model.GetScheduleModel().QueryScheduledDatesByCondition(ctx, op, condition, loc)
 	if err != nil {
 		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -1190,6 +1190,7 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 // @Tags schedule
 // @Success 200 {object} entity.ScheduleListView
 // @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view [post]
@@ -1207,8 +1208,10 @@ func (s *Server) postScheduleTimeView(c *gin.Context) {
 	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
 	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.Any("data", data), log.Any("loc", loc))
 
-	condition, err := model.GetScheduleModel().PrepareScheduleTimeViewCondition(ctx, data, op, loc)
+	result, err := model.GetScheduleModel().Query(ctx, data, op, loc)
 	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
@@ -1219,18 +1222,7 @@ func (s *Server) postScheduleTimeView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-
-	result, err := model.GetScheduleModel().Query(ctx, op, condition, loc)
-	if err == nil {
-		c.JSON(http.StatusOK, result)
-		return
-	}
-	if err == constant.ErrRecordNotFound {
-		log.Info(ctx, "record not found", log.Any("condition", condition))
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-		return
-	}
-	log.Debug(ctx, "getScheduleTimeView error", log.Err(err), log.Any("condition", condition), log.Any("condition", condition), log.Any("data", data))
+	log.Debug(ctx, "getScheduleTimeView error", log.Err(err), log.Any("data", data))
 	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 }
 
@@ -1259,8 +1251,10 @@ func (s *Server) postScheduledDates(c *gin.Context) {
 	loc := utils.GetTimeLocationByOffset(data.TimeZoneOffset)
 	log.Info(ctx, "getScheduleTimeView: time_zone_offset", log.Any("data", data), log.Any("loc", loc))
 
-	condition, err := model.GetScheduleModel().PrepareScheduleTimeViewCondition(ctx, data, op, loc)
+	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, data, op, loc)
 	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
 		return
@@ -1271,12 +1265,4 @@ func (s *Server) postScheduledDates(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-
-	result, err := model.GetScheduleModel().QueryScheduledDates(ctx, op, condition, loc)
-	if err != nil {
-		log.Error(ctx, "getScheduledDates:GetScheduleModel.QueryScheduledDates error", log.Err(err), log.Any("condition", condition))
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	c.JSON(http.StatusOK, result)
 }

@@ -33,8 +33,8 @@ type IScheduleModel interface {
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
-	Query(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
-	QueryScheduledDates(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
+	QueryByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
+	QueryScheduledDatesByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
 	Page(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
 	GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error)
 	ConflictDetection(ctx context.Context, op *entity.Operator, input *entity.ScheduleConflictInput) (*entity.ScheduleConflictView, error)
@@ -58,7 +58,9 @@ type IScheduleModel interface {
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
 	GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error)
-	PrepareScheduleTimeViewCondition(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) (*da.ScheduleCondition, error)
+	//prepareScheduleTimeViewCondition(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) (*da.ScheduleCondition, error)
+	Query(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleListView, error)
+	QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1224,7 +1226,7 @@ func (s *scheduleModel) QueryByDB(ctx context.Context, op *entity.Operator, cond
 
 	return scheduleList, nil
 }
-func (s *scheduleModel) Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
+func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
 	cacheData, err := s.QueryByCache(ctx, op, condition)
 	if err == nil {
 		log.Debug(ctx, "Query:using cache",
@@ -2256,7 +2258,7 @@ func (s *scheduleModel) StartScheduleRepeat(ctx context.Context, template *entit
 	return result, nil
 }
 
-func (s *scheduleModel) QueryScheduledDates(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error) {
+func (s *scheduleModel) QueryScheduledDatesByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error) {
 	cacheData, err := da.GetScheduleRedisDA().SearchToStrings(ctx, op.OrgID, condition)
 	if err == nil && len(cacheData) > 0 {
 		log.Debug(ctx, "Query:using cache",
@@ -2806,6 +2808,29 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 		log.Any("condition", condition),
 	)
 	return condition, nil
+}
+
+func (s *scheduleModel) Query(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleListView, error) {
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.QueryByCondition(ctx, op, condition, loc)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error) {
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.QueryScheduledDatesByCondition(ctx, op, condition, loc)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 var (
