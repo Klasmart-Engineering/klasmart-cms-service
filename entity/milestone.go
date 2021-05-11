@@ -59,7 +59,7 @@ type MilestoneCondition struct {
 	Name           string   `json:"name" form:"name"`
 	Description    string   `json:"description" form:"description"`
 	Shortcode      string   `json:"shortcode" form:"shortcode"`
-	AuthorID       string   `json:"user_id" form:"user_id"`
+	AuthorID       string   `json:"author_id" form:"author_id"`
 	AuthorName     string   `json:"author_name" form:"author_name"`
 	Page           string   `json:"page" form:"page"`
 	PageSize       string   `json:"page_size" form:"page_size"`
