@@ -326,6 +326,10 @@ func (s *Server) listTeachingLoadReport(c *gin.Context) {
 	result, err := model.GetReportTeachingLoadModel().ListTeachingLoadReport(ctx, dbo.MustGetDB(ctx), operator, &args)
 	switch err {
 	case nil:
+		if result == nil {
+			c.JSON(http.StatusOK, entity.ReportListTeachingLoadResult{})
+			return
+		}
 		c.JSON(http.StatusOK, result)
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
