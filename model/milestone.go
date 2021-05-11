@@ -563,6 +563,7 @@ func (m MilestoneModel) getBySourceID(ctx context.Context, tx *dbo.DBContext, so
 	}
 	if len(res) != 1 {
 		log.Debug(ctx, "getBySourceID: error",
+			log.String("source_id", sourceID),
 			log.Any("milestones", res))
 		return nil, constant.ErrInternalServer
 	}
