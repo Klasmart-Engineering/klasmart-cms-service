@@ -90,16 +90,15 @@ func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (
 		log.Warn(ctx, "ToMilestone: program and subject is required", log.Any("op", op), log.Any("milestone", ms))
 		return nil, &ErrValidFailed{Msg: "program and subject is required"}
 	}
-	// TODO: just for test
-	//_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
-	//	ms.ProgramIDs, ms.SubjectIDs, ms.CategoryIDs, ms.SubcategoryIDs, ms.GradeIDs, ms.AgeIDs)
-	//if err != nil {
-	//	log.Error(ctx, "ToMilestone: prepareAllNeededName failed",
-	//		log.Err(err),
-	//		log.Any("op", op),
-	//		log.Any("milestone", ms))
-	//	return nil, err
-	//}
+	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
+		ms.ProgramIDs, ms.SubjectIDs, ms.CategoryIDs, ms.SubcategoryIDs, ms.GradeIDs, ms.AgeIDs)
+	if err != nil {
+		log.Error(ctx, "ToMilestone: prepareAllNeededName failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.Any("milestone", ms))
+		return nil, err
+	}
 	return milestone, nil
 }
 
