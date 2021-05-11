@@ -50,9 +50,10 @@ const (
 	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
 	ScheduleFeedbackCompleted            ResponseLabel = "schedule_msg_cannot_submit"
 
-	AssessMsgLockedLo       ResponseLabel = "assess_msg_locked_lo"
-	AssessMsgExistingSet    ResponseLabel = "assess_msg_existing_set"
-	AssessMsgExistShortcode ResponseLabel = "assess_msg_exist_short_code"
+	AssessMsgLockedLo                ResponseLabel = "assess_msg_locked_lo"
+	AssessMsgExistingSet             ResponseLabel = "assess_msg_existing_set"
+	AssessMsgExistShortcode          ResponseLabel = "assess_msg_exist_short_code"
+	AssessMsgMilestoneExistShortcode ResponseLabel = "assess_msg_exist_milestone_short_code"
 )
 
 // L create response object with label

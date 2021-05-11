@@ -16,19 +16,70 @@ import (
 )
 
 type IMilestoneModel interface {
-	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error
+	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error
 	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string, toPublish bool) error
 	Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error
 	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error)
 	Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	Publish(ctx context.Context, op *entity.Operator, IDs []string) error
+
+	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
+	IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor, shortcode string) (bool, error)
 }
 
 type MilestoneModel struct {
 }
 
-func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error {
+func (m MilestoneModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "CreateMilestone: NewLock failed",
+			log.Err(err),
+			log.Any("op", op))
+		return "", err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	shortcodeModel := GetShortcodeModel(ctx, op, entity.KindMileStone)
+	gap, err := da.GetMilestoneDA().FindGap(ctx, shortcodeModel.cursor+1)
+	if err != nil {
+		log.Debug(ctx, "Generate: FindGap failed", log.Any("op", op), log.Int("cursor", shortcodeModel.cursor))
+		return "", err
+	}
+	shortcode, err := utils.NumToBHex(ctx, gap, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+	if err != nil {
+		log.Debug(ctx, "Generate: NumToBHex failed", log.Any("op", op), log.Int("gap", gap))
+		return "", err
+	}
+	err = shortcodeModel.Cache(ctx, op, gap, shortcode)
+	if err != nil {
+		log.Error(ctx, "Generate: Set failed", log.Err(err), log.Any("op", op), log.Int("gap", shortcodeModel.cursor), log.Int("gap", gap))
+		return "", err
+	}
+	return shortcode, nil
+}
+
+func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor string, shortcode string) (bool, error) {
+	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
+		Shortcode:      sql.NullString{String: shortcode, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "IsShortcodeExists: Search failed",
+			log.String("org", op.OrgID),
+			log.String("shortcode", shortcode))
+		return false, err
+	}
+	for i := range milestones {
+		if ancestor != milestones[i].AncestorID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateMilestone: NewLock failed",
@@ -45,17 +96,20 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	milestone.LatestID = milestone.ID
 	milestone.CreateAt = time.Now().Unix()
 	milestone.UpdateAt = milestone.CreateAt
-	milestone.Status = "draft"
+	milestone.Status = entity.OutcomeStatusDraft
+	if toPublish {
+		milestone.Status = entity.OutcomeStatusPublished
+	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		occupied, err := GetMilestoneShortcodeModel().isOccupied(ctx, tx, op.OrgID, milestone.AncestorID, milestone.Shortcode)
+		exists, err := m.IsShortcodeExists(ctx, op, tx, milestone.AncestorID, milestone.Shortcode)
 		if err != nil {
-			log.Error(ctx, "CreateMilestone: isOccupied failed",
+			log.Error(ctx, "CreateMilestone: IsShortcodeExists failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("milestone", milestone))
 			return err
 		}
-		if occupied {
+		if exists {
 			return constant.ErrConflict
 		}
 		err = da.GetMilestoneDA().Create(ctx, tx, milestone)
@@ -92,7 +146,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 		}
 		return nil
 	})
-	da.GetShortcodeCacheDA().Remove(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
+	GetShortcodeModel(ctx, op, entity.KindMileStone).Remove(ctx, op, milestone.Shortcode)
 	return err
 }
 
@@ -151,7 +205,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
-		log.Error(ctx, "CreateMilestone: NewLock failed",
+		log.Error(ctx, "Update: NewLock failed",
 			log.Err(err),
 			log.Any("op", op),
 			log.Any("milestone", milestone))
@@ -159,7 +213,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetMilestoneShortcodeModel().isCached(ctx, op.OrgID, milestone.Shortcode)
+	exists, err := GetShortcodeModel(ctx, op, entity.KindMileStone).IsCached(ctx, op, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: isCached failed",
 			log.Err(err),
@@ -219,7 +273,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 
 		if ms.Shortcode != milestone.Shortcode {
 			ms.Shortcode = milestone.Shortcode
-			exists, err := GetMilestoneShortcodeModel().isOccupied(ctx, tx, op.OrgID, ms.AncestorID, ms.Shortcode)
+			exists, err := m.IsShortcodeExists(ctx, op, tx, ms.AncestorID, ms.Shortcode)
 			if err != nil {
 				log.Error(ctx, "Update: isOccupied failed",
 					log.Err(err),
@@ -354,6 +408,15 @@ func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.M
 	return milestoneIDs, nil
 }
 
+func (m MilestoneModel) needUnLocked(ctx context.Context, milestones []*entity.Milestone) (unLocked []string) {
+	for i := range milestones {
+		if milestones[i].SourceID != "" && milestones[i].SourceID != milestones[i].ID {
+			unLocked = append(unLocked, milestones[i].SourceID)
+		}
+	}
+	return
+}
+
 func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
@@ -378,6 +441,16 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
+
+		err = da.GetMilestoneDA().BatchUnLock(ctx, tx, m.needUnLocked(ctx, milestones))
+		if err != nil {
+			log.Debug(ctx, "Delete: BatchUnLock failed",
+				log.Any("op", op),
+				log.Strings("ids", IDs),
+				log.Any("milestone", milestones))
+			return err
+		}
+
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
@@ -386,6 +459,7 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
+
 		err = da.GetMilestoneRelationDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
@@ -417,7 +491,7 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 
 			OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 			Status:         sql.NullString{String: condition.Status, Valid: condition.Status != ""},
-			OrderBy:        da.OrderByMilestoneCreatedAtDesc,
+			OrderBy:        da.NewMilestoneOrderBy(condition.OrderBy),
 			Pager:          utils.GetDboPager(condition.Page, condition.PageSize),
 		})
 		if err != nil {
