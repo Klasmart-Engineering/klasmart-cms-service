@@ -58,7 +58,7 @@ func (s AmsClassService) GetOnlyUnderOrgClasses(ctx context.Context, operator *e
 	for i, item := range orgClassList {
 		orgClassIDs[i] = item.ID
 	}
-	classSchoolMap, err := s.GetByClasses(ctx, operator, orgClassIDs)
+	classSchoolMap, err := GetSchoolServiceProvider().GetByClasses(ctx, operator, orgClassIDs)
 	if err != nil {
 		log.Error(ctx, "GetSchoolServiceProvider.GetByClasses error", log.Any("op", operator), log.Strings("orgClassIDs", orgClassIDs))
 		return nil, err

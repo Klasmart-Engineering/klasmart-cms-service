@@ -154,7 +154,7 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgUsers(ctx context.Context, op *
 
 func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) ([]*entity.ScheduleFilterClass, error) {
 	classInfos, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, op, op.OrgID)
-	if err!=nil{
+	if err != nil {
 		log.Error(ctx, "get only under org classes error", log.Any("op", op))
 		return nil,err
 	}
