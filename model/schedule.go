@@ -2774,11 +2774,6 @@ func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, qu
 					log.Any("op", op),
 					log.String("permission", external.ScheduleViewSchoolCalendar.String()),
 				)
-				log.Info(ctx, "request info",
-					log.Any("query", query),
-					log.Any("op", op),
-					log.Any("loc", loc),
-				)
 				return nil, constant.ErrInternalServer
 			}
 			for _, item := range schoolList {
