@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"time"
 
@@ -242,58 +241,6 @@ func (c *OutcomeCondition) GetOrderBy() string {
 	default:
 		return "update_at desc"
 	}
-}
-
-func (o OutcomeSQLDA) findGap(ctx context.Context, tx *dbo.DBContext, num int) (gap int, err error) {
-	if num >= constant.ShortcodeSpace-1 {
-		log.Warn(ctx, "findGap: overflow", log.Int("num", num))
-		return 0, constant.ErrOverflow
-	}
-
-	var shortcode string
-	shortcode, err = utils.NumToBHex(ctx, num, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
-	if err != nil {
-		log.Debug(ctx, "NumToBHex failed", log.Int("num", num))
-		return
-	}
-	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=? limit %d", entity.Outcome{}.TableName(), constant.ShortcodeFindStep)
-	var milestones []*entity.Milestone
-	err = tx.Raw(sql, shortcode, constant.ShortcodeShowLength).Find(&milestones).Error
-	if err != nil {
-		log.Error(ctx, "FindGap: exec failed", log.Err(err), log.Int("num", num), log.String("shortcode", shortcode))
-		return
-	}
-	mapShortcodes := make(map[int]bool, constant.ShortcodeFindStep)
-	for i := range milestones {
-		short, err := utils.BHexToNum(ctx, milestones[i].Shortcode)
-		if err != nil {
-			log.Debug(ctx, "findGap: BHexToNum failed", log.Any("milestone", milestones), log.Int("index", i))
-			return 0, err
-		}
-		mapShortcodes[short] = true
-	}
-
-	for i := 0; i < constant.ShortcodeFindStep; i++ {
-		gap = num + i
-		if !mapShortcodes[gap] && gap < constant.ShortcodeSpace {
-			return
-		}
-	}
-
-	log.Info(ctx, "findGap: no gap after num", log.Int("num", num))
-	return o.findGap(ctx, tx, gap)
-}
-
-func (o OutcomeSQLDA) FindGap(ctx context.Context, num int) (gap int, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		res, err := o.findGap(ctx, tx, num)
-		if err != nil {
-			return err
-		}
-		gap = res
-		return nil
-	})
-	return
 }
 
 func (o OutcomeSQLDA) CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {
