@@ -288,7 +288,7 @@ func (s *Server) getStudentPerformanceH5PReport(ctx *gin.Context) {
 // @Produce json
 // @Param school_id query string false "school_id"
 // @Param teacher_ids query string false "teacher_ids"
-// @Param class_ids query string false "class_ids"
+// @Param class_id query string false "class_ids"
 // @Param time_offset query string true "time_offset"
 // @Param page query integer false "page"
 // @Param size query integer false "size"

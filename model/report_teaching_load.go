@@ -265,7 +265,7 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 		}
 	}
 
-	if len(args.TeacherIDs) > 0 || (len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll)) {
+	if len(args.TeacherIDs) > 1 || (len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll)) {
 		args.ClassIDs = nil
 	}
 
