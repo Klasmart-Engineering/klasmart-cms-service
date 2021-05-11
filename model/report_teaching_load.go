@@ -247,6 +247,7 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 	case string(entity.ListTeachingLoadReportOptionNoAssigned):
 		args.SchoolID = ""
 		if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+			args.TeacherIDs = nil
 			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
 			if err != nil {
 				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetByOrganization: get failed",
@@ -256,7 +257,7 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 				)
 				return nil, err
 			}
-			var teacherIDs []string
+			teacherIDs := make([]string, 0, len(teachers))
 			for _, t := range teachers {
 				teacherIDs = append(teacherIDs, t.ID)
 			}
@@ -284,7 +285,15 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 			for _, c := range classes {
 				args.ClassIDs = append(args.ClassIDs, c.ID)
 			}
-			// TODO: Medivh
+			orgClasses, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
+			if err != nil {
+				return nil, err
+			}
+			orgClassIDs := make([]string, 0, len(orgClasses))
+			for _, c := range orgClasses {
+				orgClassIDs = append(orgClassIDs, c.ID)
+			}
+			args.ClassIDs = utils.IntersectAndDeduplicateStrSlice(args.ClassIDs, orgClassIDs)
 		}
 	default:
 		if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
