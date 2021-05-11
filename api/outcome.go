@@ -877,6 +877,16 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		return
 	}
 
+	var shortcodeModel *model.ShortcodeModel
+	switch data.Kind {
+	case entity.KindOutcome, entity.KindMileStone:
+		shortcodeModel = model.GetShortcodeModel(ctx, op, data.Kind)
+	default:
+		log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
 	if err != nil {
 		log.Warn(ctx, "generateShortcode: HasOrganizationPermission failed", log.Any("op", op), log.Err(err))
@@ -888,18 +898,8 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 		return
 	}
-	var shortcode string
 
-	switch data.Kind {
-	case entity.KindOutcome:
-		shortcode, err = model.GetOutcomeModel().GenerateShortcode(ctx, op)
-	case entity.KindMileStone:
-		shortcode, err = model.GetMilestoneModel().GenerateShortcode(ctx, op)
-	default:
-		log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
+	shortcode, err := shortcodeModel.Generate(ctx, op)
 
 	switch err {
 	case nil:

@@ -19,21 +19,23 @@ type OutcomeSQLDA struct {
 }
 
 type OutcomeCondition struct {
-	IDs            dbo.NullStrings
-	Name           sql.NullString
-	Description    sql.NullString
-	Keywords       sql.NullString
-	Shortcode      sql.NullString
-	PublishStatus  dbo.NullStrings
-	PublishScope   sql.NullString
-	AuthorName     sql.NullString
-	AuthorID       sql.NullString
-	Assumed        sql.NullBool
-	OrganizationID sql.NullString
-	SourceID       sql.NullString
-	FuzzyKey       sql.NullString
-	AuthorIDs      dbo.NullStrings
-	AncestorIDs    dbo.NullStrings
+	IDs                dbo.NullStrings
+	Name               sql.NullString
+	Description        sql.NullString
+	Keywords           sql.NullString
+	Shortcode          sql.NullString
+	ShortcodeCommonKey sql.NullString
+	Shortcodes         dbo.NullStrings
+	PublishStatus      dbo.NullStrings
+	PublishScope       sql.NullString
+	AuthorName         sql.NullString
+	AuthorID           sql.NullString
+	Assumed            sql.NullBool
+	OrganizationID     sql.NullString
+	SourceID           sql.NullString
+	FuzzyKey           sql.NullString
+	AuthorIDs          dbo.NullStrings
+	AncestorIDs        dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        OutcomeOrderBy `json:"order_by"`
@@ -91,6 +93,16 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		wheres = append(wheres, "match(description) against(? in boolean mode)")
 		//wheres = append(wheres, "description=?")
 		params = append(params, c.Description.String)
+	}
+
+	if c.ShortcodeCommonKey.Valid {
+		wheres = append(wheres, "shortcode=?")
+		params = append(params, c.ShortcodeCommonKey.String)
+	}
+
+	if c.Shortcodes.Valid {
+		wheres = append(wheres, "shortcode in (?)")
+		params = append(params, c.Shortcodes.Strings)
 	}
 
 	if c.PublishStatus.Valid {
@@ -164,6 +176,7 @@ const (
 	OrderByCreatedAtDesc
 	OrderByUpdateAt
 	OrderByUpdateAtDesc
+	OrderByShortcode
 )
 
 const defaultPageIndex = 1

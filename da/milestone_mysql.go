@@ -222,6 +222,7 @@ type MilestoneCondition struct {
 	Description sql.NullString
 	Name        sql.NullString
 	Shortcode   sql.NullString
+	Shortcodes  dbo.NullStrings
 	SearchKey   sql.NullString
 
 	AuthorID  sql.NullString
@@ -267,6 +268,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if c.IDs.Valid {
 		wheres = append(wheres, "id in (?)")
 		params = append(params, c.IDs.Strings)
+	}
+
+	if c.Shortcodes.Valid {
+		wheres = append(wheres, "shortcode in (?)")
+		params = append(params, c.Shortcodes.Strings)
 	}
 
 	if c.AncestorID.Valid {
@@ -320,6 +326,7 @@ const (
 	OrderByMilestoneCreatedAtDesc
 	OrderByMilestoneUpdatedAt
 	OrderByMilestoneUpdatedAtDesc
+	OrderByMilestoneShortcode
 )
 
 func (c *MilestoneCondition) GetPager() *dbo.Pager {
@@ -340,6 +347,8 @@ func (c *MilestoneCondition) GetOrderBy() string {
 		return "type desc, update_at"
 	case OrderByMilestoneUpdatedAtDesc:
 		return "type desc, update_at desc"
+	case OrderByMilestoneShortcode:
+		return "shortcode"
 	default:
 		return "type desc, update_at desc"
 	}
@@ -359,6 +368,8 @@ func NewMilestoneOrderBy(name string) MilestoneOrderBy {
 		return OrderByMilestoneUpdatedAt
 	case "-updated_at":
 		return OrderByMilestoneUpdatedAtDesc
+	case "shortcode":
+		return OrderByMilestoneShortcode
 	default:
 		return OrderByMilestoneUpdatedAtDesc
 	}

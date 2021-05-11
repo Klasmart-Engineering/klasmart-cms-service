@@ -10,7 +10,9 @@ import (
 
 func TestMilestoneModel_GenerateShortcode(t *testing.T) {
 	setup()
-	shortcode, err := GetMilestoneModel().GenerateShortcode(context.TODO(), initOperator())
+	ctx := context.TODO()
+	op := initOperator()
+	shortcode, err := GetShortcodeModel(ctx, op, entity.KindMileStone).Generate(ctx, op)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,8 +24,8 @@ func TestMilestoneModel_Create(t *testing.T) {
 	ctx := context.TODO()
 	op := initOperator()
 	req := MilestoneView{
-		Name:           "name07",
-		Shortcode:      "00007",
+		Name:           "name00",
+		Shortcode:      "00000",
 		Type:           entity.CustomMilestoneType,
 		Organization:   &OrganizationView{OrganizationID: op.OrgID},
 		ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},

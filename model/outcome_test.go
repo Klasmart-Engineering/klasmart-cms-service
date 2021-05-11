@@ -29,6 +29,9 @@ func setup() {
 			Port:      16379,
 			Password:  "",
 		},
+		AMS: config.AMSConfig{
+			EndPoint: os.Getenv("ams_endpoint"),
+		},
 	})
 	dboHandler, err := dbo.NewWithConfig(func(c *dbo.Config) {
 		dbConf := config.Get().DBConfig
@@ -68,8 +71,9 @@ func TestOutcomeModel_GetLearningOutcomeByID(t *testing.T) {
 
 func TestGenerateShortcode(t *testing.T) {
 	setup()
+	op := initOperator()
 	ctx := context.TODO()
-	shortcode, err := GetOutcomeModel().GenerateShortcode(ctx, initOperator())
+	shortcode, err := GetShortcodeModel(ctx, op, entity.KindOutcome).Generate(ctx, op)
 	if err != nil {
 		t.Fatal(err)
 	}
