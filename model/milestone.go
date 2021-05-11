@@ -491,7 +491,7 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 
 			OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 			Status:         sql.NullString{String: condition.Status, Valid: condition.Status != ""},
-			OrderBy:        da.OrderByMilestoneCreatedAtDesc,
+			OrderBy:        da.NewMilestoneOrderBy(condition.OrderBy),
 			Pager:          utils.GetDboPager(condition.Page, condition.PageSize),
 		})
 		if err != nil {

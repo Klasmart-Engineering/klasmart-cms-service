@@ -173,7 +173,7 @@ func (m MilestoneSQLDA) findGap(ctx context.Context, tx *dbo.DBContext, num int)
 		log.Debug(ctx, "NumToBHex failed", log.Int("num", num))
 		return
 	}
-	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=? limit %d", entity.Milestone{}.TableName(),  constant.ShortcodeFindStep)
+	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=? limit %d", entity.Milestone{}.TableName(), constant.ShortcodeFindStep)
 	var milestones []*entity.Milestone
 	err = tx.Raw(sql, shortcode, constant.ShortcodeShowLength).Find(&milestones).Error
 	if err != nil {
@@ -312,6 +312,8 @@ const (
 	OrderByMilestoneNameDesc
 	OrderByMilestoneCreatedAt
 	OrderByMilestoneCreatedAtDesc
+	OrderByMilestoneUpdatedAt
+	OrderByMilestoneUpdatedAtDesc
 )
 
 func (c *MilestoneCondition) GetPager() *dbo.Pager {
@@ -328,8 +330,31 @@ func (c *MilestoneCondition) GetOrderBy() string {
 		return "type desc, create_at"
 	case OrderByMilestoneCreatedAtDesc:
 		return "type desc, create_at desc"
+	case OrderByMilestoneUpdatedAt:
+		return "type desc, update_at"
+	case OrderByMilestoneUpdatedAtDesc:
+		return "type desc, update_at desc"
 	default:
 		return "type desc, update_at desc"
+	}
+}
+
+func NewMilestoneOrderBy(name string) MilestoneOrderBy {
+	switch name {
+	case "name":
+		return OrderByMilestoneName
+	case "-name":
+		return OrderByMilestoneNameDesc
+	case "created_at":
+		return OrderByMilestoneCreatedAt
+	case "-created_at":
+		return OrderByMilestoneCreatedAtDesc
+	case "updated_at":
+		return OrderByMilestoneUpdatedAt
+	case "-updated_at":
+		return OrderByMilestoneUpdatedAtDesc
+	default:
+		return OrderByMilestoneUpdatedAtDesc
 	}
 }
 
