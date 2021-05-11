@@ -33,8 +33,8 @@ type IScheduleModel interface {
 	Add(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleAddView) (string, error)
 	Update(ctx context.Context, op *entity.Operator, viewData *entity.ScheduleUpdateView) (string, error)
 	Delete(ctx context.Context, op *entity.Operator, id string, editType entity.ScheduleEditType) error
-	Query(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
-	QueryScheduledDates(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
+	QueryByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error)
+	QueryScheduledDatesByCondition(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error)
 	Page(ctx context.Context, operator *entity.Operator, condition *da.ScheduleCondition) (int, []*entity.ScheduleSearchView, error)
 	GetByID(ctx context.Context, operator *entity.Operator, id string) (*entity.ScheduleDetailsView, error)
 	ConflictDetection(ctx context.Context, op *entity.Operator, input *entity.ScheduleConflictInput) (*entity.ScheduleConflictView, error)
@@ -58,6 +58,9 @@ type IScheduleModel interface {
 	GetSubjectsBySubjectIDs(ctx context.Context, op *entity.Operator, subjectIDs []string) (map[string]*entity.ScheduleShortInfo, error)
 	GetVariableDataByIDs(ctx context.Context, op *entity.Operator, ids []string, include *entity.ScheduleInclude) ([]*entity.ScheduleVariable, error)
 	GetTeachingLoad(ctx context.Context, input *entity.ScheduleTeachingLoadInput) ([]*entity.ScheduleTeachingLoadView, error)
+	//prepareScheduleTimeViewCondition(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) (*da.ScheduleCondition, error)
+	Query(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleListView, error)
+	QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error)
 }
 type scheduleModel struct {
 	testScheduleRepeatFlag bool
@@ -1223,7 +1226,7 @@ func (s *scheduleModel) QueryByDB(ctx context.Context, op *entity.Operator, cond
 
 	return scheduleList, nil
 }
-func (s *scheduleModel) Query(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
+func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
 	cacheData, err := s.QueryByCache(ctx, op, condition)
 	if err == nil {
 		log.Debug(ctx, "Query:using cache",
@@ -2255,7 +2258,7 @@ func (s *scheduleModel) StartScheduleRepeat(ctx context.Context, template *entit
 	return result, nil
 }
 
-func (s *scheduleModel) QueryScheduledDates(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error) {
+func (s *scheduleModel) QueryScheduledDatesByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]string, error) {
 	cacheData, err := da.GetScheduleRedisDA().SearchToStrings(ctx, op.OrgID, condition)
 	if err == nil && len(cacheData) > 0 {
 		log.Debug(ctx, "Query:using cache",
@@ -2640,6 +2643,187 @@ func (s *scheduleModel) GetTeachingLoad(ctx context.Context, input *entity.Sched
 			resultItem.Durations = append(resultItem.Durations, durationItem)
 		}
 		result = append(result, resultItem)
+	}
+	return result, nil
+}
+
+func (s *scheduleModel) PrepareScheduleTimeViewCondition(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) (*da.ScheduleCondition, error) {
+	permissionMap, err := GetSchedulePermissionModel().HasScheduleOrgPermissions(ctx, op, []external.PermissionName{
+		external.ScheduleViewOrgCalendar,
+		external.ScheduleViewSchoolCalendar,
+		external.ScheduleViewMyCalendar,
+	})
+	if err == constant.ErrForbidden {
+		log.Info(ctx, "request info",
+			log.Any("query", query),
+			log.Any("op", op),
+			log.Any("loc", loc),
+		)
+		return nil, constant.ErrForbidden
+	}
+	if err != nil {
+		log.Info(ctx, "request info",
+			log.Any("query", query),
+			log.Any("op", op),
+			log.Any("loc", loc),
+		)
+		return nil, constant.ErrInternalServer
+	}
+
+	viewType := query.ViewType
+	condition := new(da.ScheduleCondition)
+	if viewType != entity.ScheduleViewTypeFullView.String() {
+		timeAt := query.TimeAt
+		var (
+			start int64
+			end   int64
+		)
+		switch entity.ScheduleViewType(viewType) {
+		case entity.ScheduleViewTypeDay:
+			start = utils.TodayZeroByTimeStamp(timeAt, loc).Unix()
+			end = utils.TodayEndByTimeStamp(timeAt, loc).Unix()
+		case entity.ScheduleViewTypeWorkweek:
+			start, end = utils.FindWorkWeekTimeRange(timeAt, loc)
+		case entity.ScheduleViewTypeWeek:
+			start, end = utils.FindWeekTimeRange(timeAt, loc)
+		case entity.ScheduleViewTypeMonth:
+			start, end = utils.FindMonthRange(timeAt, loc)
+		case entity.ScheduleViewTypeYear:
+			start = utils.StartOfYearByTimeStamp(timeAt, loc).Unix()
+			end = utils.EndOfYearByTimeStamp(timeAt, loc).Unix()
+		default:
+			log.Info(ctx, "request info",
+				log.Any("query", query),
+				log.Any("op", op),
+				log.Any("loc", loc),
+			)
+			return nil, constant.ErrInvalidArgs
+		}
+		startAndEndTimeViewRange := make([]sql.NullInt64, 2)
+		startAndEndTimeViewRange[0] = sql.NullInt64{
+			Valid: start >= 0,
+			Int64: start,
+		}
+		startAndEndTimeViewRange[1] = sql.NullInt64{
+			Valid: end >= 0,
+			Int64: end,
+		}
+		condition.StartAndEndTimeViewRange = startAndEndTimeViewRange
+	}
+
+	relationIDs := make([]string, 0)
+	condition.SubjectIDs = entity.NullStrings{
+		Strings: query.SubjectIDs,
+		Valid:   len(query.SubjectIDs) > 0,
+	}
+	condition.ProgramIDs = entity.NullStrings{
+		Strings: query.ProgramIDs,
+		Valid:   len(query.ProgramIDs) > 0,
+	}
+	condition.ClassTypes = entity.NullStrings{
+		Strings: query.ClassTypes,
+		Valid:   len(query.ClassTypes) > 0,
+	}
+	condition.OrderBy = da.NewScheduleOrderBy(query.OrderBy)
+	condition.OrgID = sql.NullString{
+		String: op.OrgID,
+		Valid:  true,
+	}
+	schoolIDs := entity.NullStrings{
+		Strings: query.SchoolIDs,
+		Valid:   len(query.SchoolIDs) > 0,
+	}
+	classIDs := entity.NullStrings{
+		Strings: query.ClassIDs,
+		Valid:   len(query.ClassIDs) > 0,
+	}
+	relationIDs = append(relationIDs, schoolIDs.Strings...)
+	relationIDs = append(relationIDs, classIDs.Strings...)
+	hasUndefinedClass := false
+	for _, classID := range classIDs.Strings {
+		if classID == entity.ScheduleFilterUndefinedClass {
+			hasUndefinedClass = true
+			break
+		}
+	}
+	if hasUndefinedClass {
+		userInfo, err := GetSchedulePermissionModel().GetOnlyUnderOrgUsers(ctx, op)
+		if err != nil {
+			log.Error(ctx, "GetSchedulePermissionModel.GetOnlyUnderOrgUsers error",
+				log.Err(err),
+				log.Any("op", op),
+			)
+			return nil, constant.ErrInternalServer
+		}
+		for _, item := range userInfo {
+			relationIDs = append(relationIDs, item.ID)
+		}
+	}
+
+	if permissionMap[external.ScheduleViewOrgCalendar] {
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   len(relationIDs) > 0,
+		}
+	} else if permissionMap[external.ScheduleViewSchoolCalendar] {
+		if len(relationIDs) == 0 {
+			schoolList, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, external.ScheduleViewSchoolCalendar)
+			if err != nil {
+				log.Error(ctx, "GetSchoolServiceProvider.GetByPermission error",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("permission", external.ScheduleViewSchoolCalendar.String()),
+				)
+				return nil, constant.ErrInternalServer
+			}
+			for _, item := range schoolList {
+				relationIDs = append(relationIDs, item.ID)
+			}
+		}
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   true,
+		}
+	} else if permissionMap[external.ScheduleViewMyCalendar] {
+		condition.RelationID = sql.NullString{
+			String: op.UserID,
+			Valid:  true,
+		}
+		condition.RelationIDs = entity.NullStrings{
+			Strings: relationIDs,
+			Valid:   len(relationIDs) > 0,
+		}
+	}
+	condition.AnyTime = sql.NullBool{
+		Bool:  query.Anytime,
+		Valid: query.Anytime,
+	}
+	log.Debug(ctx, "condition info",
+		log.String("viewType", viewType),
+		log.Any("condition", condition),
+	)
+	return condition, nil
+}
+
+func (s *scheduleModel) Query(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]*entity.ScheduleListView, error) {
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.QueryByCondition(ctx, op, condition, loc)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+func (s *scheduleModel) QueryScheduledDates(ctx context.Context, query *entity.ScheduleTimeViewQuery, op *entity.Operator, loc *time.Location) ([]string, error) {
+	condition, err := s.PrepareScheduleTimeViewCondition(ctx, query, op, loc)
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.QueryScheduledDatesByCondition(ctx, op, condition, loc)
+	if err != nil {
+		return nil, err
 	}
 	return result, nil
 }
