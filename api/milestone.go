@@ -57,8 +57,16 @@ func (s *Server) createMilestone(c *gin.Context) {
 	case nil:
 		if data.WithPublish {
 			c.JSON(http.StatusOK, "ok")
+			return
 		}
-		c.JSON(http.StatusOK, milestone)
+		views, err := model.FromMilestones(ctx, op, []*entity.Milestone{milestone})
+		if err != nil {
+			log.Error(ctx, "createMilestone: fromMilestones failed",
+				log.Any("milestones", views))
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		c.JSON(http.StatusOK, views[0])
 	case constant.ErrConflict:
 		log.Warn(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusConflict, L(AssessMsgMilestoneExistShortcode))

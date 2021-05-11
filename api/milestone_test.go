@@ -42,7 +42,7 @@ func TestCreateMilestone(t *testing.T) {
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	req := model.MilestoneView{
 		Name:           "name01",
-		Shortcode:      "00002",
+		Shortcode:      "Z0002",
 		Organization:   &model.OrganizationView{OrganizationID: op.OrgID},
 		ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
 		SubjectIDs:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
