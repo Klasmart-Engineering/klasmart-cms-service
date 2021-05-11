@@ -58,7 +58,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 		c.JSON(http.StatusOK, milestone)
 	case constant.ErrConflict:
 		log.Warn(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
+		c.JSON(http.StatusConflict, L(AssessMsgMilestoneExistShortcode))
 	default:
 		log.Error(ctx, "createMilestone: Create failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
@@ -165,7 +165,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case constant.ErrConflict:
 		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
-		c.JSON(http.StatusConflict, L(AssessMsgExistShortcode))
+		c.JSON(http.StatusConflict, L(AssessMsgMilestoneExistShortcode))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
