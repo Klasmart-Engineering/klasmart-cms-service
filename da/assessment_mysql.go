@@ -159,7 +159,7 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		}
 		format, values := t2.Or()
 		format = fmt.Sprintf("exists (select 1 from assessments_attendances "+
-			"where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and %s", format)
+			"where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and %s)", format)
 		t.Appendf(format, values...)
 	}
 
