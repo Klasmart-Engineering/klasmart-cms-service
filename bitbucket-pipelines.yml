@@ -1,6 +1,6 @@
 pipelines:
-  custom:
-    deploy:
+  branches:
+    dev/global/alpha:
     - step:
         name: 'Compile'
         image: golang:alpine
