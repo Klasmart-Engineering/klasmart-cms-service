@@ -1191,7 +1191,6 @@ func (s *Server) getScheduleViewByID(c *gin.Context) {
 // @Success 200 {object} entity.ScheduleListView
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
-// @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
 // @Router /schedules_time_view [post]
 func (s *Server) postScheduleTimeView(c *gin.Context) {
@@ -1214,16 +1213,11 @@ func (s *Server) postScheduleTimeView(c *gin.Context) {
 		c.JSON(http.StatusOK, result)
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-		return
-	case constant.ErrInternalServer:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
-	log.Debug(ctx, "getScheduleTimeView error", log.Err(err), log.Any("data", data))
-	c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 }
 
 // @Summary postScheduledDates
@@ -1257,12 +1251,9 @@ func (s *Server) postScheduledDates(c *gin.Context) {
 		c.JSON(http.StatusOK, result)
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(ScheduleMessageNoPermission))
-		return
-	case constant.ErrInternalServer:
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
+	default:
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
