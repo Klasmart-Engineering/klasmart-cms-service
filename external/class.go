@@ -23,6 +23,7 @@ type ClassServiceProvider interface {
 	GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, options ...APOption) (map[string][]*Class, error)
 	GetByOrganizationIDs(ctx context.Context, operator *entity.Operator, orgIDs []string, options ...APOption) (map[string][]*Class, error)
 	GetBySchoolIDs(ctx context.Context, operator *entity.Operator, schoolIDs []string, options ...APOption) (map[string][]*Class, error)
+	GetOnlyUnderOrgClasses(ctx context.Context, operator *entity.Operator, orgID string) ([]*NullableClass, error)
 }
 
 type Class struct {
@@ -41,6 +42,42 @@ func GetClassServiceProvider() ClassServiceProvider {
 }
 
 type AmsClassService struct{}
+
+func (s AmsClassService) GetOnlyUnderOrgClasses(ctx context.Context, operator *entity.Operator, orgID string) ([]*NullableClass, error) {
+	orgClassMap, err := GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, []string{orgID})
+	if err != nil {
+		log.Error(ctx, "GetClassServiceProvider.GetByOrganizationIDs error", log.Any("op", operator))
+		return nil, err
+	}
+	orgClassList, ok := orgClassMap[orgID]
+	if !ok || len(orgClassList) <= 0 {
+		log.Info(ctx, "no classes under the organization", log.Any("op", operator))
+		return nil, constant.ErrRecordNotFound
+	}
+	orgClassIDs := make([]string, len(orgClassList))
+	for i, item := range orgClassList {
+		orgClassIDs[i] = item.ID
+	}
+	classSchoolMap, err := GetSchoolServiceProvider().GetByClasses(ctx, operator, orgClassIDs)
+	if err != nil {
+		log.Error(ctx, "GetSchoolServiceProvider.GetByClasses error", log.Any("op", operator), log.Strings("orgClassIDs", orgClassIDs))
+		return nil, err
+	}
+
+	underOrgClassIDs := make([]string, 0)
+	for key, schools := range classSchoolMap {
+		if len(schools) == 0 {
+			underOrgClassIDs = append(underOrgClassIDs, key)
+		}
+	}
+	classInfos, err := GetClassServiceProvider().BatchGet(ctx, operator, underOrgClassIDs)
+	if err != nil {
+		log.Error(ctx, "GetClassServiceProvider.BatchGet error", log.Any("op", operator), log.Strings("underOrgClassIDs", underOrgClassIDs))
+		return nil, err
+	}
+
+	return classInfos, nil
+}
 
 func (s AmsClassService) BatchGet(ctx context.Context, operator *entity.Operator, ids []string) ([]*NullableClass, error) {
 	if len(ids) == 0 {
