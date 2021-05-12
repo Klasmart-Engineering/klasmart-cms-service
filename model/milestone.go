@@ -862,6 +862,7 @@ func (m *MilestoneModel) Copy(op *entity.Operator, ms *entity.Milestone) (*entit
 		Shortcode:      ms.Shortcode,
 		OrganizationID: op.OrgID,
 		AuthorID:       op.UserID,
+		Type:           ms.Type,
 		Description:    ms.Description,
 		LoCounts:       ms.LoCounts,
 
