@@ -234,6 +234,9 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			return err
 		}
 		if ms.LockedBy != "" {
+			log.Debug(ctx, "Update: lockedBy user",
+				log.Any("op", op),
+				log.Any("milestone", ms))
 			return &ErrContentAlreadyLocked{LockedBy: &external.User{
 				ID: ms.LockedBy,
 			}}
