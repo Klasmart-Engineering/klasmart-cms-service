@@ -214,7 +214,12 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 		args.SchoolID = ""
 		if args.TeacherIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
 			args.TeacherIDs = nil
-			teachers, err := external.GetTeacherServiceProvider().GetByOrganization(ctx, operator, operator.OrgID)
+			schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
+			if err != nil {
+				return nil, err
+			}
+			schoolIDs := make([]string, 0, len(schools))
+			teachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
 			if err != nil {
 				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetByOrganization: require teacher ids",
 					log.Err(err),
@@ -223,8 +228,10 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 				)
 				return nil, err
 			}
-			for _, t := range teachers {
-				args.TeacherIDs = append(args.TeacherIDs, t.ID)
+			for _, tt := range teachersMap {
+				for _, t := range tt {
+					args.TeacherIDs = append(args.TeacherIDs, t.ID)
+				}
 			}
 		}
 		if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
