@@ -1059,6 +1059,13 @@ func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, 
 				log.Any("outcome", outcome))
 			return err
 		}
+		err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
+		if err != nil {
+			log.Error(ctx, "Approve: BindToGeneral failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
 		return nil
 	})
 	return err
@@ -1164,6 +1171,13 @@ func (ocm OutcomeModel) BulkApprove(ctx context.Context, operator *entity.Operat
 			err = ocm.updateLatestToHead(ctx, operator, tx, outcome)
 			if err != nil {
 				log.Error(ctx, "BulkApprove: updateLatestToHead failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return err
+			}
+			err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
+			if err != nil {
+				log.Error(ctx, "BulkApprove: BindToGeneral failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return err

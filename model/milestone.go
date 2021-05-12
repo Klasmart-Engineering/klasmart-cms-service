@@ -25,6 +25,9 @@ type IMilestoneModel interface {
 	Publish(ctx context.Context, op *entity.Operator, IDs []string) error
 	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
 
+	CreateGeneral(ctx context.Context, op *entity.Operator) (*entity.Milestone, error)
+	ObtainGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error)
+	BindToGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
 	ShortcodeProvider
 }
 
@@ -841,6 +844,113 @@ func (m MilestoneModel) Publish(ctx context.Context, op *entity.Operator, IDs []
 	return nil
 }
 
+func (m MilestoneModel) ObtainGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error) {
+	panic("implement me")
+}
+
+func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator, shortcode string) *entity.Milestone {
+	ID := utils.NewID()
+	now := time.Now().Unix()
+	general := &entity.Milestone{
+		ID: ID,
+		Name: "General Milestone",
+		Shortcode: shortcode,
+		OrganizationID: op.OrgID,
+		AuthorID: op.UserID,
+		Description: "This is a general milestone",
+		Type: entity.GeneralMilestoneType,
+		Status: entity.OutcomeStatusPublished,
+		AncestorID: ID,
+		SourceID: ID,
+		LatestID: ID,
+		CreateAt: now,
+		UpdateAt: now,
+	}
+	return general
+}
+func (m MilestoneModel) CreateGeneral(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "CreateGeneral: NewLock failed",
+			log.Err(err),
+			log.Any("op", op))
+		return nil, err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	shortcode, err := m.GenerateShortcode(ctx, op)
+	if err != nil {
+		log.Error(ctx, "CreateGeneral: GenerateShortcode failed",
+			log.Err(err),
+			log.Any("op", op))
+		return nil, err
+	}
+	var general *entity.Milestone
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		general, err = m.ObtainGeneral(ctx, op, tx, op.OrgID)
+		if err != nil {
+			log.Debug(ctx, "CreateGeneral: ObtainGeneral failed", log.Any("op", op))
+			return err
+		}
+		if general != nil {
+			return nil
+		}
+		general = m.buildGeneral(ctx, op, shortcode)
+		err = da.GetMilestoneDA().Create(ctx, tx, general)
+		if err != nil {
+			log.Debug(ctx, "CreateGeneral: Create failed", log.Any("op", op),
+				log.Any("milestone", general))
+		}
+		return err
+	})
+	return general, err
+}
+
+func (m MilestoneModel) BindToGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error {
+	general, err := m.ObtainGeneral(ctx, op, tx, outcome.OrganizationID)
+	if err != nil {
+		log.Error(ctx, "BindToGeneral: ObtainGeneral failed",
+			log.Any("op", op),
+			log.Any("outcome", outcome))
+		return err
+	}
+	if general == nil {
+		log.Error(ctx, "BindToGeneral: no general found",
+			log.Any("op", op),
+			log.Any("outcome", outcome))
+		return constant.ErrInternalServer
+	}
+	milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+		MilestoneID: sql.NullString{String: general.ID, Valid: true},
+		OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "BindToGeneral: SearchTx failed",
+			log.Any("op", op),
+			log.Any("outcome", outcome))
+		return err
+	}
+	if len(milestoneOutcomes) != 0 {
+		return nil
+	}
+	now := time.Now().Unix()
+	milestoneOutcome := &entity.MilestoneOutcome{
+		MilestoneID: general.ID,
+		OutcomeAncestor: outcome.AncestorID,
+		CreateAt: now,
+		UpdateAt: now,
+	}
+	err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, []*entity.MilestoneOutcome{milestoneOutcome})
+	if err != nil {
+		log.Error(ctx, "BindToGeneral: InsertTx failed",
+			log.Any("op", op),
+			log.Any("general", general),
+			log.Any("outcome", outcome))
+		return err
+	}
+	return nil
+}
 var (
 	_milestoneModel     IMilestoneModel
 	_milestoneModelOnce sync.Once
