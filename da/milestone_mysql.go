@@ -174,7 +174,8 @@ type MilestoneCondition struct {
 	AuthorID  sql.NullString
 	AuthorIDs dbo.NullStrings
 
-	Status sql.NullString
+	Status   sql.NullString
+	Statuses dbo.NullStrings
 
 	OrganizationID sql.NullString
 	IncludeDeleted bool
@@ -254,6 +255,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if c.Status.Valid {
 		wheres = append(wheres, "status=?")
 		params = append(params, c.Status.String)
+	}
+
+	if c.Statuses.Valid {
+		wheres = append(wheres, "status in (?)")
+		params = append(params, c.Statuses.Strings)
 	}
 
 	if !c.IncludeDeleted {

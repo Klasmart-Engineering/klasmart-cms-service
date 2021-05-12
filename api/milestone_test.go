@@ -41,8 +41,8 @@ func TestCreateMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	req := model.MilestoneView{
-		Name:           "name01",
-		Shortcode:      "Z0002",
+		Name:           "nameX1",
+		Shortcode:      "X0001",
 		Organization:   &model.OrganizationView{OrganizationID: op.OrgID},
 		ProgramIDs:     []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
 		SubjectIDs:     []string{"5e9a201e-9c2f-4a92-bb6f-1ccf8177bb71", "36c4f793-9aa3-4fb8-84f0-68a2ab920d5a"},
@@ -52,6 +52,7 @@ func TestCreateMilestone(t *testing.T) {
 		AgeIDs:         []string{"bb7982cd-020f-4e1a-93fc-4a6874917f07"},
 		OutcomeAncestorIDs: []string{
 			"607905030e4404103a3f595d",
+			"607e7031a643f5641ce4552c",
 		},
 	}
 	data, err := json.Marshal(req)
@@ -65,7 +66,7 @@ func TestCreateMilestone(t *testing.T) {
 func TestObtainMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones/"+"607905db23b82681052ad541"+"?org_id="+op.OrgID, "")
+	res := DoHttpWithOperator(http.MethodGet, op, prefix+"/milestones/"+"609b69c1df98bedd1d83046a"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
 
