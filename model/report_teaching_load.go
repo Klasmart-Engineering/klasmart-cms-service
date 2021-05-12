@@ -94,7 +94,6 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 	// call schedule module
 	input := entity.ScheduleTeachingLoadInput{
 		OrgID:      operator.OrgID,
-		SchoolIDs:  []string{args.SchoolID},
 		ClassIDs:   args.ClassIDs,
 		TeacherIDs: args.TeacherIDs,
 		TimeRanges: ranges,
@@ -341,6 +340,10 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 
 	args.TeacherIDs = utils.SliceDeduplicationExcludeEmpty(args.TeacherIDs)
 	args.ClassIDs = utils.SliceDeduplicationExcludeEmpty(args.ClassIDs)
+
+	if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
+		args.ClassIDs = nil
+	}
 
 	return args, nil
 }
