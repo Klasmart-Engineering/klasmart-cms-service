@@ -281,7 +281,7 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 		}
 		_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
 			IDs:      dbo.NullStrings{Strings: milestoneIDs, Valid: true},
-			Statuses: dbo.NullStrings{Strings: []string{entity.OutcomeStatusDraft, entity.OutcomeStatusDraft}, Valid: true},
+			Statuses: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished, entity.OutcomeStatusDraft}, Valid: true},
 			OrderBy:  da.OrderByMilestoneUpdatedAtDesc,
 		})
 		if err != nil {
@@ -1553,12 +1553,11 @@ func allowDeleteOutcome(ctx context.Context, operator *entity.Operator, perms ma
 		return true
 	}
 
-	if outcome.PublishStatus == entity.OutcomeStatusPending && perms[external.DeleteMyPendingLearningOutcome] {
+	if outcome.PublishStatus == entity.OutcomeStatusPending && perms[external.DeleteMyPendingLearningOutcome] && outcome.AuthorID == operator.UserID {
 		return true
 	}
 
-	if outcome.PublishStatus == entity.OutcomeStatusPending &&
-		(perms[external.DeleteMyPendingLearningOutcome] && outcome.AuthorID == operator.UserID) {
+	if outcome.PublishStatus == entity.OutcomeStatusPending && perms[external.DeleteOrgPendingLearningOutcome] && outcome.OrganizationID == operator.OrgID {
 		return true
 	}
 
