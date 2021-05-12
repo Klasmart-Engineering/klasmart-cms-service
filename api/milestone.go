@@ -47,7 +47,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 	}
 	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "createMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
+		log.Warn(ctx, "createMilestone: ToMilestone failed", log.Err(err), log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -149,7 +149,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 
 	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "updateMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
+		log.Warn(ctx, "updateMilestone: ToMilestone failed", log.Err(err), log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -254,7 +254,11 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 				return
 			}
 			log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
-			c.JSON(http.StatusConflict, LD(AssessMsgLockedMilestone, user))
+			lable := AssessMsgLockedMilestone
+			if len(data.IDs) == 1 {
+				lable = AssessErrorMsgLocked
+			}
+			c.JSON(http.StatusConflict, LD(lable, user))
 			return
 		}
 		log.Error(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))

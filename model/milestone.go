@@ -718,6 +718,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		}
 		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
 			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
+			OrderBy:     da.OrderByMilestoneOutcomeUpdatedAt,
 		})
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
