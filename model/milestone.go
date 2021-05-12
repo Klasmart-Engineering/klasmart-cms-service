@@ -76,7 +76,7 @@ func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 	return false, nil
 }
 
-func (m MilestoneModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcode string) (bool, error) {
+func (m MilestoneModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error) {
 	exists, err := da.GetShortcodeRedis(ctx).IsCached(ctx, op, string(entity.KindMileStone), shortcode)
 	if err != nil {
 		log.Debug(ctx, "IsCached: redis access failed",
@@ -85,6 +85,30 @@ func (m MilestoneModel) IsShortcodeCached(ctx context.Context, op *entity.Operat
 		return false, err
 	}
 	return exists, nil
+}
+
+func (m MilestoneModel) RemoveShortcode(ctx context.Context, op *entity.Operator, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Remove(ctx, op, string(entity.KindMileStone), shortcode)
+	if err != nil {
+		log.Error(ctx, "RemoveShortcode: redis access failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
+}
+
+func (m MilestoneModel) Cache(ctx context.Context, op *entity.Operator, cursor int, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Cache(ctx, op, string(entity.KindMileStone), cursor, shortcode)
+	if err != nil {
+		log.Debug(ctx, "Cache: redis access failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
 }
 
 func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
@@ -154,7 +178,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 		}
 		return nil
 	})
-	GetShortcodeModel(ctx, op, entity.KindMileStone).Remove(ctx, op, milestone.Shortcode)
+	m.RemoveShortcode(ctx, op, milestone.Shortcode)
 	return err
 }
 
@@ -221,7 +245,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel(ctx, op, entity.KindMileStone).IsCached(ctx, op, milestone.Shortcode)
+	exists, err := m.IsShortcodeCached(ctx, op, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: isCached failed",
 			log.Err(err),

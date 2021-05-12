@@ -877,10 +877,12 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		return
 	}
 
-	var shortcodeModel *model.ShortcodeModel
+	var provider model.ShortcodeProvider
 	switch data.Kind {
-	case entity.KindOutcome, entity.KindMileStone:
-		shortcodeModel = model.GetShortcodeModel(ctx, op, data.Kind)
+	case entity.KindMileStone:
+		provider = model.GetMilestoneModel()
+	case entity.KindOutcome:
+		provider = model.GetOutcomeModel()
 	default:
 		log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -899,7 +901,7 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		return
 	}
 
-	shortcode, err := shortcodeModel.Generate(ctx, op)
+	shortcode, err := model.GetShortcodeModel().Generate(ctx, op, provider)
 
 	switch err {
 	case nil:

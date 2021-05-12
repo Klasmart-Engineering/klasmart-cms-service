@@ -73,7 +73,7 @@ func TestGenerateShortcode(t *testing.T) {
 	setup()
 	op := initOperator()
 	ctx := context.TODO()
-	shortcode, err := GetShortcodeModel(ctx, op, entity.KindOutcome).Generate(ctx, op)
+	shortcode, err := GetShortcodeModel().Generate(ctx, op, GetOutcomeModel())
 	if err != nil {
 		t.Fatal(err)
 	}

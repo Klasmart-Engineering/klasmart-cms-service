@@ -18,23 +18,22 @@ type OutcomeSQLDA struct {
 }
 
 type OutcomeCondition struct {
-	IDs                dbo.NullStrings
-	Name               sql.NullString
-	Description        sql.NullString
-	Keywords           sql.NullString
-	Shortcode          sql.NullString
-	ShortcodeCommonKey sql.NullString
-	Shortcodes         dbo.NullStrings
-	PublishStatus      dbo.NullStrings
-	PublishScope       sql.NullString
-	AuthorName         sql.NullString
-	AuthorID           sql.NullString
-	Assumed            sql.NullBool
-	OrganizationID     sql.NullString
-	SourceID           sql.NullString
-	FuzzyKey           sql.NullString
-	AuthorIDs          dbo.NullStrings
-	AncestorIDs        dbo.NullStrings
+	IDs            dbo.NullStrings
+	Name           sql.NullString
+	Description    sql.NullString
+	Keywords       sql.NullString
+	ShortcodeLike  sql.NullString
+	Shortcodes     dbo.NullStrings
+	PublishStatus  dbo.NullStrings
+	PublishScope   sql.NullString
+	AuthorName     sql.NullString
+	AuthorID       sql.NullString
+	Assumed        sql.NullBool
+	OrganizationID sql.NullString
+	SourceID       sql.NullString
+	FuzzyKey       sql.NullString
+	AuthorIDs      dbo.NullStrings
+	AncestorIDs    dbo.NullStrings
 
 	IncludeDeleted bool
 	OrderBy        OutcomeOrderBy `json:"order_by"`
@@ -77,26 +76,19 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Name.String)
 	}
 
-	if c.Shortcode.Valid {
+	if c.ShortcodeLike.Valid {
 		wheres = append(wheres, "match(shortcode) against(? in boolean mode)")
-		params = append(params, c.Shortcode.String)
+		params = append(params, c.ShortcodeLike.String)
 	}
 
 	if c.Keywords.Valid {
 		wheres = append(wheres, "match(keywords) against(? in boolean mode)")
-		//wheres = append(wheres, "keywords=?")
 		params = append(params, c.Keywords.String)
 	}
 
 	if c.Description.Valid {
 		wheres = append(wheres, "match(description) against(? in boolean mode)")
-		//wheres = append(wheres, "description=?")
 		params = append(params, c.Description.String)
-	}
-
-	if c.ShortcodeCommonKey.Valid {
-		wheres = append(wheres, "shortcode=?")
-		params = append(params, c.ShortcodeCommonKey.String)
 	}
 
 	if c.Shortcodes.Valid {
@@ -147,15 +139,14 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 
 func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 	return &OutcomeCondition{
-		IDs:           dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
-		Name:          sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
-		Description:   sql.NullString{String: condition.Description, Valid: condition.Description != ""},
-		Keywords:      sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
-		Shortcode:     sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-		PublishStatus: dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
-		PublishScope:  sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
-		AuthorID:      sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
-		//AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
+		IDs:            dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
+		Name:           sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
+		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
+		Keywords:       sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
+		ShortcodeLike:  sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
+		PublishStatus:  dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
+		PublishScope:   sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
+		AuthorID:       sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
 		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
 		AuthorIDs:      dbo.NullStrings{Strings: condition.AuthorIDs, Valid: len(condition.AuthorIDs) > 0},

@@ -82,7 +82,7 @@ func (ocm OutcomeModel) ShortcodeLength() int {
 	return constant.ShortcodeShowLength
 }
 
-func (ocm OutcomeModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcode string) (bool, error) {
+func (ocm OutcomeModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error) {
 	exists, err := da.GetShortcodeRedis(ctx).IsCached(ctx, op, string(entity.KindOutcome), shortcode)
 	if err != nil {
 		log.Debug(ctx, "IsCached: redis access failed",
@@ -95,8 +95,8 @@ func (ocm OutcomeModel) IsShortcodeCached(ctx context.Context, op *entity.Operat
 
 func (ocm OutcomeModel) IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor string, shortcode string) (bool, error) {
 	_, outcomes, err := da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
-		OrganizationID:     sql.NullString{String: op.OrgID, Valid: true},
-		ShortcodeCommonKey: sql.NullString{String: shortcode, Valid: true},
+		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
+		Shortcodes:     dbo.NullStrings{Strings: []string{shortcode}, Valid: true},
 	})
 	if err != nil {
 		log.Error(ctx, "IsShortcodeExists: Search failed",
@@ -110,6 +110,30 @@ func (ocm OutcomeModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 		}
 	}
 	return false, nil
+}
+
+func (ocm OutcomeModel) RemoveShortcode(ctx context.Context, op *entity.Operator, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Remove(ctx, op, string(entity.KindOutcome), shortcode)
+	if err != nil {
+		log.Error(ctx, "RemoveShortcode: redis access failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
+}
+
+func (ocm OutcomeModel) Cache(ctx context.Context, op *entity.Operator, cursor int, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Cache(ctx, op, string(entity.KindOutcome), cursor, shortcode)
+	if err != nil {
+		log.Debug(ctx, "Cache: redis access failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
 }
 
 func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, outcome *entity.Outcome) (err error) {
@@ -172,7 +196,7 @@ func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, o
 		}
 		return nil
 	})
-	GetShortcodeModel(ctx, operator, entity.KindOutcome).Remove(ctx, operator, outcome.Shortcode)
+	ocm.RemoveShortcode(ctx, operator, outcome.Shortcode)
 	if err != nil {
 		return err
 	}
@@ -295,7 +319,7 @@ func (ocm OutcomeModel) Update(ctx context.Context, operator *entity.Operator, o
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel(ctx, operator, entity.KindOutcome).IsCached(ctx, operator, outcome.Shortcode)
+	exists, err := ocm.IsShortcodeCached(ctx, operator, outcome.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: IsCached failed",
 			log.Err(err),
