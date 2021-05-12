@@ -65,7 +65,6 @@ func (scm *ShortcodeModel) generate(ctx context.Context, op *entity.Operator, tx
 	}
 
 	for i, shortcode := range shortcodes {
-		shortcode = shortcodes[i]
 		if !intersects[shortcode] {
 			return cursor + i, shortcode, nil
 		}
