@@ -254,7 +254,7 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 				return
 			}
 			log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
-			c.JSON(http.StatusConflict, LD(AssessErrorMsgLocked, user))
+			c.JSON(http.StatusConflict, LD(AssessMsgLockedMilestone, user))
 			return
 		}
 		log.Error(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
