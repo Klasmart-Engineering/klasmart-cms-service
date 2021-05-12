@@ -17,7 +17,15 @@ pipelines:
           - go mod tidy
           - go mod vendor
           - go build -o deploy/handler main.go
-
+          - echo $BUILD_RESULT
+        after-script:
+          - BUILD_STATUS="success"
+          - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
+          - pipe: atlassian/slack-notify:1.0.2
+            variables:
+              WEBHOOK_URL: $WEBHOOK_URL
+              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - build notification, pipeline build number $BITBUCKET_BUILD_NUMBER"'
+              MESSAGE: 'build has exited with [$BUILD_STATUS] status'
         caches:
           - gomodules
 
@@ -51,8 +59,18 @@ pipelines:
           - docker tag cms-backend:latest $CMS_BACKEND_ALPHA:latest
           - docker push $CMS_BACKEND_ALPHA:latest
 
+        after-script:
+          - BUILD_STATUS="success"
+          - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
+          - pipe: atlassian/slack-notify:1.0.2
+            variables:
+              WEBHOOK_URL: $WEBHOOK_URL
+              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - build notification, pipeline build number $BITBUCKET_BUILD_NUMBER"'
+              MESSAGE: 'ECR push has exited with [$BUILD_STATUS] status'
+
         services:
           - docker
+      
 
 definitions:
   caches:
