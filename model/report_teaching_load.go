@@ -219,6 +219,9 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 				return nil, err
 			}
 			schoolIDs := make([]string, 0, len(schools))
+			for _, s := range schools {
+				schoolIDs = append(schoolIDs, s.ID)
+			}
 			teachersMap, err := external.GetTeacherServiceProvider().GetBySchools(ctx, operator, schoolIDs)
 			if err != nil {
 				log.Error(ctx, "ListTeachingLoadReport: external.GetTeacherServiceProvider().GetByOrganization: require teacher ids",
