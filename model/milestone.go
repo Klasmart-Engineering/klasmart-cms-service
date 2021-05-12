@@ -258,7 +258,23 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 				log.Strings("ancestors", outcomeAncestors))
 			return err
 		}
-		milestone.Outcomes = outcomes
+
+		if len(outcomeAncestors) != len(outcomes) {
+			log.Error(ctx, "Obtain: some error",
+				log.String("milestone", milestoneID),
+				log.Strings("ancestors", outcomeAncestors),
+				log.Any("outcomes", outcomes))
+			return constant.ErrInternalServer
+		}
+
+		outcomesMap := make(map[string]*entity.Outcome, len(outcomes))
+		for i := range outcomes {
+			outcomesMap[outcomes[i].AncestorID] = outcomes[i]
+		}
+		milestone.Outcomes = make([]*entity.Outcome, len(outcomes))
+		for i := range outcomeAncestors {
+			milestone.Outcomes[i] = outcomesMap[outcomeAncestors[i]]
+		}
 		milestone.LoCounts = len(outcomes)
 		return nil
 	})
