@@ -12,7 +12,7 @@ func TestMilestoneModel_GenerateShortcode(t *testing.T) {
 	setup()
 	ctx := context.TODO()
 	op := initOperator()
-	shortcode, err := GetShortcodeModel().Generate(ctx, op, GetMilestoneModel())
+	shortcode, err := GetMilestoneModel().GenerateShortcode(ctx, op)
 	if err != nil {
 		t.Fatal(err)
 	}

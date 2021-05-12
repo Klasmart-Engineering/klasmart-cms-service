@@ -32,7 +32,32 @@ type MilestoneModel struct {
 }
 
 func (m MilestoneModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
-	return GetShortcodeModel().Generate(ctx, op, m)
+	var shortcode string
+	var index int
+	cursor, err := m.Current(ctx, op)
+	if err != nil {
+		log.Debug(ctx, "GenerateShortcode: Current failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor))
+		return "", err
+	}
+	shortcodeModel := GetShortcodeModel()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		index, shortcode, err = shortcodeModel.generate(ctx, op, tx, cursor+1, m)
+		if err != nil {
+			log.Debug(ctx, "GenerateShortcode",
+				log.Any("op", op),
+				log.Int("cursor", cursor))
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+	err = m.Cache(ctx, op, index, shortcode)
+	return shortcode, err
 }
 
 func (m MilestoneModel) Current(ctx context.Context, op *entity.Operator) (int, error) {

@@ -77,30 +77,3 @@ func (scm *ShortcodeModel) generate(ctx context.Context, op *entity.Operator, tx
 
 	return scm.generate(ctx, op, tx, cursor+len(shortcodes), provider)
 }
-
-func (scm *ShortcodeModel) Generate(ctx context.Context, op *entity.Operator, provider ShortcodeProvider) (string, error) {
-	var shortcode string
-	cursor, err := provider.Current(ctx, op)
-	if err != nil {
-		log.Debug(ctx, "Generate: Current failed",
-			log.Any("op", op),
-			log.Int("cursor", cursor))
-		return "", err
-	}
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		cursor, shortcode, err = scm.generate(ctx, op, tx, cursor+1, provider)
-		if err != nil {
-			log.Debug(ctx, "Generate: generate failed",
-				log.Any("op", op),
-				log.Int("cursor", cursor))
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-	err = provider.Cache(ctx, op, cursor, shortcode)
-	return shortcode, err
-}
