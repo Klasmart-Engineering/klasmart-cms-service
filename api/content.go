@@ -9,7 +9,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -923,8 +922,7 @@ func parseOrg(c *gin.Context, u *entity.Operator) string {
 	return author
 }
 
-func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
-
+func queryCondition(c *gin.Context, op *entity.Operator) entity.ContentConditionRequest {
 	contentTypeStr := c.Query("content_type")
 	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
@@ -932,11 +930,11 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	programs := c.Query("programs")
 	path := c.Query("path")
 	programGroup := c.Query("program_group")
-	condition := da.ContentCondition{
+	condition := entity.ContentConditionRequest{
 		Author:      parseAuthor(c, op),
 		Org:         parseOrg(c, op),
 		DirPath:     path,
-		OrderBy:     da.NewContentOrderBy(c.Query("order_by")),
+		OrderBy:     c.Query("order_by"),
 		Pager:       utils.GetPager(c.Query("page"), c.Query("page_size")),
 		Name:        strings.TrimSpace(c.Query("name")),
 		ContentName: strings.TrimSpace(c.Query("content_name")),

@@ -3,6 +3,7 @@ package entity
 import (
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"reflect"
 	"strings"
 
@@ -356,6 +357,39 @@ type ContentProperties struct {
 type ContentVisibilitySettings struct {
 	ContentID          string   `json:"content_id"`
 	VisibilitySettings []string `json:"visibility_settings"`
+}
+
+type ContentConditionRequest struct {
+	IDS                []string `json:"ids"`
+	Name               string   `json:"name"`
+	ContentType        []int    `json:"content_type"`
+	VisibilitySettings []string `json:"visibility_settings"`
+	PublishStatus      []string `json:"publish_status"`
+	Author             string   `json:"author"`
+	Org                string   `json:"org"`
+	Program            []string `json:"program"`
+	SourceID           string   `json:"source_id"`
+	LatestID           string   `json:"latest_id"`
+	SourceType         string   `json:"source_type"`
+	DirPath            string   `json:"dir_path"`
+	ContentName        string   `json:"content_name"`
+
+	//AuthedContentFlag bool           `json:"authed_content"`
+	AuthedOrgID NullStrings `json:"authed_org_ids"`
+	OrderBy     string     `json:"order_by"`
+	Pager       utils.Pager
+
+	JoinUserIDList []string `json:"join_user_id_list"`
+
+	AllowOwnerPublished bool `json:"allow_owner_published"`
+}
+type ContentPermission struct {
+	ID 	string `json:"id"`
+	AllowEdit bool `json:"allow_edit"`
+	AllowDelete bool `json:"allow_delete"`
+	AllowApprove bool `json:"allow_approve"`
+	AllowReject bool `json:"allow_reject"`
+	AllowRepublish bool `json:"allow_republish"`
 }
 
 type CreateContentRequest struct {

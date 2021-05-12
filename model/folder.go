@@ -900,7 +900,7 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 		if folderItem.Partition == entity.FolderPartitionMaterialAndPlans {
 			contentTypeList = []int{entity.ContentTypePlan, entity.ContentTypeMaterial, entity.AliasContentTypeFolder}
 		}
-		condition := da.ContentCondition{
+		condition := entity.ContentConditionRequest{
 			ContentType:   contentTypeList,
 			PublishStatus: []string{entity.ContentStatusPublished},
 			DirPath:       string(folderItem.ChildrenPath()),

@@ -9,7 +9,6 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 )
@@ -27,7 +26,7 @@ type IContentPermissionMySchoolModel interface {
 
 	CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
 	CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error)
-	CheckQueryContentPermission(ctx context.Context, condition da.ContentCondition, user *entity.Operator) (bool, error)
+	CheckQueryContentPermission(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) (bool, error)
 }
 
 type ContentPermissionMySchoolModel struct {
@@ -239,7 +238,7 @@ func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx contex
 	}
 	return true, nil
 }
-func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context.Context, condition da.ContentCondition, user *entity.Operator) (bool, error) {
+func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) (bool, error) {
 	contentProfiles, err := c.buildByConditionContentProfiles(ctx, condition, user)
 	if err != nil {
 		return false, err
@@ -259,7 +258,7 @@ func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context
 	return true, nil
 }
 
-func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition da.ContentCondition, user *entity.Operator) ([]*ContentProfile, error) {
+func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) ([]*ContentProfile, error) {
 	contentTypes := condition.ContentType
 	if len(contentTypes) == 0 {
 		contentTypes = []int{entity.ContentTypePlan, entity.ContentTypeMaterial, entity.ContentTypeAssets}

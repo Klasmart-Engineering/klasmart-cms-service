@@ -116,13 +116,13 @@ type IContentModel interface {
 	UpdateContentPublishStatus(ctx context.Context, tx *dbo.DBContext, cid string, reason []string, remark, status string) error
 	CheckContentAuthorization(ctx context.Context, tx *dbo.DBContext, content *entity.Content, user *entity.Operator) error
 
-	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, error)
-	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error)
-	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error)
-	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, error)
+	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
+	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
+	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	SearchContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
@@ -130,13 +130,12 @@ type IContentModel interface {
 	GetVisibleContentByID(ctx context.Context, tx *dbo.DBContext, cid string, user *entity.Operator) (*entity.ContentInfoWithDetails, error)
 
 	IsContentsOperatorByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) (bool, error)
-	ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error)
 
 	UpdateContentPath(ctx context.Context, tx *dbo.DBContext, cid string, path string) error
 	BatchReplaceContentPath(ctx context.Context, tx *dbo.DBContext, cids []string, oldPath, path string) error
 
 	//For authed content
-	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 	CopyContent(ctx context.Context, tx *dbo.DBContext, cid string, deep bool, op *entity.Operator) (string, error)
 
 	CreateContentData(ctx context.Context, contentType entity.ContentType, data string) (ContentData, error)
@@ -327,9 +326,9 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 	return nil
 }
 
-func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	log.Debug(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchContent(ctx, tx, *condition)
+	count, objs, err := da.GetContentDA().SearchContent(ctx, tx, *conditionRequestToCondition(*condition))
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -762,7 +761,7 @@ func (cm *ContentModel) PublishContentBulk(ctx context.Context, tx *dbo.DBContex
 }
 
 //TODO:For authed content => implement search auth content => done
-func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) SearchAuthedContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//set condition with authed flag
 	condition.AuthedOrgID = entity.NullStrings{
 		Strings: []string{user.OrgID, constant.ShareToAll},
@@ -1886,7 +1885,7 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 	return contentWithDetails, nil
 }
 
-func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error) {
+func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
 	//构造个人查询条件
 	//construct query condition for private search
 	condition.Author = user.UserID
@@ -1912,7 +1911,7 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
 
 	log.Info(ctx, "search folder content", log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, condition, *folderCondition)
+	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, *conditionRequestToCondition(condition), *folderCondition)
 	if err != nil {
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
@@ -1922,7 +1921,7 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	return count, ret, nil
 }
 
-func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, error) {
+func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, error) {
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
 	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
 	if err != nil {
@@ -1944,7 +1943,7 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 	}
 	return total, nil
 }
-func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.FolderContentData, error) {
+func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
 	err := cm.filterRootPath(ctx, &condition, entity.OwnerTypeOrganization, user)
 	if err != nil {
@@ -1969,7 +1968,7 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 
 	return count, ret, nil
 }
-func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	//where, params := combineCondition.GetConditions()
 	//logger.WithContext(ctx).WithField("subject", "content").Infof("Combine condition: %#v, params: %#v", where, params)
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
@@ -1980,7 +1979,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	return cm.searchContentUnsafe(ctx, tx, combineCondition, user)
 }
 
-func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.Author = user.UserID
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	scope, err := cm.listAllScopes(ctx, user)
@@ -1997,23 +1996,23 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
-func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition  entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = []string{entity.ContentStatusPending}
-	scope, err := cm.ListVisibleScopes(ctx, visiblePermissionPending, user)
-	if err != nil {
-		return 0, nil, err
-	}
-	if len(scope) == 0 {
-		log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
-		scope = []string{constant.NoSearchItem}
-	}
-	condition.VisibilitySettings = scope
+	//scope, err := cm.ListVisibleScopes(ctx, visiblePermissionPending, user)
+	//if err != nil {
+	//	return 0, nil, err
+	//}
+	//if len(scope) == 0 {
+	//	log.Info(ctx, "no valid private scope", log.Strings("scopes", scope), log.Any("user", user))
+	//	scope = []string{constant.NoSearchItem}
+	//}
+	//condition.VisibilitySettings = scope
 
 	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
-func (cm *ContentModel) addUserCondition(ctx context.Context, condition *da.ContentCondition, user *entity.Operator) {
+func (cm *ContentModel) addUserCondition(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) {
 	condition.JoinUserIDList = cm.getRelatedUserID(ctx, condition.Name, user)
 }
 
@@ -2037,7 +2036,7 @@ func (cm *ContentModel) getRelatedUserID(ctx context.Context, keyword string, us
 	return ids
 }
 
-func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	cm.addUserCondition(ctx, &condition, user)
 	return cm.searchContent(ctx, tx, &condition, user)
@@ -2341,7 +2340,7 @@ func (cm *ContentModel) parseContentOutcomes(ctx context.Context, content *entit
 	return ret
 }
 
-func (cm *ContentModel) filterRootPath(ctx context.Context, condition *da.ContentCondition, ownerType entity.OwnerType, operator *entity.Operator) error {
+func (cm *ContentModel) filterRootPath(ctx context.Context, condition *entity.ContentConditionRequest, ownerType entity.OwnerType, operator *entity.Operator) error {
 	if condition.DirPath != "" {
 		return nil
 	}
@@ -2390,7 +2389,7 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition da.ContentCondition, searchUserIDs []string, user *entity.Operator) (*da.CombineConditions, error) {
+func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (*da.CombineConditions, error) {
 	condition1 := condition
 	condition2 := condition
 
@@ -2414,24 +2413,25 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	//filter visible
 	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
 		condition2.VisibilitySettings = []string{user.OrgID}
-	} else {
-		scopes, err := cm.ListVisibleScopes(ctx, visiblePermissionPublished, user)
-		if err != nil {
-			return nil, err
-		}
-		if len(scopes) == 0 {
-			log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
-			scopes = []string{constant.NoSearchItem}
-		}
-		condition2.VisibilitySettings = scopes
 	}
+	//else {
+		//scopes, err := cm.ListVisibleScopes(ctx, visiblePermissionPublished, user)
+		//if err != nil {
+		//	return nil, err
+		//}
+		//if len(scopes) == 0 {
+		//	log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
+		//	scopes = []string{constant.NoSearchItem}
+		//}
+		//condition2.VisibilitySettings = scopes
+	//}
 
 	//condition2.Scope = scopes
 	condition1.JoinUserIDList = searchUserIDs
 	condition2.JoinUserIDList = searchUserIDs
 	combineCondition := &da.CombineConditions{
-		SourceCondition: &condition1,
-		TargetCondition: &condition2,
+		SourceCondition: conditionRequestToCondition(condition1),
+		TargetCondition: conditionRequestToCondition(condition2),
 	}
 	return combineCondition, nil
 }
@@ -2810,48 +2810,48 @@ func (cm *ContentModel) getOutcomes(ctx context.Context, pickIDs []string, user 
 	return outcomeEntities
 }
 
-func (cm *ContentModel) ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error) {
-	//TODO:添加scope
-	p := external.PublishedContentPage204
-	if permission == visiblePermissionPending {
-		p = external.PendingContentPage203
-	}
-	ret := make([]string, 0)
-
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, p)
-	if err != nil {
-		log.Warn(ctx, "can't get schools from org", log.Err(err))
-		return nil, err
-	}
-	if hasPermission {
-		schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
-		if err != nil {
-			log.Warn(ctx, "GetByOrganizationID failed", log.Err(err), log.Any("operator", operator))
-			return nil, err
-		}
-		ret = append(ret, operator.OrgID)
-		for i := range schools {
-			ret = append(ret, schools[i].ID)
-		}
-		return ret, nil
-	}
-
-	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
-	if err != nil {
-		log.Warn(ctx, "can't get schools from org", log.Err(err))
-		return nil, err
-	}
-	for i := range schools {
-		ret = append(ret, schools[i].ID)
-	}
-
-	if len(ret) == 0 {
-		return ret, ErrInvalidVisibleScope
-	}
-	ret = append(ret, operator.OrgID)
-
-	return ret, nil
-}
+//func (cm *ContentModel) ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error) {
+//	//TODO:添加scope
+//	p := external.PublishedContentPage204
+//	if permission == visiblePermissionPending {
+//		p = external.PendingContentPage203
+//	}
+//	ret := make([]string, 0)
+//
+//	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, p)
+//	if err != nil {
+//		log.Warn(ctx, "can't get schools from org", log.Err(err))
+//		return nil, err
+//	}
+//	if hasPermission {
+//		schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
+//		if err != nil {
+//			log.Warn(ctx, "GetByOrganizationID failed", log.Err(err), log.Any("operator", operator))
+//			return nil, err
+//		}
+//		ret = append(ret, operator.OrgID)
+//		for i := range schools {
+//			ret = append(ret, schools[i].ID)
+//		}
+//		return ret, nil
+//	}
+//
+//	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
+//	if err != nil {
+//		log.Warn(ctx, "can't get schools from org", log.Err(err))
+//		return nil, err
+//	}
+//	for i := range schools {
+//		ret = append(ret, schools[i].ID)
+//	}
+//
+//	if len(ret) == 0 {
+//		return ret, ErrInvalidVisibleScope
+//	}
+//	ret = append(ret, operator.OrgID)
+//
+//	return ret, nil
+//}
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
 	schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
 	if err != nil {
@@ -2926,7 +2926,7 @@ func (cm *ContentModel) getContentProperties(ctx context.Context, cid string) (*
 	}, nil
 }
 
-func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition da.ContentCondition, searchUserIDs []string, user *entity.Operator) *da.FolderCondition {
+func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) *da.FolderCondition {
 	dirPath := condition.DirPath
 	isAssets := false
 	disableFolder := true
@@ -2972,6 +2972,29 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 	for i := range objs {
 		objs[i].AuthorName = authorMap[objs[i].Author]
 		objs[i].ContentTypeName = objs[i].ContentType.Name()
+	}
+}
+
+
+func conditionRequestToCondition(c entity.ContentConditionRequest) *da.ContentCondition{
+	return &da.ContentCondition{
+		IDS:                 c.IDS,
+		Name:                c.Name,
+		ContentType:         c.ContentType,
+		VisibilitySettings:  c.VisibilitySettings,
+		PublishStatus:       c.PublishStatus,
+		Author:              c.Author,
+		Org:                 c.Org,
+		Program:             c.Program,
+		SourceID:            c.SourceID,
+		LatestID:            c.LatestID,
+		SourceType:          c.SourceType,
+		DirPath:             c.DirPath,
+		ContentName:         c.ContentName,
+		AuthedOrgID:         c.AuthedOrgID,
+		OrderBy:             da.NewContentOrderBy(c.OrderBy),
+		Pager:               c.Pager,
+		JoinUserIDList:      c.JoinUserIDList,
 	}
 }
 
