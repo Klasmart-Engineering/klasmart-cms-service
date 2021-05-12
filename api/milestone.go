@@ -180,6 +180,22 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
+		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+		if ok {
+			user, err := external.GetUserServiceProvider().Get(ctx, op, lockedByErr.LockedBy.ID)
+			if err != nil {
+				log.Error(ctx, "updateMilestone: GetUserServiceProvider failed",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("req", milestoneID),
+					log.String("locked", lockedByErr.LockedBy.ID))
+				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				return
+			}
+			log.Warn(ctx, "updateMilestone", log.Any("op", op), log.Any("req", data))
+			c.JSON(http.StatusConflict, LD(AssessErrorMsgLocked, user))
+			return
+		}
 		log.Error(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
