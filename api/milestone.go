@@ -47,7 +47,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 	}
 	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "createMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
+		log.Warn(ctx, "createMilestone: ToMilestone failed", log.Err(err), log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -149,7 +149,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 
 	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "updateMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
+		log.Warn(ctx, "updateMilestone: ToMilestone failed", log.Err(err), log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}

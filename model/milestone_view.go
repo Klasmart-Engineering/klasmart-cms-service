@@ -184,6 +184,17 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 		sbcIDs = append(sbcIDs, milestones[i].Subcategories...)
 		grdIDs = append(grdIDs, milestones[i].Grades...)
 		ageIDs = append(ageIDs, milestones[i].Ages...)
+
+		for _, outcome := range milestones[i].Outcomes {
+			orgIDs = append(orgIDs, outcome.OrganizationID)
+			authIDs = append(authIDs, outcome.AuthorID)
+			prgIDs = append(prgIDs, outcome.Programs...)
+			sbjIDs = append(sbjIDs, outcome.Subjects...)
+			catIDs = append(catIDs, outcome.Categories...)
+			sbcIDs = append(sbcIDs, outcome.Subcategories...)
+			grdIDs = append(grdIDs, outcome.Grades...)
+			ageIDs = append(ageIDs, outcome.Ages...)
+		}
 	}
 	orgs, authors, prds, sbjs, cats, sbcs, grds, ages, err := prepareAllNeededName(ctx, op, orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs)
 	if err != nil {
