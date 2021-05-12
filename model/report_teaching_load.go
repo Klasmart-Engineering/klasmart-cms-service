@@ -99,6 +99,9 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		TeacherIDs: args.TeacherIDs,
 		TimeRanges: ranges,
 	}
+	if args.SchoolID != "" {
+		input.SchoolIDs = []string{args.SchoolID}
+	}
 	log.Debug(ctx, "ListTeachingLoadReport: print call schedule args",
 		log.Any("input", input),
 	)
