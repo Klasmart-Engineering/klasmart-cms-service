@@ -144,6 +144,6 @@ func TestPublishMilestone(t *testing.T) {
 func TestOccupyMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"6099f4871551d2f217b77b7c/occupy"+"?org_id="+op.OrgID, "")
+	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"609b2c02018be3fa0bdb6e26/occupy"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }

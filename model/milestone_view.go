@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -63,6 +64,9 @@ type MilestoneView struct {
 }
 
 func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
+	if len(ms.Name) > constant.MilestoneNameLength {
+		return nil, constant.ErrExceededLimit
+	}
 	if ms.Type == "" {
 		ms.Type = entity.CustomMilestoneType
 	}
