@@ -141,3 +141,7 @@ const (
 	// 750 * 800
 	ScheduleBatchInsertCount = 800
 )
+
+const (
+	MilestoneNameLength = 200
+)
