@@ -182,13 +182,14 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
+		length := len(outcomeAncestors)
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     milestone.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[i] = &milestoneOutcome
+			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
 		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
@@ -386,13 +387,14 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 		}
 
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
+		length := len(outcomeAncestors)
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     ms.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[i] = &milestoneOutcome
+			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.ID})
 		if err != nil {

@@ -229,12 +229,10 @@ func (ocm OutcomeModel) Create(ctx context.Context, operator *entity.Operator, o
 	if err != nil {
 		return err
 	}
-	da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
 	return
 }
 
 func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outcomeID string) (outcome *entity.Outcome, err error) {
-
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
 		outcome, err = da.GetOutcomeDA().GetOutcomeByID(ctx, tx, outcomeID)
@@ -282,7 +280,9 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 			return nil
 		}
 		_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
-			IDs: dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			IDs:      dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			Statuses: dbo.NullStrings{Strings: []string{entity.OutcomeStatusDraft, entity.OutcomeStatusDraft}, Valid: true},
+			OrderBy:  da.OrderByMilestoneUpdatedAtDesc,
 		})
 		if err != nil {
 			log.Error(ctx, "Get: Search failed",
@@ -290,7 +290,13 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 				log.String("outcome", outcomeID))
 			return err
 		}
-		outcome.Milestones = milestones
+
+		for i := range milestones {
+			if milestones[i].Status == entity.OutcomeStatusDraft && milestones[i].SourceID != milestones[i].ID {
+				continue
+			}
+			outcome.Milestones = append(outcome.Milestones, milestones[i])
+		}
 		return nil
 	})
 	return
@@ -488,10 +494,6 @@ func (ocm OutcomeModel) Delete(ctx context.Context, operator *entity.Operator, o
 		}
 		return nil
 	})
-
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 
@@ -722,7 +724,6 @@ func (ocm OutcomeModel) Lock(ctx context.Context, operator *entity.Operator, tx 
 	if err != nil {
 		return "", err
 	}
-	da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
 	return newVersion.ID, nil
 }
 
@@ -763,9 +764,6 @@ func (ocm OutcomeModel) Publish(ctx context.Context, operator *entity.Operator, 
 		}
 		return nil
 	})
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 
@@ -823,9 +821,6 @@ func (ocm OutcomeModel) BulkPublish(ctx context.Context, operator *entity.Operat
 		}
 		return nil
 	})
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 
@@ -887,9 +882,6 @@ func (ocm OutcomeModel) BulkDelete(ctx context.Context, operator *entity.Operato
 		}
 		return nil
 	})
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 
@@ -1048,9 +1040,6 @@ func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, 
 		}
 		return nil
 	})
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 
@@ -1096,9 +1085,6 @@ func (ocm OutcomeModel) Reject(ctx context.Context, operator *entity.Operator, t
 		}
 		return nil
 	})
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 
@@ -1164,9 +1150,6 @@ func (ocm OutcomeModel) BulkApprove(ctx context.Context, operator *entity.Operat
 		}
 		return nil
 	})
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 func (ocm OutcomeModel) BulkReject(ctx context.Context, operator *entity.Operator, outcomeIDs []string, reason string) error {
@@ -1215,9 +1198,6 @@ func (ocm OutcomeModel) BulkReject(ctx context.Context, operator *entity.Operato
 		}
 		return nil
 	})
-	if err == nil {
-		da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, operator, nil)
-	}
 	return err
 }
 
@@ -1419,8 +1399,10 @@ func (ocm OutcomeModel) fillRelation(ctx context.Context, operator *entity.Opera
 		}
 		for i := range relations {
 			for j := range outcomes {
-				ocm.FillRelation(outcomes[j], []*entity.Relation{relations[i]})
-				break
+				if relations[i].MasterID == outcomes[j].ID {
+					ocm.FillRelation(outcomes[j], []*entity.Relation{relations[i]})
+					break
+				}
 			}
 		}
 	}
