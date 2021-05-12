@@ -18,9 +18,10 @@ var (
 )
 
 const (
-	VisibilitySettingsTypeMySchools         VisibilitySettingsType = 1
-	VisibilitySettingsTypeAllSchools        VisibilitySettingsType = 2
-	VisibilitySettingsTypeContainsOrg       VisibilitySettingsType = 3 //deprecated
+	VisibilitySettingsTypeMySchools  VisibilitySettingsType = 1
+	VisibilitySettingsTypeAllSchools VisibilitySettingsType = 2
+	// deprecated
+	// VisibilitySettingsTypeContainsOrg       VisibilitySettingsType = 3
 	VisibilitySettingsTypeOnlyOrg           VisibilitySettingsType = 4
 	VisibilitySettingsTypeOrgWithMySchools  VisibilitySettingsType = 5
 	VisibilitySettingsTypeOrgWithAllSchools VisibilitySettingsType = 6

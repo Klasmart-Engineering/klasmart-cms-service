@@ -13,6 +13,12 @@ const (
 	PublishedContentPage204   PermissionName = "published_content_page_204"
 	ArchivedContentPage205    PermissionName = "archived_content_page_205"
 
+	ViewMyUnpublishedContent210 PermissionName = "view_my_unpublished_content_210"
+
+	ViewMyPending212         PermissionName = "view_my_pending_212"
+	ViewOrgPending213        PermissionName = "view_org_pending_213"
+	ViewMyPublished214       PermissionName = "view_my_published_214"
+	ViewOrgPublished215      PermissionName = "view_org_published_215"
 	ViewMyArchived216        PermissionName = "view_my_archived_216"
 	ViewOrgArchived217       PermissionName = "view_org_archived_217"
 	ViewMySchoolPublished218 PermissionName = "view_my_school_published_218"
@@ -21,8 +27,10 @@ const (
 	CreateLessonPlan221        PermissionName = "create_lesson_plan_221"
 	CreateMySchoolsContent223  PermissionName = "create_my_schools_content_223"
 	CreateAllSchoolsContent224 PermissionName = "create_all_schools_content_224"
+	ViewMySchoolPending225     PermissionName = "view_my_school_pending_225"
 	ViewMySchoolArchived226    PermissionName = "view_my_school_archived_226"
 	ViewAllSchoolsPublished227 PermissionName = "view_all_schools_published_227"
+	ViewAllSchoolsPending228   PermissionName = "view_all_schools_pending_228"
 	ViewAllSchoolsArchived229  PermissionName = "view_all_schools_archived_229"
 
 	EditMyUnpublishedContent230             PermissionName = "edit_my_unpublished_content_230"
@@ -33,14 +41,19 @@ const (
 	EditLessonPlanContent238                PermissionName = "edit_lesson_plan_content_238"
 
 	DeleteMyUnpublishedContent240 PermissionName = "delete_my_unpublished_content_240"
+	DeleteMySchoolsPending241     PermissionName = "delete_my_schools_pending_241"
 	RemoveMySchoolsPublished242   PermissionName = "remove_my_schools_published_242"
 	DeleteMySchoolsArchived243    PermissionName = "delete_my_schools_archived_243"
+	DeleteAllSchoolsPending244    PermissionName = "delete_all_schools_pending_244"
 	RemoveAllSchoolsPublished245  PermissionName = "remove_all_schools_published_245"
 	DeleteAllSchoolsArchived246   PermissionName = "delete_all_schools_archived_246"
 	EditMySchoolsPublished247     PermissionName = "edit_my_schools_published_247"
 	EditAllSchoolsPublished249    PermissionName = "edit_all_schools_published_249"
 
-	DeleteOrgArchivedContent253 PermissionName = "delete_org_archived_content_253"
+	DeleteMyPending251           PermissionName = "delete_my_pending_251"
+	DeleteOrgPendingContent252   PermissionName = "delete_org_pending_content_252"
+	DeleteOrgArchivedContent253  PermissionName = "delete_org_archived_content_253"
+	RemoveOrgPublishedContent254 PermissionName = "remove_org_published_content_254"
 
 	ApprovePendingContent271    PermissionName = "approve_pending_content_271"
 	RejectPendingContent272     PermissionName = "reject_pending_content_272"
