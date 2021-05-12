@@ -259,24 +259,6 @@ func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context
 	return true, nil
 }
 
-//func (c *ContentPermissionMySchoolModel) checkPermissionSet(ctx context.Context, permissionSetList []*IPermissionSet, user *entity.Operator) (bool, error){
-//	for i := range permissionSetList {
-//		err := permissionSetList[i].HasPermission(ctx, *user)
-//		if err == nil {
-//			return true, nil
-//		}
-//		if err != ErrHasNoPermission {
-//			log.Error(ctx, "HasPermission failed",
-//				log.Err(err),
-//				log.Any("permissionSetList", permissionSetList),
-//				log.Any("user", user))
-//		}
-//	}
-//	log.Info(ctx, "Has no permission",
-//		log.Any("permissionSetList", permissionSetList),
-//		log.Any("user", user))
-//	return false, nil
-//}
 func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition da.ContentCondition, user *entity.Operator) ([]*ContentProfile, error) {
 	contentTypes := condition.ContentType
 	if len(contentTypes) == 0 {
