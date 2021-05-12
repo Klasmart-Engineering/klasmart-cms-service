@@ -23,41 +23,68 @@ type IMilestoneModel interface {
 	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error)
 	Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	Publish(ctx context.Context, op *entity.Operator, IDs []string) error
-
 	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
-	IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor, shortcode string) (bool, error)
+
+	ShortcodeProvider
 }
 
 type MilestoneModel struct {
 }
 
 func (m MilestoneModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
+	var shortcode string
+	var index int
+	cursor, err := m.Current(ctx, op)
 	if err != nil {
-		log.Error(ctx, "CreateMilestone: NewLock failed",
-			log.Err(err),
-			log.Any("op", op))
+		log.Debug(ctx, "GenerateShortcode: Current failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor))
 		return "", err
 	}
-	locker.Lock()
-	defer locker.Unlock()
-	shortcodeModel := GetShortcodeModel(ctx, op, entity.KindMileStone)
-	gap, err := da.GetMilestoneDA().FindGap(ctx, shortcodeModel.cursor+1)
+	shortcodeModel := GetShortcodeModel()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		index, shortcode, err = shortcodeModel.generate(ctx, op, tx, cursor+1, m)
+		if err != nil {
+			log.Debug(ctx, "GenerateShortcode",
+				log.Any("op", op),
+				log.Int("cursor", cursor))
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
-		log.Debug(ctx, "Generate: FindGap failed", log.Any("op", op), log.Int("cursor", shortcodeModel.cursor))
 		return "", err
 	}
-	shortcode, err := utils.NumToBHex(ctx, gap, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
+	err = m.Cache(ctx, op, index, shortcode)
+	return shortcode, err
+}
+
+func (m MilestoneModel) Current(ctx context.Context, op *entity.Operator) (int, error) {
+	return da.GetShortcodeRedis(ctx).Get(ctx, op, string(entity.KindMileStone))
+}
+
+func (m MilestoneModel) Intersect(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcodes []string) (map[string]bool, error) {
+	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		Shortcodes:     dbo.NullStrings{Strings: shortcodes, Valid: true},
+		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
+		OrderBy:        da.OrderByMilestoneShortcode,
+	})
 	if err != nil {
-		log.Debug(ctx, "Generate: NumToBHex failed", log.Any("op", op), log.Int("gap", gap))
-		return "", err
+		log.Debug(ctx, "Intersect: Search failed",
+			log.Any("op", op),
+			log.Strings("shortcode", shortcodes))
+		return nil, err
 	}
-	err = shortcodeModel.Cache(ctx, op, gap, shortcode)
-	if err != nil {
-		log.Error(ctx, "Generate: Set failed", log.Err(err), log.Any("op", op), log.Int("gap", shortcodeModel.cursor), log.Int("gap", gap))
-		return "", err
+	mapShortcode := make(map[string]bool)
+	for i := range milestones {
+		mapShortcode[milestones[i].Shortcode] = true
 	}
-	return shortcode, nil
+	return mapShortcode, nil
+}
+
+func (m MilestoneModel) ShortcodeLength() int {
+	return constant.ShortcodeShowLength
 }
 
 func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor string, shortcode string) (bool, error) {
@@ -77,6 +104,41 @@ func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operat
 		}
 	}
 	return false, nil
+}
+
+func (m MilestoneModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error) {
+	exists, err := da.GetShortcodeRedis(ctx).IsCached(ctx, op, string(entity.KindMileStone), shortcode)
+	if err != nil {
+		log.Debug(ctx, "IsCached: redis access failed",
+			log.Any("op", op),
+			log.String("shortcode", shortcode))
+		return false, err
+	}
+	return exists, nil
+}
+
+func (m MilestoneModel) RemoveShortcode(ctx context.Context, op *entity.Operator, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Remove(ctx, op, string(entity.KindMileStone), shortcode)
+	if err != nil {
+		log.Error(ctx, "RemoveShortcode: redis access failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
+}
+
+func (m MilestoneModel) Cache(ctx context.Context, op *entity.Operator, cursor int, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Cache(ctx, op, string(entity.KindMileStone), cursor, shortcode)
+	if err != nil {
+		log.Debug(ctx, "Cache: redis access failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
 }
 
 func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
@@ -146,7 +208,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 		}
 		return nil
 	})
-	GetShortcodeModel(ctx, op, entity.KindMileStone).Remove(ctx, op, milestone.Shortcode)
+	m.RemoveShortcode(ctx, op, milestone.Shortcode)
 	return err
 }
 
@@ -213,7 +275,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel(ctx, op, entity.KindMileStone).IsCached(ctx, op, milestone.Shortcode)
+	exists, err := m.IsShortcodeCached(ctx, op, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: isCached failed",
 			log.Err(err),

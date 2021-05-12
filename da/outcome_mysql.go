@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"time"
 
@@ -23,7 +22,8 @@ type OutcomeCondition struct {
 	Name           sql.NullString
 	Description    sql.NullString
 	Keywords       sql.NullString
-	Shortcode      sql.NullString
+	ShortcodeLike  sql.NullString
+	Shortcodes     dbo.NullStrings
 	PublishStatus  dbo.NullStrings
 	PublishScope   sql.NullString
 	AuthorName     sql.NullString
@@ -76,21 +76,24 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Name.String)
 	}
 
-	if c.Shortcode.Valid {
+	if c.ShortcodeLike.Valid {
 		wheres = append(wheres, "match(shortcode) against(? in boolean mode)")
-		params = append(params, c.Shortcode.String)
+		params = append(params, c.ShortcodeLike.String)
 	}
 
 	if c.Keywords.Valid {
 		wheres = append(wheres, "match(keywords) against(? in boolean mode)")
-		//wheres = append(wheres, "keywords=?")
 		params = append(params, c.Keywords.String)
 	}
 
 	if c.Description.Valid {
 		wheres = append(wheres, "match(description) against(? in boolean mode)")
-		//wheres = append(wheres, "description=?")
 		params = append(params, c.Description.String)
+	}
+
+	if c.Shortcodes.Valid {
+		wheres = append(wheres, "shortcode in (?)")
+		params = append(params, c.Shortcodes.Strings)
 	}
 
 	if c.PublishStatus.Valid {
@@ -136,15 +139,14 @@ func (c *OutcomeCondition) GetConditions() ([]string, []interface{}) {
 
 func NewOutcomeCondition(condition *entity.OutcomeCondition) *OutcomeCondition {
 	return &OutcomeCondition{
-		IDs:           dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
-		Name:          sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
-		Description:   sql.NullString{String: condition.Description, Valid: condition.Description != ""},
-		Keywords:      sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
-		Shortcode:     sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
-		PublishStatus: dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
-		PublishScope:  sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
-		AuthorID:      sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
-		//AuthorName:     sql.NullString{String: condition.AuthorName, Valid: condition.AuthorName != ""},
+		IDs:            dbo.NullStrings{Strings: condition.IDs, Valid: len(condition.IDs) > 0},
+		Name:           sql.NullString{String: condition.OutcomeName, Valid: condition.OutcomeName != ""},
+		Description:    sql.NullString{String: condition.Description, Valid: condition.Description != ""},
+		Keywords:       sql.NullString{String: condition.Keywords, Valid: condition.Keywords != ""},
+		ShortcodeLike:  sql.NullString{String: condition.Shortcode, Valid: condition.Shortcode != ""},
+		PublishStatus:  dbo.NullStrings{Strings: []string{condition.PublishStatus}, Valid: condition.PublishStatus != ""},
+		PublishScope:   sql.NullString{String: condition.PublishScope, Valid: condition.PublishScope != ""},
+		AuthorID:       sql.NullString{String: condition.AuthorID, Valid: condition.AuthorID != ""},
 		OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 		FuzzyKey:       sql.NullString{String: condition.FuzzyKey, Valid: condition.FuzzyKey != ""},
 		AuthorIDs:      dbo.NullStrings{Strings: condition.AuthorIDs, Valid: len(condition.AuthorIDs) > 0},
@@ -164,6 +166,7 @@ const (
 	OrderByCreatedAtDesc
 	OrderByUpdateAt
 	OrderByUpdateAtDesc
+	OrderByShortcode
 )
 
 const defaultPageIndex = 1
@@ -229,58 +232,6 @@ func (c *OutcomeCondition) GetOrderBy() string {
 	default:
 		return "update_at desc"
 	}
-}
-
-func (o OutcomeSQLDA) findGap(ctx context.Context, tx *dbo.DBContext, num int) (gap int, err error) {
-	if num >= constant.ShortcodeSpace-1 {
-		log.Warn(ctx, "findGap: overflow", log.Int("num", num))
-		return 0, constant.ErrOverflow
-	}
-
-	var shortcode string
-	shortcode, err = utils.NumToBHex(ctx, num, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
-	if err != nil {
-		log.Debug(ctx, "NumToBHex failed", log.Int("num", num))
-		return
-	}
-	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=? limit %d", entity.Outcome{}.TableName(), constant.ShortcodeFindStep)
-	var milestones []*entity.Milestone
-	err = tx.Raw(sql, shortcode, constant.ShortcodeShowLength).Find(&milestones).Error
-	if err != nil {
-		log.Error(ctx, "FindGap: exec failed", log.Err(err), log.Int("num", num), log.String("shortcode", shortcode))
-		return
-	}
-	mapShortcodes := make(map[int]bool, constant.ShortcodeFindStep)
-	for i := range milestones {
-		short, err := utils.BHexToNum(ctx, milestones[i].Shortcode)
-		if err != nil {
-			log.Debug(ctx, "findGap: BHexToNum failed", log.Any("milestone", milestones), log.Int("index", i))
-			return 0, err
-		}
-		mapShortcodes[short] = true
-	}
-
-	for i := 0; i < constant.ShortcodeFindStep; i++ {
-		gap = num + i
-		if !mapShortcodes[gap] && gap < constant.ShortcodeSpace {
-			return
-		}
-	}
-
-	log.Info(ctx, "findGap: no gap after num", log.Int("num", num))
-	return o.findGap(ctx, tx, gap)
-}
-
-func (o OutcomeSQLDA) FindGap(ctx context.Context, num int) (gap int, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		res, err := o.findGap(ctx, tx, num)
-		if err != nil {
-			return err
-		}
-		gap = res
-		return nil
-	})
-	return
 }
 
 func (o OutcomeSQLDA) CreateOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) (err error) {

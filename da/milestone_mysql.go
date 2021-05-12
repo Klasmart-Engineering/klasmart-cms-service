@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"strings"
 	"time"
 )
@@ -161,58 +159,6 @@ func (m MilestoneSQLDA) UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, o
 	return nil
 }
 
-func (m MilestoneSQLDA) findGap(ctx context.Context, tx *dbo.DBContext, num int) (gap int, err error) {
-	if num >= constant.ShortcodeSpace-1 {
-		log.Warn(ctx, "findGap: overflow", log.Int("num", num))
-		return 0, constant.ErrOverflow
-	}
-
-	var shortcode string
-	shortcode, err = utils.NumToBHex(ctx, num, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
-	if err != nil {
-		log.Debug(ctx, "NumToBHex failed", log.Int("num", num))
-		return
-	}
-	sql := fmt.Sprintf("select shortcode from %s where shortcode >= ? and length(shortcode)=? limit %d", entity.Milestone{}.TableName(), constant.ShortcodeFindStep)
-	var milestones []*entity.Milestone
-	err = tx.Raw(sql, shortcode, constant.ShortcodeShowLength).Find(&milestones).Error
-	if err != nil {
-		log.Error(ctx, "FindGap: exec failed", log.Err(err), log.Int("num", num), log.String("shortcode", shortcode))
-		return
-	}
-	mapShortcodes := make(map[int]bool, constant.ShortcodeFindStep)
-	for i := range milestones {
-		short, err := utils.BHexToNum(ctx, milestones[i].Shortcode)
-		if err != nil {
-			log.Debug(ctx, "findGap: BHexToNum failed", log.Any("milestone", milestones), log.Int("index", i))
-			return 0, err
-		}
-		mapShortcodes[short] = true
-	}
-
-	for i := 0; i < constant.ShortcodeFindStep; i++ {
-		gap = num + i
-		if !mapShortcodes[gap] && gap < constant.ShortcodeSpace {
-			return
-		}
-	}
-
-	log.Info(ctx, "findGap: no gap after num", log.Int("num", num))
-	return m.findGap(ctx, tx, gap)
-}
-
-func (m MilestoneSQLDA) FindGap(ctx context.Context, num int) (gap int, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		res, err := m.findGap(ctx, tx, num)
-		if err != nil {
-			return err
-		}
-		gap = res
-		return nil
-	})
-	return
-}
-
 type MilestoneCondition struct {
 	ID          sql.NullString
 	IDs         dbo.NullStrings
@@ -222,6 +168,7 @@ type MilestoneCondition struct {
 	Description sql.NullString
 	Name        sql.NullString
 	Shortcode   sql.NullString
+	Shortcodes  dbo.NullStrings
 	SearchKey   sql.NullString
 
 	AuthorID  sql.NullString
@@ -267,6 +214,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if c.IDs.Valid {
 		wheres = append(wheres, "id in (?)")
 		params = append(params, c.IDs.Strings)
+	}
+
+	if c.Shortcodes.Valid {
+		wheres = append(wheres, "shortcode in (?)")
+		params = append(params, c.Shortcodes.Strings)
 	}
 
 	if c.AncestorID.Valid {
@@ -320,6 +272,7 @@ const (
 	OrderByMilestoneCreatedAtDesc
 	OrderByMilestoneUpdatedAt
 	OrderByMilestoneUpdatedAtDesc
+	OrderByMilestoneShortcode
 )
 
 func (c *MilestoneCondition) GetPager() *dbo.Pager {
@@ -340,6 +293,8 @@ func (c *MilestoneCondition) GetOrderBy() string {
 		return "type desc, update_at"
 	case OrderByMilestoneUpdatedAtDesc:
 		return "type desc, update_at desc"
+	case OrderByMilestoneShortcode:
+		return "shortcode"
 	default:
 		return "type desc, update_at desc"
 	}
@@ -359,6 +314,8 @@ func NewMilestoneOrderBy(name string) MilestoneOrderBy {
 		return OrderByMilestoneUpdatedAt
 	case "-updated_at":
 		return OrderByMilestoneUpdatedAtDesc
+	case "shortcode":
+		return OrderByMilestoneShortcode
 	default:
 		return OrderByMilestoneUpdatedAtDesc
 	}
