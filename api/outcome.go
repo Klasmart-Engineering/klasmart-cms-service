@@ -877,17 +877,17 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		return
 	}
 
-	var provider model.ShortcodeProvider
-	switch data.Kind {
-	case entity.KindMileStone:
-		provider = model.GetMilestoneModel()
-	case entity.KindOutcome:
-		provider = model.GetOutcomeModel()
-	default:
-		log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
+	//var provider model.ShortcodeProvider
+	//switch data.Kind {
+	//case entity.KindMileStone:
+	//	provider = model.GetMilestoneModel()
+	//case entity.KindOutcome:
+	//	provider = model.GetOutcomeModel()
+	//default:
+	//	log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
+	//	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	//	return
+	//}
 
 	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
 	if err != nil {
@@ -901,7 +901,17 @@ func (s *Server) generateShortcode(c *gin.Context) {
 		return
 	}
 
-	shortcode, err := model.GetShortcodeModel().Generate(ctx, op, provider)
+	var shortcode string
+	switch data.Kind {
+	case entity.KindMileStone:
+		shortcode, err = model.GetMilestoneModel().GenerateShortcode(ctx, op)
+	case entity.KindOutcome:
+		shortcode, err = model.GetOutcomeModel().GenerateShortcode(ctx, op)
+	default:
+		log.Warn(ctx, "generateShortcode: kind not allowed", log.Any("shortcode_kind", data))
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
 
 	switch err {
 	case nil:

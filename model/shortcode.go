@@ -36,7 +36,6 @@ func GetShortcodeModel() *ShortcodeModel {
 }
 
 func (scm *ShortcodeModel) generate(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, cursor int, provider ShortcodeProvider) (int, string, error) {
-	var shortcode string
 	if cursor >= constant.ShortcodeSpace {
 		return 0, "", constant.ErrOverflow
 	}
@@ -65,7 +64,7 @@ func (scm *ShortcodeModel) generate(ctx context.Context, op *entity.Operator, tx
 		return 0, "", err
 	}
 
-	for i := 0; i < len(shortcodes); i++ {
+	for i, shortcode := range shortcodes {
 		shortcode = shortcodes[i]
 		if !intersects[shortcode] {
 			return cursor + i, shortcode, nil

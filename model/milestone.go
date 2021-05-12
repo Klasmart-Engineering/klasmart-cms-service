@@ -23,11 +23,16 @@ type IMilestoneModel interface {
 	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error)
 	Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	Publish(ctx context.Context, op *entity.Operator, IDs []string) error
+	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
 
 	ShortcodeProvider
 }
 
 type MilestoneModel struct {
+}
+
+func (m MilestoneModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
+	return GetShortcodeModel().Generate(ctx, op, m)
 }
 
 func (m MilestoneModel) Current(ctx context.Context, op *entity.Operator) (int, error) {

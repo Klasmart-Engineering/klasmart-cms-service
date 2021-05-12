@@ -48,6 +48,7 @@ type IOutcomeModel interface {
 
 	HasLocked(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeIDs []string) (bool, error)
 	GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestoryIDs []string) ([]*entity.Outcome, error)
+	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
 
 	ShortcodeProvider
 }
@@ -55,6 +56,9 @@ type IOutcomeModel interface {
 type OutcomeModel struct {
 }
 
+func (ocm OutcomeModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
+	return GetShortcodeModel().Generate(ctx, op, ocm)
+}
 func (ocm OutcomeModel) Current(ctx context.Context, op *entity.Operator) (int, error) {
 	return da.GetShortcodeRedis(ctx).Get(ctx, op, string(entity.KindOutcome))
 }
