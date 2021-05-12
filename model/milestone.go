@@ -260,7 +260,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		}
 
 		if len(outcomeAncestors) != len(outcomes) {
-			log.Error(ctx, "Obtain: some error",
+			log.Error(ctx, "Obtain: ancestor and outcomes not match",
 				log.String("milestone", milestoneID),
 				log.Strings("ancestors", outcomeAncestors),
 				log.Any("outcomes", outcomes))
