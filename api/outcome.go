@@ -379,6 +379,18 @@ func (s *Server) publishOutcome(c *gin.Context) {
 		return
 	}
 	req.Scope = op.OrgID
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateLearningOutcome)
+	if err != nil {
+		log.Warn(ctx, "publishOutcome: HasOrganizationPermission failed", log.Any("op", op), log.String("outcome_id", outcomeID), log.Err(err))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "publishOutcome: no permission", log.Any("op", op), log.String("perm", string(external.CreateLearningOutcome)))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
 	err = model.GetOutcomeModel().Publish(ctx, op, outcomeID, req.Scope)
 
 	switch err {

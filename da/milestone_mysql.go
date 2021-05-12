@@ -339,9 +339,16 @@ type MilestoneOutcomeCondition struct {
 	OutcomeAncestor  sql.NullString
 	OutcomeAncestors dbo.NullStrings
 	IncludeDeleted   bool
-	OrderBy          MilestoneOrderBy `json:"order_by"`
+	OrderBy          MilestoneOutcomeOrderBy `json:"order_by"`
 	Pager            dbo.Pager
 }
+type MilestoneOutcomeOrderBy int
+
+const (
+	_ MilestoneOutcomeOrderBy = iota
+	OrderByMilestoneOutcomeUpdatedAt
+	OrderByMilestoneOutcomeUpdatedAtDesc
+)
 
 func (c *MilestoneOutcomeCondition) GetConditions() ([]string, []interface{}) {
 	wheres := make([]string, 0)
@@ -378,7 +385,15 @@ func (c *MilestoneOutcomeCondition) GetPager() *dbo.Pager {
 }
 
 func (c *MilestoneOutcomeCondition) GetOrderBy() string {
-	return "update_at desc"
+	switch c.OrderBy {
+	case OrderByMilestoneOutcomeUpdatedAt:
+		return "update_at"
+	case OrderByMilestoneOutcomeUpdatedAtDesc:
+		return "update_at desc"
+	default:
+		return "update_at desc"
+
+	}
 }
 
 func (mso MilestoneOutcomeSQLDA) SearchTx(ctx context.Context, tx *dbo.DBContext, condition *MilestoneOutcomeCondition) ([]*entity.MilestoneOutcome, error) {
