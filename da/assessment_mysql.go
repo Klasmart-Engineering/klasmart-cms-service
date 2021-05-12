@@ -128,7 +128,7 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 
 	if c.OrgID.Valid {
 		t.Appendf("exists (select 1 from schedules"+
-			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID.Valid)
+			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID.String)
 	}
 
 	if c.ClassType.Valid {
