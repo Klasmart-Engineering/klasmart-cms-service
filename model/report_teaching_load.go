@@ -94,6 +94,7 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 	// call schedule module
 	input := entity.ScheduleTeachingLoadInput{
 		OrgID:      operator.OrgID,
+		SchoolIDs:  []string{args.SchoolID},
 		ClassIDs:   args.ClassIDs,
 		TeacherIDs: args.TeacherIDs,
 		TimeRanges: ranges,

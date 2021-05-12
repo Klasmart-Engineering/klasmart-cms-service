@@ -44,7 +44,7 @@ func GetClassServiceProvider() ClassServiceProvider {
 type AmsClassService struct{}
 
 func (s AmsClassService) GetOnlyUnderOrgClasses(ctx context.Context, operator *entity.Operator, orgID string) ([]*NullableClass, error) {
-	orgClassMap, err := GetClassServiceProvider().GetByOrganizationIDs(ctx, operator, []string{orgID})
+	orgClassMap, err := s.GetByOrganizationIDs(ctx, operator, []string{orgID})
 	if err != nil {
 		log.Error(ctx, "GetClassServiceProvider.GetByOrganizationIDs error", log.Any("op", operator))
 		return nil, err
@@ -70,7 +70,7 @@ func (s AmsClassService) GetOnlyUnderOrgClasses(ctx context.Context, operator *e
 			underOrgClassIDs = append(underOrgClassIDs, key)
 		}
 	}
-	classInfos, err := GetClassServiceProvider().BatchGet(ctx, operator, underOrgClassIDs)
+	classInfos, err := s.BatchGet(ctx, operator, underOrgClassIDs)
 	if err != nil {
 		log.Error(ctx, "GetClassServiceProvider.BatchGet error", log.Any("op", operator), log.Strings("underOrgClassIDs", underOrgClassIDs))
 		return nil, err
