@@ -53,28 +53,6 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		return nil, nil
 	}
 
-	// permission check
-	checker := NewReportPermissionChecker(operator)
-	ok, err := checker.SearchAndCheckTeachers(ctx, args.TeacherIDs)
-	if err != nil {
-		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: search failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("args", args),
-			log.Any("checker", checker),
-		)
-		return nil, err
-	}
-	if !ok {
-		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: check failed",
-			log.Strings("teacher_ids", args.TeacherIDs),
-			log.Any("args", args),
-			log.Any("operator", operator),
-			log.Any("checker", checker),
-		)
-		return nil, constant.ErrForbidden
-	}
-
 	// prepend time ranges
 	var (
 		ranges     = make([]*entity.ScheduleTimeRange, 0, constant.ReportTeachingLoadDays)
@@ -300,6 +278,10 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 	}
 
 	if ok := checker.CheckTeachers(args.TeacherIDs); !ok {
+		log.Error(ctx, "cleanAndValidListArgs: checker.CheckTeachers",
+			log.Any("args", args),
+			log.Strings("teacher_ids", args.TeacherIDs),
+		)
 		return nil, constant.ErrForbidden
 	}
 
