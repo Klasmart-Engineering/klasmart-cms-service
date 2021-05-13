@@ -173,7 +173,11 @@ func (s Server) registeRoute() {
 
 		outcomes.GET("/private_learning_outcomes", s.mustLogin, s.queryPrivateOutcomes)
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
-		outcomes.POST("/shortcode", s.mustLogin, s.generateShortcode)
+	}
+
+	shortcode := s.engine.Group("/v1")
+	{
+		shortcode.POST("/shortcode", s.mustLogin, s.generateShortcode)
 	}
 
 	folders := s.engine.Group("/v1/folders")

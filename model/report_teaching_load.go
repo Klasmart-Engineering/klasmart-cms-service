@@ -35,8 +35,8 @@ type reportTeachingLoadModel struct{}
 func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadResult, error) {
 	// clean args
 	var err error
-	if args, err = m.cleanListTeachingLoadReportArgs(ctx, tx, operator, args); err != nil {
-		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachers: search failed",
+	if args, err = m.cleanAndValidListArgs(ctx, tx, operator, args); err != nil {
+		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: search failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("args", args),
@@ -55,9 +55,9 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 
 	// permission check
 	checker := NewReportPermissionChecker(operator)
-	ok, err := checker.CheckTeachers(ctx, args.TeacherIDs)
+	ok, err := checker.SearchAndCheckTeachers(ctx, args.TeacherIDs)
 	if err != nil {
-		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachers: search failed",
+		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: search failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("args", args),
@@ -66,7 +66,7 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		return nil, err
 	}
 	if !ok {
-		log.Error(ctx, "ListTeachingLoadReport: checker.CheckTeachers: check failed",
+		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: check failed",
 			log.Strings("teacher_ids", args.TeacherIDs),
 			log.Any("args", args),
 			log.Any("operator", operator),
@@ -190,7 +190,7 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 	return &r, nil
 }
 
-func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadArgs, error) {
+func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.ReportListTeachingLoadArgs) (*entity.ReportListTeachingLoadArgs, error) {
 	if args.SchoolID == "" {
 		args.SchoolID = string(entity.ListTeachingLoadReportOptionAll)
 	}
@@ -199,6 +199,14 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 	}
 	if len(args.TeacherIDs) == 0 {
 		args.TeacherIDs = append(args.TeacherIDs, string(entity.ListTeachingLoadReportOptionAll))
+	}
+
+	checker := NewReportPermissionChecker(operator)
+	if err := checker.Search(ctx); err != nil {
+		log.Error(ctx, "cleanAndValidListArgs: checker.Search: search failed",
+			log.Any("args", args),
+		)
+		return nil, err
 	}
 
 	switch args.SchoolID {
@@ -234,12 +242,14 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 				}
 			}
 			args.ClassIDs = utils.IntersectAndDeduplicateStrSlice(args.ClassIDs, userClassIDs)
-			classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
-			if err != nil {
-				return nil, err
-			}
-			for _, c := range classes {
-				args.ClassIDs = append(args.ClassIDs, c.ID)
+			if checker.HasMyOrgPermission() {
+				classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
+				if err != nil {
+					return nil, err
+				}
+				for _, c := range classes {
+					args.ClassIDs = append(args.ClassIDs, c.ID)
+				}
 			}
 		}
 	case string(entity.ListTeachingLoadReportOptionNoAssigned):
@@ -287,6 +297,10 @@ func (m *reportTeachingLoadModel) cleanListTeachingLoadReportArgs(ctx context.Co
 
 	if len(args.ClassIDs) > 0 && args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
 		args.ClassIDs = nil
+	}
+
+	if ok := checker.CheckTeachers(args.TeacherIDs); !ok {
+		return nil, constant.ErrForbidden
 	}
 
 	return args, nil

@@ -18,8 +18,6 @@ type IOutcomeDA interface {
 	SearchOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, condition *OutcomeCondition) (int, []*entity.Outcome, error)
 
 	UpdateLatestHead(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, oldHeader, newHeader string) error
-
-	FindGap(ctx context.Context, num int) (int, error)
 }
 
 var _outcomeOnce sync.Once

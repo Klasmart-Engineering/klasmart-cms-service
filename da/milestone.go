@@ -20,8 +20,6 @@ type IMilestoneDA interface {
 	BatchDelete(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) error
 
 	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error
-
-	FindGap(ctx context.Context, num int) (int, error)
 }
 
 var milestoneDA *MilestoneSQLDA

@@ -110,9 +110,9 @@ func TestMain(m *testing.M) {
 	})
 
 	testOperator = &entity.Operator{
-		UserID: "14494c07-0d4f-5141-9db2-15799993f448",
-		OrgID:  "2e922238-decb-438e-b960-a0e404e015a5", // Badanamu HQ
-		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE5MmI5MzVmLTMyYjItNTA2NC05YTNjLTgzY2RlOTYxZTdmOSIsImVtYWlsIjoia2lkc2xvb3BAY2hyeXNhbGlzLndvcmxkIiwiZXhwIjoxNjE3MjQ3OTg2LCJpc3MiOiJraWRzbG9vcCJ9.R87rt217XUkQu_SoX4ZajoNbRnKtcHR8_PI77FYdMiBx2pKtIS7S_GNf--QxuMGoBbYrtFxJp_y2eNK3D9uj6AtXlyDIQI5zkk5HXl8raH5f9aLUF5eXVLmkwfwag10LqkrxIroFdbl0LmzNq8L7kMtSd40b26hGrxKSYqNAej3hXk5Zjlq7kIYa_VsiHOyCj5R1tSvsOmUEQ79u9lp_gkwoof1t84t1R9bvZmUa23IVVzG_G1DZAicnn3wmgDy-vTSaplnz4Z4-06KQb7BrHuPqa8mGVENaFIp54NPly1v-dknR6mf_ERZgPijx3134ToyDuyWJgpaio_4tdzGdCQ",
+		UserID: "f2626a21-3e98-517d-ac4a-ed6f33231869",
+		OrgID:  "10f38ce9-5152-4049-b4e7-6d2e2ba884e6", // Badanamu HQ
+		Token:  "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImYyNjI2YTIxLTNlOTgtNTE3ZC1hYzRhLWVkNmYzMzIzMTg2OSIsImVtYWlsIjoicGoud2lsbGlhbXNAY2FsbWlkLmNvbSIsImV4cCI6MTYyMDc5MTU4NSwiaXNzIjoia2lkc2xvb3AifQ.JC0jAcFYjgOauUmxeCWIB1yiXQ3u4gg4bNNhHp58sOPHScTL5IadXrrh_hAo-6x-mQyRKV86TrAH8Z-KCP6Rm2fybmY5bIUwUi4AGsPjn8CD40kZXSDDGn4yquHLmvl1NFQAupLCnYfq91BJu4F3EwWKNFC8nMXE7VTTWMouy-J_cgBTElSzV1G-WHTe4dSx3mcr1p6OSBP5UyJMqg3DH55Vxe8keCacLP9yz5gtSoCnmBoX4Cn8Uwe1i1YIahQn0ssxgnTnUsUF6v2UPdk2gOSZDTKxdGJxLJV3-cQhQw-uU0LkkMkssYSTzGGIl2UYbdYAg0Cwo0k9XcAomaSyWw",
 	}
 
 	os.Exit(m.Run())
