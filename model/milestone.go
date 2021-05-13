@@ -855,7 +855,15 @@ func (m MilestoneModel) ObtainGeneral(ctx context.Context, op *entity.Operator, 
 			log.String("org", orgID))
 		return nil, err
 	}
-	if len(milestones) != 1 {
+
+	if len(milestones) == 0 {
+		log.Warn(ctx, "ObtainGeneral: not found",
+			log.Any("op", op),
+			log.String("org", orgID))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	if len(milestones) > 1 {
 		log.Error(ctx, "ObtainGeneral: should only one",
 			log.Any("op", op),
 			log.String("org", orgID))
@@ -868,12 +876,10 @@ func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator, s
 	ID := utils.NewID()
 	now := time.Now().Unix()
 	general := &entity.Milestone{
-		ID:             ID,
-		Name:           "General Milestone",
-		Shortcode:      shortcode,
+		ID:   ID,
+		Name: entity.GeneralMilestoneName,
+		//Shortcode:      entity.GeneralMilestoneShortcode,
 		OrganizationID: op.OrgID,
-		AuthorID:       op.UserID,
-		Description:    "This is a general milestone",
 		Type:           entity.GeneralMilestoneType,
 		Status:         entity.OutcomeStatusPublished,
 		AncestorID:     ID,
@@ -905,7 +911,7 @@ func (m MilestoneModel) CreateGeneral(ctx context.Context, op *entity.Operator) 
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
 		general, err = m.ObtainGeneral(ctx, op, tx, op.OrgID)
-		if err != nil {
+		if err != nil && err != constant.ErrRecordNotFound {
 			log.Debug(ctx, "CreateGeneral: ObtainGeneral failed", log.Any("op", op))
 			return err
 		}

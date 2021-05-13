@@ -472,3 +472,55 @@ func (s *Server) publishMilestone(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }
+
+// @ID createGeneral
+// @Summary create general milestone
+// @Tags milestone
+// @Description create general milestone
+// @Accept json
+// @Produce json
+// @Success 200 {string} string "ok"
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /milestones/publish [post]
+func (s *Server) createGeneral(c *gin.Context) {
+	ctx := c.Request.Context()
+	op := s.getOperator(c)
+
+	hasPerm, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.CreateMilestone)
+	if err != nil {
+		log.Error(ctx, "createGeneral: HasOrganizationPermission failed",
+			log.Err(err),
+			log.String("perm", string(external.CreateMilestone)),
+			log.Any("op", op))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+	if !hasPerm {
+		log.Warn(ctx, "createGeneral: has no perm",
+			log.String("perm", string(external.CreateMilestone)),
+			log.Any("op", op))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
+
+	general, err := model.GetMilestoneModel().CreateGeneral(ctx, op)
+
+	switch err {
+	case model.ErrNoAuth:
+		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case model.ErrResourceNotFound:
+		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op))
+		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrInvalidContentStatusToPublish:
+		log.Warn(ctx, "publishMilestone: Publish failed", log.Any("op", op))
+		c.JSON(http.StatusConflict, L(GeneralUnknown))
+	case nil:
+		c.JSON(http.StatusOK, general.ID)
+	default:
+		log.Error(ctx, "publishMilestone: Publish failed", log.Any("op", op))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
