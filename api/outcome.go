@@ -657,6 +657,8 @@ func (s *Server) bulkPublishOutcomes(c *gin.Context) {
 
 	err = model.GetOutcomeModel().BulkPublish(ctx, op, dbo.MustGetDB(ctx), data.OutcomeIDs, "")
 	switch err {
+	case model.ErrNoAuth:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
