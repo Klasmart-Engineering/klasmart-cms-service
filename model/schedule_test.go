@@ -68,7 +68,7 @@ func TestGetTeachLoadByCondition(t *testing.T) {
 			},
 		},
 	}
-	result, _ := GetScheduleModel().GetTeachingLoad(ctx, nil, input)
+	result, _ := GetScheduleModel().GetTeachingLoad(ctx, input)
 	for _, item := range result {
 		t.Log(item.TeacherID, ":", item.ClassType, item.Durations)
 	}

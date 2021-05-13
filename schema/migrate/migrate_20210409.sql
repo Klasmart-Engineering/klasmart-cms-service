@@ -55,4 +55,3 @@ CREATE TABLE IF NOT EXISTS `outcomes_relations` (
 ) COMMENT 'outcomes_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
 
 alter table milestones drop column type;
-alter table milestones add type varchar(10) default 'normal' comment 'milestone type';
