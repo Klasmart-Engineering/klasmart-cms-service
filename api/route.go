@@ -109,6 +109,9 @@ func (s Server) registeRoute() {
 		schedules.GET("/schedules_filter/subjects", s.mustLogin, s.getSubjectsInScheduleFilter)
 		schedules.GET("/schedules_filter/class_types", s.mustLogin, s.getClassTypesInScheduleFilter)
 		schedules.GET("/schedules_view/:id", s.mustLogin, s.getScheduleViewByID)
+
+		schedules.POST("/schedules_time_view/dates", s.mustLogin, s.postScheduledDates)
+		schedules.POST("/schedules_time_view", s.mustLogin, s.postScheduleTimeView)
 	}
 	scheduleFeedback := s.engine.Group("/v1/schedules_feedbacks")
 	{
@@ -124,6 +127,7 @@ func (s Server) registeRoute() {
 		assessments.GET("/assessments/:id", s.mustLogin, s.getAssessmentDetail)
 		assessments.PUT("/assessments/:id", s.mustLogin, s.updateAssessment)
 
+		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
 	}
 
 	homeFunStudies := s.engine.Group("/v1")
@@ -144,6 +148,8 @@ func (s Server) registeRoute() {
 
 		reports.GET("/reports/performance/h5p/students", s.mustLogin, s.listStudentsPerformanceH5PReport)
 		reports.GET("/reports/performance/h5p/students/:id", s.mustLogin, s.getStudentPerformanceH5PReport)
+
+		reports.GET("/reports/teaching_loading", s.mustLogin, s.listTeachingLoadReport)
 	}
 
 	outcomes := s.engine.Group("/v1")
@@ -167,7 +173,11 @@ func (s Server) registeRoute() {
 
 		outcomes.GET("/private_learning_outcomes", s.mustLogin, s.queryPrivateOutcomes)
 		outcomes.GET("/pending_learning_outcomes", s.mustLogin, s.queryPendingOutcomes)
-		outcomes.POST("/shortcode", s.mustLogin, s.generateShortcode)
+	}
+
+	shortcode := s.engine.Group("/v1")
+	{
+		shortcode.POST("/shortcode", s.mustLogin, s.generateShortcode)
 	}
 
 	folders := s.engine.Group("/v1/folders")
@@ -289,6 +299,11 @@ func (s Server) registeRoute() {
 		milestone.GET("/milestones", s.mustLogin, s.searchMilestone)
 
 		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
+	}
+
+	organizationPermissions := s.engine.Group("/v1/organization_permissions")
+	{
+		organizationPermissions.POST("", s.mustLogin, s.hasOrganizationPermissions)
 	}
 }
 

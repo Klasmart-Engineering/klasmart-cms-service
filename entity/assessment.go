@@ -1,5 +1,7 @@
 package entity
 
+import "gitlab.badanamu.com.cn/calmisland/dbo"
+
 type Assessment struct {
 	ID           string           `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
 	ScheduleID   string           `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
@@ -51,6 +53,11 @@ func (s AssessmentStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+type NullAssessmentStatus struct {
+	Value AssessmentStatus
+	Valid bool
 }
 
 type AssessmentDetail struct {
@@ -123,17 +130,21 @@ type AssessmentContentView struct {
 }
 
 type QueryAssessmentsArgs struct {
-	Status      *AssessmentStatus       `json:"status"`
-	TeacherName *string                 `json:"teacher_name"`
-	OrderBy     *ListAssessmentsOrderBy `json:"order_by"`
-	ClassType   *ScheduleClassType      `json:"class_type"`
-	Page        int                     `json:"page"`
-	PageSize    int                     `json:"page_size"`
+	Status      NullAssessmentStatus       `json:"status"`
+	TeacherName NullString                 `json:"teacher_name"`
+	OrderBy     NullListAssessmentsOrderBy `json:"order_by"`
+	ClassType   NullScheduleClassType      `json:"class_type"`
+	Pager       dbo.Pager                  `json:"pager"`
 }
 
 type AssessmentTeacherIDAndStatusPair struct {
 	TeacherID string           `json:"teacher_id"`
 	Status    AssessmentStatus `json:"status"`
+}
+
+type NullAssessmentTeacherIDAndStatusPairs struct {
+	Values []*AssessmentTeacherIDAndStatusPair
+	Valid  bool
 }
 
 type ListAssessmentsStatus string
@@ -178,9 +189,25 @@ func (ob ListAssessmentsOrderBy) Valid() bool {
 	}
 }
 
+type NullListAssessmentsOrderBy struct {
+	Value ListAssessmentsOrderBy
+	Valid bool
+}
+
 type ListAssessmentsResult struct {
 	Total int               `json:"total"`
 	Items []*AssessmentItem `json:"items"`
+}
+
+type QueryAssessmentsSummaryArgs struct {
+	Status      NullAssessmentStatus  `json:"status"`
+	TeacherName NullString            `json:"teacher_name"`
+	ClassType   NullScheduleClassType `json:"class_type"`
+}
+
+type AssessmentsSummary struct {
+	Complete   int `json:"complete"`
+	InProgress int `json:"in_progress"`
 }
 
 type AddAssessmentArgs struct {

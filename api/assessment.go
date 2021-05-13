@@ -24,6 +24,7 @@ import (
 // @Produce json
 // @Param status query string false "status search"
 // @Param teacher_name query string false "teacher name fuzzy search"
+// @Param class_type query string false "class type"
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)
 // @Param order_by query string false "list order by" enums(class_end_time,-class_end_time,complete_time,-complete_time) default(-class_end_time)
@@ -35,7 +36,7 @@ import (
 func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	cmd := entity.QueryAssessmentsArgs{}
+	args := entity.QueryAssessmentsArgs{}
 	{
 		status := c.Query("status")
 		if status != "" {
@@ -48,14 +49,19 @@ func (s *Server) listAssessments(c *gin.Context) {
 				return
 			}
 			if status != entity.ListAssessmentsStatusAll {
-				temp := status.AssessmentStatus()
-				cmd.Status = &temp
+				args.Status = entity.NullAssessmentStatus{
+					Value: status.AssessmentStatus(),
+					Valid: true,
+				}
 			}
 		}
 
 		teacherName := c.Query("teacher_name")
 		if teacherName != "" {
-			cmd.TeacherName = &teacherName
+			args.TeacherName = entity.NullString{
+				String: teacherName,
+				Valid:  true,
+			}
 		}
 
 		orderBy := c.Query("order_by")
@@ -68,23 +74,29 @@ func (s *Server) listAssessments(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 				return
 			}
-			cmd.OrderBy = &orderBy
+			args.OrderBy = entity.NullListAssessmentsOrderBy{
+				Value: orderBy,
+				Valid: true,
+			}
 		} else {
-			orderBy := entity.ListAssessmentsOrderByClassEndTimeDesc
-			cmd.OrderBy = &orderBy
+			args.OrderBy = entity.NullListAssessmentsOrderBy{
+				Value: entity.ListAssessmentsOrderByClassEndTimeDesc,
+				Valid: true,
+			}
 		}
 
-		pager := utils.GetDboPager(c.Query("page"), c.Query("page_size"))
-		cmd.Page, cmd.PageSize = pager.Page, pager.PageSize
+		args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 
 		classType := c.Query("class_type")
 		if classType != "" {
-			tmp := entity.ScheduleClassType(classType)
-			cmd.ClassType = &tmp
+			args.ClassType = entity.NullScheduleClassType{
+				Value: entity.ScheduleClassType(classType),
+				Valid: true,
+			}
 		}
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), cmd)
+	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -93,7 +105,77 @@ func (s *Server) listAssessments(c *gin.Context) {
 	default:
 		log.Error(ctx, "list assessments: list failed",
 			log.Err(err),
-			log.Any("cmd", cmd),
+			log.Any("cmd", args),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+}
+
+// @Summary get assessments summary
+// @Description get assessments summary
+// @Tags assessments
+// @ID getAssessmentsSummary
+// @Accept json
+// @Produce json
+// @Param status query string false "status search"
+// @Param teacher_name query string false "teacher name fuzzy search"
+// @Param class_type query string false "class type"
+// @Success 200 {object} entity.AssessmentsSummary
+// @Failure 400 {object} BadRequestResponse
+// @Failure 403 {object} ForbiddenResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments_summary [get]
+func (s *Server) getAssessmentsSummary(c *gin.Context) {
+	ctx := c.Request.Context()
+	args := entity.QueryAssessmentsSummaryArgs{}
+	status := c.Query("status")
+	if status != "" {
+		status := entity.ListAssessmentsStatus(status)
+		if !status.Valid() {
+			log.Info(ctx, "getAssessmentsSummary: invalid list assessments status",
+				log.String("status", string(status)),
+			)
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
+		if status != entity.ListAssessmentsStatusAll {
+			args.Status = entity.NullAssessmentStatus{
+				Value: status.AssessmentStatus(),
+				Valid: true,
+			}
+		}
+	}
+	teacherName := c.Query("teacher_name")
+	if teacherName != "" {
+		args.TeacherName = entity.NullString{
+			String: teacherName,
+			Valid:  true,
+		}
+	}
+	classType := c.Query("class_type")
+	if classType != "" {
+		args.ClassType = entity.NullScheduleClassType{
+			Value: entity.ScheduleClassType(classType),
+			Valid: true,
+		}
+	}
+	operator := s.getOperator(c)
+	if operator.OrgID == "" {
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	result, err := model.GetAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, result)
+	case constant.ErrForbidden:
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	default:
+		log.Error(ctx, "list assessments: list failed",
+			log.Err(err),
+			log.Any("args", args),
 		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -147,6 +229,8 @@ func (s *Server) addAssessment(c *gin.Context) {
 			log.String("new_id", newID),
 		)
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "add assessment jwt: add failed",
 			log.Err(err),
@@ -183,6 +267,8 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),

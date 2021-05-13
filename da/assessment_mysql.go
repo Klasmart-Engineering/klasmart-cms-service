@@ -112,86 +112,73 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 }
 
 type QueryAssessmentConditions struct {
-	OrgID                   *string                                    `json:"org_id"`
-	Status                  *entity.AssessmentStatus                   `json:"status"`
-	ScheduleIDs             []string                                   `json:"schedule_ids"`
-	TeacherIDs              []string                                   `json:"teacher_ids"`
-	AllowTeacherIDs         []string                                   `json:"allow_teacher_ids"`
-	TeacherIDAndStatusPairs []*entity.AssessmentTeacherIDAndStatusPair `json:"teacher_id_and_status_pairs"`
-	ClassType               *entity.ScheduleClassType                  `json:"class_type"`
-	OrderBy                 *entity.ListAssessmentsOrderBy             `json:"order_by"`
-	Page                    int                                        `json:"page"`
-	PageSize                int                                        `json:"page_size"`
+	OrgID                   entity.NullString                            `json:"org_id"`
+	Status                  entity.NullAssessmentStatus                  `json:"status"`
+	ScheduleIDs             entity.NullStrings                           `json:"schedule_ids"`
+	TeacherIDs              entity.NullStrings                           `json:"teacher_ids"`
+	AllowTeacherIDs         entity.NullStrings                           `json:"allow_teacher_ids"`
+	TeacherIDAndStatusPairs entity.NullAssessmentTeacherIDAndStatusPairs `json:"teacher_id_and_status_pairs"`
+	ClassType               entity.NullScheduleClassType                 `json:"class_type"`
+	OrderBy                 entity.NullListAssessmentsOrderBy            `json:"order_by"`
+	Pager                   dbo.Pager                                    `json:"pager"`
 }
 
 func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 	t := NewSQLTemplate("delete_at = 0")
 
-	if c.OrgID != nil {
+	if c.OrgID.Valid {
 		t.Appendf("exists (select 1 from schedules"+
-			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
+			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID.String)
 	}
 
-	if c.ClassType != nil {
+	if c.ClassType.Valid {
 		t.Appendf("exists (select 1 from schedules"+
-			" where class_type = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID)
+			" where class_type = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID.String)
 	}
 
-	if c.Status != nil {
-		t.Appendf("status = ?", *c.Status)
+	if c.Status.Valid {
+		t.Appendf("status = ?", c.Status.Value)
 	}
 
-	if c.TeacherIDs != nil {
-		if len(c.TeacherIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
+	if c.TeacherIDs.Valid {
 		t.Appendf("exists (select 1 from assessments_attendances"+
 			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
-			utils.SliceDeduplication(c.TeacherIDs))
+			utils.SliceDeduplication(c.TeacherIDs.Strings))
 	}
 
-	if c.AllowTeacherIDs != nil {
-		if len(c.AllowTeacherIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
+	if c.AllowTeacherIDs.Valid {
 		t.Appendf("exists (select 1 from assessments_attendances"+
 			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
-			utils.SliceDeduplication(c.AllowTeacherIDs))
+			utils.SliceDeduplication(c.AllowTeacherIDs.Strings))
 	}
 
-	if len(c.TeacherIDAndStatusPairs) > 0 {
+	if c.TeacherIDAndStatusPairs.Valid {
 		t2 := NewSQLTemplate("")
-		for _, p := range c.TeacherIDAndStatusPairs {
+		for _, p := range c.TeacherIDAndStatusPairs.Values {
 			t2.Appendf("(attendance_id = ? and assessments.status = ?)", p.TeacherID, p.Status)
 		}
 		format, values := t2.Or()
 		format = fmt.Sprintf("exists (select 1 from assessments_attendances "+
-			"where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and %s", format)
+			"where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and %s)", format)
 		t.Appendf(format, values...)
 	}
 
-	if c.ScheduleIDs != nil {
-		if len(c.ScheduleIDs) == 0 {
-			return FalseSQLTemplate().DBOConditions()
-		}
-		t.Appendf("schedule_id in (?)", c.ScheduleIDs)
+	if c.ScheduleIDs.Valid {
+		t.Appendf("schedule_id in (?)", c.ScheduleIDs.Strings)
 	}
 
 	return t.DBOConditions()
 }
 
 func (c *QueryAssessmentConditions) GetPager() *dbo.Pager {
-	return &dbo.Pager{
-		Page:     c.Page,
-		PageSize: c.PageSize,
-	}
+	return &c.Pager
 }
 
 func (c *QueryAssessmentConditions) GetOrderBy() string {
-	if c.OrderBy == nil {
+	if !c.OrderBy.Valid {
 		return ""
 	}
-	switch *c.OrderBy {
+	switch c.OrderBy.Value {
 	case entity.ListAssessmentsOrderByClassEndTime:
 		return "class_end_time"
 	case entity.ListAssessmentsOrderByClassEndTimeDesc:

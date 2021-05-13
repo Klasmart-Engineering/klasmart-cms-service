@@ -2,128 +2,25 @@ package model
 
 import (
 	"context"
-	"database/sql"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sync"
 )
 
+type ShortcodeProvider interface {
+	Current(ctx context.Context, op *entity.Operator) (int, error)
+	Intersect(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcodes []string) (map[string]bool, error)
+	IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor string, shortcode string) (bool, error)
+	IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error)
+	RemoveShortcode(ctx context.Context, op *entity.Operator, shortcode string) error
+	Cache(ctx context.Context, op *entity.Operator, cursor int, shortcode string) error
+	ShortcodeLength() int
+}
+
 type ShortcodeModel struct {
-}
-
-func (scm ShortcodeModel) Generate(ctx context.Context, tx *dbo.DBContext, kind entity.ShortcodeKind, orgID string, shortcode string) (string, error) {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, kind, orgID)
-	if err != nil {
-		log.Error(ctx, "GenerateShortcode: NewLock failed",
-			log.Err(err),
-			log.String("org", orgID),
-			log.String("shortcode", shortcode))
-		return "", err
-	}
-	locker.Lock()
-	defer locker.Unlock()
-	shortcodes, err := scm.search(ctx, tx, kind, orgID)
-	if err != nil {
-		log.Error(ctx, "GenerateShortcode: search failed",
-			log.Err(err),
-			log.String("org", orgID),
-			log.String("shortcode", shortcode))
-		return "", err
-	}
-	for i := 0; i < constant.ShortcodeSpace; i++ {
-		value, err := utils.NumToBHex(ctx, i, constant.ShortcodeBaseCustom, constant.ShortcodeShowLength)
-		if err != nil {
-			return "", err
-		}
-		if !shortcodes[value] && value != utils.PaddingString(shortcode, constant.ShortcodeShowLength) {
-			err = scm.cacheIt(ctx, kind, orgID, value)
-			if err != nil {
-				log.Error(ctx, "GenerateShortcode: cacheIt failed",
-					log.String("org", orgID),
-					log.String("new", value),
-					log.String("old", shortcode))
-				return "", err
-			}
-			log.Info(ctx, "GenerateShortcode: cacheIt success",
-				log.String("old", shortcode),
-				log.String("new", value))
-			return value, nil
-		}
-	}
-	return "", constant.ErrExceededLimit
-}
-
-func (scm ShortcodeModel) search(ctx context.Context, tx *dbo.DBContext, kind entity.ShortcodeKind, orgID string) (map[string]bool, error) {
-	var table string
-	if kind == entity.KindOutcome {
-		table = entity.Outcome{}.TableName()
-	}
-	if kind == entity.KindMileStone {
-		table = entity.Milestone{}.TableName()
-	}
-
-	dbShortcodes, err := da.GetShortcodeDA().Search(ctx, tx, table, &da.ShortcodeCondition{
-		OrgID: sql.NullString{String: orgID, Valid: true},
-	})
-	if err != nil {
-		log.Error(ctx, "search: Search failed",
-			log.String("kind", string(kind)),
-			log.String("org", orgID))
-		return nil, err
-	}
-	cachedShortcodes, f, err := da.GetShortcodeCacheDA().SearchWithPatten(ctx, kind, orgID)
-	if err != nil {
-		log.Error(ctx, "search: SearchWithPatten failed",
-			log.String("kind", string(kind)),
-			log.String("org", orgID))
-		return nil, err
-	}
-	shortcodes := make(map[string]bool)
-	for i := range dbShortcodes {
-		shortcodes[dbShortcodes[i].Shortcode] = true
-	}
-	for i := range cachedShortcodes {
-		shortcodes[f(cachedShortcodes[i])] = true
-	}
-	return shortcodes, nil
-}
-
-func (scm ShortcodeModel) isCached(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) (bool, error) {
-	return da.GetShortcodeCacheDA().Exists(ctx, kind, orgID, shortcode)
-}
-
-func (scm ShortcodeModel) isOccupied(ctx context.Context, tx *dbo.DBContext, table string, orgID string, ancestor string, shortcode string) (bool, error) {
-	shortcodes, err := da.GetShortcodeDA().Search(ctx, tx, table, &da.ShortcodeCondition{
-		OrgID:         sql.NullString{String: orgID, Valid: true},
-		NotAncestorID: sql.NullString{String: ancestor, Valid: true},
-		Shortcode:     sql.NullString{String: shortcode, Valid: true},
-	})
-	if err != nil {
-		log.Error(ctx, "isOccupied: Search failed",
-			log.String("kind", table),
-			log.String("org", orgID),
-			log.String("shortcode", shortcode))
-		return false, err
-	}
-	for i := range shortcodes {
-		if shortcode == shortcodes[i].Shortcode {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (scm ShortcodeModel) cacheIt(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
-	return da.GetShortcodeCacheDA().Save(ctx, kind, orgID, shortcode)
-}
-
-func (scm ShortcodeModel) removeIt(ctx context.Context, kind entity.ShortcodeKind, orgID string, shortcode string) error {
-	return da.GetShortcodeCacheDA().Remove(ctx, kind, orgID, shortcode)
 }
 
 var (
@@ -133,7 +30,50 @@ var (
 
 func GetShortcodeModel() *ShortcodeModel {
 	_shortcodeModelOnce.Do(func() {
-		_shortcodeModel = new(ShortcodeModel)
+		_shortcodeModel = &ShortcodeModel{}
 	})
 	return _shortcodeModel
+}
+
+func (scm *ShortcodeModel) generate(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, cursor int, provider ShortcodeProvider) (int, string, error) {
+	if cursor >= constant.ShortcodeSpace {
+		return 0, "", constant.ErrOverflow
+	}
+
+	shortcodes := make([]string, 0, constant.ShortcodeFindStep)
+	for index := cursor; index < cursor+constant.ShortcodeFindStep; index++ {
+		if index >= constant.ShortcodeSpace {
+			break
+		}
+		code, err := utils.NumToBHex(ctx, index, constant.ShortcodeBaseCustom, provider.ShortcodeLength())
+		if err != nil {
+			log.Debug(ctx, "Generate: NumToBHex failed",
+				log.Any("op", op),
+				log.Int("cursor", cursor),
+				log.Int("index", index))
+			return 0, "", err
+		}
+		shortcodes = append(shortcodes, code)
+	}
+
+	intersects, err := provider.Intersect(ctx, op, tx, shortcodes)
+	if err != nil {
+		log.Debug(ctx, "Generate: Intersect failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor))
+		return 0, "", err
+	}
+
+	for i, shortcode := range shortcodes {
+		if !intersects[shortcode] {
+			return cursor + i, shortcode, nil
+		}
+	}
+
+	log.Info(ctx, "generate:  recursion",
+		log.Any("op", op),
+		log.Int("cursor", cursor),
+		log.Int("length", len(shortcodes)))
+
+	return scm.generate(ctx, op, tx, cursor+len(shortcodes), provider)
 }

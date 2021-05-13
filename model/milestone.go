@@ -16,19 +16,132 @@ import (
 )
 
 type IMilestoneModel interface {
-	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error
+	Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error
 	Obtain(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
-	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string) error
+	Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeIDs []string, toPublish bool) error
 	Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error
 	Search(ctx context.Context, op *entity.Operator, condition *entity.MilestoneCondition) (int, []*entity.Milestone, error)
 	Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error)
 	Publish(ctx context.Context, op *entity.Operator, IDs []string) error
+	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
+
+	ShortcodeProvider
 }
 
 type MilestoneModel struct {
 }
 
-func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string) error {
+func (m MilestoneModel) GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error) {
+	var shortcode string
+	var index int
+	cursor, err := m.Current(ctx, op)
+	if err != nil {
+		log.Debug(ctx, "GenerateShortcode: Current failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor))
+		return "", err
+	}
+	shortcodeModel := GetShortcodeModel()
+	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		index, shortcode, err = shortcodeModel.generate(ctx, op, tx, cursor+1, m)
+		if err != nil {
+			log.Debug(ctx, "GenerateShortcode",
+				log.Any("op", op),
+				log.Int("cursor", cursor))
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+	err = m.Cache(ctx, op, index, shortcode)
+	return shortcode, err
+}
+
+func (m MilestoneModel) Current(ctx context.Context, op *entity.Operator) (int, error) {
+	return da.GetShortcodeRedis(ctx).Get(ctx, op, string(entity.KindMileStone))
+}
+
+func (m MilestoneModel) Intersect(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, shortcodes []string) (map[string]bool, error) {
+	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		Shortcodes:     dbo.NullStrings{Strings: shortcodes, Valid: true},
+		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
+		OrderBy:        da.OrderByMilestoneShortcode,
+	})
+	if err != nil {
+		log.Debug(ctx, "Intersect: Search failed",
+			log.Any("op", op),
+			log.Strings("shortcode", shortcodes))
+		return nil, err
+	}
+	mapShortcode := make(map[string]bool)
+	for i := range milestones {
+		mapShortcode[milestones[i].Shortcode] = true
+	}
+	return mapShortcode, nil
+}
+
+func (m MilestoneModel) ShortcodeLength() int {
+	return constant.ShortcodeShowLength
+}
+
+func (m MilestoneModel) IsShortcodeExists(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestor string, shortcode string) (bool, error) {
+	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		OrganizationID: sql.NullString{String: op.OrgID, Valid: true},
+		Shortcode:      sql.NullString{String: shortcode, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "IsShortcodeExists: Search failed",
+			log.String("org", op.OrgID),
+			log.String("shortcode", shortcode))
+		return false, err
+	}
+	for i := range milestones {
+		if ancestor != milestones[i].AncestorID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (m MilestoneModel) IsShortcodeCached(ctx context.Context, op *entity.Operator, shortcode string) (bool, error) {
+	exists, err := da.GetShortcodeRedis(ctx).IsCached(ctx, op, string(entity.KindMileStone), shortcode)
+	if err != nil {
+		log.Debug(ctx, "IsCached: redis access failed",
+			log.Any("op", op),
+			log.String("shortcode", shortcode))
+		return false, err
+	}
+	return exists, nil
+}
+
+func (m MilestoneModel) RemoveShortcode(ctx context.Context, op *entity.Operator, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Remove(ctx, op, string(entity.KindMileStone), shortcode)
+	if err != nil {
+		log.Error(ctx, "RemoveShortcode: redis access failed",
+			log.Err(err),
+			log.Any("op", op),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
+}
+
+func (m MilestoneModel) Cache(ctx context.Context, op *entity.Operator, cursor int, shortcode string) error {
+	err := da.GetShortcodeRedis(ctx).Cache(ctx, op, string(entity.KindMileStone), cursor, shortcode)
+	if err != nil {
+		log.Debug(ctx, "Cache: redis access failed",
+			log.Any("op", op),
+			log.Int("cursor", cursor),
+			log.String("shortcode", shortcode))
+		return err
+	}
+	return nil
+}
+
+func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateMilestone: NewLock failed",
@@ -45,17 +158,20 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 	milestone.LatestID = milestone.ID
 	milestone.CreateAt = time.Now().Unix()
 	milestone.UpdateAt = milestone.CreateAt
-	milestone.Status = "draft"
+	milestone.Status = entity.OutcomeStatusDraft
+	if toPublish {
+		milestone.Status = entity.OutcomeStatusPublished
+	}
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		occupied, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, milestone.AncestorID, milestone.Shortcode)
+		exists, err := m.IsShortcodeExists(ctx, op, tx, milestone.AncestorID, milestone.Shortcode)
 		if err != nil {
-			log.Error(ctx, "CreateMilestone: isOccupied failed",
+			log.Error(ctx, "CreateMilestone: IsShortcodeExists failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Any("milestone", milestone))
 			return err
 		}
-		if occupied {
+		if exists {
 			return constant.ErrConflict
 		}
 		err = da.GetMilestoneDA().Create(ctx, tx, milestone)
@@ -66,13 +182,14 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
+		length := len(outcomeAncestors)
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     milestone.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[i] = &milestoneOutcome
+			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
 		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
@@ -92,7 +209,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 		}
 		return nil
 	})
-	da.GetShortcodeCacheDA().Remove(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
+	m.RemoveShortcode(ctx, op, milestone.Shortcode)
 	return err
 }
 
@@ -113,18 +230,20 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
-			log.Error(ctx, "Obtain: Search failed",
-				log.Err(err),
-				log.Any("op", op),
-				log.String("milestone", milestoneID))
+			log.Error(ctx, "Obtain: Search failed", log.Any("op", op), log.String("milestone", milestoneID))
 			return err
 		}
 		m.FillRelation(milestone, relations)
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "Obtain: SearchTx failed", log.Any("op", op), log.String("milestone", milestoneID))
+			return err
+		}
 		bindLength := len(milestoneOutcomes)
 		if bindLength == 0 {
-			log.Info(ctx, "Obtain: no outcome bind",
-				log.String("milestone", milestoneID))
+			log.Info(ctx, "Obtain: no outcome bind", log.String("milestone", milestoneID))
 			return nil
 		}
 
@@ -132,27 +251,40 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		for i := range milestoneOutcomes {
 			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
 		}
-		outcomes, err := GetOutcomeModel().GetLatestOutcomesByAncestors(ctx, op, tx, outcomeAncestors)
+		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
-			log.Error(ctx, "Obtain: GetLatestOutcomesByAncestors failed",
+			log.Error(ctx, "Obtain: GetLatestByAncestors failed",
 				log.Err(err),
 				log.Strings("ancestors", outcomeAncestors))
 			return err
 		}
-		milestone.Outcomes = outcomes
+
+		if len(outcomeAncestors) != len(outcomes) {
+			log.Error(ctx, "Obtain: ancestor and outcomes not match",
+				log.String("milestone", milestoneID),
+				log.Strings("ancestors", outcomeAncestors),
+				log.Any("outcomes", outcomes))
+			return constant.ErrInternalServer
+		}
+
+		outcomesMap := make(map[string]*entity.Outcome, len(outcomes))
+		for i := range outcomes {
+			outcomesMap[outcomes[i].AncestorID] = outcomes[i]
+		}
+		milestone.Outcomes = make([]*entity.Outcome, len(outcomes))
+		for i := range outcomeAncestors {
+			milestone.Outcomes[i] = outcomesMap[outcomeAncestors[i]]
+		}
 		milestone.LoCounts = len(outcomes)
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return milestone, nil
+	return milestone, err
 }
 
-func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string) error {
+func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, milestone *entity.Milestone, outcomeAncestors []string, toPublish bool) error {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
-		log.Error(ctx, "CreateMilestone: NewLock failed",
+		log.Error(ctx, "Update: NewLock failed",
 			log.Err(err),
 			log.Any("op", op),
 			log.Any("milestone", milestone))
@@ -160,7 +292,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	exists, err := GetShortcodeModel().isCached(ctx, entity.KindMileStone, op.OrgID, milestone.Shortcode)
+	exists, err := m.IsShortcodeCached(ctx, op, milestone.Shortcode)
 	if err != nil {
 		log.Error(ctx, "Update: isCached failed",
 			log.Err(err),
@@ -181,25 +313,38 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			return err
 		}
 		if ms.LockedBy != "" {
+			log.Debug(ctx, "Update: lockedBy user",
+				log.Any("op", op),
+				log.Any("milestone", ms))
 			return &ErrContentAlreadyLocked{LockedBy: &external.User{
 				ID: ms.LockedBy,
 			}}
 		}
+
+		if toPublish && !perms[external.CreateMilestone] {
+			log.Warn(ctx, "Update: perm failed",
+				log.Any("perms", perms),
+				log.Bool("to_publish", toPublish),
+				log.Any("op", op),
+				log.Any("milestone", ms))
+			return constant.ErrOperateNotAllowed
+		}
+
 		switch ms.Status {
 		case entity.OutcomeStatusDraft:
 			if !perms[external.EditUnpublishedMilestone] {
-				log.Error(ctx, "Update: perm failed",
-					log.Err(err),
+				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
+					log.Bool("to_publish", toPublish),
 					log.Any("op", op),
 					log.Any("milestone", ms))
 				return constant.ErrOperateNotAllowed
 			}
 		case entity.OutcomeStatusPublished:
 			if !perms[external.EditPublishedMilestone] {
-				log.Error(ctx, "Update: perm failed",
-					log.Err(err),
+				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
+					log.Bool("to_publish", toPublish),
 					log.Any("op", op),
 					log.Any("milestone", ms))
 				return constant.ErrOperateNotAllowed
@@ -210,10 +355,11 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 
 		if ms.Shortcode != milestone.Shortcode {
 			ms.Shortcode = milestone.Shortcode
-			exists, err := GetShortcodeModel().isOccupied(ctx, tx, entity.Milestone{}.TableName(), op.OrgID, ms.AncestorID, ms.Shortcode)
+			exists, err := m.IsShortcodeExists(ctx, op, tx, ms.AncestorID, ms.Shortcode)
 			if err != nil {
 				log.Error(ctx, "Update: isOccupied failed",
 					log.Err(err),
+					log.Bool("to_publish", toPublish),
 					log.Any("op", op),
 					log.Any("milestone", ms))
 				return err
@@ -223,27 +369,54 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 		}
 		m.UpdateMilestone(milestone, ms)
+		if toPublish {
+			ms.Status = entity.OutcomeStatusPublished
+		}
 		err = da.GetMilestoneDA().Update(ctx, tx, ms)
 		if err != nil {
 			log.Error(ctx, "Update: Update failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
 		}
 
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
+		if toPublish && ms.SourceID != ms.ID {
+			err = da.GetMilestoneDA().BatchHide(ctx, tx, []string{ms.SourceID})
+			if err != nil {
+				log.Error(ctx, "Update: BatchHide failed",
+					log.Bool("to_publish", toPublish),
+					log.Any("op", op),
+					log.Any("milestone", ms))
+				return err
+			}
+			ancestorLatest := make(map[string]string)
+			ancestorLatest[ms.AncestorID] = ms.ID
+			err = da.GetMilestoneDA().BatchUpdateLatest(ctx, tx, ancestorLatest)
+			if err != nil {
+				log.Error(ctx, "Update: BatchUpdateLatest failed",
+					log.Bool("to_publish", toPublish),
+					log.Any("op", op),
+					log.Any("milestone", ancestorLatest))
+				return err
+			}
+		}
+
+		length := len(outcomeAncestors)
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     ms.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[i] = &milestoneOutcome
+			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.ID})
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
@@ -252,6 +425,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		if err != nil {
 			log.Error(ctx, "Update: InsertTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", milestoneOutcomes))
 			return err
@@ -260,6 +434,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 			return err
@@ -268,15 +443,13 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 		if err != nil {
 			log.Error(ctx, "Update: InsertTx failed",
 				log.Err(err),
+				log.Bool("to_publish", toPublish),
 				log.Any("op", op),
 				log.Any("milestone", ms))
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.Milestone, perms map[external.PermissionName]bool) ([]string, error) {
@@ -318,6 +491,15 @@ func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.M
 	return milestoneIDs, nil
 }
 
+func (m MilestoneModel) needUnLocked(ctx context.Context, milestones []*entity.Milestone) (unLocked []string) {
+	for i := range milestones {
+		if milestones[i].SourceID != "" && milestones[i].SourceID != milestones[i].ID {
+			unLocked = append(unLocked, milestones[i].SourceID)
+		}
+	}
+	return
+}
+
 func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms map[external.PermissionName]bool, IDs []string) error {
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
@@ -342,6 +524,16 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
+
+		err = da.GetMilestoneDA().BatchUnLock(ctx, tx, m.needUnLocked(ctx, milestones))
+		if err != nil {
+			log.Debug(ctx, "Delete: BatchUnLock failed",
+				log.Any("op", op),
+				log.Strings("ids", IDs),
+				log.Any("milestone", milestones))
+			return err
+		}
+
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
@@ -350,7 +542,7 @@ func (m MilestoneModel) Delete(ctx context.Context, op *entity.Operator, perms m
 				log.Strings("milestone", deleteIDs))
 			return err
 		}
-		//err = da.GetRelationDA().Replace(ctx, tx, entity.OutcomeRelationTable, deleteIDs, entity.MilestoneType, nil)
+
 		err = da.GetMilestoneRelationDA().DeleteTx(ctx, tx, deleteIDs)
 		if err != nil {
 			log.Error(ctx, "Delete: DeleteTx failed",
@@ -382,7 +574,7 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 
 			OrganizationID: sql.NullString{String: condition.OrganizationID, Valid: condition.OrganizationID != ""},
 			Status:         sql.NullString{String: condition.Status, Valid: condition.Status != ""},
-			OrderBy:        da.OrderByMilestoneCreatedAtDesc,
+			OrderBy:        da.NewMilestoneOrderBy(condition.OrderBy),
 			Pager:          utils.GetDboPager(condition.Page, condition.PageSize),
 		})
 		if err != nil {
@@ -442,6 +634,25 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 	return count, milestones, nil
 }
 
+func (m MilestoneModel) getBySourceID(ctx context.Context, tx *dbo.DBContext, sourceID string) (*entity.Milestone, error) {
+	_, res, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		SourceID: sql.NullString{String: sourceID, Valid: true},
+		Status:   sql.NullString{String: entity.OutcomeStatusDraft, Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "getBySourceID: failed",
+			log.String("source_id", sourceID))
+		return nil, err
+	}
+	if len(res) != 1 {
+		log.Debug(ctx, "getBySourceID: error",
+			log.String("source_id", sourceID),
+			log.Any("milestones", res))
+		return nil, constant.ErrInternalServer
+	}
+	return res[0], nil
+}
+
 func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milestoneID string) (*entity.Milestone, error) {
 	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixMilestoneMute)
 	if err != nil {
@@ -463,6 +674,18 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.String("milestone", milestoneID))
 			return err
 		}
+
+		if ms.LockedBy == op.UserID {
+			milestone, err = m.getBySourceID(ctx, tx, ms.ID)
+			if err != nil {
+				log.Debug(ctx, "Occupy: getBySourceID failed",
+					log.Any("op", op),
+					log.Any("milestone", ms))
+				return err
+			}
+			return nil
+		}
+
 		if ms.LockedBy != "" {
 			log.Warn(ctx, "Occupy: already locked", log.Any("milestone", ms))
 			return &ErrContentAlreadyLocked{LockedBy: &external.User{
@@ -493,7 +716,10 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("op", op),
 				log.Any("milestone", milestone))
 		}
-		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, milestoneID)
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID: sql.NullString{String: milestoneID, Valid: true},
+			OrderBy:     da.OrderByMilestoneOutcomeUpdatedAt,
+		})
 		if err != nil {
 			log.Error(ctx, "Occupy: Search failed",
 				log.Err(err),
@@ -536,10 +762,7 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return milestone, nil
+	return milestone, err
 }
 
 func (m MilestoneModel) canPublish(ctx context.Context, milestones []*entity.Milestone) (publishIDs, hideIDs []string, ancestorLatest map[string]string, err error) {
@@ -716,12 +939,14 @@ func (m *MilestoneModel) Copy(op *entity.Operator, ms *entity.Milestone) (*entit
 	if ms.Status != entity.OutcomeStatusPublished {
 		return nil, constant.ErrOperateNotAllowed
 	}
+	now := time.Now().Unix()
 	milestone := &entity.Milestone{
 		ID:             utils.NewID(),
 		Name:           ms.Name,
 		Shortcode:      ms.Shortcode,
 		OrganizationID: op.OrgID,
 		AuthorID:       op.UserID,
+		Type:           ms.Type,
 		Description:    ms.Description,
 		LoCounts:       ms.LoCounts,
 
@@ -729,6 +954,8 @@ func (m *MilestoneModel) Copy(op *entity.Operator, ms *entity.Milestone) (*entit
 
 		AncestorID: ms.AncestorID,
 		SourceID:   ms.ID,
+		CreateAt:   now,
+		UpdateAt:   now,
 	}
 	milestone.SourceID = ms.ID
 	milestone.LatestID = milestone.ID

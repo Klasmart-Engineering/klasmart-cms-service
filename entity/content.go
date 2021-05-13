@@ -184,6 +184,11 @@ func (c ContentType) Name() string {
 	return "Unknown"
 }
 
+type NullContentType struct {
+	Value ContentType
+	Valid bool
+}
+
 func NewContentPublishStatus(status string) ContentPublishStatus {
 	switch status {
 	case ContentStatusDraft:

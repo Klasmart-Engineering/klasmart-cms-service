@@ -80,9 +80,9 @@ type PullOutcomeSetResponse struct {
 }
 
 // @ID pullOutcomeSet
-// @Summary getLearningOutcome
+// @Summary getOutcomeSet
 // @Tags outcome_set
-// @Description learning outcomes info
+// @Description outcome_set info
 // @Accept json
 // @Produce json
 // @Param set_name query string true "search by name"

@@ -21,6 +21,7 @@ type UserServiceProvider interface {
 	Query(ctx context.Context, operator *entity.Operator, organizationID, keyword string) ([]*User, error)
 	GetByOrganization(ctx context.Context, operator *entity.Operator, organizationID string) ([]*User, error)
 	NewUser(ctx context.Context, operator *entity.Operator, email string) (string, error)
+	FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error)
 }
 
 type User struct {
@@ -270,4 +271,66 @@ func (s AmsUserService) NewUser(ctx context.Context, operator *entity.Operator, 
 	}
 
 	return data.NewUser.UserID, nil
+}
+
+func (s AmsUserService) FilterByPermission(ctx context.Context, operator *entity.Operator, userIDs []string, permissionName PermissionName) ([]string, error) {
+	if len(userIDs) == 0 {
+		return []string{}, nil
+	}
+
+	_ids, indexMapping := utils.SliceDeduplicationMap(userIDs)
+
+	sb := new(strings.Builder)
+	sb.WriteString("query($organization_id: ID!, $permission_name: ID!) {")
+	for index, id := range _ids {
+		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {membership(organization_id: $organization_id) {checkAllowed(permission_name: $permission_name)}}\n", index, id)
+	}
+	sb.WriteString("}")
+
+	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	request.Var("organization_id", operator.OrgID)
+	request.Var("permission_name", permissionName.String())
+
+	data := map[string]*struct {
+		Membership struct {
+			CheckAllowed bool `json:"checkAllowed"`
+		} `json:"membership"`
+	}{}
+	response := &chlorine.Response{
+		Data: &data,
+	}
+
+	_, err := GetAmsClient().Run(ctx, request, response)
+	if err != nil {
+		log.Error(ctx, "filter users by permission failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Strings("userIDs", userIDs),
+			log.String("permission", permissionName.String()))
+		return nil, err
+	}
+
+	filtered := make([]string, 0, len(userIDs))
+	appended := make(map[string]bool, len(_ids))
+	for index, UserID := range userIDs {
+		if appended[UserID] {
+			continue
+		}
+
+		user := data[fmt.Sprintf("q%d", indexMapping[index])]
+		if user == nil || !user.Membership.CheckAllowed {
+			continue
+		}
+
+		filtered = append(filtered, UserID)
+		appended[UserID] = true
+	}
+
+	log.Info(ctx, "filter users by permission success",
+		log.Any("operator", operator),
+		log.Strings("userIDs", userIDs),
+		log.String("permission", permissionName.String()),
+		log.Strings("result", filtered))
+
+	return filtered, nil
 }

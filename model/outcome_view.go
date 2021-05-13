@@ -3,9 +3,8 @@ package model
 import (
 	"context"
 	"errors"
-	//"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
+	"regexp"
 
-	//"gitlab.badanamu.com.cn/calmisland/kidsloop2/api"
 	"strings"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -13,6 +12,17 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
+
+type ErrValidFailed struct {
+	Msg string
+}
+
+func (e *ErrValidFailed) Error() string {
+	return e.Msg
+}
+
+var shortcode3Validate = regexp.MustCompile(`^[A-Z0-9]{3}$`)
+var shortcode5Validate = regexp.MustCompile(`^[A-Z0-9]{5}$`)
 
 type OutcomeCreateView struct {
 	OutcomeID      string                  `json:"outcome_id"`
@@ -37,7 +47,12 @@ type OutcomeSetCreateView struct {
 	SetName string `json:"set_name" form:"set_name"`
 }
 
-func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
+type Milestone struct {
+	MilestoneID   string `json:"milestone_id" form:"milestone_id"`
+	MilestoneName string `json:"milestone_name" form:"milestone_name"`
+}
+
+func (req OutcomeCreateView) ToOutcome(ctx context.Context, op *entity.Operator) (*entity.Outcome, error) {
 	outcome := entity.Outcome{
 		Name:          req.OutcomeName,
 		Assumed:       req.Assumed,
@@ -45,6 +60,23 @@ func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
 		Description:   req.Description,
 		Shortcode:     req.Shortcode,
 	}
+
+	if len(req.Program) == 0 || len(req.Subject) == 0 {
+		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
+		return nil, &ErrValidFailed{Msg: "program and subject is required"}
+	}
+
+	if !shortcode3Validate.MatchString(req.Shortcode) && !shortcode5Validate.MatchString(req.Shortcode) {
+		log.Warn(ctx, "ToOutcome: program and subject is required", log.Any("op", op), log.Any("req", req))
+		return nil, &ErrValidFailed{Msg: "shortcode mismatch"}
+	}
+	_, _, _, _, _, _, _, _, err := prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
+		req.Program, req.Subject, req.Developmental, req.Skills, req.Grade, req.Age)
+	if err != nil {
+		log.Error(ctx, "ToOutcome: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", req))
+		return nil, &ErrValidFailed{Msg: "program and subject is required"}
+	}
+
 	outcome.Program = strings.Join(req.Program, entity.JoinComma)
 	outcome.Subject = strings.Join(req.Subject, entity.JoinComma)
 	outcome.Developmental = strings.Join(req.Developmental, entity.JoinComma)
@@ -71,8 +103,8 @@ func (req OutcomeCreateView) ToOutcome() (*entity.Outcome, error) {
 	return &outcome, nil
 }
 
-func (req OutcomeCreateView) ToOutcomeWithID(outcomeID string) (*entity.Outcome, error) {
-	outcome, err := req.ToOutcome()
+func (req OutcomeCreateView) ToOutcomeWithID(ctx context.Context, op *entity.Operator, outcomeID string) (*entity.Outcome, error) {
+	outcome, err := req.ToOutcome(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +201,7 @@ type OutcomeView struct {
 	CreatedAt        int64                   `json:"created_at"`
 	UpdatedAt        int64                   `json:"update_at"`
 	Sets             []*OutcomeSetCreateView `json:"sets"`
+	Milestones       []*Milestone            `json:"milestones"`
 }
 
 type OutcomeSearchResponse struct {
@@ -343,6 +376,13 @@ func buildOutcomeView(org, ath, prd, sbj, cat, sbc, grd, age map[string]string, 
 			SetName: outcome.Sets[i].Name,
 		}
 		view.Sets[i] = &set
+	}
+	view.Milestones = make([]*Milestone, len(outcome.Milestones))
+	for i := range outcome.Milestones {
+		view.Milestones[i] = &Milestone{
+			MilestoneID:   outcome.Milestones[i].ID,
+			MilestoneName: outcome.Milestones[i].Name,
+		}
 	}
 	return view
 }

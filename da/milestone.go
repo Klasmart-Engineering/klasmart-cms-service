@@ -15,29 +15,30 @@ type IMilestoneDA interface {
 
 	BatchPublish(ctx context.Context, tx *dbo.DBContext, publishIDs []string) error
 	BatchHide(ctx context.Context, tx *dbo.DBContext, hideIDs []string) error
+	BatchUnLock(ctx context.Context, tx *dbo.DBContext, unLockIDs []string) error
 	BatchUpdateLatest(ctx context.Context, tx *dbo.DBContext, ancestorLatest map[string]string) error
 	BatchDelete(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) error
 
 	UnbindOutcomes(ctx context.Context, tx *dbo.DBContext, outcomeAncestors []string) error
 }
 
-var milestoneDA *MilestoneSqlDA
+var milestoneDA *MilestoneSQLDA
 
 var _milestoneOnce sync.Once
 
 func GetMilestoneDA() IMilestoneDA {
 	_milestoneOnce.Do(func() {
-		milestoneDA = new(MilestoneSqlDA)
+		milestoneDA = new(MilestoneSQLDA)
 	})
 	return milestoneDA
 }
 
-var milestoneOutcomeDA *MilestoneOutcomeSqlDA
+var milestoneOutcomeDA *MilestoneOutcomeSQLDA
 var _milestoneOutcomeOnce sync.Once
 
-func GetMilestoneOutcomeDA() *MilestoneOutcomeSqlDA {
+func GetMilestoneOutcomeDA() *MilestoneOutcomeSQLDA {
 	_milestoneOutcomeOnce.Do(func() {
-		milestoneOutcomeDA = new(MilestoneOutcomeSqlDA)
+		milestoneOutcomeDA = new(MilestoneOutcomeSQLDA)
 	})
 	return milestoneOutcomeDA
 }

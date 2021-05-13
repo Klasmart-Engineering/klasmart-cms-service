@@ -88,6 +88,7 @@ const (
 	ShortcodeShowLength    = 5
 	ShortcodeMaxShowLength = 32
 	ShortcodeSpace         = ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom * ShortcodeBaseCustom
+	ShortcodeFindStep      = 200
 )
 
 const (
@@ -139,4 +140,8 @@ const (
 	ScheduleRelationBatchInsertCount = 3000
 	// 750 * 800
 	ScheduleBatchInsertCount = 800
+)
+
+const (
+	MilestoneNameLength = 200
 )

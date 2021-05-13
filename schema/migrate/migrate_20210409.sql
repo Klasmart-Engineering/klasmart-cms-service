@@ -53,3 +53,5 @@ CREATE TABLE IF NOT EXISTS `outcomes_relations` (
     `delete_at` BIGINT DEFAULT NULL COMMENT 'deleted_at',
     UNIQUE KEY `master_relation_delete` (`master_id`, `relation_id`, `relation_type`,`master_type`,`delete_at`)
 ) COMMENT 'outcomes_relations' DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci ;
+
+alter table milestones drop column type;

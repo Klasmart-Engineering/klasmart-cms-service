@@ -12,7 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
-type SetSqlDA struct {
+type SetSQLDA struct {
 	dbo.BaseDA
 }
 
@@ -146,7 +146,7 @@ func (c *OutcomeSetCondition) GetOrderBy() string {
 		return "update_at desc"
 	}
 }
-func (o SetSqlDA) CreateSet(ctx context.Context, tx *dbo.DBContext, set *entity.Set) (err error) {
+func (o SetSQLDA) CreateSet(ctx context.Context, tx *dbo.DBContext, set *entity.Set) (err error) {
 	now := time.Now().Unix()
 	if set.CreateAt == 0 {
 		set.CreateAt = now
@@ -162,7 +162,7 @@ func (o SetSqlDA) CreateSet(ctx context.Context, tx *dbo.DBContext, set *entity.
 	return
 }
 
-func (o SetSqlDA) UpdateOutcomeSet(ctx context.Context, tx *dbo.DBContext, set *entity.Set) (err error) {
+func (o SetSQLDA) UpdateOutcomeSet(ctx context.Context, tx *dbo.DBContext, set *entity.Set) (err error) {
 	if set.UpdateAt == 0 {
 		set.UpdateAt = time.Now().Unix()
 	}
@@ -173,7 +173,7 @@ func (o SetSqlDA) UpdateOutcomeSet(ctx context.Context, tx *dbo.DBContext, set *
 	return
 }
 
-func (o SetSqlDA) SearchSet(ctx context.Context, tx *dbo.DBContext, condition *SetCondition) (total int, sets []*entity.Set, err error) {
+func (o SetSQLDA) SearchSet(ctx context.Context, tx *dbo.DBContext, condition *SetCondition) (total int, sets []*entity.Set, err error) {
 	total, err = o.PageTx(ctx, tx, condition, &sets)
 	if err != nil {
 		log.Error(ctx, "SearchSet failed",
@@ -183,7 +183,7 @@ func (o SetSqlDA) SearchSet(ctx context.Context, tx *dbo.DBContext, condition *S
 	return
 }
 
-func (o SetSqlDA) SearchOutcomeSet(ctx context.Context, tx *dbo.DBContext, condition *OutcomeSetCondition) (total int, outcomeSets []*entity.OutcomeSet, err error) {
+func (o SetSQLDA) SearchOutcomeSet(ctx context.Context, tx *dbo.DBContext, condition *OutcomeSetCondition) (total int, outcomeSets []*entity.OutcomeSet, err error) {
 	total, err = o.PageTx(ctx, tx, condition, &outcomeSets)
 	if err != nil {
 		log.Error(ctx, "SearchOutcomeSet failed",
@@ -193,7 +193,7 @@ func (o SetSqlDA) SearchOutcomeSet(ctx context.Context, tx *dbo.DBContext, condi
 	return
 }
 
-func (o SetSqlDA) BulkBindOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeSets []*entity.OutcomeSet) error {
+func (o SetSQLDA) BulkBindOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeSets []*entity.OutcomeSet) error {
 
 	now := time.Now().Unix()
 	sql := fmt.Sprintf("insert into %s(outcome_id, set_id, create_at, update_at) values", entity.OutcomeSet{}.TableName())
@@ -213,7 +213,7 @@ func (o SetSqlDA) BulkBindOutcomeSet(ctx context.Context, op *entity.Operator, t
 	return nil
 }
 
-func (o SetSqlDA) BindOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeSets []*entity.OutcomeSet) error {
+func (o SetSQLDA) BindOutcomeSet(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcomeSets []*entity.OutcomeSet) error {
 	now := time.Now().Unix()
 	table := entity.OutcomeSet{}.TableName()
 	values := make([][]interface{}, len(outcomeSets))
@@ -237,7 +237,7 @@ func (o SetSqlDA) BindOutcomeSet(ctx context.Context, op *entity.Operator, tx *d
 	return nil
 }
 
-func (o SetSqlDA) DeleteBoundOutcomeSet(ctx context.Context, tx *dbo.DBContext, outcomeID string) error {
+func (o SetSQLDA) DeleteBoundOutcomeSet(ctx context.Context, tx *dbo.DBContext, outcomeID string) error {
 	sql := fmt.Sprintf("delete from %s where outcome_id = ?", entity.OutcomeSet{}.TableName())
 	err := tx.Exec(sql, outcomeID).Error
 	if err != nil {
@@ -249,7 +249,7 @@ func (o SetSqlDA) DeleteBoundOutcomeSet(ctx context.Context, tx *dbo.DBContext, 
 	return nil
 }
 
-func (o SetSqlDA) SearchOutcomeBySetName(ctx context.Context, op *entity.Operator, name string) ([]*entity.OutcomeSet, error) {
+func (o SetSQLDA) SearchOutcomeBySetName(ctx context.Context, op *entity.Operator, name string) ([]*entity.OutcomeSet, error) {
 	sql := fmt.Sprintf("select * from %s where set_id in (select id from %s where match(name) against(? in boolean mode) and organization_id = ? and delete_at = 0) and delete_at is null",
 		entity.OutcomeSet{}.TableName(), entity.Set{}.TableName())
 	var outcomeSets []*entity.OutcomeSet
@@ -264,7 +264,7 @@ func (o SetSqlDA) SearchOutcomeBySetName(ctx context.Context, op *entity.Operato
 	return outcomeSets, nil
 }
 
-func (o SetSqlDA) SearchSetsByOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) (map[string][]*entity.Set, error) {
+func (o SetSQLDA) SearchSetsByOutcome(ctx context.Context, tx *dbo.DBContext, outcomeIDs []string) (map[string][]*entity.Set, error) {
 	sql := fmt.Sprintf("select distinct a.outcome_id, a.set_id, b.name from (select * from %s where outcome_id in (?)) as a left join %s as b on (a.set_id=b.id)",
 		entity.OutcomeSet{}.TableName(), entity.Set{}.TableName())
 	var result []*struct {
@@ -290,7 +290,7 @@ func (o SetSqlDA) SearchSetsByOutcome(ctx context.Context, tx *dbo.DBContext, ou
 	return outcomesSets, nil
 }
 
-func (o SetSqlDA) IsSetExist(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, name string) (bool, error) {
+func (o SetSQLDA) IsSetExist(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, name string) (bool, error) {
 	sql := fmt.Sprintf("select * from %s where name=? and organization_id=?", entity.Set{}.TableName())
 	var sets []*entity.Set
 	err := tx.Raw(sql, name, op.OrgID).Scan(&sets).Error

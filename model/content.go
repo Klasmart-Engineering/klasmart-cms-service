@@ -228,7 +228,7 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	//If scope changed, refresh visibility settings
-	if scope != nil {
+	if scope != nil && len(scope) > 0 {
 		err = cm.refreshContentVisibilitySettings(ctx, tx, content.ID, scope)
 		if err != nil {
 			log.Error(ctx, "refreshContentVisibilitySettings failed",
@@ -243,7 +243,7 @@ func (cm *ContentModel) doPublishContent(ctx context.Context, tx *dbo.DBContext,
 	return nil
 }
 
-func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest) error {
+func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateContentRequest, op *entity.Operator) error {
 	if c.LessonType != "" {
 		_, err := GetLessonTypeModel().GetByID(ctx, c.LessonType)
 		if err != nil {
@@ -267,6 +267,12 @@ func (cm ContentModel) checkContentInfo(ctx context.Context, c entity.CreateCont
 		return ErrInvalidSelectForm
 	}
 
+	_, _, _, _, _, _, _, _, err = prepareAllNeededName(ctx, op, []string{op.OrgID}, []string{op.UserID},
+		[]string{c.Program}, c.Subject, c.Category, c.SubCategory, c.Grade, c.Age)
+	if err != nil {
+		log.Error(ctx, "checkContentInfo: prepareAllNeededName failed", log.Err(err), log.Any("op", op), log.Any("req", c))
+		return err
+	}
 	return nil
 }
 
@@ -391,7 +397,7 @@ func (cm *ContentModel) CreateContent(ctx context.Context, tx *dbo.DBContext, c 
 		c.PublishScope = []string{operator.OrgID}
 	}
 
-	err := cm.checkContentInfo(ctx, c)
+	err := cm.checkContentInfo(ctx, c, operator)
 	if err != nil {
 		log.Warn(ctx, "check content failed", log.Err(err), log.String("uid", operator.UserID), log.Any("data", c))
 		return "", err
@@ -468,7 +474,7 @@ func (cm *ContentModel) UpdateContent(ctx context.Context, tx *dbo.DBContext, ci
 		return ErrInvalidContentType
 	}
 
-	err := cm.checkContentInfo(ctx, data)
+	err := cm.checkContentInfo(ctx, data, user)
 	if err != nil {
 		return err
 	}
@@ -2055,17 +2061,14 @@ func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx
 	pendingAddScopes := cm.checkDiff(ctx, alreadyScopes, scope)
 	pendingDeleteScopes := cm.checkDiff(ctx, scope, alreadyScopes)
 
-	err = da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, pendingAddScopes)
-	if err != nil {
-		log.Error(ctx,
-			"BatchCreateContentVisibilitySettings failed",
-			log.Err(err),
-			log.String("cid", cid),
-			log.Strings("alreadyScopes", alreadyScopes),
-			log.Strings("scope", scope),
-			log.Strings("pendingAddScopes", pendingAddScopes))
-		return err
-	}
+	log.Info(ctx,
+		"BatchRefreshContentVisibilitySettings",
+		log.String("cid", cid),
+		log.Strings("alreadyScopes", alreadyScopes),
+		log.Strings("scope", scope),
+		log.Strings("pendingDeleteScopes", pendingDeleteScopes),
+		log.Strings("pendingAddScopes", pendingAddScopes))
+
 	err = da.GetContentDA().BatchDeleteContentVisibilitySettings(ctx, tx, cid, pendingDeleteScopes)
 	if err != nil {
 		log.Error(ctx,
@@ -2075,6 +2078,18 @@ func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx
 			log.Strings("alreadyScopes", alreadyScopes),
 			log.Strings("scope", scope),
 			log.Strings("pendingDeleteScopes", pendingDeleteScopes))
+		return err
+	}
+
+	err = da.GetContentDA().BatchCreateContentVisibilitySettings(ctx, tx, cid, pendingAddScopes)
+	if err != nil {
+		log.Error(ctx,
+			"BatchCreateContentVisibilitySettings failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Strings("alreadyScopes", alreadyScopes),
+			log.Strings("scope", scope),
+			log.Strings("pendingAddScopes", pendingAddScopes))
 		return err
 	}
 	return nil
@@ -2729,7 +2744,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 	for i := range contentList {
 		outcomeIDs = append(outcomeIDs, contentList[i].Outcomes...)
 	}
-	//outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, user)
+	//outcomeEntities, err := GetOutcomeModel().GetLatestByIDs(ctx, dbo.MustGetDB(ctx), outcomeIDs, user)
 	//if err != nil {
 	//	log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", outcomeIDs), log.String("uid", user.UserID))
 	//}
@@ -2764,7 +2779,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 
 		outcomeEntities := make([]*entity.Outcome, 0)
 		if outComes {
-			outcomeEntities, err = GetOutcomeModel().GetLatestOutcomesByIDs(ctx, user, dbo.MustGetDB(ctx), contentList[i].Outcomes)
+			outcomeEntities, err = GetOutcomeModel().GetLatestByIDs(ctx, user, dbo.MustGetDB(ctx), contentList[i].Outcomes)
 			if err != nil {
 				log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", contentList[i].Outcomes), log.String("uid", user.UserID))
 			}
@@ -2803,7 +2818,7 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 }
 
 func (cm *ContentModel) getOutcomes(ctx context.Context, pickIDs []string, user *entity.Operator) []*entity.Outcome {
-	outcomeEntities, err := GetOutcomeModel().GetLatestOutcomesByIDs(ctx, user, dbo.MustGetDB(ctx), pickIDs)
+	outcomeEntities, err := GetOutcomeModel().GetLatestByIDs(ctx, user, dbo.MustGetDB(ctx), pickIDs)
 	if err != nil {
 		log.Error(ctx, "get latest outcomes entity failed", log.Err(err), log.Strings("outcome list", pickIDs), log.String("uid", user.UserID))
 	}

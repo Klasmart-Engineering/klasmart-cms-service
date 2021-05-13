@@ -94,9 +94,9 @@ func (OutcomeSetModel) BulkBindOutcomeSet(ctx context.Context, op *entity.Operat
 	locker.Lock()
 	defer locker.Unlock()
 	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		hasLocked, err := GetOutcomeModel().HasLockedOutcome(ctx, op, tx, outcomeIDs)
+		hasLocked, err := GetOutcomeModel().HasLocked(ctx, op, tx, outcomeIDs)
 		if err != nil {
-			log.Error(ctx, "BulkBindOutcomeSet: HasLockedOutcome failed",
+			log.Error(ctx, "BulkBindOutcomeSet: HasLocked failed",
 				log.Err(err),
 				log.Any("op", op),
 				log.Strings("outcomes", outcomeIDs),
@@ -146,11 +146,7 @@ func (OutcomeSetModel) BulkBindOutcomeSet(ctx context.Context, op *entity.Operat
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, op, nil)
-	return nil
+	return err
 }
 
 func (OutcomeSetModel) BindByOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error {
