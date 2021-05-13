@@ -177,6 +177,8 @@ type MilestoneCondition struct {
 	Status   sql.NullString
 	Statuses dbo.NullStrings
 
+	Type sql.NullString
+
 	OrganizationID sql.NullString
 	IncludeDeleted bool
 	OrderBy        MilestoneOrderBy `json:"order_by"`
@@ -260,6 +262,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 	if c.Statuses.Valid {
 		wheres = append(wheres, "status in (?)")
 		params = append(params, c.Statuses.Strings)
+	}
+
+	if c.Type.Valid {
+		wheres = append(wheres, "type=?")
+		params = append(params, c.Type.String)
 	}
 
 	if !c.IncludeDeleted {

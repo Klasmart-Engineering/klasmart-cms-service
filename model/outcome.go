@@ -295,6 +295,9 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 			if milestones[i].Status == entity.OutcomeStatusDraft && milestones[i].SourceID != milestones[i].ID {
 				continue
 			}
+			if milestones[i].Type == entity.GeneralMilestoneType && len(milestones) != 1 {
+				continue
+			}
 			outcome.Milestones = append(outcome.Milestones, milestones[i])
 		}
 		return nil

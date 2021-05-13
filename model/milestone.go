@@ -845,26 +845,42 @@ func (m MilestoneModel) Publish(ctx context.Context, op *entity.Operator, IDs []
 }
 
 func (m MilestoneModel) ObtainGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error) {
-	panic("implement me")
+	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		OrganizationID: sql.NullString{String: orgID, Valid: true},
+		Type:           sql.NullString{String: string(entity.GeneralMilestoneType), Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "ObtainGeneral:Search failed",
+			log.Any("op", op),
+			log.String("org", orgID))
+		return nil, err
+	}
+	if len(milestones) != 1 {
+		log.Error(ctx, "ObtainGeneral: should only one",
+			log.Any("op", op),
+			log.String("org", orgID))
+		return nil, constant.ErrInternalServer
+	}
+	return milestones[0], nil
 }
 
 func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator, shortcode string) *entity.Milestone {
 	ID := utils.NewID()
 	now := time.Now().Unix()
 	general := &entity.Milestone{
-		ID: ID,
-		Name: "General Milestone",
-		Shortcode: shortcode,
+		ID:             ID,
+		Name:           "General Milestone",
+		Shortcode:      shortcode,
 		OrganizationID: op.OrgID,
-		AuthorID: op.UserID,
-		Description: "This is a general milestone",
-		Type: entity.GeneralMilestoneType,
-		Status: entity.OutcomeStatusPublished,
-		AncestorID: ID,
-		SourceID: ID,
-		LatestID: ID,
-		CreateAt: now,
-		UpdateAt: now,
+		AuthorID:       op.UserID,
+		Description:    "This is a general milestone",
+		Type:           entity.GeneralMilestoneType,
+		Status:         entity.OutcomeStatusPublished,
+		AncestorID:     ID,
+		SourceID:       ID,
+		LatestID:       ID,
+		CreateAt:       now,
+		UpdateAt:       now,
 	}
 	return general
 }
@@ -922,7 +938,7 @@ func (m MilestoneModel) BindToGeneral(ctx context.Context, op *entity.Operator, 
 		return constant.ErrInternalServer
 	}
 	milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
-		MilestoneID: sql.NullString{String: general.ID, Valid: true},
+		MilestoneID:     sql.NullString{String: general.ID, Valid: true},
 		OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
 	})
 	if err != nil {
@@ -936,10 +952,10 @@ func (m MilestoneModel) BindToGeneral(ctx context.Context, op *entity.Operator, 
 	}
 	now := time.Now().Unix()
 	milestoneOutcome := &entity.MilestoneOutcome{
-		MilestoneID: general.ID,
+		MilestoneID:     general.ID,
 		OutcomeAncestor: outcome.AncestorID,
-		CreateAt: now,
-		UpdateAt: now,
+		CreateAt:        now,
+		UpdateAt:        now,
 	}
 	err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, []*entity.MilestoneOutcome{milestoneOutcome})
 	if err != nil {
@@ -951,6 +967,7 @@ func (m MilestoneModel) BindToGeneral(ctx context.Context, op *entity.Operator, 
 	}
 	return nil
 }
+
 var (
 	_milestoneModel     IMilestoneModel
 	_milestoneModelOnce sync.Once
