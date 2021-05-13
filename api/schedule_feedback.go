@@ -38,7 +38,7 @@ func (s *Server) addScheduleFeedback(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, D(IDResponse{ID: id}))
 	case constant.ErrRecordNotFound:
-		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrOnlyStudentCanSubmitFeedback:
