@@ -18,8 +18,8 @@ var (
 )
 
 const (
-	VisibilitySettingsTypeMySchools  VisibilitySettingsType = 1
-	VisibilitySettingsTypeAllSchools VisibilitySettingsType = 2
+	VisibilitySettingsTypeMySchools         VisibilitySettingsType = 1
+	VisibilitySettingsTypeAllSchools        VisibilitySettingsType = 2
 	VisibilitySettingsTypeOnlyOrg           VisibilitySettingsType = 4
 	VisibilitySettingsTypeOrgWithMySchools  VisibilitySettingsType = 5
 	VisibilitySettingsTypeOrgWithAllSchools VisibilitySettingsType = 6
@@ -49,9 +49,15 @@ type IContentPermissionTable interface {
 	//GetRemovePermissionSets Get permission set list when a user want to remove contents
 	GetRemovePermissionSets(ctx context.Context, req []*ContentProfile) (IPermissionSet, error)
 
+	//GetApprovePermissionSets Get permission set list when a user want to approve contents
+	GetApprovePermissionSets(ctx context.Context, req []*ContentProfile) (IPermissionSet, error)
+
+	//GetRejectPermissionSets Get permission set list when a user want to reject contents
+	GetRejectPermissionSets(ctx context.Context, req []*ContentProfile) (IPermissionSet, error)
+
 	//BatchGetContentPermissions Get permissions of contents, return with a map, the key of the map is the content id,
 	//The value of the map is content permission
-	BatchGetContentPermissions(ctx context.Context, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error)
+	BatchGetContentPermissions(ctx context.Context, operator *entity.Operator, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error)
 }
 
 type IPermissionSet interface {
@@ -209,7 +215,7 @@ type ContentProfile struct {
 
 type ContentEntityProfile struct {
 	ContentProfile
-	ID 				   string 					   `json:"id"`
+	ID string `json:"id"`
 }
 
 // Implement TextUnmarshaler in order to support Unmarshal when key of map is a struct
@@ -351,9 +357,17 @@ func (c *ContentPermissionTable) GetRemovePermissionSets(ctx context.Context, re
 	return PermissionSetsList(permissionSetsList), nil
 }
 
+func (c *ContentPermissionTable) GetApprovePermissionSets(ctx context.Context, req []*ContentProfile) (IPermissionSet, error) {
+	return nil, nil
+}
+
+func (c *ContentPermissionTable) GetRejectPermissionSets(ctx context.Context, req []*ContentProfile) (IPermissionSet, error) {
+	return nil, nil
+}
+
 //BatchGetContentPermissions Get permissions of contents, return with a map, the key of the map is the content id,
 //The value of the map is content permission
-func (c *ContentPermissionTable) BatchGetContentPermissions(ctx context.Context, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error){
+func (c *ContentPermissionTable) BatchGetContentPermissions(ctx context.Context, operator *entity.Operator, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error) {
 	//TODO: Complete the function
 	result := make(map[string]entity.ContentPermission)
 	for i := range req {

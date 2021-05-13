@@ -3,9 +3,10 @@ package entity
 import (
 	"errors"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"reflect"
 	"strings"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
@@ -376,20 +377,21 @@ type ContentConditionRequest struct {
 
 	//AuthedContentFlag bool           `json:"authed_content"`
 	AuthedOrgID NullStrings `json:"authed_org_ids"`
-	OrderBy     string     `json:"order_by"`
+	OrderBy     string      `json:"order_by"`
 	Pager       utils.Pager
 
 	JoinUserIDList []string `json:"join_user_id_list"`
 
 	AllowOwnerPublished bool `json:"allow_owner_published"`
 }
+
 type ContentPermission struct {
-	ID 	string `json:"id"`
-	AllowEdit bool `json:"allow_edit"`
-	AllowDelete bool `json:"allow_delete"`
-	AllowApprove bool `json:"allow_approve"`
-	AllowReject bool `json:"allow_reject"`
-	AllowRepublish bool `json:"allow_republish"`
+	ID             string `json:"id"`
+	AllowEdit      bool   `json:"allow_edit"`
+	AllowDelete    bool   `json:"allow_delete"`
+	AllowApprove   bool   `json:"allow_approve"`
+	AllowReject    bool   `json:"allow_reject"`
+	AllowRepublish bool   `json:"allow_republish"`
 }
 
 type CreateContentRequest struct {
