@@ -193,30 +193,48 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 		args.SchoolID = ""
 		if args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
 			args.ClassIDs = nil
-			schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
-			if err != nil {
-				return nil, err
-			}
-			schoolIDs := make([]string, 0, len(schools))
-			for _, s := range schools {
-				schoolIDs = append(schoolIDs, s.ID)
-			}
-			m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
-			if err != nil {
-				return nil, err
-			}
-			for _, cc := range m {
-				for _, c := range cc {
-					args.ClassIDs = append(args.ClassIDs, c.ID)
-				}
-			}
 			if checker.HasMyOrgPermission() {
+				schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
+				if err != nil {
+					return nil, err
+				}
+				schoolIDs := make([]string, 0, len(schools))
+				for _, s := range schools {
+					schoolIDs = append(schoolIDs, s.ID)
+				}
+				m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
+				if err != nil {
+					return nil, err
+				}
+				for _, cc := range m {
+					for _, c := range cc {
+						args.ClassIDs = append(args.ClassIDs, c.ID)
+					}
+				}
 				classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
 				if err != nil {
 					return nil, err
 				}
 				for _, c := range classes {
 					args.ClassIDs = append(args.ClassIDs, c.ID)
+				}
+			} else if checker.HasMySchoolPermission() {
+				schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
+				if err != nil {
+					return nil, err
+				}
+				schoolIDs := make([]string, 0, len(schools))
+				for _, s := range schools {
+					schoolIDs = append(schoolIDs, s.ID)
+				}
+				m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
+				if err != nil {
+					return nil, err
+				}
+				for _, cc := range m {
+					for _, c := range cc {
+						args.ClassIDs = append(args.ClassIDs, c.ID)
+					}
 				}
 			}
 		}
