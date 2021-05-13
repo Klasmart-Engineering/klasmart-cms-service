@@ -24,7 +24,7 @@ pipelines:
           - pipe: atlassian/slack-notify:1.0.2
             variables:
               WEBHOOK_URL: $WEBHOOK_URL
-              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - pipeline build number $BITBUCKET_BUILD_NUMBER"'
+              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
               MESSAGE: 'build has exited with [$BUILD_STATUS] status'
         caches:
           - gomodules
@@ -65,7 +65,7 @@ pipelines:
           - pipe: atlassian/slack-notify:1.0.2
             variables:
               WEBHOOK_URL: $WEBHOOK_URL
-              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - pipeline build number $BITBUCKET_BUILD_NUMBER"'
+              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
               MESSAGE: 'ECR push has exited with [$BUILD_STATUS] status'
 
         services:
@@ -73,6 +73,7 @@ pipelines:
 
     - step:
         name: "Update ECS"
+        trigger: manual
         image: python:3.7.4-alpine3.10
         script:
           - pip3 install -U awscli
@@ -91,7 +92,7 @@ pipelines:
           - pipe: atlassian/slack-notify:1.0.2
             variables:
               WEBHOOK_URL: $WEBHOOK_URL
-              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - pipeline build number $BITBUCKET_BUILD_NUMBER"'
+              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
               MESSAGE: 'ECS update has exited with [$BUILD_STATUS] status'
 
 definitions:
