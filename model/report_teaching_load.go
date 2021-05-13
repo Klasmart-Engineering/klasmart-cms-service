@@ -182,6 +182,7 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 	checker := NewReportPermissionChecker(operator)
 	if err := checker.Search(ctx); err != nil {
 		log.Error(ctx, "cleanAndValidListArgs: checker.Search: search failed",
+			log.Err(err),
 			log.Any("args", args),
 		)
 		return nil, err
