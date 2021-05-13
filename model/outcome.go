@@ -739,6 +739,12 @@ func (ocm OutcomeModel) Publish(ctx context.Context, operator *entity.Operator, 
 				log.String("outcome_id", outcomeID))
 			return err
 		}
+		if outcome.AuthorID != operator.UserID {
+			log.Warn(ctx, "Publish: must by self",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return ErrNoAuth
+		}
 		err = ocm.SetStatus(ctx, outcome, entity.OutcomeStatusPending)
 		if err != nil {
 			log.Error(ctx, "Publish: SetStatus failed",
@@ -797,6 +803,12 @@ func (ocm OutcomeModel) BulkPublish(ctx context.Context, operator *entity.Operat
 			return ErrResourceNotFound
 		}
 		for _, o := range outcomes {
+			if o.AuthorID != operator.UserID {
+				log.Warn(ctx, "BulkPublish: must by self",
+					log.String("op", operator.UserID),
+					log.Any("outcome", o))
+				return ErrNoAuth
+			}
 			err = ocm.SetStatus(ctx, o, entity.OutcomeStatusPublished)
 			if err != nil {
 				log.Error(ctx, "BulkPublish: SetStatus failed",
