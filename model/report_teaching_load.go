@@ -255,6 +255,17 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 					args.ClassIDs = append(args.ClassIDs, c.ID)
 				}
 			}
+			userClassesMap, err := external.GetClassServiceProvider().GetByUserIDs(ctx, operator, []string{operator.UserID})
+			if err != nil {
+				return nil, err
+			}
+			var userClassIDs []string
+			for _, cc := range userClassesMap {
+				for _, c := range cc {
+					userClassIDs = append(userClassIDs, c.ID)
+				}
+			}
+			args.ClassIDs = utils.IntersectAndDeduplicateStrSlice(args.ClassIDs, userClassIDs)
 		}
 	}
 
