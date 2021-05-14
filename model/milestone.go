@@ -254,6 +254,34 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		for i := range milestoneOutcomes {
 			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
 		}
+
+		if milestone.Type == entity.GeneralMilestoneType {
+			intersect, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+				OutcomeAncestors: dbo.NullStrings{Strings: outcomeAncestors, Valid: true},
+				NotMilestoneID:   sql.NullString{String: milestone.ID, Valid: true},
+			})
+			if err != nil {
+				log.Debug(ctx, "Obtain: exclude normal bind from general",
+					log.Any("milestone", milestone),
+					log.Strings("ancestors", outcomeAncestors))
+				return err
+			}
+			if len(intersect) == bindLength {
+				log.Info(ctx, "Obtain: all bind to normal general", log.String("milestone", milestoneID))
+				return nil
+			}
+			intersectMap := make(map[string]bool, len(intersect))
+			for i := range intersect {
+				intersectMap[intersect[i].OutcomeAncestor] = true
+			}
+			outcomeAncestors = make([]string, 0, bindLength-len(intersect))
+			for i := range milestoneOutcomes {
+				if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
+					outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
+				}
+			}
+		}
+
 		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
 			log.Error(ctx, "Obtain: GetLatestByAncestors failed",
@@ -324,17 +352,19 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}}
 		}
 
-		if toPublish && !perms[external.CreateMilestone] {
-			log.Warn(ctx, "Update: perm failed",
-				log.Any("perms", perms),
-				log.Bool("to_publish", toPublish),
-				log.Any("op", op),
-				log.Any("milestone", ms))
-			return constant.ErrOperateNotAllowed
-		}
-
 		switch ms.Status {
 		case entity.OutcomeStatusDraft:
+			if toPublish {
+				if !perms[external.CreateMilestone] {
+					log.Warn(ctx, "Update: perm failed",
+						log.Any("perms", perms),
+						log.Bool("to_publish", toPublish),
+						log.Any("op", op),
+						log.Any("milestone", ms))
+					return constant.ErrOperateNotAllowed
+				}
+				ms.Status = entity.OutcomeStatusPublished
+			}
 			if !perms[external.EditUnpublishedMilestone] {
 				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
@@ -344,6 +374,14 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				return constant.ErrOperateNotAllowed
 			}
 		case entity.OutcomeStatusPublished:
+			if ms.Type == entity.GeneralMilestoneType {
+				log.Warn(ctx, "Update: can not operate general milestone",
+					log.Any("perms", perms),
+					log.Bool("to_publish", toPublish),
+					log.Any("op", op),
+					log.Any("milestone", ms))
+				return constant.ErrOperateNotAllowed
+			}
 			if !perms[external.EditPublishedMilestone] {
 				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
@@ -374,9 +412,6 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 		}
 		m.UpdateMilestone(milestone, ms)
-		if toPublish {
-			ms.Status = entity.OutcomeStatusPublished
-		}
 		err = da.GetMilestoneDA().Update(ctx, tx, ms)
 		if err != nil {
 			log.Error(ctx, "Update: Update failed",
@@ -480,6 +515,11 @@ func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.M
 			if !perms[external.DeletePublishedMilestone] {
 				log.Warn(ctx, "canBeDeleted: has no perm",
 					log.Any("perms", perms),
+					log.Any("milestone", milestones[i]))
+				return nil, constant.ErrOperateNotAllowed
+			}
+			if milestones[i].Type == entity.GeneralMilestoneType {
+				log.Warn(ctx, "canBeDeleted: can not operate general milestone",
 					log.Any("milestone", milestones[i]))
 				return nil, constant.ErrOperateNotAllowed
 			}
@@ -691,6 +731,11 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("op", op),
 				log.String("milestone", milestoneID))
 			return err
+		}
+
+		if ms.Type == entity.GeneralMilestoneType {
+			log.Warn(ctx, "Occupy: can not operate general milestone", log.Any("milestone", ms))
+			return constant.ErrOperateNotAllowed
 		}
 
 		if ms.LockedBy == op.UserID {

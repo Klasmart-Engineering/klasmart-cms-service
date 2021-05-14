@@ -343,6 +343,7 @@ type MilestoneOutcomeSQLDA struct {
 type MilestoneOutcomeCondition struct {
 	MilestoneID      sql.NullString
 	MilestoneIDs     dbo.NullStrings
+	NotMilestoneID   sql.NullString
 	OutcomeAncestor  sql.NullString
 	OutcomeAncestors dbo.NullStrings
 	IncludeDeleted   bool
@@ -369,6 +370,11 @@ func (c *MilestoneOutcomeCondition) GetConditions() ([]string, []interface{}) {
 	if c.MilestoneIDs.Valid {
 		wheres = append(wheres, "milestone_id in (?)")
 		params = append(params, c.MilestoneIDs.Strings)
+	}
+
+	if c.NotMilestoneID.Valid {
+		wheres = append(wheres, "milestone_id <> ?")
+		params = append(params, c.NotMilestoneID.String)
 	}
 
 	if c.OutcomeAncestor.Valid {
