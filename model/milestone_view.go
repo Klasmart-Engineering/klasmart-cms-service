@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -31,26 +32,26 @@ type AuthorView struct {
 
 type MilestoneView struct {
 	MilestoneID  string                 `json:"milestone_id,omitempty"`
-	Name         string                 `json:"milestone_name,omitempty"`
-	Shortcode    string                 `json:"shortcode,omitempty"`
+	Name         string                 `json:"milestone_name"`
+	Shortcode    string                 `json:"shortcode"`
 	Type         entity.TypeOfMilestone `json:"type"`
 	Organization *OrganizationView      `json:"organization,omitempty"`
 	Author       *AuthorView            `json:"author,omitempty"`
 	Outcomes     []*OutcomeView         `json:"outcomes"`
-	CreateAt     int64                  `json:"create_at,omitempty"`
+	CreateAt     int64                  `json:"create_at"`
 	Program      []*Program             `json:"program"`
 	Subject      []*Subject             `json:"subject"`
 	Category     []*Category            `json:"category"`
 	SubCategory  []*SubCategory         `json:"sub_category"`
 	Age          []*Age                 `json:"age"`
 	Grade        []*Grade               `json:"grade"`
-	Description  string                 `json:"description,omitempty"`
-	Status       string                 `json:"status,omitempty"`
-	LockedBy     string                 `json:"locked_by,omitempty"`
-	AncestorID   string                 `json:"ancestor_id,omitempty"`
-	SourceID     string                 `json:"source_id,omitempty"`
-	LatestID     string                 `json:"latest_id,omitempty"`
-	OutcomeCount int                    `json:"outcome_count,omitempty"`
+	Description  string                 `json:"description"`
+	Status       string                 `json:"status"`
+	LockedBy     string                 `json:"locked_by"`
+	AncestorID   string                 `json:"ancestor_id"`
+	SourceID     string                 `json:"source_id"`
+	LatestID     string                 `json:"latest_id"`
+	OutcomeCount int                    `json:"outcome_count"`
 	WithPublish  bool                   `json:"with_publish,omitempty"`
 
 	ProgramIDs         []string `json:"program_ids,omitempty"`
@@ -63,6 +64,9 @@ type MilestoneView struct {
 }
 
 func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
+	if len([]rune(ms.Name)) > constant.MilestoneNameLength {
+		return nil, constant.ErrExceededLimit
+	}
 	if ms.Type == "" {
 		ms.Type = entity.CustomMilestoneType
 	}
@@ -180,6 +184,17 @@ func FromMilestones(ctx context.Context, op *entity.Operator, milestones []*enti
 		sbcIDs = append(sbcIDs, milestones[i].Subcategories...)
 		grdIDs = append(grdIDs, milestones[i].Grades...)
 		ageIDs = append(ageIDs, milestones[i].Ages...)
+
+		for _, outcome := range milestones[i].Outcomes {
+			orgIDs = append(orgIDs, outcome.OrganizationID)
+			authIDs = append(authIDs, outcome.AuthorID)
+			prgIDs = append(prgIDs, outcome.Programs...)
+			sbjIDs = append(sbjIDs, outcome.Subjects...)
+			catIDs = append(catIDs, outcome.Categories...)
+			sbcIDs = append(sbcIDs, outcome.Subcategories...)
+			grdIDs = append(grdIDs, outcome.Grades...)
+			ageIDs = append(ageIDs, outcome.Ages...)
+		}
 	}
 	orgs, authors, prds, sbjs, cats, sbcs, grds, ages, err := prepareAllNeededName(ctx, op, orgIDs, authIDs, prgIDs, sbjIDs, catIDs, sbcIDs, grdIDs, ageIDs)
 	if err != nil {

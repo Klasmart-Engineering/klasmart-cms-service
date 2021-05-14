@@ -47,7 +47,7 @@ func (s *Server) createMilestone(c *gin.Context) {
 	}
 	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "createMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
+		log.Warn(ctx, "createMilestone: ToMilestone failed", log.Err(err), log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -149,7 +149,7 @@ func (s *Server) updateMilestone(c *gin.Context) {
 
 	milestone, err := data.ToMilestone(ctx, op)
 	if err != nil {
-		log.Warn(ctx, "updateMilestone: ToMilestone failed", log.Any("op", op), log.Any("req", data))
+		log.Warn(ctx, "updateMilestone: ToMilestone failed", log.Err(err), log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
@@ -180,6 +180,22 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
+		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
+		if ok {
+			user, err := external.GetUserServiceProvider().Get(ctx, op, lockedByErr.LockedBy.ID)
+			if err != nil {
+				log.Error(ctx, "updateMilestone: GetUserServiceProvider failed",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("req", milestoneID),
+					log.String("locked", lockedByErr.LockedBy.ID))
+				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				return
+			}
+			log.Warn(ctx, "updateMilestone", log.Any("op", op), log.Any("req", data))
+			c.JSON(http.StatusConflict, LD(AssessErrorMsgLocked, user))
+			return
+		}
 		log.Error(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -227,8 +243,22 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 	default:
 		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 		if ok {
+			user, err := external.GetUserServiceProvider().Get(ctx, op, lockedByErr.LockedBy.ID)
+			if err != nil {
+				log.Error(ctx, "deleteMilestone: Delete failed",
+					log.Err(err),
+					log.Any("op", op),
+					log.Strings("req", data.IDs),
+					log.String("locked", lockedByErr.LockedBy.ID))
+				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				return
+			}
 			log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
-			c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+			lable := AssessMsgLockedMilestone
+			if len(data.IDs) == 1 {
+				lable = AssessErrorMsgLocked
+			}
+			c.JSON(http.StatusConflict, LD(lable, user))
 			return
 		}
 		log.Error(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
@@ -357,8 +387,18 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 	default:
 		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 		if ok {
+			user, err := external.GetUserServiceProvider().Get(ctx, op, lockedByErr.LockedBy.ID)
+			if err != nil {
+				log.Error(ctx, "occupyMilestone: Delete failed",
+					log.Err(err),
+					log.Any("op", op),
+					log.String("req", milestoneID),
+					log.String("locked", lockedByErr.LockedBy.ID))
+				c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+				return
+			}
 			log.Warn(ctx, "occupyMilestone: Occupy failed", log.Any("op", op), log.String("req", milestoneID))
-			c.JSON(http.StatusConflict, LD(LibraryMsgContentLocked, lockedByErr.LockedBy))
+			c.JSON(http.StatusConflict, LD(AssessErrorMsgLocked, user))
 			return
 		}
 		log.Error(ctx, "occupyMilestone: Occupy failed", log.Any("op", op), log.String("req", milestoneID))

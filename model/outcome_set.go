@@ -146,11 +146,7 @@ func (OutcomeSetModel) BulkBindOutcomeSet(ctx context.Context, op *entity.Operat
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	da.GetOutcomeRedis().CleanOutcomeConditionCache(ctx, op, nil)
-	return nil
+	return err
 }
 
 func (OutcomeSetModel) BindByOutcome(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error {
