@@ -30,8 +30,37 @@ const (
 	OwnerTypeOthers OwnerType = 2
 )
 
-// Update synchronously with the following content permission
-var allContentPermissionSet []external.PermissionName = []external.PermissionName{external.EditMyPublishedContent234, external.EditOrgPublishedContent235, external.EditMySchoolsPublished247, external.EditAllSchoolsPublished249, external.EditLessonMaterialMetadataAndContent236, external.EditLessonPlanMetadata237, external.EditLessonPlanContent238, external.EditMyUnpublishedContent230, external.RemoveOrgPublishedContent254, external.RemoveMySchoolsPublished242, external.RemoveAllSchoolsPublished245, external.DeleteOrgArchivedContent253, external.DeleteMySchoolsArchived243, external.DeleteAllSchoolsArchived246, external.DeleteMyUnpublishedContent240, external.DeleteMyPending251, external.DeleteOrgPendingContent252, external.DeleteMySchoolsPending241, external.DeleteAllSchoolsPending244, external.ApprovePendingContent271, external.RejectPendingContent272, external.RepublishArchivedContent274, external.FullContentMmanagement294}
+// Permissions includes edit, remove, publish, approve, reject action. Update synchronously with the permission definition
+var allContentPermissionSet []external.PermissionName = []external.PermissionName{
+	external.DeleteAsset340,
+	external.CreateLessonMaterial220,
+	external.CreateLessonPlan221,
+	external.CreateMySchoolsContent223,
+	external.CreateAllSchoolsContent224,
+	external.EditMyPublishedContent234,
+	external.EditOrgPublishedContent235,
+	external.EditMySchoolsPublished247,
+	external.EditAllSchoolsPublished249,
+	external.EditLessonMaterialMetadataAndContent236,
+	external.EditLessonPlanMetadata237,
+	external.EditLessonPlanContent238,
+	external.EditMyUnpublishedContent230,
+	external.RemoveOrgPublishedContent254,
+	external.RemoveMySchoolsPublished242,
+	external.RemoveAllSchoolsPublished245,
+	external.DeleteOrgArchivedContent253,
+	external.DeleteMySchoolsArchived243,
+	external.DeleteAllSchoolsArchived246,
+	external.DeleteMyUnpublishedContent240,
+	external.DeleteMyPending251,
+	external.DeleteOrgPendingContent252,
+	external.DeleteMySchoolsPending241,
+	external.DeleteAllSchoolsPending244,
+	external.ApprovePendingContent271,
+	external.RejectPendingContent272,
+	external.RepublishArchivedContent274,
+	external.FullContentMmanagement294,
+}
 
 type VisibilitySettingsType int
 type OwnerType int
