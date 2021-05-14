@@ -302,7 +302,6 @@ func (s Server) registeRoute() {
 		milestone.GET("/milestones", s.mustLogin, s.searchMilestone)
 
 		milestone.POST("/milestones/publish", s.mustLogin, s.publishMilestone)
-		milestone.POST("/milestones/general", s.mustLogin, s.createGeneral)
 	}
 
 	organizationPermissions := s.engine.Group("/v1/organization_permissions")

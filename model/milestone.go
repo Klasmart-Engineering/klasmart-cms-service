@@ -25,7 +25,7 @@ type IMilestoneModel interface {
 	Publish(ctx context.Context, op *entity.Operator, IDs []string) error
 	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
 
-	CreateGeneral(ctx context.Context, op *entity.Operator) (*entity.Milestone, error)
+	CreateGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error)
 	ObtainGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error)
 	BindToGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
 	ShortcodeProvider
@@ -594,8 +594,21 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			log.Info(ctx, "Search: not found",
 				log.Any("op", op),
 				log.Any("cond", condition))
+			if condition.Status != entity.OutcomeStatusPublished {
+				return nil
+			}
+
+			general, err := m.CreateGeneral(ctx, op, tx, "")
+			if err != nil {
+				log.Error(ctx, "Search: CreateGeneral failed",
+					log.Any("op", op))
+				return err
+			}
+			count = 1
+			milestones = append(milestones, general)
 			return nil
 		}
+
 		milestoneIDs := make([]string, len(milestones))
 		for i := range milestones {
 			milestoneIDs[i] = milestones[i].ID
@@ -857,7 +870,7 @@ func (m MilestoneModel) ObtainGeneral(ctx context.Context, op *entity.Operator, 
 	}
 
 	if len(milestones) == 0 {
-		log.Warn(ctx, "ObtainGeneral: not found",
+		log.Error(ctx, "ObtainGeneral: not found",
 			log.Any("op", op),
 			log.String("org", orgID))
 		return nil, constant.ErrRecordNotFound
@@ -872,7 +885,7 @@ func (m MilestoneModel) ObtainGeneral(ctx context.Context, op *entity.Operator, 
 	return milestones[0], nil
 }
 
-func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator, shortcode string) *entity.Milestone {
+func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator) *entity.Milestone {
 	ID := utils.NewID()
 	now := time.Now().Unix()
 	general := &entity.Milestone{
@@ -890,8 +903,8 @@ func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator, s
 	}
 	return general
 }
-func (m MilestoneModel) CreateGeneral(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixShortcodeMute, entity.KindMileStone, op.OrgID)
+func (m MilestoneModel) CreateGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixGeneralMilestoneMute, entity.KindMileStone, op.OrgID)
 	if err != nil {
 		log.Error(ctx, "CreateGeneral: NewLock failed",
 			log.Err(err),
@@ -900,61 +913,75 @@ func (m MilestoneModel) CreateGeneral(ctx context.Context, op *entity.Operator) 
 	}
 	locker.Lock()
 	defer locker.Unlock()
-	shortcode, err := m.GenerateShortcode(ctx, op)
-	if err != nil {
-		log.Error(ctx, "CreateGeneral: GenerateShortcode failed",
-			log.Err(err),
-			log.Any("op", op))
+	if orgID == "" {
+		orgID = op.OrgID
+	}
+	general, err := m.ObtainGeneral(ctx, op, tx, orgID)
+	if err != nil && err != constant.ErrRecordNotFound {
+		log.Debug(ctx, "CreateGeneral: ObtainGeneral failed", log.Any("op", op))
 		return nil, err
 	}
-	var general *entity.Milestone
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		var err error
-		general, err = m.ObtainGeneral(ctx, op, tx, op.OrgID)
-		if err != nil && err != constant.ErrRecordNotFound {
-			log.Debug(ctx, "CreateGeneral: ObtainGeneral failed", log.Any("op", op))
-			return err
-		}
-		if general != nil {
-			return nil
-		}
-		general = m.buildGeneral(ctx, op, shortcode)
-		err = da.GetMilestoneDA().Create(ctx, tx, general)
-		if err != nil {
-			log.Debug(ctx, "CreateGeneral: Create failed", log.Any("op", op),
-				log.Any("milestone", general))
-		}
-		return err
-	})
-	return general, err
+	if general != nil {
+		return general, nil
+	}
+	general = m.buildGeneral(ctx, op)
+	err = da.GetMilestoneDA().Create(ctx, tx, general)
+	if err != nil {
+		log.Debug(ctx, "CreateGeneral: Create failed", log.Any("op", op),
+			log.Any("milestone", general))
+		return nil, err
+	}
+	//err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	//	var err error
+	//	general, err = m.ObtainGeneral(ctx, op, tx, op.OrgID)
+	//	if err != nil && err != constant.ErrRecordNotFound {
+	//		log.Debug(ctx, "CreateGeneral: ObtainGeneral failed", log.Any("op", op))
+	//		return err
+	//	}
+	//	if general != nil {
+	//		return nil
+	//	}
+	//	general = m.buildGeneral(ctx, op)
+	//	err = da.GetMilestoneDA().Create(ctx, tx, general)
+	//	if err != nil {
+	//		log.Debug(ctx, "CreateGeneral: Create failed", log.Any("op", op),
+	//			log.Any("milestone", general))
+	//	}
+	//	return err
+	//})
+	return general, nil
 }
 
 func (m MilestoneModel) BindToGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error {
 	general, err := m.ObtainGeneral(ctx, op, tx, outcome.OrganizationID)
-	if err != nil {
+	if err != nil && err != constant.ErrRecordNotFound {
 		log.Error(ctx, "BindToGeneral: ObtainGeneral failed",
 			log.Any("op", op),
 			log.Any("outcome", outcome))
 		return err
 	}
-	if general == nil {
-		log.Error(ctx, "BindToGeneral: no general found",
-			log.Any("op", op),
-			log.Any("outcome", outcome))
-		return constant.ErrInternalServer
-	}
-	milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
-		MilestoneID:     sql.NullString{String: general.ID, Valid: true},
-		OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
-	})
-	if err != nil {
-		log.Error(ctx, "BindToGeneral: SearchTx failed",
-			log.Any("op", op),
-			log.Any("outcome", outcome))
-		return err
-	}
-	if len(milestoneOutcomes) != 0 {
-		return nil
+	if err == constant.ErrRecordNotFound {
+		general, err = m.CreateGeneral(ctx, op, tx, outcome.OrganizationID)
+		if err != nil {
+			log.Error(ctx, "BindToGeneral: CreateGeneral failed",
+				log.Any("op", op),
+				log.String("org", outcome.OrganizationID))
+			return err
+		}
+	} else {
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID:     sql.NullString{String: general.ID, Valid: true},
+			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "BindToGeneral: SearchTx failed",
+				log.Any("op", op),
+				log.Any("outcome", outcome))
+			return err
+		}
+		if len(milestoneOutcomes) != 0 {
+			return nil
+		}
 	}
 	now := time.Now().Unix()
 	milestoneOutcome := &entity.MilestoneOutcome{

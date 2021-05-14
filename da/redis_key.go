@@ -27,7 +27,8 @@ const (
 	RedisKeyPrefixShortcodeMute = "shortcode:lock"
 	RedisKeyPrefixShortcode     = "shortcode"
 
-	RedisKeyPrefixMilestoneMute = "milestone:lock"
+	RedisKeyPrefixMilestoneMute        = "milestone:lock"
+	RedisKeyPrefixGeneralMilestoneMute = "milestone:general:lock"
 )
 
 const (
