@@ -54,6 +54,7 @@ func TestCreateMilestone(t *testing.T) {
 			"609b7ec4f060b597ab4782c7",
 			"609b7fac691ad140891442cc",
 		},
+		WithPublish: true,
 	}
 	data, err := json.Marshal(req)
 	if err != nil {

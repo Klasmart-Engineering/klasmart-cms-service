@@ -295,17 +295,17 @@ func (c *MilestoneCondition) GetPager() *dbo.Pager {
 func (c *MilestoneCondition) GetOrderBy() string {
 	switch c.OrderBy {
 	case OrderByMilestoneName:
-		return "type desc, name"
+		return "type, name"
 	case OrderByMilestoneNameDesc:
-		return "type desc, name desc"
+		return "type, name desc"
 	case OrderByMilestoneCreatedAt:
-		return "type desc, create_at"
+		return "type, create_at"
 	case OrderByMilestoneCreatedAtDesc:
-		return "type desc, create_at desc"
+		return "type, create_at desc"
 	case OrderByMilestoneUpdatedAt:
-		return "type desc, update_at"
+		return "type, update_at"
 	case OrderByMilestoneUpdatedAtDesc:
-		return "type desc, update_at desc"
+		return "type, update_at desc"
 	case OrderByMilestoneShortcode:
 		return "shortcode"
 	default:
