@@ -23,6 +23,7 @@ type ListStudiesResultItem struct {
 	CompleteRate  float64  `json:"complete_rate"`
 	RemainingTime float64  `json:"remaining_time"`
 	CompleteAt    int64    `json:"complete_at"`
+	Comment       string   `json:"comment"`
 	// debug
 	ScheduleID string `json:"schedule_id"`
 }
@@ -66,16 +67,12 @@ type AssessmentStudyStudentViewContentItem struct {
 type ListStudiesOrderBy string
 
 const (
-	ListStudiesOrderByCreateAt       ListStudiesOrderBy = "create_at"
-	ListStudiesOrderByCreateAtDesc   ListStudiesOrderBy = "-create_at"
 	ListStudiesOrderByCompleteAt     ListStudiesOrderBy = "complete_at"
 	ListStudiesOrderByCompleteAtDesc ListStudiesOrderBy = "-complete_at"
 )
 
 func (ob ListStudiesOrderBy) Valid() bool {
 	switch ob {
-	case ListStudiesOrderByCreateAt,
-		ListStudiesOrderByCreateAtDesc,
 		ListStudiesOrderByCompleteAt,
 		ListStudiesOrderByCompleteAtDesc:
 		return true
