@@ -270,14 +270,27 @@ func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx contex
 			log.Any("user", user))
 		return false, err
 	}
+	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
+		log.Any("contentList", contentList),
+		log.Strings("cids", cids),
+		log.Any("user", user))
+
 	profiles, err := c.buildContentProfiles(ctx, contentList, user)
 	if err != nil {
 		return false, err
 	}
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("contentList", contentList),
+		log.Any("profiles", profiles))
+
 	permissionSetList, err := NewContentPermissionTable().GetRemovePermissionSets(ctx, profiles)
 	if err != nil {
 		return false, err
 	}
+	log.Debug(ctx, "GetRemovePermissionSets result",
+		log.Any("permissionSetList", permissionSetList),
+		log.Any("profiles", profiles))
+
 	err = permissionSetList.HasPermission(ctx, user)
 	if err != nil {
 		log.Error(ctx, "No permission",
@@ -295,13 +308,24 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 		log.Error(ctx, "GetContentByIDList failed",
 			log.Err(err),
 			log.Strings("cids", cids),
+			log.Bool("isApprove", isApprove),
 			log.Any("user", user))
 		return false, err
 	}
+
+	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
+		log.Any("contentList", contentList),
+		log.Strings("cids", cids),
+		log.Bool("isApprove", isApprove),
+		log.Any("user", user))
+
 	profiles, err := c.buildContentProfiles(ctx, contentList, user)
 	if err != nil {
 		return false, err
 	}
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("profiles", profiles),
+		log.Any("contentList", contentList))
 
 	var permissionSetList IPermissionSet
 	if isApprove {
@@ -315,6 +339,8 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 			return false, err
 		}
 	}
+	log.Debug(ctx, "GetReviewPermissionSets result",
+		log.Any("permissionSetList", permissionSetList))
 
 	err = permissionSetList.HasPermission(ctx, user)
 	if err != nil {
@@ -330,12 +356,26 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) (bool, error) {
 	contentProfiles, err := c.buildByConditionContentProfiles(ctx, condition, user)
 	if err != nil {
+		log.Error(ctx, "buildByConditionContentProfiles Failed",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("user", user))
 		return false, err
 	}
+
+	log.Debug(ctx, "buildByConditionContentProfiles result",
+		log.Any("condition", condition),
+		log.Any("contentProfiles", contentProfiles),
+		log.Any("user", user))
+
 	permissionSetList, err := NewContentPermissionTable().GetViewPermissionSets(ctx, contentProfiles)
 	if err != nil {
 		return false, err
 	}
+	log.Debug(ctx, "GetViewPermissionSets result",
+		log.Any("permissionSetList", permissionSetList),
+		log.Any("contentProfiles", contentProfiles),
+		log.Any("user", user))
 	err = permissionSetList.HasPermission(ctx, user)
 	if err != nil {
 		log.Error(ctx, "No permission",
