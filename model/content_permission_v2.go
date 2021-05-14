@@ -14,6 +14,7 @@ import (
 
 var (
 	ErrInvalidVisibilitySetting = errors.New("invalid visibility settings")
+	ErrEmptyContentList         = errors.New("content list is nil")
 )
 
 type IContentPermissionMySchoolModel interface {
@@ -88,22 +89,14 @@ func (c *ContentPermissionMySchoolModel) CheckCreateContentPermission(ctx contex
 }
 
 func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
-	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), cids)
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
 	if err != nil {
-		log.Error(ctx, "GetContentByIDList failed",
-			log.Err(err),
+		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.Strings("cids", cids),
 			log.Any("user", user))
 		return false, err
 	}
-	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
-		log.Any("contentList", contentList),
-		log.Strings("cids", cids),
-		log.Any("user", user))
-	profiles, err := c.buildContentProfiles(ctx, contentList, user)
-	if err != nil {
-		return false, err
-	}
+
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles),
 		log.Strings("cids", cids))
@@ -125,26 +118,14 @@ func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx co
 }
 
 func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx context.Context, cid string, scopes []string, user *entity.Operator) (bool, error) {
-	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), []string{cid})
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
 	if err != nil {
-		log.Error(ctx, "GetContentByIDList failed",
-			log.Err(err),
+		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.String("cid", cid),
 			log.Any("user", user))
 		return false, err
 	}
-	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
-		log.Any("contentList", contentList),
-		log.String("cid", cid),
-		log.Strings("scopes", scopes),
-		log.Any("user", user))
-	for i := range contentList {
-		contentList[i].VisibilitySettings = scopes
-	}
-	profiles, err := c.buildContentProfiles(ctx, contentList, user)
-	if err != nil {
-		return false, err
-	}
+
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles))
 	permissionSetList, err := NewContentPermissionTable().GetPublishPermissionSets(ctx, profiles)
@@ -167,34 +148,14 @@ func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx cont
 }
 
 func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), []string{cid})
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
 	if err != nil {
-		log.Error(ctx, "GetContentByIDList failed",
-			log.Err(err),
+		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.String("cid", cid),
-			log.Any("user", user))
-		return false, err
-	}
-	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
-		log.Any("contentList", contentList),
-		log.String("cid", cid),
-		log.Any("user", user))
-	if len(contentList) < 1 {
-		log.Warn(ctx, "content list is nil",
-			log.String("cid", cid),
-			log.Any("contentList", contentList),
 			log.Any("user", user))
 		return false, err
 	}
 
-	profiles, err := c.buildContentProfiles(ctx, contentList, user)
-	if err != nil {
-		return false, err
-	}
-	log.Debug(ctx, "buildContentProfiles result",
-		log.Any("contentList", contentList),
-		log.String("cid", cid),
-		log.Any("profiles", profiles))
 	permissionSetList, err := NewContentPermissionTable().GetViewPermissionSets(ctx, profiles)
 	if err != nil {
 		return false, err
@@ -214,34 +175,17 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 }
 
 func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), []string{cid})
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
 	if err != nil {
-		log.Error(ctx, "GetContentByIDList failed",
-			log.Err(err),
+		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.String("cid", cid),
 			log.Any("user", user))
 		return false, err
 	}
-	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
-		log.Any("contentList", contentList),
-		log.String("cid", cid),
-		log.Any("user", user))
 
-	if len(contentList) < 1 {
-		log.Warn(ctx, "content list is nil",
-			log.String("cid", cid),
-			log.Any("contentList", contentList),
-			log.Any("user", user))
-		return false, err
-	}
-
-	profiles, err := c.buildContentProfiles(ctx, contentList, user)
-	if err != nil {
-		return false, err
-	}
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles),
-		log.Any("contentList", contentList))
+		log.String("cid", cid))
 
 	permissionSetList, err := NewContentPermissionTable().GetEditPermissionSets(ctx, *profiles[0])
 	if err != nil {
@@ -262,25 +206,15 @@ func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx contex
 	return true, nil
 }
 func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
-	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), cids)
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
 	if err != nil {
-		log.Error(ctx, "GetContentByIDList failed",
-			log.Err(err),
+		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.Strings("cids", cids),
 			log.Any("user", user))
 		return false, err
 	}
-	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
-		log.Any("contentList", contentList),
-		log.Strings("cids", cids),
-		log.Any("user", user))
-
-	profiles, err := c.buildContentProfiles(ctx, contentList, user)
-	if err != nil {
-		return false, err
-	}
 	log.Debug(ctx, "buildContentProfiles result",
-		log.Any("contentList", contentList),
+		log.Strings("cids", cids),
 		log.Any("profiles", profiles))
 
 	permissionSetList, err := NewContentPermissionTable().GetRemovePermissionSets(ctx, profiles)
@@ -303,29 +237,16 @@ func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx contex
 }
 
 func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx context.Context, isApprove bool, cids []string, user *entity.Operator) (bool, error) {
-	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), cids)
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
 	if err != nil {
-		log.Error(ctx, "GetContentByIDList failed",
-			log.Err(err),
+		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.Strings("cids", cids),
-			log.Bool("isApprove", isApprove),
 			log.Any("user", user))
-		return false, err
-	}
-
-	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
-		log.Any("contentList", contentList),
-		log.Strings("cids", cids),
-		log.Bool("isApprove", isApprove),
-		log.Any("user", user))
-
-	profiles, err := c.buildContentProfiles(ctx, contentList, user)
-	if err != nil {
 		return false, err
 	}
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles),
-		log.Any("contentList", contentList))
+		log.Strings("cids", cids))
 
 	var permissionSetList IPermissionSet
 	if isApprove {
@@ -385,6 +306,42 @@ func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context
 		return false, nil
 	}
 	return true, nil
+}
+
+func (c *ContentPermissionMySchoolModel) buildContentProfileByIDs(ctx context.Context, cids []string, user *entity.Operator) ([]*ContentProfile, error) {
+	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), cids)
+	if err != nil {
+		log.Error(ctx, "GetContentByIDList failed",
+			log.Err(err),
+			log.Strings("cid", cids),
+			log.Any("user", user))
+		return nil, err
+	}
+	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
+		log.Any("contentList", contentList),
+		log.Strings("cid", cids),
+		log.Any("user", user))
+	if len(contentList) < 1 {
+		log.Warn(ctx, "content list is nil",
+			log.Strings("cid", cids),
+			log.Any("contentList", contentList),
+			log.Any("user", user))
+		return nil, ErrEmptyContentList
+	}
+	profiles, err := c.buildContentProfiles(ctx, contentList, user)
+	if err != nil {
+		log.Error(ctx, "buildContentProfiles failed",
+			log.Err(err),
+			log.Any("contentList", contentList),
+			log.Any("user", user))
+		return nil, err
+	}
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("contentList", contentList),
+		log.Strings("cid", cids),
+		log.Any("profiles", profiles))
+
+	return profiles, nil
 }
 
 func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) ([]*ContentProfile, error) {
