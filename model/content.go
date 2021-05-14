@@ -55,8 +55,9 @@ var (
 	ErrInvalidContentType = errors.New("invalid content type")
 	ErrNoRejectReason     = errors.New("no reject reason")
 
-	ErrInvalidSelectForm = errors.New("invalid select form")
-	ErrUserNotFound      = errors.New("user not found in locked by")
+	ErrInvalidSelectForm   = errors.New("invalid select form")
+	ErrUserNotFound        = errors.New("user not found in locked by")
+	ErrNoPermissionToQuery = errors.New("no permission to query")
 
 	ErrMoveToDifferentPartition = errors.New("move to different parititon")
 )
@@ -354,7 +355,7 @@ func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, co
 	return count, contentWithDetails, nil
 }
 
-func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition *da.CombineConditions, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) searchContentUnsafe(ctx context.Context, tx *dbo.DBContext, condition dbo.Conditions, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	count, objs, err := da.GetContentDA().SearchContentUnSafe(ctx, tx, condition)
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
@@ -1891,6 +1892,44 @@ func (cm *ContentModel) GetContentByIDList(ctx context.Context, tx *dbo.DBContex
 	return contentWithDetails, nil
 }
 
+func (cm *ContentModel) getContentInfoByIDList(ctx context.Context, tx *dbo.DBContext, cids []string, user *entity.Operator) ([]*entity.ContentInfo, error) {
+	if len(cids) < 1 {
+		return nil, nil
+	}
+
+	nid, cachedContent := da.GetContentRedis().GetContentCacheByIDList(ctx, cids)
+	//全在缓存中
+	//all cached
+	if len(nid) < 1 {
+		contentWithDetails, err := cm.buildContentWithDetails(ctx, cachedContent, true, user)
+		if err != nil {
+			log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Err(err))
+			return nil, ErrReadContentFailed
+		}
+		res := make([]*entity.ContentInfo, len(contentWithDetails))
+		for i := range contentWithDetails {
+			res[i] = &contentWithDetails[i].ContentInfo
+		}
+		return res, nil
+	}
+
+	data, err := da.GetContentDA().GetContentByIDList(ctx, tx, nid)
+	if err != nil {
+		log.Error(ctx, "can't read contentdata", log.Strings("cids", cids), log.Err(err))
+		return nil, ErrReadContentFailed
+	}
+	res, err := cm.BatchConvertContentObj(ctx, tx, data, user)
+	if err != nil {
+		log.Error(ctx, "can't parse contentdata", log.Strings("cids", cids), log.Any("data", data), log.Err(err))
+		return nil, ErrReadContentFailed
+	}
+	res = append(res, cachedContent...)
+
+	da.GetContentRedis().SaveContentCacheList(ctx, res)
+
+	return res, nil
+}
+
 func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error) {
 	//构造个人查询条件
 	//construct query condition for private search
@@ -1942,7 +1981,7 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
 
 	log.Info(ctx, "count folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	total, err := da.GetContentDA().CountFolderContentUnsafe(ctx, tx, *combineCondition, *folderCondition)
+	total, err := da.GetContentDA().CountFolderContentUnsafe(ctx, tx, combineCondition, *folderCondition)
 	if err != nil {
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, ErrReadContentFailed
@@ -1964,14 +2003,13 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
 
 	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, *combineCondition, *folderCondition)
+	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, combineCondition, *folderCondition)
 	if err != nil {
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
 	}
 	ret := cm.convertFolderContent(ctx, objs, user)
 	cm.fillFolderContent(ctx, ret, user)
-
 	return count, ret, nil
 }
 func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
@@ -2002,7 +2040,7 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	return cm.searchContent(ctx, tx, &condition, user)
 }
 
-func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition  entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = []string{entity.ContentStatusPending}
 	//scope, err := cm.ListVisibleScopes(ctx, visiblePermissionPending, user)
 	//if err != nil {
@@ -2404,7 +2442,7 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (*da.CombineConditions, error) {
+func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (dbo.Conditions, error) {
 	condition1 := condition
 	condition2 := condition
 
@@ -2429,21 +2467,21 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	if len(condition.ContentType) == 1 && condition.ContentType[0] == entity.ContentTypeAssets {
 		condition2.VisibilitySettings = []string{user.OrgID}
 	}
-	//else {
-		//scopes, err := cm.ListVisibleScopes(ctx, visiblePermissionPublished, user)
-		//if err != nil {
-		//	return nil, err
-		//}
-		//if len(scopes) == 0 {
-		//	log.Info(ctx, "no valid scope", log.Strings("scopes", scopes), log.Any("user", user))
-		//	scopes = []string{constant.NoSearchItem}
-		//}
-		//condition2.VisibilitySettings = scopes
-	//}
 
 	//condition2.Scope = scopes
 	condition1.JoinUserIDList = searchUserIDs
 	condition2.JoinUserIDList = searchUserIDs
+
+	if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOwner {
+		//The user only has the permission to query his own
+		return conditionRequestToCondition(condition1), nil
+	} else if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOthers {
+		//The user only has the permission to query others
+		return conditionRequestToCondition(condition2), nil
+	} else if condition.PublishedQueryMode == entity.PublishedQueryModeNone {
+		return nil, ErrNoPermissionToQuery
+	}
+
 	combineCondition := &da.CombineConditions{
 		SourceCondition: conditionRequestToCondition(condition1),
 		TargetCondition: conditionRequestToCondition(condition2),
@@ -2814,6 +2852,9 @@ func (cm *ContentModel) buildContentWithDetails(ctx context.Context, contentList
 		}
 	}
 
+	//fill content permission info
+	cm.fillContentPermission(ctx, contentDetailsList, user)
+
 	return contentDetailsList, nil
 }
 
@@ -2825,48 +2866,6 @@ func (cm *ContentModel) getOutcomes(ctx context.Context, pickIDs []string, user 
 	return outcomeEntities
 }
 
-//func (cm *ContentModel) ListVisibleScopes(ctx context.Context, permission visiblePermission, operator *entity.Operator) ([]string, error) {
-//	//TODO:添加scope
-//	p := external.PublishedContentPage204
-//	if permission == visiblePermissionPending {
-//		p = external.PendingContentPage203
-//	}
-//	ret := make([]string, 0)
-//
-//	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, p)
-//	if err != nil {
-//		log.Warn(ctx, "can't get schools from org", log.Err(err))
-//		return nil, err
-//	}
-//	if hasPermission {
-//		schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
-//		if err != nil {
-//			log.Warn(ctx, "GetByOrganizationID failed", log.Err(err), log.Any("operator", operator))
-//			return nil, err
-//		}
-//		ret = append(ret, operator.OrgID)
-//		for i := range schools {
-//			ret = append(ret, schools[i].ID)
-//		}
-//		return ret, nil
-//	}
-//
-//	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, operator, p)
-//	if err != nil {
-//		log.Warn(ctx, "can't get schools from org", log.Err(err))
-//		return nil, err
-//	}
-//	for i := range schools {
-//		ret = append(ret, schools[i].ID)
-//	}
-//
-//	if len(ret) == 0 {
-//		return ret, ErrInvalidVisibleScope
-//	}
-//	ret = append(ret, operator.OrgID)
-//
-//	return ret, nil
-//}
 func (cm *ContentModel) listAllScopes(ctx context.Context, operator *entity.Operator) ([]string, error) {
 	schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
 	if err != nil {
@@ -2973,6 +2972,208 @@ func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition enti
 	return folderCondition
 }
 
+func (cm *ContentModel) hasFolderPermission(ctx context.Context, user *entity.Operator) (bool, error) {
+	return external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, user, external.CreateFolder289)
+}
+
+func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []*entity.FolderContentData, user *entity.Operator) {
+	hasFolderPermission, err := cm.hasFolderPermission(ctx, user)
+	if err != nil {
+		log.Error(ctx, "hasFolderPermission failed",
+			log.Err(err),
+			log.Any("user", user))
+		return
+	}
+
+	contentIDs := make([]string, 0)
+	for i := range objs {
+		//init permission
+		objs[i].Permission = entity.ContentPermission{
+			ID:             objs[i].ID,
+			AllowEdit:      hasFolderPermission,
+			AllowDelete:    hasFolderPermission,
+			AllowApprove:   false,
+			AllowReject:    false,
+			AllowRepublish: false,
+		}
+
+		if objs[i].ContentType != entity.AliasContentTypeFolder {
+			contentIDs = append(contentIDs, objs[i].ID)
+			//when it comes to content, set permission as false, pending to check content permission
+			objs[i].Permission.AllowEdit = false
+			objs[i].Permission.AllowDelete = false
+		}
+	}
+	contentList, err := cm.getContentInfoByIDList(ctx, dbo.MustGetDB(ctx), contentIDs, user)
+	if err != nil {
+		log.Error(ctx, "GetContentByIDList failed",
+			log.Err(err),
+			log.Any("user", user),
+			log.Strings("contentIDs", contentIDs))
+		return
+	}
+	//build content profiles
+	contentProfiles, err := cm.buildContentProfiles(ctx, contentList, user)
+	if err != nil {
+		log.Error(ctx, "buildContentProfiles failed",
+			log.Err(err),
+			log.Any("user", user),
+			log.Any("contentList", contentList))
+		return
+	}
+
+	//get permission map
+	permissionMap, err := NewContentPermissionTable().BatchGetContentPermissions(ctx, user, contentProfiles)
+	if err != nil {
+		log.Error(ctx, "BatchGetContentPermissions failed",
+			log.Err(err),
+			log.Any("user", user),
+			log.Any("contentProfiles", contentProfiles),
+			log.Any("contentList", contentList))
+		return
+	}
+	//if permission is in the map, replace the permission of content
+	for i := range objs {
+		p, exists := permissionMap[objs[i].ID]
+		if exists {
+			objs[i].Permission = p
+		}
+	}
+}
+
+func (cm *ContentModel) fillContentPermission(ctx context.Context, objs []*entity.ContentInfoWithDetails, user *entity.Operator) {
+	//TODO: complete the function
+	contentList := make([]*entity.ContentInfo, len(objs))
+	for i := range objs {
+		contentList[i] = &objs[i].ContentInfo
+		objs[i].Permission = entity.ContentPermission{
+			ID:             objs[i].ID,
+			AllowEdit:      false,
+			AllowDelete:    false,
+			AllowApprove:   false,
+			AllowReject:    false,
+			AllowRepublish: false,
+		}
+	}
+
+	contentProfiles, err := cm.buildContentProfiles(ctx, contentList, user)
+	if err != nil {
+		log.Error(ctx, "buildContentProfiles failed",
+			log.Err(err),
+			log.Any("user", user),
+			log.Any("contentList", contentList))
+		return
+	}
+
+	permissionMap, err := NewContentPermissionTable().BatchGetContentPermissions(ctx, user, contentProfiles)
+	if err != nil {
+		log.Error(ctx, "BatchGetContentPermissions failed",
+			log.Err(err),
+			log.Any("user", user),
+			log.Any("contentProfiles", contentProfiles),
+			log.Any("contentList", contentList))
+		return
+	}
+	for i := range objs {
+		p, exists := permissionMap[objs[i].ID]
+		if exists {
+			objs[i].Permission = p
+		}
+	}
+}
+
+func (c *ContentModel) buildContentProfiles(ctx context.Context, content []*entity.ContentInfo, user *entity.Operator) ([]*ContentEntityProfile, error) {
+	profiles := make([]*ContentEntityProfile, len(content))
+
+	schoolsInfo, err := querySchools(ctx, user)
+	if err != nil {
+		log.Error(ctx, "getVisibilitySettingsType failed",
+			log.Err(err),
+			log.Any("content", content),
+			log.Any("user", user))
+		return nil, err
+	}
+
+	for i := range content {
+		visibilitySettingType, err := c.getVisibilitySettingsType(ctx, content[i].PublishScope, schoolsInfo, user)
+		if err != nil {
+			log.Error(ctx, "getVisibilitySettingsType failed",
+				log.Err(err),
+				log.Any("content", content))
+			return nil, err
+		}
+
+		ownerType := OwnerTypeUser
+		if user.UserID != content[i].Author {
+			ownerType = OwnerTypeOthers
+		}
+		profiles[i] = &ContentEntityProfile{
+			ID: content[i].ID,
+			ContentProfile: ContentProfile{
+				ContentType:        content[i].ContentType,
+				Status:             content[i].PublishStatus,
+				VisibilitySettings: visibilitySettingType,
+				Owner:              ownerType,
+			},
+		}
+	}
+	return profiles, nil
+}
+
+func (c *ContentModel) getVisibilitySettingsType(ctx context.Context, visibilitySettings []string, schoolInfo *SchoolInfo, user *entity.Operator) (VisibilitySettingsType, error) {
+	containsOrg := false
+	containsOtherSchools := false
+	containsSchools := false
+	for i := range visibilitySettings {
+		if visibilitySettings[i] == user.OrgID {
+			//contains org
+			containsOrg = true
+		}
+
+		if !utils.CheckInStringArray(visibilitySettings[i], schoolInfo.MySchool) {
+			if utils.CheckInStringArray(visibilitySettings[i], schoolInfo.AllSchool) {
+				//contains other schools in org
+				containsOtherSchools = true
+				containsSchools = true
+			} else {
+				log.Warn(ctx, "visibility setting is not in all schools",
+					log.Strings("visibilitySettings", visibilitySettings),
+					log.Any("mySchool", schoolInfo.MySchool),
+					log.Any("allSchool", schoolInfo.AllSchool),
+					log.Any("user", user))
+				return VisibilitySettingsTypeAllSchools, ErrInvalidVisibilitySetting
+			}
+		} else {
+			containsSchools = true
+		}
+	}
+	log.Info(ctx, "visibility settings check result",
+		log.Strings("visibilitySettings", visibilitySettings),
+		log.Bool("containsOrg", containsOrg),
+		log.Bool("containsOtherSchools", containsOtherSchools),
+		log.Bool("containsSchools", containsSchools))
+
+	//contains org
+	if containsOrg {
+		//contains other schools
+		if containsOtherSchools {
+			return VisibilitySettingsTypeOrgWithAllSchools, nil
+		}
+		if !containsSchools {
+			//only contains org
+			return VisibilitySettingsTypeOnlyOrg, nil
+		}
+		return VisibilitySettingsTypeOrgWithMySchools, nil
+	}
+
+	//contains other schools but org
+	if containsOtherSchools {
+		return VisibilitySettingsTypeAllSchools, nil
+	}
+	//only contains my schools
+	return VisibilitySettingsTypeMySchools, nil
+}
+
 func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.FolderContentData, user *entity.Operator) {
 	authorIDs := make([]string, len(objs))
 	for i := range objs {
@@ -2988,28 +3189,27 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 		objs[i].AuthorName = authorMap[objs[i].Author]
 		objs[i].ContentTypeName = objs[i].ContentType.Name()
 	}
+
+	//fill folder content permissions
+	cm.fillFolderContentPermission(ctx, objs, user)
 }
 
-
-func conditionRequestToCondition(c entity.ContentConditionRequest) *da.ContentCondition{
+func conditionRequestToCondition(c entity.ContentConditionRequest) *da.ContentCondition {
 	return &da.ContentCondition{
-		IDS:                 c.IDS,
-		Name:                c.Name,
-		ContentType:         c.ContentType,
-		VisibilitySettings:  c.VisibilitySettings,
-		PublishStatus:       c.PublishStatus,
-		Author:              c.Author,
-		Org:                 c.Org,
-		Program:             c.Program,
-		SourceID:            c.SourceID,
-		LatestID:            c.LatestID,
-		SourceType:          c.SourceType,
-		DirPath:             c.DirPath,
-		ContentName:         c.ContentName,
-		AuthedOrgID:         c.AuthedOrgID,
-		OrderBy:             da.NewContentOrderBy(c.OrderBy),
-		Pager:               c.Pager,
-		JoinUserIDList:      c.JoinUserIDList,
+		Name:               c.Name,
+		ContentType:        c.ContentType,
+		VisibilitySettings: c.VisibilitySettings,
+		PublishStatus:      c.PublishStatus,
+		Author:             c.Author,
+		Org:                c.Org,
+		Program:            c.Program,
+		SourceType:         c.SourceType,
+		DirPath:            c.DirPath,
+		ContentName:        c.ContentName,
+		AuthedOrgID:        c.AuthedOrgID,
+		OrderBy:            da.NewContentOrderBy(c.OrderBy),
+		Pager:              c.Pager,
+		JoinUserIDList:     c.JoinUserIDList,
 	}
 }
 

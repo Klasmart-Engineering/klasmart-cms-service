@@ -117,18 +117,6 @@ func (s *Server) copyContent(c *gin.Context) {
 		return
 	}
 
-	// hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
-	// if err != nil {
-	// 	log.Error(ctx, "get permission failed", log.Err(err))
-	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	// 	return
-	// }
-	// //有permission，直接返回
-	// //if user has no permission return
-	// if !hasPermission {
-	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
-	// 	return
-	// }
 	cid, err := model.GetContentModel().CopyContentTx(ctx, data.ContentID, data.Deep, op)
 	switch err {
 	case model.ErrNoContentData:
@@ -596,6 +584,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program_group query string false "search program group"
+// @Param submenu query string false "search page sub menu"
 // @Param program query string false "search content program"
 // @Param content_name query string false "search content name"
 // @Param path query string false "search content path"
@@ -613,6 +602,28 @@ func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := queryCondition(c, op)
+	author := c.Query("author")
+
+	var err error
+	if author != constant.Self {
+		if c.Query("submenu") == "archived" {
+			err = model.GetContentFilterModel().FilterArchivedContent(ctx, &condition, op)
+		} else {
+			err = model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
+		}
+		if err == model.ErrNoAvailableVisibilitySettings {
+			//no available visibility settings
+			c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+				Total:       0,
+				ContentList: nil,
+			})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+	}
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, condition, op)
 	if err != nil {
@@ -623,7 +634,6 @@ func (s *Server) queryContent(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-	author := c.Query("author")
 	total := 0
 	var results []*entity.ContentInfoWithDetails
 	if author == constant.Self {
@@ -654,6 +664,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param program query string false "search content program"
 // @Param content_name query string false "search content name"
 // @Param program_group query string false "search program group"
+// @Param submenu query string false "search page sub menu"
 // @Param source_type query string false "search content source type"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -701,6 +712,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param content_name query string false "search content name"
+// @Param submenu query string false "search page sub menu"
 // @Param program query string false "search content program"
 // @Param program_group query string false "search program group"
 // @Param path query string false "search content path"
@@ -719,6 +731,29 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 	condition := queryCondition(c, op)
+	author := c.Query("author")
+
+	//if query is not self, filter conditions
+	if author != constant.Self {
+		var err error
+		if c.Query("submenu") == "archived" {
+			err = model.GetContentFilterModel().FilterArchivedContent(ctx, &condition, op)
+		} else {
+			err = model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
+		}
+		if err == model.ErrNoAvailableVisibilitySettings {
+			//no available visibility settings
+			c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+				Total:       0,
+				ContentList: nil,
+			})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+	}
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, condition, op)
 	if err != nil {
@@ -729,7 +764,6 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-	author := c.Query("author")
 	total := 0
 	var results []*entity.FolderContentData
 	if author == constant.Self {
@@ -763,6 +797,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Param program query string false "search content program"
 // @Param program_group query string false "search program group"
 // @Param content_name query string false "search content name"
+// @Param submenu query string false "search page sub menu"
 // @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -817,6 +852,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param submenu query string false "search page sub menu"
 // @Param content_name query string false "search content name"
 // @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
@@ -835,6 +871,20 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := queryCondition(c, op)
+
+	err := model.GetContentFilterModel().FilterPendingContent(ctx, &condition, op)
+	if err == model.ErrNoAvailableVisibilitySettings {
+		//no available visibility settings
+		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+			Total:       0,
+			ContentList: nil,
+		})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, condition, op)
 	if err != nil {
