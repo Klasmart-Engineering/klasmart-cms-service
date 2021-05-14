@@ -73,7 +73,7 @@ const (
 
 func (ob ListStudiesOrderBy) Valid() bool {
 	switch ob {
-		ListStudiesOrderByCompleteAt,
+	case ListStudiesOrderByCompleteAt,
 		ListStudiesOrderByCompleteAtDesc:
 		return true
 	}
