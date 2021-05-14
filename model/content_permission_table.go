@@ -23,10 +23,15 @@ const (
 	VisibilitySettingsTypeOnlyOrg           VisibilitySettingsType = 4
 	VisibilitySettingsTypeOrgWithMySchools  VisibilitySettingsType = 5
 	VisibilitySettingsTypeOrgWithAllSchools VisibilitySettingsType = 6
+)
 
+const (
 	OwnerTypeUser   OwnerType = 1
 	OwnerTypeOthers OwnerType = 2
 )
+
+// Update synchronously with the following content permission
+var allContentPermissionSet []external.PermissionName = []external.PermissionName{external.EditMyPublishedContent234, external.EditOrgPublishedContent235, external.EditMySchoolsPublished247, external.EditAllSchoolsPublished249, external.EditLessonMaterialMetadataAndContent236, external.EditLessonPlanMetadata237, external.EditLessonPlanContent238, external.EditMyUnpublishedContent230, external.RemoveOrgPublishedContent254, external.RemoveMySchoolsPublished242, external.RemoveAllSchoolsPublished245, external.DeleteOrgArchivedContent253, external.DeleteMySchoolsArchived243, external.DeleteAllSchoolsArchived246, external.DeleteMyUnpublishedContent240, external.DeleteMyPending251, external.DeleteOrgPendingContent252, external.DeleteMySchoolsPending241, external.DeleteAllSchoolsPending244, external.ApprovePendingContent271, external.RejectPendingContent272, external.RepublishArchivedContent274, external.FullContentMmanagement294}
 
 type VisibilitySettingsType int
 type OwnerType int
@@ -57,7 +62,7 @@ type IContentPermissionTable interface {
 
 	//BatchGetContentPermissions Get permissions of contents, return with a map, the key of the map is the content id,
 	//The value of the map is content permission
-	BatchGetContentPermissions(ctx context.Context, operator *entity.Operator, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error)
+	BatchGetContentPermissions(ctx context.Context, operator *entity.Operator, reqs []*ContentEntityProfile) (map[string]entity.ContentPermission, error)
 }
 
 type IPermissionSet interface {
@@ -230,6 +235,8 @@ type ContentPermissionTable struct {
 	publishPermissionDict map[ContentProfile][]*PermissionSet
 	viewPermissionDict    map[ContentProfile][]*PermissionSet
 	removePermissionDict  map[ContentProfile][]*PermissionSet
+	approvePermissionDict map[ContentProfile][]*PermissionSet
+	rejectPermissionDict  map[ContentProfile][]*PermissionSet
 }
 
 var (
@@ -254,6 +261,8 @@ func (c *ContentPermissionTable) loadContentPermissionDict() {
 		PublishPermissionDict map[ContentProfile][]*PermissionSet `json:"publishPermissionDict"`
 		ViewPermissionDict    map[ContentProfile][]*PermissionSet `json:"viewPermissionDict"`
 		RemovePermissionDict  map[ContentProfile][]*PermissionSet `json:"removePermissionDict"`
+		ApprovePermissionDict map[ContentProfile][]*PermissionSet `json:"approvePermissionDict"`
+		RejectPermissionDict  map[ContentProfile][]*PermissionSet `json:"rejectPermissionDict"`
 	}{}
 
 	err := json.Unmarshal(constant.ContentPermissionJsonData, &permissionDict)
@@ -267,6 +276,8 @@ func (c *ContentPermissionTable) loadContentPermissionDict() {
 	c.publishPermissionDict = permissionDict.PublishPermissionDict
 	c.viewPermissionDict = permissionDict.ViewPermissionDict
 	c.removePermissionDict = permissionDict.RemovePermissionDict
+	c.approvePermissionDict = permissionDict.ApprovePermissionDict
+	c.rejectPermissionDict = permissionDict.RejectPermissionDict
 }
 
 func (c *ContentPermissionTable) GetCreatePermissionSets(ctx context.Context, req ContentProfile) (IPermissionSet, error) {
@@ -358,28 +369,221 @@ func (c *ContentPermissionTable) GetRemovePermissionSets(ctx context.Context, re
 }
 
 func (c *ContentPermissionTable) GetApprovePermissionSets(ctx context.Context, req []*ContentProfile) (IPermissionSet, error) {
-	return nil, nil
+	set := make(map[ContentProfile]struct{})
+	permissionSetsList := make([][]*PermissionSet, 0)
+
+	for i := range req {
+		key := *req[i]
+		if _, ok := set[key]; !ok {
+			if _, ok := c.approvePermissionDict[key]; !ok {
+				log.Warn(context.TODO(), "undefined permission",
+					log.Any("ContentType", key),
+					log.Err(ErrUndefinedPermission))
+				return nil, ErrUndefinedPermission
+			}
+
+			set[key] = struct{}{}
+			permissionSetsList = append(permissionSetsList, c.approvePermissionDict[key])
+		}
+	}
+
+	return PermissionSetsList(permissionSetsList), nil
 }
 
 func (c *ContentPermissionTable) GetRejectPermissionSets(ctx context.Context, req []*ContentProfile) (IPermissionSet, error) {
-	return nil, nil
+	set := make(map[ContentProfile]struct{})
+	permissionSetsList := make([][]*PermissionSet, 0)
+
+	for i := range req {
+		key := *req[i]
+		if _, ok := set[key]; !ok {
+			if _, ok := c.rejectPermissionDict[key]; !ok {
+				log.Warn(context.TODO(), "undefined permission",
+					log.Any("ContentType", key),
+					log.Err(ErrUndefinedPermission))
+				return nil, ErrUndefinedPermission
+			}
+
+			set[key] = struct{}{}
+			permissionSetsList = append(permissionSetsList, c.rejectPermissionDict[key])
+		}
+	}
+
+	return PermissionSetsList(permissionSetsList), nil
+}
+
+type contentPermission struct {
+	allowEdit      bool
+	allowDelete    bool
+	allowApprove   bool
+	allowReject    bool
+	allowRepublish bool
 }
 
 //BatchGetContentPermissions Get permissions of contents, return with a map, the key of the map is the content id,
 //The value of the map is content permission
 func (c *ContentPermissionTable) BatchGetContentPermissions(ctx context.Context, operator *entity.Operator, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error) {
-	//TODO: Complete the function
-	result := make(map[string]entity.ContentPermission)
-	for i := range req {
-		result[req[i].ID] = entity.ContentPermission{
-			ID:             req[i].ID,
-			AllowEdit:      true,
-			AllowDelete:    true,
-			AllowApprove:   true,
-			AllowReject:    true,
-			AllowRepublish: true,
+	contentPermissionDict, err := c.getOperatorContentPermission(ctx, operator)
+	if err != nil {
+		log.Warn(ctx, "getOperatorContentPermission failed",
+			log.Any("operator", operator),
+			log.Err(err))
+		return nil, err
+	}
+
+	result := make(map[string]entity.ContentPermission, len(req))
+	for _, r := range req {
+		pm := contentPermissionDict[r.ContentProfile]
+		result[r.ID] = entity.ContentPermission{
+			ID:             r.ID,
+			AllowEdit:      pm.allowEdit,
+			AllowDelete:    pm.allowDelete,
+			AllowApprove:   pm.allowApprove,
+			AllowReject:    pm.allowReject,
+			AllowRepublish: pm.allowRepublish,
 		}
 	}
 
 	return result, nil
+}
+
+func (c *ContentPermissionTable) getOperatorContentPermission(ctx context.Context, operator *entity.Operator) (map[ContentProfile]*contentPermission, error) {
+	result := make(map[ContentProfile]*contentPermission)
+
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, allContentPermissionSet)
+	if err != nil {
+		log.Warn(ctx, "HasOrganizationPermissions failed",
+			log.Any("operator", operator),
+			log.Any("permissions", allContentPermissionSet),
+			log.Err(err))
+		return nil, err
+	}
+
+	c.getOperatorContentEditPermission(result, hasPermission)
+	c.getOperatorContentRemovePermission(result, hasPermission)
+	c.getOperatorContentRepublishPermission(result, hasPermission)
+	c.getOperatorContentApprovePermission(result, hasPermission)
+	c.getOperatorContentRejectPermission(result, hasPermission)
+
+	return result, nil
+}
+
+func (c *ContentPermissionTable) getOperatorContentEditPermission(result map[ContentProfile]*contentPermission, hasPermission map[external.PermissionName]bool) {
+	for k, v := range c.editPermissionDict {
+		if _, ok := result[k]; !ok {
+			result[k] = &contentPermission{}
+		}
+
+		allowEdit := true
+		for i := range v {
+			allowEdit = true
+			for _, v := range v[i].Permissions {
+				if val, ok := hasPermission[v]; !ok || !val {
+					allowEdit = false
+					break
+				}
+			}
+
+			if allowEdit == true {
+				break
+			}
+		}
+		result[k].allowEdit = allowEdit
+	}
+}
+
+func (c *ContentPermissionTable) getOperatorContentRepublishPermission(result map[ContentProfile]*contentPermission, hasPermission map[external.PermissionName]bool) {
+	for k, v := range c.publishPermissionDict {
+		if _, ok := result[k]; !ok {
+			result[k] = &contentPermission{}
+		}
+
+		allowRepublish := true
+		for i := range v {
+			allowRepublish = true
+			for _, v := range v[i].Permissions {
+				if val, ok := hasPermission[v]; !ok || !val {
+					allowRepublish = false
+					break
+				}
+			}
+
+			if allowRepublish == true {
+				break
+			}
+		}
+		result[k].allowRepublish = allowRepublish
+	}
+}
+
+func (c *ContentPermissionTable) getOperatorContentRemovePermission(result map[ContentProfile]*contentPermission, hasPermission map[external.PermissionName]bool) {
+	for k, v := range c.removePermissionDict {
+		if _, ok := result[k]; !ok {
+			result[k] = &contentPermission{}
+		}
+
+		allowDelete := true
+		for i := range v {
+			allowDelete = true
+			for _, v := range v[i].Permissions {
+				if val, ok := hasPermission[v]; !ok || !val {
+					allowDelete = false
+					break
+				}
+			}
+
+			if allowDelete == true {
+				break
+			}
+		}
+		result[k].allowDelete = allowDelete
+	}
+}
+
+func (c *ContentPermissionTable) getOperatorContentApprovePermission(result map[ContentProfile]*contentPermission, hasPermission map[external.PermissionName]bool) {
+	for k, v := range c.approvePermissionDict {
+		if _, ok := result[k]; !ok {
+			result[k] = &contentPermission{}
+		}
+
+		allowApprove := true
+		for i := range v {
+			allowApprove = true
+			for _, v := range v[i].Permissions {
+				if val, ok := hasPermission[v]; !ok || !val {
+					allowApprove = false
+					break
+				}
+			}
+
+			if allowApprove == true {
+				break
+			}
+		}
+		result[k].allowApprove = allowApprove
+	}
+}
+
+func (c *ContentPermissionTable) getOperatorContentRejectPermission(result map[ContentProfile]*contentPermission, hasPermission map[external.PermissionName]bool) {
+	for k, v := range c.rejectPermissionDict {
+		if _, ok := result[k]; !ok {
+			result[k] = &contentPermission{}
+		}
+
+		allowReject := true
+		for i := range v {
+			allowReject = true
+			for _, v := range v[i].Permissions {
+				if val, ok := hasPermission[v]; !ok || !val {
+					allowReject = false
+					break
+				}
+			}
+
+			if allowReject == true {
+				break
+			}
+		}
+		result[k].allowReject = allowReject
+	}
 }
