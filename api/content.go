@@ -603,24 +603,10 @@ func (s *Server) queryContent(c *gin.Context) {
 	op := s.getOperator(c)
 	condition := queryCondition(c, op)
 	author := c.Query("author")
-
-	var err error
+	//filter unauthed visibility settings
 	if author != constant.Self {
-		if c.Query("submenu") == "archived" {
-			err = model.GetContentFilterModel().FilterArchivedContent(ctx, &condition, op)
-		} else {
-			err = model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
-		}
-		if err == model.ErrNoAvailableVisibilitySettings {
-			//no available visibility settings
-			c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
-				Total:       0,
-				ContentList: nil,
-			})
-			return
-		}
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		isTerminal := filterPublishedContent(c, condition, op)
+		if isTerminal {
 			return
 		}
 	}
@@ -679,15 +665,6 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	op := s.getOperator(c)
 	condition := queryCondition(c, op)
 
-	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, condition, op)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
-		return
-	}
 	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	switch err {
 	case nil:
@@ -735,22 +712,8 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 
 	//if query is not self, filter conditions
 	if author != constant.Self {
-		var err error
-		if c.Query("submenu") == "archived" {
-			err = model.GetContentFilterModel().FilterArchivedContent(ctx, &condition, op)
-		} else {
-			err = model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
-		}
-		if err == model.ErrNoAvailableVisibilitySettings {
-			//no available visibility settings
-			c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
-				Total:       0,
-				ContentList: nil,
-			})
-			return
-		}
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		isTerminal := filterPublishedContent(c, condition, op)
+		if isTerminal {
 			return
 		}
 	}
@@ -872,17 +835,9 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 
 	condition := queryCondition(c, op)
 
-	err := model.GetContentFilterModel().FilterPendingContent(ctx, &condition, op)
-	if err == model.ErrNoAvailableVisibilitySettings {
-		//no available visibility settings
-		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
-			Total:       0,
-			ContentList: nil,
-		})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	//filter pending visibility settings
+	isTerminal := filterPendingContent(c, condition, op)
+	if isTerminal {
 		return
 	}
 
@@ -970,6 +925,48 @@ func parseOrg(c *gin.Context, u *entity.Operator) string {
 		author = u.OrgID
 	}
 	return author
+}
+
+func filterPendingContent(c *gin.Context, condition entity.ContentConditionRequest, op *entity.Operator) bool{
+	ctx := c.Request.Context()
+	err := model.GetContentFilterModel().FilterPendingContent(ctx, &condition, op)
+	if err == model.ErrNoAvailableVisibilitySettings {
+		//no available visibility settings
+		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+			Total:       0,
+			ContentList: nil,
+		})
+		return true
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return true
+	}
+	return false
+}
+
+func filterPublishedContent(c *gin.Context, condition entity.ContentConditionRequest, op *entity.Operator) bool {
+	ctx := c.Request.Context()
+	var err error
+	if c.Query("submenu") == "archived" {
+		err = model.GetContentFilterModel().FilterArchivedContent(ctx, &condition, op)
+	} else {
+		err = model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
+	}
+	//no available content visibility settings, return nil
+	if err == model.ErrNoAvailableVisibilitySettings {
+		//no available visibility settings
+		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+			Total:       0,
+			ContentList: make([]*entity.FolderContentData, 0),
+		})
+		return true
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return true
+	}
+	return false
 }
 
 func queryCondition(c *gin.Context, op *entity.Operator) entity.ContentConditionRequest {

@@ -9,6 +9,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -275,6 +276,11 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 }
 
 func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) (bool, error) {
+	//if condition is self, set as user id
+	if condition.Author == constant.Self {
+		condition.Author = user.UserID
+	}
+
 	contentProfiles, err := c.buildByConditionContentProfiles(ctx, condition, user)
 	if err != nil {
 		log.Error(ctx, "buildByConditionContentProfiles Failed",

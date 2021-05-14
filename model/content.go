@@ -2984,6 +2984,10 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 			log.Any("user", user))
 		return
 	}
+	log.Debug(ctx, "hasFolderPermission result",
+		log.Any("hasFolderPermission", hasFolderPermission),
+		log.Any("objs", objs),
+		log.Any("user", user))
 
 	contentIDs := make([]string, 0)
 	for i := range objs {
@@ -3004,6 +3008,9 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 			objs[i].Permission.AllowDelete = false
 		}
 	}
+
+	log.Debug(ctx, "hasFolderPermission result after init permissions",
+		log.Any("objs", objs))
 	contentList, err := cm.getContentInfoByIDList(ctx, dbo.MustGetDB(ctx), contentIDs, user)
 	if err != nil {
 		log.Error(ctx, "GetContentByIDList failed",
@@ -3012,6 +3019,10 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 			log.Strings("contentIDs", contentIDs))
 		return
 	}
+	log.Debug(ctx, "getContentInfoByIDList result",
+		log.Any("contentList", contentList),
+		log.Any("objs", objs))
+
 	//build content profiles
 	contentProfiles, err := cm.buildContentProfiles(ctx, contentList, user)
 	if err != nil {
@@ -3021,6 +3032,9 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 			log.Any("contentList", contentList))
 		return
 	}
+	log.Debug(ctx, "contentProfiles result",
+		log.Any("contentList", contentList),
+		log.Any("contentProfiles", contentProfiles))
 
 	//get permission map
 	permissionMap, err := NewContentPermissionTable().BatchGetContentPermissions(ctx, user, contentProfiles)
@@ -3032,6 +3046,8 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 			log.Any("contentList", contentList))
 		return
 	}
+	log.Debug(ctx, "BatchGetContentPermissions result",
+		log.Any("permissionMap", permissionMap))
 	//if permission is in the map, replace the permission of content
 	for i := range objs {
 		p, exists := permissionMap[objs[i].ID]
@@ -3039,10 +3055,11 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 			objs[i].Permission = p
 		}
 	}
+	log.Debug(ctx, "fillFolderContentPermission result",
+		log.Any("objs", objs))
 }
 
 func (cm *ContentModel) fillContentPermission(ctx context.Context, objs []*entity.ContentInfoWithDetails, user *entity.Operator) {
-	//TODO: complete the function
 	contentList := make([]*entity.ContentInfo, len(objs))
 	for i := range objs {
 		contentList[i] = &objs[i].ContentInfo
@@ -3055,6 +3072,9 @@ func (cm *ContentModel) fillContentPermission(ctx context.Context, objs []*entit
 			AllowRepublish: false,
 		}
 	}
+	log.Debug(ctx, "fillContentPermission",
+		log.Any("contentList", contentList),
+		log.Any("objs", objs))
 
 	contentProfiles, err := cm.buildContentProfiles(ctx, contentList, user)
 	if err != nil {
@@ -3065,6 +3085,9 @@ func (cm *ContentModel) fillContentPermission(ctx context.Context, objs []*entit
 		return
 	}
 
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("contentProfiles", contentProfiles))
+
 	permissionMap, err := NewContentPermissionTable().BatchGetContentPermissions(ctx, user, contentProfiles)
 	if err != nil {
 		log.Error(ctx, "BatchGetContentPermissions failed",
@@ -3074,12 +3097,19 @@ func (cm *ContentModel) fillContentPermission(ctx context.Context, objs []*entit
 			log.Any("contentList", contentList))
 		return
 	}
+
+	log.Debug(ctx, "BatchGetContentPermissions result",
+		log.Any("permissionMap", permissionMap))
+
 	for i := range objs {
 		p, exists := permissionMap[objs[i].ID]
 		if exists {
 			objs[i].Permission = p
 		}
 	}
+	log.Debug(ctx, "fillContentPermission result",
+		log.Any("objs", objs),
+		log.Any("permissionMap", permissionMap))
 }
 
 func (c *ContentModel) buildContentProfiles(ctx context.Context, content []*entity.ContentInfo, user *entity.Operator) ([]*ContentEntityProfile, error) {
@@ -3093,6 +3123,9 @@ func (c *ContentModel) buildContentProfiles(ctx context.Context, content []*enti
 			log.Any("user", user))
 		return nil, err
 	}
+	log.Debug(ctx, "querySchools result",
+		log.Any("schoolsInfo", schoolsInfo),
+		log.Any("content", content))
 
 	for i := range content {
 		visibilitySettingType, err := c.getVisibilitySettingsType(ctx, content[i].PublishScope, schoolsInfo, user)
