@@ -64,7 +64,7 @@ type MilestoneView struct {
 }
 
 func (ms *MilestoneView) ToMilestone(ctx context.Context, op *entity.Operator) (*entity.Milestone, error) {
-	if len(ms.Name) > constant.MilestoneNameLength {
+	if len([]rune(ms.Name)) > constant.MilestoneNameLength {
 		return nil, constant.ErrExceededLimit
 	}
 	if ms.Type == "" {
