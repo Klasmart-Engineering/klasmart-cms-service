@@ -18,7 +18,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type IAssessmentModel interface {
+type IOutcomeAssessmentModel interface {
 	GetPlain(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.Assessment, error)
 	Get(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
@@ -28,22 +28,22 @@ type IAssessmentModel interface {
 }
 
 var (
-	assessmentModelInstance     IAssessmentModel
-	assessmentModelInstanceOnce = sync.Once{}
+	outcomeAssessmentModelInstance     IOutcomeAssessmentModel
+	outcomeAssessmentModelInstanceOnce = sync.Once{}
 
 	ErrNotFoundAttendance = errors.New("not found attendance")
 )
 
-func GetAssessmentModel() IAssessmentModel {
-	assessmentModelInstanceOnce.Do(func() {
-		assessmentModelInstance = &assessmentModel{}
+func GetOutcomeAssessmentModel() IOutcomeAssessmentModel {
+	outcomeAssessmentModelInstanceOnce.Do(func() {
+		outcomeAssessmentModelInstance = &outcomeAssessmentModel{}
 	})
-	return assessmentModelInstance
+	return outcomeAssessmentModelInstance
 }
 
-type assessmentModel struct{}
+type outcomeAssessmentModel struct{}
 
-func (m *assessmentModel) GetPlain(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.Assessment, error) {
+func (m *outcomeAssessmentModel) GetPlain(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.Assessment, error) {
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
 	if err != nil {
 		log.Error(ctx, "GetPlain: da.GetAssessmentDA().GetExcludeSoftDeleted: get assessment failed",
@@ -56,7 +56,7 @@ func (m *assessmentModel) GetPlain(ctx context.Context, tx *dbo.DBContext, opera
 	return assessment, nil
 }
 
-func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
+func (m *outcomeAssessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
 	if err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentDA().GetExcludeSoftDeleted: get failed",
@@ -252,7 +252,7 @@ func (m *assessmentModel) Get(ctx context.Context, tx *dbo.DBContext, operator *
 	return &result, nil
 }
 
-func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
+func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
 	// check permission
 	var (
 		checker = NewAssessmentPermissionChecker(operator)
@@ -273,6 +273,10 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
+			Type: entity.NullAssessmentType{
+				Value: entity.AssessmentTypeOutcomeClassAndLive,
+				Valid: true,
+			},
 			OrgID: entity.NullString{
 				String: operator.OrgID,
 				Valid:  true,
@@ -282,7 +286,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 				Strings: checker.allowTeacherIDs,
 				Valid:   true,
 			},
-			TeacherIDAndStatusPairs: entity.NullAssessmentTeacherIDAndStatusPairs{
+			AllowTeacherIDAndStatusPairs: entity.NullAssessmentAllowTeacherIDAndStatusPairs{
 				Values: checker.AllowPairs(),
 				Valid:  len(checker.AllowPairs()) > 0,
 			},
@@ -388,7 +392,7 @@ func (m *assessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator 
 	return &result, nil
 }
 
-func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error) {
+func (m *outcomeAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error) {
 	// check permission
 	var (
 		checker = NewAssessmentPermissionChecker(operator)
@@ -409,6 +413,10 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
+			Type: entity.NullAssessmentType{
+				Value: entity.AssessmentTypeOutcomeClassAndLive,
+				Valid: true,
+			},
 			OrgID: entity.NullString{
 				String: operator.OrgID,
 				Valid:  true,
@@ -418,7 +426,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 				Strings: checker.AllowTeacherIDs(),
 				Valid:   true,
 			},
-			TeacherIDAndStatusPairs: entity.NullAssessmentTeacherIDAndStatusPairs{
+			AllowTeacherIDAndStatusPairs: entity.NullAssessmentAllowTeacherIDAndStatusPairs{
 				Values: checker.allowPairs,
 				Valid:  len(checker.allowPairs) > 0,
 			},
@@ -493,7 +501,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 	return &r, nil
 }
 
-func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, checkedStudents *bool) ([]*entity.AssessmentView, error) {
+func (m *outcomeAssessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, checkedStudents *bool) ([]*entity.AssessmentView, error) {
 	if len(assessments) == 0 {
 		return nil, nil
 	}
@@ -643,7 +651,7 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 	return result, nil
 }
 
-func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
+func (m *outcomeAssessmentModel) Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
 	log.Debug(ctx, "add assessment args", log.Any("args", args), log.Any("operator", operator))
 
 	// clean data
@@ -652,6 +660,10 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 	// check if assessment already exits
 	var assessments []entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+		Type: entity.NullAssessmentType{
+			Value: entity.AssessmentTypeOutcomeClassAndLive,
+			Valid: true,
+		},
 		OrgID: entity.NullString{
 			String: operator.OrgID,
 			Valid:  true,
@@ -929,7 +941,7 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 	return newAssessmentID, nil
 }
 
-func (m *assessmentModel) addAssessmentContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
+func (m *outcomeAssessmentModel) addAssessmentContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
 	if len(contents) == 0 {
 		return nil
 	}
@@ -985,7 +997,7 @@ func (m *assessmentModel) addAssessmentContents(ctx context.Context, tx *dbo.DBC
 	return nil
 }
 
-func (m *assessmentModel) addAssessmentAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, scheduleRelations []*entity.ScheduleRelation) error {
+func (m *outcomeAssessmentModel) addAssessmentAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, scheduleRelations []*entity.ScheduleRelation) error {
 	if len(scheduleRelations) == 0 {
 		return nil
 	}
@@ -1031,7 +1043,7 @@ func (m *assessmentModel) addAssessmentAttendances(ctx context.Context, tx *dbo.
 	return nil
 }
 
-func (m *assessmentModel) addAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome) error {
+func (m *outcomeAssessmentModel) addAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome) error {
 	if len(outcomes) == 0 {
 		return nil
 	}
@@ -1059,7 +1071,7 @@ func (m *assessmentModel) addAssessmentOutcomes(ctx context.Context, tx *dbo.DBC
 	return nil
 }
 
-func (m *assessmentModel) addOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome, scheduleRelations []*entity.ScheduleRelation) error {
+func (m *outcomeAssessmentModel) addOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome, scheduleRelations []*entity.ScheduleRelation) error {
 	if len(outcomes) == 0 || len(scheduleRelations) == 0 {
 		return nil
 	}
@@ -1102,7 +1114,7 @@ func (m *assessmentModel) addOutcomeAttendances(ctx context.Context, tx *dbo.DBC
 	return nil
 }
 
-func (m *assessmentModel) Update(ctx context.Context, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
+func (m *outcomeAssessmentModel) Update(ctx context.Context, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
 	// validate
 	if !args.Action.Valid() {
 		log.Error(ctx, "update assessment: invalid action", log.Any("args", args))
@@ -1309,11 +1321,11 @@ func (m *assessmentModel) Update(ctx context.Context, operator *entity.Operator,
 
 // region utils
 
-func (m *assessmentModel) generateTitle(classEndTime int64, className string, lessonName string) string {
+func (m *outcomeAssessmentModel) generateTitle(classEndTime int64, className string, lessonName string) string {
 	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, lessonName)
 }
 
-func (m *assessmentModel) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
+func (m *outcomeAssessmentModel) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
 	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
 	cond := da.QueryAssessmentContentOutcomeConditions{
 		AssessmentIDs: entity.NullStrings{
@@ -1374,7 +1386,7 @@ type AssessmentPermissionChecker struct {
 	allowStatusComplete   bool
 	allowStatusInProgress bool
 	allowTeacherIDs       []string
-	allowPairs            []*entity.AssessmentTeacherIDAndStatusPair
+	allowPairs            []*entity.AssessmentAllowTeacherIDAndStatusPair
 }
 
 func NewAssessmentPermissionChecker(operator *entity.Operator) *AssessmentPermissionChecker {
@@ -1446,7 +1458,7 @@ func (c *AssessmentPermissionChecker) SearchOrgPermissions(ctx context.Context) 
 		if hasP424 {
 			c.allowStatusComplete = true
 			for _, teacherID := range teacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentTeacherIDAndStatusPair{
+				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
 					TeacherID: teacherID,
 					Status:    entity.AssessmentStatusComplete,
 				})
@@ -1456,7 +1468,7 @@ func (c *AssessmentPermissionChecker) SearchOrgPermissions(ctx context.Context) 
 		if hasP425 {
 			c.allowStatusInProgress = true
 			for _, teacherID := range teacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentTeacherIDAndStatusPair{
+				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
 					TeacherID: teacherID,
 					Status:    entity.AssessmentStatusInProgress,
 				})
@@ -1520,7 +1532,7 @@ func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Contex
 		if hasP426 {
 			c.allowStatusComplete = true
 			for _, teacherID := range c.allowTeacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentTeacherIDAndStatusPair{
+				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
 					TeacherID: teacherID,
 					Status:    entity.AssessmentStatusComplete,
 				})
@@ -1530,7 +1542,7 @@ func (c *AssessmentPermissionChecker) SearchSchoolPermissions(ctx context.Contex
 		if hasP427 {
 			c.allowStatusInProgress = true
 			for _, teacherID := range teacherIDs {
-				c.allowPairs = append(c.allowPairs, &entity.AssessmentTeacherIDAndStatusPair{
+				c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
 					TeacherID: teacherID,
 					Status:    entity.AssessmentStatusInProgress,
 				})
@@ -1562,14 +1574,14 @@ func (c *AssessmentPermissionChecker) SearchSelfPermissions(ctx context.Context)
 	if hasP414 || hasP415 {
 		if hasP414 {
 			c.allowStatusComplete = true
-			c.allowPairs = append(c.allowPairs, &entity.AssessmentTeacherIDAndStatusPair{
+			c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
 				TeacherID: c.operator.UserID,
 				Status:    entity.AssessmentStatusComplete,
 			})
 		}
 		if hasP415 {
 			c.allowStatusInProgress = true
-			c.allowPairs = append(c.allowPairs, &entity.AssessmentTeacherIDAndStatusPair{
+			c.allowPairs = append(c.allowPairs, &entity.AssessmentAllowTeacherIDAndStatusPair{
 				TeacherID: c.operator.UserID,
 				Status:    entity.AssessmentStatusInProgress,
 			})
@@ -1584,8 +1596,8 @@ func (c *AssessmentPermissionChecker) AllowTeacherIDs() []string {
 	return c.allowTeacherIDs
 }
 
-func (c *AssessmentPermissionChecker) AllowPairs() []*entity.AssessmentTeacherIDAndStatusPair {
-	var result []*entity.AssessmentTeacherIDAndStatusPair
+func (c *AssessmentPermissionChecker) AllowPairs() []*entity.AssessmentAllowTeacherIDAndStatusPair {
+	var result []*entity.AssessmentAllowTeacherIDAndStatusPair
 
 	m := map[string]*struct {
 		allowStatusInProgress bool
@@ -1614,13 +1626,13 @@ func (c *AssessmentPermissionChecker) AllowPairs() []*entity.AssessmentTeacherID
 			continue
 		}
 		if statuses.allowStatusComplete {
-			result = append(result, &entity.AssessmentTeacherIDAndStatusPair{
+			result = append(result, &entity.AssessmentAllowTeacherIDAndStatusPair{
 				TeacherID: teacherID,
 				Status:    entity.AssessmentStatusComplete,
 			})
 		}
 		if statuses.allowStatusInProgress {
-			result = append(result, &entity.AssessmentTeacherIDAndStatusPair{
+			result = append(result, &entity.AssessmentAllowTeacherIDAndStatusPair{
 				TeacherID: teacherID,
 				Status:    entity.AssessmentStatusInProgress,
 			})

@@ -65,7 +65,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 			Strings: checker.allowTeacherIDs,
 			Valid:   true,
 		},
-		AllowPairs: entity.NullAssessmentTeacherIDAndStatusPairs{
+		AllowPairs: entity.NullAssessmentAllowTeacherIDAndStatusPairs{
 			Values: checker.AllowPairs(),
 			Valid:  len(checker.AllowPairs()) > 0,
 		},

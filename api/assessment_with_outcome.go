@@ -96,7 +96,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 		}
 	}
 
-	result, err := model.GetAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	result, err := model.GetOutcomeAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -166,7 +166,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
+	result, err := model.GetOutcomeAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -221,7 +221,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd), log.String("token", body.Token))
-	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
+	newID, err := model.GetOutcomeAssessmentModel().Add(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		log.Debug(ctx, "add assessment jwt success",
@@ -263,7 +263,7 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		return
 	}
 
-	newID, err := model.GetAssessmentModel().Add(ctx, s.getOperator(c), cmd)
+	newID, err := model.GetOutcomeAssessmentModel().Add(ctx, s.getOperator(c), cmd)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
@@ -301,7 +301,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetAssessmentModel().Get(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
+	item, err := model.GetOutcomeAssessmentModel().Get(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
@@ -356,7 +356,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		return
 	}
 
-	err := model.GetAssessmentModel().Update(ctx, s.getOperator(c), args)
+	err := model.GetOutcomeAssessmentModel().Update(ctx, s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
