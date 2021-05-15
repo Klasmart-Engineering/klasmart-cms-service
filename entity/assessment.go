@@ -1,5 +1,7 @@
 package entity
 
+import "database/sql"
+
 type Assessment struct {
 	ID           string           `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
 	ScheduleID   string           `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
@@ -20,14 +22,14 @@ type Assessment struct {
 type AssessmentType string
 
 const (
-	AssessmentTypeOutcomeClassAndLive = "outcome_class_and_live"
-	AssessmentTypeContentClassAndLive = "content_class_and_live"
-	AssessmentTypeContentStudy        = "content_study"
+	AssessmentTypeClassAndLiveOutcome = "class_and_live_outcome"
+	AssessmentTypeClassAndLiveH5P     = "class_and_live_h5p"
+	AssessmentTypeStudyH5P            = "study_h5p"
 )
 
 func (t AssessmentType) Valid() bool {
 	switch t {
-	case AssessmentTypeOutcomeClassAndLive, AssessmentTypeContentClassAndLive, AssessmentTypeContentStudy:
+	case AssessmentTypeClassAndLiveOutcome, AssessmentTypeClassAndLiveH5P, AssessmentTypeStudyH5P:
 		return true
 	default:
 		return false
@@ -41,6 +43,22 @@ type NullAssessmentType struct {
 
 func (Assessment) TableName() string {
 	return "assessments"
+}
+
+type AddAssessmentArgs struct {
+	Type          AssessmentType `json:"type"`
+	ScheduleID    string         `json:"schedule_id"`
+	AttendanceIDs []string       `json:"attendance_ids"`
+	ClassLength   int            `json:"class_length"`
+	ClassEndTime  int64          `json:"class_end_time"`
+}
+
+func (a *AddAssessmentArgs) Valid() error {
+	return nil
+}
+
+type AddAssessmentResult struct {
+	IDs []string `json:"id"`
 }
 
 type UpdateAssessmentAction string
@@ -57,4 +75,94 @@ func (a UpdateAssessmentAction) Valid() bool {
 	default:
 		return false
 	}
+}
+
+type AssessmentsOrderBy string
+
+const (
+	ListAssessmentsOrderByClassEndTime     AssessmentsOrderBy = "class_end_time"
+	ListAssessmentsOrderByClassEndTimeDesc AssessmentsOrderBy = "-class_end_time"
+	ListAssessmentsOrderByCompleteTime     AssessmentsOrderBy = "complete_time"
+	ListAssessmentsOrderByCompleteTimeDesc AssessmentsOrderBy = "-complete_time"
+	ListAssessmentsOrderByCreateAt         AssessmentsOrderBy = "create_at"
+	ListAssessmentsOrderByCreateAtDesc     AssessmentsOrderBy = "-create_at"
+)
+
+func (ob AssessmentsOrderBy) Valid() bool {
+	switch ob {
+	case ListAssessmentsOrderByClassEndTime,
+		ListAssessmentsOrderByClassEndTimeDesc,
+		ListAssessmentsOrderByCompleteTime,
+		ListAssessmentsOrderByCompleteTimeDesc,
+		ListAssessmentsOrderByCreateAt,
+		ListAssessmentsOrderByCreateAtDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+type NullAssessmentsOrderBy struct {
+	Value AssessmentsOrderBy
+	Valid bool
+}
+
+type AssessmentView struct {
+	*Assessment
+	Schedule        *Schedule
+	Program         AssessmentProgram               `json:"program"`
+	Subjects        []*AssessmentSubject            `json:"subjects"`
+	Teachers        []*AssessmentTeacher            `json:"teachers"`
+	Students        []*AssessmentStudent            `json:"students"`
+	Class           AssessmentClass                 `json:"class"`
+	LessonPlan      *AssessmentViewLessonPlan       `json:"lesson_plan"`
+	LessonMaterials []*AssessmentViewLessonMaterial `json:"lesson_materials"`
+}
+
+type AssessmentProgram struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type AssessmentTeacher struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type AssessmentStudent struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Checked bool   `json:"checked"`
+}
+
+type AssessmentClass struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type AssessmentSubject struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type AssessmentViewLessonPlan struct {
+	ID   string
+	Name string
+}
+
+type AssessmentViewLessonMaterial struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Source string `json:"source"`
+}
+
+type ConvertToViewsOptions struct {
+	CheckedStudents       sql.NullBool
+	EnableProgram         bool
+	EnableSubjects        bool
+	EnableTeachers        bool
+	EnableStudents        bool
+	EnableClass           bool
+	EnableLessonPlan      bool
+	EnableLessonMaterials bool
 }

@@ -128,12 +128,29 @@ type QueryAssessmentConditions struct {
 	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`
 	AllowTeacherIDAndStatusPairs entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"teacher_id_and_status_pairs"`
 	ClassType                    entity.NullScheduleClassType                      `json:"class_type"`
-	OrderBy                      entity.NullListAssessmentsOrderBy                 `json:"order_by"`
-	Pager                        dbo.Pager                                         `json:"pager"`
+	ClassIDs                     entity.NullStrings                                `json:"class_ids"`
+	ClassIDsOrTeacherIDs         NullClassIDsOrTeacherIDs                          `json:"class_ids_or_teacher_ids"`
+
+	OrderBy entity.NullAssessmentsOrderBy `json:"order_by"`
+	Pager   dbo.Pager                     `json:"pager"`
+}
+
+type ClassIDsOrTeacherIDs struct {
+	ClassIDs   []string `json:"class_ids"`
+	TeacherIDs []string `json:"teacher_ids"`
+}
+
+type NullClassIDsOrTeacherIDs struct {
+	Value ClassIDsOrTeacherIDs
+	Valid bool
 }
 
 func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 	t := NewSQLTemplate("delete_at = 0")
+
+	if c.IDs.Valid {
+		t.Appendf("id in (?)", c.IDs.Strings)
+	}
 
 	if c.Type.Valid && c.Type.Value.Valid() {
 		t.Appendf("'type' = ?", c.Type.Value)
@@ -178,6 +195,21 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 
 	if c.ScheduleIDs.Valid {
 		t.Appendf("schedule_id in (?)", c.ScheduleIDs.Strings)
+	}
+
+	if c.ClassIDs.Valid {
+		t.Appendf("exists (select 1 from schedules"+
+			" where class_id in (?) and delete_at = 0 and assessments.schedule_id = schedules.id)", c.ClassIDs.Strings)
+	}
+
+	if c.ClassIDsOrTeacherIDs.Valid {
+		t2 := NewSQLTemplate("")
+		t2.Appendf("exists (select 1 from schedules"+
+			" where class_id in (?) and delete_at = 0 and assessments.schedule_id = schedules.id)", c.ClassIDs.Strings)
+		t2.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
+			utils.SliceDeduplication(c.TeacherIDs.Strings))
+		t.AppendResult(t2.Or())
 	}
 
 	return t.DBOConditions()

@@ -2,14 +2,6 @@ package entity
 
 import "gitlab.badanamu.com.cn/calmisland/dbo"
 
-type AssessmentView struct {
-	*Assessment
-	Program  AssessmentProgram    `json:"program"`
-	Subjects []*AssessmentSubject `json:"subjects"`
-	Teachers []*AssessmentTeacher `json:"teachers"`
-	Students []*AssessmentStudent `json:"students"`
-}
-
 type AssessmentItem struct {
 	ID           string               `json:"id"`
 	Title        string               `json:"title"`
@@ -71,32 +63,6 @@ type OutcomeAttendances struct {
 	Checked       bool     `json:"checked"`
 }
 
-type AssessmentSubject struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type AssessmentProgram struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type AssessmentTeacher struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type AssessmentStudent struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Checked bool   `json:"checked"`
-}
-
-type AssessmentClass struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
 type AssessmentContentView struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
@@ -106,11 +72,11 @@ type AssessmentContentView struct {
 }
 
 type QueryAssessmentsArgs struct {
-	Status      NullAssessmentStatus       `json:"status"`
-	TeacherName NullString                 `json:"teacher_name"`
-	OrderBy     NullListAssessmentsOrderBy `json:"order_by"`
-	ClassType   NullScheduleClassType      `json:"class_type"`
-	Pager       dbo.Pager                  `json:"pager"`
+	Status      NullAssessmentStatus   `json:"status"`
+	TeacherName NullString             `json:"teacher_name"`
+	OrderBy     NullAssessmentsOrderBy `json:"order_by"`
+	ClassType   NullScheduleClassType  `json:"class_type"`
+	Pager       dbo.Pager              `json:"pager"`
 }
 
 type AssessmentAllowTeacherIDAndStatusPair struct {
@@ -144,32 +110,6 @@ func (s ListAssessmentsStatus) AssessmentStatus() AssessmentStatus {
 	return AssessmentStatus(s)
 }
 
-type ListAssessmentsOrderBy string
-
-const (
-	ListAssessmentsOrderByClassEndTime     ListAssessmentsOrderBy = "class_end_time"
-	ListAssessmentsOrderByClassEndTimeDesc ListAssessmentsOrderBy = "-class_end_time"
-	ListAssessmentsOrderByCompleteTime     ListAssessmentsOrderBy = "complete_time"
-	ListAssessmentsOrderByCompleteTimeDesc ListAssessmentsOrderBy = "-complete_time"
-)
-
-func (ob ListAssessmentsOrderBy) Valid() bool {
-	switch ob {
-	case ListAssessmentsOrderByClassEndTime,
-		ListAssessmentsOrderByClassEndTimeDesc,
-		ListAssessmentsOrderByCompleteTime,
-		ListAssessmentsOrderByCompleteTimeDesc:
-		return true
-	default:
-		return false
-	}
-}
-
-type NullListAssessmentsOrderBy struct {
-	Value ListAssessmentsOrderBy
-	Valid bool
-}
-
 type ListAssessmentsResult struct {
 	Total int               `json:"total"`
 	Items []*AssessmentItem `json:"items"`
@@ -184,21 +124,6 @@ type QueryAssessmentsSummaryArgs struct {
 type AssessmentsSummary struct {
 	Complete   int `json:"complete"`
 	InProgress int `json:"in_progress"`
-}
-
-type AddAssessmentArgs struct {
-	ScheduleID    string   `json:"schedule_id"`
-	AttendanceIDs []string `json:"attendance_ids"`
-	ClassLength   int      `json:"class_length"`
-	ClassEndTime  int64    `json:"class_end_time"`
-}
-
-func (a *AddAssessmentArgs) Valid() error {
-	return nil
-}
-
-type AddAssessmentResult struct {
-	ID string `json:"id"`
 }
 
 type UpdateAssessmentArgs struct {

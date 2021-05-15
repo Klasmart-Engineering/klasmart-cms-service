@@ -10,7 +10,7 @@ func GetH5PServiceProvider() H5PServiceProvider {
 }
 
 type H5PServiceProvider interface {
-	BatchGet(ctx context.Context, operator *entity.Operator, studentIDs []string)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, studentIDs []string) (map[string][]*StudentActivity, error)
 }
 
 type StudentActivity struct {
@@ -20,6 +20,7 @@ type StudentActivity struct {
 	Answer        string       `json:"answer"`
 	MaxScore      float64      `json:"max_score"`
 	AchievedScore float64      `json:"achieved_score"`
+	Attempted     bool         `json:"attempted"`
 }
 
 type ActivityType string
@@ -30,6 +31,6 @@ const (
 
 type h5pServiceProvider struct{}
 
-func (*h5pServiceProvider) BatchGet(ctx context.Context, operator *entity.Operator, studentIDs []string) {
+func (*h5pServiceProvider) BatchGetMap(ctx context.Context, operator *entity.Operator, studentIDs []string) (map[string][]*StudentActivity, error) {
 	panic("implement me")
 }

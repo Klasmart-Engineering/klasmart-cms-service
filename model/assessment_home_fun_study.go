@@ -36,8 +36,8 @@ var (
 
 type IHomeFunStudyModel interface {
 	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
-	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
-	GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
+	GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
+	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
 	GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error)
 	Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
@@ -171,7 +171,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 	return &result, nil
 }
 
-func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error) {
+func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error) {
 	var study entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().Get: get failed",
@@ -263,10 +263,10 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 	return result, nil
 }
 
-func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
+func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
 	var study entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
-		log.Error(ctx, "GetPlain: da.GetHomeFunStudyDA().Get: get failed",
+		log.Error(ctx, "Get: da.GetHomeFunStudyDA().Get: get failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("id", id),

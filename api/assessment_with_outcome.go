@@ -2,8 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"github.com/dgrijalva/jwt-go"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"net/http"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -66,7 +64,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 
 		orderBy := c.Query("order_by")
 		if orderBy != "" {
-			orderBy := entity.ListAssessmentsOrderBy(orderBy)
+			orderBy := entity.AssessmentsOrderBy(orderBy)
 			if !orderBy.Valid() {
 				log.Info(ctx, "list assessments: invalid order by",
 					log.String("status", string(status)),
@@ -74,12 +72,12 @@ func (s *Server) listAssessments(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 				return
 			}
-			args.OrderBy = entity.NullListAssessmentsOrderBy{
+			args.OrderBy = entity.NullAssessmentsOrderBy{
 				Value: orderBy,
 				Valid: true,
 			}
 		} else {
-			args.OrderBy = entity.NullListAssessmentsOrderBy{
+			args.OrderBy = entity.NullAssessmentsOrderBy{
 				Value: entity.ListAssessmentsOrderByClassEndTimeDesc,
 				Valid: true,
 			}
@@ -182,102 +180,6 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 	}
 }
 
-// @Summary add assessments
-// @Description add assessments
-// @Tags assessments
-// @ID addAssessment
-// @Accept json
-// @Produce json
-// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
-// @Success 200 {object} entity.AddAssessmentResult
-// @Failure 400 {object} BadRequestResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /assessments [post]
-func (s *Server) addAssessment(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	log.Debug(ctx, "add assessment jwt: call")
-	body := struct {
-		Token string `json:"token"`
-	}{}
-	if err := c.ShouldBind(&body); err != nil {
-		log.Info(ctx, "add assessment jwt: bind failed",
-			log.Err(err),
-		)
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-
-	cmd := entity.AddAssessmentArgs{}
-	if _, err := jwt.ParseWithClaims(body.Token, &cmd, func(token *jwt.Token) (interface{}, error) {
-		return config.Get().Assessment.AddAssessmentSecret, nil
-	}); err != nil {
-		log.Error(ctx, "add assessment jwt: parse with claims failed",
-			log.Err(err),
-			log.Any("token", body.Token),
-		)
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-
-	log.Debug(ctx, "add assessment jwt: fill cmd", log.Any("cmd", cmd), log.String("token", body.Token))
-	newID, err := model.GetOutcomeAssessmentModel().Add(ctx, s.getOperator(c), cmd)
-	switch err {
-	case nil:
-		log.Debug(ctx, "add assessment jwt success",
-			log.Any("cmd", cmd),
-			log.String("new_id", newID),
-		)
-		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	default:
-		log.Error(ctx, "add assessment jwt: add failed",
-			log.Err(err),
-			log.Any("cmd", cmd),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	}
-}
-
-// @Summary add assessments for test
-// @Description add assessments for test
-// @Tags assessments
-// @ID addAssessmentForTest
-// @Accept json
-// @Produce json
-// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
-// @Success 200 {object} entity.AddAssessmentResult
-// @Failure 400 {object} BadRequestResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /assessments_for_test [post]
-func (s *Server) addAssessmentForTest(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	cmd := entity.AddAssessmentArgs{}
-	if err := c.ShouldBind(&cmd); err != nil {
-		log.Info(ctx, "add assessment: bind failed",
-			log.Err(err),
-		)
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-
-	newID, err := model.GetOutcomeAssessmentModel().Add(ctx, s.getOperator(c), cmd)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
-	case constant.ErrInvalidArgs:
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	default:
-		log.Error(ctx, "add assessment: add failed",
-			log.Err(err),
-			log.Any("cmd", cmd),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-	}
-}
-
 // @Summary get assessment detail
 // @Description get assessment detail
 // @Tags assessments
@@ -301,7 +203,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetOutcomeAssessmentModel().Get(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
+	item, err := model.GetOutcomeAssessmentModel().GetDetail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
