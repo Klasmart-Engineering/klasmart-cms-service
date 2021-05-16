@@ -658,7 +658,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		return "", err
 	}
 	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location, relations)
+		scheduleID, err := s.addSchedule(ctx, tx,op, schedule, &viewData.Repeat, viewData.Location, relations)
 		if err != nil {
 			log.Error(ctx, "add schedule: error",
 				log.Err(err),
@@ -677,7 +677,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	return id.(string), nil
 }
 
-func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) (string, error) {
+func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext,op *entity.Operator, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) (string, error) {
 	scheduleList, err := s.StartScheduleRepeat(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
@@ -713,6 +713,17 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 		log.Error(ctx, "schedules_relations batchInsert error", log.Err(err), log.Any("allRelations", allRelations))
 		return "", err
 	}
+
+	// add assessment
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun{
+		//_,err:=GetH5PAssessmentModel().AddStudy(ctx,tx,op,schedule.ID)
+		//if err!=nil{
+		//	log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("allRelations", allRelations))
+		//	return "", err
+		//}
+	}
+
+
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Operator, id string) (*entity.Schedule, error) {
@@ -923,7 +934,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 				repeatOptions = repeat
 			}
 		}
-		id, err = s.addSchedule(ctx, tx, schedule, repeatOptions, viewData.Location, relations)
+		id, err = s.addSchedule(ctx, tx,operator, schedule, repeatOptions, viewData.Location, relations)
 		if err != nil {
 			log.Error(ctx, "update schedule: add failed",
 				log.Err(err),

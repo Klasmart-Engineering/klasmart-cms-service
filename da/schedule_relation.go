@@ -190,6 +190,12 @@ type ScheduleRelationCondition struct {
 	NotStartCondition     *NotStartCondition
 	ScheduleFilterSubject *ScheduleFilterSubject
 	ScheduleIDs           entity.NullStrings
+	ScheduleAndRelations []*ScheduleAndRelations
+}
+
+type ScheduleAndRelations struct{
+	ScheduleID string
+	RelationIDs []string
 }
 
 //select * from schedules_relations where
@@ -312,6 +318,17 @@ exists(select 1 from %s as b where b.relation_id in (?) and schedule_id = b.sche
 		wheres = append(wheres, "schedule_id in (?)")
 		params = append(params, c.ScheduleIDs.Strings)
 	}
+
+	if len(c.ScheduleAndRelations)>0{
+		var tempWhere = make([]string,len(c.ScheduleAndRelations))
+		for i,item:=range c.ScheduleAndRelations{
+			tempWhere[i] = " (schedule_id = ? and relation_id in (?)) "
+			params = append(params,item.ScheduleID,item.RelationIDs)
+		}
+		sql := strings.Join(tempWhere, " or ")
+		wheres = append(wheres,fmt.Sprintf("(%s)",sql))
+	}
+
 	return wheres, params
 }
 
