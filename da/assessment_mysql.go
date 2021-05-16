@@ -17,6 +17,7 @@ type IAssessmentDA interface {
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
 	SoftDelete(ctx context.Context, tx *dbo.DBContext, ids string) error
+	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.Assessment) error
 }
 
 var (
@@ -112,6 +113,52 @@ func (a *assessmentDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id str
 		log.Error(ctx, "SoftDelete: update failed",
 			log.Err(err),
 			log.String("id", id),
+		)
+		return err
+	}
+	return nil
+}
+
+func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.Assessment) error {
+	if len(items) == 0 {
+		return nil
+	}
+	columns := []string{
+		"id",
+		"schedule_id",
+		"type",
+		"title",
+		"complete_time",
+		"status",
+		"create_at",
+		"update_at",
+		"delete_at",
+		"class_length",
+		"class_end_time",
+	}
+	var matrix [][]interface{}
+	for _, item := range items {
+		if item.ID == "" {
+			item.ID = utils.NewID()
+		}
+		matrix = append(matrix, []interface{}{
+			item.ID,
+			item.ScheduleID,
+			item.Type,
+			item.CompleteTime,
+			item.Status,
+			item.CreateAt,
+			item.UpdateAt,
+			item.DeleteAt,
+			item.ClassLength,
+			item.ClassEndTime,
+		})
+	}
+	format, values := SQLBatchInsert(entity.AssessmentAttendance{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values...).Error; err != nil {
+		log.Error(ctx, "BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("items", items),
 		)
 		return err
 	}

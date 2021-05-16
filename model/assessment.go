@@ -20,7 +20,9 @@ type IAssessmentModel interface {
 	ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error)
 	ConvertToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error)
 	AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error
+	BatchAddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.BatchAddAttendancesInput) error
 	AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error
+	BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentLessonPlan, error)
 }
 
 var (
@@ -226,7 +228,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 
 	// fill lesson plan
 	var (
-		lessonPlanMap map[string]*entity.AssessmentViewLessonPlan
+		lessonPlanMap map[string]*entity.AssessmentLessonPlan
 		lessonPlanIDs []string
 	)
 	if options.EnableLessonPlan {
@@ -253,9 +255,9 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 			)
 			return nil, err
 		}
-		lessonPlanMap = make(map[string]*entity.AssessmentViewLessonPlan, len(lessonPlans))
+		lessonPlanMap = make(map[string]*entity.AssessmentLessonPlan, len(lessonPlans))
 		for _, lp := range lessonPlans {
-			lessonPlanMap[lp.ID] = &entity.AssessmentViewLessonPlan{
+			lessonPlanMap[lp.ID] = &entity.AssessmentLessonPlan{
 				ID:   lp.ID,
 				Name: lp.Name,
 			}
@@ -263,9 +265,9 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	// fill lesson materials
-	var lessonPlanToMaterialsMap map[string][]*entity.AssessmentViewLessonMaterial
+	var lessonPlanToMaterialsMap map[string][]*entity.AssessmentLessonMaterial
 	if options.EnableLessonPlan && options.EnableLessonMaterials {
-		lessonPlanToMaterialsMap = make(map[string][]*entity.AssessmentViewLessonMaterial, len(lessonPlanMap))
+		lessonPlanToMaterialsMap = make(map[string][]*entity.AssessmentLessonMaterial, len(lessonPlanMap))
 		m2, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, dbo.MustGetDB(ctx), lessonPlanIDs, operator)
 		if err != nil {
 			log.Error(ctx, "List: GetContentModel().GetContentsSubContentsMapByIDList: get failed",
@@ -277,7 +279,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 		}
 		for lessonPlanID, lessonMaterials := range m2 {
 			for _, lm := range lessonMaterials {
-				newItem := entity.AssessmentViewLessonMaterial{
+				newItem := entity.AssessmentLessonMaterial{
 					ID:     lm.ID,
 					Name:   lm.Name,
 					Source: "",
@@ -424,6 +426,70 @@ func (m *assessmentModel) AddAttendances(ctx context.Context, tx *dbo.DBContext,
 	return nil
 }
 
+func (m *assessmentModel) BatchAddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.BatchAddAttendancesInput) error {
+	if len(input.Items) == 0 {
+		return nil
+	}
+	var (
+		err                         error
+		cond                        = da.ScheduleRelationCondition{}
+		scheduleRelations           []*entity.ScheduleRelation
+		scheduleIDToAssessmentIDMap = make(map[string]string, len(input.Items))
+	)
+	for _, item := range input.Items {
+		cond.ScheduleAndRelations = append(cond.ScheduleAndRelations, &da.ScheduleAndRelations{
+			ScheduleID:  item.ScheduleID,
+			RelationIDs: item.AttendanceIDs,
+		})
+		scheduleIDToAssessmentIDMap[item.ScheduleID] = item.AssessmentID
+	}
+	if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, &cond); err != nil {
+		log.Error(ctx, "AddAttendances: GetScheduleRelationModel().Query: get failed",
+			log.Err(err),
+			log.Any("input", input),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+
+	var assessmentAttendances []*entity.AssessmentAttendance
+	for _, relation := range scheduleRelations {
+		newAttendance := entity.AssessmentAttendance{
+			ID:           utils.NewID(),
+			AssessmentID: scheduleIDToAssessmentIDMap[relation.ScheduleID],
+			AttendanceID: relation.RelationID,
+			Checked:      true,
+		}
+		switch relation.RelationType {
+		case entity.ScheduleRelationTypeClassRosterStudent:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+		case entity.ScheduleRelationTypeClassRosterTeacher:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+		case entity.ScheduleRelationTypeParticipantStudent:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+		case entity.ScheduleRelationTypeParticipantTeacher:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+		default:
+			continue
+		}
+		assessmentAttendances = append(assessmentAttendances, &newAttendance)
+	}
+	if err = da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, assessmentAttendances); err != nil {
+		log.Error(ctx, "AddAttendances: da.GetAssessmentAttendanceDA().BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("input", input),
+			log.Any("scheduleRelations", scheduleRelations),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	return nil
+}
+
 func (m *assessmentModel) AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
 	if len(contents) == 0 {
 		return nil
@@ -455,4 +521,60 @@ func (m *assessmentModel) AddContents(ctx context.Context, tx *dbo.DBContext, op
 		return err
 	}
 	return nil
+}
+
+func (m *assessmentModel) BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentLessonPlan, error) {
+	lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
+	var (
+		err         error
+		lessonPlans = make([]*entity.ContentInfoWithDetails, 0, len(lessonPlanIDs))
+	)
+	lessonPlanIDs, err = GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "BatchGetLatestLessonPlanMap: GetContentModel().GetLatestContentIDByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+	lessonPlans, err = GetContentModel().GetContentByIDList(ctx, tx, lessonPlanIDs, operator)
+	if err != nil {
+		log.Error(ctx, "ConvertToViews: GetContentModel().GetContentByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+	lessonPlanMap := make(map[string]*entity.AssessmentLessonPlan, len(lessonPlans))
+	for _, lp := range lessonPlans {
+		lessonPlanMap[lp.ID] = &entity.AssessmentLessonPlan{
+			ID:   lp.ID,
+			Name: lp.Name,
+		}
+	}
+
+	// fill lesson materials
+	m2, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, dbo.MustGetDB(ctx), lessonPlanIDs, operator)
+	if err != nil {
+		log.Error(ctx, "List: GetContentModel().GetContentsSubContentsMapByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+	for id, lp := range lessonPlanMap {
+		lms := m2[id]
+		for _, lm := range lms {
+			newMaterial := &entity.AssessmentLessonMaterial{
+				ID:   lm.ID,
+				Name: lm.Name,
+			}
+			switch v := lm.Data.(type) {
+			case *MaterialData:
+				newMaterial.Source = string(v.Source)
+			}
+			lp.Materials = append(lp.Materials, newMaterial)
+		}
+	}
+	return lessonPlanMap, nil
 }

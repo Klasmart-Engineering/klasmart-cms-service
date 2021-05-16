@@ -56,3 +56,13 @@ type AddAttendancesInput struct {
 	AttendanceIDs     []string
 	ScheduleRelations []*ScheduleRelation
 }
+
+type BatchAddAttendancesInput struct {
+	Items []*BatchAddAttendancesInputItem
+}
+
+type BatchAddAttendancesInputItem struct {
+	AssessmentID  string
+	ScheduleID    string
+	AttendanceIDs []string
+}

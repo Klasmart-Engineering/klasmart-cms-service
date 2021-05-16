@@ -110,13 +110,13 @@ type NullAssessmentsOrderBy struct {
 type AssessmentView struct {
 	*Assessment
 	Schedule        *Schedule
-	Program         AssessmentProgram               `json:"program"`
-	Subjects        []*AssessmentSubject            `json:"subjects"`
-	Teachers        []*AssessmentTeacher            `json:"teachers"`
-	Students        []*AssessmentStudent            `json:"students"`
-	Class           AssessmentClass                 `json:"class"`
-	LessonPlan      *AssessmentViewLessonPlan       `json:"lesson_plan"`
-	LessonMaterials []*AssessmentViewLessonMaterial `json:"lesson_materials"`
+	Program         AssessmentProgram           `json:"program"`
+	Subjects        []*AssessmentSubject        `json:"subjects"`
+	Teachers        []*AssessmentTeacher        `json:"teachers"`
+	Students        []*AssessmentStudent        `json:"students"`
+	Class           AssessmentClass             `json:"class"`
+	LessonPlan      *AssessmentLessonPlan       `json:"lesson_plan"`
+	LessonMaterials []*AssessmentLessonMaterial `json:"lesson_materials"`
 }
 
 type AssessmentProgram struct {
@@ -145,17 +145,6 @@ type AssessmentSubject struct {
 	Name string `json:"name"`
 }
 
-type AssessmentViewLessonPlan struct {
-	ID   string
-	Name string
-}
-
-type AssessmentViewLessonMaterial struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Source string `json:"source"`
-}
-
 type ConvertToViewsOptions struct {
 	CheckedStudents       sql.NullBool
 	EnableProgram         bool
@@ -165,4 +154,16 @@ type ConvertToViewsOptions struct {
 	EnableClass           bool
 	EnableLessonPlan      bool
 	EnableLessonMaterials bool
+}
+
+type AssessmentLessonPlan struct {
+	ID        string                      `json:"id"`
+	Name      string                      `json:"name"`
+	Materials []*AssessmentLessonMaterial `json:"materials"`
+}
+
+type AssessmentLessonMaterial struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Source string `json:"source"`
 }
