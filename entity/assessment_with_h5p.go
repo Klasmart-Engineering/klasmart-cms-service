@@ -68,20 +68,19 @@ type H5PAssessmentLessonMaterial struct {
 }
 
 type H5PAssessmentStudentViewItem struct {
-	StudentID       string                                 `json:"student_id"`
-	StudentName     string                                 `json:"student_name"`
-	Comment         string                                 `json:"comment"`
-	LessonMaterials []*H5PAssessmentStudentViewContentItem `json:"lesson_materials"`
+	StudentID       string                                    `json:"student_id"`
+	StudentName     string                                    `json:"student_name"`
+	Comment         string                                    `json:"comment"`
+	LessonMaterials []*H5PAssessmentStudentViewLessonMaterial `json:"lesson_materials"`
 }
 
-type H5PAssessmentStudentViewContentItem struct {
+type H5PAssessmentStudentViewLessonMaterial struct {
 	LessonMaterialID   string  `json:"lesson_material_id"`
 	LessonMaterialName string  `json:"lesson_material_name"`
 	LessonMaterialType string  `json:"lesson_material_type"`
 	Answer             string  `json:"answer"`
 	MaxScore           float64 `json:"max_score"`
 	AchievedScore      float64 `json:"achieved_score"`
-	Checked            bool    `json:"checked"`
 }
 
 type UpdateH5PAssessmentArgs struct {

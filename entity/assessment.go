@@ -153,7 +153,6 @@ type ConvertToViewsOptions struct {
 	EnableStudents        bool
 	EnableClass           bool
 	EnableLessonPlan      bool
-	EnableLessonMaterials bool
 }
 
 type AssessmentLessonPlan struct {
@@ -163,6 +162,20 @@ type AssessmentLessonPlan struct {
 }
 
 type AssessmentLessonMaterial struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Comment string `json:"comment"`
+	Source string `json:"source"`
+	Checked bool `json:"checked"`
+}
+
+type AssessmentExternalLessonPlan struct {
+	ID        string                      `json:"id"`
+	Name      string                      `json:"name"`
+	Materials []*AssessmentExternalLessonMaterial `json:"materials"`
+}
+
+type AssessmentExternalLessonMaterial struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Source string `json:"source"`

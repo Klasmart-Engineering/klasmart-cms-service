@@ -156,6 +156,7 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 
 type QueryAssessmentContentConditions struct {
 	AssessmentID entity.NullString
+	AssessmentIDs entity.NullStrings
 	ContentIDs   entity.NullStrings
 	ContentType  entity.NullContentType
 	Checked      entity.NullBool
@@ -165,6 +166,9 @@ func (c *QueryAssessmentContentConditions) GetConditions() ([]string, []interfac
 	t := NewSQLTemplate("")
 	if c.AssessmentID.Valid {
 		t.Appendf("assessment_id = ?", c.AssessmentID.String)
+	}
+	if c.AssessmentIDs.Valid {
+		t.Appendf("assessment_id in ?", c.AssessmentIDs.Strings)
 	}
 	if c.ContentIDs.Valid {
 		t.Appendf("content_id in (?)", c.ContentIDs.Strings)

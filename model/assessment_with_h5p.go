@@ -151,7 +151,6 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 		EnableStudents:        true,
 		EnableClass:           true,
 		EnableLessonPlan:      true,
-		EnableLessonMaterials: true,
 	}); err != nil {
 		log.Error(ctx, "List: GetAssessmentModel().ConvertToViews: get failed",
 			log.Err(err),
@@ -228,7 +227,168 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 }
 
 func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetH5PAssessmentDetailResult, error) {
-	panic("implement me")
+	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
+	if err != nil {
+		log.Error(ctx, "get detail: get assessment failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+		)
+		return nil, err
+	}
+
+	// convert to assessment view
+	var (
+		views []*entity.AssessmentView
+		view  *entity.AssessmentView
+	)
+	if views, err = GetAssessmentModel().ConvertToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
+		EnableProgram:    true,
+		EnableSubjects:   true,
+		EnableTeachers:   true,
+		EnableStudents:   true,
+		EnableClass:      true,
+	}); err != nil {
+		log.Error(ctx, "Get: GetAssessmentModel().ConvertToViews: get failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	view = views[0]
+
+	// construct result
+	result := entity.GetH5PAssessmentDetailResult{
+		ID:               view.ID,
+		Title:            view.Title,
+		ClassName:        view.Class.Name,
+		Students:         view.Students,
+		DueAt:            view.Schedule.DueAt,
+		CompleteAt:       view.CompleteTime,
+		ScheduleID:       view.ScheduleID,
+		Status:           view.Status,
+	}
+
+	// teacher names
+	result.TeacherNames = make([]string, 0, len(view.Teachers))
+	for _, t := range view.Teachers {
+		result.TeacherNames = append(result.TeacherNames, t.Name)
+	}
+
+	// remaining time
+	if view.Schedule.DueAt != 0 {
+		result.RemainingTime = time.Now().Unix() - view.Schedule.DueAt
+	} else {
+		result.RemainingTime = time.Now().Unix() - view.CreateAt
+	}
+
+	// fill lesson plan and lesson materials
+	plan, err := da.GetAssessmentContentDA().GetPlan(ctx, tx, id)
+	if  err != nil {
+		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetPlan: get failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+		)
+	}
+	result.LessonPlan = entity.H5PAssessmentLessonPlan{
+		ID:      plan.ContentID,
+		Name:    plan.ContentName,
+		Comment: plan.ContentComment,
+	}
+	materials, err := da.GetAssessmentContentDA().GetMaterials(ctx, tx, id);
+	if  err != nil {
+		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetMaterials: get failed",
+			log.Err(err),
+			log.String("assessment_id", id),
+		)
+	}
+	for _, m := range materials {
+		result.LessonMaterials = append(result.LessonMaterials, &entity.H5PAssessmentLessonMaterial{
+			ID:      m.ContentID,
+			Name:    m.ContentName,
+			Comment: m.ContentComment,
+			Checked: m.Checked,
+		})
+	}
+
+	// get activities
+	var allStudentIDs []string
+	for _, v := range views {
+		for _, s := range v.Students {
+			if s.Checked {
+				allStudentIDs = append(allStudentIDs, s.ID)
+			}
+		}
+	}
+	allStudentIDs = utils.SliceDeduplication(allStudentIDs)
+	studentActivityMap, err := external.GetH5PServiceProvider().BatchGetMap(ctx, operator, allStudentIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// complete rate
+	var (
+		activityAllAttempted int
+		activityAllCount     int
+	)
+	for _, s := range view.Students {
+		aa := studentActivityMap[s.ID]
+		for _, a := range aa {
+			activityAllCount++
+			if a.Attempted {
+				activityAllAttempted++
+			}
+		}
+	}
+	if activityAllCount != 0 {
+		result.CompleteRate = float64(activityAllAttempted) / float64(activityAllCount)
+	}
+
+	// get student comment
+	var attendances []*entity.AssessmentAttendance
+	if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{id},
+			Valid:   true,
+		},
+	}, &attendances); err != nil {
+		log.Error(ctx, "get h5p assessment detail: get failed",
+			log.Err(err),
+			log.String("id", id),
+		)
+	}
+	attendanceCommentMap := make(map[string]string, len(attendances))
+
+	// student view items
+	for _, s := range view.Students {
+		newItem := &entity.H5PAssessmentStudentViewItem{
+			StudentID:       s.ID,
+			StudentName:     s.Name,
+			Comment:         attendanceCommentMap[s.ID],
+			LessonMaterials: nil,
+		}
+		activityMap := studentActivityMap[s.ID]
+		for _, lm := range view.LessonMaterials {
+			var activity *external.StudentActivity
+			if activityMap != nil {
+				activity = activityMap[lm.Source]
+			}
+			if activity == nil {
+				activity = &external.StudentActivity{}
+			}
+			newItem.LessonMaterials = append(newItem.LessonMaterials, &entity.H5PAssessmentStudentViewLessonMaterial{
+				LessonMaterialID:   lm.ID,
+				LessonMaterialName: lm.Name,
+				LessonMaterialType: string(activity.ActivityType),
+				Answer:             activity.Answer,
+				MaxScore:           activity.MaxScore,
+				AchievedScore:      activity.AchievedScore,
+			})
+		}
+		result.StudentViewItems = append(result.StudentViewItems, newItem)
+	}
+
+	return &result, nil
 }
 
 func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) {
@@ -509,7 +669,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	// get contents
 	var (
 		lessonPlanIDs []string
-		lessonPlanMap map[string]*entity.AssessmentLessonPlan
+		lessonPlanMap map[string]*entity.AssessmentExternalLessonPlan
 	)
 	for _, s := range schedules {
 		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
@@ -609,12 +769,13 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		})
 		for _, lm := range lp.Materials {
 			assessmentContents = append(assessmentContents, &entity.AssessmentContent{
-				ID:           utils.NewID(),
-				AssessmentID: a.ID,
-				ContentID:    lm.ID,
-				ContentName:  lm.Name,
-				ContentType:  entity.ContentTypeMaterial,
-				Checked:      true,
+				ID:             utils.NewID(),
+				AssessmentID:   a.ID,
+				ContentID:      lm.ID,
+				ContentName:    lm.Name,
+				ContentType:    entity.ContentTypeMaterial,
+				ContentSource:  lm.Source,
+				Checked:        true,
 			})
 		}
 	}
