@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -14,12 +16,16 @@ import (
 )
 
 type IAssessmentModel interface {
-	AddClassAndLive(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error)
-	ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (map[entity.AssessmentType]bool, error)
+	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error)
+	ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error)
 	ConvertToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error)
+	AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error
+	AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error
 }
 
 var (
+	ErrNotFoundAttendance = errors.New("not found attendance")
+
 	assessmentModelInstance     IAssessmentModel
 	assessmentModelInstanceOnce = sync.Once{}
 )
@@ -33,16 +39,16 @@ func GetAssessmentModel() IAssessmentModel {
 
 type assessmentModel struct{}
 
-func (*assessmentModel) AddClassAndLive(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error) {
+func (*assessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error) {
 	newAssessmentIDs := make([]string, 0, 2)
 	args.Type = entity.AssessmentTypeClassAndLiveOutcome
-	id, err := GetOutcomeAssessmentModel().Add(ctx, operator, args)
+	id, err := GetOutcomeAssessmentModel().Add(ctx, tx, operator, args)
 	if err != nil {
 		return nil, err
 	}
 	newAssessmentIDs = append(newAssessmentIDs, id)
 	args.Type = entity.AssessmentTypeClassAndLiveH5P
-	id2, err := GetContentAssessmentModel().AddClassAndLive(ctx, operator, args)
+	id2, err := GetH5PAssessmentModel().AddClassAndLive(ctx, tx, operator, args)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +56,7 @@ func (*assessmentModel) AddClassAndLive(ctx context.Context, operator *entity.Op
 	return newAssessmentIDs, nil
 }
 
-func (m *assessmentModel) ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (map[entity.AssessmentType]bool, error) {
+func (m *assessmentModel) ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error) {
 	var assessments []*entity.Assessment
 	cond := da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
@@ -63,13 +69,9 @@ func (m *assessmentModel) ExistsByScheduleID(ctx context.Context, operator *enti
 			log.Err(err),
 			log.Any("cond", cond),
 		)
-		return nil, err
+		return false, err
 	}
-	typeMap := make(map[entity.AssessmentType]bool, len(assessments))
-	for _, a := range assessments {
-		typeMap[a.Type] = true
-	}
-	return typeMap, nil
+	return len(assessments) > 0, nil
 }
 
 func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
@@ -346,4 +348,111 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 	}
 
 	return result, nil
+}
+
+func (m *assessmentModel) AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error {
+	var (
+		err               error
+		scheduleRelations []*entity.ScheduleRelation
+	)
+	if input.ScheduleRelations != nil {
+		scheduleRelations = input.ScheduleRelations
+	} else {
+		cond := &da.ScheduleRelationCondition{
+			ScheduleID: sql.NullString{
+				String: input.ScheduleID,
+				Valid:  true,
+			},
+			RelationIDs: entity.NullStrings{
+				Strings: input.AttendanceIDs,
+				Valid:   true,
+			},
+		}
+		if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, cond); err != nil {
+			log.Error(ctx, "AddAttendances: GetScheduleRelationModel().Query: get failed",
+				log.Err(err),
+				log.Any("input", input),
+				log.Any("operator", operator),
+			)
+			return err
+		}
+	}
+	if len(scheduleRelations) == 0 {
+		log.Error(ctx, "AddAttendances: not found any schedule relations",
+			log.Err(err),
+			log.Any("input", input),
+			log.Any("operator", operator),
+		)
+		return ErrNotFoundAttendance
+	}
+
+	var assessmentAttendances []*entity.AssessmentAttendance
+	for _, relation := range scheduleRelations {
+		newAttendance := entity.AssessmentAttendance{
+			ID:           utils.NewID(),
+			AssessmentID: input.AssessmentID,
+			AttendanceID: relation.RelationID,
+			Checked:      true,
+		}
+		switch relation.RelationType {
+		case entity.ScheduleRelationTypeClassRosterStudent:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+		case entity.ScheduleRelationTypeClassRosterTeacher:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+		case entity.ScheduleRelationTypeParticipantStudent:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+		case entity.ScheduleRelationTypeParticipantTeacher:
+			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+		default:
+			continue
+		}
+		assessmentAttendances = append(assessmentAttendances, &newAttendance)
+	}
+	if err = da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, assessmentAttendances); err != nil {
+		log.Error(ctx, "AddAttendances: da.GetAssessmentAttendanceDA().BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("input", input),
+			log.Any("scheduleRelations", scheduleRelations),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	return nil
+}
+
+func (m *assessmentModel) AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
+	if len(contents) == 0 {
+		return nil
+	}
+	var (
+		assessmentContents []*entity.AssessmentContent
+	)
+	for _, c := range contents {
+		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
+			ID:           utils.NewID(),
+			AssessmentID: assessmentID,
+			ContentID:    c.ID,
+			ContentName:  c.Name,
+			ContentType:  c.ContentType,
+			Checked:      true,
+		})
+	}
+	if len(assessmentContents) == 0 {
+		return nil
+	}
+	if err := da.GetAssessmentContentDA().BatchInsert(ctx, tx, assessmentContents); err != nil {
+		log.Error(ctx, "addAssessmentContentsAndOutcomes: da.GetAssessmentContentDA().BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("assessment_contents", assessmentContents),
+			log.String("assessment_id", assessmentID),
+			log.Any("contents", contents),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	return nil
 }

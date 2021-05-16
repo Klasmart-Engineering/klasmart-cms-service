@@ -102,3 +102,7 @@ type UpdateH5PAssessmentStudentViewMaterialItem struct {
 	LessonMaterialID string  `json:"lesson_material_id"`
 	AchievedScore    float64 `json:"achieved_score"`
 }
+
+type AddH5PAssessmentStudyInput struct {
+	ScheduleID string `json:"schedule_id"`
+}

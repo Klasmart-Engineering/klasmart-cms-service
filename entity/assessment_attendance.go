@@ -49,3 +49,10 @@ type NullAssessmentAttendanceRole struct {
 	Value AssessmentAttendanceRole
 	Valid bool
 }
+
+type AddAttendancesInput struct {
+	AssessmentID      string
+	ScheduleID        string
+	AttendanceIDs     []string
+	ScheduleRelations []*ScheduleRelation
+}

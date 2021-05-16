@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"github.com/dgrijalva/jwt-go"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"net/http"
 
@@ -52,7 +54,12 @@ func (s *Server) addAssessment(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
-	newIDs, err := model.GetAssessmentModel().AddClassAndLive(ctx, s.getOperator(c), args)
+	var newIDs []string
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newIDs, err = model.GetAssessmentModel().AddClassAndLive(ctx, tx, s.getOperator(c), args)
+		return err
+	})
 	switch err {
 	case nil:
 		log.Debug(ctx, "add assessment jwt success",
@@ -94,7 +101,12 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		return
 	}
 
-	newIDs, err := model.GetAssessmentModel().AddClassAndLive(ctx, s.getOperator(c), args)
+	var newIDs []string
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newIDs, err = model.GetAssessmentModel().AddClassAndLive(ctx, tx, s.getOperator(c), args)
+		return err
+	})
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, entity.AddAssessmentResult{IDs: newIDs})

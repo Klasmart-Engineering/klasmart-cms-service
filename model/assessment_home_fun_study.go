@@ -500,7 +500,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 
 func (m *homeFunStudyModel) EncodeTitle(className *string, lessonName string) string {
 	if className == nil {
-		tmp := constant.HomeFunStudyNoClass
+		tmp := constant.AssessmentNoClass
 		className = &tmp
 	}
 	return fmt.Sprintf("%s-%s", *className, lessonName)

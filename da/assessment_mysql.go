@@ -16,7 +16,7 @@ type IAssessmentDA interface {
 	dbo.DataAccesser
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
-	SoftDelete(ctx context.Context, tx *dbo.DBContext, id string) error
+	SoftDelete(ctx context.Context, tx *dbo.DBContext, ids string) error
 }
 
 var (

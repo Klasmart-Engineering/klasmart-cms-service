@@ -21,15 +21,13 @@ type IOutcomeAssessmentModel interface {
 	GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
-	Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
+	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	Update(ctx context.Context, operator *entity.Operator, args entity.UpdateAssessmentArgs) error
 }
 
 var (
 	outcomeAssessmentModelInstance     IOutcomeAssessmentModel
 	outcomeAssessmentModelInstanceOnce = sync.Once{}
-
-	ErrNotFoundAttendance = errors.New("not found attendance")
 )
 
 func GetOutcomeAssessmentModel() IOutcomeAssessmentModel {
@@ -496,7 +494,7 @@ func (m *outcomeAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext,
 	return &r, nil
 }
 
-func (m *outcomeAssessmentModel) Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
+func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
 	log.Debug(ctx, "add assessment args", log.Any("args", args), log.Any("operator", operator))
 
 	// clean data
@@ -563,7 +561,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, operator *entity.Opera
 		return "", nil
 	}
 
-	// fix: materials permission
+	// fix: permission
 	operator.OrgID = schedule.OrgID
 
 	// get contents
@@ -637,145 +635,135 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, operator *entity.Opera
 	// generate new assessment id
 	var newAssessmentID = utils.NewID()
 
-	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		// add assessment
-		var (
-			err           error
-			now           = time.Now().Unix()
-			classNameMap  map[string]string
-			newAssessment = entity.Assessment{
-				ID:           newAssessmentID,
-				ScheduleID:   args.ScheduleID,
-				Type:         entity.AssessmentTypeClassAndLiveOutcome,
-				ClassLength:  args.ClassLength,
-				ClassEndTime: args.ClassEndTime,
-			}
+	// add assessment
+	var (
+		now           = time.Now().Unix()
+		classNameMap  map[string]string
+		newAssessment = entity.Assessment{
+			ID:           newAssessmentID,
+			ScheduleID:   args.ScheduleID,
+			Type:         entity.AssessmentTypeClassAndLiveOutcome,
+			ClassLength:  args.ClassLength,
+			ClassEndTime: args.ClassEndTime,
+		}
+	)
+	if len(outcomeIDs) == 0 {
+		newAssessment.Status = entity.AssessmentStatusComplete
+		newAssessment.CompleteTime = now
+	} else {
+		newAssessment.Status = entity.AssessmentStatusInProgress
+	}
+	if classNameMap, err = external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID}); err != nil {
+		log.Error(ctx, "Add: external.GetClassServiceProvider().BatchGetNameMap: get failed",
+			log.Err(err),
+			log.Strings("class_ids", []string{schedule.ClassID}),
+			log.Any("args", args),
 		)
-		if len(outcomeIDs) == 0 {
-			newAssessment.Status = entity.AssessmentStatusComplete
-			newAssessment.CompleteTime = now
-		} else {
-			newAssessment.Status = entity.AssessmentStatusInProgress
-		}
-		if classNameMap, err = external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, []string{schedule.ClassID}); err != nil {
-			log.Error(ctx, "Add: external.GetClassServiceProvider().BatchGetNameMap: get failed",
-				log.Err(err),
-				log.Strings("class_ids", []string{schedule.ClassID}),
-				log.Any("args", args),
-			)
-			return err
-		}
-		newAssessment.Title = fmt.Sprintf("%s-%s-%s", time.Unix(newAssessment.ClassEndTime, 0).Format("20060102"), classNameMap[schedule.ClassID], schedule.Title)
-		if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newAssessment); err != nil {
-			log.Error(ctx, "add assessment: add failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("new_item", newAssessment),
-			)
-			return err
-		}
-
-		// add assessment attendances map
-		var (
-			finalAttendanceIDs []string
-			scheduleRelations  []*entity.ScheduleRelation
+		return "", err
+	}
+	newAssessment.Title = fmt.Sprintf("%s-%s-%s", time.Unix(newAssessment.ClassEndTime, 0).Format("20060102"), classNameMap[schedule.ClassID], schedule.Title)
+	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newAssessment); err != nil {
+		log.Error(ctx, "add assessment: add failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("new_item", newAssessment),
 		)
-		switch schedule.ClassType {
-		case entity.ScheduleClassTypeOfflineClass:
-			users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, args.ScheduleID)
-			if err != nil {
-				return err
-			}
-			for _, u := range users {
-				finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
-			}
-		default:
-			finalAttendanceIDs = args.AttendanceIDs
-		}
+		return "", err
+	}
 
-		cond := &da.ScheduleRelationCondition{
-			ScheduleID: sql.NullString{
-				String: schedule.ID,
-				Valid:  true,
-			},
-			RelationIDs: entity.NullStrings{
-				Strings: finalAttendanceIDs,
-				Valid:   true,
-			},
+	// add assessment attendances map
+	var (
+		finalAttendanceIDs []string
+		scheduleRelations  []*entity.ScheduleRelation
+	)
+	switch schedule.ClassType {
+	case entity.ScheduleClassTypeOfflineClass:
+		users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, args.ScheduleID)
+		if err != nil {
+			return "", err
 		}
-		if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, cond); err != nil {
-			log.Error(ctx, "addAssessmentAttendances: GetScheduleRelationModel().GetByRelationIDs: get failed",
-				log.Err(err),
-				log.Any("attendance_ids", finalAttendanceIDs),
-				log.String("assessment_id", newAssessmentID),
-				log.Any("operator", operator),
-				log.Any("condition", cond),
-			)
-			return err
+		for _, u := range users {
+			finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
 		}
-		if len(scheduleRelations) == 0 {
-			log.Error(ctx, "Add: GetScheduleRelationModel().Query: not found any schedule relations",
-				log.Err(err),
-				log.Any("attendance_ids", finalAttendanceIDs),
-				log.String("assessment_id", newAssessmentID),
-				log.Any("operator", operator),
-				log.Any("condition", cond),
-			)
-			return ErrNotFoundAttendance
-		}
-		if err = m.addAssessmentAttendances(ctx, tx, operator, newAssessmentID, scheduleRelations); err != nil {
-			log.Error(ctx, "Add: m.addAssessmentAttendances: add failed",
-				log.Err(err),
-				log.String("assessment_id", newAssessmentID),
-				log.Strings("attendance_ids", finalAttendanceIDs),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
+	default:
+		finalAttendanceIDs = args.AttendanceIDs
+	}
 
-		// add assessment outcomes map
-		if err = m.addAssessmentOutcomes(ctx, tx, operator, newAssessmentID, outcomes); err != nil {
-			log.Error(ctx, "Add: m.addAssessmentOutcomes: add failed",
-				log.Err(err),
-				log.String("assessment_id", newAssessmentID),
-				log.Any("outcomes", outcomes),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-
-		// add outcome attendances map
-		if err = m.addOutcomeAttendances(ctx, tx, operator, newAssessmentID, outcomes, scheduleRelations); err != nil {
-			log.Error(ctx, "Add: m.addOutcomeAttendances: add failed",
-				log.Err(err),
-				log.String("assessment_id", newAssessmentID),
-				log.Any("outcomes", outcomes),
-				log.Any("schedule_relations", scheduleRelations),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-
-		// add assessment contents map
-		if err = m.addAssessmentContents(ctx, tx, operator, newAssessmentID, contents); err != nil {
-			log.Error(ctx, "Add: m.addAssessmentContents: add failed",
-				log.Err(err),
-				log.String("assessment_id", newAssessmentID),
-				log.Any("contents", contents),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-
-		return nil
+	cond := &da.ScheduleRelationCondition{
+		ScheduleID: sql.NullString{
+			String: schedule.ID,
+			Valid:  true,
+		},
+		RelationIDs: entity.NullStrings{
+			Strings: finalAttendanceIDs,
+			Valid:   true,
+		},
+	}
+	if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, cond); err != nil {
+		log.Error(ctx, "addAssessmentAttendances: GetScheduleRelationModel().GetByRelationIDs: get failed",
+			log.Err(err),
+			log.Any("attendance_ids", finalAttendanceIDs),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("operator", operator),
+			log.Any("condition", cond),
+		)
+		return "", err
+	}
+	if len(scheduleRelations) == 0 {
+		log.Error(ctx, "Add: GetScheduleRelationModel().Query: not found any schedule relations",
+			log.Err(err),
+			log.Any("attendance_ids", finalAttendanceIDs),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("operator", operator),
+			log.Any("condition", cond),
+		)
+		return "", ErrNotFoundAttendance
+	}
+	if err = GetAssessmentModel().AddAttendances(ctx, tx, operator, entity.AddAttendancesInput{
+		AssessmentID:      newAssessmentID,
+		ScheduleRelations: scheduleRelations,
 	}); err != nil {
-		log.Error(ctx, "Add: tx failed",
+		log.Error(ctx, "Add: m.addAssessmentAttendances: add failed",
 			log.Err(err),
 			log.String("assessment_id", newAssessmentID),
+			log.Strings("attendance_ids", finalAttendanceIDs),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+
+	// add assessment outcomes map
+	if err = m.addAssessmentOutcomes(ctx, tx, operator, newAssessmentID, outcomes); err != nil {
+		log.Error(ctx, "Add: m.addAssessmentOutcomes: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("outcomes", outcomes),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+
+	// add outcome attendances map
+	if err = m.addOutcomeAttendances(ctx, tx, operator, newAssessmentID, outcomes, scheduleRelations); err != nil {
+		log.Error(ctx, "Add: m.addOutcomeAttendances: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("outcomes", outcomes),
+			log.Any("schedule_relations", scheduleRelations),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+
+	// add assessment contents map
+	if err = m.addAssessmentContentsAndOutcomes(ctx, tx, operator, newAssessmentID, contents); err != nil {
+		log.Error(ctx, "Add: m.addAssessmentContentsAndOutcomes: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("contents", contents),
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
@@ -785,7 +773,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, operator *entity.Opera
 	return newAssessmentID, nil
 }
 
-func (m *outcomeAssessmentModel) addAssessmentContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
+func (m *outcomeAssessmentModel) addAssessmentContentsAndOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
 	if len(contents) == 0 {
 		return nil
 	}
@@ -815,7 +803,7 @@ func (m *outcomeAssessmentModel) addAssessmentContents(ctx context.Context, tx *
 		return nil
 	}
 	if err := da.GetAssessmentContentDA().BatchInsert(ctx, tx, assessmentContents); err != nil {
-		log.Error(ctx, "addAssessmentContents: da.GetAssessmentContentDA().BatchInsert: batch insert failed",
+		log.Error(ctx, "addAssessmentContentsAndOutcomes: da.GetAssessmentContentDA().BatchInsert: batch insert failed",
 			log.Err(err),
 			log.Any("assessment_contents", assessmentContents),
 			log.String("assessment_id", assessmentID),
@@ -828,7 +816,7 @@ func (m *outcomeAssessmentModel) addAssessmentContents(ctx context.Context, tx *
 		return nil
 	}
 	if err := da.GetAssessmentContentOutcomeDA().BatchInsert(ctx, tx, assessmentContentOutcomes); err != nil {
-		log.Error(ctx, "addAssessmentContents: da.GetAssessmentContentOutcomeDA().BatchInsert: batch insert failed",
+		log.Error(ctx, "addAssessmentContentsAndOutcomes: da.GetAssessmentContentOutcomeDA().BatchInsert: batch insert failed",
 			log.Err(err),
 			log.Any("assessment_content_outcomes", assessmentContentOutcomes),
 			log.String("assessment_id", assessmentID),
@@ -838,52 +826,6 @@ func (m *outcomeAssessmentModel) addAssessmentContents(ctx context.Context, tx *
 		return err
 	}
 
-	return nil
-}
-
-func (m *outcomeAssessmentModel) addAssessmentAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, scheduleRelations []*entity.ScheduleRelation) error {
-	if len(scheduleRelations) == 0 {
-		return nil
-	}
-	var (
-		err                   error
-		assessmentAttendances []*entity.AssessmentAttendance
-	)
-	for _, relation := range scheduleRelations {
-		newAttendance := entity.AssessmentAttendance{
-			ID:           utils.NewID(),
-			AssessmentID: assessmentID,
-			AttendanceID: relation.RelationID,
-			Checked:      true,
-		}
-		switch relation.RelationType {
-		case entity.ScheduleRelationTypeClassRosterStudent:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
-			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
-		case entity.ScheduleRelationTypeClassRosterTeacher:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
-			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
-		case entity.ScheduleRelationTypeParticipantStudent:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
-			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
-		case entity.ScheduleRelationTypeParticipantTeacher:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
-			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
-		default:
-			continue
-		}
-		assessmentAttendances = append(assessmentAttendances, &newAttendance)
-	}
-	if err = da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, assessmentAttendances); err != nil {
-		log.Error(ctx, "addAssessmentAttendances: da.GetAssessmentAttendanceDA().BatchInsert: batch insert failed",
-			log.Err(err),
-			log.Any("assessment_attendances", assessmentAttendances),
-			log.String("assessment_id", assessmentID),
-			log.Any("scheduleRelations", scheduleRelations),
-			log.Any("operator", operator),
-		)
-		return err
-	}
 	return nil
 }
 
