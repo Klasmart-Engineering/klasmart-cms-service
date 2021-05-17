@@ -50,12 +50,12 @@ func (*assessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBContext, 
 		return nil, err
 	}
 	newAssessmentIDs = append(newAssessmentIDs, id)
-	args.Type = entity.AssessmentTypeClassAndLiveH5P
-	id2, err := GetH5PAssessmentModel().AddClassAndLive(ctx, tx, operator, args)
-	if err != nil {
-		return nil, err
-	}
-	newAssessmentIDs = append(newAssessmentIDs, id2)
+	//args.Type = entity.AssessmentTypeClassAndLiveH5P
+	//id2, err := GetH5PAssessmentModel().AddClassAndLive(ctx, tx, operator, args)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//newAssessmentIDs = append(newAssessmentIDs, id2)
 	return newAssessmentIDs, nil
 }
 
