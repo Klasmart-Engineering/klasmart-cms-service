@@ -67,6 +67,13 @@ func (c *ContentPermissionMySchoolModel) CheckCreateContentPermission(ctx contex
 		Owner:              OwnerTypeUser,
 	}
 	permissionSetList, err := NewContentPermissionTable().GetCreatePermissionSets(ctx, profile)
+	if err == ErrUndefinedPermission {
+		log.Error(ctx, "ErrUndefinedPermission",
+			log.Err(err),
+			log.Any("contentProfiles", profile),
+			log.Any("user", user))
+		return false, nil
+	}
 	if err != nil {
 		log.Error(ctx, "GetCreatePermissionSets failed",
 			log.Err(err),
@@ -102,6 +109,13 @@ func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx co
 		log.Any("profiles", profiles),
 		log.Strings("cids", cids))
 	permissionSetList, err := NewContentPermissionTable().GetPublishPermissionSets(ctx, profiles)
+	if err == ErrUndefinedPermission {
+		log.Error(ctx, "ErrUndefinedPermission",
+			log.Err(err),
+			log.Any("contentProfiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -130,6 +144,13 @@ func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx cont
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles))
 	permissionSetList, err := NewContentPermissionTable().GetPublishPermissionSets(ctx, profiles)
+	if err == ErrUndefinedPermission {
+		log.Error(ctx, "ErrUndefinedPermission",
+			log.Err(err),
+			log.Any("contentProfiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -158,6 +179,13 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 	}
 
 	permissionSetList, err := NewContentPermissionTable().GetViewPermissionSets(ctx, profiles)
+	if err == ErrUndefinedPermission {
+		log.Error(ctx, "ErrUndefinedPermission",
+			log.Err(err),
+			log.Any("contentProfiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -189,6 +217,13 @@ func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx contex
 		log.String("cid", cid))
 
 	permissionSetList, err := NewContentPermissionTable().GetEditPermissionSets(ctx, *profiles[0])
+	if err == ErrUndefinedPermission {
+		log.Error(ctx, "ErrUndefinedPermission",
+			log.Err(err),
+			log.Any("contentProfiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -219,6 +254,13 @@ func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx contex
 		log.Any("profiles", profiles))
 
 	permissionSetList, err := NewContentPermissionTable().GetRemovePermissionSets(ctx, profiles)
+	if err == ErrUndefinedPermission {
+		log.Error(ctx, "ErrUndefinedPermission",
+			log.Err(err),
+			log.Any("contentProfiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -252,11 +294,25 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 	var permissionSetList IPermissionSet
 	if isApprove {
 		permissionSetList, err = NewContentPermissionTable().GetApprovePermissionSets(ctx, profiles)
+		if err == ErrUndefinedPermission {
+			log.Error(ctx, "ErrUndefinedPermission",
+				log.Err(err),
+				log.Any("contentProfiles", profiles),
+				log.Any("user", user))
+			return false, nil
+		}
 		if err != nil {
 			return false, err
 		}
 	} else {
 		permissionSetList, err = NewContentPermissionTable().GetRejectPermissionSets(ctx, profiles)
+		if err == ErrUndefinedPermission {
+			log.Error(ctx, "ErrUndefinedPermission",
+				log.Err(err),
+				log.Any("contentProfiles", profiles),
+				log.Any("user", user))
+			return false, nil
+		}
 		if err != nil {
 			return false, err
 		}
@@ -296,6 +352,13 @@ func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context
 		log.Any("user", user))
 
 	permissionSetList, err := NewContentPermissionTable().GetViewPermissionSets(ctx, contentProfiles)
+	if err == ErrUndefinedPermission {
+		log.Error(ctx, "ErrUndefinedPermission",
+			log.Err(err),
+			log.Any("contentProfiles", contentProfiles),
+			log.Any("user", user))
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -351,10 +414,18 @@ func (c *ContentPermissionMySchoolModel) buildContentProfileByIDs(ctx context.Co
 }
 
 func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) ([]*ContentProfile, error) {
-	contentTypes := condition.ContentType
+	contentTypes := make([]int, 0)
+	for i := range condition.ContentType {
+		ct := entity.NewContentType(condition.ContentType[i])
+		if ct.Validate() == nil {
+			contentTypes = append(contentTypes, condition.ContentType[i])
+		}
+	}
+
 	if len(contentTypes) == 0 {
 		contentTypes = []int{entity.ContentTypePlan, entity.ContentTypeMaterial, entity.ContentTypeAssets}
 	}
+
 	publishStatus := condition.PublishStatus
 	if len(publishStatus) == 0 {
 		publishStatus = []string{
