@@ -45,24 +45,24 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	orgIDsMap := make(map[string]bool)
-	for i := range outcomes {
-		if !orgIDsMap[outcomes[i].OrganizationID] {
-			orgIDsMap[outcomes[i].OrganizationID] = true
-		}
-	}
-	milestoneModel := model.GetMilestoneModel()
-	for k, _ := range orgIDsMap {
-		_, err = milestoneModel.CreateGeneral(ctx, &entity.Operator{OrgID: k}, dbo.MustGetDB(ctx), "")
-		if err != nil {
-			log.Panic(k, err)
-		}
-	}
+	//orgIDsMap := make(map[string]bool)
+	//for i := range outcomes {
+	//	if !orgIDsMap[outcomes[i].OrganizationID] {
+	//		orgIDsMap[outcomes[i].OrganizationID] = true
+	//	}
+	//}
+	//milestoneModel := model.GetMilestoneModel()
+	//for k, _ := range orgIDsMap {
+	//	_, err = milestoneModel.CreateGeneral(ctx, &entity.Operator{OrgID: k}, dbo.MustGetDB(ctx), "")
+	//	if err != nil {
+	//		log.Panic(k, err)
+	//	}
+	//}
 
 	ancestorIDs := make(map[string]bool)
 	for i := range outcomes {
 		if !ancestorIDs[outcomes[i].AncestorID] {
-			err = milestoneModel.BindToGeneral(ctx, &entity.Operator{}, dbo.MustGetDB(ctx), outcomes[i])
+			err = model.GetMilestoneModel().BindToGeneral(ctx, &entity.Operator{}, dbo.MustGetDB(ctx), outcomes[i])
 			if err != nil {
 				log.Panic(*outcomes[i], err)
 			}
