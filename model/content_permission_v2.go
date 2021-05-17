@@ -393,7 +393,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 	contentProfiles := make([]*ContentProfile, len(contentTypes)*len(publishStatus))
 	for i := range contentTypes {
 		for j := range publishStatus {
-			contentProfiles[j+i*len(contentTypes)] = &ContentProfile{
+			contentProfiles[j+i*len(publishStatus)] = &ContentProfile{
 				ContentType:        entity.ContentType(contentTypes[i]),
 				Status:             entity.ContentPublishStatus(publishStatus[j]),
 				VisibilitySettings: visibilitySettings,
