@@ -192,8 +192,8 @@ func querySchools(ctx context.Context, user *entity.Operator) (*SchoolInfo, erro
 		return nil, err
 	}
 	schoolInfo := &SchoolInfo{
-		MySchool:  make([]string, len(schools)),
-		AllSchool: make([]string, len(mySchools)),
+		MySchool:  make([]string, len(mySchools)),
+		AllSchool: make([]string, len(schools)),
 	}
 	for i := range schools {
 		schoolInfo.AllSchool[i] = schools[i].ID
