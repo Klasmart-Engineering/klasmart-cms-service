@@ -39,6 +39,7 @@ type Config struct {
 	LiveTokenConfig       LiveTokenConfig       `yaml:"live_token_config"`
 	Assessment            AssessmentConfig      `yaml:"assessment_config"`
 	AMS                   AMSConfig             `json:"ams" yaml:"ams"`
+	H5P                   H5PServiceConfig      `json:"h5p" yaml:"h5p"`
 	KidsLoopRegion        string                `json:"kidsloop_region" yaml:"kidsloop_region"`
 	TencentConfig         TencentConfig         `json:"tencent" yaml:"tencent"`
 	KidsloopCNLoginConfig KidsloopCNLoginConfig `json:"kidsloop_cn" yaml:"kidsloop_cn"`
@@ -115,6 +116,10 @@ type AMSConfig struct {
 	TokenVerifyKey interface{} `json:"token_verify_key" yaml:"token_verify_key"`
 }
 
+type H5PServiceConfig struct {
+	EndPoint string `json:"endpoint" yaml:"endpoint"`
+}
+
 type KidsloopCNLoginConfig struct {
 	Open         string      `json:"open" yaml:"open"`
 	PrivateKey   interface{} `json:"private_key" yaml:"private_key"`
@@ -157,6 +162,7 @@ func LoadEnvConfig() {
 	loadCryptoEnvConfig(ctx)
 	loadLiveTokenEnvConfig(ctx)
 	loadAMSConfig(ctx)
+	loadH5PServiceConfig(ctx)
 	loadTencentConfig(ctx)
 	loadKidsloopCNLoginConfig(ctx)
 	loadAssessmentConfig(ctx)
@@ -373,6 +379,10 @@ func loadAMSConfig(ctx context.Context) {
 		log.Panic(ctx, "loadAMSConfig:ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.AMS.TokenVerifyKey = key
+}
+
+func loadH5PServiceConfig(ctx context.Context) {
+	config.H5P.EndPoint = assertGetEnv("h5p_endpoint")
 }
 
 func loadCORSConfig(ctx context.Context) {
