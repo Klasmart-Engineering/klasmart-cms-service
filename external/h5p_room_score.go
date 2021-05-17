@@ -3,10 +3,10 @@ package external
 import (
 	"context"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
-
-type H5PScoreService struct{}
 
 // type Score {
 // 	min: Float
@@ -73,14 +73,34 @@ type H5PUserScores struct {
 	Scores []*H5PUserContentScore `json:"scores"`
 }
 
-type H5PScoreServiceProvider interface {
-	GetByRoom(ctx context.Context, operator *entity.Operator, roomID string) ([]*H5PUserScores, error)
+type H5PRoomScoreServiceProvider interface {
+	Get(ctx context.Context, operator *entity.Operator, roomID string) ([]*H5PUserScores, error)
+	BatchGet(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string][]*H5PUserScores, error)
 }
 
-func GetH5PScoreServiceProvider() H5PScoreServiceProvider {
-	return &H5PScoreService{}
+func GetH5PRoomScoreServiceProvider() H5PRoomScoreServiceProvider {
+	return &H5PRoomScoreService{}
 }
 
-func (s H5PScoreService) GetByRoom(ctx context.Context, operator *entity.Operator, roomID string) ([]*H5PUserScores, error) {
+type H5PRoomScoreService struct{}
+
+func (s H5PRoomScoreService) Get(ctx context.Context, operator *entity.Operator, roomID string) ([]*H5PUserScores, error) {
+	scores, err := s.BatchGet(ctx, operator, []string{roomID})
+	if err != nil {
+		return nil, err
+	}
+
+	score, found := scores[roomID]
+	if !found {
+		log.Error(ctx, "h5p room score not found",
+			log.String("roomID", roomID),
+			log.Any("scores", scores))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return score, nil
+}
+
+func (s H5PRoomScoreService) BatchGet(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string][]*H5PUserScores, error) {
 	return nil, nil
 }
