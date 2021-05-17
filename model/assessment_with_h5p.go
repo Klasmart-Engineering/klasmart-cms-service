@@ -369,19 +369,19 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		}
 		activityMap := studentActivityMap[s.ID]
 		for _, lm := range view.LessonMaterials {
-			var activity *external.StudentActivity
+			var activity *external.H5PStudentScore
 			if activityMap != nil {
 				activity = activityMap[lm.Source]
 			}
 			if activity == nil {
-				activity = &external.StudentActivity{}
+				activity = &external.H5PStudentScore{}
 			}
 			newItem.LessonMaterials = append(newItem.LessonMaterials, &entity.H5PAssessmentStudentViewLessonMaterial{
 				LessonMaterialID:   lm.ID,
 				LessonMaterialName: lm.Name,
 				LessonMaterialType: string(activity.ActivityType),
 				Answer:             activity.Answer,
-				MaxScore:           activity.MaxScore,
+				MaxScore:           activity.MaxPossibleScore,
 				AchievedScore:      activity.AchievedScore,
 			})
 		}

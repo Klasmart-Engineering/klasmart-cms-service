@@ -10,17 +10,17 @@ func GetH5PServiceProvider() H5PServiceProvider {
 }
 
 type H5PServiceProvider interface {
-	BatchGetMap(ctx context.Context, operator *entity.Operator, studentIDs []string) (map[string]map[string]*StudentActivity, error)
+	BatchGetMap(ctx context.Context, operator *entity.Operator, studentIDs []string) (map[string]map[string]*H5PStudentScore, error)
 }
 
-type StudentActivity struct {
-	StudentID     string       `json:"student_id"`
-	ActivityID    string       `json:"activity_id"`
-	ActivityType  ActivityType `json:"activity_type"`
-	Answer        string       `json:"answer"`
-	MaxScore      float64      `json:"max_score"`
-	AchievedScore float64      `json:"achieved_score"`
-	Attempted     bool         `json:"attempted"`
+type H5PStudentScore struct {
+	StudentID        string       `json:"student_id"`
+	ActivityID       string       `json:"activity_id"`
+	ActivityType     ActivityType `json:"activity_type"`
+	Answer           string       `json:"answer"`
+	MaxPossibleScore float64      `json:"max_possible_score"`
+	AchievedScore    float64      `json:"achieved_score"`
+	Attempted        bool         `json:"attempted"`
 }
 
 type ActivityType string
@@ -31,6 +31,6 @@ const (
 
 type h5pServiceProvider struct{}
 
-func (*h5pServiceProvider) BatchGetMap(ctx context.Context, operator *entity.Operator, studentIDs []string) (map[string]map[string]*StudentActivity, error) {
+func (*h5pServiceProvider) BatchGetMap(ctx context.Context, operator *entity.Operator, studentIDs []string) (map[string]map[string]*H5PStudentScore, error) {
 	panic("implement me")
 }
