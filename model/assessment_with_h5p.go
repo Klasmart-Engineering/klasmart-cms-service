@@ -259,20 +259,20 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// construct result
 	result := entity.GetH5PAssessmentDetailResult{
-		ID:         view.ID,
-		Title:      view.Title,
-		ClassName:  view.Class.Name,
-		Students:   view.Students,
-		DueAt:      view.Schedule.DueAt,
-		CompleteAt: view.CompleteTime,
-		ScheduleID: view.ScheduleID,
-		Status:     view.Status,
-	}
-
-	// teacher names
-	result.TeacherNames = make([]string, 0, len(view.Teachers))
-	for _, t := range view.Teachers {
-		result.TeacherNames = append(result.TeacherNames, t.Name)
+		ID:               view.ID,
+		Title:            view.Title,
+		ClassName:        view.Class.Name,
+		Teachers:         view.Teachers,
+		Students:         view.Students,
+		DueAt:            view.Schedule.DueAt,
+		LessonPlan:       entity.H5PAssessmentLessonPlan{},
+		LessonMaterials:  nil,
+		CompleteRate:     0,
+		CompleteAt:       view.CompleteTime,
+		RemainingTime:    0,
+		StudentViewItems: nil,
+		ScheduleID:       view.ScheduleID,
+		Status:           view.Status,
 	}
 
 	// remaining time

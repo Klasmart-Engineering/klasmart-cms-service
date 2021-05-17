@@ -45,7 +45,7 @@ type GetH5PAssessmentDetailResult struct {
 	ID               string                          `json:"id"`
 	Title            string                          `json:"title"`
 	ClassName        string                          `json:"class_name"`
-	TeacherNames     []string                        `json:"teacher_names"`
+	Teachers         []*AssessmentTeacher            `json:"teachers"`
 	Students         []*AssessmentStudent            `json:"students"`
 	DueAt            int64                           `json:"due_at"`
 	LessonPlan       H5PAssessmentLessonPlan         `json:"lesson_plan"`
