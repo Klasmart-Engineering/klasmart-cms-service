@@ -77,18 +77,18 @@ func (a UpdateAssessmentAction) Valid() bool {
 	}
 }
 
-type AssessmentsOrderBy string
+type AssessmentOrderBy string
 
 const (
-	ListAssessmentsOrderByClassEndTime     AssessmentsOrderBy = "class_end_time"
-	ListAssessmentsOrderByClassEndTimeDesc AssessmentsOrderBy = "-class_end_time"
-	ListAssessmentsOrderByCompleteTime     AssessmentsOrderBy = "complete_time"
-	ListAssessmentsOrderByCompleteTimeDesc AssessmentsOrderBy = "-complete_time"
-	ListAssessmentsOrderByCreateAt         AssessmentsOrderBy = "create_at"
-	ListAssessmentsOrderByCreateAtDesc     AssessmentsOrderBy = "-create_at"
+	ListAssessmentsOrderByClassEndTime     AssessmentOrderBy = "class_end_time"
+	ListAssessmentsOrderByClassEndTimeDesc AssessmentOrderBy = "-class_end_time"
+	ListAssessmentsOrderByCompleteTime     AssessmentOrderBy = "complete_time"
+	ListAssessmentsOrderByCompleteTimeDesc AssessmentOrderBy = "-complete_time"
+	ListAssessmentsOrderByCreateAt         AssessmentOrderBy = "create_at"
+	ListAssessmentsOrderByCreateAtDesc     AssessmentOrderBy = "-create_at"
 )
 
-func (ob AssessmentsOrderBy) Valid() bool {
+func (ob AssessmentOrderBy) Valid() bool {
 	switch ob {
 	case ListAssessmentsOrderByClassEndTime,
 		ListAssessmentsOrderByClassEndTimeDesc,
@@ -103,7 +103,7 @@ func (ob AssessmentsOrderBy) Valid() bool {
 }
 
 type NullAssessmentsOrderBy struct {
-	Value AssessmentsOrderBy
+	Value AssessmentOrderBy
 	Valid bool
 }
 
@@ -146,13 +146,13 @@ type AssessmentSubject struct {
 }
 
 type ConvertToViewsOptions struct {
-	CheckedStudents       sql.NullBool
-	EnableProgram         bool
-	EnableSubjects        bool
-	EnableTeachers        bool
-	EnableStudents        bool
-	EnableClass           bool
-	EnableLessonPlan      bool
+	CheckedStudents  sql.NullBool
+	EnableProgram    bool
+	EnableSubjects   bool
+	EnableTeachers   bool
+	EnableStudents   bool
+	EnableClass      bool
+	EnableLessonPlan bool
 }
 
 type AssessmentLessonPlan struct {
@@ -162,16 +162,16 @@ type AssessmentLessonPlan struct {
 }
 
 type AssessmentLessonMaterial struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
 	Comment string `json:"comment"`
-	Source string `json:"source"`
-	Checked bool `json:"checked"`
+	Source  string `json:"source"`
+	Checked bool   `json:"checked"`
 }
 
 type AssessmentExternalLessonPlan struct {
-	ID        string                      `json:"id"`
-	Name      string                      `json:"name"`
+	ID        string                              `json:"id"`
+	Name      string                              `json:"name"`
 	Materials []*AssessmentExternalLessonMaterial `json:"materials"`
 }
 

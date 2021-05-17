@@ -64,7 +64,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 
 		orderBy := c.Query("order_by")
 		if orderBy != "" {
-			orderBy := entity.AssessmentsOrderBy(orderBy)
+			orderBy := entity.AssessmentOrderBy(orderBy)
 			if !orderBy.Valid() {
 				log.Info(ctx, "list assessments: invalid order by",
 					log.String("status", string(status)),

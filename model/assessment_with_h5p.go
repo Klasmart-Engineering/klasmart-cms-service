@@ -19,7 +19,7 @@ import (
 type IH5PAssessmentModel interface {
 	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListH5PAssessmentsArgs) (*entity.ListH5PAssessmentsResult, error)
 	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetH5PAssessmentDetailResult, error)
-	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs)
+	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) error
 	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	DeleteStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 	AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]string, error)
@@ -144,13 +144,13 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 	// convert to assessment view
 	var views []*entity.AssessmentView
 	if views, err = GetAssessmentModel().ConvertToViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
-		CheckedStudents:       sql.NullBool{Bool: true, Valid: true},
-		EnableProgram:         true,
-		EnableSubjects:        true,
-		EnableTeachers:        true,
-		EnableStudents:        true,
-		EnableClass:           true,
-		EnableLessonPlan:      true,
+		CheckedStudents:  sql.NullBool{Bool: true, Valid: true},
+		EnableProgram:    true,
+		EnableSubjects:   true,
+		EnableTeachers:   true,
+		EnableStudents:   true,
+		EnableClass:      true,
+		EnableLessonPlan: true,
 	}); err != nil {
 		log.Error(ctx, "List: GetAssessmentModel().ConvertToViews: get failed",
 			log.Err(err),
@@ -242,11 +242,11 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		view  *entity.AssessmentView
 	)
 	if views, err = GetAssessmentModel().ConvertToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
-		EnableProgram:    true,
-		EnableSubjects:   true,
-		EnableTeachers:   true,
-		EnableStudents:   true,
-		EnableClass:      true,
+		EnableProgram:  true,
+		EnableSubjects: true,
+		EnableTeachers: true,
+		EnableStudents: true,
+		EnableClass:    true,
 	}); err != nil {
 		log.Error(ctx, "Get: GetAssessmentModel().ConvertToViews: get failed",
 			log.Err(err),
@@ -259,14 +259,14 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// construct result
 	result := entity.GetH5PAssessmentDetailResult{
-		ID:               view.ID,
-		Title:            view.Title,
-		ClassName:        view.Class.Name,
-		Students:         view.Students,
-		DueAt:            view.Schedule.DueAt,
-		CompleteAt:       view.CompleteTime,
-		ScheduleID:       view.ScheduleID,
-		Status:           view.Status,
+		ID:         view.ID,
+		Title:      view.Title,
+		ClassName:  view.Class.Name,
+		Students:   view.Students,
+		DueAt:      view.Schedule.DueAt,
+		CompleteAt: view.CompleteTime,
+		ScheduleID: view.ScheduleID,
+		Status:     view.Status,
 	}
 
 	// teacher names
@@ -284,7 +284,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// fill lesson plan and lesson materials
 	plan, err := da.GetAssessmentContentDA().GetPlan(ctx, tx, id)
-	if  err != nil {
+	if err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetPlan: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
@@ -295,8 +295,8 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		Name:    plan.ContentName,
 		Comment: plan.ContentComment,
 	}
-	materials, err := da.GetAssessmentContentDA().GetMaterials(ctx, tx, id);
-	if  err != nil {
+	materials, err := da.GetAssessmentContentDA().GetMaterials(ctx, tx, id)
+	if err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetMaterials: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
@@ -391,7 +391,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 	return &result, nil
 }
 
-func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) {
+func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) error {
 	panic("implement me")
 }
 
@@ -769,13 +769,13 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		})
 		for _, lm := range lp.Materials {
 			assessmentContents = append(assessmentContents, &entity.AssessmentContent{
-				ID:             utils.NewID(),
-				AssessmentID:   a.ID,
-				ContentID:      lm.ID,
-				ContentName:    lm.Name,
-				ContentType:    entity.ContentTypeMaterial,
-				ContentSource:  lm.Source,
-				Checked:        true,
+				ID:            utils.NewID(),
+				AssessmentID:  a.ID,
+				ContentID:     lm.ID,
+				ContentName:   lm.Name,
+				ContentType:   entity.ContentTypeMaterial,
+				ContentSource: lm.Source,
+				Checked:       true,
 			})
 		}
 	}

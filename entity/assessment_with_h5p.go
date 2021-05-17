@@ -18,6 +18,11 @@ const (
 	ListH5PAssessmentsQueryTypeClassName   = "class_name"
 )
 
+type NullListH5PAssessmentsQueryType struct {
+	Value ListH5PAssessmentsQueryType
+	Valid bool
+}
+
 type ListH5PAssessmentsResult struct {
 	Items []*ListH5PAssessmentsResultItem `json:"items"`
 	Total int                             `json:"total"`
@@ -81,7 +86,7 @@ type H5PAssessmentStudentViewLessonMaterial struct {
 	Answer             string  `json:"answer"`
 	MaxScore           float64 `json:"max_score"`
 	AchievedScore      float64 `json:"achieved_score"`
-	ScoreCount int `json:"score_count"`
+	ScoreCount         int     `json:"score_count"`
 }
 
 type UpdateH5PAssessmentArgs struct {
