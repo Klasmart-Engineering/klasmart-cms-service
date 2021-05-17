@@ -53,28 +53,6 @@ func (m *reportTeachingLoadModel) ListTeachingLoadReport(ctx context.Context, tx
 		return nil, nil
 	}
 
-	// permission check
-	checker := NewReportPermissionChecker(operator)
-	ok, err := checker.SearchAndCheckTeachers(ctx, args.TeacherIDs)
-	if err != nil {
-		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: search failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("args", args),
-			log.Any("checker", checker),
-		)
-		return nil, err
-	}
-	if !ok {
-		log.Error(ctx, "ListTeachingLoadReport: checker.SearchAndCheckTeachers: check failed",
-			log.Strings("teacher_ids", args.TeacherIDs),
-			log.Any("args", args),
-			log.Any("operator", operator),
-			log.Any("checker", checker),
-		)
-		return nil, constant.ErrForbidden
-	}
-
 	// prepend time ranges
 	var (
 		ranges     = make([]*entity.ScheduleTimeRange, 0, constant.ReportTeachingLoadDays)
@@ -204,6 +182,7 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 	checker := NewReportPermissionChecker(operator)
 	if err := checker.Search(ctx); err != nil {
 		log.Error(ctx, "cleanAndValidListArgs: checker.Search: search failed",
+			log.Err(err),
 			log.Any("args", args),
 		)
 		return nil, err
@@ -214,41 +193,48 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 		args.SchoolID = ""
 		if args.ClassIDs[0] == string(entity.ListTeachingLoadReportOptionAll) {
 			args.ClassIDs = nil
-			schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
-			if err != nil {
-				return nil, err
-			}
-			schoolIDs := make([]string, 0, len(schools))
-			for _, s := range schools {
-				schoolIDs = append(schoolIDs, s.ID)
-			}
-			m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
-			if err != nil {
-				return nil, err
-			}
-			for _, cc := range m {
-				for _, c := range cc {
-					args.ClassIDs = append(args.ClassIDs, c.ID)
-				}
-			}
-			userClassesMap, err := external.GetClassServiceProvider().GetByUserIDs(ctx, operator, []string{operator.UserID})
-			if err != nil {
-				return nil, err
-			}
-			var userClassIDs []string
-			for _, cc := range userClassesMap {
-				for _, c := range cc {
-					userClassIDs = append(userClassIDs, c.ID)
-				}
-			}
-			args.ClassIDs = utils.IntersectAndDeduplicateStrSlice(args.ClassIDs, userClassIDs)
 			if checker.HasMyOrgPermission() {
+				schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, operator, operator.OrgID)
+				if err != nil {
+					return nil, err
+				}
+				schoolIDs := make([]string, 0, len(schools))
+				for _, s := range schools {
+					schoolIDs = append(schoolIDs, s.ID)
+				}
+				m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
+				if err != nil {
+					return nil, err
+				}
+				for _, cc := range m {
+					for _, c := range cc {
+						args.ClassIDs = append(args.ClassIDs, c.ID)
+					}
+				}
 				classes, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, operator, operator.OrgID)
 				if err != nil {
 					return nil, err
 				}
 				for _, c := range classes {
 					args.ClassIDs = append(args.ClassIDs, c.ID)
+				}
+			} else if checker.HasMySchoolPermission() {
+				schools, err := external.GetSchoolServiceProvider().GetByOperator(ctx, operator)
+				if err != nil {
+					return nil, err
+				}
+				schoolIDs := make([]string, 0, len(schools))
+				for _, s := range schools {
+					schoolIDs = append(schoolIDs, s.ID)
+				}
+				m, err := external.GetClassServiceProvider().GetBySchoolIDs(ctx, operator, schoolIDs)
+				if err != nil {
+					return nil, err
+				}
+				for _, cc := range m {
+					for _, c := range cc {
+						args.ClassIDs = append(args.ClassIDs, c.ID)
+					}
 				}
 			}
 		}
@@ -300,6 +286,10 @@ func (m *reportTeachingLoadModel) cleanAndValidListArgs(ctx context.Context, tx 
 	}
 
 	if ok := checker.CheckTeachers(args.TeacherIDs); !ok {
+		log.Error(ctx, "cleanAndValidListArgs: checker.CheckTeachers",
+			log.Any("args", args),
+			log.Strings("teacher_ids", args.TeacherIDs),
+		)
 		return nil, constant.ErrForbidden
 	}
 
