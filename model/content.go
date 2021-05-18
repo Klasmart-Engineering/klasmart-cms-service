@@ -3021,7 +3021,7 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 	}
 
 	contentList := make([]*entity.ContentInfo, len(contentDetailsList))
-	for i := range objs {
+	for i := range contentDetailsList {
 		contentList[i] = &contentDetailsList[i].ContentInfo
 	}
 	log.Debug(ctx, "getContentInfoByIDList result",
