@@ -23,6 +23,7 @@ type IH5PAssessmentModel interface {
 	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	DeleteStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 	AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]string, error)
+	HasAnyoneAttemptInRoom(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomID string) (bool, error)
 }
 
 var (
@@ -245,15 +246,20 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// construct result
 	result := entity.GetH5PAssessmentDetailResult{
-		ID:         view.ID,
-		Title:      view.Title,
-		ClassName:  view.Class.Name,
-		Teachers:   view.Teachers,
-		Students:   view.Students,
-		DueAt:      view.Schedule.DueAt,
-		CompleteAt: view.CompleteTime,
-		ScheduleID: view.ScheduleID,
-		Status:     view.Status,
+		ID:               view.ID,
+		Title:            view.Title,
+		ClassName:        view.Class.Name,
+		Teachers:         view.Teachers,
+		Students:         view.Students,
+		DueAt:            view.Schedule.DueAt,
+		LessonPlan:       entity.H5PAssessmentLessonPlan{},
+		LessonMaterials:  nil,
+		CompleteRate:     0,
+		CompleteAt:       view.CompleteTime,
+		RemainingTime:    0,
+		StudentViewItems: nil,
+		ScheduleID:       view.ScheduleID,
+		Status:           view.Status,
 	}
 
 	// remaining time
@@ -321,10 +327,9 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 			continue
 		}
 		newItem := &entity.H5PAssessmentStudentViewItem{
-			StudentID:       s.ID,
-			StudentName:     s.Name,
-			Comment:         user.Comment,
-			LessonMaterials: nil,
+			StudentID:   s.ID,
+			StudentName: s.Name,
+			Comment:     user.Comment,
 		}
 		for _, lm := range view.LessonMaterials {
 			content := user.ContentMap[lm.Source]
@@ -344,6 +349,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 				Answer:             content.Answer,
 				MaxScore:           content.MaxPossibleScore,
 				AchievedScore:      content.AchievedScore,
+				Attempted:          len(content.Answers) > 0,
 			})
 		}
 		result.StudentViewItems = append(result.StudentViewItems, newItem)
@@ -400,9 +406,10 @@ func (m *h5pAssessmentModel) getRoomMap(ctx context.Context, operator *entity.Op
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
 		}
 		room := entity.AssessmentH5PRoom{
-			CompleteRate: 0,
-			Users:        assessmentUsers,
-			UserMap:      assessmentUserMap,
+			CompleteRate:    0,
+			AnyoneAttempted: attempted > 0,
+			Users:           assessmentUsers,
+			UserMap:         assessmentUserMap,
 		}
 		if total > 0 {
 			room.CompleteRate = float64(attempted) / float64(total)
@@ -733,7 +740,7 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 }
 
 func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]string, error) {
-	log.Debug(ctx, "AddStudies: add assessment args", log.Strings("schedule_ids", scheduleIDs), log.Any("operator", operator))
+	log.Debug(ctx, "add studies args", log.Strings("schedule_ids", scheduleIDs), log.Any("operator", operator))
 
 	// check if assessment already exits
 	var assessments []*entity.Assessment
@@ -970,4 +977,19 @@ func (m *h5pAssessmentModel) DeleteStudies(ctx context.Context, tx *dbo.DBContex
 		}
 	}
 	return nil
+}
+
+func (m *h5pAssessmentModel) HasAnyoneAttemptInRoom(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomID string) (bool, error) {
+	if roomID == "" {
+		return false, nil
+	}
+	roomMap, err := m.getRoomMap(ctx, operator, []string{roomID})
+	if err != nil {
+		return false, err
+	}
+	room := roomMap[roomID]
+	if room == nil {
+		return false, nil
+	}
+	return room.AnyoneAttempted, nil
 }

@@ -86,7 +86,7 @@ type H5PAssessmentStudentViewLessonMaterial struct {
 	Answer             string  `json:"answer"`
 	MaxScore           float64 `json:"max_score"`
 	AchievedScore      float64 `json:"achieved_score"`
-	ScoreCount         int     `json:"score_count"`
+	Attempted          bool    `json:"attempted"`
 }
 
 type UpdateH5PAssessmentArgs struct {
@@ -113,9 +113,10 @@ type AddH5PAssessmentStudyInput struct {
 }
 
 type AssessmentH5PRoom struct {
-	CompleteRate float64
-	Users        []*AssessmentH5PUser
-	UserMap      map[string]*AssessmentH5PUser
+	CompleteRate    float64
+	AnyoneAttempted bool
+	Users           []*AssessmentH5PUser
+	UserMap         map[string]*AssessmentH5PUser
 }
 
 type AssessmentH5PUser struct {
