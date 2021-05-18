@@ -623,7 +623,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	total := 0
 	var results []*entity.ContentInfoWithDetails
 	if author == constant.Self {
-		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
+		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	} else {
 		total, results, err = model.GetContentModel().SearchUserContent(ctx, dbo.MustGetDB(ctx), condition, op)
 	}
@@ -635,6 +635,8 @@ func (s *Server) queryContent(c *gin.Context) {
 		})
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -674,6 +676,8 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 		})
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -744,6 +748,8 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -790,7 +796,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 		return
 	}
 
-	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
@@ -801,6 +807,8 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -852,7 +860,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 		return
 	}
 
-	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
@@ -861,6 +869,8 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 		})
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -908,6 +918,8 @@ func handleContentError(c *gin.Context, err error) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidResourceId:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

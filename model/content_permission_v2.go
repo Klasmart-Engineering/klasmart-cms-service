@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 var (
@@ -36,7 +37,7 @@ type ContentPermissionMySchoolModel struct {
 }
 
 func (c *ContentPermissionMySchoolModel) CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error) {
-	schoolsInfo, err := querySchools(ctx, user)
+	schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
 	if err != nil {
 		log.Error(ctx, "querySchools failed",
 			log.Err(err),
@@ -440,7 +441,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 	visibilitySettings := VisibilitySettingsTypeOrgWithAllSchools
 
 	if len(condition.VisibilitySettings) != 0 {
-		schoolsInfo, err := querySchools(ctx, user)
+		schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
 		if err != nil {
 			log.Error(ctx, "getVisibilitySettingsType failed",
 				log.Err(err),
@@ -477,7 +478,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Context, content []*entity.ContentWithVisibilitySettings, user *entity.Operator) ([]*ContentProfile, error) {
 	profiles := make([]*ContentProfile, len(content))
 
-	schoolsInfo, err := querySchools(ctx, user)
+	schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
 	if err != nil {
 		log.Error(ctx, "getVisibilitySettingsType failed",
 			log.Err(err),
@@ -514,8 +515,8 @@ func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.C
 			containsOrg = true
 		} else {
 			containsSchools = true
-			if !c.checkInSchools(ctx, visibilitySettings[i], schoolInfo.MySchool) {
-				if c.checkInSchools(ctx, visibilitySettings[i], schoolInfo.AllSchool) {
+			if !utils.ContainsStr(schoolInfo.MySchool, visibilitySettings[i]) {
+				if utils.ContainsStr(schoolInfo.AllSchool, visibilitySettings[i]) {
 					//contains other schools in org
 					containsOtherSchools = true
 				} else {
@@ -554,15 +555,6 @@ func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.C
 	}
 	//only contains my schools
 	return VisibilitySettingsTypeMySchools, nil
-}
-
-func (c *ContentPermissionMySchoolModel) checkInSchools(ctx context.Context, visibilitySetting string, schools []string) bool {
-	for i := range schools {
-		if schools[i] == visibilitySetting {
-			return true
-		}
-	}
-	return false
 }
 
 func (c *ContentPermissionMySchoolModel) getOwnerType(ctx context.Context, owner string, user *entity.Operator) OwnerType {

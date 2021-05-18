@@ -19,6 +19,7 @@ type IContentFilterModel interface {
 	FilterPublishContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error
 	FilterPendingContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error
 	FilterArchivedContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error
+	QueryUserSchools(ctx context.Context, user *entity.Operator) (*SchoolInfo, error)
 }
 
 type PermissionList struct {
@@ -85,7 +86,7 @@ func (cf *ContentFilterModel) doFilterContent(ctx context.Context, c *entity.Con
 	permissionList PermissionList, user *entity.Operator) error {
 	//check view_my_published_214 permission to fill PublishedQueryMode
 	//1.fill organizations & schools into visibility settings
-	schoolsInfo, err := querySchools(ctx, user)
+	schoolsInfo, err := cf.QueryUserSchools(ctx, user)
 	if err != nil {
 		log.Error(ctx, "querySchools failed",
 			log.Err(err),
@@ -175,7 +176,7 @@ func (cf *ContentFilterModel) filterVisibilitySettings(ctx context.Context, quer
 	return res
 }
 
-func querySchools(ctx context.Context, user *entity.Operator) (*SchoolInfo, error) {
+func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity.Operator) (*SchoolInfo, error) {
 	//todo: complete it
 	schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, user, user.OrgID)
 	if err != nil {

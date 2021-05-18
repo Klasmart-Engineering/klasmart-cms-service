@@ -18,16 +18,16 @@ var (
 )
 
 const (
-	VisibilitySettingsTypeMySchools         VisibilitySettingsType = 1
-	VisibilitySettingsTypeAllSchools        VisibilitySettingsType = 2
-	VisibilitySettingsTypeOnlyOrg           VisibilitySettingsType = 4
-	VisibilitySettingsTypeOrgWithMySchools  VisibilitySettingsType = 5
-	VisibilitySettingsTypeOrgWithAllSchools VisibilitySettingsType = 6
+	VisibilitySettingsTypeMySchools         VisibilitySettingsType = "my schools"
+	VisibilitySettingsTypeAllSchools        VisibilitySettingsType = "all schools"
+	VisibilitySettingsTypeOnlyOrg           VisibilitySettingsType = "only org"
+	VisibilitySettingsTypeOrgWithMySchools  VisibilitySettingsType = "org and my schools"
+	VisibilitySettingsTypeOrgWithAllSchools VisibilitySettingsType = "org and all schools"
 )
 
 const (
-	OwnerTypeUser   OwnerType = 1
-	OwnerTypeOthers OwnerType = 2
+	OwnerTypeUser   OwnerType = "user"
+	OwnerTypeOthers OwnerType = "others"
 )
 
 // Permissions includes edit, remove, publish, approve, reject action. Update synchronously with the permission definition
@@ -62,8 +62,8 @@ var allContentPermissionSet []external.PermissionName = []external.PermissionNam
 	external.FullContentMmanagement294,
 }
 
-type VisibilitySettingsType int
-type OwnerType int
+type VisibilitySettingsType string
+type OwnerType string
 
 type IContentPermissionTable interface {
 	//GetCreatePermissionSets Get permission set list when a user want to create a content

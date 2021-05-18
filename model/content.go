@@ -121,9 +121,9 @@ type IContentModel interface {
 	SearchUserPrivateFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
 	SearchUserFolderContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.FolderContentData, error)
 	SearchUserContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
-	SearchContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
+	SearchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error)
 
 	GetContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
 	GetVisibleContentOutcomeByID(ctx context.Context, tx *dbo.DBContext, cid string) ([]string, error)
@@ -2023,7 +2023,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	return cm.searchContentUnsafe(ctx, tx, combineCondition, user)
 }
 
-func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.Author = user.UserID
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
 	scope, err := cm.listAllScopes(ctx, user)
@@ -2036,11 +2036,11 @@ func (cm *ContentModel) SearchUserPrivateContent(ctx context.Context, tx *dbo.DB
 	}
 	condition.VisibilitySettings = scope
 
-	cm.addUserCondition(ctx, &condition, user)
-	return cm.searchContent(ctx, tx, &condition, user)
+	cm.addUserCondition(ctx, condition, user)
+	return cm.searchContent(ctx, tx, condition, user)
 }
 
-func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = []string{entity.ContentStatusPending}
 	//scope, err := cm.ListVisibleScopes(ctx, visiblePermissionPending, user)
 	//if err != nil {
@@ -2052,8 +2052,8 @@ func (cm *ContentModel) ListPendingContent(ctx context.Context, tx *dbo.DBContex
 	//}
 	//condition.VisibilitySettings = scope
 
-	cm.addUserCondition(ctx, &condition, user)
-	return cm.searchContent(ctx, tx, &condition, user)
+	cm.addUserCondition(ctx, condition, user)
+	return cm.searchContent(ctx, tx, condition, user)
 }
 
 func (cm *ContentModel) addUserCondition(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) {
@@ -2080,10 +2080,10 @@ func (cm *ContentModel) getRelatedUserID(ctx context.Context, keyword string, us
 	return ids
 }
 
-func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
+func (cm *ContentModel) SearchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	condition.PublishStatus = cm.filterInvisiblePublishStatus(ctx, condition.PublishStatus)
-	cm.addUserCondition(ctx, &condition, user)
-	return cm.searchContent(ctx, tx, &condition, user)
+	cm.addUserCondition(ctx, condition, user)
+	return cm.searchContent(ctx, tx, condition, user)
 }
 
 func (cm *ContentModel) refreshContentVisibilitySettings(ctx context.Context, tx *dbo.DBContext, cid string, scope []string) error {
@@ -2478,6 +2478,11 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 		//The user only has the permission to query others
 		return conditionRequestToCondition(condition2), nil
 	} else if condition.PublishedQueryMode == entity.PublishedQueryModeNone {
+		log.Error(ctx, "no valid private scope",
+			log.Err(err),
+			log.Strings("scopes", scope),
+			log.Any("condition", condition),
+			log.Any("user", user))
 		return nil, ErrNoPermissionToQuery
 	}
 
@@ -2988,7 +2993,7 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 		log.Any("objs", objs),
 		log.Any("user", user))
 
-	contentIDs := make([]string, 0)
+	contentIDs := make([]string, len(objs))
 	for i := range objs {
 		//init permission
 		objs[i].Permission = entity.ContentPermission{
@@ -3121,7 +3126,7 @@ func (cm *ContentModel) fillContentPermission(ctx context.Context, objs []*entit
 func (c *ContentModel) buildContentProfiles(ctx context.Context, content []*entity.ContentInfo, user *entity.Operator) ([]*ContentEntityProfile, error) {
 	profiles := make([]*ContentEntityProfile, len(content))
 
-	schoolsInfo, err := querySchools(ctx, user)
+	schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
 	if err != nil {
 		log.Error(ctx, "getVisibilitySettingsType failed",
 			log.Err(err),
