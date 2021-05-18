@@ -26,7 +26,7 @@ type IAssessmentModel interface {
 }
 
 var (
-	ErrNotFoundAttendance = errors.New("not found attendance")
+	ErrNotFoundAttendance     = errors.New("not found attendance")
 	ErrNotAttemptedAssessment = errors.New("not attempted assessment")
 
 	assessmentModelInstance     IAssessmentModel
@@ -229,7 +229,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 
 	// fill lesson plan
 	var (
-		assessmentLessonPlanMap map[string]*entity.AssessmentLessonPlan
+		assessmentLessonPlanMap      map[string]*entity.AssessmentLessonPlan
 		assessmentLessonMaterialsMap map[string][]*entity.AssessmentLessonMaterial
 	)
 	if options.EnableLessonPlan {
@@ -244,7 +244,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 			log.Error(ctx, "convert to views: query assessment content failed",
 				log.Err(err),
 				log.Strings("assessment_ids", assessmentIDs),
-				)
+			)
 			return nil, err
 		}
 		assessmentLessonPlanMap = map[string]*entity.AssessmentLessonPlan{}
@@ -253,8 +253,8 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 			switch c.ContentType {
 			case entity.ContentTypePlan:
 				assessmentLessonPlanMap[c.AssessmentID] = &entity.AssessmentLessonPlan{
-					ID:        c.ContentID,
-					Name:      c.ContentName,
+					ID:   c.ContentID,
+					Name: c.ContentName,
 				}
 			case entity.ContentTypeMaterial:
 				assessmentLessonMaterialsMap[c.AssessmentID] = append(assessmentLessonMaterialsMap[c.AssessmentID], &entity.AssessmentLessonMaterial{
@@ -271,13 +271,15 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 	var result []*entity.AssessmentView
 	for _, a := range assessments {
 		var (
+			v = entity.AssessmentView{Assessment: a}
 			s = scheduleMap[a.ScheduleID]
-			v = entity.AssessmentView{Assessment: a, Schedule: s.Schedule}
 		)
-		if s == nil || v.Schedule == nil {
+		if s == nil {
 			log.Warn(ctx, "List: not found schedule", log.Any("assessment", a))
 			continue
 		}
+		v.Schedule = s.Schedule
+		v.RoomID = s.RoomID
 		if options.EnableProgram {
 			v.Program = entity.AssessmentProgram{
 				ID:   s.ProgramID,

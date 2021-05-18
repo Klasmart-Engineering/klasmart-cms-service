@@ -109,7 +109,8 @@ type NullAssessmentsOrderBy struct {
 
 type AssessmentView struct {
 	*Assessment
-	Schedule        *Schedule
+	Schedule        *Schedule                   `json:"schedule"`
+	RoomID          string                      `json:"room_id"`
 	Program         AssessmentProgram           `json:"program"`
 	Subjects        []*AssessmentSubject        `json:"subjects"`
 	Teachers        []*AssessmentTeacher        `json:"teachers"`

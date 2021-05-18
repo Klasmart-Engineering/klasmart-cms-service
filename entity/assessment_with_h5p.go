@@ -111,3 +111,27 @@ type UpdateH5PAssessmentStudentViewMaterialItem struct {
 type AddH5PAssessmentStudyInput struct {
 	ScheduleID string `json:"schedule_id"`
 }
+
+type AssessmentH5PRoom struct {
+	CompleteRate float64
+	Users        []*AssessmentH5PUser
+	UserMap      map[string]*AssessmentH5PUser
+}
+
+type AssessmentH5PUser struct {
+	UserID     string
+	Comment    string
+	Contents   []*AssessmentH5PContentScore
+	ContentMap map[string]*AssessmentH5PContentScore
+}
+
+type AssessmentH5PContentScore struct {
+	ContentID        string
+	ContentName      string
+	ContentType      string
+	Answer           string
+	Answers          []string
+	MaxPossibleScore float64
+	AchievedScore    float64
+	Scores           []float64
+}

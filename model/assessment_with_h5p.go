@@ -161,18 +161,17 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 		return nil, err
 	}
 
-	// fill activities
-	var allStudentIDs []string
+	// get scores
+	var roomIDs []string
 	for _, v := range views {
-		for _, s := range v.Students {
-			if s.Checked {
-				allStudentIDs = append(allStudentIDs, s.ID)
-			}
-		}
+		roomIDs = append(roomIDs, v.RoomID)
 	}
-	allStudentIDs = utils.SliceDeduplication(allStudentIDs)
-	studentActivitiesMap, err := external.GetH5PServiceProvider().BatchGetMap(ctx, operator, allStudentIDs)
+	roomMap, err := m.getRoomMap(ctx, operator, roomIDs)
 	if err != nil {
+		log.Error(ctx, "list h5p assessments: get room user scores map failed",
+			log.Err(err),
+			log.Strings("room_ids", roomIDs),
+		)
 		return nil, err
 	}
 
@@ -183,23 +182,6 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 		for _, t := range v.Teachers {
 			teacherNames = append(teacherNames, t.Name)
 		}
-		var (
-			activityAllAttempted int
-			activityAllCount     int
-		)
-		for _, s := range v.Students {
-			aa := studentActivitiesMap[s.ID]
-			for _, a := range aa {
-				activityAllCount++
-				if a.Attempted {
-					activityAllAttempted++
-				}
-			}
-		}
-		var completeRate float64
-		if activityAllCount != 0 {
-			completeRate = float64(activityAllAttempted) / float64(activityAllCount)
-		}
 		var remainingTime int64
 		if v.Schedule.DueAt != 0 {
 			remainingTime = time.Now().Unix() - v.Schedule.DueAt
@@ -208,6 +190,10 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 		}
 		if remainingTime < 0 {
 			remainingTime = 0
+		}
+		var completeRate float64
+		if v := roomMap[v.RoomID]; v != nil {
+			v.CompleteRate = completeRate
 		}
 		newItem := entity.ListH5PAssessmentsResultItem{
 			ID:            v.ID,
@@ -259,20 +245,15 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// construct result
 	result := entity.GetH5PAssessmentDetailResult{
-		ID:               view.ID,
-		Title:            view.Title,
-		ClassName:        view.Class.Name,
-		Teachers:         view.Teachers,
-		Students:         view.Students,
-		DueAt:            view.Schedule.DueAt,
-		LessonPlan:       entity.H5PAssessmentLessonPlan{},
-		LessonMaterials:  nil,
-		CompleteRate:     0,
-		CompleteAt:       view.CompleteTime,
-		RemainingTime:    0,
-		StudentViewItems: nil,
-		ScheduleID:       view.ScheduleID,
-		Status:           view.Status,
+		ID:         view.ID,
+		Title:      view.Title,
+		ClassName:  view.Class.Name,
+		Teachers:   view.Teachers,
+		Students:   view.Students,
+		DueAt:      view.Schedule.DueAt,
+		CompleteAt: view.CompleteTime,
+		ScheduleID: view.ScheduleID,
+		Status:     view.Status,
 	}
 
 	// remaining time
@@ -291,9 +272,8 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		)
 	}
 	result.LessonPlan = entity.H5PAssessmentLessonPlan{
-		ID:      plan.ContentID,
-		Name:    plan.ContentName,
-		Comment: plan.ContentComment,
+		ID:   plan.ContentID,
+		Name: plan.ContentName,
 	}
 	materials, err := da.GetAssessmentContentDA().GetMaterials(ctx, tx, id)
 	if err != nil {
@@ -311,84 +291,125 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		})
 	}
 
-	// get activities
-	var allStudentIDs []string
-	for _, v := range views {
-		for _, s := range v.Students {
-			if s.Checked {
-				allStudentIDs = append(allStudentIDs, s.ID)
-			}
-		}
-	}
-	allStudentIDs = utils.SliceDeduplication(allStudentIDs)
-	studentActivityMap, err := external.GetH5PServiceProvider().BatchGetMap(ctx, operator, allStudentIDs)
+	// get h5p room scores
+	roomMap, err := m.getRoomMap(ctx, operator, []string{view.RoomID})
 	if err != nil {
+		log.Error(ctx, "get assessment detail: get room map failed",
+			log.Err(err),
+			log.String("room_id", view.RoomID),
+		)
 		return nil, err
 	}
-
-	// complete rate
-	var (
-		activityAllAttempted int
-		activityAllCount     int
-	)
-	for _, s := range view.Students {
-		aa := studentActivityMap[s.ID]
-		for _, a := range aa {
-			activityAllCount++
-			if a.Attempted {
-				activityAllAttempted++
-			}
-		}
-	}
-	if activityAllCount != 0 {
-		result.CompleteRate = float64(activityAllAttempted) / float64(activityAllCount)
+	room := roomMap[view.RoomID]
+	if room == nil {
+		log.Debug(ctx, "add h5p assessment detail: not found room", log.String("room_id", view.RoomID))
+		return &result, nil
 	}
 
-	// get student comment
-	var attendances []*entity.AssessmentAttendance
-	if err := da.GetAssessmentAttendanceDA().Query(ctx, &da.QueryAssessmentAttendanceConditions{
-		AssessmentIDs: entity.NullStrings{
-			Strings: []string{id},
-			Valid:   true,
-		},
-	}, &attendances); err != nil {
-		log.Error(ctx, "get h5p assessment detail: get failed",
-			log.Err(err),
-			log.String("id", id),
-		)
-	}
-	attendanceCommentMap := make(map[string]string, len(attendances))
+	// fill complete rate
+	result.CompleteRate = room.CompleteRate
 
 	// student view items
 	for _, s := range view.Students {
+		user := room.UserMap[s.ID]
+		if user == nil {
+			log.Debug(ctx, "get h5p assessment detail: not found user from h5p room",
+				log.String("room_id", view.RoomID),
+				log.Any("not_found_student_id", s.ID),
+				log.Any("room", room),
+			)
+			continue
+		}
 		newItem := &entity.H5PAssessmentStudentViewItem{
 			StudentID:       s.ID,
 			StudentName:     s.Name,
-			Comment:         attendanceCommentMap[s.ID],
+			Comment:         user.Comment,
 			LessonMaterials: nil,
 		}
-		activityMap := studentActivityMap[s.ID]
 		for _, lm := range view.LessonMaterials {
-			var activity *external.H5PStudentScore
-			if activityMap != nil {
-				activity = activityMap[lm.Source]
-			}
-			if activity == nil {
-				activity = &external.H5PStudentScore{}
+			content := user.ContentMap[lm.Source]
+			if content == nil {
+				log.Debug(ctx, "get h5p assessment detail: not found content from h5p room user",
+					log.String("room_id", view.RoomID),
+					log.Any("student_id", s.ID),
+					log.Any("not_found_content_id", lm.Source),
+					log.Any("room", room),
+				)
+				continue
 			}
 			newItem.LessonMaterials = append(newItem.LessonMaterials, &entity.H5PAssessmentStudentViewLessonMaterial{
 				LessonMaterialID:   lm.ID,
 				LessonMaterialName: lm.Name,
-				LessonMaterialType: string(activity.ActivityType),
-				Answer:             activity.Answer,
-				MaxScore:           activity.MaxPossibleScore,
-				AchievedScore:      activity.AchievedScore,
+				LessonMaterialType: content.ContentType,
+				Answer:             content.Answer,
+				MaxScore:           content.MaxPossibleScore,
+				AchievedScore:      content.AchievedScore,
 			})
 		}
 		result.StudentViewItems = append(result.StudentViewItems, newItem)
 	}
 
 	return &result, nil
+}
+
+func (m *h5pAssessmentModel) getRoomMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]*entity.AssessmentH5PRoom, error) {
+	m2, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]*entity.AssessmentH5PRoom, len(m2))
+	for roomID, users := range m2 {
+		assessmentUsers := make([]*entity.AssessmentH5PUser, 0, len(users))
+		assessmentUserMap := make(map[string]*entity.AssessmentH5PUser, len(users))
+		attempted, total := 0, 0
+		for _, u := range users {
+			assessmentContents := make([]*entity.AssessmentH5PContentScore, 0, len(u.Scores))
+			assessmentContentMap := make(map[string]*entity.AssessmentH5PContentScore, len(u.Scores))
+			for _, s := range u.Scores {
+				assessmentContent := entity.AssessmentH5PContentScore{
+					ContentID:        s.Content.ID,
+					ContentName:      s.Content.Name,
+					ContentType:      s.Content.Type,
+					MaxPossibleScore: s.MaximumPossibleScore,
+					Scores:           s.Score.Scores,
+				}
+				for _, a := range s.Score.Answers {
+					assessmentContent.Answers = append(assessmentContent.Answers, a.Answer)
+				}
+				if len(assessmentContent.Answers) > 0 {
+					assessmentContent.Answer = assessmentContent.Answers[0]
+				}
+				if len(s.TeacherScores) > 0 {
+					assessmentContent.AchievedScore = s.TeacherScores[0].Score
+				} else if len(s.Score.Scores) > 0 {
+					assessmentContent.AchievedScore = s.Score.Scores[len(s.Score.Scores)-1]
+				}
+				total++
+				if len(s.Score.Answers) > 0 {
+					attempted++
+				}
+				assessmentContents = append(assessmentContents, &assessmentContent)
+				assessmentContentMap[assessmentContent.ContentID] = &assessmentContent
+			}
+			assessmentUser := entity.AssessmentH5PUser{
+				UserID:     u.User.UserID,
+				Contents:   assessmentContents,
+				ContentMap: assessmentContentMap,
+			}
+			assessmentUsers = append(assessmentUsers, &assessmentUser)
+			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
+		}
+		room := entity.AssessmentH5PRoom{
+			CompleteRate: 0,
+			Users:        assessmentUsers,
+			UserMap:      assessmentUserMap,
+		}
+		if total > 0 {
+			room.CompleteRate = float64(attempted) / float64(total)
+		}
+		result[roomID] = &room
+	}
+	return result, nil
 }
 
 func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) error {
