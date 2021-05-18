@@ -49,6 +49,8 @@ const (
 	scheduleMsgHide                      ResponseLabel = "schedule_msg_hide"
 	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
 	ScheduleFeedbackCompleted            ResponseLabel = "schedule_msg_cannot_submit"
+	ScheduleMsgCannotEditStudy           ResponseLabel = "schedule_msg_cannot_edit_study"
+	ScheduleMsgCannotDeleteStudy         ResponseLabel = "schedule_msg_cannot_delete_study"
 
 	AssessMsgLockedLo                ResponseLabel = "assess_msg_locked_lo"
 	AssessMsgExistingSet             ResponseLabel = "assess_msg_existing_set"
