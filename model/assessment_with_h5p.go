@@ -413,7 +413,124 @@ func (m *h5pAssessmentModel) getRoomMap(ctx context.Context, operator *entity.Op
 }
 
 func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) error {
-	panic("implement me")
+	// validate
+	if !args.Action.Valid() {
+		log.Error(ctx, "update h5p assessment: invalid action", log.Any("args", args))
+		return constant.ErrInvalidArgs
+	}
+
+	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, dbo.MustGetDB(ctx), args.ID)
+	if err != nil {
+		log.Error(ctx, "update h5p assessment: get assessment failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		return err
+	}
+
+	// permission check
+	hasP439, err := NewAssessmentPermissionChecker(operator).HasP439(ctx)
+	if err != nil {
+		log.Error(ctx, "Update: NewAssessmentPermissionChecker(operator).HasP439: check permission 439 failed",
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	if !hasP439 {
+		log.Error(ctx, "update assessment: not have permission 439",
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return constant.ErrForbidden
+	}
+	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, dbo.MustGetDB(ctx), args.ID)
+	if err != nil {
+		log.Error(ctx, "Update: da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID: get failed",
+			log.String("assessment_id", args.ID),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	hasOperator := false
+	for _, tid := range teacherIDs {
+		if tid == operator.UserID {
+			hasOperator = true
+			break
+		}
+	}
+	if !hasOperator {
+		log.Error(ctx, "update h5p assessment: teacher not int assessment",
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return constant.ErrForbidden
+	}
+	if assessment.Status == entity.AssessmentStatusComplete {
+		errMsg := "update h5p assessment: assessment has completed, not allow update"
+		log.Info(ctx, errMsg,
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return errors.New(errMsg)
+	}
+
+	// update assessment students check property
+	if args.StudentIDs != nil {
+		if err := da.GetAssessmentAttendanceDA().UncheckStudents(ctx, tx, args.ID); err != nil {
+			log.Error(ctx, "update h5p assessment: uncheck student failed",
+				log.Err(err),
+				log.Any("args", args),
+			)
+			return err
+		}
+		if args.StudentIDs != nil && len(args.StudentIDs) > 0 {
+			if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, args.StudentIDs); err != nil {
+				log.Error(ctx, "update h5p assessment: batch check student failed",
+					log.Err(err),
+					log.Any("args", args),
+				)
+				return err
+			}
+		}
+	}
+
+	/// update contents
+	for _, lm := range args.LessonMaterials {
+		updateArgs := da.UpdatePartialAssessmentContentArgs{
+			AssessmentID:   args.ID,
+			ContentID:      lm.ID,
+			ContentComment: lm.Comment,
+			Checked:        lm.Checked,
+		}
+		if err = da.GetAssessmentContentDA().UpdatePartial(ctx, tx, updateArgs); err != nil {
+			log.Error(ctx, "update h5p assessment: update assessment content failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.Any("update_args", updateArgs),
+				log.Any("operator", operator),
+			)
+			return err
+		}
+	}
+
+	// update assessment status
+	if args.Action == entity.UpdateAssessmentActionComplete {
+		if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
+			log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.Any("operator", operator),
+			)
+			return err
+		}
+	}
+
+	// TODO: Medvih: update score and comment
+	panic("not implemented")
+
+	return nil
 }
 
 func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {

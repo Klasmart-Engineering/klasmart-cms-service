@@ -22,7 +22,7 @@ type IOutcomeAssessmentModel interface {
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
 	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
-	Update(ctx context.Context, operator *entity.Operator, args entity.UpdateAssessmentArgs) error
+	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error
 }
 
 var (
@@ -900,7 +900,7 @@ func (m *outcomeAssessmentModel) addOutcomeAttendances(ctx context.Context, tx *
 	return nil
 }
 
-func (m *outcomeAssessmentModel) Update(ctx context.Context, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
+func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
 	// validate
 	if !args.Action.Valid() {
 		log.Error(ctx, "update assessment: invalid action", log.Any("args", args))

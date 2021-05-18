@@ -258,7 +258,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		return
 	}
 
-	err := model.GetOutcomeAssessmentModel().Update(ctx, s.getOperator(c), args)
+	err := model.GetOutcomeAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
