@@ -43,7 +43,7 @@ type h5pAssessmentModel struct{}
 func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListH5PAssessmentsArgs) (*entity.ListH5PAssessmentsResult, error) {
 	// check args
 	if !args.Type.Valid() {
-		err := errors.New("List: require assessment type")
+		err := errors.New("list h5p assessments: require assessment type")
 		log.Error(ctx, "check args error", log.Err(err), log.Any("args", args), log.Any("operator", operator))
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 			}
 		case entity.ListH5PAssessmentsQueryTypeClassName:
 			cond.ClassIDs.Valid = true
-			// TODO: Medivh: query classs by name
+			// TODO: Medivh: query classes by name
 		default:
 			cond.ClassIDsOrTeacherIDs.Valid = true
 			teachers, err := external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
@@ -113,7 +113,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 			for _, item := range teachers {
 				cond.ClassIDsOrTeacherIDs.Value.TeacherIDs = append(cond.ClassIDsOrTeacherIDs.Value.TeacherIDs, item.ID)
 			}
-			// TODO: Medivh: query classs by name 2
+			// TODO: Medivh: query classes by name 2
 		}
 	}
 	log.Debug(ctx, "List: print query cond", log.Any("cond", cond))

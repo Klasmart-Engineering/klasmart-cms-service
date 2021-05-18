@@ -34,16 +34,17 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	args := entity.ListH5PAssessmentsArgs{
-		Type: "study_h5p",
+		Type:      "study_h5p",
+		QueryType: entity.ListH5PAssessmentsQueryTypeTeacherName,
 	}
 	args.Query = c.Query("query")
-	args.QueryType = entity.ListH5PAssessmentsQueryType(c.Query("query_type"))
-	if status := entity.AssessmentStatus(c.Query("status")); status.Valid() {
-		args.Status = entity.NullAssessmentStatus{
-			Value: status,
-			Valid: true,
-		}
-	}
+	//args.QueryType = entity.ListH5PAssessmentsQueryType(c.Query("query_type"))
+	//if status := entity.AssessmentStatus(c.Query("status")); status.Valid() {
+	//	args.Status = entity.NullAssessmentStatus{
+	//		Value: status,
+	//		Valid: true,
+	//	}
+	//}
 	if orderBy := entity.ListHomeFunStudiesOrderBy(c.Query("order_by")); orderBy.Valid() {
 		args.OrderBy = entity.NullAssessmentsOrderBy{
 			Value: entity.AssessmentOrderBy(orderBy),
