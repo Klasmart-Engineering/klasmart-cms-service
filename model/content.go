@@ -3010,7 +3010,8 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 
 	log.Debug(ctx, "hasFolderPermission result after init permissions",
 		log.Any("objs", objs))
-	contentList, err := cm.getContentInfoByIDList(ctx, dbo.MustGetDB(ctx), contentIDs, user)
+
+	contentDetailsList, err := cm.GetContentByIDList(ctx, dbo.MustGetDB(ctx), contentIDs, user)
 	if err != nil {
 		log.Error(ctx, "GetContentByIDList failed",
 			log.Err(err),
@@ -3018,7 +3019,13 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 			log.Strings("contentIDs", contentIDs))
 		return
 	}
+
+	contentList := make([]*entity.ContentInfo, len(contentDetailsList))
+	for i := range objs {
+		contentList[i] = &contentDetailsList[i].ContentInfo
+	}
 	log.Debug(ctx, "getContentInfoByIDList result",
+		log.Any("contentDetailsList", contentDetailsList),
 		log.Any("contentList", contentList),
 		log.Any("objs", objs))
 
