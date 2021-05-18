@@ -3160,23 +3160,21 @@ func (c *ContentModel) getVisibilitySettingsType(ctx context.Context, visibility
 		if visibilitySettings[i] == user.OrgID {
 			//contains org
 			containsOrg = true
-		}
-
-		if !utils.CheckInStringArray(visibilitySettings[i], schoolInfo.MySchool) {
-			if utils.CheckInStringArray(visibilitySettings[i], schoolInfo.AllSchool) {
-				//contains other schools in org
-				containsOtherSchools = true
-				containsSchools = true
-			} else {
-				log.Warn(ctx, "visibility setting is not in all schools",
-					log.Strings("visibilitySettings", visibilitySettings),
-					log.Any("mySchool", schoolInfo.MySchool),
-					log.Any("allSchool", schoolInfo.AllSchool),
-					log.Any("user", user))
-				return VisibilitySettingsTypeAllSchools, ErrInvalidVisibilitySetting
-			}
 		} else {
 			containsSchools = true
+			if !utils.CheckInStringArray(visibilitySettings[i], schoolInfo.MySchool) {
+				if utils.CheckInStringArray(visibilitySettings[i], schoolInfo.AllSchool) {
+					//contains other schools in org
+					containsOtherSchools = true
+				} else {
+					log.Warn(ctx, "visibility setting is not in all schools",
+						log.Strings("visibilitySettings", visibilitySettings),
+						log.Any("mySchool", schoolInfo.MySchool),
+						log.Any("allSchool", schoolInfo.AllSchool),
+						log.Any("user", user))
+					return VisibilitySettingsTypeAllSchools, ErrInvalidVisibilitySetting
+				}
+			}
 		}
 	}
 	log.Info(ctx, "visibility settings check result",

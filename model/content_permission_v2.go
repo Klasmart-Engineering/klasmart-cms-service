@@ -514,18 +514,18 @@ func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.C
 			containsOrg = true
 		} else {
 			containsSchools = true
-		}
-		if !c.checkInSchools(ctx, visibilitySettings[i], schoolInfo.MySchool) {
-			if c.checkInSchools(ctx, visibilitySettings[i], schoolInfo.AllSchool) {
-				//contains other schools in org
-				containsOtherSchools = true
-			} else {
-				log.Warn(ctx, "visibility setting is not in all schools",
-					log.Strings("visibilitySettings", visibilitySettings),
-					log.Any("mySchool", schoolInfo.MySchool),
-					log.Any("allSchool", schoolInfo.AllSchool),
-					log.Any("user", user))
-				return VisibilitySettingsTypeAllSchools, ErrInvalidVisibilitySetting
+			if !c.checkInSchools(ctx, visibilitySettings[i], schoolInfo.MySchool) {
+				if c.checkInSchools(ctx, visibilitySettings[i], schoolInfo.AllSchool) {
+					//contains other schools in org
+					containsOtherSchools = true
+				} else {
+					log.Warn(ctx, "visibility setting is not in all schools",
+						log.Strings("visibilitySettings", visibilitySettings),
+						log.Any("mySchool", schoolInfo.MySchool),
+						log.Any("allSchool", schoolInfo.AllSchool),
+						log.Any("user", user))
+					return VisibilitySettingsTypeAllSchools, ErrInvalidVisibilitySetting
+				}
 			}
 		}
 	}
