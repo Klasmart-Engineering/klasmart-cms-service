@@ -457,7 +457,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 		return nil, err
 	}
 	author := OwnerTypeOthers
-	if len(condition.Author) != 0 {
+	if condition.Author != "" {
 		author = c.getOwnerType(ctx, condition.Author, user)
 	}
 

@@ -778,6 +778,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	op := s.getOperator(c)
 
 	condition := queryCondition(c, op)
+	condition.Author = op.UserID
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, condition, op)
 	if err != nil {
@@ -927,7 +928,7 @@ func parseOrg(c *gin.Context, u *entity.Operator) string {
 	return author
 }
 
-func filterPendingContent(c *gin.Context, condition entity.ContentConditionRequest, op *entity.Operator) bool{
+func filterPendingContent(c *gin.Context, condition entity.ContentConditionRequest, op *entity.Operator) bool {
 	ctx := c.Request.Context()
 	err := model.GetContentFilterModel().FilterPendingContent(ctx, &condition, op)
 	if err == model.ErrNoAvailableVisibilitySettings {
