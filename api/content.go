@@ -605,7 +605,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	author := c.Query("author")
 	//filter unauthed visibility settings
 	if author != constant.Self {
-		isTerminal := filterPublishedContent(c, condition, op)
+		isTerminal := filterPublishedContent(c, &condition, op)
 		if isTerminal {
 			return
 		}
@@ -712,7 +712,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 
 	//if query is not self, filter conditions
 	if author != constant.Self {
-		isTerminal := filterPublishedContent(c, condition, op)
+		isTerminal := filterPublishedContent(c, &condition, op)
 		if isTerminal {
 			return
 		}
@@ -837,7 +837,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	condition := queryCondition(c, op)
 
 	//filter pending visibility settings
-	isTerminal := filterPendingContent(c, condition, op)
+	isTerminal := filterPendingContent(c, &condition, op)
 	if isTerminal {
 		return
 	}
@@ -928,9 +928,9 @@ func parseOrg(c *gin.Context, u *entity.Operator) string {
 	return author
 }
 
-func filterPendingContent(c *gin.Context, condition entity.ContentConditionRequest, op *entity.Operator) bool {
+func filterPendingContent(c *gin.Context, condition *entity.ContentConditionRequest, op *entity.Operator) bool {
 	ctx := c.Request.Context()
-	err := model.GetContentFilterModel().FilterPendingContent(ctx, &condition, op)
+	err := model.GetContentFilterModel().FilterPendingContent(ctx, condition, op)
 	if err == model.ErrNoAvailableVisibilitySettings {
 		//no available visibility settings
 		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
@@ -946,13 +946,13 @@ func filterPendingContent(c *gin.Context, condition entity.ContentConditionReque
 	return false
 }
 
-func filterPublishedContent(c *gin.Context, condition entity.ContentConditionRequest, op *entity.Operator) bool {
+func filterPublishedContent(c *gin.Context, condition *entity.ContentConditionRequest, op *entity.Operator) bool {
 	ctx := c.Request.Context()
 	var err error
 	if c.Query("submenu") == "archived" {
-		err = model.GetContentFilterModel().FilterArchivedContent(ctx, &condition, op)
+		err = model.GetContentFilterModel().FilterArchivedContent(ctx, condition, op)
 	} else {
-		err = model.GetContentFilterModel().FilterPublishContent(ctx, &condition, op)
+		err = model.GetContentFilterModel().FilterPublishContent(ctx, condition, op)
 	}
 	//no available content visibility settings, return nil
 	if err == model.ErrNoAvailableVisibilitySettings {
