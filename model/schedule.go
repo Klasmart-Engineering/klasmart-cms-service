@@ -27,6 +27,7 @@ var (
 	ErrScheduleEditMissTimeForDueAt = errors.New("editable time has expired for due at")
 	ErrScheduleAlreadyHidden        = errors.New("schedule already hidden")
 	ErrScheduleAlreadyFeedback      = errors.New("students already submitted feedback")
+	ErrScheduleStudyAlreadyProgress      = errors.New("students already started")
 )
 
 type IScheduleModel interface {
@@ -764,7 +765,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		return nil, ErrScheduleAlreadyHidden
 	}
 	if schedule.ClassType == entity.ScheduleClassTypeHomework {
-		if schedule.IsHomeFun{
+		if schedule.IsHomeFun {
 			exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
 			if err != nil {
 				log.Error(ctx, "update schedule: get schedule feedback error",
@@ -777,8 +778,16 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 				log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
 				return nil, ErrScheduleAlreadyFeedback
 			}
-		}else{
-			// TODO: has student already done the homework
+		} else {
+			exist, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), op, schedule.ID)
+			if err != nil {
+				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
+				return nil, err
+			}
+			if exist {
+				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
+				return nil, ErrScheduleStudyAlreadyProgress
+			}
 		}
 	}
 	switch schedule.ClassType {
@@ -1022,9 +1031,9 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 	var scheduleIDs []string
 
 	if editType == entity.ScheduleEditOnlyCurrent ||
-		(editType == entity.ScheduleEditWithFollowing && schedule.RepeatID == ""){
+		(editType == entity.ScheduleEditWithFollowing && schedule.RepeatID == "") {
 
-		scheduleIDs = append(scheduleIDs,schedule.ID)
+		scheduleIDs = append(scheduleIDs, schedule.ID)
 
 	} else if editType == entity.ScheduleEditWithFollowing {
 		var scheduleList []*entity.Schedule
@@ -1053,14 +1062,14 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 			scheduleIDs[i] = item.ID
 		}
 	}
-	if len(scheduleIDs)<=0{
-		log.Info(ctx, "no need to delete",log.Any("schedule",schedule),log.Any("editType",editType))
+	if len(scheduleIDs) <= 0 {
+		log.Info(ctx, "no need to delete", log.Any("schedule", schedule), log.Any("editType", editType))
 		return nil
 	}
 
 	// delete schedule relation error
-	err:=da.GetScheduleRelationDA().Delete(ctx, tx, scheduleIDs)
-	if err!=nil{
+	err := da.GetScheduleRelationDA().Delete(ctx, tx, scheduleIDs)
+	if err != nil {
 		log.Error(ctx, "delete schedule relation error",
 			log.Err(err),
 			log.Any("op", op),
@@ -1069,8 +1078,8 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 	}
 
 	// delete schedule assessment relation error
-	err = GetH5PAssessmentModel().DeleteStudies(ctx,tx,op,scheduleIDs)
-	if err!=nil{
+	err = GetH5PAssessmentModel().DeleteStudies(ctx, tx, op, scheduleIDs)
+	if err != nil {
 		log.Error(ctx, "delete schedule assessment relation error",
 			log.Err(err),
 			log.Any("op", op),
