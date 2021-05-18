@@ -7,7 +7,6 @@ type AssessmentContent struct {
 	ContentName    string      `gorm:"column:content_name;type:varchar(255);not null" json:"content_name"`
 	ContentType    ContentType `gorm:"column:content_type;type:int;not null" json:"content_type"`
 	ContentComment string      `gorm:"column:content_comment;type:text;not null" json:"content_comment"`
-	ContentSource string `gorm:"column:content_source;type:text;not null" json:"content_source"` // add: 2021-05-16
 	Checked        bool        `gorm:"column:checked;type:boolean;not null" json:"checked"`
 }
 

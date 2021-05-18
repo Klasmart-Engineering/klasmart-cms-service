@@ -18,11 +18,12 @@ import (
 type IAssessmentModel interface {
 	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error)
 	ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error)
-	ConvertToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error)
+	ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error)
 	AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error
 	BatchAddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.BatchAddAttendancesInput) error
 	AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error
 	BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error)
+	GetLessonMaterialSourceMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]string, error)
 }
 
 var (
@@ -77,7 +78,7 @@ func (m *assessmentModel) ExistsByScheduleID(ctx context.Context, operator *enti
 	return len(assessments) > 0, nil
 }
 
-func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
+func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
 	if len(assessments) == 0 {
 		return nil, nil
 	}
@@ -94,7 +95,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 		scheduleIDs = append(scheduleIDs, a.ScheduleID)
 	}
 	if schedules, err = GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{Subject: true}); err != nil {
-		log.Error(ctx, "ConvertToViews: GetScheduleModel().GetVariableDataByIDs: get failed",
+		log.Error(ctx, "ToViews: GetScheduleModel().GetVariableDataByIDs: get failed",
 			log.Err(err),
 			log.Strings("assessment_ids", assessmentIDs),
 			log.Any("operator", operator),
@@ -114,7 +115,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 		}
 		programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, programIDs)
 		if err != nil {
-			log.Error(ctx, "ConvertToViews: external.GetProgramServiceProvider().BatchGetNameMap: get failed",
+			log.Error(ctx, "ToViews: external.GetProgramServiceProvider().BatchGetNameMap: get failed",
 				log.Err(err),
 				log.Strings("assessment_ids", assessmentIDs),
 				log.Strings("program_ids", programIDs),
@@ -145,7 +146,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 				Valid: true,
 			},
 		}, &assessmentAttendances); err != nil {
-			log.Error(ctx, "ConvertToViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+			log.Error(ctx, "ToViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
 				log.Err(err),
 				log.Strings("assessment_ids", assessmentIDs),
 				log.Any("operator", operator),
@@ -158,7 +159,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 			assessmentTeachersMap[a.AssessmentID] = append(assessmentTeachersMap[a.AssessmentID], a)
 		}
 		if teacherNameMap, err = external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs); err != nil {
-			log.Error(ctx, "ConvertToViews: external.GetTeacherServiceProvider().BatchGetNameMap: get failed",
+			log.Error(ctx, "ToViews: external.GetTeacherServiceProvider().BatchGetNameMap: get failed",
 				log.Err(err),
 				log.Strings("teacher_ids", teacherIDs),
 				log.Strings("assessment_ids", assessmentIDs),
@@ -189,7 +190,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 				Valid: true,
 			},
 		}, &assessmentAttendances); err != nil {
-			log.Error(ctx, "ConvertToViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+			log.Error(ctx, "ToViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
 				log.Err(err),
 				log.Strings("assessment_ids", assessmentIDs),
 				log.Any("operator", operator),
@@ -204,7 +205,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 			}
 		}
 		if studentNameMap, err = external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs); err != nil {
-			log.Error(ctx, "ConvertToViews: external.GetStudentServiceProvider().BatchGetNameMap: get failed",
+			log.Error(ctx, "ToViews: external.GetStudentServiceProvider().BatchGetNameMap: get failed",
 				log.Err(err),
 				log.Strings("student_ids", studentIDs),
 				log.Strings("assessment_ids", assessmentIDs),
@@ -249,6 +250,23 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 		}
 		assessmentLessonPlanMap = map[string]*entity.AssessmentLessonPlan{}
 		assessmentLessonMaterialsMap = map[string][]*entity.AssessmentLessonMaterial{}
+
+		var lessonMaterialIDs []string
+		for _, c := range contents {
+			switch c.ContentType {
+			case entity.ContentTypeMaterial:
+				lessonMaterialIDs = append(lessonMaterialIDs, c.ID)
+			}
+		}
+		lessonMaterialSourceMap, err := m.GetLessonMaterialSourceMap(ctx, tx, operator, lessonMaterialIDs)
+		if err != nil {
+			log.Error(ctx, "to views: get lesson material source map failed",
+				log.Err(err),
+				log.Strings("lesson_material_ids", lessonMaterialIDs),
+			)
+			return nil, err
+		}
+
 		for _, c := range contents {
 			switch c.ContentType {
 			case entity.ContentTypePlan:
@@ -261,7 +279,7 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 					ID:      c.ContentID,
 					Name:    c.ContentName,
 					Comment: c.ContentComment,
-					Source:  c.ContentSource,
+					Source:  lessonMaterialSourceMap[c.ID],
 					Checked: c.Checked,
 				})
 			}
@@ -324,6 +342,33 @@ func (m *assessmentModel) ConvertToViews(ctx context.Context, tx *dbo.DBContext,
 		result = append(result, &v)
 	}
 
+	return result, nil
+}
+
+func (m *assessmentModel) GetLessonMaterialSourceMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]string, error) {
+	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, tx, ids, operator)
+	if err != nil {
+		log.Error(ctx, "get lesson material source map: get contents faield",
+			log.Err(err),
+			log.Strings("ids", ids),
+		)
+		return nil, err
+	}
+	result := make(map[string]string, len(lessonMaterials))
+	for _, lm := range lessonMaterials {
+		data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
+		if err != nil {
+			log.Error(ctx, "get lesson material source map: create content data failed",
+				log.Err(err),
+				log.Any("content", lm),
+			)
+			return nil, err
+		}
+		switch v := data.(type) {
+		case *MaterialData:
+			result[lm.ID] = string(v.Source)
+		}
+	}
 	return result, nil
 }
 
@@ -514,7 +559,7 @@ func (m *assessmentModel) BatchGetLatestLessonPlanMap(ctx context.Context, tx *d
 	}
 	lessonPlans, err = GetContentModel().GetContentByIDList(ctx, tx, lessonPlanIDs, operator)
 	if err != nil {
-		log.Error(ctx, "ConvertToViews: GetContentModel().GetContentByIDList: get failed",
+		log.Error(ctx, "ToViews: GetContentModel().GetContentByIDList: get failed",
 			log.Err(err),
 			log.Strings("lesson_plan_ids", lessonPlanIDs),
 		)

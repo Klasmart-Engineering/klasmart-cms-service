@@ -54,13 +54,13 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 		views []*entity.AssessmentView
 		view  *entity.AssessmentView
 	)
-	if views, err = GetAssessmentModel().ConvertToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
+	if views, err = GetAssessmentModel().ToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
 		EnableProgram:  true,
 		EnableSubjects: true,
 		EnableTeachers: true,
 		EnableStudents: true,
 	}); err != nil {
-		log.Error(ctx, "Get: GetAssessmentModel().ConvertToViews: get failed",
+		log.Error(ctx, "Get: GetAssessmentModel().ToViews: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
 			log.Any("operator", operator),
@@ -351,13 +351,13 @@ func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, op
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
-	if views, err = GetAssessmentModel().ConvertToViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
+	if views, err = GetAssessmentModel().ToViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
 		CheckedStudents: sql.NullBool{Bool: true, Valid: true},
 		EnableProgram:   true,
 		EnableSubjects:  true,
 		EnableTeachers:  true,
 	}); err != nil {
-		log.Error(ctx, "List: GetAssessmentModel().ConvertToViews: get failed",
+		log.Error(ctx, "List: GetAssessmentModel().ToViews: get failed",
 			log.Err(err),
 			log.Any("assessments", assessments),
 			log.Any("args", args),
