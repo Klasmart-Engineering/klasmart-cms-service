@@ -87,6 +87,7 @@ type H5PAssessmentStudentViewLessonMaterial struct {
 	MaxScore           float64 `json:"max_score"`
 	AchievedScore      float64 `json:"achieved_score"`
 	Attempted          bool    `json:"attempted"`
+	IsH5P              bool    `json:"is_h5p"`
 }
 
 type UpdateH5PAssessmentArgs struct {

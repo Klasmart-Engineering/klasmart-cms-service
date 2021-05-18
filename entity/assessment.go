@@ -163,11 +163,12 @@ type AssessmentLessonPlan struct {
 }
 
 type AssessmentLessonMaterial struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Comment string `json:"comment"`
-	Source  string `json:"source"`
-	Checked bool   `json:"checked"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	FileType FileType `json:"file_type"`
+	Comment  string   `json:"comment"`
+	Source   string   `json:"source"`
+	Checked  bool     `json:"checked"`
 }
 
 type AssessmentExternalLessonPlan struct {

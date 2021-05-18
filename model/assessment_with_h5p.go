@@ -334,12 +334,6 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		for _, lm := range view.LessonMaterials {
 			content := user.ContentMap[lm.Source]
 			if content == nil {
-				log.Debug(ctx, "get h5p assessment detail: not found content from h5p room user",
-					log.String("room_id", view.RoomID),
-					log.Any("student_id", s.ID),
-					log.Any("not_found_content_id", lm.Source),
-					log.Any("room", room),
-				)
 				continue
 			}
 			newItem.LessonMaterials = append(newItem.LessonMaterials, &entity.H5PAssessmentStudentViewLessonMaterial{
@@ -350,6 +344,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 				MaxScore:           content.MaxPossibleScore,
 				AchievedScore:      content.AchievedScore,
 				Attempted:          len(content.Answers) > 0,
+				IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
 			})
 		}
 		result.StudentViewItems = append(result.StudentViewItems, newItem)

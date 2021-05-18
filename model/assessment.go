@@ -23,7 +23,7 @@ type IAssessmentModel interface {
 	BatchAddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.BatchAddAttendancesInput) error
 	AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error
 	BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error)
-	GetLessonMaterialSourceMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]string, error)
+	GetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error)
 }
 
 var (
@@ -258,7 +258,7 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 				lessonMaterialIDs = append(lessonMaterialIDs, c.ID)
 			}
 		}
-		lessonMaterialSourceMap, err := m.GetLessonMaterialSourceMap(ctx, tx, operator, lessonMaterialIDs)
+		lessonMaterialSourceMap, err := m.GetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
 		if err != nil {
 			log.Error(ctx, "to views: get lesson material source map failed",
 				log.Err(err),
@@ -275,12 +275,17 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 					Name: c.ContentName,
 				}
 			case entity.ContentTypeMaterial:
+				data := lessonMaterialSourceMap[c.ID]
+				if data == nil {
+					data = &MaterialData{}
+				}
 				assessmentLessonMaterialsMap[c.AssessmentID] = append(assessmentLessonMaterialsMap[c.AssessmentID], &entity.AssessmentLessonMaterial{
-					ID:      c.ContentID,
-					Name:    c.ContentName,
-					Comment: c.ContentComment,
-					Source:  lessonMaterialSourceMap[c.ID],
-					Checked: c.Checked,
+					ID:       c.ContentID,
+					Name:     c.ContentName,
+					FileType: data.FileType,
+					Comment:  c.ContentComment,
+					Source:   string(data.Source),
+					Checked:  c.Checked,
 				})
 			}
 		}
@@ -345,7 +350,7 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 	return result, nil
 }
 
-func (m *assessmentModel) GetLessonMaterialSourceMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]string, error) {
+func (m *assessmentModel) GetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
 	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, tx, ids, operator)
 	if err != nil {
 		log.Error(ctx, "get lesson material source map: get contents faield",
@@ -354,7 +359,7 @@ func (m *assessmentModel) GetLessonMaterialSourceMap(ctx context.Context, tx *db
 		)
 		return nil, err
 	}
-	result := make(map[string]string, len(lessonMaterials))
+	result := make(map[string]*MaterialData, len(lessonMaterials))
 	for _, lm := range lessonMaterials {
 		data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
 		if err != nil {
@@ -366,7 +371,7 @@ func (m *assessmentModel) GetLessonMaterialSourceMap(ctx context.Context, tx *db
 		}
 		switch v := data.(type) {
 		case *MaterialData:
-			result[lm.ID] = string(v.Source)
+			result[lm.ID] = v
 		}
 	}
 	return result, nil
