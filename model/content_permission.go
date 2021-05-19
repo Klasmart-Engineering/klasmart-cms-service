@@ -480,18 +480,20 @@ func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, 
 			Name: schools[i].Name,
 		})
 	}
-	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, op, []string{op.OrgID})
+	orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "get org info failed", log.Err(err))
 		return nil, err
 	}
-	if !orgs[0].Valid {
-		log.Warn(ctx, "invalid value", log.String("org_id", op.OrgID))
+	for i := range orgs {
+		if orgs[i].ID == op.OrgID {
+			entities = append(entities, entity.OrganizationOrSchool{
+				ID:   op.OrgID,
+				Name: orgs[0].Name,
+			})
+		}
 	}
-	entities = append(entities, entity.OrganizationOrSchool{
-		ID:   op.OrgID,
-		Name: orgs[0].Name,
-	})
+
 	return entities, nil
 }
 
