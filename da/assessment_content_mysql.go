@@ -72,6 +72,9 @@ func (d *assessmentContentDA) GetMaterials(ctx context.Context, tx *dbo.DBContex
 }
 
 func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error {
+	if len(items) == 0 {
+		return nil
+	}
 	var (
 		columns = []string{"id", "assessment_id", "content_id", "content_name", "content_type", "checked"}
 		matrix  [][]interface{}
@@ -155,11 +158,11 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 }
 
 type QueryAssessmentContentConditions struct {
-	AssessmentID entity.NullString
+	AssessmentID  entity.NullString
 	AssessmentIDs entity.NullStrings
-	ContentIDs   entity.NullStrings
-	ContentType  entity.NullContentType
-	Checked      entity.NullBool
+	ContentIDs    entity.NullStrings
+	ContentType   entity.NullContentType
+	Checked       entity.NullBool
 }
 
 func (c *QueryAssessmentContentConditions) GetConditions() ([]string, []interface{}) {
