@@ -20,11 +20,6 @@ var (
 	ErrEmptyContentList         = errors.New("content list is nil")
 )
 
-type OrgIDAndName struct {
-	ID   string
-	Name string
-}
-
 type IContentPermissionMySchoolModel interface {
 	CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error)
 	CheckPublishContentsPermission(ctx context.Context, cid string, scopes []string, user *entity.Operator) (bool, error)
@@ -38,7 +33,7 @@ type IContentPermissionMySchoolModel interface {
 
 	CheckReviewContentPermission(ctx context.Context, isApprove bool, cids []string, user *entity.Operator) (bool, error)
 
-	GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]OrgIDAndName, error)
+	GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]entity.OrganizationOrSchool, error)
 }
 
 type ContentPermissionMySchoolModel struct {
@@ -462,15 +457,15 @@ func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.C
 	return VisibilitySettingsTypeMySchools, nil
 }
 
-func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]OrgIDAndName, error) {
+func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]entity.OrganizationOrSchool, error) {
 	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil {
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return nil, err
 	}
-	entities := make([]OrgIDAndName, 0)
+	entities := make([]entity.OrganizationOrSchool, 0)
 	for i := range schools {
-		entities = append(entities, OrgIDAndName{
+		entities = append(entities, entity.OrganizationOrSchool{
 			ID:   schools[i].ID,
 			Name: schools[i].Name,
 		})
@@ -483,7 +478,7 @@ func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, 
 	if !orgs[0].Valid {
 		log.Warn(ctx, "invalid value", log.String("org_id", op.OrgID))
 	}
-	entities = append(entities, OrgIDAndName{
+	entities = append(entities, entity.OrganizationOrSchool{
 		ID:   op.OrgID,
 		Name: orgs[0].Name,
 	})
