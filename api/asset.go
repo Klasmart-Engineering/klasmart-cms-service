@@ -160,7 +160,7 @@ func (s *Server) searchAssets(c *gin.Context) {
 		condition.ContentType = []int{entity.ContentTypeAssets}
 	}
 
-	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
