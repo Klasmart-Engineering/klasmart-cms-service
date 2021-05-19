@@ -40,6 +40,7 @@ type H5PRoomCommentServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, roomID string) ([]*H5PTeacherCommentsByStudent, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string][]*H5PTeacherCommentsByStudent, error)
 	Add(ctx context.Context, operator *entity.Operator, request *H5PAddRoomCommentRequest) (*H5PTeacherComment, error)
+	BatchAdd(ctx context.Context, operator *entity.Operator, requests []*H5PAddRoomCommentRequest) ([]*H5PTeacherComment, error)
 }
 
 func GetH5PRoomCommentServiceProvider() H5PRoomCommentServiceProvider {
@@ -176,12 +177,33 @@ type H5PAddRoomCommentRequest struct {
 }
 
 func (s H5PRoomCommentService) Add(ctx context.Context, operator *entity.Operator, request *H5PAddRoomCommentRequest) (*H5PTeacherComment, error) {
-	query := `
+	comments, err := s.BatchAdd(ctx, operator, []*H5PAddRoomCommentRequest{request})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(comments) != 1 {
+		log.Error(ctx, "h5p room set comment result not found",
+			log.Any("request", request),
+			log.Any("comments", comments))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return comments[0], nil
+}
+
+func (s H5PRoomCommentService) BatchAdd(ctx context.Context, operator *entity.Operator, requests []*H5PAddRoomCommentRequest) ([]*H5PTeacherComment, error) {
+	if len(requests) == 0 {
+		return []*H5PTeacherComment{}, nil
+	}
+
+	mutation := `
 mutation {
-	addComment(
-		comment: "{{.Comment}}"
-		student_id: "{{.StudentID}}"
-		room_id: "{{.RoomID}}"
+	{{range $i, $e := .}}
+	q{{$i}}: addComment(
+		comment: "{{$e.Comment}}"
+		student_id: "{{$e.StudentID}}"
+		room_id: "{{$e.RoomID}}"
 	) {
 		student {
 			user_id
@@ -196,61 +218,64 @@ mutation {
 		date
 		comment
 	}
+	{{end}}
 }`
 
-	temp, err := template.New("").Parse(query)
+	temp, err := template.New("").Parse(mutation)
 	if err != nil {
 		log.Error(ctx, "init template failed", log.Err(err))
 		return nil, err
 	}
 
 	buffer := new(bytes.Buffer)
-	err = temp.Execute(buffer, request)
+	err = temp.Execute(buffer, requests)
 	if err != nil {
-		log.Error(ctx, "execute template failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "execute template failed", log.Err(err), log.Any("requests", requests))
 		return nil, err
 	}
 
 	_request := chlorine.NewRequest(buffer.String(), chlorine.ReqToken(operator.Token))
 
-	data := struct {
-		AddComment *H5PTeacherComment `json:"addComment"`
-	}{}
+	data := map[string]*H5PTeacherComment{}
 	response := &chlorine.Response{
 		Data: &data,
 	}
 
 	_, err = GetH5PClient().Run(ctx, _request, response)
 	if err != nil {
-		log.Error(ctx, "add room comment failed",
+		log.Error(ctx, "add room comments failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("query", buffer.String()),
-			log.Any("request", request))
+			log.Any("requests", requests))
 		return nil, err
 	}
 
 	if len(response.Errors) > 0 {
-		log.Error(ctx, "add room comment failed",
+		log.Error(ctx, "add room comments failed",
 			log.Err(response.Errors),
 			log.Any("operator", operator),
 			log.String("query", buffer.String()),
-			log.Any("request", request))
+			log.Any("requests", requests))
 		return nil, response.Errors
 	}
 
-	comment := data.AddComment
-	if comment == nil {
-		log.Error(ctx, "room comment not found", log.Any("request", request))
-		return nil, constant.ErrRecordNotFound
+	comments := make([]*H5PTeacherComment, 0, len(data))
+	for index := range requests {
+		comment := data[fmt.Sprintf("q%d", index)]
+		if comment == nil {
+			log.Error(ctx, "h5p room comment result not found", log.Any("request", requests[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		// date is saved in milliseconds, we are more used to processing by seconds
+		comment.Date = comment.Date / 1000
+		comments = append(comments, comment)
 	}
 
-	// date is saved in milliseconds, we are more used to processing by seconds
-	comment.Date = comment.Date / 1000
-
 	log.Info(ctx, "add room comment success",
-		log.Any("request", request),
-		log.Any("comment", comment))
+		log.Any("requests", requests),
+		log.Any("comments", comments))
 
-	return comment, nil
+	return comments, nil
 }

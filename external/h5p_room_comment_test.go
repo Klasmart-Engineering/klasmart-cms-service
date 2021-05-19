@@ -47,3 +47,29 @@ func TestH5PRoomCommentService_Add(t *testing.T) {
 		return
 	}
 }
+
+func TestH5PRoomCommentService_BatchAdd(t *testing.T) {
+	requests := []*H5PAddRoomCommentRequest{
+		{
+			RoomID:    "60a1d40a03b03c3acdb4f946",
+			StudentID: "6ef232ce-5c37-4550-a8ca-8d27da5133f8",
+			Comment:   fmt.Sprintf("CommentA-%s", time.Now().Format("20060102150405")),
+		},
+		{
+			RoomID:    "60a1d40a03b03c3acdb4f946",
+			StudentID: "6ef232ce-5c37-4550-a8ca-8d27da5133f8",
+			Comment:   fmt.Sprintf("CommentB-%s", time.Now().Format("20060102150405")),
+		},
+	}
+	commentResults, err := GetH5PRoomCommentServiceProvider().BatchAdd(context.TODO(), testOperator, requests)
+	if err != nil {
+		t.Errorf("GetH5PRoomCommentServiceProvider().BatchAdd() error = %v", err)
+		return
+	}
+
+	if len(commentResults) != len(requests) {
+		t.Errorf("GetH5PRoomCommentServiceProvider().BatchAdd() get invalid result, want %d, got %d", len(requests), len(commentResults))
+		return
+
+	}
+}
