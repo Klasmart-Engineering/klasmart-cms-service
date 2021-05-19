@@ -145,6 +145,7 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 			item.ID,
 			item.ScheduleID,
 			item.Type,
+			item.Title,
 			item.CompleteTime,
 			item.Status,
 			item.CreateAt,
