@@ -328,6 +328,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 	}
 
 	publishStatus := condition.PublishStatus
+	publishAssetsStatus := condition.PublishStatus
 	if len(publishStatus) == 0 {
 		publishStatus = []string{
 			entity.ContentStatusPublished,
@@ -337,6 +338,9 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 			entity.ContentStatusAttachment,
 			entity.ContentStatusHidden,
 			entity.ContentStatusArchive}
+		publishAssetsStatus = []string{
+			entity.ContentStatusPublished,
+		}
 	}
 	visibilitySettings := VisibilitySettingsTypeOrgWithAllSchools
 
@@ -366,7 +370,11 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 
 	contentProfiles := make([]*ContentProfile, len(contentTypes)*len(publishStatus))
 	for i := range contentTypes {
-		for j := range publishStatus {
+		tempPublishStatus := publishStatus
+		if contentTypes[i] == entity.ContentTypeAssets {
+			tempPublishStatus = publishAssetsStatus
+		}
+		for j := range tempPublishStatus {
 			contentProfiles[j+i*len(publishStatus)] = &ContentProfile{
 				ContentType:        entity.ContentType(contentTypes[i]),
 				Status:             entity.ContentPublishStatus(publishStatus[j]),
