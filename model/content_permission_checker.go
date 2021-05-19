@@ -139,7 +139,7 @@ func (c *contentPermissionChecker) HasPermission(ctx context.Context, operator *
 func (c *contentPermissionChecker) BatchGetContentPermission(ctx context.Context, operator *entity.Operator, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error) {
 	contentPermissionDict, err := c.getOperatorContentPermission(ctx, operator)
 	if err != nil {
-		log.Warn(ctx, "getOperatorContentPermission failed",
+		log.Error(ctx, "getOperatorContentPermission failed",
 			log.Any("operator", operator),
 			log.Err(err))
 		return nil, err
@@ -166,7 +166,7 @@ func (c *contentPermissionChecker) getOperatorContentPermission(ctx context.Cont
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, allContentPermissionSet)
 	if err != nil {
-		log.Warn(ctx, "HasOrganizationPermissions failed",
+		log.Error(ctx, "HasOrganizationPermissions failed",
 			log.Any("operator", operator),
 			log.Any("permissions", allContentPermissionSet),
 			log.Err(err))
@@ -219,6 +219,7 @@ func (c *contentPermissionChecker) GetPermissionSetList(ctx context.Context, mod
 		log.Error(ctx, "undefined permission",
 			log.Any("mode", mode),
 			log.Any("req", req),
+			log.Any("dict", c.contentPermissionDict),
 			log.Err(ErrUndefinedPermission))
 		return nil, ErrUndefinedPermission
 	}
@@ -230,7 +231,7 @@ func (c *contentPermissionChecker) GetPermissionSetList(ctx context.Context, mod
 		key := *req[i]
 		if _, ok := set[key]; !ok {
 			if _, ok := dict[key]; !ok {
-				log.Warn(ctx, "undefined permission",
+				log.Error(ctx, "undefined permission",
 					log.Any("contentProfile", key),
 					log.Any("mode", mode),
 					log.Any("permissionDict", dict),
@@ -258,7 +259,7 @@ func (p PermissionSetList) HasPermission(ctx context.Context, operator *entity.O
 
 	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissions)
 	if err != nil {
-		log.Warn(ctx, "HasOrganizationPermissions failed",
+		log.Error(ctx, "HasOrganizationPermissions failed",
 			log.Any("operator", operator),
 			log.Any("permissions", permissions),
 			log.Err(err))
