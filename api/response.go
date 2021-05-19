@@ -20,10 +20,11 @@ const (
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
 
 	//Library
-	LibraryMsgContentLocked       ResponseLabel = "library_error_content_locked"
-	LibraryMsgContentDataInvalid  ResponseLabel = "library_error_content_data_invalid"
-	LibraryContentLockedByMe      ResponseLabel = "library_error_content_locked_by_me"
-	LibraryErrDuplicateFolderName ResponseLabel = "library_error_duplicate_folder_name"
+	LibraryMsgContentLocked         ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentDataInvalid    ResponseLabel = "library_error_content_data_invalid"
+	LibraryContentLockedByMe        ResponseLabel = "library_error_content_locked_by_me"
+	LibraryErrDuplicateFolderName   ResponseLabel = "library_error_duplicate_folder_name"
+	LibraryIncludeArchivedMaterials ResponseLabel = "library_error_include_archived_lesson_material"
 
 	LibraryErrorPlanDuration ResponseLabel = "library_error_plan_duration"
 

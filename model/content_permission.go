@@ -1,497 +1,471 @@
+//content_permission_v2 is for new version of cms permission check
+//add my_schools permission check
 package model
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-type QueryMode string
-
 var (
-	QueryModePending   QueryMode = "pending"
-	QueryModePublished QueryMode = "published"
-	QueryModePrivate   QueryMode = "private"
+	ErrInvalidVisibilitySetting = errors.New("invalid visibility settings")
+	ErrEmptyContentList         = errors.New("content list is nil")
 )
 
-type IContentPermissionModel interface {
+type IContentPermissionMySchoolModel interface {
 	CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error)
-	CheckPublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error)
+	CheckPublishContentsPermission(ctx context.Context, cid string, scopes []string, user *entity.Operator) (bool, error)
+	CheckRepublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error)
+
 	CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
-	CheckPublishContentsPermissionBatch(ctx context.Context, cid string, scope []string, user *entity.Operator) (bool, error)
 
 	CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
-	CheckLockContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
 	CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error)
-	CheckQueryContentPermission(ctx context.Context, condition da.ContentCondition, mode QueryMode, user *entity.Operator) (bool, error)
+	CheckQueryContentPermission(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (bool, error)
 
-	GetPermissionedOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]Entity, error)
+	CheckReviewContentPermission(ctx context.Context, isApprove bool, cids []string, user *entity.Operator) (bool, error)
+
+	GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]entity.OrganizationOrSchool, error)
 }
 
-type Entity struct {
-	ID   string
-	Name string
+type ContentPermissionMySchoolModel struct {
 }
 
-type ContentPermissionModel struct{}
-
-func (cpm *ContentPermissionModel) CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error) {
-	if len(data.PublishScope) == 0 {
-		return cpm.checkHasAnyOrgPermission(ctx, cpm.createPermissionName(ctx, data.ContentType), user)
-	}
-	//检查是否有添加权限
-	//check if user has the permission to operate
-	hasPermission, err := cpm.checkHasPermission(ctx, data.PublishScope, cpm.createPermissionName(ctx, data.ContentType), user)
+func (c *ContentPermissionMySchoolModel) CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error) {
+	schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
 	if err != nil {
-		return false, err
-	}
-	//没有权限，直接返回
-	//if no permission, return
-	if !hasPermission {
-		return false, nil
-	}
-	return true, nil
-
-}
-
-func (cpm *ContentPermissionModel) CheckPublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
-	contentList, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
-	if err != nil {
-		log.Warn(ctx, "get content list failed", log.Strings("ids", cids), log.Err(err))
-		return false, err
-	}
-
-	//排除自己的content
-	othersContents := make([]*entity.Content, 0)
-	for i := range contentList {
-		if contentList[i].Org != user.OrgID {
-			//若org_id不相等，则无权限
-			//if org_id is not user's org id, no permission
-			log.Info(ctx, "publish content in other org", log.String("org_id", contentList[i].Org), log.String("user_org_id", user.OrgID))
-			return false, nil
-		}
-		if contentList[i].Author != user.UserID {
-			othersContents = append(othersContents, contentList[i])
-		}
-	}
-
-	//若全是自己的content，则返回有权限
-	//if user is the author of all the contents, no need to check the permission, pass
-	if len(othersContents) == 0 {
-		return true, nil
-	}
-
-	//检查是否有republished权限及该content是否为archive状态
-	//check if user have republished permission to operate the content
-	//check if the content is archive status
-	republishScope := make([]string, 0)
-	for i := range othersContents {
-		visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), othersContents[i].ID)
-		if err != nil {
-			log.Error(ctx, "GetContentVisibilitySettings failed",
-				log.Err(err),
-				log.Any("content", othersContents[i]),
-				log.String("org_id", contentList[i].Org),
-				log.String("user_org_id", user.OrgID))
-			return false, err
-		}
-		scope := visibilitySettings
-		//有republish archive权限
-		//user has republish archive permission
-		if othersContents[i].PublishStatus != entity.ContentStatusArchive {
-			log.Info(ctx, "republish not archive content", log.String("cid", othersContents[i].ID))
-			return false, nil
-		}
-		if len(scope) > 1 {
-			republishScope = append(republishScope, othersContents[i].Org)
-		} else if len(scope) == 0 {
-			republishScope = append(republishScope, scope[0])
-		}
-	}
-
-	hasPermission, err := cpm.checkCMSPermissionBatch(ctx, republishScope, []external.PermissionName{external.RepublishArchivedContent274}, user)
-	if err != nil {
-		return false, err
-	}
-	if !hasPermission {
-		log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
-		return false, nil
-	}
-	return true, nil
-}
-
-func (cpm *ContentPermissionModel) CheckPublishContentsPermissionBatch(ctx context.Context, cid string, scope []string, user *entity.Operator) (bool, error) {
-	content, err := da.GetContentDA().GetContentByID(ctx, dbo.MustGetDB(ctx), cid)
-	if err != nil {
-		log.Warn(ctx, "get content list failed", log.String("id", cid), log.Err(err))
-		return false, err
-	}
-
-	//排除自己的content
-	if content.Org != user.OrgID {
-		//若org_id不相等，则无权限
-		//if org_id is not user's org id, no permission
-		log.Info(ctx, "publish content in other org",
-			log.String("org_id", content.Org),
-			log.Any("content", content),
-			log.String("user_org_id", user.OrgID))
-		return false, nil
-	}
-	//若全是自己的content，则返回有权限
-	//if user is the author of all the contents, no need to check the permission, pass
-	if content.Author == user.UserID {
-		//republish author content
-		if len(scope) == 0 {
-			log.Info(ctx, "republish content author content",
-				log.String("org_id", content.Org),
-				log.Any("content", content),
-				log.String("user_org_id", user.OrgID))
-			return true, nil
-		}
-		//若作者是自己，且非republish，则查看权限
-		//if author is current user, and it is not republish content, check the permission
-		ret, err := cpm.checkCMSPermissionBatch(ctx, scope, cpm.createPermissionName(ctx, content.ContentType), user)
-		if err != nil {
-			return false, err
-		}
-		if !ret {
-			return false, nil
-		}
-
-		log.Info(ctx, "publish content author content",
-			log.String("org_id", content.Org),
-			log.Any("content", content),
-			log.String("user_org_id", user.OrgID))
-		return true, nil
-	}
-
-	//检查是否有republished权限及该content是否为archive状态
-	//check if user have republished permission to operate the content
-	//check if the content is archive status
-	if len(scope) == 0 {
-		visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
-		if err != nil {
-			log.Error(ctx, "GetContentVisibilitySettings failed",
-				log.Err(err),
-				log.Any("content", content),
-				log.String("org_id", content.Org),
-				log.String("user_org_id", user.OrgID))
-			return false, err
-		}
-		scope = visibilitySettings
-	}
-	//有republish archive权限
-	//user has republish archive permission
-	if content.PublishStatus != entity.ContentStatusArchive {
-		log.Info(ctx, "republish not archive content", log.String("cid", content.ID))
-		return false, nil
-	}
-
-	hasPermission, err := cpm.checkCMSPermissionBatch(ctx, scope, []external.PermissionName{external.RepublishArchivedContent274}, user)
-	if err != nil {
-		return false, err
-	}
-	if !hasPermission {
-		log.Info(ctx, "no republish author", log.String("user_id", user.UserID))
-		return false, nil
-	}
-	return true, nil
-}
-
-func (cpm *ContentPermissionModel) CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	content, err := da.GetContentDA().GetContentByID(ctx, dbo.MustGetDB(ctx), cid)
-	if err != nil {
-		log.Warn(ctx, "get content failed", log.String("id", cid), log.Err(err))
-		return false, err
-	}
-	//排除其他机构
-	//exclude other orgs
-	if content.Org != user.OrgID {
-		//若org_id不相等，则无权限
-		//if org_id is not equal to user's org id, no permission
-		log.Info(ctx, "view content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
-		//check if it is shared content
-		condition := entity.SearchAuthedContentRequest{
-			OrgIDs:     []string{user.OrgID, constant.ShareToAll},
-			ContentIDs: []string{content.ID},
-		}
-		records, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), condition, user)
-		if err != nil {
-			log.Warn(ctx, "get authed record failed",
-				log.String("id", cid),
-				log.Err(err),
-				log.Any("condition", condition))
-			return false, err
-		}
-		if len(records) > 0 {
-			return true, nil
-		}
-
-		return false, nil
-	}
-	//若是自己的content，则可以获取
-	//if the content is user's content, pass
-	if content.Author == user.UserID {
-		return true, nil
-	}
-	//若不是自己的，未发布不能看
-	//if the content is not user's content & the content is not published
-	if content.PublishStatus == entity.ContentStatusDraft ||
-		content.PublishStatus == entity.ContentStatusRejected {
-		log.Info(ctx, "view draft content", log.String("cid", cid), log.String("user_org_id", user.OrgID))
-		return false, nil
-	}
-
-	//查看content的publish scope是否在自己的可见范围内
-	//check the content's publish scope, if it is in the visibility settings pass
-	switch content.PublishStatus {
-	case entity.ContentStatusPublished:
-		return cpm.checkContentScope(ctx, content, external.PublishedContentPage204, user)
-	case entity.ContentStatusPending:
-		return cpm.checkContentScope(ctx, content, external.PendingContentPage203, user)
-	case entity.ContentStatusArchive:
-		return cpm.checkContentScope(ctx, content, external.ArchivedContentPage205, user)
-	}
-	//权限可能不对，没有权限限制则允许
-	//maybe wrong, if no permission restrict, pass
-	return true, nil
-}
-
-func (cpm *ContentPermissionModel) CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	content, err := da.GetContentDA().GetContentByID(ctx, dbo.MustGetDB(ctx), cid)
-	if err != nil {
-		log.Warn(ctx, "get content failed", log.String("id", cid), log.Err(err))
-		return false, err
-	}
-	if content.ContentType == entity.ContentTypeAssets {
-		log.Warn(ctx, "asset can't update", log.String("id", cid), log.Err(err))
-		return false, nil
-	}
-	//排除其他机构
-	//exclude other orgs
-	if content.Org != user.OrgID {
-		//若org_id不相等，则无权限
-		//if org_id is not equals to user's org id, no permission
-		log.Info(ctx, "update content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
-		return false, nil
-	}
-	//不是自己的，查看lock_by和修改权限
-	//if it's not the current user's content, check the locked_by and check update permission
-	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
-		log.Info(ctx, "can't update content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
-	}
-	if content.LockedBy == user.UserID {
-		log.Info(ctx, "locked by user", log.String("cid", cid), log.String("user_id", user.UserID))
-		return true, nil
-	}
-	//若是自己的content，则可以修改
-	//if the author of the content is current user, has permission, pass
-	if content.Author == user.UserID {
-		log.Info(ctx, "author edit", log.String("cid", cid), log.String("user_id", user.UserID))
-		return true, nil
-	}
-
-	if content.PublishStatus != entity.ContentStatusPublished {
-		log.Info(ctx, "update other's unpublished content", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, nil
-	}
-
-	//若被自己锁定，则查看权限
-	//if user is locked, check the permission
-	visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
-	if err != nil {
-		log.Error(ctx, "GetContentVisibilitySettings failed",
+		log.Error(ctx, "querySchools failed",
 			log.Err(err),
-			log.String("cid", content.ID))
+			log.Any("data", data),
+			log.Any("user", user))
 		return false, err
 	}
-	return cpm.checkCMSPermissionBatchForMultiple(ctx, visibilitySettings, cpm.editPermissionName(ctx, content.ContentType), user)
-}
+	log.Debug(ctx, "querySchools result",
+		log.Any("schoolsInfo", schoolsInfo),
+		log.Any("data", data),
+		log.Any("user", user))
 
-func (cpm *ContentPermissionModel) CheckLockContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	content, err := da.GetContentDA().GetContentByID(ctx, dbo.MustGetDB(ctx), cid)
+	visibilitySettingType, err := c.getVisibilitySettingsType(ctx, data.PublishScope, schoolsInfo, user)
 	if err != nil {
-		log.Warn(ctx, "get content failed", log.String("id", cid), log.Err(err))
-		return false, err
-	}
-	if content.ContentType == entity.ContentTypeAssets {
-		log.Warn(ctx, "asset can't update", log.String("id", cid), log.Err(err))
-		return false, nil
-	}
-	if content.LockedBy != "" && content.LockedBy != constant.LockedByNoBody && content.LockedBy != user.UserID {
-		log.Info(ctx, "can't lock content locked by others", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, NewErrContentAlreadyLocked(ctx, content.LockedBy, user)
-	}
-	//排除其他机构
-	//Exclude other orgs
-	if content.Org != user.OrgID {
-		//若org_id不相等，则无权限
-		//if org_id is not equal to user's org id, no permission
-		log.Info(ctx, "update content in other org", log.String("cid", cid), log.String("user_org_id", user.OrgID))
-		return false, nil
-	}
-	//若是自己的content，则可以修改
-	//if the content is user's content, pass
-	if content.Author == user.UserID || content.LockedBy == user.UserID {
-		return true, nil
-	}
-
-	if content.PublishStatus != entity.ContentStatusPublished {
-		log.Info(ctx, "update other's unpublished content", log.String("cid", cid), log.String("user_id", user.UserID))
-		return false, nil
-	}
-	//若未锁定，则查看权限
-	//if it is not locked, check the permission
-	visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
-	if err != nil {
-		log.Error(ctx, "GetContentVisibilitySettings failed",
+		log.Error(ctx, "getVisibilitySettingsType failed",
 			log.Err(err),
-			log.String("cid", content.ID))
+			log.Any("data", data),
+			log.Any("user", user))
 		return false, err
 	}
-	return cpm.checkCMSPermissionBatchForMultiple(ctx, visibilitySettings, cpm.editPermissionName(ctx, content.ContentType), user)
+	log.Debug(ctx, "visibilitySettingType result",
+		log.Any("visibilitySettingType", visibilitySettingType))
+
+	profile := ContentProfile{
+		ContentType:        data.ContentType,
+		Status:             entity.ContentStatusDraft,
+		VisibilitySettings: visibilitySettingType,
+		Owner:              OwnerTypeUser,
+	}
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeCreate, []*ContentProfile{&profile})
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profile", profile),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
 }
 
-func (cpm *ContentPermissionModel) CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
-	contentList, err := da.GetContentDA().GetContentByIDList(ctx, dbo.MustGetDB(ctx), cids)
+func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
 	if err != nil {
-		log.Warn(ctx, "get content list failed", log.Strings("ids", cids), log.Err(err))
+		log.Debug(ctx, "buildContentProfileByIDs result",
+			log.Strings("cids", cids),
+			log.Any("user", user))
 		return false, err
 	}
 
-	//排除自己的content
-	//exclude user's owner content
-	othersContents := make([]*entity.Content, 0)
-	for i := range contentList {
-		if contentList[i].Org != user.OrgID {
-			//若org_id不相等，则无权限
-			//if org_id is not equal to user's org id, no permission
-			log.Info(ctx, "publish content in other org", log.String("org_id", contentList[i].Org), log.String("user_org_id", user.OrgID))
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("profiles", profiles),
+		log.Strings("cids", cids))
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModePublish, profiles)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx context.Context, cid string, scopes []string, user *entity.Operator) (bool, error) {
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
+	if err != nil {
+		log.Debug(ctx, "buildContentProfileByIDs result",
+			log.String("cid", cid),
+			log.Any("user", user))
+		return false, err
+	}
+
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("profiles", profiles))
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModePublish, profiles)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
+	if err != nil {
+		log.Debug(ctx, "buildContentProfileByIDs result",
+			log.String("cid", cid),
+			log.Any("user", user))
+		return false, err
+	}
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeView, profiles)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
+	if err != nil {
+		log.Debug(ctx, "buildContentProfileByIDs result",
+			log.String("cid", cid),
+			log.Any("user", user))
+		return false, err
+	}
+
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("profiles", profiles),
+		log.String("cid", cid))
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeEdit, profiles)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
+}
+func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
+	if err != nil {
+		log.Debug(ctx, "buildContentProfileByIDs result",
+			log.Strings("cids", cids),
+			log.Any("user", user))
+		return false, err
+	}
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Strings("cids", cids),
+		log.Any("profiles", profiles))
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeRemove, profiles)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx context.Context, isApprove bool, cids []string, user *entity.Operator) (bool, error) {
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
+	if err != nil {
+		log.Debug(ctx, "buildContentProfileByIDs result",
+			log.Strings("cids", cids),
+			log.Any("user", user))
+		return false, err
+	}
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("profiles", profiles),
+		log.Strings("cids", cids))
+
+	var permissionSetList PermissionSetList
+	if isApprove {
+		permissionSetList, err = GetContentPermissionChecker().GetPermissionSetList(ctx, ContentPermissionModeApprove, profiles)
+		if err == ErrUndefinedPermission {
+			log.Error(ctx, "ErrUndefinedPermission",
+				log.Err(err),
+				log.Any("contentProfiles", profiles),
+				log.Any("user", user))
 			return false, nil
 		}
-		if contentList[i].Author != user.UserID {
-			othersContents = append(othersContents, contentList[i])
+		if err != nil {
+			return false, err
+		}
+	} else {
+		permissionSetList, err = GetContentPermissionChecker().GetPermissionSetList(ctx, ContentPermissionModeReject, profiles)
+		if err == ErrUndefinedPermission {
+			log.Error(ctx, "ErrUndefinedPermission",
+				log.Err(err),
+				log.Any("contentProfiles", profiles),
+				log.Any("user", user))
+			return false, nil
+		}
+		if err != nil {
+			return false, err
 		}
 	}
-	//若全是自己的content，则返回有权限
-	//if the content is user's content, pass
-	if len(othersContents) == 0 {
-		return true, nil
+	log.Debug(ctx, "GetReviewPermissionSets result",
+		log.Any("permissionSetList", permissionSetList))
+
+	err = permissionSetList.HasPermission(ctx, user)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profiles", profiles),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (bool, error) {
+	//if condition is self, set as user id
+	if condition.Author == constant.Self {
+		condition.Author = user.UserID
 	}
 
-	//判断archive和published
-	//check if content is archived or published
-	for i := range othersContents {
-		permissions := make([]external.PermissionName, 0)
-		if othersContents[i].PublishStatus == entity.ContentStatusArchive {
-			permissions = append(permissions, external.DeleteArchivedContent275)
-		} else if othersContents[i].PublishStatus == entity.ContentStatusPublished {
-			permissions = append(permissions, external.ArchivePublishedContent273)
+	contentProfiles, err := c.buildByConditionContentProfiles(ctx, condition, user)
+	if err != nil {
+		log.Error(ctx, "buildByConditionContentProfiles Failed",
+			log.Err(err),
+			log.Any("condition", condition),
+			log.Any("user", user))
+		return false, err
+	}
+
+	log.Debug(ctx, "buildByConditionContentProfiles result",
+		log.Any("condition", condition),
+		log.Any("contentProfiles", contentProfiles),
+		log.Any("user", user))
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeView, contentProfiles)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.Any("profiles", contentProfiles),
+			log.Any("user", user))
+		return false, nil
+	}
+	return true, nil
+}
+
+func (c *ContentPermissionMySchoolModel) buildContentProfileByIDs(ctx context.Context, cids []string, user *entity.Operator) ([]*ContentProfile, error) {
+	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), cids)
+	if err != nil {
+		log.Error(ctx, "GetContentByIDList failed",
+			log.Err(err),
+			log.Strings("cid", cids),
+			log.Any("user", user))
+		return nil, err
+	}
+	log.Debug(ctx, "GetRawContentByIDListWithVisibilitySettings result",
+		log.Any("contentList", contentList),
+		log.Strings("cid", cids),
+		log.Any("user", user))
+	if len(contentList) < 1 {
+		log.Warn(ctx, "content list is nil",
+			log.Strings("cid", cids),
+			log.Any("contentList", contentList),
+			log.Any("user", user))
+		return nil, ErrEmptyContentList
+	}
+	profiles, err := c.buildContentProfiles(ctx, contentList, user)
+	if err != nil {
+		log.Error(ctx, "buildContentProfiles failed",
+			log.Err(err),
+			log.Any("contentList", contentList),
+			log.Any("user", user))
+		return nil, err
+	}
+	log.Debug(ctx, "buildContentProfiles result",
+		log.Any("contentList", contentList),
+		log.Strings("cid", cids),
+		log.Any("profiles", profiles))
+
+	return profiles, nil
+}
+
+func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) ([]*ContentProfile, error) {
+	contentTypes := make([]int, 0)
+	for i := range condition.ContentType {
+		ct := entity.NewContentType(condition.ContentType[i])
+		if ct.Validate() == nil {
+			contentTypes = append(contentTypes, condition.ContentType[i])
+		}
+	}
+
+	if len(contentTypes) == 0 {
+		contentTypes = []int{entity.ContentTypePlan, entity.ContentTypeMaterial, entity.ContentTypeAssets}
+	}
+
+	publishStatus := condition.PublishStatus
+	if len(publishStatus) == 0 {
+		publishStatus = []string{
+			entity.ContentStatusPublished,
+			entity.ContentStatusDraft,
+			entity.ContentStatusPending,
+			entity.ContentStatusRejected,
+			entity.ContentStatusAttachment,
+			entity.ContentStatusHidden,
+			entity.ContentStatusArchive}
+	}
+	visibilitySettings := VisibilitySettingsTypeOrgWithAllSchools
+
+	if len(condition.VisibilitySettings) != 0 {
+		schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
+		if err != nil {
+			log.Error(ctx, "getVisibilitySettingsType failed",
+				log.Err(err),
+				log.Any("data", condition),
+				log.Any("user", user))
+			return nil, err
+		}
+		visibilitySetting, err := c.getVisibilitySettingsType(ctx, condition.VisibilitySettings, schoolsInfo, user)
+		log.Error(ctx, "getVisibilitySettingsType failed",
+			log.Err(err),
+			log.Any("condition.VisibilitySettings", condition.VisibilitySettings),
+			log.Any("user", user))
+		visibilitySettings = visibilitySetting
+		return nil, err
+	}
+	author := OwnerTypeOthers
+	if condition.Author != "" {
+		author = c.getOwnerType(ctx, condition.Author, user)
+	}
+
+	contentProfiles := make([]*ContentProfile, len(contentTypes)*len(publishStatus))
+	for i := range contentTypes {
+		for j := range publishStatus {
+			contentProfiles[j+i*len(publishStatus)] = &ContentProfile{
+				ContentType:        entity.ContentType(contentTypes[i]),
+				Status:             entity.ContentPublishStatus(publishStatus[j]),
+				VisibilitySettings: visibilitySettings,
+				Owner:              author,
+			}
+		}
+	}
+	return contentProfiles, nil
+}
+func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Context, content []*entity.ContentWithVisibilitySettings, user *entity.Operator) ([]*ContentProfile, error) {
+	profiles := make([]*ContentProfile, len(content))
+
+	schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
+	if err != nil {
+		log.Error(ctx, "getVisibilitySettingsType failed",
+			log.Err(err),
+			log.Any("content", content),
+			log.Any("user", user))
+		return nil, err
+	}
+
+	for i := range content {
+		visibilitySettingType, err := c.getVisibilitySettingsType(ctx, content[i].VisibilitySettings, schoolsInfo, user)
+		if err != nil {
+			log.Error(ctx, "getVisibilitySettingsType failed",
+				log.Err(err),
+				log.Any("content", content))
+			return nil, err
+		}
+		profiles[i] = &ContentProfile{
+			ContentType:        content[i].ContentType,
+			Status:             content[i].PublishStatus,
+			VisibilitySettings: visibilitySettingType,
+			Owner:              c.getOwnerType(ctx, content[i].Author, user),
+		}
+	}
+	return profiles, nil
+}
+
+func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.Context, visibilitySettings []string, schoolInfo *contentFilterUserSchoolInfo, user *entity.Operator) (VisibilitySettingsType, error) {
+	containsOrg := false
+	containsOtherSchools := false
+	containsSchools := false
+	for i := range visibilitySettings {
+		if visibilitySettings[i] == user.OrgID {
+			//contains org
+			containsOrg = true
 		} else {
-			log.Info(ctx, "only archive and published content of other's can be deleted", log.String("user_id", user.UserID), log.String("cid", othersContents[i].ID))
-			return false, nil
-		}
-
-		visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), othersContents[i].ID)
-		if err != nil {
-			log.Error(ctx, "GetContentVisibilitySettings failed",
-				log.Err(err),
-				log.String("cid", contentList[i].ID))
-			return false, err
-		}
-		flag, err := cpm.checkCMSPermissionBatchForMultiple(ctx, visibilitySettings, permissions, user)
-		if err != nil {
-			return false, err
-		}
-		if !flag {
-			return false, nil
+			containsSchools = true
+			if !utils.ContainsStr(schoolInfo.MySchool, visibilitySettings[i]) {
+				if utils.ContainsStr(schoolInfo.AllSchool, visibilitySettings[i]) {
+					//contains other schools in org
+					containsOtherSchools = true
+				} else {
+					log.Warn(ctx, "visibility setting is not in all schools",
+						log.Strings("visibilitySettings", visibilitySettings),
+						log.Any("mySchool", schoolInfo.MySchool),
+						log.Any("allSchool", schoolInfo.AllSchool),
+						log.Any("user", user))
+					return VisibilitySettingsTypeAllSchools, ErrInvalidVisibilitySetting
+				}
+			}
 		}
 	}
+	log.Info(ctx, "visibility settings check result",
+		log.Strings("visibilitySettings", visibilitySettings),
+		log.Bool("containsOrg", containsOrg),
+		log.Bool("containsOtherSchools", containsOtherSchools),
+		log.Bool("containsSchools", containsSchools))
 
-	return true, nil
-}
-
-func (cpm *ContentPermissionModel) CheckQueryContentPermission(ctx context.Context, condition da.ContentCondition, mode QueryMode, user *entity.Operator) (bool, error) {
-	permissions := make([]external.PermissionName, 0)
-	switch mode {
-	case QueryModePending:
-		log.Info(ctx, "check query pending content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
-		permissions = []external.PermissionName{external.PendingContentPage203}
-		for i := range condition.VisibilitySettings {
-			ret, err := cpm.checkCMSPermission(ctx, condition.VisibilitySettings[i], permissions, user)
-			if err != nil {
-				return false, err
-			}
-			if !ret {
-				return false, nil
-			}
+	//contains org
+	if containsOrg {
+		//contains other schools
+		if containsOtherSchools {
+			return VisibilitySettingsTypeOrgWithAllSchools, nil
 		}
-		return true, nil
-
-	case QueryModePublished:
-		//published模式，若需要查看archive需要权限，查看assets需要权限
-		//published mode, if content is an archived content, check permission
-		log.Info(ctx, "check query published content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
-		permissions = []external.PermissionName{external.PublishedContentPage204}
-		if utils.ContainsStr(condition.PublishStatus, entity.ContentStatusArchive) {
-			permissions = append(permissions, external.ArchivedContentPage205)
+		if !containsSchools {
+			//only contains org
+			return VisibilitySettingsTypeOnlyOrg, nil
 		}
-		if utils.ContainsInt(condition.ContentType, entity.ContentTypeAssets) {
-			permissions = append(permissions, external.CreateAssetPage301)
-		}
-		for i := range condition.VisibilitySettings {
-			ret, err := cpm.checkCMSPermission(ctx, condition.VisibilitySettings[i], permissions, user)
-			if err != nil {
-				return false, err
-			}
-			if !ret {
-				return false, nil
-			}
-		}
-		return true, nil
-	case QueryModePrivate:
-		//private模式，若需要查看archive需要权限，查看assets需要权限
-		//private mode, if content is an archived content, check permission
-		log.Info(ctx, "check query private content permission", log.Any("user", user), log.Any("condition", condition), log.String("mode", string(mode)))
-		permissions = make([]external.PermissionName, 0)
-		if utils.ContainsInt(condition.ContentType, entity.ContentTypeAssets) {
-			permissions = append(permissions, external.CreateAssetPage301)
-		}
-		if utils.ContainsStr(condition.PublishStatus, entity.ContentStatusArchive) {
-			permissions = append(permissions, external.ArchivedContentPage205)
-		}
-
-		for i := range condition.VisibilitySettings {
-			ret, err := cpm.checkCMSPermission(ctx, condition.VisibilitySettings[i], permissions, user)
-			if err != nil {
-				return false, err
-			}
-			if !ret {
-				return false, nil
-			}
-		}
-		return true, nil
+		return VisibilitySettingsTypeOrgWithMySchools, nil
 	}
-	return false, nil
+
+	//contains other schools but org
+	if containsOtherSchools {
+		return VisibilitySettingsTypeAllSchools, nil
+	}
+	//only contains my schools
+	return VisibilitySettingsTypeMySchools, nil
 }
 
-func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]Entity, error) {
+func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]entity.OrganizationOrSchool, error) {
 	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil {
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return nil, err
 	}
-	entities := make([]Entity, 0)
+	entities := make([]entity.OrganizationOrSchool, 0)
 	for i := range schools {
-		entities = append(entities, Entity{
+		entities = append(entities, entity.OrganizationOrSchool{
 			ID:   schools[i].ID,
 			Name: schools[i].Name,
 		})
@@ -504,282 +478,28 @@ func (s *ContentPermissionModel) GetPermissionedOrgs(ctx context.Context, permis
 	if !orgs[0].Valid {
 		log.Warn(ctx, "invalid value", log.String("org_id", op.OrgID))
 	}
-	entities = append(entities, Entity{
+	entities = append(entities, entity.OrganizationOrSchool{
 		ID:   op.OrgID,
 		Name: orgs[0].Name,
 	})
 	return entities, nil
 }
 
-func (s *ContentPermissionModel) checkCMSPermissionBatchForMultiple(ctx context.Context, scope []string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
-	orgIdList := make([]*external.Organization, 0)
-	for i := range permissions {
-		orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permissions[i])
-		if err != nil {
-			log.Warn(ctx, "get org by permission failed", log.String("permission", string(permissions[i])),
-				log.Err(err), log.Any("user", op))
-			return false, err
-		}
-		orgIdList = append(orgIdList, orgs...)
+func (c *ContentPermissionMySchoolModel) getOwnerType(ctx context.Context, owner string, user *entity.Operator) OwnerType {
+	if owner == user.UserID {
+		return OwnerTypeUser
 	}
-
-	//if scope is multiple, only has org permission can do it
-	for i := range orgIdList {
-		if orgIdList[i].ID == op.OrgID {
-			return true, nil
-		}
-	}
-
-	for i := range scope {
-		flag := false
-		for j := range orgIdList {
-			if orgIdList[j].ID == scope[i] {
-				flag = true
-				break
-			}
-		}
-		if !flag {
-			log.Warn(ctx, "scope has no permission", log.String("scope", scope[i]), log.Any("user", op))
-			return false, nil
-		}
-	}
-	return true, nil
-}
-func (s *ContentPermissionModel) checkCMSPermissionBatch(ctx context.Context, scope []string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
-	orgIdList := make([]*external.Organization, 0)
-	for i := range permissions {
-		orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permissions[i])
-		if err != nil {
-			log.Warn(ctx, "get org by permission failed", log.String("permission", string(permissions[i])),
-				log.Err(err), log.Any("user", op))
-			return false, err
-		}
-		orgIdList = append(orgIdList, orgs...)
-	}
-	//if the user has org permission, he can do anythings
-	for j := range orgIdList {
-		if orgIdList[j].ID == op.OrgID {
-			return true, nil
-		}
-	}
-
-	for i := range scope {
-		flag := false
-		for j := range orgIdList {
-			if orgIdList[j].ID == scope[i] {
-				flag = true
-				break
-			}
-		}
-		if !flag {
-			log.Warn(ctx, "scope has no permission", log.String("scope", scope[i]), log.Any("user", op))
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
-func (s *ContentPermissionModel) checkCMSPermission(ctx context.Context, scope string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
-	if len(permissions) < 1 {
-		return true, nil
-	}
-	//查看org权限
-	//check org permission
-	if scope == op.OrgID {
-		//检查Permission权限
-		//check permission
-		for i := range permissions {
-			hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissions[i])
-			if err != nil {
-				log.Error(ctx, "get permission failed", log.Err(err))
-				return false, err
-			}
-			//有permission，直接返回
-			//if user has the permission, pass
-			if hasPermission {
-				return true, nil
-			}
-		}
-		log.Info(ctx, "No permission", log.String("userID", op.UserID))
-		return false, nil
-	}
-
-	//检查学校权限
-	//check school permission
-	for i := range permissions {
-		hasPermission, err := external.GetPermissionServiceProvider().HasSchoolPermission(ctx, op, scope, permissions[i])
-		if err != nil {
-			log.Warn(ctx, "get school permission failed", log.Err(err))
-			return false, err
-		}
-		if hasPermission {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (s *ContentPermissionModel) checkHasPermission(ctx context.Context, scope []string, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
-	if len(permissions) < 1 {
-		return true, nil
-	}
-	if len(scope) < 1 {
-		log.Warn(ctx, "scope is 0", log.Strings("scopes", scope))
-		return false, nil
-	}
-	for i := range permissions {
-		hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissions[i])
-		if err != nil {
-			log.Error(ctx, "get permission failed", log.Err(err))
-			return false, err
-		}
-		//有permission，直接返回
-		//if user has the permission, pass
-		if hasPermission {
-			return true, nil
-		}
-	}
-	if len(scope) > 0 {
-		return false, nil
-	}
-
-	schoolScope := scope[0]
-	//检查学校权限
-	//check school permission
-	for i := range permissions {
-		schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permissions[i])
-		if err != nil {
-			log.Error(ctx, "get school permission failed", log.Err(err))
-			return false, err
-		}
-		for j := range schools {
-			if schools[j].ID == schoolScope {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-func (s *ContentPermissionModel) checkHasAnyOrgPermission(ctx context.Context, permissions []external.PermissionName, op *entity.Operator) (bool, error) {
-	if len(permissions) < 1 {
-		return true, nil
-	}
-	for i := range permissions {
-		hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permissions[i])
-		if err != nil {
-			log.Error(ctx, "get permission failed", log.Err(err))
-			return false, err
-		}
-		//有permission，直接返回
-		//if user has the permission, pass
-		if hasPermission {
-			return true, nil
-		}
-	}
-
-	//检查学校权限
-	//check school permission
-	for i := range permissions {
-		schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permissions[i])
-		if err != nil {
-			log.Error(ctx, "get school permission failed", log.Err(err))
-			return false, err
-		}
-		if len(schools) > 0 {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (s *ContentPermissionModel) checkContentScope(ctx context.Context, content *entity.Content, permission external.PermissionName, op *entity.Operator) (bool, error) {
-	os, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permission)
-	if err != nil {
-		log.Error(ctx, "get permission orgs os failed", log.Err(err))
-		return false, err
-	}
-	for i := range os {
-		if os[i].ID == op.OrgID {
-			log.Info(ctx, "user has org permission",
-				log.Any("orgs", os),
-				log.String("permission", string(permission)),
-				log.Any("user", op),
-				log.Any("content", content))
-			return true, nil
-		}
-	}
-
-	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
-	if err != nil {
-		log.Error(ctx, "get permission orgs failed", log.Err(err))
-		return false, err
-	}
-
-	orgs := []string{}
-	for i := range schools {
-		orgs = append(orgs, schools[i].ID)
-	}
-	visibilitySettings, err := da.GetContentDA().GetContentVisibilitySettings(ctx, dbo.MustGetDB(ctx), content.ID)
-	if err != nil {
-		log.Error(ctx, "GetContentVisibilitySettings failed",
-			log.Err(err),
-			log.String("cid", content.ID))
-		return false, err
-	}
-	log.Info(ctx, "user orgs with permission",
-		log.Strings("orgs", orgs),
-		log.String("permission", string(permission)),
-		log.Strings("visibilitySettings", visibilitySettings),
-		log.Any("user", op),
-		log.Any("content", content))
-	for i := range orgs {
-		if utils.ContainsStr(visibilitySettings, orgs[i]) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-func (s *ContentPermissionModel) createPermissionName(ctx context.Context, contentType entity.ContentType) []external.PermissionName {
-	switch contentType {
-	case entity.ContentTypeMaterial:
-		return []external.PermissionName{external.CreateContentPage201, external.CreateLessonMaterial220}
-	case entity.ContentTypePlan:
-		return []external.PermissionName{external.CreateContentPage201, external.CreateLessonPlan221}
-	case entity.ContentTypeAssets:
-		return []external.PermissionName{external.CreateContentPage201, external.CreateAsset320}
-	}
-	return []external.PermissionName{external.CreateContentPage201}
-}
-
-func (s *ContentPermissionModel) editPermissionName(ctx context.Context, contentType entity.ContentType) []external.PermissionName {
-	switch contentType {
-	case entity.ContentTypeMaterial:
-		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonMaterialMetadataAndContent236}
-	case entity.ContentTypePlan:
-		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonPlanContent238, external.EditLessonPlanMetadata237}
-	}
-	return []external.PermissionName{external.EditOrgPublishedContent235}
-}
-
-func (s *ContentPermissionModel) deletePermissionName(ctx context.Context, contentStatus entity.ContentPublishStatus) []external.PermissionName {
-	switch contentStatus {
-	case entity.ContentStatusArchive:
-		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonMaterialMetadataAndContent236}
-	case entity.ContentStatusPublished:
-		return []external.PermissionName{external.EditOrgPublishedContent235, external.EditLessonPlanContent238, external.EditLessonPlanMetadata237}
-	}
-	return nil
+	return OwnerTypeOthers
 }
 
 var (
-	_contentPermissionModel     IContentPermissionModel
-	_contentPermissionModelOnce sync.Once
+	_contentPermissionMySchoolModel     IContentPermissionMySchoolModel
+	_contentPermissionMySchoolModelOnce sync.Once
 )
 
-func GetContentPermissionModel() IContentPermissionModel {
-	_contentPermissionModelOnce.Do(func() {
-		_contentPermissionModel = new(ContentPermissionModel)
+func GetContentPermissionMySchoolModel() IContentPermissionMySchoolModel {
+	_contentPermissionMySchoolModelOnce.Do(func() {
+		_contentPermissionMySchoolModel = new(ContentPermissionMySchoolModel)
 	})
-	return _contentPermissionModel
+	return _contentPermissionMySchoolModel
 }
