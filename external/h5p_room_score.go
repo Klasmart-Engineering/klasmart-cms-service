@@ -105,6 +105,7 @@ type H5PRoomScoreServiceProvider interface {
 	Get(ctx context.Context, operator *entity.Operator, roomID string) ([]*H5PUserScores, error)
 	BatchGet(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string][]*H5PUserScores, error)
 	Set(ctx context.Context, operator *entity.Operator, request *H5PSetScoreRequest) (*H5PTeacherScore, error)
+	BatchSet(ctx context.Context, operator *entity.Operator, requests []*H5PSetScoreRequest) ([]*H5PTeacherScore, error)
 }
 
 func GetH5PRoomScoreServiceProvider() H5PRoomScoreServiceProvider {
@@ -266,13 +267,34 @@ query {
 }
 
 func (s H5PRoomScoreService) Set(ctx context.Context, operator *entity.Operator, request *H5PSetScoreRequest) (*H5PTeacherScore, error) {
+	scores, err := s.BatchSet(ctx, operator, []*H5PSetScoreRequest{request})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(scores) != 1 {
+		log.Error(ctx, "h5p room set score result not found",
+			log.Any("request", request),
+			log.Any("scores", scores))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	return scores[0], nil
+}
+
+func (s H5PRoomScoreService) BatchSet(ctx context.Context, operator *entity.Operator, requests []*H5PSetScoreRequest) ([]*H5PTeacherScore, error) {
+	if len(requests) == 0 {
+		return []*H5PTeacherScore{}, nil
+	}
+
 	query := `
 mutation {
-	setScore(
-		score: {{.Score}}
-		content_id: "{{.ContentID}}"
-		student_id: "{{.StudentID}}"
-		room_id: "{{.RoomID}}"
+	{{range $i, $e := .}}
+	q{{$i}}: setScore(
+		score: {{$e.Score}}
+		content_id: "{{$e.ContentID}}"
+		student_id: "{{$e.StudentID}}"
+		room_id: "{{$e.RoomID}}"
 	) {
 		teacher {
 			user_id
@@ -292,6 +314,7 @@ mutation {
 		score
 		date
 	}
+	{{end}}
 }`
 
 	temp, err := template.New("").Parse(query)
@@ -301,52 +324,54 @@ mutation {
 	}
 
 	buffer := new(bytes.Buffer)
-	err = temp.Execute(buffer, request)
+	err = temp.Execute(buffer, requests)
 	if err != nil {
-		log.Error(ctx, "execute template failed", log.Err(err), log.Any("request", request))
+		log.Error(ctx, "execute template failed", log.Err(err), log.Any("requests", requests))
 		return nil, err
 	}
 
 	_request := chlorine.NewRequest(buffer.String(), chlorine.ReqToken(operator.Token))
 
-	data := struct {
-		SetScore *H5PTeacherScore `json:"setScore"`
-	}{}
+	data := map[string]*H5PTeacherScore{}
 	response := &chlorine.Response{
 		Data: &data,
 	}
 
 	_, err = GetH5PClient().Run(ctx, _request, response)
 	if err != nil {
-		log.Error(ctx, "set room score failed",
+		log.Error(ctx, "set room scores failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("query", buffer.String()),
-			log.Any("request", request))
+			log.Any("requests", requests))
 		return nil, err
 	}
 
 	if len(response.Errors) > 0 {
-		log.Error(ctx, "set room score failed",
+		log.Error(ctx, "set room scores failed",
 			log.Err(response.Errors),
 			log.Any("operator", operator),
 			log.String("query", buffer.String()),
-			log.Any("request", request))
+			log.Any("requests", requests))
 		return nil, response.Errors
 	}
 
-	score := data.SetScore
-	if score == nil {
-		log.Error(ctx, "room score not found", log.Any("request", request))
-		return nil, constant.ErrRecordNotFound
+	scores := make([]*H5PTeacherScore, 0, len(data))
+	for index := range requests {
+		score := data[fmt.Sprintf("q%d", index)]
+		if score == nil {
+			log.Error(ctx, "user content score not found", log.Any("request", requests[index]))
+			return nil, constant.ErrRecordNotFound
+		}
+
+		// date is saved in milliseconds, we are more used to processing by seconds
+		score.Date = score.Date / 1000
+		scores = append(scores, score)
 	}
 
-	// date is saved in milliseconds, we are more used to processing by seconds
-	score.Date = score.Date / 1000
-
 	log.Info(ctx, "set room score success",
-		log.Any("request", request),
-		log.Any("score", score))
+		log.Any("requests", requests),
+		log.Any("scores", scores))
 
-	return score, nil
+	return scores, nil
 }
