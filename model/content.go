@@ -335,7 +335,7 @@ func (cm ContentModel) checkPublishContent(ctx context.Context, tx *dbo.DBContex
 
 func (cm *ContentModel) searchContent(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, user *entity.Operator) (int, []*entity.ContentInfoWithDetails, error) {
 	log.Debug(ctx, "search content ", log.Any("condition", condition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchContent(ctx, tx, conditionRequestToCondition(*condition))
+	count, objs, err := da.GetContentDA().SearchContent(ctx, tx, cm.conditionRequestToCondition(*condition))
 	if err != nil {
 		log.Error(ctx, "can't read contentdata", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
@@ -1965,7 +1965,7 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
 
 	log.Info(ctx, "search folder content", log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
-	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, *conditionRequestToCondition(*condition), folderCondition)
+	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, *cm.conditionRequestToCondition(*condition), folderCondition)
 	if err != nil {
 		log.Error(ctx, "can't read folder content", log.Err(err), log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 		return 0, nil, ErrReadContentFailed
@@ -2482,10 +2482,10 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 
 	if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOwner {
 		//The user only has the permission to query his own
-		return conditionRequestToCondition(condition1), nil
+		return cm.conditionRequestToCondition(condition1), nil
 	} else if condition.PublishedQueryMode == entity.PublishedQueryModeOnlyOthers {
 		//The user only has the permission to query others
-		return conditionRequestToCondition(condition2), nil
+		return cm.conditionRequestToCondition(condition2), nil
 	} else if condition.PublishedQueryMode == entity.PublishedQueryModeNone {
 		log.Error(ctx, "no valid private scope",
 			log.Err(err),
@@ -2496,8 +2496,8 @@ func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.D
 	}
 
 	combineCondition := &da.CombineConditions{
-		SourceCondition: conditionRequestToCondition(condition1),
-		TargetCondition: conditionRequestToCondition(condition2),
+		SourceCondition: cm.conditionRequestToCondition(condition1),
+		TargetCondition: cm.conditionRequestToCondition(condition2),
 	}
 	return combineCondition, nil
 }
@@ -3245,7 +3245,7 @@ func (cm *ContentModel) fillFolderContent(ctx context.Context, objs []*entity.Fo
 	cm.fillFolderContentPermission(ctx, objs, user)
 }
 
-func conditionRequestToCondition(c entity.ContentConditionRequest) *da.ContentCondition {
+func (cm *ContentModel) conditionRequestToCondition(c entity.ContentConditionRequest) *da.ContentCondition {
 	return &da.ContentCondition{
 		Name:               c.Name,
 		ContentType:        c.ContentType,

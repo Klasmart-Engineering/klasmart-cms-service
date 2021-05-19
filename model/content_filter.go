@@ -160,7 +160,7 @@ func (cf *ContentFilterModel) doFilterContent(ctx context.Context, c *entity.Con
 	}
 	log.Debug(ctx, "filter result",
 		log.Strings("c.VisibilitySettings", c.VisibilitySettings),
-		log.Int("c.PublishedQueryMode", int(c.PublishedQueryMode)),
+		log.String("c.PublishedQueryMode", string(c.PublishedQueryMode)),
 		log.Any("permissionMap", permissionMap))
 	return nil
 }

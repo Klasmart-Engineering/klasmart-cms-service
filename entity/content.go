@@ -56,10 +56,10 @@ const (
 	ContentPropertyTypeGrade       ContentPropertyType = 5
 	ContentPropertyTypeSubCategory ContentPropertyType = 6
 
-	PublishedQueryModeOnlyOwner  PublishedQueryMode = 1
-	PublishedQueryModeAll        PublishedQueryMode = 2
-	PublishedQueryModeOnlyOthers PublishedQueryMode = 3
-	PublishedQueryModeNone       PublishedQueryMode = 3
+	PublishedQueryModeOnlyOwner  PublishedQueryMode = "query only owner"
+	PublishedQueryModeAll        PublishedQueryMode = "query all"
+	PublishedQueryModeOnlyOthers PublishedQueryMode = "query only others"
+	PublishedQueryModeNone       PublishedQueryMode = "query none"
 )
 
 var (
@@ -79,7 +79,7 @@ type FileType int
 
 type ContentAuth int
 
-type PublishedQueryMode int
+type PublishedQueryMode string
 
 func NewFileType(fileType int) FileType {
 	switch fileType {
