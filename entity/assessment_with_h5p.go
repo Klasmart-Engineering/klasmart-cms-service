@@ -142,4 +142,5 @@ type AddStudyInput struct {
 	ScheduleID   string
 	ClassID      string
 	LessonPlanID string
+	Attendances  []*ScheduleRelation
 }

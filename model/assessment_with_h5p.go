@@ -884,6 +884,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 
 	// add assessment
 	newAssessments := make([]*entity.Assessment, 0, len(scheduleIDs))
+	now := time.Now().Unix()
 	for _, item := range input {
 		className := classNameMap[item.ClassID]
 		if className == "" {
@@ -891,10 +892,12 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		}
 		newAssessments = append(newAssessments, &entity.Assessment{
 			ID:         utils.NewID(),
-			Title:      fmt.Sprintf("%s-%s", className, lessonPlanMap[item.LessonPlanID].Name),
 			ScheduleID: item.ScheduleID,
 			Type:       entity.AssessmentTypeStudyH5P,
+			Title:      fmt.Sprintf("%s-%s", className, lessonPlanMap[item.LessonPlanID].Name),
 			Status:     entity.AssessmentStatusInProgress,
+			CreateAt:   now,
+			UpdateAt:   now,
 		})
 	}
 
