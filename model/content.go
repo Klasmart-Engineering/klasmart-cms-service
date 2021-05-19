@@ -1953,7 +1953,7 @@ func (cm *ContentModel) SearchUserPrivateFolderContent(ctx context.Context, tx *
 	//cm.addUserCondition(ctx, &condition, user)
 
 	//生成folder condition
-	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
+	folderCondition := cm.buildFolderCondition(ctx, &condition, searchUserIDs, user)
 
 	log.Info(ctx, "search folder content", log.Any("condition", condition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 	count, objs, err := da.GetContentDA().SearchFolderContent(ctx, tx, *conditionRequestToCondition(condition), *folderCondition)
@@ -1973,12 +1973,12 @@ func (cm *ContentModel) CountUserFolderContent(ctx context.Context, tx *dbo.DBCo
 		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, err
 	}
-	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIDs, user)
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, &condition, searchUserIDs, user)
 	if err != nil {
 		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIDs", searchUserIDs), log.String("uid", user.UserID))
 		return 0, err
 	}
-	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
+	folderCondition := cm.buildFolderCondition(ctx, &condition, searchUserIDs, user)
 
 	log.Info(ctx, "count folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 	total, err := da.GetContentDA().CountFolderContentUnsafe(ctx, tx, combineCondition, *folderCondition)
@@ -1995,12 +1995,12 @@ func (cm *ContentModel) SearchUserFolderContent(ctx context.Context, tx *dbo.DBC
 		log.Warn(ctx, "filterRootPath failed", log.Err(err), log.Any("condition", condition), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
-	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIDs, user)
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, &condition, searchUserIDs, user)
 	if err != nil {
 		log.Warn(ctx, "buildUserContentCondition failed", log.Err(err), log.Any("condition", condition), log.Any("searchUserIDs", searchUserIDs), log.String("uid", user.UserID))
 		return 0, nil, err
 	}
-	folderCondition := cm.buildFolderCondition(ctx, condition, searchUserIDs, user)
+	folderCondition := cm.buildFolderCondition(ctx, &condition, searchUserIDs, user)
 
 	log.Info(ctx, "search folder content", log.Any("combineCondition", combineCondition), log.Any("folderCondition", folderCondition), log.String("uid", user.UserID))
 	count, objs, err := da.GetContentDA().SearchFolderContentUnsafe(ctx, tx, combineCondition, *folderCondition)
@@ -2016,7 +2016,7 @@ func (cm *ContentModel) SearchUserContent(ctx context.Context, tx *dbo.DBContext
 	//where, params := combineCondition.GetConditions()
 	//logger.WithContext(ctx).WithField("subject", "content").Infof("Combine condition: %#v, params: %#v", where, params)
 	searchUserIDs := cm.getRelatedUserID(ctx, condition.Name, user)
-	combineCondition, err := cm.buildUserContentCondition(ctx, tx, condition, searchUserIDs, user)
+	combineCondition, err := cm.buildUserContentCondition(ctx, tx, &condition, searchUserIDs, user)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -2442,9 +2442,9 @@ func (cm *ContentModel) filterPublishedPublishStatus(ctx context.Context, status
 	return newStatus
 }
 
-func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (dbo.Conditions, error) {
-	condition1 := condition
-	condition2 := condition
+func (cm *ContentModel) buildUserContentCondition(ctx context.Context, tx *dbo.DBContext, condition *entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) (dbo.Conditions, error) {
+	condition1 := *condition
+	condition2 := *condition
 
 	//condition1 private
 	condition1.Author = user.UserID
@@ -2944,7 +2944,7 @@ func (cm *ContentModel) getContentProperties(ctx context.Context, cid string) (*
 	}, nil
 }
 
-func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) *da.FolderCondition {
+func (cm *ContentModel) buildFolderCondition(ctx context.Context, condition *entity.ContentConditionRequest, searchUserIDs []string, user *entity.Operator) *da.FolderCondition {
 	dirPath := condition.DirPath
 	isAssets := false
 	disableFolder := true
@@ -3164,7 +3164,7 @@ func (c *ContentModel) buildContentProfiles(ctx context.Context, content []*enti
 	return profiles, nil
 }
 
-func (c *ContentModel) getVisibilitySettingsType(ctx context.Context, visibilitySettings []string, schoolInfo *SchoolInfo, user *entity.Operator) (VisibilitySettingsType, error) {
+func (c *ContentModel) getVisibilitySettingsType(ctx context.Context, visibilitySettings []string, schoolInfo *contentFilterUserSchoolInfo, user *entity.Operator) (VisibilitySettingsType, error) {
 	containsOrg := false
 	containsOtherSchools := false
 	containsSchools := false

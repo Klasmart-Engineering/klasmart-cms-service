@@ -3,12 +3,13 @@ package da
 import (
 	"context"
 	"fmt"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 	"unicode"
+
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 
@@ -106,22 +107,22 @@ type ContentCondition struct {
 }
 
 func (s *ContentCondition) GetConditions() ([]string, []interface{}) {
-	internalCondition := NewContentConditionByInternalCondition(*s)
+	internalCondition := GetContentConditionByInternalCondition(*s)
 	conditions, params := internalCondition.GetConditions()
 	conditions = append(conditions, " delete_at = 0")
 	return conditions, params
 }
 
 func (s *ContentCondition) GetPager() *dbo.Pager {
-	internalCondition := NewContentConditionByInternalCondition(*s)
+	internalCondition := GetContentConditionByInternalCondition(*s)
 	return internalCondition.GetPager()
 }
 func (s *ContentCondition) GetOrderBy() string {
-	internalCondition := NewContentConditionByInternalCondition(*s)
+	internalCondition := GetContentConditionByInternalCondition(*s)
 	return internalCondition.GetOrderBy()
 }
 
-func NewContentConditionByInternalCondition(s ContentCondition) *ContentConditionInternal {
+func GetContentConditionByInternalCondition(s ContentCondition) *ContentConditionInternal {
 	return &ContentConditionInternal{
 		IDS:                s.IDS,
 		Name:               s.Name,

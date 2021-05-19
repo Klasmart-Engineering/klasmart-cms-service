@@ -15,11 +15,32 @@ var (
 	ErrNoAvailableVisibilitySettings = errors.New("no available visibilitySettings")
 )
 
+var (
+	publishedContentFilter = PermissionList{
+		ViewOrgPermission:       external.ViewOrgPublished215,
+		ViewMySchoolPermission:  external.ViewMySchoolPublished218,
+		ViewAllSchoolPermission: external.ViewAllSchoolsPublished227,
+		ViewMyPermission:        external.ViewMyPublished214,
+	}
+	pendingContentFilter = PermissionList{
+		ViewOrgPermission:       external.ViewOrgPending213,
+		ViewMySchoolPermission:  external.ViewMySchoolPending225,
+		ViewAllSchoolPermission: external.ViewAllSchoolsPending228,
+		ViewMyPermission:        external.ViewMyPending212,
+	}
+	archivedContentFilter = PermissionList{
+		ViewOrgPermission:       external.ViewOrgArchived217,
+		ViewMySchoolPermission:  external.ViewMySchoolArchived226,
+		ViewAllSchoolPermission: external.ViewAllSchoolsArchived229,
+		ViewMyPermission:        external.ViewMyArchived216,
+	}
+)
+
 type IContentFilterModel interface {
 	FilterPublishContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error
 	FilterPendingContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error
 	FilterArchivedContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error
-	QueryUserSchools(ctx context.Context, user *entity.Operator) (*SchoolInfo, error)
+	QueryUserSchools(ctx context.Context, user *entity.Operator) (*contentFilterUserSchoolInfo, error)
 }
 
 type PermissionList struct {
@@ -38,7 +59,7 @@ func (p PermissionList) Array() []external.PermissionName {
 	}
 }
 
-type SchoolInfo struct {
+type contentFilterUserSchoolInfo struct {
 	MySchool  []string
 	AllSchool []string
 }
@@ -49,12 +70,7 @@ func (cf *ContentFilterModel) FilterPublishContent(ctx context.Context, c *entit
 	log.Debug(ctx, "FilterPublishContent",
 		log.Any("condition", c),
 		log.Any("user", user))
-	return cf.doFilterContent(ctx, c, PermissionList{
-		ViewOrgPermission:       external.ViewOrgPublished215,
-		ViewMySchoolPermission:  external.ViewMySchoolPublished218,
-		ViewAllSchoolPermission: external.ViewAllSchoolsPublished227,
-		ViewMyPermission:        external.ViewMyPublished214,
-	}, user)
+	return cf.doFilterContent(ctx, c, publishedContentFilter, user)
 }
 func (cf *ContentFilterModel) FilterPendingContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error {
 	//check view_my_pending_212 permission for condition1 to fill PublishedQueryMode
@@ -62,24 +78,14 @@ func (cf *ContentFilterModel) FilterPendingContent(ctx context.Context, c *entit
 		log.Any("condition", c),
 		log.Any("user", user))
 
-	return cf.doFilterContent(ctx, c, PermissionList{
-		ViewOrgPermission:       external.ViewOrgPending213,
-		ViewMySchoolPermission:  external.ViewMySchoolPending225,
-		ViewAllSchoolPermission: external.ViewAllSchoolsPending228,
-		ViewMyPermission:        external.ViewMyPending212,
-	}, user)
+	return cf.doFilterContent(ctx, c, pendingContentFilter, user)
 }
 func (cf *ContentFilterModel) FilterArchivedContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error {
 	//check view_my_archived_216 permission to fill PublishedQueryMode
 	log.Debug(ctx, "FilterArchivedContent",
 		log.Any("condition", c),
 		log.Any("user", user))
-	return cf.doFilterContent(ctx, c, PermissionList{
-		ViewOrgPermission:       external.ViewOrgArchived217,
-		ViewMySchoolPermission:  external.ViewMySchoolArchived226,
-		ViewAllSchoolPermission: external.ViewAllSchoolsArchived229,
-		ViewMyPermission:        external.ViewMyArchived216,
-	}, user)
+	return cf.doFilterContent(ctx, c, archivedContentFilter, user)
 }
 
 func (cf *ContentFilterModel) doFilterContent(ctx context.Context, c *entity.ContentConditionRequest,
@@ -176,7 +182,7 @@ func (cf *ContentFilterModel) filterVisibilitySettings(ctx context.Context, quer
 	return res
 }
 
-func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity.Operator) (*SchoolInfo, error) {
+func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity.Operator) (*contentFilterUserSchoolInfo, error) {
 	//todo: complete it
 	schools, err := external.GetSchoolServiceProvider().GetByOrganizationID(ctx, user, user.OrgID)
 	if err != nil {
@@ -192,7 +198,7 @@ func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity
 			log.Any("user", user))
 		return nil, err
 	}
-	schoolInfo := &SchoolInfo{
+	schoolInfo := &contentFilterUserSchoolInfo{
 		MySchool:  make([]string, len(mySchools)),
 		AllSchool: make([]string, len(schools)),
 	}
