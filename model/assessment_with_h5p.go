@@ -167,7 +167,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 	for _, v := range views {
 		roomIDs = append(roomIDs, v.RoomID)
 	}
-	roomMap, err := m.getRoomMap(ctx, operator, roomIDs)
+	roomMap, err := m.getRoomScoreMap(ctx, operator, roomIDs, false)
 	if err != nil {
 		log.Error(ctx, "list h5p assessments: get room user scores map failed",
 			log.Err(err),
@@ -298,7 +298,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 	}
 
 	// get h5p room scores
-	roomMap, err := m.getRoomMap(ctx, operator, []string{view.RoomID})
+	roomMap, err := m.getRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get room map failed",
 			log.Err(err),
@@ -353,13 +353,22 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 	return &result, nil
 }
 
-func (m *h5pAssessmentModel) getRoomMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]*entity.AssessmentH5PRoom, error) {
-	m2, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
+func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[string]*entity.AssessmentH5PRoom, len(m2))
-	for roomID, users := range m2 {
+
+	var roomCommentMap map[string]map[string][]string
+	if enableComment {
+		roomCommentMap, err = m.getRoomCommentMap(ctx, operator, roomIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	result := make(map[string]*entity.AssessmentH5PRoom, len(roomScoreMap))
+	for roomID, users := range roomScoreMap {
 		assessmentUsers := make([]*entity.AssessmentH5PUser, 0, len(users))
 		assessmentUserMap := make(map[string]*entity.AssessmentH5PUser, len(users))
 		attempted, total := 0, 0
@@ -397,6 +406,12 @@ func (m *h5pAssessmentModel) getRoomMap(ctx context.Context, operator *entity.Op
 				Contents:   assessmentContents,
 				ContentMap: assessmentContentMap,
 			}
+			if enableComment &&
+				roomCommentMap != nil &&
+				roomCommentMap[roomID] != nil &&
+				len(roomCommentMap[roomID][u.User.UserID]) > 0 {
+				assessmentUser.Comment = roomCommentMap[roomID][u.User.UserID][0]
+			}
 			assessmentUsers = append(assessmentUsers, &assessmentUser)
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
 		}
@@ -410,6 +425,23 @@ func (m *h5pAssessmentModel) getRoomMap(ctx context.Context, operator *entity.Op
 			room.CompleteRate = float64(attempted) / float64(total)
 		}
 		result[roomID] = &room
+	}
+	return result, nil
+}
+
+func (m *h5pAssessmentModel) getRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
+	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]map[string][]string, len(commentMap))
+	for roomID, users := range commentMap {
+		result[roomID] = make(map[string][]string, len(users))
+		for _, u := range users {
+			for _, c := range u.TeacherComments {
+				result[roomID][u.User.UserID] = append(result[roomID][u.User.UserID], c.Comment)
+			}
+		}
 	}
 	return result, nil
 }
@@ -529,8 +561,56 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 		}
 	}
 
-	// TODO: Medvih: update score and comment
-	panic("not implemented")
+	// get schedule
+	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{assessment.ScheduleID}, nil)
+	if err != nil {
+		log.Error(ctx, "update h5p assessment: get plain schedule failed",
+			log.Err(err),
+			log.String("schedule_id", assessment.ScheduleID),
+			log.Any("args", args),
+		)
+		return err
+	}
+	if len(schedules) == 0 {
+		errMsg := "update h5p assessment: not found schedule"
+		log.Error(ctx, errMsg,
+			log.String("schedule_id", assessment.ScheduleID),
+			log.Any("args", args),
+		)
+		return errors.New(errMsg)
+	}
+	schedule := schedules[0]
+
+	// set scores
+	var newScores []*external.H5PSetScoreRequest
+	for _, item := range args.StudentViewItems {
+		for _, lm := range item.LessonMaterials {
+			newScore := external.H5PSetScoreRequest{
+				RoomID:    schedule.RoomID,
+				ContentID: lm.LessonMaterialID,
+				StudentID: item.StudentID,
+				Score:     lm.AchievedScore,
+			}
+			newScores = append(newScores, &newScore)
+		}
+	}
+	if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, operator, newScores); err != nil {
+		return err
+	}
+
+	// add comments
+	var newComments []*external.H5PAddRoomCommentRequest
+	for _, item := range args.StudentViewItems {
+		newComment := external.H5PAddRoomCommentRequest{
+			RoomID:    schedule.RoomID,
+			StudentID: item.StudentID,
+			Comment:   item.Comment,
+		}
+		newComments = append(newComments, &newComment)
+	}
+	if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, operator, newComments); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -978,7 +1058,7 @@ func (m *h5pAssessmentModel) HasAnyoneAttemptInRoom(ctx context.Context, tx *dbo
 	if roomID == "" {
 		return false, nil
 	}
-	roomMap, err := m.getRoomMap(ctx, operator, []string{roomID})
+	roomMap, err := m.getRoomScoreMap(ctx, operator, []string{roomID}, false)
 	if err != nil {
 		return false, err
 	}
