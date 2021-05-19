@@ -905,7 +905,7 @@ func (f *FolderModel) GetFolderByID(ctx context.Context, folderID string, operat
 			PublishStatus: []string{entity.ContentStatusPublished},
 			DirPath:       string(folderItem.ChildrenPath()),
 		}
-		total, err := GetContentModel().CountUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, operator)
+		total, err := GetContentModel().CountUserFolderContent(ctx, dbo.MustGetDB(ctx), &condition, operator)
 		if err != nil {
 			log.Warn(ctx, "count folder failed failed", log.Err(err), log.Any("condition", condition))
 			return nil, err

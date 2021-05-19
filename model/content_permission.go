@@ -34,7 +34,7 @@ type IContentPermissionMySchoolModel interface {
 
 	CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error)
 	CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error)
-	CheckQueryContentPermission(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) (bool, error)
+	CheckQueryContentPermission(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (bool, error)
 
 	CheckReviewContentPermission(ctx context.Context, isApprove bool, cids []string, user *entity.Operator) (bool, error)
 
@@ -340,7 +340,7 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 	return true, nil
 }
 
-func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) (bool, error) {
+func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) (bool, error) {
 	//if condition is self, set as user id
 	if condition.Author == constant.Self {
 		condition.Author = user.UserID
@@ -422,7 +422,7 @@ func (c *ContentPermissionMySchoolModel) buildContentProfileByIDs(ctx context.Co
 	return profiles, nil
 }
 
-func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition entity.ContentConditionRequest, user *entity.Operator) ([]*ContentProfile, error) {
+func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx context.Context, condition *entity.ContentConditionRequest, user *entity.Operator) ([]*ContentProfile, error) {
 	contentTypes := make([]int, 0)
 	for i := range condition.ContentType {
 		ct := entity.NewContentType(condition.ContentType[i])
