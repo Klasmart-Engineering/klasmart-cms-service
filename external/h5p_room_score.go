@@ -70,6 +70,7 @@ type H5PTeacherScore struct {
 // 	user: User!
 // 	content: Content!
 // 	score: Score!
+//	seen: Boolean!
 // 	teacherScores: [TeacherScore!]!
 // 	minimumPossibleScore: Float!
 // 	maximumPossibleScore: Float!
@@ -78,6 +79,7 @@ type H5PUserContentScore struct {
 	User                 *H5PUser           `json:"user"`
 	Content              *H5PContent        `json:"content"`
 	Score                *H5PScore          `json:"score"`
+	Seen                 bool               `json:"seen"`
 	TeacherScores        []*H5PTeacherScore `json:"teacherScores"`
 	MinimumPossibleScore float64            `json:"minimumPossibleScore"`
 	MaximumPossibleScore float64            `json:"maximumPossibleScore"`
@@ -234,6 +236,17 @@ query {
 		return nil, response.Errors
 	}
 
+	for _, studentScores := range data {
+		for _, scoreByUser := range studentScores.ScoresByUser {
+			for _, score := range scoreByUser.Scores {
+				for _, teacherScore := range score.TeacherScores {
+					// date is saved in milliseconds, we are more used to processing by seconds
+					teacherScore.Date = teacherScore.Date / 1000
+				}
+			}
+		}
+	}
+
 	scores := make(map[string][]*H5PUserScores, len(data))
 	for index := range roomIDs {
 		score := data[fmt.Sprintf("q%d", indexMapping[index])]
@@ -327,6 +340,9 @@ mutation {
 		log.Error(ctx, "room score not found", log.Any("request", request))
 		return nil, constant.ErrRecordNotFound
 	}
+
+	// date is saved in milliseconds, we are more used to processing by seconds
+	score.Date = score.Date / 1000
 
 	log.Info(ctx, "set room score success",
 		log.Any("request", request),
