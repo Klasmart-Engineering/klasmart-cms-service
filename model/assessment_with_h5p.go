@@ -264,9 +264,12 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// remaining time
 	if view.Schedule.DueAt != 0 {
-		result.RemainingTime = time.Now().Unix() - view.Schedule.DueAt
+		result.RemainingTime = view.Schedule.DueAt - time.Now().Unix()
 	} else {
-		result.RemainingTime = time.Now().Unix() - view.CreateAt
+		result.RemainingTime = time.Unix(view.CreateAt, 0).AddDate(0, 0, constant.ReportTeachingLoadDays).Unix() - time.Now().Unix()
+	}
+	if result.RemainingTime < 0 {
+		result.RemainingTime = 0
 	}
 
 	// fill lesson plan and lesson materials
