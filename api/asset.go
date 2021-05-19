@@ -154,7 +154,7 @@ func (s *Server) getAssetByID(c *gin.Context) {
 func (s *Server) searchAssets(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 
 	if condition.ContentType == nil {
 		condition.ContentType = []int{entity.ContentTypeAssets}

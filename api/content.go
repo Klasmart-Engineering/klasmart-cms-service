@@ -601,7 +601,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 	author := c.Query("author")
 	//filter unauthed visibility settings
 	if author != constant.Self {
@@ -665,7 +665,7 @@ func (s *Server) queryContent(c *gin.Context) {
 func (s *Server) queryAuthContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 
 	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
@@ -711,7 +711,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 	author := c.Query("author")
 
 	//if query is not self, filter conditions
@@ -783,7 +783,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 	condition.Author = op.UserID
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
@@ -842,7 +842,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 
 	//filter pending visibility settings
 	isTerminal := s.filterPendingContent(c, &condition, op)
@@ -934,7 +934,7 @@ func (s *Server) filterPublishedContent(c *gin.Context, condition *entity.Conten
 	return false
 }
 
-func queryCondition(c *gin.Context, op *entity.Operator) entity.ContentConditionRequest {
+func (s *Server) queryContentCondition(c *gin.Context, op *entity.Operator) entity.ContentConditionRequest {
 	contentTypeStr := c.Query("content_type")
 	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
