@@ -912,42 +912,43 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	}
 
 	// add attendances
-	relations, err := GetScheduleRelationModel().Query(ctx, operator, &da.ScheduleRelationCondition{
-		ScheduleIDs: entity.NullStrings{
-			Strings: scheduleIDs,
-			Valid:   true,
-		},
-		RelationTypes: entity.NullStrings{
-			Strings: []string{
-				entity.ScheduleRelationTypeClassRosterTeacher.String(),
-				entity.ScheduleRelationTypeClassRosterStudent.String(),
-				entity.ScheduleRelationTypeParticipantTeacher.String(),
-				entity.ScheduleRelationTypeParticipantStudent.String(),
-			},
-			Valid: true,
-		},
-	})
-	if err != nil {
-		log.Error(ctx, "add studies: query schedule relation failed", log.Err(err), log.Strings("schedule_ids", scheduleIDs))
-		return nil, err
+	scheduleIDToAssessmentIDMap := make(map[string]string, len(newAssessments))
+	for _, item := range newAssessments {
+		scheduleIDToAssessmentIDMap[item.ScheduleID] = item.ID
 	}
-	scheduleIDToAttendanceIDsMap := map[string][]string{}
-	for _, r := range relations {
-		scheduleIDToAttendanceIDsMap[r.ScheduleID] = append(scheduleIDToAttendanceIDsMap[r.ScheduleID], r.RelationID)
+	var attendances []*entity.AssessmentAttendance
+	for _, item := range input {
+		for _, attendance := range item.Attendances {
+			newAttendance := entity.AssessmentAttendance{
+				ID:           utils.NewID(),
+				AssessmentID: scheduleIDToAssessmentIDMap[item.ScheduleID],
+				AttendanceID: attendance.ScheduleID,
+				Checked:      true,
+			}
+			switch attendance.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+			case entity.ScheduleRelationTypeParticipantStudent:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+			case entity.ScheduleRelationTypeParticipantTeacher:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+			default:
+				continue
+			}
+			attendances = append(attendances, &newAttendance)
+		}
 	}
-	addAttendanceInput := entity.BatchAddAttendancesInput{}
-	for _, a := range assessments {
-		addAttendanceInput.Items = append(addAttendanceInput.Items, &entity.BatchAddAttendancesInputItem{
-			AssessmentID:  a.ID,
-			ScheduleID:    a.ScheduleID,
-			AttendanceIDs: scheduleIDToAttendanceIDsMap[a.ScheduleID],
-		})
-	}
-	if err = GetAssessmentModel().BatchAddAttendances(ctx, tx, operator, addAttendanceInput); err != nil {
-		log.Error(ctx, "Add: GetAssessmentModel().AddAttendances: add failed",
+	if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, attendances); err != nil {
+		log.Error(ctx, "add studies: batch insert attendance failed",
 			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("operator", operator),
+			log.Any("attendances", attendances),
+			log.Any("input", input),
 		)
 		return nil, err
 	}
