@@ -27,7 +27,7 @@ var (
 	ErrScheduleEditMissTimeForDueAt = errors.New("editable time has expired for due at")
 	ErrScheduleAlreadyHidden        = errors.New("schedule already hidden")
 	ErrScheduleAlreadyFeedback      = errors.New("students already submitted feedback")
-	ErrScheduleStudyAlreadyProgress      = errors.New("students already started")
+	ErrScheduleStudyAlreadyProgress = errors.New("students already started")
 )
 
 type IScheduleModel interface {
@@ -695,8 +695,11 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 		return "", constant.ErrRecordNotFound
 	}
 	// add schedules relation
-	allRelations := make([]*entity.ScheduleRelation, 0)
+	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
+	userRelations := make(map[string][]*entity.ScheduleRelation,len(scheduleList))
 	for _, item := range scheduleList {
+		userRelations[item.ID] = make([]*entity.ScheduleRelation, 0, len(relations))
+
 		for _, relation := range relations {
 			if relation.RelationID == "" {
 				continue
@@ -707,6 +710,13 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 				RelationID:   relation.RelationID,
 				RelationType: relation.RelationType,
 			})
+			if relation.RelationType == entity.ScheduleRelationTypeClassRosterTeacher ||
+				relation.RelationType == entity.ScheduleRelationTypeClassRosterStudent ||
+				relation.RelationType == entity.ScheduleRelationTypeParticipantTeacher ||
+				relation.RelationType == entity.ScheduleRelationTypeParticipantStudent {
+
+				userRelations[item.ID] = append(userRelations[item.ID], relation)
+			}
 		}
 	}
 	_, err = da.GetScheduleRelationDA().MultipleBatchInsert(ctx, tx, allRelations)
@@ -717,12 +727,16 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 
 	// add assessment
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		studyInput := make([]*entity.AddStudyInput,len(scheduleList))
+		studyInput := make([]*entity.AddStudyInput, len(scheduleList))
+
 		for i, item := range scheduleList {
+			attendances := userRelations[item.ID]
+
 			studyInput[i] = &entity.AddStudyInput{
 				ScheduleID:   item.ID,
 				ClassID:      item.ClassID,
 				LessonPlanID: item.LessonPlanID,
+				Attendances:  attendances,
 			}
 		}
 		_, err := GetH5PAssessmentModel().AddStudies(ctx, tx, op, studyInput)
