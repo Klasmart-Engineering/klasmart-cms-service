@@ -200,7 +200,7 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 	}
 
 	if c.Type.Valid && c.Type.Value.Valid() {
-		t.Appendf("'type' = ?", c.Type.Value)
+		t.Appendf("`type` = ?", c.Type.Value)
 	}
 
 	if c.OrgID.Valid {
