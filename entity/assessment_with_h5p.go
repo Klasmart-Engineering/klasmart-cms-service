@@ -137,3 +137,9 @@ type AssessmentH5PContentScore struct {
 	AchievedScore    float64
 	Scores           []float64
 }
+
+type AddStudyInput struct {
+	ScheduleID   string
+	ClassID      string
+	LessonPlanID string
+}

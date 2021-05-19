@@ -22,7 +22,7 @@ type IH5PAssessmentModel interface {
 	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) error
 	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	DeleteStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
-	AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]string, error)
+	AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
 	HasAnyoneAttemptInRoom(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomID string) (bool, error)
 }
 
@@ -814,10 +814,14 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	return newAssessmentID, nil
 }
 
-func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) ([]string, error) {
-	log.Debug(ctx, "add studies args", log.Strings("schedule_ids", scheduleIDs), log.Any("operator", operator))
+func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error) {
+	log.Debug(ctx, "add studies args", log.Any("input", input), log.Any("operator", operator))
 
 	// check if assessment already exits
+	scheduleIDs := make([]string, 0, len(input))
+	for _, item := range input {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
 	var assessments []*entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
@@ -849,35 +853,13 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		return nil, nil
 	}
 
-	// get schedules
-	var (
-		schedules []*entity.ScheduleVariable
-		err       error
-	)
-	if schedules, err = GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, nil); err != nil {
-		log.Error(ctx, "AddStudies: GetScheduleModel().GetPlainByID: get failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	if len(schedules) == 0 {
-		return nil, nil
-	}
-
-	// fix: permission
-	operator.OrgID = schedules[0].OrgID
-
 	// get class name map
-	var (
-		classIDs     []string
-		classNameMap map[string]string
-	)
-	for _, s := range schedules {
-		classIDs = append(classIDs, s.ClassID)
+	var classIDs []string
+	for _, item := range input {
+		classIDs = append(classIDs, item.ClassID)
 	}
-	if classNameMap, err = external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs); err != nil {
+	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
+	if err != nil {
 		log.Error(ctx, "AddStudies: external.GetClassServiceProvider().BatchGetNameMap: get failed",
 			log.Err(err),
 			log.Strings("class_ids", classIDs),
@@ -887,14 +869,12 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	}
 
 	// get contents
-	var (
-		lessonPlanIDs []string
-		lessonPlanMap map[string]*entity.AssessmentExternalLessonPlan
-	)
-	for _, s := range schedules {
-		lessonPlanIDs = append(lessonPlanIDs, s.LessonPlanID)
+	var lessonPlanIDs []string
+	for _, item := range input {
+		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 	}
-	if lessonPlanMap, err = GetAssessmentModel().BatchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs); err != nil {
+	lessonPlanMap, err := GetAssessmentModel().BatchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs)
+	if err != nil {
 		log.Error(ctx, "AddStudies: GetAssessmentModel().BatchGetLatestLessonPlanMap: get failed",
 			log.Err(err),
 			log.Strings("lesson_plan_ids", lessonPlanIDs),
@@ -904,15 +884,15 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 
 	// add assessment
 	newAssessments := make([]*entity.Assessment, 0, len(scheduleIDs))
-	for _, s := range schedules {
-		className := classNameMap[s.ClassID]
+	for _, item := range input {
+		className := classNameMap[item.ClassID]
 		if className == "" {
 			className = constant.AssessmentNoClass
 		}
 		newAssessments = append(newAssessments, &entity.Assessment{
 			ID:         utils.NewID(),
-			Title:      fmt.Sprintf("%s-%s", className, lessonPlanMap[s.LessonPlanID].Name),
-			ScheduleID: s.ID,
+			Title:      fmt.Sprintf("%s-%s", className, lessonPlanMap[item.LessonPlanID].Name),
+			ScheduleID: item.ScheduleID,
 			Type:       entity.AssessmentTypeClassAndLiveH5P,
 			Status:     entity.AssessmentStatusInProgress,
 		})
@@ -952,15 +932,15 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	for _, r := range relations {
 		scheduleIDToAttendanceIDsMap[r.ScheduleID] = append(scheduleIDToAttendanceIDsMap[r.ScheduleID], r.RelationID)
 	}
-	input := entity.BatchAddAttendancesInput{}
+	addAttendanceInput := entity.BatchAddAttendancesInput{}
 	for _, a := range assessments {
-		input.Items = append(input.Items, &entity.BatchAddAttendancesInputItem{
+		addAttendanceInput.Items = append(addAttendanceInput.Items, &entity.BatchAddAttendancesInputItem{
 			AssessmentID:  a.ID,
 			ScheduleID:    a.ScheduleID,
 			AttendanceIDs: scheduleIDToAttendanceIDsMap[a.ScheduleID],
 		})
 	}
-	if err = GetAssessmentModel().BatchAddAttendances(ctx, tx, operator, input); err != nil {
+	if err = GetAssessmentModel().BatchAddAttendances(ctx, tx, operator, addAttendanceInput); err != nil {
 		log.Error(ctx, "Add: GetAssessmentModel().AddAttendances: add failed",
 			log.Err(err),
 			log.Strings("schedule_ids", scheduleIDs),
@@ -971,14 +951,20 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 
 	// add contents
 	var (
-		scheduleMap        = make(map[string]*entity.ScheduleVariable, len(schedules))
+		scheduleMap        = make(map[string]*entity.AddStudyInput, len(input))
 		assessmentContents []*entity.AssessmentContent
 	)
-	for _, s := range schedules {
-		scheduleMap[s.ID] = s
+	for _, item := range input {
+		scheduleMap[item.ScheduleID] = item
 	}
 	for _, a := range assessments {
-		lp := lessonPlanMap[scheduleMap[a.ScheduleID].LessonPlanID]
+		schedule := scheduleMap[a.ScheduleID]
+		if schedule == nil {
+			errMsg := "add study assessment: not found schedule by id"
+			log.Error(ctx, errMsg, log.Any("input", input))
+			return nil, errors.New(errMsg)
+		}
+		lp := lessonPlanMap[schedule.LessonPlanID]
 		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
 			ID:           utils.NewID(),
 			AssessmentID: a.ID,
