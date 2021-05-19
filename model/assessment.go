@@ -646,8 +646,14 @@ func (m *assessmentModel) convertToAssessmentViews(ctx context.Context, tx *dbo.
 func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
 	log.Debug(ctx, "add assessment args", log.Any("args", args), log.Any("operator", operator))
 
-	// clean data
+	// clean args
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
+
+	// valid args
+	if args.ScheduleID == "" {
+		log.Error(ctx, "add assessment: require schedule id", log.Any("args", args))
+		return "", constant.ErrInvalidArgs
+	}
 
 	// check if assessment already exits
 	var assessments []entity.Assessment
@@ -704,6 +710,10 @@ func (m *assessmentModel) Add(ctx context.Context, operator *entity.Operator, ar
 			log.Any("operator", operator),
 		)
 		return "", nil
+	}
+	if schedule.ClassType == entity.ScheduleClassTypeOnlineClass  && len(args.AttendanceIDs) == 0{
+		log.Error(ctx, "add assessment: require attendance ids in online class type", log.Any("args", args))
+		return "", constant.ErrInvalidArgs
 	}
 
 	// fix: materials permission
