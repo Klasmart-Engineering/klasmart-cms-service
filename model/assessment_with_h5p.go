@@ -922,7 +922,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 			newAttendance := entity.AssessmentAttendance{
 				ID:           utils.NewID(),
 				AssessmentID: scheduleIDToAssessmentIDMap[item.ScheduleID],
-				AttendanceID: attendance.ScheduleID,
+				AttendanceID: attendance.RelationID,
 				Checked:      true,
 			}
 			switch attendance.RelationType {
