@@ -287,7 +287,7 @@ func (s H5PRoomScoreService) BatchSet(ctx context.Context, operator *entity.Oper
 		return []*H5PTeacherScore{}, nil
 	}
 
-	query := `
+	mutation := `
 mutation {
 	{{range $i, $e := .}}
 	q{{$i}}: setScore(
@@ -317,7 +317,7 @@ mutation {
 	{{end}}
 }`
 
-	temp, err := template.New("").Parse(query)
+	temp, err := template.New("").Parse(mutation)
 	if err != nil {
 		log.Error(ctx, "init template failed", log.Err(err))
 		return nil, err
@@ -360,7 +360,7 @@ mutation {
 	for index := range requests {
 		score := data[fmt.Sprintf("q%d", index)]
 		if score == nil {
-			log.Error(ctx, "user content score not found", log.Any("request", requests[index]))
+			log.Error(ctx, "h5p set room score result not found", log.Any("request", requests[index]))
 			return nil, constant.ErrRecordNotFound
 		}
 
