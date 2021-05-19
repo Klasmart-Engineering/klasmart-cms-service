@@ -126,7 +126,7 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	columns := []string{
 		"id",
 		"schedule_id",
-		"type",
+		"`type`",
 		"title",
 		"complete_time",
 		"status",
