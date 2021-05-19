@@ -350,12 +350,14 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 			return nil, err
 		}
 		visibilitySetting, err := c.getVisibilitySettingsType(ctx, condition.VisibilitySettings, schoolsInfo, user)
-		log.Error(ctx, "getVisibilitySettingsType failed",
-			log.Err(err),
-			log.Any("condition.VisibilitySettings", condition.VisibilitySettings),
-			log.Any("user", user))
+		if err != nil {
+			log.Error(ctx, "getVisibilitySettingsType failed",
+				log.Err(err),
+				log.Any("condition.VisibilitySettings", condition.VisibilitySettings),
+				log.Any("user", user))
+			return nil, err
+		}
 		visibilitySettings = visibilitySetting
-		return nil, err
 	}
 	author := OwnerTypeOthers
 	if condition.Author != "" {
