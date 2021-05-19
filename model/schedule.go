@@ -717,11 +717,15 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 
 	// add assessment
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		scheduleIDs := make([]string, len(scheduleList))
+		studyInput := make([]*entity.AddStudyInput,len(scheduleList))
 		for i, item := range scheduleList {
-			scheduleIDs[i] = item.ID
+			studyInput[i] = &entity.AddStudyInput{
+				ScheduleID:   item.ID,
+				ClassID:      item.ClassID,
+				LessonPlanID: item.LessonPlanID,
+			}
 		}
-		_, err := GetH5PAssessmentModel().AddStudies(ctx, tx, op, scheduleIDs)
+		_, err := GetH5PAssessmentModel().AddStudies(ctx, tx, op, studyInput)
 		if err != nil {
 			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("allRelations", allRelations))
 			return "", err
