@@ -46,3 +46,31 @@ func TestH5PRoomScoreService_Set(t *testing.T) {
 		return
 	}
 }
+
+func TestH5PRoomScoreService_BatchSet(t *testing.T) {
+	requests := []*H5PSetScoreRequest{
+		{
+			RoomID:    "60a1d40a03b03c3acdb4f946",
+			ContentID: "0a30bb0e-665f-443f-a80e-a1e29e5d1166",
+			StudentID: "6ef232ce-5c37-4550-a8ca-8d27da5133f8",
+			Score:     3.5,
+		},
+		{
+			RoomID:    "60a1d40a03b03c3acdb4f946",
+			ContentID: "0a30bb0e-665f-443f-a80e-a1e29e5d1166",
+			StudentID: "6ef232ce-5c37-4550-a8ca-8d27da5133f8",
+			Score:     4,
+		},
+	}
+
+	scoreResults, err := GetH5PRoomScoreServiceProvider().BatchSet(context.TODO(), testOperator, requests)
+	if err != nil {
+		t.Errorf("GetH5PRoomScoreServiceProvider().BatchSet() error = %v", err)
+		return
+	}
+
+	if len(scoreResults) != len(requests) {
+		t.Errorf("GetH5PRoomScoreServiceProvider().BatchSet() get invalid result, want %d, got %d", len(requests), len(scoreResults))
+		return
+	}
+}
