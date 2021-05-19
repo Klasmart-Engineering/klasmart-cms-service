@@ -171,7 +171,7 @@ func (c *QueryAssessmentContentConditions) GetConditions() ([]string, []interfac
 		t.Appendf("assessment_id = ?", c.AssessmentID.String)
 	}
 	if c.AssessmentIDs.Valid {
-		t.Appendf("assessment_id in ?", c.AssessmentIDs.Strings)
+		t.Appendf("assessment_id in (?)", c.AssessmentIDs.Strings)
 	}
 	if c.ContentIDs.Valid {
 		t.Appendf("content_id in (?)", c.ContentIDs.Strings)
