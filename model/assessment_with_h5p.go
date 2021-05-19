@@ -961,7 +961,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	for _, item := range input {
 		scheduleMap[item.ScheduleID] = item
 	}
-	for _, a := range assessments {
+	for _, a := range newAssessments {
 		schedule := scheduleMap[a.ScheduleID]
 		if schedule == nil {
 			errMsg := "add study assessment: not found schedule by id"
@@ -999,7 +999,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	}
 
 	var newAssessmentIDs []string
-	for _, a := range assessments {
+	for _, a := range newAssessments {
 		newAssessmentIDs = append(newAssessmentIDs, a.ID)
 	}
 
