@@ -893,7 +893,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 			ID:         utils.NewID(),
 			Title:      fmt.Sprintf("%s-%s", className, lessonPlanMap[item.LessonPlanID].Name),
 			ScheduleID: item.ScheduleID,
-			Type:       entity.AssessmentTypeClassAndLiveH5P,
+			Type:       entity.AssessmentTypeStudyH5P,
 			Status:     entity.AssessmentStatusInProgress,
 		})
 	}
