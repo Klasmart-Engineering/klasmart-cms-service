@@ -75,26 +75,8 @@ func (c *ContentPermissionMySchoolModel) CheckCreateContentPermission(ctx contex
 		VisibilitySettings: visibilitySettingType,
 		Owner:              OwnerTypeUser,
 	}
-	permissionSetList, err := NewContentPermissionTable().GetCreatePermissionSets(ctx, profile)
-	if err == ErrUndefinedPermission {
-		log.Error(ctx, "ErrUndefinedPermission",
-			log.Err(err),
-			log.Any("contentProfiles", profile),
-			log.Any("user", user))
-		return false, nil
-	}
-	if err != nil {
-		log.Error(ctx, "GetCreatePermissionSets failed",
-			log.Err(err),
-			log.Any("profile", profile),
-			log.Any("user", user))
-		return false, err
-	}
 
-	log.Debug(ctx, "GetCreatePermissionSets result",
-		log.Any("permissionSetList", permissionSetList))
-
-	err = permissionSetList.HasPermission(ctx, user)
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeCreate, []*ContentProfile{&profile})
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -117,20 +99,8 @@ func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx co
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles),
 		log.Strings("cids", cids))
-	permissionSetList, err := NewContentPermissionTable().GetPublishPermissionSets(ctx, profiles)
-	if err == ErrUndefinedPermission {
-		log.Error(ctx, "ErrUndefinedPermission",
-			log.Err(err),
-			log.Any("contentProfiles", profiles),
-			log.Any("user", user))
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	log.Debug(ctx, "GetPublishPermissionSets result",
-		log.Any("permissionSetList", permissionSetList))
-	err = permissionSetList.HasPermission(ctx, user)
+
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModePublish, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -152,22 +122,8 @@ func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx cont
 
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles))
-	permissionSetList, err := NewContentPermissionTable().GetPublishPermissionSets(ctx, profiles)
-	if err == ErrUndefinedPermission {
-		log.Error(ctx, "ErrUndefinedPermission",
-			log.Err(err),
-			log.Any("contentProfiles", profiles),
-			log.Any("user", user))
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	log.Debug(ctx, "GetPublishPermissionSets result",
-		log.Any("profiles", profiles),
-		log.Any("permissionSetList", permissionSetList))
 
-	err = permissionSetList.HasPermission(ctx, user)
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModePublish, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -187,21 +143,7 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 		return false, err
 	}
 
-	permissionSetList, err := NewContentPermissionTable().GetViewPermissionSets(ctx, profiles)
-	if err == ErrUndefinedPermission {
-		log.Error(ctx, "ErrUndefinedPermission",
-			log.Err(err),
-			log.Any("contentProfiles", profiles),
-			log.Any("user", user))
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	log.Debug(ctx, "GetViewPermissionSets result",
-		log.Any("permissionSetList", permissionSetList))
-
-	err = permissionSetList.HasPermission(ctx, user)
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeView, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -225,22 +167,7 @@ func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx contex
 		log.Any("profiles", profiles),
 		log.String("cid", cid))
 
-	permissionSetList, err := NewContentPermissionTable().GetEditPermissionSets(ctx, *profiles[0])
-	if err == ErrUndefinedPermission {
-		log.Error(ctx, "ErrUndefinedPermission",
-			log.Err(err),
-			log.Any("contentProfiles", profiles),
-			log.Any("user", user))
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	log.Debug(ctx, "GetEditPermissionSets result",
-		log.Any("profiles", profiles),
-		log.Any("permissionSetList", permissionSetList))
-
-	err = permissionSetList.HasPermission(ctx, user)
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeEdit, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -262,22 +189,7 @@ func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx contex
 		log.Strings("cids", cids),
 		log.Any("profiles", profiles))
 
-	permissionSetList, err := NewContentPermissionTable().GetRemovePermissionSets(ctx, profiles)
-	if err == ErrUndefinedPermission {
-		log.Error(ctx, "ErrUndefinedPermission",
-			log.Err(err),
-			log.Any("contentProfiles", profiles),
-			log.Any("user", user))
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	log.Debug(ctx, "GetRemovePermissionSets result",
-		log.Any("permissionSetList", permissionSetList),
-		log.Any("profiles", profiles))
-
-	err = permissionSetList.HasPermission(ctx, user)
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeRemove, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -300,9 +212,9 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 		log.Any("profiles", profiles),
 		log.Strings("cids", cids))
 
-	var permissionSetList IPermissionSet
+	var permissionSetList PermissionSetList
 	if isApprove {
-		permissionSetList, err = NewContentPermissionTable().GetApprovePermissionSets(ctx, profiles)
+		permissionSetList, err = GetContentPermissionChecker().GetPermissionSetList(ctx, ContentPermissionModeApprove, profiles)
 		if err == ErrUndefinedPermission {
 			log.Error(ctx, "ErrUndefinedPermission",
 				log.Err(err),
@@ -314,7 +226,7 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 			return false, err
 		}
 	} else {
-		permissionSetList, err = NewContentPermissionTable().GetRejectPermissionSets(ctx, profiles)
+		permissionSetList, err = GetContentPermissionChecker().GetPermissionSetList(ctx, ContentPermissionModeReject, profiles)
 		if err == ErrUndefinedPermission {
 			log.Error(ctx, "ErrUndefinedPermission",
 				log.Err(err),
@@ -360,22 +272,7 @@ func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context
 		log.Any("contentProfiles", contentProfiles),
 		log.Any("user", user))
 
-	permissionSetList, err := NewContentPermissionTable().GetViewPermissionSets(ctx, contentProfiles)
-	if err == ErrUndefinedPermission {
-		log.Error(ctx, "ErrUndefinedPermission",
-			log.Err(err),
-			log.Any("contentProfiles", contentProfiles),
-			log.Any("user", user))
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	log.Debug(ctx, "GetViewPermissionSets result",
-		log.Any("permissionSetList", permissionSetList),
-		log.Any("contentProfiles", contentProfiles),
-		log.Any("user", user))
-	err = permissionSetList.HasPermission(ctx, user)
+	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeView, contentProfiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),

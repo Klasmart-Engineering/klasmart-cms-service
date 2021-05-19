@@ -3057,7 +3057,7 @@ func (cm *ContentModel) fillFolderContentPermission(ctx context.Context, objs []
 		log.Any("contentProfiles", contentProfiles))
 
 	//get permission map
-	permissionMap, err := NewContentPermissionTable().BatchGetContentPermissions(ctx, user, contentProfiles)
+	permissionMap, err := GetContentPermissionChecker().BatchGetContentPermission(ctx, user, contentProfiles)
 	if err != nil {
 		log.Error(ctx, "BatchGetContentPermissions failed",
 			log.Err(err),
@@ -3108,7 +3108,7 @@ func (cm *ContentModel) fillContentPermission(ctx context.Context, objs []*entit
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("contentProfiles", contentProfiles))
 
-	permissionMap, err := NewContentPermissionTable().BatchGetContentPermissions(ctx, user, contentProfiles)
+	permissionMap, err := GetContentPermissionChecker().BatchGetContentPermission(ctx, user, contentProfiles)
 	if err != nil {
 		log.Error(ctx, "BatchGetContentPermissions failed",
 			log.Err(err),
