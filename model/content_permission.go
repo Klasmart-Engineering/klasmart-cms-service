@@ -138,7 +138,7 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 		return false, err
 	}
 
-	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModeView, profiles)
+	err = GetContentPermissionChecker().HasPermissionWithLogicalOr(ctx, user, ContentPermissionModeView, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
