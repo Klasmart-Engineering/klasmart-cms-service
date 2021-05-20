@@ -138,8 +138,9 @@ type AssessmentH5PContentScore struct {
 }
 
 type AddStudyInput struct {
-	ScheduleID   string
-	ClassID      string
-	LessonPlanID string
-	Attendances  []*ScheduleRelation
+	ScheduleID    string
+	ScheduleTitle string
+	ClassID       string
+	LessonPlanID  string
+	Attendances   []*ScheduleRelation
 }
