@@ -45,9 +45,21 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 	//		Valid: true,
 	//	}
 	//}
-	if orderBy := entity.ListHomeFunStudiesOrderBy(c.Query("order_by")); orderBy.Valid() {
+
+	if status := c.Query("status"); status != "" {
+		args.Status = entity.NullAssessmentStatus{
+			Value: entity.AssessmentStatus(status),
+			Valid: true,
+		}
+	}
+	if orderBy := c.Query("order_by"); orderBy != "" {
 		args.OrderBy = entity.NullAssessmentsOrderBy{
 			Value: entity.AssessmentOrderBy(orderBy),
+			Valid: true,
+		}
+	} else {
+		args.OrderBy = entity.NullAssessmentsOrderBy{
+			Value: entity.ListAssessmentsOrderByCreateAtDesc,
 			Valid: true,
 		}
 	}

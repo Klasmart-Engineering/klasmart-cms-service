@@ -278,9 +278,13 @@ func (c *QueryAssessmentConditions) GetOrderBy() string {
 	case entity.ListAssessmentsOrderByClassEndTimeDesc:
 		return "class_end_time desc"
 	case entity.ListAssessmentsOrderByCompleteTime:
-		return "complete_time"
+		return "status desc, complete_time, create_at"
 	case entity.ListAssessmentsOrderByCompleteTimeDesc:
-		return "complete_time desc"
+		return "status desc, complete_time desc, create_at desc"
+	case entity.ListAssessmentsOrderByCreateAt:
+		return "create_at"
+	case entity.ListAssessmentsOrderByCreateAtDesc:
+		return "create_at desc"
 	}
 	return ""
 }

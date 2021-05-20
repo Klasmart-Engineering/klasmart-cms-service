@@ -39,6 +39,7 @@ type ListH5PAssessmentsResultItem struct {
 	CompleteAt    int64    `json:"complete_at"`
 	// debug
 	ScheduleID string `json:"schedule_id"`
+	CreateAt   int64  `json:"create_at"`
 }
 
 type GetH5PAssessmentDetailResult struct {
@@ -50,7 +51,6 @@ type GetH5PAssessmentDetailResult struct {
 	DueAt            int64                           `json:"due_at"`
 	LessonPlan       H5PAssessmentLessonPlan         `json:"lesson_plan"`
 	LessonMaterials  []*H5PAssessmentLessonMaterial  `json:"lesson_materials"`
-	CompleteRate     float64                         `json:"complete_rate"`
 	CompleteAt       int64                           `json:"complete_at"`
 	RemainingTime    int64                           `json:"remaining_time"`
 	StudentViewItems []*H5PAssessmentStudentViewItem `json:"student_view_items"`
@@ -114,7 +114,6 @@ type AddH5PAssessmentStudyInput struct {
 }
 
 type AssessmentH5PRoom struct {
-	CompleteRate    float64
 	AnyoneAttempted bool
 	Users           []*AssessmentH5PUser
 	UserMap         map[string]*AssessmentH5PUser
