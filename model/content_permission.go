@@ -328,6 +328,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 	}
 
 	publishStatus := condition.PublishStatus
+	publishAssetsStatus := condition.PublishStatus
 	if len(publishStatus) == 0 {
 		publishStatus = []string{
 			entity.ContentStatusPublished,
@@ -337,6 +338,9 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 			entity.ContentStatusAttachment,
 			entity.ContentStatusHidden,
 			entity.ContentStatusArchive}
+		publishAssetsStatus = []string{
+			entity.ContentStatusPublished,
+		}
 	}
 	visibilitySettings := VisibilitySettingsTypeOrgWithAllSchools
 
@@ -364,15 +368,19 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 		author = c.getOwnerType(ctx, condition.Author, user)
 	}
 
-	contentProfiles := make([]*ContentProfile, len(contentTypes)*len(publishStatus))
+	contentProfiles := make([]*ContentProfile, 0)
 	for i := range contentTypes {
-		for j := range publishStatus {
-			contentProfiles[j+i*len(publishStatus)] = &ContentProfile{
+		tempPublishStatus := publishStatus
+		if contentTypes[i] == entity.ContentTypeAssets {
+			tempPublishStatus = publishAssetsStatus
+		}
+		for j := range tempPublishStatus {
+			contentProfiles = append(contentProfiles, &ContentProfile{
 				ContentType:        entity.ContentType(contentTypes[i]),
 				Status:             entity.ContentPublishStatus(publishStatus[j]),
 				VisibilitySettings: visibilitySettings,
 				Owner:              author,
-			}
+			})
 		}
 	}
 	return contentProfiles, nil
@@ -472,18 +480,20 @@ func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, 
 			Name: schools[i].Name,
 		})
 	}
-	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, op, []string{op.OrgID})
+	orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "get org info failed", log.Err(err))
 		return nil, err
 	}
-	if !orgs[0].Valid {
-		log.Warn(ctx, "invalid value", log.String("org_id", op.OrgID))
+	for i := range orgs {
+		if orgs[i].ID == op.OrgID {
+			entities = append(entities, entity.OrganizationOrSchool{
+				ID:   op.OrgID,
+				Name: orgs[0].Name,
+			})
+		}
 	}
-	entities = append(entities, entity.OrganizationOrSchool{
-		ID:   op.OrgID,
-		Name: orgs[0].Name,
-	})
+
 	return entities, nil
 }
 

@@ -84,7 +84,7 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 	data := map[string]*School{}
 
 	response := &chlorine.Response{
-		Data: data,
+		Data: &data,
 	}
 
 	_, err := GetAmsClient().Run(ctx, request, response)
