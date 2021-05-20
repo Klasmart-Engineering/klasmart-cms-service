@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 )
 
@@ -53,6 +55,11 @@ const (
 	ContentPropertyTypeAge         ContentPropertyType = 4
 	ContentPropertyTypeGrade       ContentPropertyType = 5
 	ContentPropertyTypeSubCategory ContentPropertyType = 6
+
+	PublishedQueryModeOnlyOwner  PublishedQueryMode = "query only owner"
+	PublishedQueryModeAll        PublishedQueryMode = "query all"
+	PublishedQueryModeOnlyOthers PublishedQueryMode = "query only others"
+	PublishedQueryModeNone       PublishedQueryMode = "query none"
 )
 
 var (
@@ -71,6 +78,8 @@ type ContentPropertyType int
 type FileType int
 
 type ContentAuth int
+
+type PublishedQueryMode string
 
 func NewFileType(fileType int) FileType {
 	switch fileType {
@@ -218,7 +227,6 @@ func ContentLink(id string) string {
 }
 
 type ContentVisibilitySetting struct {
-	ID                int    `gorm:"type:int;PRIMARY_KEY;AUTO_INCREMENT"`
 	ContentID         string `gorm:"type:char(50);NOT NULL;column:content_id"`
 	VisibilitySetting string `gorm:"type:char(50);NOT NULL;column:visibility_setting;index"`
 }
@@ -228,7 +236,6 @@ func (ContentVisibilitySetting) TableName() string {
 }
 
 type ContentProperty struct {
-	ID           int                 `gorm:"type:int;AUTO_INCREMENT;PRIMARY_KEY"`
 	PropertyType ContentPropertyType `gorm:"type:int;column:property_type"`
 	ContentID    string              `gorm:"type: varchar(50);column:content_id"`
 	PropertyID   string              `gorm:"type: varchar(50);column:property_id"`
@@ -237,6 +244,11 @@ type ContentProperty struct {
 
 func (ContentProperty) TableName() string {
 	return "cms_content_properties"
+}
+
+type ContentWithVisibilitySettings struct {
+	Content
+	VisibilitySettings []string
 }
 
 type Content struct {
@@ -360,6 +372,41 @@ type ContentVisibilitySettings struct {
 	VisibilitySettings []string `json:"visibility_settings"`
 }
 
+type ContentConditionRequest struct {
+	Name               string   `json:"name"`
+	ContentType        []int    `json:"content_type"`
+	VisibilitySettings []string `json:"visibility_settings"`
+	PublishStatus      []string `json:"publish_status"`
+	Author             string   `json:"author"`
+	Org                string   `json:"org"`
+	Program            []string `json:"program"`
+	SourceType         string   `json:"source_type"`
+	DirPath            string   `json:"dir_path"`
+	ContentName        string   `json:"content_name"`
+
+	//AuthedContentFlag bool           `json:"authed_content"`
+	AuthedOrgID NullStrings `json:"authed_org_ids"`
+	OrderBy     string      `json:"order_by"`
+	Pager       utils.Pager
+
+	JoinUserIDList []string `json:"join_user_id_list"`
+
+	PublishedQueryMode PublishedQueryMode `json:"published_query_mode"`
+}
+type OrganizationOrSchool struct {
+	ID   string
+	Name string
+}
+
+type ContentPermission struct {
+	ID             string `json:"id"`
+	AllowEdit      bool   `json:"allow_edit"`
+	AllowDelete    bool   `json:"allow_delete"`
+	AllowApprove   bool   `json:"allow_approve"`
+	AllowReject    bool   `json:"allow_reject"`
+	AllowRepublish bool   `json:"allow_republish"`
+}
+
 type CreateContentRequest struct {
 	ContentType ContentType `json:"content_type"`
 	SourceType  string      `json:"source_type"`
@@ -452,6 +499,8 @@ type ContentInfoWithDetails struct {
 	OutcomeEntities []*Outcome `json:"outcome_entities"`
 
 	IsMine bool `json:"is_mine"`
+
+	Permission ContentPermission `json:"permission"`
 }
 
 type ContentName struct {
@@ -481,21 +530,22 @@ type FolderContent struct {
 
 //Content in folder
 type FolderContentData struct {
-	ID              string      `json:"id"`
-	ContentName     string      `json:"name"`
-	ContentType     ContentType `json:"content_type"`
-	Description     string      `json:"description"`
-	Keywords        []string    `json:"keywords"`
-	Author          string      `json:"author"`
-	ItemsCount      int         `json:"items_count"`
-	PublishStatus   string      `json:"publish_status"`
-	Thumbnail       string      `json:"thumbnail"`
-	Data            string      `json:"data"`
-	AuthorName      string      `json:"author_name"`
-	DirPath         string      `json:"dir_path"`
-	ContentTypeName string      `json:"content_type_name"`
-	CreateAt        int         `json:"create_at"`
-	UpdateAt        int         `json:"update_at"`
+	ID              string            `json:"id"`
+	ContentName     string            `json:"name"`
+	ContentType     ContentType       `json:"content_type"`
+	Description     string            `json:"description"`
+	Keywords        []string          `json:"keywords"`
+	Author          string            `json:"author"`
+	ItemsCount      int               `json:"items_count"`
+	PublishStatus   string            `json:"publish_status"`
+	Thumbnail       string            `json:"thumbnail"`
+	Data            string            `json:"data"`
+	AuthorName      string            `json:"author_name"`
+	DirPath         string            `json:"dir_path"`
+	ContentTypeName string            `json:"content_type_name"`
+	CreateAt        int               `json:"create_at"`
+	UpdateAt        int               `json:"update_at"`
+	Permission      ContentPermission `json:"permission"`
 }
 
 type ContentInfo struct {

@@ -91,7 +91,7 @@ func (s *Server) getHomeFunStudy(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetHomeFunStudyModel().Get(ctx, s.getOperator(c), id)
+	result, err := model.GetHomeFunStudyModel().GetDetail(ctx, s.getOperator(c), id)
 	if err != nil {
 		log.Info(ctx, "model.GetHomeFunStudyModel().Get: get failed",
 			log.Err(err),

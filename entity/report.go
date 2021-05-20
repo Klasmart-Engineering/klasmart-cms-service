@@ -352,7 +352,7 @@ type ActivityFlashCardsPlayRecord struct {
 }
 
 type GetTeachingHoursReportArgs struct {
-	OrgID      *string  `json:"org_id`
+	OrgID      *string  `json:"org_id"`
 	SchoolIDs  []string `json:"school_ids"`
 	TeacherIDs []string `json:"teacher_ids"`
 	Days       int      `json:"days"`

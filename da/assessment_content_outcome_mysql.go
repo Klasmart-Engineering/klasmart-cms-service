@@ -30,6 +30,9 @@ type assessmentContentOutcomeDA struct {
 }
 
 func (*assessmentContentOutcomeDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContentOutcome) error {
+	if len(items) == 0 {
+		return nil
+	}
 	var (
 		columns = []string{"id", "assessment_id", "content_id", "outcome_id"}
 		matrix  [][]interface{}
