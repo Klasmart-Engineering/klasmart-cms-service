@@ -102,10 +102,14 @@ func initOperator(orgID string, authTo string, authCode string) *entity.Operator
 	}
 	return nil
 }
+
 func TestMain(m *testing.M) {
 	config.Set(&config.Config{
 		AMS: config.AMSConfig{
 			EndPoint: "https://api.beta.kidsloop.net/user/",
+		},
+		H5P: config.H5PServiceConfig{
+			EndPoint: "https://api.alpha.kidsloop.net/assessment/graphql/",
 		},
 	})
 
