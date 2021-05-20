@@ -83,7 +83,7 @@ func (c *ContentPermissionMySchoolModel) CheckCreateContentPermission(ctx contex
 }
 
 func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
-	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, false, user)
 	if err != nil {
 		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.Strings("cids", cids),
@@ -107,7 +107,7 @@ func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx co
 }
 
 func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx context.Context, cid string, scopes []string, user *entity.Operator) (bool, error) {
-	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, false, user)
 	if err != nil {
 		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.String("cid", cid),
@@ -130,7 +130,7 @@ func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx cont
 }
 
 func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, true, user)
 	if err != nil {
 		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.String("cid", cid),
@@ -150,7 +150,7 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 }
 
 func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
-	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, user)
+	profiles, err := c.buildContentProfileByIDs(ctx, []string{cid}, false, user)
 	if err != nil {
 		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.String("cid", cid),
@@ -173,7 +173,7 @@ func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx contex
 	return true, nil
 }
 func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx context.Context, cids []string, user *entity.Operator) (bool, error) {
-	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, false, user)
 	if err != nil {
 		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.Strings("cids", cids),
@@ -196,7 +196,7 @@ func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx contex
 }
 
 func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx context.Context, isApprove bool, cids []string, user *entity.Operator) (bool, error) {
-	profiles, err := c.buildContentProfileByIDs(ctx, cids, user)
+	profiles, err := c.buildContentProfileByIDs(ctx, cids, false, user)
 	if err != nil {
 		log.Debug(ctx, "buildContentProfileByIDs result",
 			log.Strings("cids", cids),
@@ -278,7 +278,7 @@ func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context
 	return true, nil
 }
 
-func (c *ContentPermissionMySchoolModel) buildContentProfileByIDs(ctx context.Context, cids []string, user *entity.Operator) ([]*ContentProfile, error) {
+func (c *ContentPermissionMySchoolModel) buildContentProfileByIDs(ctx context.Context, cids []string, isView bool, user *entity.Operator) ([]*ContentProfile, error) {
 	contentList, err := GetContentModel().GetRawContentByIDListWithVisibilitySettings(ctx, dbo.MustGetDB(ctx), cids)
 	if err != nil {
 		log.Error(ctx, "GetContentByIDList failed",
@@ -298,7 +298,7 @@ func (c *ContentPermissionMySchoolModel) buildContentProfileByIDs(ctx context.Co
 			log.Any("user", user))
 		return nil, ErrEmptyContentList
 	}
-	profiles, err := c.buildContentProfiles(ctx, contentList, user)
+	profiles, err := c.buildContentProfiles(ctx, contentList, isView, user)
 	if err != nil {
 		log.Error(ctx, "buildContentProfiles failed",
 			log.Err(err),
@@ -385,7 +385,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 	}
 	return contentProfiles, nil
 }
-func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Context, content []*entity.ContentWithVisibilitySettings, user *entity.Operator) ([]*ContentProfile, error) {
+func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Context, content []*entity.ContentWithVisibilitySettings, isView bool, user *entity.Operator) ([]*ContentProfile, error) {
 	profiles := make([]*ContentProfile, len(content))
 
 	schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
@@ -398,19 +398,37 @@ func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Contex
 	}
 
 	for i := range content {
-		visibilitySettingType, err := c.getVisibilitySettingsType(ctx, content[i].VisibilitySettings, schoolsInfo, user)
-		if err != nil {
-			log.Error(ctx, "getVisibilitySettingsType failed",
-				log.Err(err),
-				log.Any("content", content))
-			return nil, err
+		visibilitySettingType := make([]VisibilitySettingsType, 0)
+
+		if isView {
+			vsType, err := c.getViewVisibilitySettingsType(ctx, content[i].VisibilitySettings, schoolsInfo, user)
+			if err != nil {
+				log.Error(ctx, "getViewVisibilitySettingsType failed",
+					log.Err(err),
+					log.Any("content", content))
+				return nil, err
+			}
+			visibilitySettingType = append(visibilitySettingType, vsType...)
+		} else {
+			vsType, err := c.getVisibilitySettingsType(ctx, content[i].VisibilitySettings, schoolsInfo, user)
+			if err != nil {
+				log.Error(ctx, "getVisibilitySettingsType failed",
+					log.Err(err),
+					log.Any("content", content))
+				return nil, err
+			}
+			visibilitySettingType = append(visibilitySettingType, vsType)
 		}
-		profiles[i] = &ContentProfile{
-			ContentType:        content[i].ContentType,
-			Status:             content[i].PublishStatus,
-			VisibilitySettings: visibilitySettingType,
-			Owner:              c.getOwnerType(ctx, content[i].Author, user),
+
+		for j := range visibilitySettingType {
+			profiles[i] = &ContentProfile{
+				ContentType:        content[i].ContentType,
+				Status:             content[i].PublishStatus,
+				VisibilitySettings: visibilitySettingType[j],
+				Owner:              c.getOwnerType(ctx, content[i].Author, user),
+			}
 		}
+
 	}
 	return profiles, nil
 }
@@ -465,6 +483,62 @@ func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.C
 	}
 	//only contains my schools
 	return VisibilitySettingsTypeMySchools, nil
+}
+
+func (c *ContentPermissionMySchoolModel) getViewVisibilitySettingsType(ctx context.Context, visibilitySettings []string, schoolInfo *contentFilterUserSchoolInfo, user *entity.Operator) ([]VisibilitySettingsType, error) {
+	containsOrg := false
+	containsOtherSchools := false
+	containsSchools := false
+	for i := range visibilitySettings {
+		if visibilitySettings[i] == user.OrgID {
+			//contains org
+			containsOrg = true
+		} else {
+			containsSchools = true
+			if !utils.ContainsStr(schoolInfo.MySchool, visibilitySettings[i]) {
+				if utils.ContainsStr(schoolInfo.AllSchool, visibilitySettings[i]) {
+					//contains other schools in org
+					containsOtherSchools = true
+				} else {
+					log.Warn(ctx, "visibility setting is not in all schools",
+						log.Strings("visibilitySettings", visibilitySettings),
+						log.Any("mySchool", schoolInfo.MySchool),
+						log.Any("allSchool", schoolInfo.AllSchool),
+						log.Any("user", user))
+					return []VisibilitySettingsType{VisibilitySettingsTypeAllSchools}, ErrInvalidVisibilitySetting
+				}
+			}
+		}
+	}
+	log.Info(ctx, "visibility settings check result",
+		log.Strings("visibilitySettings", visibilitySettings),
+		log.Bool("containsOrg", containsOrg),
+		log.Bool("containsOtherSchools", containsOtherSchools),
+		log.Bool("containsSchools", containsSchools))
+
+	res := make([]VisibilitySettingsType, 0)
+
+	//contains org
+	if containsOrg {
+		//contains other schools
+		if containsOtherSchools {
+			res = append(res, VisibilitySettingsTypeOrgWithAllSchools)
+		}
+		if !containsSchools {
+			//only contains org
+			res = append(res, VisibilitySettingsTypeOnlyOrg)
+		}
+		res = append(res, VisibilitySettingsTypeOrgWithMySchools)
+	}
+
+	//contains other schools but org
+	if containsOtherSchools {
+		res = append(res, VisibilitySettingsTypeAllSchools)
+	} else if containsSchools {
+		res = append(res, VisibilitySettingsTypeMySchools)
+	}
+	//only contains my schools
+	return res, nil
 }
 
 func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]entity.OrganizationOrSchool, error) {

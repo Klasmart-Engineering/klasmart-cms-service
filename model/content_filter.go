@@ -70,7 +70,7 @@ func (cf *ContentFilterModel) FilterPublishContent(ctx context.Context, c *entit
 	log.Debug(ctx, "FilterPublishContent",
 		log.Any("condition", c),
 		log.Any("user", user))
-	return cf.doFilterContent(ctx, c, publishedContentFilter, user)
+	return cf.doFilterContent(ctx, c, publishedContentFilter, true, user)
 }
 func (cf *ContentFilterModel) FilterPendingContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error {
 	//check view_my_pending_212 permission for condition1 to fill PublishedQueryMode
@@ -78,18 +78,18 @@ func (cf *ContentFilterModel) FilterPendingContent(ctx context.Context, c *entit
 		log.Any("condition", c),
 		log.Any("user", user))
 
-	return cf.doFilterContent(ctx, c, pendingContentFilter, user)
+	return cf.doFilterContent(ctx, c, pendingContentFilter, false, user)
 }
 func (cf *ContentFilterModel) FilterArchivedContent(ctx context.Context, c *entity.ContentConditionRequest, user *entity.Operator) error {
 	//check view_my_archived_216 permission to fill PublishedQueryMode
 	log.Debug(ctx, "FilterArchivedContent",
 		log.Any("condition", c),
 		log.Any("user", user))
-	return cf.doFilterContent(ctx, c, archivedContentFilter, user)
+	return cf.doFilterContent(ctx, c, archivedContentFilter, true, user)
 }
 
 func (cf *ContentFilterModel) doFilterContent(ctx context.Context, c *entity.ContentConditionRequest,
-	permissionList PermissionList, user *entity.Operator) error {
+	permissionList PermissionList, allowQueryAll bool, user *entity.Operator) error {
 	//check view_my_published_214 permission to fill PublishedQueryMode
 	//1.fill organizations & schools into visibility settings
 	schoolsInfo, err := cf.QueryUserSchools(ctx, user)
@@ -148,16 +148,20 @@ func (cf *ContentFilterModel) doFilterContent(ctx context.Context, c *entity.Con
 		return ErrNoAvailableVisibilitySettings
 	}
 
-	if permissionMap[permissionList.ViewMyPermission] && len(c.VisibilitySettings) > 0 {
-		//user can search all
-		c.PublishedQueryMode = entity.PublishedQueryModeAll
-	} else if permissionMap[permissionList.ViewMyPermission] {
-		c.PublishedQueryMode = entity.PublishedQueryModeOnlyOwner
-	} else if len(c.VisibilitySettings) > 0 {
-		c.PublishedQueryMode = entity.PublishedQueryModeOnlyOthers
-	} else {
-		c.PublishedQueryMode = entity.PublishedQueryModeNone
+	c.PublishedQueryMode = entity.PublishedQueryModeOnlyOthers
+	if allowQueryAll {
+		if permissionMap[permissionList.ViewMyPermission] && len(c.VisibilitySettings) > 0 {
+			//user can search all
+			c.PublishedQueryMode = entity.PublishedQueryModeAll
+		} else if permissionMap[permissionList.ViewMyPermission] {
+			c.PublishedQueryMode = entity.PublishedQueryModeOnlyOwner
+		} else if len(c.VisibilitySettings) > 0 {
+			c.PublishedQueryMode = entity.PublishedQueryModeOnlyOthers
+		} else {
+			c.PublishedQueryMode = entity.PublishedQueryModeNone
+		}
 	}
+
 	log.Debug(ctx, "filter result",
 		log.Strings("c.VisibilitySettings", c.VisibilitySettings),
 		log.String("c.PublishedQueryMode", string(c.PublishedQueryMode)),
