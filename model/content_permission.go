@@ -556,6 +556,7 @@ func (c *ContentPermissionMySchoolModel) getViewVisibilitySettingsType(ctx conte
 	containsOrg := false
 	containsOtherSchools := false
 	containsSchools := false
+	containsMySchool := false
 	for i := range visibilitySettings {
 		if visibilitySettings[i] == user.OrgID {
 			//contains org
@@ -574,12 +575,15 @@ func (c *ContentPermissionMySchoolModel) getViewVisibilitySettingsType(ctx conte
 						log.Any("user", user))
 					return []VisibilitySettingsType{VisibilitySettingsTypeAllSchools}, ErrInvalidVisibilitySetting
 				}
+			} else {
+				containsMySchool = true
 			}
 		}
 	}
 	log.Info(ctx, "visibility settings check result",
 		log.Strings("visibilitySettings", visibilitySettings),
 		log.Bool("containsOrg", containsOrg),
+		log.Bool("containsMySchool", containsMySchool),
 		log.Bool("containsOtherSchools", containsOtherSchools),
 		log.Bool("containsSchools", containsSchools))
 
@@ -599,16 +603,17 @@ func (c *ContentPermissionMySchoolModel) getViewVisibilitySettingsType(ctx conte
 	}
 
 	//contains other schools but org
-	if containsSchools {
+	if containsMySchool {
+		res = append(res, VisibilitySettingsTypeMySchools)
+	}
+	if containsOtherSchools {
 		res = append(res, VisibilitySettingsTypeAllSchools)
-		if !containsOtherSchools {
-			res = append(res, VisibilitySettingsTypeMySchools)
-		}
 	}
 
 	log.Info(ctx, "build visibility settings result",
 		log.Strings("visibilitySettings", visibilitySettings),
 		log.Bool("containsOrg", containsOrg),
+		log.Bool("containsMySchool", containsMySchool),
 		log.Bool("containsOtherSchools", containsOtherSchools),
 		log.Bool("containsSchools", containsSchools),
 		log.Any("res", res))
