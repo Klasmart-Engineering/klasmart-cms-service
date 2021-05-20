@@ -309,9 +309,9 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 			materialItem.TypeName = entity.MaterialTypeH5P
 		case entity.FileTypeDocument:
 			log.Debug(ctx, "content material doc type", log.Any("op", op), log.Any("content", item))
-			if mData.Source.Ext() != constant.LiveTokenDocumentPDF {
-				continue
-			}
+			//if mData.Source.Ext() != constant.LiveTokenDocumentPDF {
+			//	continue
+			//}
 			materialItem.TypeName = entity.MaterialTypeH5P
 		default:
 			log.Warn(ctx, "content material type is invalid", log.Any("materialData", mData))
@@ -324,24 +324,31 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 		case entity.FileTypeH5p:
 			materialItem.URL = fmt.Sprintf("/h5p/play/%v", mData.Source)
 		default:
-			sourceUrl, err := GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
-			if err != nil {
-				log.Error(ctx, "getMaterials:get resource path error",
-					log.Err(err),
-					log.Any("input", input),
-					log.Any("mData", mData))
-				return nil, err
+			source := string(mData.Source)
+			parts := strings.Split(source, "-")
+			if len(parts) != 2 {
+				log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+				return nil, constant.ErrInvalidArgs
 			}
-			if mData.FileType == entity.FileTypeDocument {
-				source := string(mData.Source)
-				parts := strings.Split(source, "-")
-				if len(parts) != 2 {
-					log.Error(ctx, "invalid resource id", log.String("resourceId", source))
-					return nil, constant.ErrInvalidArgs
-				}
-				sourceUrl = fmt.Sprintf("/assets/%s", parts[1])
-			}
-			materialItem.URL = sourceUrl
+			materialItem.URL = fmt.Sprintf("/assets/%s", parts[1])
+			//sourceUrl, err := GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
+			//if err != nil {
+			//	log.Error(ctx, "getMaterials:get resource path error",
+			//		log.Err(err),
+			//		log.Any("input", input),
+			//		log.Any("mData", mData))
+			//	return nil, err
+			//}
+			//if mData.FileType == entity.FileTypeDocument {
+			//	source := string(mData.Source)
+			//	parts := strings.Split(source, "-")
+			//	if len(parts) != 2 {
+			//		log.Error(ctx, "invalid resource id", log.String("resourceId", source))
+			//		return nil, constant.ErrInvalidArgs
+			//	}
+			//	sourceUrl = fmt.Sprintf("/assets/%s", parts[1])
+			//}
+			//materialItem.URL = sourceUrl
 		}
 		materials = append(materials, materialItem)
 	}
