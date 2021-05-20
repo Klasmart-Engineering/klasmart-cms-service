@@ -382,7 +382,11 @@ func loadAMSConfig(ctx context.Context) {
 }
 
 func loadH5PServiceConfig(ctx context.Context) {
-	config.H5P.EndPoint = assertGetEnv("h5p_endpoint")
+	config.H5P.EndPoint = constant.H5PServiceDefaultEndpoint
+	h5pEndpoint := os.Getenv("h5p_endpoint")
+	if h5pEndpoint != "" {
+		config.H5P.EndPoint = h5pEndpoint
+	}
 }
 
 func loadCORSConfig(ctx context.Context) {
