@@ -126,8 +126,11 @@ func (s Server) registeRoute() {
 		assessments.POST("/assessments_for_test", s.mustLogin, s.addAssessmentForTest)
 		assessments.GET("/assessments/:id", s.mustLogin, s.getAssessmentDetail)
 		assessments.PUT("/assessments/:id", s.mustLogin, s.updateAssessment)
-
 		assessments.GET("/assessments_summary", s.mustLogin, s.getAssessmentsSummary)
+
+		assessments.GET("/h5p_assessments", s.mustLogin, s.listH5PAssessments)
+		assessments.GET("/h5p_assessments/:id", s.mustLogin, s.getH5PAssessmentDetail)
+		assessments.PUT("/h5p_assessments/:id", s.mustLogin, s.updateH5PAssessment)
 	}
 
 	homeFunStudies := s.engine.Group("/v1")
