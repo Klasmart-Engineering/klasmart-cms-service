@@ -600,10 +600,10 @@ func (c *ContentPermissionMySchoolModel) getViewVisibilitySettingsType(ctx conte
 
 	//contains other schools but org
 	if containsSchools {
-		res = append(res, VisibilitySettingsTypeMySchools)
-	}
-	if containsOtherSchools {
 		res = append(res, VisibilitySettingsTypeAllSchools)
+		if !containsOtherSchools {
+			res = append(res, VisibilitySettingsTypeMySchools)
+		}
 	}
 
 	log.Info(ctx, "build visibility settings result",
