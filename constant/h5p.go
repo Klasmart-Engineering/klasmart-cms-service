@@ -14,4 +14,6 @@ const (
 	H5PGJSONPathImagePairCorrectPairsCount      = "additionanProp1.correct_amount"
 	H5PGJSONPathFlashCardsCardsNumber           = "params.cards.#"
 	H5PGJSONPathFlashCardsCorrectCardsCount     = "additionanProp1.correct_amount"
+
+	H5PServiceDefaultEndpoint = "https://api.alpha.kidsloop.net/assessment/graphql"
 )
