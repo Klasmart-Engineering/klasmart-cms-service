@@ -386,7 +386,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 	return contentProfiles, nil
 }
 func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Context, content []*entity.ContentWithVisibilitySettings, isView bool, user *entity.Operator) ([]*ContentProfile, error) {
-	profiles := make([]*ContentProfile, len(content))
+	profiles := make([]*ContentProfile, 0)
 
 	schoolsInfo, err := GetContentFilterModel().QueryUserSchools(ctx, user)
 	if err != nil {
@@ -430,12 +430,12 @@ func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Contex
 			log.Any("visibilitySettingType", visibilitySettingType),
 			log.Any("content", content))
 		for j := range visibilitySettingType {
-			profiles[i] = &ContentProfile{
+			profiles = append(profiles, &ContentProfile{
 				ContentType:        content[i].ContentType,
 				Status:             content[i].PublishStatus,
 				VisibilitySettings: visibilitySettingType[j],
 				Owner:              c.getOwnerType(ctx, content[i].Author, user),
-			}
+			})
 		}
 
 	}
