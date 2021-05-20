@@ -1281,6 +1281,16 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		}
 		temp.ExistFeedback = existFeedback
 
+		// verify is exist assessment
+		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
+			existAssessment, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), op, item.ID)
+			if err != nil {
+				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", item.ID))
+				return nil, err
+			}
+			temp.ExistAssessment = existAssessment
+		}
+
 		result = append(result, temp)
 	}
 
@@ -1636,6 +1646,16 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		return nil, err
 	}
 	result.ExistFeedback = existFeedback
+
+	// verify is exist assessment
+	if result.ClassType == entity.ScheduleClassTypeHomework && !result.IsHomeFun {
+		existAssessment, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), operator, result.ID)
+		if err != nil {
+			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", result.ID))
+			return nil, err
+		}
+		result.ExistAssessment = existAssessment
+	}
 
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
