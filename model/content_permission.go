@@ -71,7 +71,7 @@ func (c *ContentPermissionMySchoolModel) CheckCreateContentPermission(ctx contex
 		Owner:              OwnerTypeUser,
 	}
 
-	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeCreate, []*ContentProfile{&profile})
+	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModeCreate, []*ContentProfile{&profile})
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -95,7 +95,7 @@ func (c *ContentPermissionMySchoolModel) CheckRepublishContentsPermission(ctx co
 		log.Any("profiles", profiles),
 		log.Strings("cids", cids))
 
-	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModePublish, profiles)
+	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModePublish, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -118,7 +118,7 @@ func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx cont
 	log.Debug(ctx, "buildContentProfiles result",
 		log.Any("profiles", profiles))
 
-	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModePublish, profiles)
+	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModePublish, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -138,7 +138,7 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 		return false, err
 	}
 
-	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeView, profiles)
+	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModeView, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -162,7 +162,7 @@ func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx contex
 		log.Any("profiles", profiles),
 		log.String("cid", cid))
 
-	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeEdit, profiles)
+	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModeEdit, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -184,7 +184,7 @@ func (c *ContentPermissionMySchoolModel) CheckDeleteContentPermission(ctx contex
 		log.Strings("cids", cids),
 		log.Any("profiles", profiles))
 
-	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeRemove, profiles)
+	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModeRemove, profiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -236,7 +236,7 @@ func (c *ContentPermissionMySchoolModel) CheckReviewContentPermission(ctx contex
 	log.Debug(ctx, "GetReviewPermissionSets result",
 		log.Any("permissionSetList", permissionSetList))
 
-	err = permissionSetList.HasPermission(ctx, user)
+	err = permissionSetList.HasPermissionWithLogicalAnd(ctx, user)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
@@ -267,7 +267,7 @@ func (c *ContentPermissionMySchoolModel) CheckQueryContentPermission(ctx context
 		log.Any("contentProfiles", contentProfiles),
 		log.Any("user", user))
 
-	err = GetContentPermissionChecker().HasPermission(ctx, user, ContentPermissionModeView, contentProfiles)
+	err = GetContentPermissionChecker().HasPermissionWithLogicalAnd(ctx, user, ContentPermissionModeView, contentProfiles)
 	if err != nil {
 		log.Error(ctx, "No permission",
 			log.Err(err),
