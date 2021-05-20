@@ -74,7 +74,7 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 			return nil, err
 		}
 		if hasPermission {
-			schools, err := external.GetSchoolServiceProvider().BatchGet(ctx, operator, schoolInfo.AllSchool)
+			schools, err := external.GetSchoolServiceProvider().BatchGet(ctx, operator, schoolInfo.MySchool)
 			if err != nil {
 				log.Error(ctx, "GetSchoolServiceProvider.BatchGet error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
 				return nil, err
