@@ -741,6 +741,7 @@ type ScheduleViewDetail struct {
 	Students      []*ScheduleShortInfo `json:"students"`
 	RoomID        string               `json:"room_id"`
 	//LiveToken     string               `json:"live_token"`
+	ExistAssessment bool `json:"exist_assessment"`
 }
 
 type ScheduleTeachingLoadInput struct {

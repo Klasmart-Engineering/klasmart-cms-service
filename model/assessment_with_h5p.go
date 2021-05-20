@@ -171,20 +171,27 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 		if remainingTime < 0 {
 			remainingTime = 0
 		}
-		var completeRate float64
-		if v := roomMap[v.RoomID]; v != nil {
-			v.CompleteRate = completeRate
+
+		userIDs := make([]string, 0, len(v.Students))
+		for _, s := range v.Students {
+			userIDs = append(userIDs, s.ID)
 		}
+		contentIDs := make([]string, 0, len(v.LessonMaterials))
+		for _, lm := range v.LessonMaterials {
+			contentIDs = append(contentIDs, lm.ID)
+		}
+
 		newItem := entity.ListH5PAssessmentsResultItem{
 			ID:            v.ID,
 			Title:         v.Title,
 			TeacherNames:  teacherNames,
 			ClassName:     v.Class.Name,
 			DueAt:         v.Schedule.DueAt,
-			CompleteRate:  completeRate,
+			CompleteRate:  m.getRoomCompleteRate(roomMap[v.RoomID], userIDs, contentIDs),
 			RemainingTime: remainingTime,
 			CompleteAt:    v.CompleteTime,
 			ScheduleID:    v.ScheduleID,
+			CreateAt:      v.CreateAt,
 		}
 		result.Items = append(result.Items, &newItem)
 	}
@@ -233,7 +240,6 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		DueAt:            view.Schedule.DueAt,
 		LessonPlan:       entity.H5PAssessmentLessonPlan{},
 		LessonMaterials:  nil,
-		CompleteRate:     0,
 		CompleteAt:       view.CompleteTime,
 		RemainingTime:    0,
 		StudentViewItems: nil,
@@ -293,9 +299,6 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		log.Debug(ctx, "add h5p assessment detail: not found room", log.String("room_id", view.RoomID))
 		return &result, nil
 	}
-
-	// fill complete rate
-	result.CompleteRate = room.CompleteRate
 
 	// student view items
 	for _, s := range view.Students {
@@ -358,6 +361,7 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 			assessmentContents := make([]*entity.AssessmentH5PContentScore, 0, len(u.Scores))
 			assessmentContentMap := make(map[string]*entity.AssessmentH5PContentScore, len(u.Scores))
 			for _, s := range u.Scores {
+				total++
 				assessmentContent := entity.AssessmentH5PContentScore{
 					ContentID:        s.Content.ID,
 					ContentName:      s.Content.Name,
@@ -370,15 +374,12 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 				}
 				if len(assessmentContent.Answers) > 0 {
 					assessmentContent.Answer = assessmentContent.Answers[0]
+					attempted++
 				}
 				if len(s.TeacherScores) > 0 {
 					assessmentContent.AchievedScore = s.TeacherScores[0].Score
 				} else if len(s.Score.Scores) > 0 {
 					assessmentContent.AchievedScore = s.Score.Scores[len(s.Score.Scores)-1]
-				}
-				total++
-				if len(s.Score.Answers) > 0 {
-					attempted++
 				}
 				assessmentContents = append(assessmentContents, &assessmentContent)
 				assessmentContentMap[assessmentContent.ContentID] = &assessmentContent
@@ -398,17 +399,46 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
 		}
 		room := entity.AssessmentH5PRoom{
-			CompleteRate:    0,
 			AnyoneAttempted: attempted > 0,
 			Users:           assessmentUsers,
 			UserMap:         assessmentUserMap,
 		}
-		if total > 0 {
-			room.CompleteRate = float64(attempted) / float64(total)
-		}
 		result[roomID] = &room
 	}
 	return result, nil
+}
+
+func (m *h5pAssessmentModel) getRoomCompleteRate(room *entity.AssessmentH5PRoom, userIDs []string, contentIDs []string) float64 {
+	if room == nil {
+		return 0
+	}
+	userIDExistsMap := map[string]bool{}
+	for _, uid := range userIDs {
+		userIDExistsMap[uid] = true
+	}
+	contentIDExistsMap := map[string]bool{}
+	for _, cid := range contentIDs {
+		contentIDExistsMap[cid] = true
+	}
+	total, attempted := 0, 0
+	for _, u := range room.Users {
+		if !userIDExistsMap[u.UserID] {
+			continue
+		}
+		for _, c := range u.Contents {
+			if !contentIDExistsMap[c.ContentID] {
+				continue
+			}
+			total++
+			if len(c.Answers) > 0 {
+				attempted++
+			}
+		}
+	}
+	if total > 0 {
+		return float64(attempted) / float64(total)
+	}
+	return 0
 }
 
 func (m *h5pAssessmentModel) getRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
@@ -1056,4 +1086,51 @@ func (m *h5pAssessmentModel) HasAnyoneAttemptInRoom(ctx context.Context, tx *dbo
 		return false, nil
 	}
 	return room.AnyoneAttempted, nil
+}
+
+type H5pAssessmentItemsOrder struct {
+	Items   []*entity.ListH5PAssessmentsResultItem
+	OrderBy entity.AssessmentOrderBy
+}
+
+func NewH5pAssessmentItemsOrder(items []*entity.ListH5PAssessmentsResultItem, orderBy entity.AssessmentOrderBy) *H5pAssessmentItemsOrder {
+	return &H5pAssessmentItemsOrder{Items: items, OrderBy: orderBy}
+}
+
+func (h *H5pAssessmentItemsOrder) Len() int {
+	return len(h.Items)
+}
+
+func (h *H5pAssessmentItemsOrder) Less(i, j int) bool {
+	switch h.OrderBy {
+	case entity.ListAssessmentsOrderByCompleteTime:
+		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt > 0 {
+			return true
+		}
+		if h.Items[i].CompleteAt != 0 && h.Items[j].CompleteAt == 0 {
+			return false
+		}
+		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt == 0 {
+			return h.Items[i].CreateAt < h.Items[j].CreateAt
+		}
+	case entity.ListAssessmentsOrderByCompleteTimeDesc:
+		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt > 0 {
+			return false
+		}
+		if h.Items[i].CompleteAt != 0 && h.Items[j].CompleteAt == 0 {
+			return true
+		}
+		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt == 0 {
+			return h.Items[i].CreateAt > h.Items[j].CreateAt
+		}
+	case entity.ListAssessmentsOrderByCreateAt:
+		return h.Items[i].CreateAt < h.Items[j].CreateAt
+	case entity.ListAssessmentsOrderByCreateAtDesc:
+		return h.Items[i].CreateAt > h.Items[j].CreateAt
+	}
+	return false
+}
+
+func (h *H5pAssessmentItemsOrder) Swap(i, j int) {
+	h.Items[i], h.Items[j] = h.Items[j], h.Items[i]
 }
