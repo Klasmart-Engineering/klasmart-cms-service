@@ -119,3 +119,24 @@ func TestAmsSchoolService_GetByUsers(t *testing.T) {
 		}
 	}
 }
+
+func TestAmsSchoolService_BatchGet(t *testing.T) {
+	ids := []string{"4460deda-ed0c-42d1-902d-8513070493be", "dc910c1e-23ac-4e29-a77e-b11b445be25a"}
+	schools, err := GetSchoolServiceProvider().BatchGet(context.TODO(), testOperator, ids)
+	if err != nil {
+		t.Errorf("GetSchoolServiceProvider().BatchGet() error = %v", err)
+		return
+	}
+
+	if len(schools) != len(ids) {
+		t.Error("GetSchoolServiceProvider().BatchGet() get invalid slice")
+		return
+	}
+
+	for _, school := range schools {
+		if school == nil {
+			t.Error("GetSchoolServiceProvider().BatchGet() get null")
+			return
+		}
+	}
+}
