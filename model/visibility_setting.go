@@ -62,10 +62,13 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 			return nil, err
 		}
 		for i := range schools {
-			ret = append(ret, &entity.VisibilitySetting{
-				ID:   schools[i].ID,
-				Name: schools[i].Name,
-			})
+			if schools[i].Valid {
+				ret = append(ret, &entity.VisibilitySetting{
+					ID:   schools[i].ID,
+					Name: schools[i].Name,
+				})
+			}
+
 		}
 	} else {
 		hasPermission, err = external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, operator, external.CreateMySchoolsContent223)
@@ -80,10 +83,12 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 				return nil, err
 			}
 			for i := range schools {
-				ret = append(ret, &entity.VisibilitySetting{
-					ID:   schools[i].ID,
-					Name: schools[i].Name,
-				})
+				if schools[i].Valid {
+					ret = append(ret, &entity.VisibilitySetting{
+						ID:   schools[i].ID,
+						Name: schools[i].Name,
+					})
+				}
 			}
 		}
 	}
