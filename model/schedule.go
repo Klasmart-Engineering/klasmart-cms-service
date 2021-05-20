@@ -2660,6 +2660,15 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	}
 	result.ExistFeedback = existFeedback
 
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+		existAssessment, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), op, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
+			return nil, err
+		}
+		result.ExistAssessment = existAssessment
+	}
+
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
 		err := json.Unmarshal([]byte(schedule.Attachment), &attachment)
