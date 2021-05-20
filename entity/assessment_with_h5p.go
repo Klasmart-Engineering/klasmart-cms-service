@@ -60,16 +60,16 @@ type GetH5PAssessmentDetailResult struct {
 }
 
 type H5PAssessmentLessonPlan struct {
-	ID      string
-	Name    string
-	Comment string
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Comment string `json:"comment"`
 }
 
 type H5PAssessmentLessonMaterial struct {
-	ID      string
-	Name    string
-	Comment string
-	Checked bool
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Comment string `json:"comment"`
+	Checked bool   `json:"checked"`
 }
 
 type H5PAssessmentStudentViewItem struct {

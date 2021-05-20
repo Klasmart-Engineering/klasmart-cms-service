@@ -264,9 +264,12 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// remaining time
 	if view.Schedule.DueAt != 0 {
-		result.RemainingTime = time.Now().Unix() - view.Schedule.DueAt
+		result.RemainingTime = view.Schedule.DueAt - time.Now().Unix()
 	} else {
-		result.RemainingTime = time.Now().Unix() - view.CreateAt
+		result.RemainingTime = time.Unix(view.CreateAt, 0).AddDate(0, 0, constant.ReportTeachingLoadDays).Unix() - time.Now().Unix()
+	}
+	if result.RemainingTime < 0 {
+		result.RemainingTime = 0
 	}
 
 	// fill lesson plan and lesson materials
@@ -438,6 +441,14 @@ func (m *h5pAssessmentModel) getRoomCommentMap(ctx context.Context, operator *en
 	for roomID, users := range commentMap {
 		result[roomID] = make(map[string][]string, len(users))
 		for _, u := range users {
+			if u.User == nil {
+				log.Debug(ctx, "get room comment map: user is nil",
+					log.Strings("room_ids", roomIDs),
+					log.Any("comment_map", commentMap),
+					log.Any("operator", operator),
+				)
+				continue
+			}
 			for _, c := range u.TeacherComments {
 				result[roomID][u.User.UserID] = append(result[roomID][u.User.UserID], c.Comment)
 			}
@@ -922,7 +933,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 			newAttendance := entity.AssessmentAttendance{
 				ID:           utils.NewID(),
 				AssessmentID: scheduleIDToAssessmentIDMap[item.ScheduleID],
-				AttendanceID: attendance.ScheduleID,
+				AttendanceID: attendance.RelationID,
 				Checked:      true,
 			}
 			switch attendance.RelationType {
@@ -961,7 +972,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	for _, item := range input {
 		scheduleMap[item.ScheduleID] = item
 	}
-	for _, a := range assessments {
+	for _, a := range newAssessments {
 		schedule := scheduleMap[a.ScheduleID]
 		if schedule == nil {
 			errMsg := "add study assessment: not found schedule by id"
@@ -999,7 +1010,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	}
 
 	var newAssessmentIDs []string
-	for _, a := range assessments {
+	for _, a := range newAssessments {
 		newAssessmentIDs = append(newAssessmentIDs, a.ID)
 	}
 

@@ -2,10 +2,11 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"sync"
 )
 
 type IVisibilitySettingModel interface {
@@ -22,7 +23,7 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 	//	log.Error(ctx, "query error", log.Err(err), log.Any("condition", condition))
 	//	return nil, err
 	//}
-	ret, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateContentPage201, operator)
+	ret, err := GetContentPermissionMySchoolModel().GetPermissionOrgs(ctx, external.CreateContentPage201, operator)
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
 		return nil, err
@@ -62,7 +63,7 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 	}
 
 	if contentType == entity.ContentTypePlan {
-		ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonPlan221, operator)
+		ret2, err := GetContentPermissionMySchoolModel().GetPermissionOrgs(ctx, external.CreateLessonPlan221, operator)
 		if err != nil {
 			log.Error(ctx, "query lesson error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
 			return nil, err
@@ -74,7 +75,7 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 			}
 		}
 	} else if contentType == entity.ContentTypeMaterial {
-		ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonMaterial220, operator)
+		ret2, err := GetContentPermissionMySchoolModel().GetPermissionOrgs(ctx, external.CreateLessonMaterial220, operator)
 		if err != nil {
 			log.Error(ctx, "query material error", log.Err(err), log.Int("contentType", contentType), log.Any("operator", operator))
 			return nil, err
@@ -98,18 +99,18 @@ func (m *visibilitySettingModel) Query(ctx context.Context, contentType int, ope
 }
 
 func (m *visibilitySettingModel) GetByID(ctx context.Context, id string, operator *entity.Operator) (*entity.VisibilitySetting, error) {
-	ret, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateContentPage201, operator)
+	ret, err := GetContentPermissionMySchoolModel().GetPermissionOrgs(ctx, external.CreateContentPage201, operator)
 	if err != nil {
 		log.Error(ctx, "query error", log.Err(err), log.String("id", id), log.Any("operator", operator))
 		return nil, err
 	}
-	ret2, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonPlan221, operator)
+	ret2, err := GetContentPermissionMySchoolModel().GetPermissionOrgs(ctx, external.CreateLessonPlan221, operator)
 	if err != nil {
 		log.Error(ctx, "query lesson error", log.Err(err), log.String("id", id), log.Any("operator", operator))
 		return nil, err
 	}
 	ret = append(ret, ret2...)
-	ret3, err := GetContentPermissionModel().GetPermissionedOrgs(ctx, external.CreateLessonMaterial220, operator)
+	ret3, err := GetContentPermissionMySchoolModel().GetPermissionOrgs(ctx, external.CreateLessonMaterial220, operator)
 	if err != nil {
 		log.Error(ctx, "query material error", log.Err(err), log.String("id", id), log.Any("operator", operator))
 		return nil, err

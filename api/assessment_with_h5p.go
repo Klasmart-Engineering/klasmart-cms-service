@@ -125,7 +125,7 @@ func (s *Server) getH5PAssessmentDetail(c *gin.Context) {
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /h5p_assessments/{id}/update [put]
+// @Router /h5p_assessments/{id} [put]
 func (s *Server) updateH5PAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 

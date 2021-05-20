@@ -40,15 +40,16 @@ func (s *Server) approveBulk(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "can't bind data")
 		return
 	}
-	err = s.checkApproveAuthByCIDs(ctx, req.IDs, external.ApprovePendingContent271, op)
-	if err == model.ErrNoAuth {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
-		return
-	}
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, true, req.IDs, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	// extract reject reason
 	err = model.GetReviewerModel().ApproveBulk(ctx, dbo.MustGetDB(ctx), req.IDs, op)
 	switch err {
@@ -87,30 +88,16 @@ func (s *Server) approve(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "cid can't be empty string")
 		return
 	}
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.ApprovePendingContent271)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, true, []string{cid}, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
 	if !hasPermission {
-		content, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
-		if err != nil {
-			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
-		}
-
-		hasPermission, err = external.GetPermissionServiceProvider().HasAnySchoolPermission(ctx, op, content.PublishScope, external.ApprovePendingContent271)
-		if err != nil {
-			log.Error(ctx, "approve", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
-		}
-		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(GeneralUnknown))
-			return
-		}
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
 	}
+
 	err = model.GetReviewerModel().Approve(ctx, dbo.MustGetDB(ctx), cid, op)
 	switch err {
 	case model.ErrNoContent:
@@ -161,30 +148,7 @@ func (s *Server) reject(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "can't bind data")
 		return
 	}
-	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, external.RejectPendingContent272)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	if !hasPermission {
-		content, err := model.GetContentModel().GetContentByID(ctx, dbo.MustGetDB(ctx), cid, op)
-		if err != nil {
-			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
-		}
-
-		hasPermission, err = external.GetPermissionServiceProvider().HasAnySchoolPermission(ctx, op, content.PublishScope, external.RejectPendingContent272)
-		if err != nil {
-			log.Error(ctx, "reject", log.Any("op", op), log.String("cid", cid), log.Err(err))
-			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-			return
-		}
-		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(GeneralUnknown))
-			return
-		}
-	}
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, false, []string{cid}, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -193,6 +157,7 @@ func (s *Server) reject(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
+
 	// extract reject reason
 	err = model.GetReviewerModel().Reject(ctx, dbo.MustGetDB(ctx), cid, req.Reasons, req.Remark, op)
 	switch err {
@@ -238,15 +203,16 @@ func (s *Server) rejectBulk(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "can't bind data")
 		return
 	}
-	err = s.checkApproveAuthByCIDs(ctx, req.IDs, external.RejectPendingContent272, op)
-	if err == model.ErrNoAuth {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
-		return
-	}
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckReviewContentPermission(ctx, false, req.IDs, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
 	}
+	if !hasPermission {
+		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		return
+	}
+
 	// extract reject reason
 	err = model.GetReviewerModel().RejectBulk(ctx, dbo.MustGetDB(ctx), req.IDs, req.Reasons, req.Remark, op)
 	switch err {

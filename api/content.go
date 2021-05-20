@@ -9,7 +9,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -52,7 +51,7 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 
-	hasPermission, err := model.GetContentPermissionModel().CheckCreateContentPermission(ctx, data, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckCreateContentPermission(ctx, data, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -70,6 +69,8 @@ func (s *Server) createContent(c *gin.Context) {
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrResourceNotFound:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoContentData:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -116,21 +117,11 @@ func (s *Server) copyContent(c *gin.Context) {
 		return
 	}
 
-	// hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermission(ctx, op, permission)
-	// if err != nil {
-	// 	log.Error(ctx, "get permission failed", log.Err(err))
-	// 	c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-	// 	return
-	// }
-	// //有permission，直接返回
-	// //if user has no permission return
-	// if !hasPermission {
-	// 	c.JSON(http.StatusForbidden, L(GeneralUnknown))
-	// 	return
-	// }
 	cid, err := model.GetContentModel().CopyContentTx(ctx, data.ContentID, data.Deep, op)
 	switch err {
 	case model.ErrNoContentData:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
@@ -162,7 +153,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermission(ctx, ids.ID, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckRepublishContentsPermission(ctx, ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -178,6 +169,10 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		c.JSON(http.StatusOK, L(GeneralUnknown))
 	case model.ErrInvalidContentStatusToPublish:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrPlanHasArchivedMaterials:
+		c.JSON(http.StatusBadRequest, L(LibraryIncludeArchivedMaterials))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -206,7 +201,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckPublishContentsPermission(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -221,6 +216,10 @@ func (s *Server) publishContent(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrPlanHasArchivedMaterials:
+		c.JSON(http.StatusBadRequest, L(LibraryIncludeArchivedMaterials))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -251,7 +250,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckPublishContentsPermissionBatch(ctx, cid, data.Scope, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckPublishContentsPermission(ctx, cid, data.Scope, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -265,6 +264,10 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 	switch err {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrPlanHasArchivedMaterials:
+		c.JSON(http.StatusBadRequest, L(LibraryIncludeArchivedMaterials))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -295,7 +298,7 @@ func (s *Server) getContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
-	hasPermission, err := model.GetContentPermissionModel().CheckGetContentPermission(ctx, cid, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckGetContentPermission(ctx, cid, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -309,6 +312,8 @@ func (s *Server) getContent(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -337,7 +342,7 @@ func (s *Server) updateContent(c *gin.Context) {
 		return
 	}
 
-	hasPermission, err := model.GetContentPermissionModel().CheckUpdateContentPermission(ctx, cid, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckUpdateContentPermission(ctx, cid, op)
 	if err != nil {
 		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 		if ok {
@@ -360,6 +365,8 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrSuggestTimeTooSmall:
 		c.JSON(http.StatusBadRequest, L(LibraryErrorPlanDuration))
 	case model.ErrInvalidResourceID:
@@ -405,7 +412,7 @@ func (s *Server) lockContent(c *gin.Context) {
 	op := s.getOperator(c)
 	cid := c.Param("content_id")
 
-	hasPermission, err := model.GetContentPermissionModel().CheckLockContentPermission(ctx, cid, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckUpdateContentPermission(ctx, cid, op)
 	if err != nil {
 		lockedByErr, ok := err.(*model.ErrContentAlreadyLocked)
 		if ok {
@@ -430,6 +437,8 @@ func (s *Server) lockContent(c *gin.Context) {
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrInvalidPublishStatus:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
@@ -466,7 +475,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		return
 	}
 
-	hasPermission, err := model.GetContentPermissionModel().CheckDeleteContentPermission(ctx, ids.ID, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckDeleteContentPermission(ctx, ids.ID, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -509,7 +518,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 	op := s.getOperator(c)
 	cid := c.Param("content_id")
 
-	hasPermission, err := model.GetContentPermissionModel().CheckDeleteContentPermission(ctx, []string{cid}, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckDeleteContentPermission(ctx, []string{cid}, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -531,6 +540,8 @@ func (s *Server) deleteContent(c *gin.Context) {
 		c.JSON(http.StatusConflict, L(GeneralUnknown))
 	case model.ErrNoContent:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -556,6 +567,8 @@ func (s *Server) contentDataCount(c *gin.Context) {
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, res)
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -571,6 +584,7 @@ func (s *Server) contentDataCount(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program_group query string false "search program group"
+// @Param submenu query string false "search page sub menu"
 // @Param program query string false "search content program"
 // @Param content_name query string false "search content name"
 // @Param path query string false "search content path"
@@ -587,9 +601,17 @@ func (s *Server) contentDataCount(c *gin.Context) {
 func (s *Server) queryContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
+	author := c.Query("author")
+	//filter unauthed visibility settings
+	if author != constant.Self {
+		isTerminal := s.filterPublishedContent(c, &condition, op)
+		if isTerminal {
+			return
+		}
+	}
 
-	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -598,13 +620,12 @@ func (s *Server) queryContent(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-	author := c.Query("author")
 	total := 0
 	var results []*entity.ContentInfoWithDetails
 	if author == constant.Self {
-		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
+		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	} else {
-		total, results, err = model.GetContentModel().SearchUserContent(ctx, dbo.MustGetDB(ctx), condition, op)
+		total, results, err = model.GetContentModel().SearchUserContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	}
 	switch err {
 	case nil:
@@ -612,6 +633,10 @@ func (s *Server) queryContent(c *gin.Context) {
 			Total:       total,
 			ContentList: results,
 		})
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -627,6 +652,7 @@ func (s *Server) queryContent(c *gin.Context) {
 // @Param program query string false "search content program"
 // @Param content_name query string false "search content name"
 // @Param program_group query string false "search program group"
+// @Param submenu query string false "search page sub menu"
 // @Param source_type query string false "search content source type"
 // @Param order_by query string false "search content order by column name" Enums(id, -id, content_name, -content_name, create_at, -create_at, update_at, -update_at)
 // @Param page_size query int false "content list page size"
@@ -639,24 +665,19 @@ func (s *Server) queryContent(c *gin.Context) {
 func (s *Server) queryAuthContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 
-	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
-		return
-	}
-	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().SearchAuthedContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
 		})
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -672,6 +693,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param content_name query string false "search content name"
+// @Param submenu query string false "search page sub menu"
 // @Param program query string false "search content program"
 // @Param program_group query string false "search program group"
 // @Param path query string false "search content path"
@@ -689,10 +711,18 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 func (s *Server) queryFolderContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
+	author := c.Query("author")
 
-	//TODO: add check folder permission
-	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePublished, op)
+	//if query is not self, filter conditions
+	if author != constant.Self {
+		isTerminal := s.filterPublishedContent(c, &condition, op)
+		if isTerminal {
+			return
+		}
+	}
+
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -701,13 +731,12 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralUnknown))
 		return
 	}
-	author := c.Query("author")
 	total := 0
 	var results []*entity.FolderContentData
 	if author == constant.Self {
-		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
+		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	} else {
-		total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), condition, op)
+		total, results, err = model.GetContentModel().SearchUserFolderContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	}
 	switch err {
 	case nil:
@@ -717,6 +746,10 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 		})
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -733,6 +766,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 // @Param program query string false "search content program"
 // @Param program_group query string false "search program group"
 // @Param content_name query string false "search content name"
+// @Param submenu query string false "search page sub menu"
 // @Param source_type query string false "search content source type"
 // @Param scope query string false "search content scope"
 // @Param publish_status query string  false "search content publish status" Enums(published, draft, pending, rejected, archive)
@@ -749,9 +783,10 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
+	condition.Author = op.UserID
 
-	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePrivate, op)
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -761,7 +796,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 		return
 	}
 
-	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
@@ -770,6 +805,10 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 		})
 	case model.ErrInvalidVisibleScope:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -785,6 +824,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 // @Param content_type query string false "search content type"
 // @Param scope query string false "search content scope"
 // @Param program query string false "search content program"
+// @Param submenu query string false "search page sub menu"
 // @Param content_name query string false "search content name"
 // @Param program_group query string false "search program group"
 // @Param source_type query string false "search content source type"
@@ -802,9 +842,15 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
 
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 
-	hasPermission, err := model.GetContentPermissionModel().CheckQueryContentPermission(ctx, condition, model.QueryModePending, op)
+	//filter pending visibility settings
+	isTerminal := s.filterPendingContent(c, &condition, op)
+	if isTerminal {
+		return
+	}
+
+	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 		return
@@ -814,13 +860,17 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 		return
 	}
 
-	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	total, results, err := model.GetContentModel().ListPendingContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, &entity.ContentInfoWithDetailsResponse{
 			Total:       total,
 			ContentList: results,
 		})
+	case model.ErrInvalidVisibilitySetting:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrNoPermissionToQuery:
+		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -842,8 +892,49 @@ func parseOrg(c *gin.Context, u *entity.Operator) string {
 	return author
 }
 
-func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
+func (s *Server) filterPendingContent(c *gin.Context, condition *entity.ContentConditionRequest, op *entity.Operator) bool {
+	ctx := c.Request.Context()
+	err := model.GetContentFilterModel().FilterPendingContent(ctx, condition, op)
+	if err == model.ErrNoAvailableVisibilitySettings {
+		//no available visibility settings
+		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+			Total:       0,
+			ContentList: nil,
+		})
+		return true
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return true
+	}
+	return false
+}
 
+func (s *Server) filterPublishedContent(c *gin.Context, condition *entity.ContentConditionRequest, op *entity.Operator) bool {
+	ctx := c.Request.Context()
+	var err error
+	if c.Query("submenu") == constant.SubMenuLibraryArchived {
+		err = model.GetContentFilterModel().FilterArchivedContent(ctx, condition, op)
+	} else {
+		err = model.GetContentFilterModel().FilterPublishContent(ctx, condition, op)
+	}
+	//no available content visibility settings, return nil
+	if err == model.ErrNoAvailableVisibilitySettings {
+		//no available visibility settings
+		c.JSON(http.StatusOK, &entity.FolderContentInfoWithDetailsResponse{
+			Total:       0,
+			ContentList: make([]*entity.FolderContentData, 0),
+		})
+		return true
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return true
+	}
+	return false
+}
+
+func (s *Server) queryContentCondition(c *gin.Context, op *entity.Operator) entity.ContentConditionRequest {
 	contentTypeStr := c.Query("content_type")
 	//keywords := strings.Split(strings.TrimSpace(c.Query("name")), " ")
 	scope := c.Query("scope")
@@ -851,11 +942,11 @@ func queryCondition(c *gin.Context, op *entity.Operator) da.ContentCondition {
 	programs := c.Query("programs")
 	path := c.Query("path")
 	programGroup := c.Query("program_group")
-	condition := da.ContentCondition{
+	condition := entity.ContentConditionRequest{
 		Author:      parseAuthor(c, op),
 		Org:         parseOrg(c, op),
 		DirPath:     path,
-		OrderBy:     da.NewContentOrderBy(c.Query("order_by")),
+		OrderBy:     c.Query("order_by"),
 		Pager:       utils.GetPager(c.Query("page"), c.Query("page_size")),
 		Name:        strings.TrimSpace(c.Query("name")),
 		ContentName: strings.TrimSpace(c.Query("content_name")),
