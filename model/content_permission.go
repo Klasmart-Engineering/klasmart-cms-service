@@ -401,6 +401,9 @@ func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Contex
 		visibilitySettingType := make([]VisibilitySettingsType, 0)
 
 		if isView {
+			log.Debug(ctx, "getViewVisibilitySettingsType",
+				log.Any("schoolsInfo", schoolsInfo),
+				log.Any("content", content))
 			vsType, err := c.getViewVisibilitySettingsType(ctx, content[i].VisibilitySettings, schoolsInfo, user)
 			if err != nil {
 				log.Error(ctx, "getViewVisibilitySettingsType failed",
@@ -410,6 +413,9 @@ func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Contex
 			}
 			visibilitySettingType = append(visibilitySettingType, vsType...)
 		} else {
+			log.Debug(ctx, "getVisibilitySettingsType",
+				log.Any("schoolsInfo", schoolsInfo),
+				log.Any("content", content))
 			vsType, err := c.getVisibilitySettingsType(ctx, content[i].VisibilitySettings, schoolsInfo, user)
 			if err != nil {
 				log.Error(ctx, "getVisibilitySettingsType failed",
@@ -419,7 +425,10 @@ func (c *ContentPermissionMySchoolModel) buildContentProfiles(ctx context.Contex
 			}
 			visibilitySettingType = append(visibilitySettingType, vsType)
 		}
-
+		log.Debug(ctx, "getVisibilitySettingsType result",
+			log.Any("schoolsInfo", schoolsInfo),
+			log.Any("visibilitySettingType", visibilitySettingType),
+			log.Any("content", content))
 		for j := range visibilitySettingType {
 			profiles[i] = &ContentProfile{
 				ContentType:        content[i].ContentType,
@@ -538,6 +547,13 @@ func (c *ContentPermissionMySchoolModel) getViewVisibilitySettingsType(ctx conte
 	if containsOtherSchools {
 		res = append(res, VisibilitySettingsTypeAllSchools)
 	}
+
+	log.Info(ctx, "build visibility settings result",
+		log.Strings("visibilitySettings", visibilitySettings),
+		log.Bool("containsOrg", containsOrg),
+		log.Bool("containsOtherSchools", containsOtherSchools),
+		log.Bool("containsSchools", containsSchools),
+		log.Any("res", res))
 	//only contains my schools
 	return res, nil
 }
