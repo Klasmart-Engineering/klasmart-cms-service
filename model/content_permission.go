@@ -20,11 +20,6 @@ var (
 	ErrEmptyContentList         = errors.New("content list is nil")
 )
 
-type OrgIDAndName struct {
-	ID   string
-	Name string
-}
-
 type IContentPermissionMySchoolModel interface {
 	CheckCreateContentPermission(ctx context.Context, data entity.CreateContentRequest, user *entity.Operator) (bool, error)
 	CheckPublishContentsPermission(ctx context.Context, cid string, scopes []string, user *entity.Operator) (bool, error)
@@ -38,7 +33,7 @@ type IContentPermissionMySchoolModel interface {
 
 	CheckReviewContentPermission(ctx context.Context, isApprove bool, cids []string, user *entity.Operator) (bool, error)
 
-	GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]OrgIDAndName, error)
+	GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]entity.OrganizationOrSchool, error)
 }
 
 type ContentPermissionMySchoolModel struct {
@@ -333,6 +328,7 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 	}
 
 	publishStatus := condition.PublishStatus
+	publishAssetsStatus := condition.PublishStatus
 	if len(publishStatus) == 0 {
 		publishStatus = []string{
 			entity.ContentStatusPublished,
@@ -342,6 +338,9 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 			entity.ContentStatusAttachment,
 			entity.ContentStatusHidden,
 			entity.ContentStatusArchive}
+		publishAssetsStatus = []string{
+			entity.ContentStatusPublished,
+		}
 	}
 	visibilitySettings := VisibilitySettingsTypeOrgWithAllSchools
 
@@ -355,27 +354,33 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 			return nil, err
 		}
 		visibilitySetting, err := c.getVisibilitySettingsType(ctx, condition.VisibilitySettings, schoolsInfo, user)
-		log.Error(ctx, "getVisibilitySettingsType failed",
-			log.Err(err),
-			log.Any("condition.VisibilitySettings", condition.VisibilitySettings),
-			log.Any("user", user))
+		if err != nil {
+			log.Error(ctx, "getVisibilitySettingsType failed",
+				log.Err(err),
+				log.Any("condition.VisibilitySettings", condition.VisibilitySettings),
+				log.Any("user", user))
+			return nil, err
+		}
 		visibilitySettings = visibilitySetting
-		return nil, err
 	}
 	author := OwnerTypeOthers
 	if condition.Author != "" {
 		author = c.getOwnerType(ctx, condition.Author, user)
 	}
 
-	contentProfiles := make([]*ContentProfile, len(contentTypes)*len(publishStatus))
+	contentProfiles := make([]*ContentProfile, 0)
 	for i := range contentTypes {
-		for j := range publishStatus {
-			contentProfiles[j+i*len(publishStatus)] = &ContentProfile{
+		tempPublishStatus := publishStatus
+		if contentTypes[i] == entity.ContentTypeAssets {
+			tempPublishStatus = publishAssetsStatus
+		}
+		for j := range tempPublishStatus {
+			contentProfiles = append(contentProfiles, &ContentProfile{
 				ContentType:        entity.ContentType(contentTypes[i]),
 				Status:             entity.ContentPublishStatus(publishStatus[j]),
 				VisibilitySettings: visibilitySettings,
 				Owner:              author,
-			}
+			})
 		}
 	}
 	return contentProfiles, nil
@@ -462,31 +467,33 @@ func (c *ContentPermissionMySchoolModel) getVisibilitySettingsType(ctx context.C
 	return VisibilitySettingsTypeMySchools, nil
 }
 
-func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]OrgIDAndName, error) {
+func (s *ContentPermissionMySchoolModel) GetPermissionOrgs(ctx context.Context, permission external.PermissionName, op *entity.Operator) ([]entity.OrganizationOrSchool, error) {
 	schools, err := external.GetSchoolServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil {
 		log.Error(ctx, "get permission orgs failed", log.Err(err))
 		return nil, err
 	}
-	entities := make([]OrgIDAndName, 0)
+	entities := make([]entity.OrganizationOrSchool, 0)
 	for i := range schools {
-		entities = append(entities, OrgIDAndName{
+		entities = append(entities, entity.OrganizationOrSchool{
 			ID:   schools[i].ID,
 			Name: schools[i].Name,
 		})
 	}
-	orgs, err := external.GetOrganizationServiceProvider().BatchGet(ctx, op, []string{op.OrgID})
+	orgs, err := external.GetOrganizationServiceProvider().GetByPermission(ctx, op, permission)
 	if err != nil || len(orgs) < 1 {
 		log.Error(ctx, "get org info failed", log.Err(err))
 		return nil, err
 	}
-	if !orgs[0].Valid {
-		log.Warn(ctx, "invalid value", log.String("org_id", op.OrgID))
+	for i := range orgs {
+		if orgs[i].ID == op.OrgID {
+			entities = append(entities, entity.OrganizationOrSchool{
+				ID:   op.OrgID,
+				Name: orgs[0].Name,
+			})
+		}
 	}
-	entities = append(entities, OrgIDAndName{
-		ID:   op.OrgID,
-		Name: orgs[0].Name,
-	})
+
 	return entities, nil
 }
 

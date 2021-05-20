@@ -206,7 +206,7 @@ func (cf *ContentFilterModel) QueryUserSchools(ctx context.Context, user *entity
 		schoolInfo.AllSchool[i] = schools[i].ID
 	}
 	for i := range mySchools {
-		schoolInfo.AllSchool[i] = mySchools[i].ID
+		schoolInfo.MySchool[i] = mySchools[i].ID
 	}
 
 	return schoolInfo, nil
