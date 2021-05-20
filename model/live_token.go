@@ -331,24 +331,6 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 				return nil, constant.ErrInvalidArgs
 			}
 			materialItem.URL = fmt.Sprintf("/assets/%s", parts[1])
-			//sourceUrl, err := GetResourceUploaderModel().GetResourcePath(ctx, string(mData.Source))
-			//if err != nil {
-			//	log.Error(ctx, "getMaterials:get resource path error",
-			//		log.Err(err),
-			//		log.Any("input", input),
-			//		log.Any("mData", mData))
-			//	return nil, err
-			//}
-			//if mData.FileType == entity.FileTypeDocument {
-			//	source := string(mData.Source)
-			//	parts := strings.Split(source, "-")
-			//	if len(parts) != 2 {
-			//		log.Error(ctx, "invalid resource id", log.String("resourceId", source))
-			//		return nil, constant.ErrInvalidArgs
-			//	}
-			//	sourceUrl = fmt.Sprintf("/assets/%s", parts[1])
-			//}
-			//materialItem.URL = sourceUrl
 		}
 		materials = append(materials, materialItem)
 	}
