@@ -26,6 +26,8 @@ type IOutcomeAssessmentModel interface {
 }
 
 var (
+	ErrAssessmentHasCompleted = errors.New("assessment has completed")
+
 	outcomeAssessmentModelInstance     IOutcomeAssessmentModel
 	outcomeAssessmentModelInstanceOnce = sync.Once{}
 )
@@ -162,6 +164,7 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 			log.Err(err),
 			log.String("assessment_id", id),
 		)
+		return nil, err
 	} else {
 		contentIDs = append(contentIDs, plan.ContentID)
 	}
@@ -170,6 +173,7 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 			log.Err(err),
 			log.String("assessment_id", id),
 		)
+		return nil, err
 	} else {
 		for _, m := range materials {
 			contentIDs = append(contentIDs, m.ContentID)
@@ -247,13 +251,13 @@ func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, op
 		err     error
 	)
 	if err = checker.SearchAllPermissions(ctx); err != nil {
-		log.Error(ctx, "List: checker.SearchAllPermissions: search failed",
-			log.Any("operator", operator),
-			log.Any("args", args),
-		)
 		return nil, err
 	}
 	if !checker.CheckStatus(args.Status.Value) {
+		log.Error(ctx, "list outcome assessments: check status failed",
+			log.Any("args", args),
+			log.Any("checker", checker),
+		)
 		return nil, constant.ErrForbidden
 	}
 
@@ -392,13 +396,13 @@ func (m *outcomeAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext,
 		err     error
 	)
 	if err = checker.SearchAllPermissions(ctx); err != nil {
-		log.Error(ctx, "List: checker.SearchAllPermissions: search failed",
-			log.Any("operator", operator),
-			log.Any("args", args),
-		)
 		return nil, err
 	}
 	if args.Status.Valid && !checker.CheckStatus(args.Status.Value) {
+		log.Error(ctx, "get outcome summary: check status failed",
+			log.Any("args", args),
+			log.Any("checker", checker),
+		)
 		return nil, constant.ErrForbidden
 	}
 
@@ -501,8 +505,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
 	// check if assessment already exits
-	var assessments []entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+	count, err := da.GetAssessmentDA().Count(ctx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
 			Value: entity.AssessmentTypeClassAndLiveOutcome,
 			Valid: true,
@@ -515,7 +518,8 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 			Strings: []string{args.ScheduleID},
 			Valid:   true,
 		},
-	}, &assessments); err != nil {
+	}, entity.Assessment{})
+	if err != nil {
 		log.Error(ctx, "Add: da.GetAssessmentDA().Query: query failed",
 			log.Err(err),
 			log.Any("args", args),
@@ -523,20 +527,16 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 		)
 		return "", err
 	}
-	if len(assessments) > 0 {
+	if count > 0 {
 		log.Info(ctx, "Add: assessment already exists",
 			log.Any("args", args),
-			log.Any("assessments", assessments),
 			log.Any("operator", operator),
 		)
 		return "", nil
 	}
 
 	// get schedule and check class type
-	var (
-		schedule *entity.SchedulePlain
-		err      error
-	)
+	var schedule *entity.SchedulePlain
 	if schedule, err = GetScheduleModel().GetPlainByID(ctx, args.ScheduleID); err != nil {
 		log.Error(ctx, "Add: GetScheduleModel().GetPlainByID: get failed",
 			log.Err(err),
@@ -661,7 +661,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 		)
 		return "", err
 	}
-	newAssessment.Title = fmt.Sprintf("%s-%s-%s", time.Unix(newAssessment.ClassEndTime, 0).Format("20060102"), classNameMap[schedule.ClassID], schedule.Title)
+	newAssessment.Title = m.generateTitle(newAssessment.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
 	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newAssessment); err != nil {
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
@@ -771,6 +771,10 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 	}
 
 	return newAssessmentID, nil
+}
+
+func (m *outcomeAssessmentModel) generateTitle(classEndTime int64, className string, scheduleTitle string) string {
+	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, scheduleTitle)
 }
 
 func (m *outcomeAssessmentModel) addAssessmentContentsAndOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
@@ -931,10 +935,6 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 	// permission check
 	hasP439, err := NewAssessmentPermissionChecker(operator).HasP439(ctx)
 	if err != nil {
-		log.Error(ctx, "Update: NewAssessmentPermissionChecker(operator).HasP439: check permission 439 failed",
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
 		return err
 	}
 	if !hasP439 {
@@ -972,7 +972,7 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
-		return errors.New("update assessment: assessment has completed, not allow update")
+		return ErrAssessmentHasCompleted
 	}
 
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {

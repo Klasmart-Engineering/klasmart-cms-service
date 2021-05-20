@@ -14,8 +14,8 @@ type ListH5PAssessmentsArgs struct {
 type ListH5PAssessmentsQueryType string
 
 const (
-	ListH5PAssessmentsQueryTypeTeacherName = "teacher_name"
-	ListH5PAssessmentsQueryTypeClassName   = "class_name"
+	ListH5PAssessmentsQueryTypeTeacherName ListH5PAssessmentsQueryType = "teacher_name"
+	ListH5PAssessmentsQueryTypeClassName   ListH5PAssessmentsQueryType = "class_name"
 )
 
 type NullListH5PAssessmentsQueryType struct {
@@ -91,11 +91,11 @@ type H5PAssessmentStudentViewLessonMaterial struct {
 }
 
 type UpdateH5PAssessmentArgs struct {
-	ID               string                               `json:"id"`
-	Action           UpdateAssessmentAction               `json:"action" enums:"save,complete"`
-	StudentIDs       []string                             `json:"student_ids"`
-	LessonMaterials  []UpdateAssessmentContentArgs        `json:"lesson_materials"`
-	StudentViewItems []UpdateH5PAssessmentStudentViewItem `json:"student_view_items"`
+	ID               string                                `json:"id"`
+	Action           UpdateAssessmentAction                `json:"action" enums:"save,complete"`
+	StudentIDs       []string                              `json:"student_ids"`
+	LessonMaterials  []*UpdateAssessmentContentArgs        `json:"lesson_materials"`
+	StudentViewItems []*UpdateH5PAssessmentStudentViewItem `json:"student_view_items"`
 }
 
 type UpdateH5PAssessmentStudentViewItem struct {

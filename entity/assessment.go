@@ -22,9 +22,9 @@ type Assessment struct {
 type AssessmentType string
 
 const (
-	AssessmentTypeClassAndLiveOutcome = "class_and_live_outcome"
-	AssessmentTypeClassAndLiveH5P     = "class_and_live_h5p"
-	AssessmentTypeStudyH5P            = "study_h5p"
+	AssessmentTypeClassAndLiveOutcome AssessmentType = "class_and_live_outcome"
+	AssessmentTypeClassAndLiveH5P     AssessmentType = "class_and_live_h5p"
+	AssessmentTypeStudyH5P            AssessmentType = "study_h5p"
 )
 
 func (t AssessmentType) Valid() bool {

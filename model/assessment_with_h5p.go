@@ -27,6 +27,8 @@ type IH5PAssessmentModel interface {
 }
 
 var (
+	ErrAssessmentNotFoundSchedule = errors.New("assessment: not found schedule")
+
 	h5pAssessmentModelInstance     IH5PAssessmentModel
 	h5pAssessmentModelInstanceOnce = sync.Once{}
 )
@@ -43,9 +45,9 @@ type h5pAssessmentModel struct{}
 func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListH5PAssessmentsArgs) (*entity.ListH5PAssessmentsResult, error) {
 	// check args
 	if !args.Type.Valid() {
-		err := errors.New("list h5p assessments: require assessment type")
-		log.Error(ctx, "check args error", log.Err(err), log.Any("args", args), log.Any("operator", operator))
-		return nil, err
+		errMsg := "list h5p assessments: require assessment type"
+		log.Error(ctx, errMsg, log.Any("args", args), log.Any("operator", operator))
+		return nil, constant.ErrInvalidArgs
 	}
 
 	// check permission
@@ -55,12 +57,17 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 	)
 	if err = checker.SearchAllPermissions(ctx); err != nil {
 		log.Error(ctx, "List: checker.SearchAllPermissions: search failed",
+			log.Err(err),
 			log.Any("operator", operator),
 			log.Any("args", args),
 		)
 		return nil, err
 	}
 	if !checker.CheckStatus(args.Status.Value) {
+		log.Error(ctx, "list h5p assessments: check status failed",
+			log.Any("operator", operator),
+			log.Any("args", args),
+		)
 		return nil, constant.ErrForbidden
 	}
 
@@ -89,7 +96,6 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 			Pager:   args.Pager,
 		}
 	)
-
 	if args.Query != "" {
 		switch args.QueryType {
 		case entity.ListH5PAssessmentsQueryTypeTeacherName:
@@ -101,42 +107,15 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 			for _, item := range teachers {
 				cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
 			}
-		case entity.ListH5PAssessmentsQueryTypeClassName:
-			cond.ClassIDs.Valid = true
-			// TODO: Medivh: query classes by name
-		default:
-			cond.ClassIDsOrTeacherIDs.Valid = true
-			teachers, err := external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
-			if err != nil {
-				return nil, err
-			}
-			for _, item := range teachers {
-				cond.ClassIDsOrTeacherIDs.Value.TeacherIDs = append(cond.ClassIDsOrTeacherIDs.Value.TeacherIDs, item.ID)
-			}
-			// TODO: Medivh: query classes by name 2
 		}
 	}
 	log.Debug(ctx, "List: print query cond", log.Any("cond", cond))
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
+	total, err := da.GetAssessmentDA().PageTx(ctx, tx, &cond, &assessments)
+	if err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
 			log.Err(err),
 			log.Any("cond", cond),
 			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	if len(assessments) == 0 {
-		return nil, nil
-	}
-
-	// get assessment list total
-	var total int
-	if total, err = da.GetAssessmentDA().CountTx(ctx, tx, &cond, &entity.Assessment{}); err != nil {
-		log.Error(ctx, "List: da.GetAssessmentDA().CountTx: count failed",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("cond", cond),
 			log.Any("operator", operator),
 		)
 		return nil, err
@@ -185,9 +164,9 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 		}
 		var remainingTime int64
 		if v.Schedule.DueAt != 0 {
-			remainingTime = time.Now().Unix() - v.Schedule.DueAt
+			remainingTime = v.Schedule.DueAt - time.Now().Unix()
 		} else {
-			remainingTime = time.Now().Unix() - v.CreateAt
+			remainingTime = time.Unix(v.CreateAt, 0).Add(constant.AssessmentDefaultRemainingTime).Unix() - time.Now().Unix()
 		}
 		if remainingTime < 0 {
 			remainingTime = 0
@@ -266,7 +245,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 	if view.Schedule.DueAt != 0 {
 		result.RemainingTime = view.Schedule.DueAt - time.Now().Unix()
 	} else {
-		result.RemainingTime = time.Unix(view.CreateAt, 0).AddDate(0, 0, constant.ReportTeachingLoadDays).Unix() - time.Now().Unix()
+		result.RemainingTime = time.Unix(view.CreateAt, 0).Add(constant.AssessmentDefaultRemainingTime).Unix() - time.Now().Unix()
 	}
 	if result.RemainingTime < 0 {
 		result.RemainingTime = 0
@@ -491,7 +470,8 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 	}
 	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, dbo.MustGetDB(ctx), args.ID)
 	if err != nil {
-		log.Error(ctx, "Update: da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID: get failed",
+		log.Error(ctx, "update study assessment: get teacher ids failed by assessment id ",
+			log.Err(err),
 			log.String("assessment_id", args.ID),
 			log.Any("args", args),
 			log.Any("operator", operator),
@@ -633,8 +613,7 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
 	// check if assessment already exits
-	var assessments []entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+	count, err := da.GetAssessmentDA().Count(ctx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
 			Value: entity.AssessmentTypeClassAndLiveH5P,
 			Valid: true,
@@ -647,28 +626,25 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 			Strings: []string{args.ScheduleID},
 			Valid:   true,
 		},
-	}, &assessments); err != nil {
-		log.Error(ctx, "AddClassAndLive: da.GetAssessmentDA().Query: query failed",
+	}, entity.Assessment{})
+	if err != nil {
+		log.Error(ctx, "add class and live h5p study assessment: count failed",
 			log.Err(err),
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
 		return "", err
 	}
-	if len(assessments) > 0 {
-		log.Info(ctx, "AddClassAndLive: assessment already exists",
+	if count > 0 {
+		log.Info(ctx, "add class and live h5p study assessment:: assessment already exists",
 			log.Any("args", args),
-			log.Any("assessments", assessments),
 			log.Any("operator", operator),
 		)
 		return "", nil
 	}
 
 	// get schedule and check class type
-	var (
-		schedule *entity.SchedulePlain
-		err      error
-	)
+	var schedule *entity.SchedulePlain
 	if schedule, err = GetScheduleModel().GetPlainByID(ctx, args.ScheduleID); err != nil {
 		log.Error(ctx, "AddClassAndLive: GetScheduleModel().GetPlainByID: get failed",
 			log.Err(err),
@@ -771,7 +747,7 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	if className == "" {
 		className = constant.AssessmentNoClass
 	}
-	newAssessment.Title = fmt.Sprintf("%s-%s", className, lessonPlan.Name)
+	newAssessment.Title = m.generateTitle(className, lessonPlan.Name)
 	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newAssessment); err != nil {
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
@@ -782,31 +758,7 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	}
 
 	// add attendances
-	var finalAttendanceIDs []string
-	switch schedule.ClassType {
-	case entity.ScheduleClassTypeOfflineClass:
-		users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, args.ScheduleID)
-		if err != nil {
-			return "", err
-		}
-		for _, u := range users {
-			finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
-		}
-	default:
-		finalAttendanceIDs = args.AttendanceIDs
-	}
-	if err = GetAssessmentModel().AddAttendances(ctx, tx, operator, entity.AddAttendancesInput{
-		AssessmentID:  newAssessmentID,
-		ScheduleID:    schedule.ID,
-		AttendanceIDs: finalAttendanceIDs,
-	}); err != nil {
-		log.Error(ctx, "Add: GetAssessmentModel().AddAttendances: add failed",
-			log.Err(err),
-			log.String("assessment_id", newAssessmentID),
-			log.Strings("attendance_ids", finalAttendanceIDs),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
+	if err := m.addAttendances(ctx, tx, operator, newAssessmentID, schedule, args.AttendanceIDs); err != nil {
 		return "", err
 	}
 
@@ -825,6 +777,45 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	return newAssessmentID, nil
 }
 
+func (m *h5pAssessmentModel) generateTitle(className, lessonPlanName string) string {
+	return fmt.Sprintf("%s-%s", className, lessonPlanName)
+}
+
+func (m *h5pAssessmentModel) addAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessmentID string, schedule *entity.SchedulePlain, attendanceIDs []string) error {
+	var finalAttendanceIDs []string
+	switch schedule.ClassType {
+	case entity.ScheduleClassTypeOfflineClass:
+		users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "add attendances: get users failed by schedule id",
+				log.Err(err),
+				log.Any("schedule", schedule),
+				log.String("assessment_id", newAssessmentID),
+			)
+			return err
+		}
+		for _, u := range users {
+			finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
+		}
+	default:
+		finalAttendanceIDs = attendanceIDs
+	}
+	if err := GetAssessmentModel().AddAttendances(ctx, tx, operator, entity.AddAttendancesInput{
+		AssessmentID:  newAssessmentID,
+		ScheduleID:    schedule.ID,
+		AttendanceIDs: finalAttendanceIDs,
+	}); err != nil {
+		log.Error(ctx, "Add: GetAssessmentModel().AddAttendances: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Strings("attendance_ids", finalAttendanceIDs),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	return nil
+}
+
 func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error) {
 	log.Debug(ctx, "add studies args", log.Any("input", input), log.Any("operator", operator))
 
@@ -833,8 +824,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	for _, item := range input {
 		scheduleIDs = append(scheduleIDs, item.ScheduleID)
 	}
-	var assessments []*entity.Assessment
-	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+	count, err := da.GetAssessmentDA().Count(ctx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
 			Value: entity.AssessmentTypeClassAndLiveH5P,
 			Valid: true,
@@ -847,7 +837,8 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 			Strings: scheduleIDs,
 			Valid:   true,
 		},
-	}, &assessments); err != nil {
+	}, entity.Assessment{})
+	if err != nil {
 		log.Error(ctx, "AddStudies: da.GetAssessmentDA().Query: query failed",
 			log.Err(err),
 			log.Strings("schedule_id", scheduleIDs),
@@ -855,10 +846,9 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		)
 		return nil, err
 	}
-	if len(assessments) > 0 {
+	if count > 0 {
 		log.Info(ctx, "AddStudies: assessment already exists",
 			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("assessments", assessments),
 			log.Any("operator", operator),
 		)
 		return nil, nil
@@ -905,7 +895,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 			ID:         utils.NewID(),
 			ScheduleID: item.ScheduleID,
 			Type:       entity.AssessmentTypeStudyH5P,
-			Title:      fmt.Sprintf("%s-%s", className, lessonPlanMap[item.LessonPlanID].Name),
+			Title:      m.generateTitle(className, lessonPlanMap[item.LessonPlanID].Name),
 			Status:     entity.AssessmentStatusInProgress,
 			CreateAt:   now,
 			UpdateAt:   now,
@@ -975,9 +965,8 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	for _, a := range newAssessments {
 		schedule := scheduleMap[a.ScheduleID]
 		if schedule == nil {
-			errMsg := "add study assessment: not found schedule by id"
-			log.Error(ctx, errMsg, log.Any("input", input))
-			return nil, errors.New(errMsg)
+			log.Error(ctx, "add study assessment: not found schedule by id", log.Any("input", input))
+			return nil, ErrAssessmentNotFoundSchedule
 		}
 		lp := lessonPlanMap[schedule.LessonPlanID]
 		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
@@ -1043,14 +1032,17 @@ func (m *h5pAssessmentModel) DeleteStudies(ctx context.Context, tx *dbo.DBContex
 		)
 		return err
 	}
+	assessmentIDs := make([]string, 0, len(assessments))
 	for _, a := range assessments {
-		if err := da.GetAssessmentDA().SoftDelete(ctx, tx, a.ID); err != nil {
-			log.Error(ctx, "DeleteStudy: da.GetAssessmentDA().SoftDelete",
-				log.Err(err),
-				log.Strings("schedule_ids", scheduleIDs),
-			)
-			return err
-		}
+		assessmentIDs = append(assessmentIDs, a.ID)
+	}
+	if err := da.GetAssessmentDA().BatchSoftDelete(ctx, tx, assessmentIDs); err != nil {
+		log.Error(ctx, "DeleteStudy: da.GetAssessmentDA().BatchSoftDelete",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Strings("assessment_ids", assessmentIDs),
+		)
+		return err
 	}
 	return nil
 }

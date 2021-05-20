@@ -293,6 +293,10 @@ func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, ope
 			Strings: []string{studentID},
 			Valid:   true,
 		},
+		Pager: dbo.Pager{
+			Page:     1,
+			PageSize: 1,
+		},
 	}
 	var studies []*entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Query(ctx, &cond, &studies); err != nil {

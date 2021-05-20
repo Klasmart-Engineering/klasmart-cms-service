@@ -696,7 +696,7 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 	}
 	// add schedules relation
 	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
-	userRelations := make(map[string][]*entity.ScheduleRelation,len(scheduleList))
+	userRelations := make(map[string][]*entity.ScheduleRelation, len(scheduleList))
 	for _, item := range scheduleList {
 		userRelations[item.ID] = make([]*entity.ScheduleRelation, 0, len(relations))
 
@@ -710,11 +710,11 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 				RelationID:   relation.RelationID,
 				RelationType: relation.RelationType,
 			})
-			if relation.RelationType == entity.ScheduleRelationTypeClassRosterTeacher ||
-				relation.RelationType == entity.ScheduleRelationTypeClassRosterStudent ||
-				relation.RelationType == entity.ScheduleRelationTypeParticipantTeacher ||
-				relation.RelationType == entity.ScheduleRelationTypeParticipantStudent {
-
+			switch relation.RelationType {
+			case entity.ScheduleRelationTypeClassRosterTeacher,
+				entity.ScheduleRelationTypeClassRosterStudent,
+				entity.ScheduleRelationTypeParticipantTeacher,
+				entity.ScheduleRelationTypeParticipantStudent:
 				userRelations[item.ID] = append(userRelations[item.ID], relation)
 			}
 		}

@@ -34,7 +34,7 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	args := entity.ListH5PAssessmentsArgs{
-		Type:      "study_h5p",
+		Type:      entity.AssessmentTypeStudyH5P,
 		QueryType: entity.ListH5PAssessmentsQueryTypeTeacherName,
 	}
 	args.Query = c.Query("query")
@@ -65,6 +65,8 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 		c.JSON(http.StatusOK, result)
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -157,7 +159,7 @@ func (s *Server) updateH5PAssessment(c *gin.Context) {
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
-	case constant.ErrRecordNotFound, sql.ErrNoRows:
+	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case model.ErrHomeFunStudyHasNewFeedback:
 		c.JSON(http.StatusInternalServerError, L(AssessMsgNewVersion))

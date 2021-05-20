@@ -264,6 +264,8 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	case constant.ErrForbidden:
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case model.ErrAssessmentHasCompleted:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Info(ctx, "update assessment: update failed")
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))

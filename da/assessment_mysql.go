@@ -16,7 +16,7 @@ type IAssessmentDA interface {
 	dbo.DataAccesser
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
-	SoftDelete(ctx context.Context, tx *dbo.DBContext, ids string) error
+	BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, ids []string) error
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.Assessment) error
 }
 
@@ -108,11 +108,13 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 	return "delete_at = 0"
 }
 
-func (a *assessmentDA) SoftDelete(ctx context.Context, tx *dbo.DBContext, id string) error {
-	if err := tx.Where(a.filterSoftDeletedTemplate()).Update("delete_at", time.Now().Unix()).Error; err != nil {
-		log.Error(ctx, "SoftDelete: update failed",
+func (a *assessmentDA) BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, ids []string) error {
+	if err := tx.Where(a.filterSoftDeletedTemplate()).
+		Where("id in (?)", ids).
+		Update("delete_at", time.Now().Unix()).Error; err != nil {
+		log.Error(ctx, "BatchSoftDelete: update failed",
 			log.Err(err),
-			log.String("id", id),
+			log.Strings("ids", ids),
 		)
 		return err
 	}
@@ -138,9 +140,6 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	}
 	var matrix [][]interface{}
 	for _, item := range items {
-		if item.ID == "" {
-			item.ID = utils.NewID()
-		}
 		matrix = append(matrix, []interface{}{
 			item.ID,
 			item.ScheduleID,
@@ -160,6 +159,8 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 		log.Error(ctx, "BatchInsert: batch insert failed",
 			log.Err(err),
 			log.Any("items", items),
+			log.String("format", format),
+			log.Any("values", values),
 		)
 		return err
 	}
@@ -255,8 +256,8 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		t2.Appendf("exists (select 1 from schedules"+
 			" where class_id in (?) and delete_at = 0 and assessments.schedule_id = schedules.id)", c.ClassIDs.Strings)
 		t2.Appendf("exists (select 1 from assessments_attendances"+
-			" where assessments.id = assessments_attendances.assessment_id and role = 'teacher' and attendance_id in (?))",
-			utils.SliceDeduplication(c.TeacherIDs.Strings))
+			" where assessments.id = assessments_attendances.assessment_id and role = ? and attendance_id in (?))",
+			entity.AssessmentAttendanceRoleTeacher, utils.SliceDeduplication(c.TeacherIDs.Strings))
 		t.AppendResult(t2.Or())
 	}
 
