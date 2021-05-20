@@ -78,7 +78,10 @@ type ContentPermissionMode string
 
 type ContentPermissionChecker interface {
 	// HasPermission check operator has permission of all content profiles for mode or not
-	HasPermission(ctx context.Context, operator *entity.Operator, mode ContentPermissionMode, req []*ContentProfile) error
+	HasPermissionWithLogicalAnd(ctx context.Context, operator *entity.Operator, mode ContentPermissionMode, req []*ContentProfile) error
+
+	// HasPermission check operator has permission of any content profile for mode or not
+	HasPermissionWithLogicalOr(ctx context.Context, operator *entity.Operator, mode ContentPermissionMode, req []*ContentProfile) error
 
 	// BatchGetContentPermissions Get permissions of contents, return with a map, the key of the map is the content id,
 	// The value of the map is content permission
@@ -118,7 +121,7 @@ func (c *contentPermissionChecker) loadContentPermissionDict() {
 	c.contentPermissionDict = dict
 }
 
-func (c *contentPermissionChecker) HasPermission(ctx context.Context, operator *entity.Operator, mode ContentPermissionMode, req []*ContentProfile) error {
+func (c *contentPermissionChecker) HasPermissionWithLogicalAnd(ctx context.Context, operator *entity.Operator, mode ContentPermissionMode, req []*ContentProfile) error {
 	if len(req) < 1 {
 		log.Error(ctx, "undefined permission",
 			log.Any("mode", mode),
@@ -133,7 +136,25 @@ func (c *contentPermissionChecker) HasPermission(ctx context.Context, operator *
 		return err
 	}
 
-	return permissionSetList.HasPermission(ctx, operator)
+	return permissionSetList.HasPermissionWithLogicalAnd(ctx, operator)
+}
+
+func (c *contentPermissionChecker) HasPermissionWithLogicalOr(ctx context.Context, operator *entity.Operator, mode ContentPermissionMode, req []*ContentProfile) error {
+	if len(req) < 1 {
+		log.Error(ctx, "undefined permission",
+			log.Any("mode", mode),
+			log.Any("operator", operator),
+			log.Any("req", req),
+			log.Err(ErrUndefinedPermission))
+		return ErrUndefinedPermission
+	}
+
+	permissionSetList, err := c.GetPermissionSetList(ctx, mode, req)
+	if err != nil {
+		return err
+	}
+
+	return permissionSetList.HasPermissionWithLogicalOr(ctx, operator)
 }
 
 func (c *contentPermissionChecker) BatchGetContentPermission(ctx context.Context, operator *entity.Operator, req []*ContentEntityProfile) (map[string]entity.ContentPermission, error) {
@@ -228,6 +249,10 @@ func (c *contentPermissionChecker) GetPermissionSetList(ctx context.Context, mod
 	permissionSetList := make([][]*PermissionSet, 0)
 
 	for i := range req {
+		if req[i] == nil {
+			continue
+		}
+
 		key := *req[i]
 		if _, ok := set[key]; !ok {
 			if _, ok := dict[key]; !ok {
@@ -250,7 +275,7 @@ func (c *contentPermissionChecker) GetPermissionSetList(ctx context.Context, mod
 // The AND of a set of external.PermissionNamehave access if and only if all of its permissions have access
 // The OR of a set of permissionSet have access if and only if all of its permissions have access
 // The AND of a set of []*permissionSet have access if and only if all of its permissionSets have access
-func (p PermissionSetList) HasPermission(ctx context.Context, operator *entity.Operator) error {
+func (p PermissionSetList) HasPermissionWithLogicalAnd(ctx context.Context, operator *entity.Operator) error {
 	if len(p) < 1 {
 		return nil
 	}
@@ -287,6 +312,44 @@ func (p PermissionSetList) HasPermission(ctx context.Context, operator *entity.O
 	}
 
 	return nil
+}
+
+// The AND of a set of external.PermissionNamehave access if and only if all of its permissions have access
+// The OR of a set of permissionSet have access if and only if all of its permissions have access
+// The OR of a set of []*permissionSet have access if any permissionSets have access
+func (p PermissionSetList) HasPermissionWithLogicalOr(ctx context.Context, operator *entity.Operator) error {
+	if len(p) < 1 {
+		return nil
+	}
+
+	permissions := p.getAllPermissions()
+
+	hasPermission, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, operator, permissions)
+	if err != nil {
+		log.Error(ctx, "HasOrganizationPermissions failed",
+			log.Any("operator", operator),
+			log.Any("permissions", permissions),
+			log.Err(err))
+		return err
+	}
+
+	for _, pmSetList := range p {
+		for _, pmSet := range pmSetList {
+			err = nil
+			for _, pm := range pmSet.Permissions {
+				if val, ok := hasPermission[pm]; !ok || !val {
+					err = ErrHasNoPermission
+					break
+				}
+			}
+
+			if err == nil {
+				return nil
+			}
+		}
+	}
+
+	return ErrHasNoPermission
 }
 
 func (p PermissionSetList) getAllPermissions() []external.PermissionName {
