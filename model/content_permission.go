@@ -368,19 +368,19 @@ func (c *ContentPermissionMySchoolModel) buildByConditionContentProfiles(ctx con
 		author = c.getOwnerType(ctx, condition.Author, user)
 	}
 
-	contentProfiles := make([]*ContentProfile, len(contentTypes)*len(publishStatus))
+	contentProfiles := make([]*ContentProfile, 0)
 	for i := range contentTypes {
 		tempPublishStatus := publishStatus
 		if contentTypes[i] == entity.ContentTypeAssets {
 			tempPublishStatus = publishAssetsStatus
 		}
 		for j := range tempPublishStatus {
-			contentProfiles[j+i*len(publishStatus)] = &ContentProfile{
+			contentProfiles = append(contentProfiles, &ContentProfile{
 				ContentType:        entity.ContentType(contentTypes[i]),
 				Status:             entity.ContentPublishStatus(publishStatus[j]),
 				VisibilitySettings: visibilitySettings,
 				Owner:              author,
-			}
+			})
 		}
 	}
 	return contentProfiles, nil
