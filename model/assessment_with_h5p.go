@@ -455,10 +455,6 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 	// permission check
 	hasP439, err := NewAssessmentPermissionChecker(operator).HasP439(ctx)
 	if err != nil {
-		log.Error(ctx, "Update: NewAssessmentPermissionChecker(operator).HasP439: check permission 439 failed",
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
 		return err
 	}
 	if !hasP439 {
