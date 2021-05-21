@@ -60,7 +60,7 @@ func (s *Server) createContent(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -162,7 +162,7 @@ func (s *Server) publishContentBulk(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -210,7 +210,7 @@ func (s *Server) publishContent(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -259,7 +259,7 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 	err = model.GetContentModel().PublishContentWithAssetsTx(ctx, cid, data.Scope, op)
@@ -307,7 +307,7 @@ func (s *Server) getContent(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -356,7 +356,7 @@ func (s *Server) updateContent(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -381,7 +381,7 @@ func (s *Server) updateContent(c *gin.Context) {
 	case model.ErrInvalidContentData:
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case model.ErrNoAuth:
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	case model.ErrInvalidPublishStatus:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequireContentName:
@@ -426,7 +426,7 @@ func (s *Server) lockContent(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -484,7 +484,7 @@ func (s *Server) deleteContentBulk(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -527,7 +527,7 @@ func (s *Server) deleteContent(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -621,7 +621,7 @@ func (s *Server) queryContent(c *gin.Context) {
 			return
 		}
 		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+			c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 			return
 		}
 	}
@@ -643,7 +643,7 @@ func (s *Server) queryContent(c *gin.Context) {
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -684,7 +684,7 @@ func (s *Server) queryAuthContent(c *gin.Context) {
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -735,7 +735,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 			return
 		}
 		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+			c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 			return
 		}
 	}
@@ -759,7 +759,7 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -802,7 +802,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 		return
 	}
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 		return
 	}
 
@@ -818,7 +818,7 @@ func (s *Server) queryPrivateContent(c *gin.Context) {
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
@@ -867,7 +867,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 			return
 		}
 		if !hasPermission {
-			c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+			c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 			return
 		}
 	}
@@ -882,7 +882,7 @@ func (s *Server) queryPendingContent(c *gin.Context) {
 	case model.ErrInvalidVisibilitySetting:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrNoPermissionToQuery:
-		c.JSON(http.StatusForbidden, L(GeneralUnAuthorized))
+		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}

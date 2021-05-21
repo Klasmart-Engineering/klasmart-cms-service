@@ -10,6 +10,7 @@ const (
 	GeneralUnknown             ResponseLabel = "general_error_unknown"
 	GeneralUnAuthorized        ResponseLabel = "general_error_unauthorized"
 	GeneralUnAuthorizedNoOrgID ResponseLabel = "general_error_no_organization"
+	GeneralNoPermission        ResponseLabel = "general_error_no_permission"
 
 	// Assessment
 	AssessMsgOneStudent   ResponseLabel = "assess_msg_one_student"
