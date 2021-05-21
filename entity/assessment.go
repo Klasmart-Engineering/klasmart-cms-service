@@ -80,22 +80,22 @@ func (a UpdateAssessmentAction) Valid() bool {
 type AssessmentOrderBy string
 
 const (
-	ListAssessmentsOrderByClassEndTime     AssessmentOrderBy = "class_end_time"
-	ListAssessmentsOrderByClassEndTimeDesc AssessmentOrderBy = "-class_end_time"
-	ListAssessmentsOrderByCompleteTime     AssessmentOrderBy = "complete_time"
-	ListAssessmentsOrderByCompleteTimeDesc AssessmentOrderBy = "-complete_time"
-	ListAssessmentsOrderByCreateAt         AssessmentOrderBy = "create_at"
-	ListAssessmentsOrderByCreateAtDesc     AssessmentOrderBy = "-create_at"
+	AssessmentOrderByClassEndTime     AssessmentOrderBy = "class_end_time"
+	AssessmentOrderByClassEndTimeDesc AssessmentOrderBy = "-class_end_time"
+	AssessmentOrderByCompleteTime     AssessmentOrderBy = "complete_time"
+	AssessmentOrderByCompleteTimeDesc AssessmentOrderBy = "-complete_time"
+	AssessmentOrderByCreateAt         AssessmentOrderBy = "create_at"
+	AssessmentOrderByCreateAtDesc     AssessmentOrderBy = "-create_at"
 )
 
 func (ob AssessmentOrderBy) Valid() bool {
 	switch ob {
-	case ListAssessmentsOrderByClassEndTime,
-		ListAssessmentsOrderByClassEndTimeDesc,
-		ListAssessmentsOrderByCompleteTime,
-		ListAssessmentsOrderByCompleteTimeDesc,
-		ListAssessmentsOrderByCreateAt,
-		ListAssessmentsOrderByCreateAtDesc:
+	case AssessmentOrderByClassEndTime,
+		AssessmentOrderByClassEndTimeDesc,
+		AssessmentOrderByCompleteTime,
+		AssessmentOrderByCompleteTimeDesc,
+		AssessmentOrderByCreateAt,
+		AssessmentOrderByCreateAtDesc:
 		return true
 	default:
 		return false

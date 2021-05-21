@@ -1118,7 +1118,7 @@ func (h *H5pAssessmentItemsOrder) Len() int {
 
 func (h *H5pAssessmentItemsOrder) Less(i, j int) bool {
 	switch h.OrderBy {
-	case entity.ListAssessmentsOrderByCompleteTime:
+	case entity.AssessmentOrderByCompleteTime:
 		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt > 0 {
 			return true
 		}
@@ -1128,7 +1128,7 @@ func (h *H5pAssessmentItemsOrder) Less(i, j int) bool {
 		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt == 0 {
 			return h.Items[i].CreateAt < h.Items[j].CreateAt
 		}
-	case entity.ListAssessmentsOrderByCompleteTimeDesc:
+	case entity.AssessmentOrderByCompleteTimeDesc:
 		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt > 0 {
 			return false
 		}
@@ -1138,9 +1138,9 @@ func (h *H5pAssessmentItemsOrder) Less(i, j int) bool {
 		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt == 0 {
 			return h.Items[i].CreateAt > h.Items[j].CreateAt
 		}
-	case entity.ListAssessmentsOrderByCreateAt:
+	case entity.AssessmentOrderByCreateAt:
 		return h.Items[i].CreateAt < h.Items[j].CreateAt
-	case entity.ListAssessmentsOrderByCreateAtDesc:
+	case entity.AssessmentOrderByCreateAtDesc:
 		return h.Items[i].CreateAt > h.Items[j].CreateAt
 	}
 	return false

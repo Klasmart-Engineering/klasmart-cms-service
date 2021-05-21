@@ -78,7 +78,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 			}
 		} else {
 			args.OrderBy = entity.NullAssessmentsOrderBy{
-				Value: entity.ListAssessmentsOrderByClassEndTimeDesc,
+				Value: entity.AssessmentOrderByClassEndTimeDesc,
 				Valid: true,
 			}
 		}

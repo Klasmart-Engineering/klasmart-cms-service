@@ -53,19 +53,13 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 		}
 	}
 	if orderBy := c.Query("order_by"); orderBy != "" {
-		if orderBy == "complete_at" {
-			orderBy = "complete_time"
-		}
-		if orderBy == "-complete_at" {
-			orderBy = "-complete_time"
-		}
 		args.OrderBy = entity.NullAssessmentsOrderBy{
 			Value: entity.AssessmentOrderBy(orderBy),
 			Valid: true,
 		}
 	} else {
 		args.OrderBy = entity.NullAssessmentsOrderBy{
-			Value: entity.ListAssessmentsOrderByCreateAtDesc,
+			Value: entity.AssessmentOrderByCreateAtDesc,
 			Valid: true,
 		}
 	}
