@@ -3,6 +3,8 @@ package da
 import (
 	"context"
 	"fmt"
+	"github.com/jinzhu/gorm"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"sync"
 	"time"
 
@@ -58,6 +60,9 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 			log.Err(err),
 			log.String("id", id),
 		)
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, constant.ErrRecordNotFound
+		}
 		return nil, err
 	}
 
@@ -109,7 +114,10 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 }
 
 func (a *assessmentDA) BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, ids []string) error {
-	if err := tx.Where(a.filterSoftDeletedTemplate()).
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := tx.Model(entity.Assessment{}).Where(a.filterSoftDeletedTemplate()).
 		Where("id in (?)", ids).
 		Update("delete_at", time.Now().Unix()).Error; err != nil {
 		log.Error(ctx, "BatchSoftDelete: update failed",
