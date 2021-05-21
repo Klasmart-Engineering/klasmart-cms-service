@@ -50,6 +50,9 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	if data.ContentType == entity.ContentTypeAssets {
+		data.PublishScope = []string{op.OrgID}
+	}
 
 	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckCreateContentPermission(ctx, data, op)
 	if err != nil {
