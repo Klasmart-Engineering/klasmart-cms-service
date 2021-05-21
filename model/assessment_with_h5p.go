@@ -12,6 +12,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
+	"sort"
 	"sync"
 	"time"
 )
@@ -345,6 +346,9 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		}
 		result.StudentViewItems = append(result.StudentViewItems, &newItem)
 	}
+
+	// order students
+	sort.Sort(entity.H5PAssessmentStudentViewItemsOrder(result.StudentViewItems))
 
 	return &result, nil
 }
