@@ -22,7 +22,7 @@ import (
 // @Param query query string false "query teacher name or class name"
 // @Param query_type query string false "query type" enums(all,class_name,teacher_name) default(all)
 // @Param status query string false "query status" enums(all,in_progress,complete) default(all)
-// @Param order_by query string false "list order by" enums(create_at,-create_at,complete_at,-complete_at) default(-complete_at)
+// @Param order_by query string false "list order by" enums(create_at,-create_at,complete_time,-complete_time) default(-complete_time)
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)
 // @Success 200 {object} entity.ListH5PAssessmentsResult
@@ -59,7 +59,7 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 		}
 	} else {
 		args.OrderBy = entity.NullAssessmentsOrderBy{
-			Value: entity.ListAssessmentsOrderByCreateAtDesc,
+			Value: entity.AssessmentOrderByCreateAtDesc,
 			Valid: true,
 		}
 	}

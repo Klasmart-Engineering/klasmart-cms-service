@@ -281,17 +281,17 @@ func (c *QueryAssessmentConditions) GetOrderBy() string {
 		return ""
 	}
 	switch c.OrderBy.Value {
-	case entity.ListAssessmentsOrderByClassEndTime:
+	case entity.AssessmentOrderByClassEndTime:
 		return "class_end_time"
-	case entity.ListAssessmentsOrderByClassEndTimeDesc:
+	case entity.AssessmentOrderByClassEndTimeDesc:
 		return "class_end_time desc"
-	case entity.ListAssessmentsOrderByCompleteTime:
+	case entity.AssessmentOrderByCompleteTime:
 		return "status desc, complete_time, create_at"
-	case entity.ListAssessmentsOrderByCompleteTimeDesc:
+	case entity.AssessmentOrderByCompleteTimeDesc:
 		return "status desc, complete_time desc, create_at desc"
-	case entity.ListAssessmentsOrderByCreateAt:
+	case entity.AssessmentOrderByCreateAt:
 		return "create_at"
-	case entity.ListAssessmentsOrderByCreateAtDesc:
+	case entity.AssessmentOrderByCreateAtDesc:
 		return "create_at desc"
 	}
 	return ""
