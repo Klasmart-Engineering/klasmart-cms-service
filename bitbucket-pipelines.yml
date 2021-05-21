@@ -1,99 +1,98 @@
 pipelines:
   branches:
     dev/global/alpha:
-    - step:
-        name: 'Compile'
-        image: golang:alpine
-        script:
-          - apk add git --no-cache
-          - set +x
-          - echo "machine gitlab.badanamu.com.cn" >> ~/.netrc
-          - echo "  login $GITLAB_USERNAME"       >> ~/.netrc
-          - echo "  password $GITLAB_PASSWORD"    >> ~/.netrc
-          - set -x
-          - go env -w GO111MODULE=on
-          - go env -w GOPRIVATE=gitlab.badanamu.com.cn
-          - go get
-          - go mod tidy
-          - go mod vendor
-          - go build -o deploy/handler main.go
-          - echo $BUILD_RESULT
-        after-script:
-          - BUILD_STATUS="success"
-          - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
-          - pipe: atlassian/slack-notify:1.0.2
-            variables:
-              WEBHOOK_URL: $WEBHOOK_URL
-              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
-              MESSAGE: 'build has exited with [$BUILD_STATUS] status'
-        caches:
-          - gomodules
+      - step:
+          name: "Compile"
+          image: golang:alpine
+          script:
+            - apk add git --no-cache
+            - set +x
+            - echo "machine gitlab.badanamu.com.cn" >> ~/.netrc
+            - echo "  login $GITLAB_USERNAME"       >> ~/.netrc
+            - echo "  password $GITLAB_PASSWORD"    >> ~/.netrc
+            - set -x
+            - go env -w GO111MODULE=on
+            - go env -w GOPRIVATE=gitlab.badanamu.com.cn
+            - go get
+            - go mod tidy
+            - go mod vendor
+            - go build -o deploy/handler main.go
+            - echo $BUILD_RESULT
+          after-script:
+            - BUILD_STATUS="success"
+            - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
+            - pipe: atlassian/slack-notify:1.0.2
+              variables:
+                WEBHOOK_URL: $WEBHOOK_URL
+                PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
+                MESSAGE: "build has exited with [$BUILD_STATUS] status"
+          caches:
+            - gomodules
 
-        artifacts:
-          - deploy/*
+          artifacts:
+            - deploy/*
 
-    - step:
-        name: "Build & Push Docker image"
-        image: python:3.7.4-alpine3.10
-        script:
-          - pip3 install -U awscli
-          
-          - export BRANCH_TAG=$(echo "$BITBUCKET_BRANCH" | sed -E 's/([^0-9a-zA-Z]+)/-/g' | awk '{print tolower($0)}')
-          - export REPO=$DOCKER_REPO_URL/kidsloop-cms-backend  # DOCKER_REPO_URL is workspace wide variable
+      - step:
+          name: "Build & Push Docker image"
+          image: python:3.7.4-alpine3.10
+          script:
+            - pip3 install -U awscli
 
-          - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin $DOCKER_REPO_URL
-          - aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
+            - export BRANCH_TAG=$(echo "$BITBUCKET_BRANCH" | sed -E 's/([^0-9a-zA-Z]+)/-/g' | awk '{print tolower($0)}')
+            - export REPO=$DOCKER_REPO_URL/kidsloop-cms-backend # DOCKER_REPO_URL is workspace wide variable
 
-          - docker build -t cms-backend deploy/
-          - docker tag cms-backend:latest $REPO:$BRANCH_TAG
-          - docker tag cms-backend:latest $REPO:$BRANCH_TAG-latest
-          - docker tag cms-backend:latest $REPO:$BRANCH_TAG-$BITBUCKET_BUILD_NUMBER
+            - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin $DOCKER_REPO_URL
+            - aws s3 cp s3://$S3_BUCKET/keys/ deploy/ --recursive --sse aws:kms --sse-kms-key-id $KMS_KEY
 
-          - docker push $REPO:$BRANCH_TAG
-          - docker push $REPO:$BRANCH_TAG-latest
-          - docker push $REPO:$BRANCH_TAG-$BITBUCKET_BUILD_NUMBER
+            - docker build -t cms-backend deploy/
+            - docker tag cms-backend:latest $REPO:$BRANCH_TAG
+            - docker tag cms-backend:latest $REPO:$BRANCH_TAG-latest
+            - docker tag cms-backend:latest $REPO:$BRANCH_TAG-$BITBUCKET_BUILD_NUMBER
 
-          - export AWS_ACCESS_KEY_ID=$AWS_ALPHA_KEY_ID && export AWS_SECRET_ACCESS_KEY=$AWS_ALPHA_ACCESS_KEY && export AWS_DEFAULT_REGION=ap-northeast-2
-          - aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $DOCKER_ALPHA_REPO
+            - docker push $REPO:$BRANCH_TAG
+            - docker push $REPO:$BRANCH_TAG-latest
+            - docker push $REPO:$BRANCH_TAG-$BITBUCKET_BUILD_NUMBER
 
-          - docker tag cms-backend:latest $CMS_BACKEND_ALPHA:latest
-          - docker push $CMS_BACKEND_ALPHA:latest
+            - export AWS_ACCESS_KEY_ID=$AWS_ALPHA_KEY_ID && export AWS_SECRET_ACCESS_KEY=$AWS_ALPHA_ACCESS_KEY && export AWS_DEFAULT_REGION=ap-northeast-2
+            - aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $DOCKER_ALPHA_REPO
 
-        after-script:
-          - BUILD_STATUS="success"
-          - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
-          - pipe: atlassian/slack-notify:1.0.2
-            variables:
-              WEBHOOK_URL: $WEBHOOK_URL
-              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
-              MESSAGE: 'ECR push has exited with [$BUILD_STATUS] status'
+            - docker tag cms-backend:latest $CMS_BACKEND_ALPHA:latest
+            - docker push $CMS_BACKEND_ALPHA:latest
 
-        services:
-          - docker
+          after-script:
+            - BUILD_STATUS="success"
+            - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
+            - pipe: atlassian/slack-notify:1.0.2
+              variables:
+                WEBHOOK_URL: $WEBHOOK_URL
+                PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
+                MESSAGE: "ECR push has exited with [$BUILD_STATUS] status"
 
-    - step:
-        name: "Update ECS"
-        trigger: manual
-        image: python:3.7.4-alpine3.10
-        script:
-          - pip3 install -U awscli
+          services:
+            - docker
 
-          - apk add git jq --no-cache
+      - step:
+          name: "Update ECS"
+          image: python:3.7.4-alpine3.10
+          script:
+            - pip3 install -U awscli
 
-          - assume_role=$(aws sts assume-role --role-arn arn:aws:iam::${ACC_ID}:role/cross_account_deployment_role --role-session-name deployment)
-          
-          - export AWS_ACCESS_KEY_ID=$(echo $assume_role | jq -r .Credentials.AccessKeyId) && export AWS_SECRET_ACCESS_KEY=$(echo $assume_role | jq -r .Credentials.SecretAccessKey) && export AWS_SESSION_TOKEN=$(echo $assume_role | jq -r .Credentials.SessionToken) && export AWS_DEFAULT_REGION=ap-northeast-2
-          
-          - aws ecs update-service --service arn:aws:ecs:${AWS_DEFAULT_REGION}:${ACC_ID}:service/${CLUSTER}/${CLUSTER}-cms --force-new-deployment --cluster $CLUSTER
+            - apk add git jq --no-cache
 
-        after-script:
-          - BUILD_STATUS="success"
-          - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
-          - pipe: atlassian/slack-notify:1.0.2
-            variables:
-              WEBHOOK_URL: $WEBHOOK_URL
-              PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
-              MESSAGE: 'ECS update has exited with [$BUILD_STATUS] status'
+            - assume_role=$(aws sts assume-role --role-arn arn:aws:iam::${ACC_ID}:role/cross_account_deployment_role --role-session-name deployment)
+
+            - export AWS_ACCESS_KEY_ID=$(echo $assume_role | jq -r .Credentials.AccessKeyId) && export AWS_SECRET_ACCESS_KEY=$(echo $assume_role | jq -r .Credentials.SecretAccessKey) && export AWS_SESSION_TOKEN=$(echo $assume_role | jq -r .Credentials.SessionToken) && export AWS_DEFAULT_REGION=ap-northeast-2
+
+            - aws ecs update-service --service arn:aws:ecs:${AWS_DEFAULT_REGION}:${ACC_ID}:service/${CLUSTER}/${CLUSTER}-cms --force-new-deployment --cluster $CLUSTER
+
+          after-script:
+            - BUILD_STATUS="success"
+            - if [[ $BITBUCKET_EXIT_CODE -ne 0 ]]; then BUILD_STATUS="failure"; fi
+            - pipe: atlassian/slack-notify:1.0.2
+              variables:
+                WEBHOOK_URL: $WEBHOOK_URL
+                PRETEXT: '"[Alpha] $BITBUCKET_REPO_SLUG - Pipeline ${BITBUCKET_GIT_HTTP_ORIGIN}/addon/pipelines/home#!/results/${BITBUCKET_BUILD_NUMBER}"'
+                MESSAGE: "ECS update has exited with [$BUILD_STATUS] status"
 
 definitions:
   caches:
