@@ -220,6 +220,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		EnableTeachers: true,
 		EnableStudents: true,
 		EnableClass:    true,
+		//EnableLessonPlan: true,
 	}); err != nil {
 		log.Error(ctx, "Get: GetAssessmentModel().ToViews: get failed",
 			log.Err(err),
@@ -316,6 +317,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 				log.Any("room", room),
 			)
 		}
+
 		for _, lm := range view.LessonMaterials {
 			newLessMaterial := entity.H5PAssessmentStudentViewLessonMaterial{
 				LessonMaterialID:   lm.ID,
