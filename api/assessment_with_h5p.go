@@ -46,7 +46,7 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 	//	}
 	//}
 
-	if status := c.Query("status"); status != "" {
+	if status := c.Query("status"); entity.AssessmentStatus(status).Valid() {
 		args.Status = entity.NullAssessmentStatus{
 			Value: entity.AssessmentStatus(status),
 			Valid: true,

@@ -773,7 +773,7 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	if className == "" {
 		className = constant.AssessmentNoClass
 	}
-	newAssessment.Title = m.generateTitle(className, lessonPlan.Name)
+	newAssessment.Title = m.generateTitle(className, schedule.Title)
 	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newAssessment); err != nil {
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
@@ -803,8 +803,8 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	return newAssessmentID, nil
 }
 
-func (m *h5pAssessmentModel) generateTitle(className, lessonPlanName string) string {
-	return fmt.Sprintf("%s-%s", className, lessonPlanName)
+func (m *h5pAssessmentModel) generateTitle(className, lessonName string) string {
+	return fmt.Sprintf("%s-%s", className, lessonName)
 }
 
 func (m *h5pAssessmentModel) addAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessmentID string, schedule *entity.SchedulePlain, attendanceIDs []string) error {
@@ -921,7 +921,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 			ID:         utils.NewID(),
 			ScheduleID: item.ScheduleID,
 			Type:       entity.AssessmentTypeStudyH5P,
-			Title:      m.generateTitle(className, lessonPlanMap[item.LessonPlanID].Name),
+			Title:      m.generateTitle(className, item.ScheduleTitle),
 			Status:     entity.AssessmentStatusInProgress,
 			CreateAt:   now,
 			UpdateAt:   now,

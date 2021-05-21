@@ -737,6 +737,7 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 				ClassID:      item.ClassID,
 				LessonPlanID: item.LessonPlanID,
 				Attendances:  attendances,
+				ScheduleTitle: item.Title,
 			}
 		}
 		_, err := GetH5PAssessmentModel().AddStudies(ctx, tx, op, studyInput)
