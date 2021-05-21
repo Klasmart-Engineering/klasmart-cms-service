@@ -215,11 +215,12 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		view  *entity.AssessmentView
 	)
 	if views, err = GetAssessmentModel().ToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
-		EnableProgram:  true,
-		EnableSubjects: true,
-		EnableTeachers: true,
-		EnableStudents: true,
-		EnableClass:    true,
+		EnableProgram:    true,
+		EnableSubjects:   true,
+		EnableTeachers:   true,
+		EnableStudents:   true,
+		EnableClass:      true,
+		EnableLessonPlan: true,
 	}); err != nil {
 		log.Error(ctx, "Get: GetAssessmentModel().ToViews: get failed",
 			log.Err(err),
@@ -302,37 +303,47 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// student view items
 	for _, s := range view.Students {
+		newItem := entity.H5PAssessmentStudentViewItem{
+			StudentID:   s.ID,
+			StudentName: s.Name,
+		}
 		user := room.UserMap[s.ID]
-		if user == nil {
+		if user != nil {
+			newItem.Comment = user.Comment
+		} else {
 			log.Debug(ctx, "get h5p assessment detail: not found user from h5p room",
 				log.String("room_id", view.RoomID),
 				log.Any("not_found_student_id", s.ID),
 				log.Any("room", room),
 			)
-			continue
 		}
-		newItem := &entity.H5PAssessmentStudentViewItem{
-			StudentID:   s.ID,
-			StudentName: s.Name,
-			Comment:     user.Comment,
-		}
+
 		for _, lm := range view.LessonMaterials {
-			content := user.ContentMap[lm.Source]
-			if content == nil {
-				continue
-			}
-			newItem.LessonMaterials = append(newItem.LessonMaterials, &entity.H5PAssessmentStudentViewLessonMaterial{
+			newLessMaterial := entity.H5PAssessmentStudentViewLessonMaterial{
 				LessonMaterialID:   lm.ID,
 				LessonMaterialName: lm.Name,
-				LessonMaterialType: content.ContentType,
-				Answer:             content.Answer,
-				MaxScore:           content.MaxPossibleScore,
-				AchievedScore:      content.AchievedScore,
-				Attempted:          len(content.Answers) > 0,
 				IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-			})
+			}
+			var content *entity.AssessmentH5PContentScore
+			if user != nil {
+				content = user.ContentMap[lm.Source]
+				if content != nil {
+					newLessMaterial.LessonMaterialType = content.ContentType
+					newLessMaterial.Answer = content.Answer
+					newLessMaterial.MaxScore = content.MaxPossibleScore
+					newLessMaterial.AchievedScore = content.AchievedScore
+					newLessMaterial.Attempted = len(content.Answers) > 0
+				} else {
+					log.Debug(ctx, "get h5p assessment detail: not found content from h5p room",
+						log.String("room_id", view.RoomID),
+						log.Any("not_found_content_id", lm.Source),
+						log.Any("room", room),
+					)
+				}
+			}
+			newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
 		}
-		result.StudentViewItems = append(result.StudentViewItems, newItem)
+		result.StudentViewItems = append(result.StudentViewItems, &newItem)
 	}
 
 	return &result, nil
