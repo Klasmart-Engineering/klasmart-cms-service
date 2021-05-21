@@ -339,7 +339,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 					)
 				}
 			}
-			newItem.LessonMaterials = append(newItem.LessonMaterials)
+			newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
 		}
 		result.StudentViewItems = append(result.StudentViewItems, &newItem)
 	}
