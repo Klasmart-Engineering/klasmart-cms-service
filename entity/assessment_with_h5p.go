@@ -79,6 +79,20 @@ type H5PAssessmentStudentViewItem struct {
 	LessonMaterials []*H5PAssessmentStudentViewLessonMaterial `json:"lesson_materials"`
 }
 
+type H5PAssessmentStudentViewItemsOrder []*H5PAssessmentStudentViewItem
+
+func (h H5PAssessmentStudentViewItemsOrder) Len() int {
+	return len(h)
+}
+
+func (h H5PAssessmentStudentViewItemsOrder) Less(i, j int) bool {
+	return h[i].StudentName < h[j].StudentName
+}
+
+func (h H5PAssessmentStudentViewItemsOrder) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+}
+
 type H5PAssessmentStudentViewLessonMaterial struct {
 	LessonMaterialID   string  `json:"lesson_material_id"`
 	LessonMaterialName string  `json:"lesson_material_name"`
