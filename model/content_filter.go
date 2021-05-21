@@ -138,7 +138,7 @@ func (cf *ContentFilterModel) doFilterContent(ctx context.Context, c *entity.Con
 		log.Strings("c.VisibilitySettings", c.VisibilitySettings))
 
 	//2. fill PublishedQueryMode
-	if len(c.VisibilitySettings) < 1 && !permissionMap[external.ViewMyPublished214] {
+	if len(c.VisibilitySettings) < 1 && !permissionMap[permissionList.ViewMyPermission] {
 		//if no available vs & no permission to view my own
 		log.Warn(ctx, "ErrNoAvailableVisibilitySettings",
 			log.Any("user", user),
