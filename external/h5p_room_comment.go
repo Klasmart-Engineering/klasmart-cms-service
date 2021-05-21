@@ -201,7 +201,7 @@ func (s H5PRoomCommentService) BatchAdd(ctx context.Context, operator *entity.Op
 mutation {
 	{{range $i, $e := .}}
 	q{{$i}}: addComment(
-		comment: "{{$e.Comment}}"
+		comment: """{{$e.Comment}}"""
 		student_id: "{{$e.StudentID}}"
 		room_id: "{{$e.RoomID}}"
 	) {
