@@ -611,16 +611,20 @@ func (s *Server) queryContent(c *gin.Context) {
 		}
 	}
 
-	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
+	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
+		hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		if !hasPermission {
+			c.JSON(http.StatusForbidden, L(GeneralUnknown))
+			return
+		}
 	}
-	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
-		return
-	}
+
 	total := 0
+	var err error
 	var results []*entity.ContentInfoWithDetails
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateContent(ctx, dbo.MustGetDB(ctx), &condition, op)
@@ -721,17 +725,20 @@ func (s *Server) queryFolderContent(c *gin.Context) {
 			return
 		}
 	}
+	if condition.PublishedQueryMode != entity.PublishedQueryModeOnlyOwner {
+		hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+			return
+		}
+		if !hasPermission {
+			c.JSON(http.StatusForbidden, L(GeneralUnknown))
+			return
+		}
+	}
 
-	hasPermission, err := model.GetContentPermissionMySchoolModel().CheckQueryContentPermission(ctx, &condition, op)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-	if !hasPermission {
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
-		return
-	}
 	total := 0
+	var err error
 	var results []*entity.FolderContentData
 	if author == constant.Self {
 		total, results, err = model.GetContentModel().SearchUserPrivateFolderContent(ctx, dbo.MustGetDB(ctx), &condition, op)
