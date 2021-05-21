@@ -215,12 +215,12 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		view  *entity.AssessmentView
 	)
 	if views, err = GetAssessmentModel().ToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
-		EnableProgram:  true,
-		EnableSubjects: true,
-		EnableTeachers: true,
-		EnableStudents: true,
-		EnableClass:    true,
-		//EnableLessonPlan: true,
+		EnableProgram:    true,
+		EnableSubjects:   true,
+		EnableTeachers:   true,
+		EnableStudents:   true,
+		EnableClass:      true,
+		EnableLessonPlan: true,
 	}); err != nil {
 		log.Error(ctx, "Get: GetAssessmentModel().ToViews: get failed",
 			log.Err(err),
