@@ -11,6 +11,7 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sort"
 	"sync"
@@ -504,6 +505,19 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 	// clean data
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
+	// use distributed lock
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentLock, args.ScheduleID, string(entity.AssessmentTypeClassAndLiveOutcome))
+	if err != nil {
+		log.Error(ctx, "add outcome assessment",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
 	// check if assessment already exits
 	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
@@ -660,6 +674,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 		return "", err
 	}
 	newAssessment.Title = m.generateTitle(newAssessment.ClassEndTime, classNameMap[schedule.ClassID], schedule.Title)
+	// insert assessment
 	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newAssessment); err != nil {
 		log.Error(ctx, "add assessment: add failed",
 			log.Err(err),
