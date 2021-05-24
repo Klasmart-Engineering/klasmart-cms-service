@@ -510,10 +510,6 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 			Value: entity.AssessmentTypeClassAndLiveOutcome,
 			Valid: true,
 		},
-		OrgID: entity.NullString{
-			String: operator.OrgID,
-			Valid:  true,
-		},
 		ScheduleIDs: entity.NullStrings{
 			Strings: []string{args.ScheduleID},
 			Valid:   true,
