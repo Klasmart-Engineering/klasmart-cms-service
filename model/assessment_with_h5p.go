@@ -654,7 +654,7 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
 	// check if assessment already exits
-	count, err := da.GetAssessmentDA().Count(ctx, &da.QueryAssessmentConditions{
+	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
 			Value: entity.AssessmentTypeClassAndLiveH5P,
 			Valid: true,
@@ -861,7 +861,7 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 	for _, item := range input {
 		scheduleIDs = append(scheduleIDs, item.ScheduleID)
 	}
-	count, err := da.GetAssessmentDA().Count(ctx, &da.QueryAssessmentConditions{
+	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
 			Value: entity.AssessmentTypeClassAndLiveH5P,
 			Valid: true,

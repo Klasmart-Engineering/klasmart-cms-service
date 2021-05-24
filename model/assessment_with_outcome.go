@@ -505,7 +505,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
 	// check if assessment already exits
-	count, err := da.GetAssessmentDA().Count(ctx, &da.QueryAssessmentConditions{
+	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
 		Type: entity.NullAssessmentType{
 			Value: entity.AssessmentTypeClassAndLiveOutcome,
 			Valid: true,
@@ -639,6 +639,8 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 			ID:           newAssessmentID,
 			ScheduleID:   args.ScheduleID,
 			Type:         entity.AssessmentTypeClassAndLiveOutcome,
+			CreateAt:     now,
+			UpdateAt:     now,
 			ClassLength:  args.ClassLength,
 			ClassEndTime: args.ClassEndTime,
 		}
