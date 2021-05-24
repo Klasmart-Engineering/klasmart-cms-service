@@ -787,6 +787,9 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 }
 
 func (m *outcomeAssessmentModel) generateTitle(classEndTime int64, className string, scheduleTitle string) string {
+	if className == "" {
+		className = constant.AssessmentNoClass
+	}
 	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, scheduleTitle)
 }
 
