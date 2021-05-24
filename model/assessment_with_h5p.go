@@ -659,10 +659,6 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 			Value: entity.AssessmentTypeClassAndLiveH5P,
 			Valid: true,
 		},
-		OrgID: entity.NullString{
-			String: operator.OrgID,
-			Valid:  true,
-		},
 		ScheduleIDs: entity.NullStrings{
 			Strings: []string{args.ScheduleID},
 			Valid:   true,
@@ -869,10 +865,6 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		Type: entity.NullAssessmentType{
 			Value: entity.AssessmentTypeClassAndLiveH5P,
 			Valid: true,
-		},
-		OrgID: entity.NullString{
-			String: operator.OrgID,
-			Valid:  true,
 		},
 		ScheduleIDs: entity.NullStrings{
 			Strings: scheduleIDs,
