@@ -11,6 +11,7 @@ import (
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 )
 
@@ -435,83 +436,111 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 }
 
 func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string, options ...APOption) (map[string][]*School, error) {
-	if len(userIDs) == 0 {
+	_userIDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
+
+	if len(_userIDs) == 0 {
 		return map[string][]*School{}, nil
 	}
 
-	condition := NewCondition(options...)
+	schools := make(map[string][]*School, len(_userIDs))
 
-	_userIDs, indexMapping := utils.SliceDeduplicationMap(userIDs)
+	total := len(_userIDs)
+	pageSize := constant.AMSRequestUserSchoolPageSize
+	pageCount := (total + pageSize - 1) / pageSize
 
-	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _userIDs {
-		fmt.Fprintf(sb, `q%d: user(user_id: "%s") {school_memberships {school {school_id school_name status organization {organization_id}}}}`, index, id)
-	}
-	sb.WriteString("}")
+	var wg sync.WaitGroup
+	wg.Add(pageCount)
+	cerr := make(chan error)
 
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+	for i := 0; i < pageCount; i++ {
+		go func(j int) {
+			defer wg.Done()
 
-	data := map[string]*struct {
-		SchoolMemberships []struct {
-			School struct {
-				SchoolID     string   `json:"school_id"`
-				SchoolName   string   `json:"school_name"`
-				Status       APStatus `json:"status"`
-				Organization struct {
-					OrganizationID string `json:"organization_id"`
-				} `json:"organization"`
-			} `json:"school"`
-		} `json:"school_memberships"`
-	}{}
+			start := j * pageSize
+			end := (j + 1) * pageSize
+			if end >= total {
+				end = total
+			}
+			pageUserIDs := _userIDs[start:end]
+			condition := NewCondition(options...)
 
-	response := &chlorine.Response{
-		Data: &data,
-	}
+			sb := new(strings.Builder)
+			sb.WriteString("query {")
+			for index, id := range pageUserIDs {
+				fmt.Fprintf(sb, `q%d: user(user_id: "%s") {school_memberships {school {school_id school_name status organization {organization_id}}}}`, index, id)
+			}
+			sb.WriteString("}")
 
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get user schools filter by org and user ids failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("orgID", orgID),
-			log.Strings("userIDs", userIDs))
-		return nil, err
-	}
+			request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
-	schools := make(map[string][]*School, len(userIDs))
-	for index, userID := range userIDs {
-		user := data[fmt.Sprintf("q%d", indexMapping[index])]
-		if user == nil {
-			continue
-		}
+			data := map[string]*struct {
+				SchoolMemberships []struct {
+					School struct {
+						SchoolID     string   `json:"school_id"`
+						SchoolName   string   `json:"school_name"`
+						Status       APStatus `json:"status"`
+						Organization struct {
+							OrganizationID string `json:"organization_id"`
+						} `json:"organization"`
+					} `json:"school"`
+				} `json:"school_memberships"`
+			}{}
 
-		schools[userID] = make([]*School, 0)
-		for _, membership := range user.SchoolMemberships {
-			// filtering by operator's org id
-			if membership.School.Organization.OrganizationID != orgID {
-				continue
+			response := &chlorine.Response{
+				Data: &data,
 			}
 
-			if condition.Status.Valid {
-				if condition.Status.Status != membership.School.Status {
-					continue
-				}
-			} else {
-				// only status = "Active" data is returned by default
-				if membership.School.Status != Active {
-					continue
-				}
+			_, err := GetAmsClient().Run(ctx, request, response)
+			if err != nil {
+				log.Error(ctx, "get user schools filter by org and user ids failed",
+					log.Err(err),
+					log.Any("operator", operator),
+					log.String("orgID", orgID),
+					log.Strings("pageUserIDs", pageUserIDs))
+				cerr <- err
 			}
 
-			schools[userID] = append(schools[userID], &School{
-				ID:     membership.School.SchoolID,
-				Name:   membership.School.SchoolName,
-				Status: membership.School.Status,
-			})
-		}
+			for index, userID := range pageUserIDs {
+				user := data[fmt.Sprintf("q%d", index)]
+				if user == nil {
+					continue
+				}
+				schools[userID] = make([]*School, 0)
+				for _, membership := range user.SchoolMemberships {
+					// filtering by operator's org id
+					if membership.School.Organization.OrganizationID != orgID {
+						continue
+					}
 
+					if condition.Status.Valid {
+						if condition.Status.Status != membership.School.Status {
+							continue
+						}
+					} else {
+						// only status = "Active" data is returned by default
+						if membership.School.Status != Active {
+							continue
+						}
+					}
+
+					schools[userID] = append(schools[userID], &School{
+						ID:     membership.School.SchoolID,
+						Name:   membership.School.SchoolName,
+						Status: membership.School.Status,
+					})
+				}
+			}
+			cerr <- nil
+		}(i)
 	}
+
+	for i := 0; i < pageCount; i++ {
+		if err := <-cerr; err != nil {
+			return nil, err
+		}
+	}
+
+	wg.Wait()
 
 	log.Info(ctx, "get user school filter by org and user ids success",
 		log.Any("operator", operator),

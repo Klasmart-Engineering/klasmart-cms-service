@@ -97,10 +97,20 @@ func TestAmsSchoolService_GetByOperator(t *testing.T) {
 }
 
 func TestAmsSchoolService_GetByUsers(t *testing.T) {
+	userInfos, err := GetUserServiceProvider().GetByOrganization(context.TODO(), testOperator, testOperator.OrgID)
+	if err != nil {
+		t.Error("GetUserServiceProvider.GetByOrganization error")
+		return
+	}
+	userIDs := make([]string, len(userInfos))
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+	}
+
 	schools, err := GetSchoolServiceProvider().GetByUsers(context.TODO(),
 		testOperator,
-		"9e285fc9-50fd-4cf2-ba5b-3f191c3338b4",
-		[]string{"335e0577-99cb-5d88-b5e1-dfdb14d5d4c2", "335e0577-99cb-5d88-b5e1-dfdb14d5d4c2"},
+		"32bfe7ba-d897-4504-955c-8d6b484549c6",
+		userIDs,
 		WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSchoolServiceProvider().GetByUsers() error = %v", err)
