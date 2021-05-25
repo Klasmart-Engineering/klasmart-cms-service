@@ -436,7 +436,7 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 }
 
 func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string, options ...APOption) (map[string][]*School, error) {
-	_userIDs := userIDs//utils.SliceDeduplicationExcludeEmpty(userIDs)
+	_userIDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
 
 	if len(_userIDs) == 0 {
 		return map[string][]*School{}, nil
