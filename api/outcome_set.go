@@ -104,6 +104,30 @@ func (s *Server) pullOutcomeSet(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
+	perms, err := external.GetPermissionServiceProvider().HasOrganizationPermissions(ctx, op, []external.PermissionName{
+		external.CreateLearningOutcome,
+		external.EditMyUnpublishedLearningOutcome,
+		external.EditOrgUnpublishedLearningOutcome,
+		external.EditPublishedLearningOutcome,
+	})
+	if err != nil {
+		log.Warn(ctx, "pullOutcomeSet: HasOrganizationPermissions failed", log.Any("op", op), log.Err(err), log.Any("req", request))
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+		return
+	}
+
+	hasPerm := false
+	for _, v := range perms {
+		if v == true {
+			hasPerm = true
+			break
+		}
+	}
+	if !hasPerm {
+		log.Warn(ctx, "pullOutcomeSet: no permission", log.Any("op", op))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+		return
+	}
 	outcomeSets, err := model.GetOutcomeSetModel().PullOutcomeSet(ctx, op, request.SetName)
 	var response PullOutcomeSetResponse
 	response.Sets = make([]*model.OutcomeSetCreateView, len(outcomeSets))
