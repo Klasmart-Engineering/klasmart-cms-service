@@ -861,11 +861,20 @@ func (ocm OutcomeModel) BulkDelete(ctx context.Context, operator *entity.Operato
 			return err
 		}
 
-		if len(outcomes) > 0 && !allowDeleteOutcome(ctx, operator, perms, outcomes[0]) {
-			log.Warn(ctx, "BulkDelete: no permission", log.Any("op", operator),
-				log.Any("perms", perms), log.Any("outcome", outcomes[0]))
-			return constant.ErrOperateNotAllowed
+		if len(outcomes) == 0 {
+			log.Warn(ctx, "BulkDelete: not found", log.Any("op", operator),
+				log.Any("perms", perms), log.Strings("outcome_ids", outcomeIDs))
+			return nil
 		}
+
+		for i := range outcomes {
+			if !allowDeleteOutcome(ctx, operator, perms, outcomes[i]) {
+				log.Warn(ctx, "BulkDelete: no permission", log.Any("op", operator),
+					log.Any("perms", perms), log.Any("outcome", outcomes[i]))
+				return constant.ErrOperateNotAllowed
+			}
+		}
+
 		ancestorIDs := make([]string, len(outcomes))
 		for i, o := range outcomes {
 			err = ocm.deleteOutcome(ctx, operator, tx, o)

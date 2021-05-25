@@ -97,10 +97,21 @@ func TestAmsSchoolService_GetByOperator(t *testing.T) {
 }
 
 func TestAmsSchoolService_GetByUsers(t *testing.T) {
+	userInfos, err := GetUserServiceProvider().GetByOrganization(context.TODO(), testOperator, testOperator.OrgID)
+	if err != nil {
+		t.Error("GetUserServiceProvider.GetByOrganization error")
+		return
+	}
+	userIDs := make([]string, len(userInfos))
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+	}
+	userIDs = append(userIDs,userIDs...)
+	userIDs = append(userIDs,userIDs...)
 	schools, err := GetSchoolServiceProvider().GetByUsers(context.TODO(),
 		testOperator,
-		"9e285fc9-50fd-4cf2-ba5b-3f191c3338b4",
-		[]string{"335e0577-99cb-5d88-b5e1-dfdb14d5d4c2", "335e0577-99cb-5d88-b5e1-dfdb14d5d4c2"},
+		testOperator.OrgID,
+		userIDs,
 		WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSchoolServiceProvider().GetByUsers() error = %v", err)
@@ -111,13 +122,18 @@ func TestAmsSchoolService_GetByUsers(t *testing.T) {
 		t.Error("GetSchoolServiceProvider().GetByUsers() get empty slice")
 		return
 	}
-
-	for _, school := range schools {
+	count:=0
+	for key, school := range schools {
 		if school == nil {
 			t.Error("GetSchoolServiceProvider().GetByUsers() get null")
 			return
 		}
+		t.Logf("%s:%d",key,len(school))
+		if len(school)==0{
+			count++
+		}
 	}
+	t.Log(count)
 }
 
 func TestAmsSchoolService_BatchGet(t *testing.T) {
