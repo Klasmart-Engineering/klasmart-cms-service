@@ -448,13 +448,13 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 	pageSize := constant.AMSRequestUserSchoolPageSize
 	pageCount := (total + pageSize - 1) / pageSize
 
-	var wg sync.WaitGroup
-	wg.Add(pageCount)
+	//var wg sync.WaitGroup
+	//wg.Add(pageCount)
 	cerr := make(chan error)
 
 	for i := 0; i < pageCount; i++ {
 		go func(j int) {
-			defer wg.Done()
+			//defer wg.Done()
 
 			start := j * pageSize
 			end := (j + 1) * pageSize
@@ -540,8 +540,7 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 		}
 	}
 
-	wg.Wait()
-
+	//wg.Wait()
 	log.Info(ctx, "get user school filter by org and user ids success",
 		log.Any("operator", operator),
 		log.String("orgID", orgID),
