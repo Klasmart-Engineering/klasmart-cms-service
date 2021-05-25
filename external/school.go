@@ -448,9 +448,21 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 	pageSize := constant.AMSRequestUserSchoolPageSize
 	pageCount := (total + pageSize - 1) / pageSize
 
-	//var wg sync.WaitGroup
-	//wg.Add(pageCount)
-	cerr := make(chan error)
+	condition := NewCondition(options...)
+	data := map[string]*struct {
+		SchoolMemberships []struct {
+			School struct {
+				SchoolID     string   `json:"school_id"`
+				SchoolName   string   `json:"school_name"`
+				Status       APStatus `json:"status"`
+				Organization struct {
+					OrganizationID string `json:"organization_id"`
+				} `json:"organization"`
+			} `json:"school"`
+		} `json:"school_memberships"`
+	}{}
+
+	cerr := make(chan error, pageCount)
 
 	for i := 0; i < pageCount; i++ {
 		go func(j int) {
@@ -462,7 +474,6 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 				end = total
 			}
 			pageUserIDs := _userIDs[start:end]
-			condition := NewCondition(options...)
 
 			sb := new(strings.Builder)
 			sb.WriteString("query {")
@@ -472,19 +483,6 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 			sb.WriteString("}")
 
 			request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-
-			data := map[string]*struct {
-				SchoolMemberships []struct {
-					School struct {
-						SchoolID     string   `json:"school_id"`
-						SchoolName   string   `json:"school_name"`
-						Status       APStatus `json:"status"`
-						Organization struct {
-							OrganizationID string `json:"organization_id"`
-						} `json:"organization"`
-					} `json:"school"`
-				} `json:"school_memberships"`
-			}{}
 
 			response := &chlorine.Response{
 				Data: &data,
@@ -498,6 +496,7 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 					log.String("orgID", orgID),
 					log.Strings("pageUserIDs", pageUserIDs))
 				cerr <- err
+				return
 			}
 
 			for index, userID := range pageUserIDs {
@@ -540,7 +539,6 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 		}
 	}
 
-	//wg.Wait()
 	log.Info(ctx, "get user school filter by org and user ids success",
 		log.Any("operator", operator),
 		log.String("orgID", orgID),

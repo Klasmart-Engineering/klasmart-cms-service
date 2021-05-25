@@ -121,13 +121,18 @@ func TestAmsSchoolService_GetByUsers(t *testing.T) {
 		t.Error("GetSchoolServiceProvider().GetByUsers() get empty slice")
 		return
 	}
-
-	for _, school := range schools {
+	count:=0
+	for key, school := range schools {
 		if school == nil {
 			t.Error("GetSchoolServiceProvider().GetByUsers() get null")
 			return
 		}
+		t.Logf("%s:%d",key,len(school))
+		if len(school)==0{
+			count++
+		}
 	}
+	t.Log(count)
 }
 
 func TestAmsSchoolService_BatchGet(t *testing.T) {
