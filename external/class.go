@@ -183,31 +183,24 @@ func (s AmsClassService) GetByUserID(ctx context.Context, operator *entity.Opera
 }
 
 func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, options ...APOption) (map[string][]*Class, error) {
-	_userIDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
+	_userIDs := userIDs//utils.SliceDeduplicationExcludeEmpty(userIDs)
 
 	if len(_userIDs) == 0 {
 		return map[string][]*Class{}, nil
 	}
 
 	classes := make(map[string][]*Class, len(_userIDs))
-	var mapLock sync.Mutex
+	var mapLock sync.RWMutex
 
 	total := len(_userIDs)
 	pageSize := constant.AMSRequestUserClassPageSize
 	pageCount := (total + pageSize - 1) / pageSize
 
 	condition := NewCondition(options...)
-	data := map[string]*struct {
-		ClassesTeaching []*Class `json:"classesTeaching"`
-		ClassesStudying []*Class `json:"classesStudying"`
-	}{}
 
 	cerr := make(chan error, pageCount)
 	for i := 0; i < pageCount; i++ {
 		go func(j int) {
-			mapLock.Lock()
-			defer mapLock.Unlock()
-
 			start := j * pageSize
 			end := (j + 1) * pageSize
 			if end >= total {
@@ -225,6 +218,10 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 			sb.WriteString("}")
 
 			request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+			data := map[string]*struct {
+				ClassesTeaching []*Class `json:"classesTeaching"`
+				ClassesStudying []*Class `json:"classesStudying"`
+			}{}
 
 			response := &chlorine.Response{
 				Data: &data,
@@ -237,8 +234,6 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 				return
 			}
 
-
-
 			var queryAlias string
 			for index, userID := range pageUserIDs {
 				queryAlias = fmt.Sprintf("q%d", index)
@@ -250,9 +245,9 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 				}
 
 				allClasses := append(query.ClassesTeaching, query.ClassesStudying...)
-
+				mapLock.Lock()
 				classes[userID] = make([]*Class, 0, len(allClasses))
-
+				mapLock.Unlock()
 				for _, class := range allClasses {
 					if condition.Status.Valid {
 						if condition.Status.Status != class.Status {
@@ -264,7 +259,9 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 							continue
 						}
 					}
+					mapLock.RLock()
 					classes[userID] = append(classes[userID], class)
+					mapLock.RUnlock()
 				}
 			}
 			cerr <- nil

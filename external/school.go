@@ -443,33 +443,17 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 	}
 
 	schools := make(map[string][]*School, len(_userIDs))
-	var mapLock sync.Mutex
+	var mapLock sync.RWMutex
 
 	total := len(_userIDs)
 	pageSize := constant.AMSRequestUserSchoolPageSize
 	pageCount := (total + pageSize - 1) / pageSize
 
 	condition := NewCondition(options...)
-	data := map[string]*struct {
-		SchoolMemberships []struct {
-			School struct {
-				SchoolID     string   `json:"school_id"`
-				SchoolName   string   `json:"school_name"`
-				Status       APStatus `json:"status"`
-				Organization struct {
-					OrganizationID string `json:"organization_id"`
-				} `json:"organization"`
-			} `json:"school"`
-		} `json:"school_memberships"`
-	}{}
-
 	cerr := make(chan error, pageCount)
 
 	for i := 0; i < pageCount; i++ {
 		go func(j int) {
-			mapLock.Lock()
-			defer mapLock.Unlock()
-
 			start := j * pageSize
 			end := (j + 1) * pageSize
 			if end >= total {
@@ -485,7 +469,18 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 			sb.WriteString("}")
 
 			request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-
+			data := map[string]*struct {
+				SchoolMemberships []struct {
+					School struct {
+						SchoolID     string   `json:"school_id"`
+						SchoolName   string   `json:"school_name"`
+						Status       APStatus `json:"status"`
+						Organization struct {
+							OrganizationID string `json:"organization_id"`
+						} `json:"organization"`
+					} `json:"school"`
+				} `json:"school_memberships"`
+			}{}
 			response := &chlorine.Response{
 				Data: &data,
 			}
@@ -506,7 +501,10 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 				if user == nil {
 					continue
 				}
+				mapLock.Lock()
 				schools[userID] = make([]*School, 0)
+				mapLock.Unlock()
+
 				for _, membership := range user.SchoolMemberships {
 					// filtering by operator's org id
 					if membership.School.Organization.OrganizationID != orgID {
@@ -523,12 +521,13 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 							continue
 						}
 					}
-
+					mapLock.RLock()
 					schools[userID] = append(schools[userID], &School{
 						ID:     membership.School.SchoolID,
 						Name:   membership.School.SchoolName,
 						Status: membership.School.Status,
 					})
+					mapLock.RUnlock()
 				}
 			}
 			cerr <- nil
