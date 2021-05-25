@@ -131,6 +131,5 @@ func conditionHash(condition *ScheduleCacheCondition) string {
 	b, _ := json.Marshal(condition)
 	h.Write(b)
 	md5Hash := fmt.Sprintf("%x", h.Sum(nil))
-	fmt.Println(string(b))
 	return md5Hash
 }
