@@ -10,16 +10,26 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+
 	"gitlab.badanamu.com.cn/calmisland/ro"
 	"sync"
 	"time"
 )
 
+type ScheduleCacheFlag string
+
+const (
+	ScheduleFilterUnDefineClass ScheduleCacheFlag = "UnDefineClass"
+)
+
 type ScheduleCacheCondition struct {
-	Condition  dbo.Conditions
-	UserID     string
-	ScheduleID string
-	SchoolID   string
+	Condition     dbo.Conditions
+	UserID        string
+	ScheduleID    string
+	SchoolID      string
+	CacheFlag     ScheduleCacheFlag
+	PermissionMap map[external.PermissionName]bool
 }
 
 type IScheduleCacheDA interface {
@@ -28,6 +38,7 @@ type IScheduleCacheDA interface {
 	SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error)
 	SearchToBasicData(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error)
 	SearchToScheduleDetails(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error)
+	SearchToScheduleFilterClass(ctx context.Context, orgID string, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error)
 	Clean(ctx context.Context, orgID string) error
 }
 
@@ -139,6 +150,26 @@ func (r *ScheduleRedisDA) SearchToScheduleDetails(ctx context.Context, orgID str
 	}
 	return result, nil
 }
+
+func (r *ScheduleRedisDA) SearchToScheduleFilterClass(ctx context.Context, orgID string, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error) {
+	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{CacheFlag: ScheduleFilterUnDefineClass, PermissionMap: permissionMap})
+	if err != nil {
+		return nil, err
+	}
+	var result *entity.ScheduleFilterClass
+	err = json.Unmarshal([]byte(res), &result)
+	if err != nil {
+		log.Error(ctx, "unmarshal schedule error ",
+			log.Err(err),
+			log.String("orgID", orgID),
+			log.Any("permissionMap", permissionMap),
+			log.String("scheduleJson", res),
+		)
+		return nil, err
+	}
+	return result, nil
+}
+
 func (r *ScheduleRedisDA) getHSetKey(orgID string) string {
 	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleCondition, orgID)
 }
