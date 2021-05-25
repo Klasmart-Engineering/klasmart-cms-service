@@ -28,15 +28,15 @@ type homeFunStudyDA struct {
 }
 
 type QueryHomeFunStudyCondition struct {
-	OrgID           entity.NullString                            `json:"org_id"`
-	ScheduleID      entity.NullString                            `json:"schedule_id"`
-	TeacherIDs      utils.NullSQLJSONStringArray                 `json:"teacher_ids"`
-	StudentIDs      entity.NullStrings                           `json:"student_ids"`
-	Status          entity.NullAssessmentStatus                  `json:"status"`
-	OrderBy         entity.NullListHomeFunStudiesOrderBy         `json:"order_by"`
-	AllowTeacherIDs entity.NullStrings                           `json:"allow_teacher_ids"`
-	AllowPairs      entity.NullAssessmentTeacherIDAndStatusPairs `json:"allow_pairs"`
-	Pager           dbo.Pager                                    `json:"pager"`
+	OrgID           entity.NullString                                 `json:"org_id"`
+	ScheduleID      entity.NullString                                 `json:"schedule_id"`
+	TeacherIDs      utils.NullSQLJSONStringArray                      `json:"teacher_ids"`
+	StudentIDs      entity.NullStrings                                `json:"student_ids"`
+	Status          entity.NullAssessmentStatus                       `json:"status"`
+	OrderBy         entity.NullListHomeFunStudiesOrderBy              `json:"order_by"`
+	AllowTeacherIDs entity.NullStrings                                `json:"allow_teacher_ids"`
+	AllowPairs      entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"allow_pairs"`
+	Pager           dbo.Pager                                         `json:"pager"`
 }
 
 func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {

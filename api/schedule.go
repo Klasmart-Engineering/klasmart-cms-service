@@ -166,6 +166,8 @@ func (s *Server) updateSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
 	case model.ErrScheduleAlreadyFeedback:
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgAssignmentNew))
+	case model.ErrScheduleStudyAlreadyProgress:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgCannotEditStudy))
 	case nil:
 		c.JSON(http.StatusOK, D(IDResponse{ID: newID}))
 	default:
@@ -225,6 +227,8 @@ func (s *Server) deleteSchedule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(ScheduleMsgHidden))
 	case model.ErrScheduleAlreadyFeedback:
 		c.JSON(http.StatusBadRequest, L(scheduleMsgHide))
+	case model.ErrScheduleStudyAlreadyProgress:
+		c.JSON(http.StatusBadRequest, L(ScheduleMsgCannotDeleteStudy))
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
 	default:
@@ -840,7 +844,7 @@ func (s *Server) processTimeQuery(c *gin.Context, condition *da.ScheduleConditio
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return err
 		}
-		condition.StartAtGe = sql.NullInt64{
+		condition.StartAtAndDueAtGe = sql.NullInt64{
 			Int64: startAt,
 			Valid: true,
 		}
@@ -854,7 +858,7 @@ func (s *Server) processTimeQuery(c *gin.Context, condition *da.ScheduleConditio
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return err
 		}
-		condition.EndAtLe = sql.NullInt64{
+		condition.EndAtAndDueAtLe = sql.NullInt64{
 			Int64: endAt,
 			Valid: true,
 		}

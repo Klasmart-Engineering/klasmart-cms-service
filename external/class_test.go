@@ -2,11 +2,23 @@ package external
 
 import (
 	"context"
+	"fmt"
 	"testing"
 )
 
 func TestAmsClassService_GetByUserIDs(t *testing.T) {
-	classes, err := GetClassServiceProvider().GetByUserIDs(context.TODO(), testOperator, []string{"335e0577-99cb-5d88-b5e1-dfdb14d5d4c2", "335e0577-99cb-5d88-b5e1-dfdb14d5d4c2"}, WithStatus(Active))
+	userInfos, err := GetUserServiceProvider().GetByOrganization(context.TODO(), testOperator, testOperator.OrgID)
+	if err != nil {
+		t.Error("GetUserServiceProvider.GetByOrganization error")
+		return
+	}
+	userIDs := make([]string, len(userInfos))
+	for i, item := range userInfos {
+		userIDs[i] = item.ID
+	}
+	fmt.Println(len(userIDs))
+	userIDs = append(userIDs,userIDs...)
+	classes, err := GetClassServiceProvider().GetByUserIDs(context.TODO(), testOperator, userIDs, WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetClassServiceProvider().GetByUserIDs() error = %v", err)
 		return

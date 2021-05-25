@@ -10,6 +10,7 @@ const (
 	GeneralUnknown             ResponseLabel = "general_error_unknown"
 	GeneralUnAuthorized        ResponseLabel = "general_error_unauthorized"
 	GeneralUnAuthorizedNoOrgID ResponseLabel = "general_error_no_organization"
+	GeneralNoPermission        ResponseLabel = "general_error_no_permission"
 
 	// Assessment
 	AssessMsgOneStudent   ResponseLabel = "assess_msg_one_student"
@@ -20,10 +21,11 @@ const (
 	ReportMsgNoPermission ResponseLabel = "report_error_no_permissions"
 
 	//Library
-	LibraryMsgContentLocked       ResponseLabel = "library_error_content_locked"
-	LibraryMsgContentDataInvalid  ResponseLabel = "library_error_content_data_invalid"
-	LibraryContentLockedByMe      ResponseLabel = "library_error_content_locked_by_me"
-	LibraryErrDuplicateFolderName ResponseLabel = "library_error_duplicate_folder_name"
+	LibraryMsgContentLocked         ResponseLabel = "library_error_content_locked"
+	LibraryMsgContentDataInvalid    ResponseLabel = "library_error_content_data_invalid"
+	LibraryContentLockedByMe        ResponseLabel = "library_error_content_locked_by_me"
+	LibraryErrDuplicateFolderName   ResponseLabel = "library_error_duplicate_folder_name"
+	LibraryIncludeArchivedMaterials ResponseLabel = "library_error_include_archived_lesson_material"
 
 	LibraryErrorPlanDuration ResponseLabel = "library_error_plan_duration"
 
@@ -49,6 +51,8 @@ const (
 	scheduleMsgHide                      ResponseLabel = "schedule_msg_hide"
 	ScheduleMsgAssignmentNew             ResponseLabel = "schedule_msg_assignment_new"
 	ScheduleFeedbackCompleted            ResponseLabel = "schedule_msg_cannot_submit"
+	ScheduleMsgCannotEditStudy           ResponseLabel = "schedule_msg_cannot_edit_study"
+	ScheduleMsgCannotDeleteStudy         ResponseLabel = "schedule_msg_cannot_delete_study"
 
 	AssessMsgLockedLo                ResponseLabel = "assess_msg_locked_lo"
 	AssessMsgExistingSet             ResponseLabel = "assess_msg_existing_set"
@@ -56,6 +60,7 @@ const (
 	AssessMsgMilestoneExistShortcode ResponseLabel = "assess_msg_exist_milestone_short_code"
 	AssessErrorMsgLocked             ResponseLabel = "assess_error_message_locked"
 	AssessMsgLockedMilestone         ResponseLabel = "assess_msg_locked_milestone"
+	AssessMsgUnLockedMilestone       ResponseLabel = "assess_msg_unlocked_milestone"
 )
 
 // L create response object with label

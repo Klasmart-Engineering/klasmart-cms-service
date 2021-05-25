@@ -154,13 +154,13 @@ func (s *Server) getAssetByID(c *gin.Context) {
 func (s *Server) searchAssets(c *gin.Context) {
 	ctx := c.Request.Context()
 	op := s.getOperator(c)
-	condition := queryCondition(c, op)
+	condition := s.queryContentCondition(c, op)
 
 	if condition.ContentType == nil {
 		condition.ContentType = []int{entity.ContentTypeAssets}
 	}
 
-	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), condition, op)
+	key, results, err := model.GetContentModel().SearchContent(ctx, dbo.MustGetDB(ctx), &condition, op)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, gin.H{

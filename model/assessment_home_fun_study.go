@@ -36,8 +36,8 @@ var (
 
 type IHomeFunStudyModel interface {
 	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
-	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
-	GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
+	GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
+	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
 	GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error)
 	Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
@@ -65,7 +65,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 			Strings: checker.allowTeacherIDs,
 			Valid:   true,
 		},
-		AllowPairs: entity.NullAssessmentTeacherIDAndStatusPairs{
+		AllowPairs: entity.NullAssessmentAllowTeacherIDAndStatusPairs{
 			Values: checker.AllowPairs(),
 			Valid:  len(checker.AllowPairs()) > 0,
 		},
@@ -171,7 +171,7 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 	return &result, nil
 }
 
-func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error) {
+func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error) {
 	var study entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
 		log.Error(ctx, "da.GetHomeFunStudyDA().Get: get failed",
@@ -263,10 +263,10 @@ func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, 
 	return result, nil
 }
 
-func (m *homeFunStudyModel) GetPlain(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
+func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
 	var study entity.HomeFunStudy
 	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
-		log.Error(ctx, "GetPlain: da.GetHomeFunStudyDA().Get: get failed",
+		log.Error(ctx, "Get: da.GetHomeFunStudyDA().Get: get failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("id", id),
@@ -292,6 +292,10 @@ func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, ope
 		StudentIDs: entity.NullStrings{
 			Strings: []string{studentID},
 			Valid:   true,
+		},
+		Pager: dbo.Pager{
+			Page:     1,
+			PageSize: 1,
 		},
 	}
 	var studies []*entity.HomeFunStudy
@@ -500,7 +504,7 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 
 func (m *homeFunStudyModel) EncodeTitle(className *string, lessonName string) string {
 	if className == nil {
-		tmp := constant.HomeFunStudyNoClass
+		tmp := constant.AssessmentNoClass
 		className = &tmp
 	}
 	return fmt.Sprintf("%s-%s", *className, lessonName)

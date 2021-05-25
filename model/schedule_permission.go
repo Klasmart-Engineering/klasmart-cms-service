@@ -2,11 +2,14 @@ package model
 
 import (
 	"context"
+	"sync"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"sync"
 )
 
 type ISchedulePermissionModel interface {
@@ -40,10 +43,22 @@ func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *enti
 		Name:             entity.ScheduleFilterUndefinedClass,
 		OperatorRoleType: entity.ScheduleRoleTypeUnknown,
 	}
+
 	return result, nil
 }
 
 func (s *schedulePermissionModel) HasUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (bool, error) {
+	cacheData, err := da.GetScheduleRedisDA().SearchToBool(ctx, op.OrgID, &da.ScheduleCacheCondition{
+		CacheFlag:     da.ScheduleFilterUnDefineClass,
+		PermissionMap: permissionMap})
+	if err == nil {
+		log.Debug(ctx, "Query:using cache",
+			log.Any("op", op),
+			log.Any("permissionMap", permissionMap),
+		)
+		return cacheData, nil
+	}
+
 	userInfos, err := s.GetOnlyUnderOrgUsers(ctx, op)
 	if err != nil {
 		log.Error(ctx, "GetOnlyUnderOrgUsers error", log.Any("op", op))
@@ -76,6 +91,12 @@ func (s *schedulePermissionModel) HasUnDefineClass(ctx context.Context, op *enti
 		log.Error(ctx, "has schedule by relation ids", log.Strings("userIDs", userIDs), log.Any("op", op))
 		return false, err
 	}
+
+	da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{
+		CacheFlag:     da.ScheduleFilterUnDefineClass,
+		PermissionMap: permissionMap,
+	}, hasSchedule)
+
 	return hasSchedule, nil
 }
 
@@ -156,7 +177,7 @@ func (s *schedulePermissionModel) GetOnlyUnderOrgClasses(ctx context.Context, op
 	classInfos, err := external.GetClassServiceProvider().GetOnlyUnderOrgClasses(ctx, op, op.OrgID)
 	if err != nil {
 		log.Error(ctx, "get only under org classes error", log.Any("op", op))
-		return nil,err
+		return nil, err
 	}
 	underOrgClassIDs := make([]string, 0, len(classInfos))
 	for _, classItem := range classInfos {

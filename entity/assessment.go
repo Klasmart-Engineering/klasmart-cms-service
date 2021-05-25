@@ -1,97 +1,123 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/dbo"
+import "database/sql"
 
 type Assessment struct {
 	ID           string           `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
 	ScheduleID   string           `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
+	Type         AssessmentType   `gorm:"column:type;type:varchar(1024);not null" json:"type"` // add: 2021-05-15
 	Title        string           `gorm:"column:title;type:varchar(1024);not null" json:"title"`
-	ClassLength  int              `gorm:"column:class_length;type:int;not null" json:"class_length"`
-	ClassEndTime int64            `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
 	CompleteTime int64            `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
 	Status       AssessmentStatus `gorm:"column:status;type:varchar(128);not null" json:"status"`
 
 	CreateAt int64 `gorm:"column:create_at;type:bigint;not null" json:"create_at"`
 	UpdateAt int64 `gorm:"column:update_at;type:bigint;not null" json:"update_at"`
 	DeleteAt int64 `gorm:"column:delete_at;type:bigint;not null" json:"delete_at"`
+
+	// Union Fields
+	ClassLength  int   `gorm:"column:class_length;type:int;not null" json:"class_length"`
+	ClassEndTime int64 `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
 }
 
-func (Assessment) TableName() string {
-	return "assessments"
-}
-
-type AssessmentView struct {
-	*Assessment
-	Program  AssessmentProgram    `json:"program"`
-	Subjects []*AssessmentSubject `json:"subjects"`
-	Teachers []*AssessmentTeacher `json:"teachers"`
-	Students []*AssessmentStudent `json:"students"`
-}
-
-type AssessmentItem struct {
-	ID           string               `json:"id"`
-	Title        string               `json:"title"`
-	Program      AssessmentProgram    `json:"program"`
-	Subjects     []*AssessmentSubject `json:"subjects"`
-	Teachers     []*AssessmentTeacher `json:"teachers"`
-	ClassEndTime int64                `json:"class_end_time"`
-	CompleteTime int64                `json:"complete_time"`
-	Status       AssessmentStatus     `json:"status"`
-}
-
-type AssessmentStatus string
+type AssessmentType string
 
 const (
-	AssessmentStatusInProgress AssessmentStatus = "in_progress"
-	AssessmentStatusComplete   AssessmentStatus = "complete"
+	AssessmentTypeClassAndLiveOutcome AssessmentType = "class_and_live_outcome"
+	AssessmentTypeClassAndLiveH5P     AssessmentType = "class_and_live_h5p"
+	AssessmentTypeStudyH5P            AssessmentType = "study_h5p"
 )
 
-func (s AssessmentStatus) Valid() bool {
-	switch s {
-	case AssessmentStatusInProgress, AssessmentStatusComplete:
+func (t AssessmentType) Valid() bool {
+	switch t {
+	case AssessmentTypeClassAndLiveOutcome, AssessmentTypeClassAndLiveH5P, AssessmentTypeStudyH5P:
 		return true
 	default:
 		return false
 	}
 }
 
-type NullAssessmentStatus struct {
-	Value AssessmentStatus
+type NullAssessmentType struct {
+	Value AssessmentType
 	Valid bool
 }
 
-type AssessmentDetail struct {
-	ID           string               `json:"id"`
-	Title        string               `json:"title"`
-	Class        AssessmentClass      `json:"class"`
-	Status       AssessmentStatus     `json:"status"`
-	CompleteTime int64                `json:"complete_time"`
-	Teachers     []*AssessmentTeacher `json:"teachers"`
-	Students     []*AssessmentStudent `json:"students"`
-	Program      AssessmentProgram    `json:"program"`
-	Subjects     []*AssessmentSubject `json:"subjects"`
-	ClassEndTime int64                `json:"class_end_time"`
-	ClassLength  int                  `json:"class_length"`
-	RoomID       string               `json:"room_id"`
-
-	Plan               AssessmentContentView    `json:"plan"`
-	Materials          []*AssessmentContentView `json:"materials"`
-	OutcomeAttendances []*OutcomeAttendances    `json:"outcome_attendances"`
+func (Assessment) TableName() string {
+	return "assessments"
 }
 
-type OutcomeAttendances struct {
-	OutcomeID     string   `json:"outcome_id"`
-	OutcomeName   string   `json:"outcome_name"`
-	Assumed       bool     `json:"assumed"`
-	Skip          bool     `json:"skip"`
-	NoneAchieved  bool     `json:"none_achieved"`
-	AttendanceIDs []string `json:"attendance_ids"`
-	Checked       bool     `json:"checked"`
+type AddAssessmentArgs struct {
+	Type          AssessmentType `json:"type"`
+	ScheduleID    string         `json:"schedule_id"`
+	AttendanceIDs []string       `json:"attendance_ids"`
+	ClassLength   int            `json:"class_length"`
+	ClassEndTime  int64          `json:"class_end_time"`
 }
 
-type AssessmentSubject struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+func (a *AddAssessmentArgs) Valid() error {
+	return nil
+}
+
+type AddAssessmentResult struct {
+	IDs []string `json:"id"`
+}
+
+type UpdateAssessmentAction string
+
+const (
+	UpdateAssessmentActionSave     UpdateAssessmentAction = "save"
+	UpdateAssessmentActionComplete UpdateAssessmentAction = "complete"
+)
+
+func (a UpdateAssessmentAction) Valid() bool {
+	switch a {
+	case UpdateAssessmentActionSave, UpdateAssessmentActionComplete:
+		return true
+	default:
+		return false
+	}
+}
+
+type AssessmentOrderBy string
+
+const (
+	AssessmentOrderByClassEndTime     AssessmentOrderBy = "class_end_time"
+	AssessmentOrderByClassEndTimeDesc AssessmentOrderBy = "-class_end_time"
+	AssessmentOrderByCompleteTime     AssessmentOrderBy = "complete_time"
+	AssessmentOrderByCompleteTimeDesc AssessmentOrderBy = "-complete_time"
+	AssessmentOrderByCreateAt         AssessmentOrderBy = "create_at"
+	AssessmentOrderByCreateAtDesc     AssessmentOrderBy = "-create_at"
+)
+
+func (ob AssessmentOrderBy) Valid() bool {
+	switch ob {
+	case AssessmentOrderByClassEndTime,
+		AssessmentOrderByClassEndTimeDesc,
+		AssessmentOrderByCompleteTime,
+		AssessmentOrderByCompleteTimeDesc,
+		AssessmentOrderByCreateAt,
+		AssessmentOrderByCreateAtDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+type NullAssessmentsOrderBy struct {
+	Value AssessmentOrderBy
+	Valid bool
+}
+
+type AssessmentView struct {
+	*Assessment
+	Schedule        *Schedule                   `json:"schedule"`
+	RoomID          string                      `json:"room_id"`
+	Program         AssessmentProgram           `json:"program"`
+	Subjects        []*AssessmentSubject        `json:"subjects"`
+	Teachers        []*AssessmentTeacher        `json:"teachers"`
+	Students        []*AssessmentStudent        `json:"students"`
+	Class           AssessmentClass             `json:"class"`
+	LessonPlan      *AssessmentLessonPlan       `json:"lesson_plan"`
+	LessonMaterials []*AssessmentLessonMaterial `json:"lesson_materials"`
 }
 
 type AssessmentProgram struct {
@@ -115,149 +141,44 @@ type AssessmentClass struct {
 	Name string `json:"name"`
 }
 
-type AssessmentOutcomeView struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Checked bool   `json:"checked"`
+type AssessmentSubject struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
-type AssessmentContentView struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	Comment    string   `json:"comment"`
-	Checked    bool     `json:"checked"`
-	OutcomeIDs []string `json:"outcome_ids"`
+type ConvertToViewsOptions struct {
+	CheckedStudents  sql.NullBool
+	EnableProgram    bool
+	EnableSubjects   bool
+	EnableTeachers   bool
+	EnableStudents   bool
+	EnableClass      bool
+	EnableLessonPlan bool
 }
 
-type QueryAssessmentsArgs struct {
-	Status      NullAssessmentStatus       `json:"status"`
-	TeacherName NullString                 `json:"teacher_name"`
-	OrderBy     NullListAssessmentsOrderBy `json:"order_by"`
-	ClassType   NullScheduleClassType      `json:"class_type"`
-	Pager       dbo.Pager                  `json:"pager"`
+type AssessmentLessonPlan struct {
+	ID        string                      `json:"id"`
+	Name      string                      `json:"name"`
+	Materials []*AssessmentLessonMaterial `json:"materials"`
 }
 
-type AssessmentTeacherIDAndStatusPair struct {
-	TeacherID string           `json:"teacher_id"`
-	Status    AssessmentStatus `json:"status"`
+type AssessmentLessonMaterial struct {
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	FileType FileType `json:"file_type"`
+	Comment  string   `json:"comment"`
+	Source   string   `json:"source"`
+	Checked  bool     `json:"checked"`
 }
 
-type NullAssessmentTeacherIDAndStatusPairs struct {
-	Values []*AssessmentTeacherIDAndStatusPair
-	Valid  bool
+type AssessmentExternalLessonPlan struct {
+	ID        string                              `json:"id"`
+	Name      string                              `json:"name"`
+	Materials []*AssessmentExternalLessonMaterial `json:"materials"`
 }
 
-type ListAssessmentsStatus string
-
-const (
-	ListAssessmentsStatusAll        ListAssessmentsStatus = "all"
-	ListAssessmentsStatusInProgress ListAssessmentsStatus = "in_progress"
-	ListAssessmentsStatusComplete   ListAssessmentsStatus = "complete"
-)
-
-func (s ListAssessmentsStatus) Valid() bool {
-	switch s {
-	case ListAssessmentsStatusAll, ListAssessmentsStatusInProgress, ListAssessmentsStatusComplete:
-		return true
-	default:
-		return false
-	}
-}
-
-func (s ListAssessmentsStatus) AssessmentStatus() AssessmentStatus {
-	return AssessmentStatus(s)
-}
-
-type ListAssessmentsOrderBy string
-
-const (
-	ListAssessmentsOrderByClassEndTime     ListAssessmentsOrderBy = "class_end_time"
-	ListAssessmentsOrderByClassEndTimeDesc ListAssessmentsOrderBy = "-class_end_time"
-	ListAssessmentsOrderByCompleteTime     ListAssessmentsOrderBy = "complete_time"
-	ListAssessmentsOrderByCompleteTimeDesc ListAssessmentsOrderBy = "-complete_time"
-)
-
-func (ob ListAssessmentsOrderBy) Valid() bool {
-	switch ob {
-	case ListAssessmentsOrderByClassEndTime,
-		ListAssessmentsOrderByClassEndTimeDesc,
-		ListAssessmentsOrderByCompleteTime,
-		ListAssessmentsOrderByCompleteTimeDesc:
-		return true
-	default:
-		return false
-	}
-}
-
-type NullListAssessmentsOrderBy struct {
-	Value ListAssessmentsOrderBy
-	Valid bool
-}
-
-type ListAssessmentsResult struct {
-	Total int               `json:"total"`
-	Items []*AssessmentItem `json:"items"`
-}
-
-type QueryAssessmentsSummaryArgs struct {
-	Status      NullAssessmentStatus  `json:"status"`
-	TeacherName NullString            `json:"teacher_name"`
-	ClassType   NullScheduleClassType `json:"class_type"`
-}
-
-type AssessmentsSummary struct {
-	Complete   int `json:"complete"`
-	InProgress int `json:"in_progress"`
-}
-
-type AddAssessmentArgs struct {
-	ScheduleID    string   `json:"schedule_id"`
-	AttendanceIDs []string `json:"attendance_ids"`
-	ClassLength   int      `json:"class_length"`
-	ClassEndTime  int64    `json:"class_end_time"`
-}
-
-func (a *AddAssessmentArgs) Valid() error {
-	return nil
-}
-
-type AddAssessmentResult struct {
-	ID string `json:"id"`
-}
-
-type UpdateAssessmentArgs struct {
-	ID                 string                          `json:"id"`
-	Action             UpdateAssessmentAction          `json:"action" enums:"save,complete"`
-	StudentIDs         *[]string                       `json:"attendance_ids"`
-	OutcomeAttendances *[]UpdateOutcomeAttendancesArgs `json:"outcome_attendances"`
-	Materials          []UpdateAssessmentMaterialArgs  `json:"materials"`
-}
-
-type UpdateAssessmentAction string
-
-const (
-	UpdateAssessmentActionSave     UpdateAssessmentAction = "save"
-	UpdateAssessmentActionComplete UpdateAssessmentAction = "complete"
-)
-
-func (a UpdateAssessmentAction) Valid() bool {
-	switch a {
-	case UpdateAssessmentActionSave, UpdateAssessmentActionComplete:
-		return true
-	default:
-		return false
-	}
-}
-
-type UpdateOutcomeAttendancesArgs struct {
-	OutcomeID     string   `json:"outcome_id"`
-	Skip          bool     `json:"skip"`
-	NoneAchieved  bool     `json:"none_achieved"`
-	AttendanceIDs []string `json:"attendance_ids"`
-}
-
-type UpdateAssessmentMaterialArgs struct {
-	ID      string `json:"id"`
-	Checked bool   `json:"checked"`
-	Comment string `json:"comment"`
+type AssessmentExternalLessonMaterial struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Source string `json:"source"`
 }

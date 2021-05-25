@@ -440,20 +440,21 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID            string            `json:"id"`
-	Title         string            `json:"title"`
-	StartAt       int64             `json:"start_at"`
-	EndAt         int64             `json:"end_at"`
-	IsRepeat      bool              `json:"is_repeat"`
-	LessonPlanID  string            `json:"lesson_plan_id"`
-	ClassType     ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	Status        ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ClassID       string            `json:"class_id"`
-	DueAt         int64             `json:"due_at"`
-	IsHidden      bool              `json:"is_hidden"`
-	RoleType      ScheduleRoleType  `json:"role_type"`
-	ExistFeedback bool              `json:"exist_feedback"`
-	IsHomeFun     bool              `json:"is_home_fun"`
+	ID              string            `json:"id"`
+	Title           string            `json:"title"`
+	StartAt         int64             `json:"start_at"`
+	EndAt           int64             `json:"end_at"`
+	IsRepeat        bool              `json:"is_repeat"`
+	LessonPlanID    string            `json:"lesson_plan_id"`
+	ClassType       ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status          ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID         string            `json:"class_id"`
+	DueAt           int64             `json:"due_at"`
+	IsHidden        bool              `json:"is_hidden"`
+	RoleType        ScheduleRoleType  `json:"role_type"`
+	ExistFeedback   bool              `json:"exist_feedback"`
+	IsHomeFun       bool              `json:"is_home_fun"`
+	ExistAssessment bool              `json:"exist_assessment"`
 }
 
 type ScheduleDateView struct {
@@ -489,6 +490,7 @@ type ScheduleDetailsView struct {
 	Subjects             []*ScheduleShortInfo          `json:"subjects"`
 	Program              *ScheduleShortInfo            `json:"program"`
 	Teachers             []*ScheduleAccessibleUserView `json:"teachers"`
+	ExistAssessment      bool                          `json:"exist_assessment"`
 }
 
 type ScheduleRoleType string
@@ -739,6 +741,7 @@ type ScheduleViewDetail struct {
 	Students      []*ScheduleShortInfo `json:"students"`
 	RoomID        string               `json:"room_id"`
 	//LiveToken     string               `json:"live_token"`
+	ExistAssessment bool `json:"exist_assessment"`
 }
 
 type ScheduleTeachingLoadInput struct {

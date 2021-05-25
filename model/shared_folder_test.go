@@ -2,12 +2,12 @@ package model
 
 import (
 	"context"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"testing"
 )
 
 func createFolders(t *testing.T) ([]string, error) {
@@ -43,7 +43,7 @@ func createFolders(t *testing.T) ([]string, error) {
 func fakeContentsID(t *testing.T) []string {
 	return []string{
 		"5f6c2e1c2caa9a07b6fc3496",
-		"5f6c3528cbf5a918df9ad98d",}
+		"5f6c3528cbf5a918df9ad98d"}
 	//"5f6c688b71536559d91f2344",
 	//"5f713e4462762537b1ed9e1b",
 	//"5f7175f557337f28cf6d1968",
@@ -59,11 +59,10 @@ func fakeContentsID(t *testing.T) []string {
 	//"5f7ff91a970387d696c09366"}
 }
 
-
 func fakeContentsID2(t *testing.T) []string {
 	return []string{
 		"5f71763557337f28cf6d1989",
-		"5f7294c906b1527fd862a8b2",}
+		"5f7294c906b1527fd862a8b2"}
 }
 
 func TestShareFolderProcess(t *testing.T) {
@@ -205,7 +204,6 @@ func TestShareFolderToAllProcess(t *testing.T) {
 	}
 }
 
-
 func TestMoveSubFolderToAllProcess(t *testing.T) {
 	folderIDs, err := createFolders(t)
 	if err != nil {
@@ -251,9 +249,9 @@ func TestMoveSubFolderToAllProcess(t *testing.T) {
 				FolderFileType: entity.FolderFileTypeFolder,
 			},
 		},
-		OwnerType:  entity.OwnerTypeOrganization,
-		Dist:       folderIDs[1],
-		Partition:  entity.FolderPartitionMaterialAndPlans,
+		OwnerType: entity.OwnerTypeOrganization,
+		Dist:      folderIDs[1],
+		Partition: entity.FolderPartitionMaterialAndPlans,
 	}, fakeOperator())
 
 	assert.NoError(t, err)
@@ -266,7 +264,7 @@ func TestQuerySharedContents(t *testing.T) {
 	operator := fakeOperator()
 	operator.OrgID = "100"
 	total, data, err := GetContentModel().SearchAuthedContent(context.Background(), dbo.MustGetDB(context.Background()),
-		da.ContentCondition{}, operator)
+		entity.ContentConditionRequest{}, operator)
 
 	assert.NoError(t, err)
 	if err != nil {

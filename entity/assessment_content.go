@@ -13,3 +13,9 @@ type AssessmentContent struct {
 func (AssessmentContent) TableName() string {
 	return "assessments_contents"
 }
+
+type UpdateAssessmentContentArgs struct {
+	ID      string `json:"id"`
+	Checked bool   `json:"checked"`
+	Comment string `json:"comment"`
+}

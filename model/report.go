@@ -836,9 +836,9 @@ func (m *reportModel) GetStudentPerformanceReport(ctx context.Context, tx *dbo.D
 }
 
 func (m *reportModel) getCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]string, error) {
-	ids, err := m.getAssessmentIDs(ctx, tx, operator, classID, lessonPlanID)
+	assessments, err := m.getCompletedAssessments(ctx, tx, operator, classID, lessonPlanID)
 	if err != nil {
-		log.Error(ctx, "get assessment ids failed",
+		log.Error(ctx, "GetStudentPerformanceReport: call getCompletedAssessments failed",
 			log.Err(err),
 			log.String("class_id", classID),
 			log.String("lesson_plan_id", lessonPlanID),
@@ -846,15 +846,11 @@ func (m *reportModel) getCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBC
 		)
 		return nil, err
 	}
-	result, err := da.GetAssessmentDA().FilterCompletedAssessmentIDs(ctx, tx, ids)
-	if err != nil {
-		log.Error(ctx, "filter completed assessment ids failed",
-			log.Any("operator", operator),
-			log.Strings("ids", ids),
-		)
-		return nil, err
+	assessmentIDs := make([]string, 0, len(assessments))
+	for _, a := range assessments {
+		assessmentIDs = append(assessmentIDs, a.ID)
 	}
-	return result, nil
+	return assessmentIDs, nil
 }
 
 func (m *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, classID string, lessonPlanID string) ([]*entity.Assessment, error) {
@@ -868,9 +864,22 @@ func (m *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBCon
 		)
 		return nil, err
 	}
-	result, err := da.GetAssessmentDA().FilterCompletedAssessments(ctx, tx, ids)
-	if err != nil {
-		log.Error(ctx, "getCompletedAssessments: call FilterCompletedAssessments failed",
+	result := make([]*entity.Assessment, 0, len(ids))
+	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+		IDs: entity.NullStrings{
+			Strings: ids,
+			Valid:   true,
+		},
+		Type: entity.NullAssessmentType{
+			Value: entity.AssessmentTypeClassAndLiveOutcome,
+			Valid: true,
+		},
+		Status: entity.NullAssessmentStatus{
+			Value: entity.AssessmentStatusComplete,
+			Valid: true,
+		},
+	}, &result); err != nil {
+		log.Error(ctx, "da.GetAssessmentDA().Query: call FilterCompletedAssessments failed",
 			log.Err(err),
 			log.Any("operator", operator),
 			log.String("class_id", classID),
@@ -892,9 +901,18 @@ func (m *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 		)
 		return nil, err
 	}
-	assessments, err := da.GetAssessmentDA().BatchGetAssessmentsByScheduleIDs(ctx, tx, scheduleIDs)
-	if err != nil {
-		log.Error(ctx, "get assessment ids: batch get assessment failed by schedule ids",
+	assessments := make([]*entity.Assessment, 0, len(scheduleIDs))
+	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
+		Type: entity.NullAssessmentType{
+			Value: entity.AssessmentTypeClassAndLiveOutcome,
+			Valid: true,
+		},
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+	}, &assessments); err != nil {
+		log.Error(ctx, "da.GetAssessmentDA().Query: batch get assessment failed by schedule ids",
 			log.Err(err),
 			log.Any("cmd", "cmd"),
 		)

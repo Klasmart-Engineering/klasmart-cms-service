@@ -27,6 +27,7 @@ var (
 	ErrScheduleEditMissTimeForDueAt = errors.New("editable time has expired for due at")
 	ErrScheduleAlreadyHidden        = errors.New("schedule already hidden")
 	ErrScheduleAlreadyFeedback      = errors.New("students already submitted feedback")
+	ErrScheduleStudyAlreadyProgress = errors.New("students already started")
 )
 
 type IScheduleModel interface {
@@ -658,7 +659,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 		return "", err
 	}
 	id, err := dbo.GetTransResult(ctx, func(ctx context.Context, tx *dbo.DBContext) (interface{}, error) {
-		scheduleID, err := s.addSchedule(ctx, tx, schedule, &viewData.Repeat, viewData.Location, relations)
+		scheduleID, err := s.addSchedule(ctx, tx, op, schedule, &viewData.Repeat, viewData.Location, relations)
 		if err != nil {
 			log.Error(ctx, "add schedule: error",
 				log.Err(err),
@@ -677,7 +678,7 @@ func (s *scheduleModel) Add(ctx context.Context, op *entity.Operator, viewData *
 	return id.(string), nil
 }
 
-func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) (string, error) {
+func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, schedule *entity.Schedule, options *entity.RepeatOptions, location *time.Location, relations []*entity.ScheduleRelation) (string, error) {
 	scheduleList, err := s.StartScheduleRepeat(ctx, schedule, options, location)
 	if err != nil {
 		log.Error(ctx, "schedule repeat error", log.Err(err), log.Any("schedule", schedule), log.Any("options", options))
@@ -694,8 +695,11 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 		return "", constant.ErrRecordNotFound
 	}
 	// add schedules relation
-	allRelations := make([]*entity.ScheduleRelation, 0)
+	allRelations := make([]*entity.ScheduleRelation, 0, len(scheduleList)*len(relations))
+	userRelations := make(map[string][]*entity.ScheduleRelation, len(scheduleList))
 	for _, item := range scheduleList {
+		userRelations[item.ID] = make([]*entity.ScheduleRelation, 0, len(relations))
+
 		for _, relation := range relations {
 			if relation.RelationID == "" {
 				continue
@@ -706,6 +710,13 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 				RelationID:   relation.RelationID,
 				RelationType: relation.RelationType,
 			})
+			switch relation.RelationType {
+			case entity.ScheduleRelationTypeClassRosterTeacher,
+				entity.ScheduleRelationTypeClassRosterStudent,
+				entity.ScheduleRelationTypeParticipantTeacher,
+				entity.ScheduleRelationTypeParticipantStudent:
+				userRelations[item.ID] = append(userRelations[item.ID], relation)
+			}
 		}
 	}
 	_, err = da.GetScheduleRelationDA().MultipleBatchInsert(ctx, tx, allRelations)
@@ -713,6 +724,29 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, sche
 		log.Error(ctx, "schedules_relations batchInsert error", log.Err(err), log.Any("allRelations", allRelations))
 		return "", err
 	}
+
+	// add assessment
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+		studyInput := make([]*entity.AddStudyInput, len(scheduleList))
+
+		for i, item := range scheduleList {
+			attendances := userRelations[item.ID]
+
+			studyInput[i] = &entity.AddStudyInput{
+				ScheduleID:   item.ID,
+				ClassID:      item.ClassID,
+				LessonPlanID: item.LessonPlanID,
+				Attendances:  attendances,
+				ScheduleTitle: item.Title,
+			}
+		}
+		_, err := GetH5PAssessmentModel().AddStudies(ctx, tx, op, studyInput)
+		if err != nil {
+			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("allRelations", allRelations))
+			return "", err
+		}
+	}
+
 	return scheduleList[0].ID, nil
 }
 func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Operator, id string) (*entity.Schedule, error) {
@@ -749,18 +783,30 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 		log.Info(ctx, "schedule already hidden", log.Any("schedule", schedule))
 		return nil, ErrScheduleAlreadyHidden
 	}
-	if schedule.ClassType == entity.ScheduleClassTypeHomework && schedule.IsHomeFun {
-		exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
-		if err != nil {
-			log.Error(ctx, "update schedule: get schedule feedback error",
-				log.Any("schedule", schedule),
-				log.Err(err),
-			)
-			return nil, err
-		}
-		if exist {
-			log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
-			return nil, ErrScheduleAlreadyFeedback
+	if schedule.ClassType == entity.ScheduleClassTypeHomework {
+		if schedule.IsHomeFun {
+			exist, err := GetScheduleFeedbackModel().ExistByScheduleID(ctx, op, schedule.ID)
+			if err != nil {
+				log.Error(ctx, "update schedule: get schedule feedback error",
+					log.Any("schedule", schedule),
+					log.Err(err),
+				)
+				return nil, err
+			}
+			if exist {
+				log.Info(ctx, "ErrScheduleAlreadyAssignments", log.Any("schedule", schedule))
+				return nil, ErrScheduleAlreadyFeedback
+			}
+		} else {
+			exist, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), op, schedule.ID)
+			if err != nil {
+				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
+				return nil, err
+			}
+			if exist {
+				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
+				return nil, ErrScheduleStudyAlreadyProgress
+			}
 		}
 	}
 	switch schedule.ClassType {
@@ -923,7 +969,7 @@ func (s *scheduleModel) Update(ctx context.Context, operator *entity.Operator, v
 				repeatOptions = repeat
 			}
 		}
-		id, err = s.addSchedule(ctx, tx, schedule, repeatOptions, viewData.Location, relations)
+		id, err = s.addSchedule(ctx, tx, operator, schedule, repeatOptions, viewData.Location, relations)
 		if err != nil {
 			log.Error(ctx, "update schedule: add failed",
 				log.Err(err),
@@ -1001,13 +1047,14 @@ func (s *scheduleModel) Delete(ctx context.Context, op *entity.Operator, id stri
 }
 
 func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, schedule *entity.Schedule, editType entity.ScheduleEditType) error {
-	if editType == entity.ScheduleEditOnlyCurrent {
-		return da.GetScheduleRelationDA().Delete(ctx, tx, []string{schedule.ID})
-	}
-	if editType == entity.ScheduleEditWithFollowing {
-		if schedule.RepeatID == "" {
-			return da.GetScheduleRelationDA().Delete(ctx, tx, []string{schedule.ID})
-		}
+	var scheduleIDs []string
+
+	if editType == entity.ScheduleEditOnlyCurrent ||
+		(editType == entity.ScheduleEditWithFollowing && schedule.RepeatID == "") {
+
+		scheduleIDs = append(scheduleIDs, schedule.ID)
+
+	} else if editType == entity.ScheduleEditWithFollowing {
 		var scheduleList []*entity.Schedule
 		condition := da.ScheduleCondition{
 			StartAtGe: sql.NullInt64{
@@ -1028,13 +1075,38 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 			)
 			return err
 		}
+
 		scheduleIDs := make([]string, len(scheduleList))
 		for i, item := range scheduleList {
 			scheduleIDs[i] = item.ID
 		}
-		return da.GetScheduleRelationDA().Delete(ctx, tx, scheduleIDs)
 	}
-	return constant.ErrInvalidArgs
+	if len(scheduleIDs) <= 0 {
+		log.Info(ctx, "no need to delete", log.Any("schedule", schedule), log.Any("editType", editType))
+		return nil
+	}
+
+	// delete schedule relation error
+	err := da.GetScheduleRelationDA().Delete(ctx, tx, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "delete schedule relation error",
+			log.Err(err),
+			log.Any("op", op),
+		)
+		return err
+	}
+
+	// delete schedule assessment relation error
+	err = GetH5PAssessmentModel().DeleteStudies(ctx, tx, op, scheduleIDs)
+	if err != nil {
+		log.Error(ctx, "delete schedule assessment relation error",
+			log.Err(err),
+			log.Any("op", op),
+		)
+		return err
+	}
+
+	return nil
 }
 
 func (s *scheduleModel) deleteScheduleTx(ctx context.Context, tx *dbo.DBContext, op *entity.Operator, schedule *entity.Schedule, editType entity.ScheduleEditType) error {
@@ -1209,6 +1281,16 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 			return nil, err
 		}
 		temp.ExistFeedback = existFeedback
+
+		// verify is exist assessment
+		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
+			existAssessment, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), op, item.ID)
+			if err != nil {
+				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", item.ID))
+				return nil, err
+			}
+			temp.ExistAssessment = existAssessment
+		}
 
 		result = append(result, temp)
 	}
@@ -1565,6 +1647,16 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		return nil, err
 	}
 	result.ExistFeedback = existFeedback
+
+	// verify is exist assessment
+	if result.ClassType == entity.ScheduleClassTypeHomework && !result.IsHomeFun {
+		existAssessment, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), operator, result.ID)
+		if err != nil {
+			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", result.ID))
+			return nil, err
+		}
+		result.ExistAssessment = existAssessment
+	}
 
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo
@@ -2568,6 +2660,15 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 	result.ExistFeedback = existFeedback
+
+	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
+		existAssessment, err := GetH5PAssessmentModel().HasAnyoneAttemptInRoom(ctx, dbo.MustGetDB(ctx), op, schedule.ID)
+		if err != nil {
+			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
+			return nil, err
+		}
+		result.ExistAssessment = existAssessment
+	}
 
 	if schedule.Attachment != "" {
 		var attachment entity.ScheduleShortInfo

@@ -18,9 +18,8 @@ type IAssessmentDA interface {
 	dbo.DataAccesser
 	GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBContext, id string) (*entity.Assessment, error)
 	UpdateStatus(ctx context.Context, tx *dbo.DBContext, id string, status entity.AssessmentStatus) error
-	BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]*entity.Assessment, error)
-	FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, ids []string) ([]string, error)
-	FilterCompletedAssessments(ctx context.Context, tx *dbo.DBContext, ids []string) ([]*entity.Assessment, error)
+	BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, ids []string) error
+	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.Assessment) error
 }
 
 var (
@@ -61,6 +60,9 @@ func (a *assessmentDA) GetExcludeSoftDeleted(ctx context.Context, tx *dbo.DBCont
 			log.Err(err),
 			log.String("id", id),
 		)
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, constant.ErrRecordNotFound
+		}
 		return nil, err
 	}
 
@@ -111,20 +113,105 @@ func (a *assessmentDA) filterSoftDeletedTemplate() string {
 	return "delete_at = 0"
 }
 
+func (a *assessmentDA) BatchSoftDelete(ctx context.Context, tx *dbo.DBContext, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := tx.Model(entity.Assessment{}).Where(a.filterSoftDeletedTemplate()).
+		Where("id in (?)", ids).
+		Update("delete_at", time.Now().Unix()).Error; err != nil {
+		log.Error(ctx, "BatchSoftDelete: update failed",
+			log.Err(err),
+			log.Strings("ids", ids),
+		)
+		return err
+	}
+	return nil
+}
+
+func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.Assessment) error {
+	if len(items) == 0 {
+		return nil
+	}
+	columns := []string{
+		"id",
+		"schedule_id",
+		"`type`",
+		"title",
+		"complete_time",
+		"status",
+		"create_at",
+		"update_at",
+		"delete_at",
+		"class_length",
+		"class_end_time",
+	}
+	var matrix [][]interface{}
+	for _, item := range items {
+		matrix = append(matrix, []interface{}{
+			item.ID,
+			item.ScheduleID,
+			item.Type,
+			item.Title,
+			item.CompleteTime,
+			item.Status,
+			item.CreateAt,
+			item.UpdateAt,
+			item.DeleteAt,
+			item.ClassLength,
+			item.ClassEndTime,
+		})
+	}
+	format, values := SQLBatchInsert(entity.Assessment{}.TableName(), columns, matrix)
+	if err := tx.Exec(format, values...).Error; err != nil {
+		log.Error(ctx, "BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("items", items),
+			log.String("format", format),
+			log.Any("values", values),
+		)
+		return err
+	}
+	return nil
+}
+
 type QueryAssessmentConditions struct {
-	OrgID                   entity.NullString                            `json:"org_id"`
-	Status                  entity.NullAssessmentStatus                  `json:"status"`
-	ScheduleIDs             entity.NullStrings                           `json:"schedule_ids"`
-	TeacherIDs              entity.NullStrings                           `json:"teacher_ids"`
-	AllowTeacherIDs         entity.NullStrings                           `json:"allow_teacher_ids"`
-	TeacherIDAndStatusPairs entity.NullAssessmentTeacherIDAndStatusPairs `json:"teacher_id_and_status_pairs"`
-	ClassType               entity.NullScheduleClassType                 `json:"class_type"`
-	OrderBy                 entity.NullListAssessmentsOrderBy            `json:"order_by"`
-	Pager                   dbo.Pager                                    `json:"pager"`
+	IDs                          entity.NullStrings                                `json:"ids"`
+	Type                         entity.NullAssessmentType                         `json:"type"`
+	OrgID                        entity.NullString                                 `json:"org_id"`
+	Status                       entity.NullAssessmentStatus                       `json:"status"`
+	ScheduleIDs                  entity.NullStrings                                `json:"schedule_ids"`
+	TeacherIDs                   entity.NullStrings                                `json:"teacher_ids"`
+	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`
+	AllowTeacherIDAndStatusPairs entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"teacher_id_and_status_pairs"`
+	ClassType                    entity.NullScheduleClassType                      `json:"class_type"`
+	ClassIDs                     entity.NullStrings                                `json:"class_ids"`
+	ClassIDsOrTeacherIDs         NullClassIDsOrTeacherIDs                          `json:"class_ids_or_teacher_ids"`
+
+	OrderBy entity.NullAssessmentsOrderBy `json:"order_by"`
+	Pager   dbo.Pager                     `json:"pager"`
+}
+
+type ClassIDsOrTeacherIDs struct {
+	ClassIDs   []string `json:"class_ids"`
+	TeacherIDs []string `json:"teacher_ids"`
+}
+
+type NullClassIDsOrTeacherIDs struct {
+	Value ClassIDsOrTeacherIDs
+	Valid bool
 }
 
 func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 	t := NewSQLTemplate("delete_at = 0")
+
+	if c.IDs.Valid {
+		t.Appendf("id in (?)", c.IDs.Strings)
+	}
+
+	if c.Type.Valid && c.Type.Value.Valid() {
+		t.Appendf("`type` = ?", c.Type.Value)
+	}
 
 	if c.OrgID.Valid {
 		t.Appendf("exists (select 1 from schedules"+
@@ -152,9 +239,9 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 			utils.SliceDeduplication(c.AllowTeacherIDs.Strings))
 	}
 
-	if c.TeacherIDAndStatusPairs.Valid {
+	if c.AllowTeacherIDAndStatusPairs.Valid {
 		t2 := NewSQLTemplate("")
-		for _, p := range c.TeacherIDAndStatusPairs.Values {
+		for _, p := range c.AllowTeacherIDAndStatusPairs.Values {
 			t2.Appendf("(attendance_id = ? and assessments.status = ?)", p.TeacherID, p.Status)
 		}
 		format, values := t2.Or()
@@ -165,6 +252,21 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 
 	if c.ScheduleIDs.Valid {
 		t.Appendf("schedule_id in (?)", c.ScheduleIDs.Strings)
+	}
+
+	if c.ClassIDs.Valid {
+		t.Appendf("exists (select 1 from schedules"+
+			" where class_id in (?) and delete_at = 0 and assessments.schedule_id = schedules.id)", c.ClassIDs.Strings)
+	}
+
+	if c.ClassIDsOrTeacherIDs.Valid {
+		t2 := NewSQLTemplate("")
+		t2.Appendf("exists (select 1 from schedules"+
+			" where class_id in (?) and delete_at = 0 and assessments.schedule_id = schedules.id)", c.ClassIDs.Strings)
+		t2.Appendf("exists (select 1 from assessments_attendances"+
+			" where assessments.id = assessments_attendances.assessment_id and role = ? and attendance_id in (?))",
+			entity.AssessmentAttendanceRoleTeacher, utils.SliceDeduplication(c.TeacherIDs.Strings))
+		t.AppendResult(t2.Or())
 	}
 
 	return t.DBOConditions()
@@ -179,67 +281,18 @@ func (c *QueryAssessmentConditions) GetOrderBy() string {
 		return ""
 	}
 	switch c.OrderBy.Value {
-	case entity.ListAssessmentsOrderByClassEndTime:
+	case entity.AssessmentOrderByClassEndTime:
 		return "class_end_time"
-	case entity.ListAssessmentsOrderByClassEndTimeDesc:
+	case entity.AssessmentOrderByClassEndTimeDesc:
 		return "class_end_time desc"
-	case entity.ListAssessmentsOrderByCompleteTime:
-		return "complete_time"
-	case entity.ListAssessmentsOrderByCompleteTimeDesc:
-		return "complete_time desc"
+	case entity.AssessmentOrderByCompleteTime:
+		return "status desc, complete_time, create_at"
+	case entity.AssessmentOrderByCompleteTimeDesc:
+		return "status desc, complete_time desc, create_at desc"
+	case entity.AssessmentOrderByCreateAt:
+		return "create_at"
+	case entity.AssessmentOrderByCreateAtDesc:
+		return "create_at desc"
 	}
 	return ""
-}
-
-func (a *assessmentDA) BatchGetAssessmentsByScheduleIDs(ctx context.Context, tx *dbo.DBContext, scheduleIDs []string) ([]*entity.Assessment, error) {
-	var result []*entity.Assessment
-	if err := tx.Where("schedule_id in (?)", scheduleIDs).Find(&result).Error; err != nil {
-		log.Error(ctx, "batch get assessments by schedule ids: find failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-		)
-		return nil, err
-	}
-	return result, nil
-}
-
-func (a *assessmentDA) FilterCompletedAssessmentIDs(ctx context.Context, tx *dbo.DBContext, ids []string) ([]string, error) {
-	var items []struct {
-		ID string `gorm:"column:id"`
-	}
-	if err := tx.Table(entity.Assessment{}.TableName()).
-		Select("id").
-		Where("id in (?) and status = ?", ids, entity.AssessmentStatusComplete).
-		Find(&items).Error; err != nil {
-		log.Error(ctx, "filter completed assessment ids failed",
-			log.Err(err),
-			log.Strings("ids", ids),
-		)
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, constant.ErrRecordNotFound
-		}
-		return nil, err
-	}
-	result := make([]string, 0, len(items))
-	for _, item := range items {
-		result = append(result, item.ID)
-	}
-	return result, nil
-}
-
-func (a *assessmentDA) FilterCompletedAssessments(ctx context.Context, tx *dbo.DBContext, ids []string) ([]*entity.Assessment, error) {
-	var result []*entity.Assessment
-	if err := tx.Model(entity.Assessment{}).
-		Where("id in (?) and status = ?", ids, entity.AssessmentStatusComplete).
-		Find(&result).Error; err != nil {
-		log.Error(ctx, "call FilterCompletedAssessments failed",
-			log.Err(err),
-			log.Strings("ids", ids),
-		)
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, constant.ErrRecordNotFound
-		}
-		return nil, err
-	}
-	return result, nil
 }

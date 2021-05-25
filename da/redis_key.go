@@ -32,4 +32,5 @@ const (
 
 const (
 	RedisKeyPrefixAssessmentItem = "assessment:item"
+	RedisKeyPrefixAssessmentLock = "assessment:add"
 )
