@@ -1,4 +1,4 @@
 package constant
 
-const AMSRequestUserSchoolPageSize = 250
-const AMSRequestUserClassPageSize = 250
+const AMSRequestUserSchoolPageSize = 200
+const AMSRequestUserClassPageSize = 200
