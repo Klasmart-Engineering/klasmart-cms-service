@@ -844,7 +844,7 @@ func (s *Server) processTimeQuery(c *gin.Context, condition *da.ScheduleConditio
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return err
 		}
-		condition.StartAtGe = sql.NullInt64{
+		condition.StartAtAndDueAtGe = sql.NullInt64{
 			Int64: startAt,
 			Valid: true,
 		}
@@ -858,7 +858,7 @@ func (s *Server) processTimeQuery(c *gin.Context, condition *da.ScheduleConditio
 			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 			return err
 		}
-		condition.EndAtLe = sql.NullInt64{
+		condition.EndAtAndDueAtLe = sql.NullInt64{
 			Int64: endAt,
 			Valid: true,
 		}
