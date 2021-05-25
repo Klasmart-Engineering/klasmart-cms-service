@@ -106,10 +106,11 @@ func TestAmsSchoolService_GetByUsers(t *testing.T) {
 	for i, item := range userInfos {
 		userIDs[i] = item.ID
 	}
-
+	userIDs = append(userIDs,userIDs...)
+	userIDs = append(userIDs,userIDs...)
 	schools, err := GetSchoolServiceProvider().GetByUsers(context.TODO(),
 		testOperator,
-		"32bfe7ba-d897-4504-955c-8d6b484549c6",
+		testOperator.OrgID,
 		userIDs,
 		WithStatus(Active))
 	if err != nil {
