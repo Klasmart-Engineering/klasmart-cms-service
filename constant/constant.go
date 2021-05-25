@@ -57,6 +57,7 @@ var (
 	ErrForbidden         = errors.New("forbidden")
 	ErrHasLocked         = errors.New("has locked")
 	ErrOverflow          = errors.New("over flow")
+	ErrOutOfDate         = errors.New("out of date")
 )
 
 const (
