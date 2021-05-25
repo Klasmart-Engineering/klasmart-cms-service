@@ -38,7 +38,7 @@ type IScheduleCacheDA interface {
 	SearchToStrings(ctx context.Context, orgID string, condition *ScheduleCondition) ([]string, error)
 	SearchToBasicData(ctx context.Context, orgID string, scheduleID string) (*entity.ScheduleBasic, error)
 	SearchToScheduleDetails(ctx context.Context, orgID string, userID string, scheduleID string) (*entity.ScheduleDetailsView, error)
-	SearchToScheduleFilterClass(ctx context.Context, orgID string, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error)
+	SearchToBool(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (bool, error)
 	Clean(ctx context.Context, orgID string) error
 }
 
@@ -151,21 +151,21 @@ func (r *ScheduleRedisDA) SearchToScheduleDetails(ctx context.Context, orgID str
 	return result, nil
 }
 
-func (r *ScheduleRedisDA) SearchToScheduleFilterClass(ctx context.Context, orgID string, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error) {
-	res, err := r.search(ctx, orgID, &ScheduleCacheCondition{CacheFlag: ScheduleFilterUnDefineClass, PermissionMap: permissionMap})
+func (r *ScheduleRedisDA) SearchToBool(ctx context.Context, orgID string, condition *ScheduleCacheCondition) (bool, error) {
+	res, err := r.search(ctx, orgID, condition)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	var result *entity.ScheduleFilterClass
+	var result bool
 	err = json.Unmarshal([]byte(res), &result)
 	if err != nil {
 		log.Error(ctx, "unmarshal schedule error ",
 			log.Err(err),
 			log.String("orgID", orgID),
-			log.Any("permissionMap", permissionMap),
+			log.Any("condition", condition),
 			log.String("scheduleJson", res),
 		)
-		return nil, err
+		return false, err
 	}
 	return result, nil
 }

@@ -31,15 +31,6 @@ type schedulePermissionModel struct {
 }
 
 func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (*entity.ScheduleFilterClass, error) {
-	cacheData, err := da.GetScheduleRedisDA().SearchToScheduleFilterClass(ctx, op.OrgID, permissionMap)
-	if err == nil {
-		log.Debug(ctx, "Query:using cache",
-			log.Any("op", op),
-			log.Any("permissionMap", permissionMap),
-		)
-		return cacheData, nil
-	}
-
 	hasUnDefineClass, err := s.HasUnDefineClass(ctx, op, permissionMap)
 	if err != nil {
 		return nil, err
@@ -53,15 +44,21 @@ func (s *schedulePermissionModel) GetUnDefineClass(ctx context.Context, op *enti
 		OperatorRoleType: entity.ScheduleRoleTypeUnknown,
 	}
 
-	da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{
-		CacheFlag:     da.ScheduleFilterUnDefineClass,
-		PermissionMap: permissionMap,
-	}, result)
-
 	return result, nil
 }
 
 func (s *schedulePermissionModel) HasUnDefineClass(ctx context.Context, op *entity.Operator, permissionMap map[external.PermissionName]bool) (bool, error) {
+	cacheData, err := da.GetScheduleRedisDA().SearchToBool(ctx, op.OrgID, &da.ScheduleCacheCondition{
+		CacheFlag:     da.ScheduleFilterUnDefineClass,
+		PermissionMap: permissionMap})
+	if err == nil {
+		log.Debug(ctx, "Query:using cache",
+			log.Any("op", op),
+			log.Any("permissionMap", permissionMap),
+		)
+		return cacheData, nil
+	}
+
 	userInfos, err := s.GetOnlyUnderOrgUsers(ctx, op)
 	if err != nil {
 		log.Error(ctx, "GetOnlyUnderOrgUsers error", log.Any("op", op))
@@ -94,6 +91,11 @@ func (s *schedulePermissionModel) HasUnDefineClass(ctx context.Context, op *enti
 		log.Error(ctx, "has schedule by relation ids", log.Strings("userIDs", userIDs), log.Any("op", op))
 		return false, err
 	}
+
+	da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{
+		CacheFlag:     da.ScheduleFilterUnDefineClass,
+		PermissionMap: permissionMap,
+	}, hasSchedule)
 
 	return hasSchedule, nil
 }
