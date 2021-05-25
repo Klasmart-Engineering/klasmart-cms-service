@@ -226,23 +226,23 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 
 			_, err := GetAmsClient().Run(ctx, request, response)
 			if err != nil {
-				log.Error(ctx, "get classes by users failed", log.Err(err), log.Strings("ids", userIDs))
+				log.Error(ctx, "get classes by users failed", log.Err(err), log.Strings("pageUserIDs", pageUserIDs))
 				cerr <- err
 				return
 			}
 
 			var queryAlias string
-			for index := range pageUserIDs {
+			for index,userID := range pageUserIDs {
 				queryAlias = fmt.Sprintf("q%d", index)
 				query, found := data[queryAlias]
 				if !found || query == nil {
-					log.Error(ctx, "classes not found", log.Strings("userIDs", userIDs), log.String("id", userIDs[index]))
+					log.Error(ctx, "classes not found", log.Strings("pageUserIDs", pageUserIDs), log.String("id", userID))
 					cerr <- constant.ErrRecordNotFound
 					return
 				}
 
 				allClasses := append(query.ClassesTeaching, query.ClassesStudying...)
-				classes[userIDs[index]] = make([]*Class, 0, len(allClasses))
+				classes[userID] = make([]*Class, 0, len(allClasses))
 				for _, class := range allClasses {
 					if condition.Status.Valid {
 						if condition.Status.Status != class.Status {
@@ -255,7 +255,7 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 						}
 					}
 
-					classes[userIDs[index]] = append(classes[userIDs[index]], class)
+					classes[userID] = append(classes[userID], class)
 				}
 			}
 			cerr <- nil
