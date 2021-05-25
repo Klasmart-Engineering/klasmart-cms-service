@@ -382,9 +382,10 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 					ContentID:   s.Content.ID,
 					ContentName: s.Content.Name,
 					ContentType: s.Content.Type,
-					// TODO: h5p api changed
-					// MaxPossibleScore: s.MaximumPossibleScore,
-					Scores: s.Score.Scores,
+					Scores:      s.Score.Scores,
+				}
+				if len(s.Score.Answers) > 0 {
+					assessmentContent.MaxPossibleScore = s.Score.Answers[0].MaximumPossibleScore
 				}
 				for _, a := range s.Score.Answers {
 					assessmentContent.Answers = append(assessmentContent.Answers, a.Answer)
