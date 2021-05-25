@@ -181,65 +181,90 @@ func (s AmsClassService) GetByUserID(ctx context.Context, operator *entity.Opera
 }
 
 func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, options ...APOption) (map[string][]*Class, error) {
-	if len(userIDs) == 0 {
+	_userIDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
+
+	if len(_userIDs) == 0 {
 		return map[string][]*Class{}, nil
 	}
 
+	classes := make(map[string][]*Class, len(_userIDs))
+
+	total := len(_userIDs)
+	pageSize := constant.AMSRequestUserClassPageSize
+	pageCount := (total + pageSize - 1) / pageSize
+
 	condition := NewCondition(options...)
-
-	_userIDs, indexMapping := utils.SliceDeduplicationMap(userIDs)
-
-	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _userIDs {
-		fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {\n", index, id)
-		fmt.Fprintln(sb, "classesTeaching {id:class_id name:class_name status}")
-		fmt.Fprintln(sb, "classesStudying {id:class_id name:class_name status}}")
-	}
-	sb.WriteString("}")
-
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-
 	data := map[string]*struct {
 		ClassesTeaching []*Class `json:"classesTeaching"`
 		ClassesStudying []*Class `json:"classesStudying"`
 	}{}
 
-	response := &chlorine.Response{
-		Data: &data,
-	}
+	cerr := make(chan error, pageCount)
+	for i := 0; i < pageCount; i++ {
+		go func(j int) {
+			start := j * pageSize
+			end := (j + 1) * pageSize
+			if end >= total {
+				end = total
+			}
+			pageUserIDs := _userIDs[start:end]
 
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get classes by users failed", log.Err(err), log.Strings("ids", userIDs))
-		return nil, err
-	}
+			sb := new(strings.Builder)
+			sb.WriteString("query {")
+			for index, id := range pageUserIDs {
+				fmt.Fprintf(sb, "q%d: user(user_id: \"%s\") {\n", index, id)
+				fmt.Fprintln(sb, "classesTeaching {id:class_id name:class_name status}")
+				fmt.Fprintln(sb, "classesStudying {id:class_id name:class_name status}}")
+			}
+			sb.WriteString("}")
 
-	classes := make(map[string][]*Class, len(_userIDs))
-	var queryAlias string
-	for index := range userIDs {
-		queryAlias = fmt.Sprintf("q%d", indexMapping[index])
-		query, found := data[queryAlias]
-		if !found || query == nil {
-			log.Error(ctx, "classes not found", log.Strings("userIDs", userIDs), log.String("id", userIDs[index]))
-			return nil, constant.ErrRecordNotFound
-		}
+			request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
 
-		allClasses := append(query.ClassesTeaching, query.ClassesStudying...)
-		classes[userIDs[index]] = make([]*Class, 0, len(allClasses))
-		for _, class := range allClasses {
-			if condition.Status.Valid {
-				if condition.Status.Status != class.Status {
-					continue
-				}
-			} else {
-				// only status = "Active" data is returned by default
-				if class.Status != Active {
-					continue
-				}
+			response := &chlorine.Response{
+				Data: &data,
 			}
 
-			classes[userIDs[index]] = append(classes[userIDs[index]], class)
+			_, err := GetAmsClient().Run(ctx, request, response)
+			if err != nil {
+				log.Error(ctx, "get classes by users failed", log.Err(err), log.Strings("ids", userIDs))
+				cerr <- err
+				return
+			}
+
+			var queryAlias string
+			for index := range pageUserIDs {
+				queryAlias = fmt.Sprintf("q%d", index)
+				query, found := data[queryAlias]
+				if !found || query == nil {
+					log.Error(ctx, "classes not found", log.Strings("userIDs", userIDs), log.String("id", userIDs[index]))
+					cerr <- constant.ErrRecordNotFound
+					return
+				}
+
+				allClasses := append(query.ClassesTeaching, query.ClassesStudying...)
+				classes[userIDs[index]] = make([]*Class, 0, len(allClasses))
+				for _, class := range allClasses {
+					if condition.Status.Valid {
+						if condition.Status.Status != class.Status {
+							continue
+						}
+					} else {
+						// only status = "Active" data is returned by default
+						if class.Status != Active {
+							continue
+						}
+					}
+
+					classes[userIDs[index]] = append(classes[userIDs[index]], class)
+				}
+			}
+			cerr <- nil
+		}(i)
+	}
+
+	for i := 0; i < pageCount; i++ {
+		if err := <-cerr; err != nil {
+			return nil, err
 		}
 	}
 
