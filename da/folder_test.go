@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 func initDB() {
@@ -56,34 +56,34 @@ func TestCreateTable(t *testing.T) {
 	db.AutoMigrate(entity.Content{})
 }
 
-func TestSearchFolderContent(t *testing.T) {
-	total, folderContent, err := GetContentDA().SearchFolderContentUnsafe(context.Background(), dbo.MustGetDB(context.Background()), CombineConditions{
-		SourceCondition: &ContentCondition{Name: "test",
-			OrderBy: ContentOrderByCreatedAtDesc,
-			Pager: utils.Pager{
-				PageIndex: 0,
-				PageSize:  10,
-			},
-		},
-		TargetCondition: &ContentCondition{Name: "test2",
-			OrderBy: ContentOrderByCreatedAtDesc,
-			Pager: utils.Pager{
-				PageIndex: 0,
-				PageSize:  10,
-			},
-		},
-	}, FolderCondition{
-		Name: "plans and materials",
-	})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	t.Log(total)
-	for i := range folderContent {
-		t.Logf("%#v\n", folderContent[i])
-	}
-}
+//func TestSearchFolderContent(t *testing.T) {
+//	total, folderContent, err := GetContentDA().SearchFolderContentUnsafe(context.Background(), dbo.MustGetDB(context.Background()), CombineConditions{
+//		SourceCondition: &ContentCondition{Name: "test",
+//			OrderBy: ContentOrderByCreatedAtDesc,
+//			Pager: utils.Pager{
+//				PageIndex: 0,
+//				PageSize:  10,
+//			},
+//		},
+//		TargetCondition: &ContentCondition{Name: "test2",
+//			OrderBy: ContentOrderByCreatedAtDesc,
+//			Pager: utils.Pager{
+//				PageIndex: 0,
+//				PageSize:  10,
+//			},
+//		},
+//	}, FolderCondition{
+//		Name: "plans and materials",
+//	})
+//	if err != nil {
+//		t.Error(err)
+//		return
+//	}
+//	t.Log(total)
+//	for i := range folderContent {
+//		t.Logf("%#v\n", folderContent[i])
+//	}
+//}
 
 func TestBatchUpdatePath(t *testing.T) {
 	fids := []string{
