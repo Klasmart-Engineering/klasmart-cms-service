@@ -436,13 +436,14 @@ func (s AmsSchoolService) GetByOperator(ctx context.Context, operator *entity.Op
 }
 
 func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Operator, orgID string, userIDs []string, options ...APOption) (map[string][]*School, error) {
-	_userIDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
+	_userIDs := userIDs//utils.SliceDeduplicationExcludeEmpty(userIDs)
 
 	if len(_userIDs) == 0 {
 		return map[string][]*School{}, nil
 	}
 
 	schools := make(map[string][]*School, len(_userIDs))
+	var mapLock sync.Mutex
 
 	total := len(_userIDs)
 	pageSize := constant.AMSRequestUserSchoolPageSize
@@ -466,7 +467,8 @@ func (s AmsSchoolService) GetByUsers(ctx context.Context, operator *entity.Opera
 
 	for i := 0; i < pageCount; i++ {
 		go func(j int) {
-			//defer wg.Done()
+			mapLock.Lock()
+			defer mapLock.Unlock()
 
 			start := j * pageSize
 			end := (j + 1) * pageSize

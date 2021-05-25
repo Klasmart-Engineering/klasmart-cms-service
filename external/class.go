@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"text/template"
 
 	"gitlab.badanamu.com.cn/calmisland/chlorine"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
@@ -181,13 +183,14 @@ func (s AmsClassService) GetByUserID(ctx context.Context, operator *entity.Opera
 }
 
 func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Operator, userIDs []string, options ...APOption) (map[string][]*Class, error) {
-	_userIDs := utils.SliceDeduplicationExcludeEmpty(userIDs)
+	_userIDs := userIDs //utils.SliceDeduplicationExcludeEmpty(userIDs)
 
 	if len(_userIDs) == 0 {
 		return map[string][]*Class{}, nil
 	}
 
 	classes := make(map[string][]*Class, len(_userIDs))
+	var mapLock sync.Mutex
 
 	total := len(_userIDs)
 	pageSize := constant.AMSRequestUserClassPageSize
@@ -202,6 +205,9 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 	cerr := make(chan error, pageCount)
 	for i := 0; i < pageCount; i++ {
 		go func(j int) {
+			mapLock.Lock()
+			defer mapLock.Unlock()
+
 			start := j * pageSize
 			end := (j + 1) * pageSize
 			if end >= total {
@@ -231,8 +237,10 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 				return
 			}
 
+
+
 			var queryAlias string
-			for index,userID := range pageUserIDs {
+			for index, userID := range pageUserIDs {
 				queryAlias = fmt.Sprintf("q%d", index)
 				query, found := data[queryAlias]
 				if !found || query == nil {
@@ -242,7 +250,9 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 				}
 
 				allClasses := append(query.ClassesTeaching, query.ClassesStudying...)
+
 				classes[userID] = make([]*Class, 0, len(allClasses))
+
 				for _, class := range allClasses {
 					if condition.Status.Valid {
 						if condition.Status.Status != class.Status {
@@ -254,7 +264,6 @@ func (s AmsClassService) GetByUserIDs(ctx context.Context, operator *entity.Oper
 							continue
 						}
 					}
-
 					classes[userID] = append(classes[userID], class)
 				}
 			}
