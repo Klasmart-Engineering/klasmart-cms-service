@@ -168,6 +168,9 @@ func (s *Server) updateMilestone(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrOutOfDate:
+		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
+		c.JSON(http.StatusForbidden, L(AssessMsgUnLockedMilestone))
 	case model.ErrResourceNotFound:
 		log.Warn(ctx, "updateMilestone: Update failed", log.Any("op", op), log.Any("req", data))
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
@@ -238,6 +241,9 @@ func (s *Server) deleteMilestone(c *gin.Context) {
 	case constant.ErrOperateNotAllowed:
 		log.Warn(ctx, "deleteMilestone: Delete failed", log.Any("op", op), log.Strings("req", data.IDs))
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrOutOfDate:
+		log.Warn(ctx, "deleteMilestone: Update failed", log.Any("op", op), log.Any("req", data))
+		c.JSON(http.StatusForbidden, L(AssessMsgUnLockedMilestone))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
@@ -379,7 +385,10 @@ func (s *Server) occupyMilestone(c *gin.Context) {
 	milestone, err := model.GetMilestoneModel().Occupy(ctx, op, milestoneID)
 	switch err {
 	case constant.ErrOperateNotAllowed:
-		c.JSON(http.StatusForbidden, L(GeneralUnknown))
+		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
+	case constant.ErrOutOfDate:
+		log.Warn(ctx, "occupyMilestone: Update failed", log.Any("op", op))
+		c.JSON(http.StatusForbidden, L(AssessMsgUnLockedMilestone))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
 	case nil:

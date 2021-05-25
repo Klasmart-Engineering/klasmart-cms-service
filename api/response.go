@@ -60,6 +60,7 @@ const (
 	AssessMsgMilestoneExistShortcode ResponseLabel = "assess_msg_exist_milestone_short_code"
 	AssessErrorMsgLocked             ResponseLabel = "assess_error_message_locked"
 	AssessMsgLockedMilestone         ResponseLabel = "assess_msg_locked_milestone"
+	AssessMsgUnLockedMilestone       ResponseLabel = "assess_msg_unlocked_milestone"
 )
 
 // L create response object with label
