@@ -5,6 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,9 +16,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sort"
-	"sync"
-	"time"
 )
 
 type IH5PAssessmentModel interface {
@@ -378,11 +379,13 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 			for _, s := range u.Scores {
 				total++
 				assessmentContent := entity.AssessmentH5PContentScore{
-					ContentID:        s.Content.ID,
-					ContentName:      s.Content.Name,
-					ContentType:      s.Content.Type,
-					MaxPossibleScore: s.MaximumPossibleScore,
-					Scores:           s.Score.Scores,
+					ContentID:   s.Content.ID,
+					ContentName: s.Content.Name,
+					ContentType: s.Content.Type,
+					Scores:      s.Score.Scores,
+				}
+				if len(s.Score.Answers) > 0 {
+					assessmentContent.MaxPossibleScore = s.Score.Answers[0].MaximumPossibleScore
 				}
 				for _, a := range s.Score.Answers {
 					assessmentContent.Answers = append(assessmentContent.Answers, a.Answer)
