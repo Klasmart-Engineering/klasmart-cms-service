@@ -798,12 +798,12 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 				return nil, ErrScheduleAlreadyFeedback
 			}
 		} else {
-			exist, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, schedule.ID)
+			existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
 				return nil, err
 			}
-			if exist {
+			if existAssessment[schedule.ID] {
 				log.Info(ctx, "The schedule has already been attended", log.Any("scheduleID", schedule.ID))
 				return nil, ErrScheduleStudyAlreadyProgress
 			}
@@ -1243,6 +1243,18 @@ func (s *scheduleModel) QueryByCache(ctx context.Context, op *entity.Operator, c
 func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operator, scheduleList []*entity.Schedule, loc *time.Location) ([]*entity.ScheduleListView, error) {
 	result := make([]*entity.ScheduleListView, 0, len(scheduleList))
 
+	studyScheduleIDs:=make([]string,0,len(scheduleList))
+	for _, item := range scheduleList {
+		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
+			studyScheduleIDs = append(studyScheduleIDs,item.ID)
+		}
+	}
+	existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, studyScheduleIDs)
+	if err != nil {
+		log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.Strings("studyScheduleIDs",studyScheduleIDs))
+		return nil, err
+	}
+
 	for _, item := range scheduleList {
 		temp := &entity.ScheduleListView{
 			ID:           item.ID,
@@ -1284,14 +1296,8 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 
 		// verify is exist assessment
 		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
-			existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, item.ID)
-			if err != nil {
-				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", item.ID))
-				return nil, err
-			}
-			temp.ExistAssessment = existAssessment
+			temp.ExistAssessment = existAssessment[item.ID]
 		}
-
 		result = append(result, temp)
 	}
 
@@ -1650,12 +1656,12 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 
 	// verify is exist assessment
 	if result.ClassType == entity.ScheduleClassTypeHomework && !result.IsHomeFun {
-		existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, result.ID)
+		existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{result.ID})
 		if err != nil {
 			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", result.ID))
 			return nil, err
 		}
-		result.ExistAssessment = existAssessment
+		result.ExistAssessment = existAssessment[result.ID]
 	}
 
 	if schedule.Attachment != "" {
@@ -2662,12 +2668,12 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	result.ExistFeedback = existFeedback
 
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, schedule.ID)
+		existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
 		if err != nil {
 			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
 			return nil, err
 		}
-		result.ExistAssessment = existAssessment
+		result.ExistAssessment = existAssessment[schedule.ID]
 	}
 
 	if schedule.Attachment != "" {
