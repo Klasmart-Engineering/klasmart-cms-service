@@ -307,13 +307,9 @@ func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, op
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
-		if len(teachers) > 0 {
-			cond.TeacherIDs.Valid = true
-			for _, item := range teachers {
-				cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
-			}
-		} else {
-			cond.TeacherIDs.Valid = false
+		cond.TeacherIDs.Valid = true
+		for _, item := range teachers {
+			cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
 		}
 	}
 	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {

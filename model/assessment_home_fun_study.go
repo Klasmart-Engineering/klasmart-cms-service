@@ -71,17 +71,17 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		},
 		Pager: args.Pager,
 	}
-	teachers, err := external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
-	if err != nil {
-		log.Error(ctx, "external.GetTeacherServiceProvider().Query: query failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("org_id", operator.OrgID),
-			log.Any("args", args),
-		)
-		return nil, err
-	}
-	if len(teachers) > 0 {
+	if args.Query != "" {
+		teachers, err := external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
+		if err != nil {
+			log.Error(ctx, "external.GetTeacherServiceProvider().Query: query failed",
+				log.Err(err),
+				log.Any("operator", operator),
+				log.String("org_id", operator.OrgID),
+				log.Any("args", args),
+			)
+			return nil, err
+		}
 		cond.TeacherIDs.Valid = true
 		for _, t := range teachers {
 			cond.TeacherIDs.Values = append(cond.TeacherIDs.Values, t.ID)
