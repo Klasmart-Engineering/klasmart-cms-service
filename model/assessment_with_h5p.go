@@ -24,7 +24,7 @@ type IH5PAssessmentModel interface {
 	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	DeleteStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 	AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
-	HasAnyoneAttemptInRoom(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomID string) (bool, error)
+	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
 }
 
 var (
@@ -1080,19 +1080,23 @@ func (m *h5pAssessmentModel) DeleteStudies(ctx context.Context, tx *dbo.DBContex
 	return nil
 }
 
-func (m *h5pAssessmentModel) HasAnyoneAttemptInRoom(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomID string) (bool, error) {
-	if roomID == "" {
-		return false, nil
+func (m *h5pAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error) {
+	if len(roomIDs) == 0 {
+		return map[string]bool{}, nil
 	}
-	roomMap, err := m.getRoomScoreMap(ctx, operator, []string{roomID}, false)
+	roomMap, err := m.getRoomScoreMap(ctx, operator, roomIDs, false)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	room := roomMap[roomID]
-	if room == nil {
-		return false, nil
+	result := make(map[string]bool, len(roomIDs))
+	for _, id := range roomIDs {
+		if v := roomMap[id]; v != nil {
+			result[id] = v.AnyoneAttempted
+		} else {
+			result[id] = false
+		}
 	}
-	return room.AnyoneAttempted, nil
+	return result, nil
 }
 
 type H5pAssessmentItemsOrder struct {
