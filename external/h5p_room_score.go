@@ -162,7 +162,9 @@ query {
 					answers {
 						answer
 						score
-						# date
+						date
+						minimumPossibleScore
+						maximumPossibleScore
 					}
 					median
 					medians
@@ -186,8 +188,6 @@ query {
 					score
 					date
 				}
-				minimumPossibleScore
-				maximumPossibleScore
 			}
 		}
   	}

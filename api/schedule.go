@@ -467,7 +467,7 @@ func (s *Server) getScheduleByID(c *gin.Context) {
 		return
 	}
 	if err == constant.ErrRecordNotFound {
-		c.JSON(http.StatusNotFound, L(ScheduleMessageDeleteOverlap))
+		c.JSON(http.StatusNotFound, L(ScheduleMessageEditOverlap))
 		return
 	}
 	log.Error(ctx, "get schedule by id error", log.Err(err), log.Any("id", id))
