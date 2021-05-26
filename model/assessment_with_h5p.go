@@ -537,12 +537,11 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 		return constant.ErrForbidden
 	}
 	if assessment.Status == entity.AssessmentStatusComplete {
-		errMsg := "update h5p assessment: assessment has completed, not allow update"
-		log.Info(ctx, errMsg,
+		log.Error(ctx, "update h5p assessment: assessment has completed, not allow update",
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
-		return errors.New(errMsg)
+		return ErrAssessmentHasCompleted
 	}
 
 	// update assessment students check property
