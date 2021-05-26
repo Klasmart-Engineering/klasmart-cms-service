@@ -733,10 +733,10 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 			attendances := userRelations[item.ID]
 
 			studyInput[i] = &entity.AddStudyInput{
-				ScheduleID:   item.ID,
-				ClassID:      item.ClassID,
-				LessonPlanID: item.LessonPlanID,
-				Attendances:  attendances,
+				ScheduleID:    item.ID,
+				ClassID:       item.ClassID,
+				LessonPlanID:  item.LessonPlanID,
+				Attendances:   attendances,
 				ScheduleTitle: item.Title,
 			}
 		}
@@ -1263,7 +1263,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 			DueAt:     temp.DueAt,
 			ClassType: temp.ClassType,
 		})
-		if temp.ClassType == entity.ScheduleClassTypeHomework {
+		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.DueAt != 0 {
 			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, loc).Unix()
 			temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, loc).Unix()
 		}
