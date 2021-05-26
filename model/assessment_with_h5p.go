@@ -24,7 +24,7 @@ type IH5PAssessmentModel interface {
 	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	DeleteStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 	AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
-	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomID string) (bool, error)
+	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
 }
 
 var (
