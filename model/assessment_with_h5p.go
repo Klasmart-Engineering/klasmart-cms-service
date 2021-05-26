@@ -379,10 +379,12 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 			for _, s := range u.Scores {
 				total++
 				assessmentContent := entity.AssessmentH5PContentScore{
-					ContentID:   s.Content.ID,
-					ContentName: s.Content.Name,
-					ContentType: s.Content.Type,
-					Scores:      s.Score.Scores,
+					Scores: s.Score.Scores,
+				}
+				if s.Content != nil {
+					assessmentContent.ContentID = s.Content.ID
+					assessmentContent.ContentName = s.Content.Name
+					assessmentContent.ContentType = s.Content.Type
 				}
 				if len(s.Score.Answers) > 0 {
 					assessmentContent.MaxPossibleScore = s.Score.Answers[0].MaximumPossibleScore
@@ -403,15 +405,18 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 				assessmentContentMap[assessmentContent.ContentID] = &assessmentContent
 			}
 			assessmentUser := entity.AssessmentH5PUser{
-				UserID:     u.User.UserID,
 				Contents:   assessmentContents,
 				ContentMap: assessmentContentMap,
+			}
+			if u.User != nil {
+				assessmentUser.UserID = u.User.UserID
 			}
 			if enableComment &&
 				roomCommentMap != nil &&
 				roomCommentMap[roomID] != nil &&
-				len(roomCommentMap[roomID][u.User.UserID]) > 0 {
-				assessmentUser.Comment = roomCommentMap[roomID][u.User.UserID][0]
+				assessmentUser.UserID != "" &&
+				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
+				assessmentUser.Comment = roomCommentMap[roomID][assessmentUser.UserID][0]
 			}
 			assessmentUsers = append(assessmentUsers, &assessmentUser)
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
