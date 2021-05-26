@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -159,7 +160,9 @@ func (s *Server) updateH5PAssessment(c *gin.Context) {
 		args.ID = id
 	}
 
-	err := model.GetH5PAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		return model.GetH5PAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+	})
 	if err != nil {
 		log.Error(ctx, "update h5p assessment: call model failed",
 			log.Err(err),
@@ -173,8 +176,6 @@ func (s *Server) updateH5PAssessment(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
 	case constant.ErrRecordNotFound:
 		c.JSON(http.StatusNotFound, L(GeneralUnknown))
-	case model.ErrHomeFunStudyHasNewFeedback:
-		c.JSON(http.StatusInternalServerError, L(AssessMsgNewVersion))
 	default:
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
