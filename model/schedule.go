@@ -1249,11 +1249,6 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 			studyScheduleIDs = append(studyScheduleIDs, item.ID)
 		}
 	}
-	existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, studyScheduleIDs)
-	if err != nil {
-		log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.Strings("studyScheduleIDs", studyScheduleIDs))
-		return nil, err
-	}
 
 	for _, item := range scheduleList {
 		temp := &entity.ScheduleListView{
@@ -1294,10 +1289,6 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		}
 		temp.ExistFeedback = existFeedback
 
-		// verify is exist assessment
-		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
-			temp.ExistAssessment = existAssessment[item.ID]
-		}
 		result = append(result, temp)
 	}
 
