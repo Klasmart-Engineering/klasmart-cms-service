@@ -6,9 +6,24 @@ import (
 )
 
 func TestAmsSchoolService_GetByClasses(t *testing.T) {
+	orgClassMap, err := GetClassServiceProvider().GetByOrganizationIDs(context.TODO(), testOperator, []string{testOperator.OrgID})
+	if err != nil {
+		t.Errorf("error = %v", err)
+		return
+	}
+	orgClassList, ok := orgClassMap[testOperator.OrgID]
+	if !ok || len(orgClassList) <= 0 {
+		t.Errorf("error = %v", err)
+		return
+	}
+	orgClassIDs := make([]string, len(orgClassList))
+	for i, item := range orgClassList {
+		orgClassIDs[i] = item.ID
+	}
+	t.Log(len(orgClassIDs))
 	schools, err := GetSchoolServiceProvider().GetByClasses(context.TODO(),
 		testOperator,
-		[]string{"7a8b9212-d4ae-4bb8-bf5a-b3a425626790", "7a8b9212-d4ae-4bb8-bf5a-b3a425626790"},
+		orgClassIDs,
 		WithStatus(Active))
 	if err != nil {
 		t.Errorf("GetSchoolServiceProvider().GetByClasses() error = %v", err)

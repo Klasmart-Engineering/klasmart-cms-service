@@ -1243,15 +1243,15 @@ func (s *scheduleModel) QueryByCache(ctx context.Context, op *entity.Operator, c
 func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operator, scheduleList []*entity.Schedule, loc *time.Location) ([]*entity.ScheduleListView, error) {
 	result := make([]*entity.ScheduleListView, 0, len(scheduleList))
 
-	studyScheduleIDs:=make([]string,0,len(scheduleList))
+	studyScheduleIDs := make([]string, 0, len(scheduleList))
 	for _, item := range scheduleList {
 		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
-			studyScheduleIDs = append(studyScheduleIDs,item.ID)
+			studyScheduleIDs = append(studyScheduleIDs, item.ID)
 		}
 	}
 	existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, studyScheduleIDs)
 	if err != nil {
-		log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.Strings("studyScheduleIDs",studyScheduleIDs))
+		log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.Strings("studyScheduleIDs", studyScheduleIDs))
 		return nil, err
 	}
 
@@ -1504,7 +1504,7 @@ func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entit
 		result.Name = lessonInfo.Name
 
 		isAuth, err := s.VerifyLessonPlanAuthed(ctx, op, lessonPlanID)
-		if err != nil {
+		if err != nil && err != ErrScheduleLessonPlanUnAuthed {
 			return nil, err
 		}
 		result.IsAuth = isAuth
