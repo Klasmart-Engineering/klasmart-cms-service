@@ -17,11 +17,15 @@ import (
 // 	  answer
 // 	  score
 // 	  # date
+// 	  minimumPossibleScore
+// 	  maximumPossibleScore
 // 	}
 type H5PScoreAnswer struct {
-	Answer string  `json:"answer"`
-	Score  float64 `json:"score"`
-	Date   int64   `json:"date"`
+	Answer               string  `json:"answer"`
+	Score                float64 `json:"score"`
+	Date                 int64   `json:"date"`
+	MinimumPossibleScore float64 `json:"minimumPossibleScore"`
+	MaximumPossibleScore float64 `json:"maximumPossibleScore"`
 }
 
 // score {
@@ -72,17 +76,13 @@ type H5PTeacherScore struct {
 // 	score: Score!
 //	seen: Boolean!
 // 	teacherScores: [TeacherScore!]!
-// 	minimumPossibleScore: Float!
-// 	maximumPossibleScore: Float!
 // }
 type H5PUserContentScore struct {
-	User                 *H5PUser           `json:"user"`
-	Content              *H5PContent        `json:"content"`
-	Score                *H5PScore          `json:"score"`
-	Seen                 bool               `json:"seen"`
-	TeacherScores        []*H5PTeacherScore `json:"teacherScores"`
-	MinimumPossibleScore float64            `json:"minimumPossibleScore"`
-	MaximumPossibleScore float64            `json:"maximumPossibleScore"`
+	User          *H5PUser           `json:"user"`
+	Content       *H5PContent        `json:"content"`
+	Score         *H5PScore          `json:"score"`
+	Seen          bool               `json:"seen"`
+	TeacherScores []*H5PTeacherScore `json:"teacherScores"`
 }
 
 // type UserScores {
@@ -162,7 +162,9 @@ query {
 					answers {
 						answer
 						score
-						# date
+						date
+						minimumPossibleScore
+						maximumPossibleScore
 					}
 					median
 					medians
@@ -186,8 +188,6 @@ query {
 					score
 					date
 				}
-				minimumPossibleScore
-				maximumPossibleScore
 			}
 		}
   	}

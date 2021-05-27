@@ -1,6 +1,9 @@
 package entity
 
-import "gitlab.badanamu.com.cn/calmisland/dbo"
+import (
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"strings"
+)
 
 type ListH5PAssessmentsArgs struct {
 	Type      AssessmentType              `json:"type"`
@@ -86,7 +89,7 @@ func (h H5PAssessmentStudentViewItemsOrder) Len() int {
 }
 
 func (h H5PAssessmentStudentViewItemsOrder) Less(i, j int) bool {
-	return h[i].StudentName < h[j].StudentName
+	return strings.ToLower(h[i].StudentName) < strings.ToLower(h[j].StudentName)
 }
 
 func (h H5PAssessmentStudentViewItemsOrder) Swap(i, j int) {

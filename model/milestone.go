@@ -349,6 +349,8 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 					log.Any("milestone", ms))
 				return constant.ErrOperateNotAllowed
 			}
+		case entity.OutcomeStatusHidden:
+			return constant.ErrOutOfDate
 		default:
 			return constant.ErrOperateNotAllowed
 		}
@@ -936,6 +938,9 @@ func (m MilestoneModel) FillRelation(ms *entity.Milestone, relations []*entity.R
 }
 
 func (m *MilestoneModel) Copy(op *entity.Operator, ms *entity.Milestone) (*entity.Milestone, error) {
+	if ms.Status == entity.OutcomeStatusHidden {
+		return nil, constant.ErrOutOfDate
+	}
 	if ms.Status != entity.OutcomeStatusPublished {
 		return nil, constant.ErrOperateNotAllowed
 	}

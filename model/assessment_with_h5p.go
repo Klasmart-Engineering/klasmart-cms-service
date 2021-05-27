@@ -5,6 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
+	"sync"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -12,9 +16,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"sort"
-	"sync"
-	"time"
 )
 
 type IH5PAssessmentModel interface {
@@ -378,11 +379,15 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 			for _, s := range u.Scores {
 				total++
 				assessmentContent := entity.AssessmentH5PContentScore{
-					ContentID:        s.Content.ID,
-					ContentName:      s.Content.Name,
-					ContentType:      s.Content.Type,
-					MaxPossibleScore: s.MaximumPossibleScore,
-					Scores:           s.Score.Scores,
+					Scores: s.Score.Scores,
+				}
+				if s.Content != nil {
+					assessmentContent.ContentID = s.Content.ID
+					assessmentContent.ContentName = s.Content.Name
+					assessmentContent.ContentType = s.Content.Type
+				}
+				if len(s.Score.Answers) > 0 {
+					assessmentContent.MaxPossibleScore = s.Score.Answers[0].MaximumPossibleScore
 				}
 				for _, a := range s.Score.Answers {
 					assessmentContent.Answers = append(assessmentContent.Answers, a.Answer)
@@ -400,15 +405,18 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 				assessmentContentMap[assessmentContent.ContentID] = &assessmentContent
 			}
 			assessmentUser := entity.AssessmentH5PUser{
-				UserID:     u.User.UserID,
 				Contents:   assessmentContents,
 				ContentMap: assessmentContentMap,
+			}
+			if u.User != nil {
+				assessmentUser.UserID = u.User.UserID
 			}
 			if enableComment &&
 				roomCommentMap != nil &&
 				roomCommentMap[roomID] != nil &&
-				len(roomCommentMap[roomID][u.User.UserID]) > 0 {
-				assessmentUser.Comment = roomCommentMap[roomID][u.User.UserID][0]
+				assessmentUser.UserID != "" &&
+				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
+				assessmentUser.Comment = roomCommentMap[roomID][assessmentUser.UserID][0]
 			}
 			assessmentUsers = append(assessmentUsers, &assessmentUser)
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
@@ -534,12 +542,11 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 		return constant.ErrForbidden
 	}
 	if assessment.Status == entity.AssessmentStatusComplete {
-		errMsg := "update h5p assessment: assessment has completed, not allow update"
-		log.Info(ctx, errMsg,
+		log.Error(ctx, "update h5p assessment: assessment has completed, not allow update",
 			log.Any("args", args),
 			log.Any("operator", operator),
 		)
-		return errors.New(errMsg)
+		return ErrAssessmentHasCompleted
 	}
 
 	// update assessment students check property
