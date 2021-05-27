@@ -1503,10 +1503,7 @@ func (s *scheduleModel) getLessonPlanWithMaterial(ctx context.Context, op *entit
 		result.ID = lessonInfo.ID
 		result.Name = lessonInfo.Name
 
-		isAuth, err := s.VerifyLessonPlanAuthed(ctx, op, lessonPlanID)
-		if err != nil {
-			return nil, err
-		}
+		isAuth, _ := s.VerifyLessonPlanAuthed(ctx, op, lessonPlanID)
 		result.IsAuth = isAuth
 
 		contentList, err := GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), lessonPlanID, op)
