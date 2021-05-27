@@ -168,7 +168,7 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 
 			sb := new(strings.Builder)
 			sb.WriteString("query {")
-			for index, id := range _classIDs {
+			for index, id := range pageClassIDs {
 				fmt.Fprintf(sb, `q%d: class(class_id: "%s") {schools{id:school_id name:school_name status}}`, index, id)
 			}
 			sb.WriteString("}")
@@ -188,7 +188,7 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 				log.Error(ctx, "get schools by classes failed",
 					log.Err(err),
 					log.Any("operator", operator),
-					log.Strings("classIDs", classIDs))
+					log.Strings("pageClassIDs", pageClassIDs))
 				cerr <- err
 				return
 			}
