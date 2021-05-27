@@ -141,61 +141,90 @@ func (s AmsSchoolService) BatchGetNameMap(ctx context.Context, operator *entity.
 }
 
 func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Operator, classIDs []string, options ...APOption) (map[string][]*School, error) {
+	_classIDs := utils.SliceDeduplicationExcludeEmpty(classIDs)
+
 	if len(classIDs) == 0 {
 		return map[string][]*School{}, nil
 	}
 
-	condition := NewCondition(options...)
-
-	_classIDs, indexMapping := utils.SliceDeduplicationMap(classIDs)
-
-	sb := new(strings.Builder)
-	sb.WriteString("query {")
-	for index, id := range _classIDs {
-		fmt.Fprintf(sb, `q%d: class(class_id: "%s") {schools{id:school_id name:school_name status}}`, index, id)
-	}
-	sb.WriteString("}")
-
-	request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
-
-	data := map[string]*struct {
-		Schools []*School `json:"schools"`
-	}{}
-
-	response := &chlorine.Response{
-		Data: &data,
-	}
-
-	_, err := GetAmsClient().Run(ctx, request, response)
-	if err != nil {
-		log.Error(ctx, "get schools by classes failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Strings("classIDs", classIDs))
-		return nil, err
-	}
-
 	schools := make(map[string][]*School, len(classIDs))
-	for index, classID := range classIDs {
-		class := data[fmt.Sprintf("q%d", indexMapping[index])]
-		if class == nil {
-			continue
-		}
+	var mapLock sync.RWMutex
 
-		schools[classID] = make([]*School, 0, len(class.Schools))
-		for _, school := range class.Schools {
-			if condition.Status.Valid {
-				if condition.Status.Status != school.Status {
-					continue
-				}
-			} else {
-				// only status = "Active" data is returned by default
-				if school.Status != Active {
-					continue
-				}
+	total := len(_classIDs)
+	pageSize := constant.AMSRequestUserClassPageSize
+	pageCount := (total + pageSize - 1) / pageSize
+
+	condition := NewCondition(options...)
+	cerr := make(chan error, pageCount)
+
+	for i := 0; i < pageCount; i++ {
+		go func(j int) {
+			start := j * pageSize
+			end := (j + 1) * pageSize
+			if end >= total {
+				end = total
+			}
+			pageClassIDs := _classIDs[start:end]
+
+			sb := new(strings.Builder)
+			sb.WriteString("query {")
+			for index, id := range _classIDs {
+				fmt.Fprintf(sb, `q%d: class(class_id: "%s") {schools{id:school_id name:school_name status}}`, index, id)
+			}
+			sb.WriteString("}")
+
+			request := chlorine.NewRequest(sb.String(), chlorine.ReqToken(operator.Token))
+
+			data := map[string]*struct {
+				Schools []*School `json:"schools"`
+			}{}
+
+			response := &chlorine.Response{
+				Data: &data,
 			}
 
-			schools[classID] = append(schools[classID], school)
+			_, err := GetAmsClient().Run(ctx, request, response)
+			if err != nil {
+				log.Error(ctx, "get schools by classes failed",
+					log.Err(err),
+					log.Any("operator", operator),
+					log.Strings("classIDs", classIDs))
+				cerr <- err
+				return
+			}
+
+
+			for index, classID := range pageClassIDs {
+				class := data[fmt.Sprintf("q%d", index)]
+				if class == nil {
+					continue
+				}
+				mapLock.Lock()
+				schools[classID] = make([]*School, 0, len(class.Schools))
+				mapLock.Unlock()
+				for _, school := range class.Schools {
+					if condition.Status.Valid {
+						if condition.Status.Status != school.Status {
+							continue
+						}
+					} else {
+						// only status = "Active" data is returned by default
+						if school.Status != Active {
+							continue
+						}
+					}
+					mapLock.Lock()
+					schools[classID] = append(schools[classID], school)
+					mapLock.Unlock()
+				}
+			}
+			cerr <- nil
+		}(i)
+	}
+
+	for i := 0; i < pageCount; i++ {
+		if err := <-cerr; err != nil {
+			return nil, err
 		}
 	}
 
