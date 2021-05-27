@@ -193,7 +193,6 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 				return
 			}
 
-
 			for index, classID := range pageClassIDs {
 				class := data[fmt.Sprintf("q%d", index)]
 				if class == nil {
@@ -213,9 +212,9 @@ func (s AmsSchoolService) GetByClasses(ctx context.Context, operator *entity.Ope
 							continue
 						}
 					}
-					mapLock.Lock()
+					mapLock.RLock()
 					schools[classID] = append(schools[classID], school)
-					mapLock.Unlock()
+					mapLock.RUnlock()
 				}
 			}
 			cerr <- nil
