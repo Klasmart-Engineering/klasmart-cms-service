@@ -30,6 +30,7 @@ ALTER TABLE assessments_attendances ADD (
     `origin` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'origin',
     `role` VARCHAR(128) NOT NULL DEFAULT '' COMMENT 'role'
 );
+
 CREATE UNIQUE INDEX uq_assessments_attendances_assessment_id_attendance_id_role on assessments_attendances(assessment_id, attendance_id, role);
 
 /* assessments */
