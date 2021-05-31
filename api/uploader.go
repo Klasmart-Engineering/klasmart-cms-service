@@ -1,10 +1,11 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/model/storage"
-	"net/http"
 )
 
 type UploadPathResponse struct {
@@ -41,6 +42,8 @@ func (s *Server) getUploadPath(c *gin.Context) {
 	switch err {
 	case storage.ErrInvalidUploadPartition:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidExtensionInPartitionFile:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case nil:
 		c.JSON(http.StatusOK, UploadPathResponse{
 			Path:       path,
@@ -76,6 +79,8 @@ func (s *Server) getContentResourcePath(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case storage.ErrInvalidUploadPartition:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidExtensionInPartitionFile:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case nil:
 		c.Redirect(http.StatusFound, path)
 	default:
@@ -108,6 +113,8 @@ func (s *Server) getDownloadPath(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case storage.ErrInvalidUploadPartition:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case storage.ErrInvalidExtensionInPartitionFile:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case nil:
 		c.JSON(http.StatusOK, DownloadPathResource{
 			Path: path,
