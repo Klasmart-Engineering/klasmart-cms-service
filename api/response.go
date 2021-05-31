@@ -28,6 +28,7 @@ const (
 	LibraryIncludeArchivedMaterials ResponseLabel = "library_error_include_archived_lesson_material"
 
 	LibraryErrorPlanDuration ResponseLabel = "library_error_plan_duration"
+	LibraryErrorUnsupported  ResponseLabel = "library_error_unsupported_format"
 
 	//Folder
 	FolderDeleteNoEmptyFolder ResponseLabel = "library_error_delete_folder"
