@@ -71,6 +71,10 @@ func (s *Server) createContent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(LibraryMsgContentDataInvalid))
 	case model.ErrInvalidResourceID:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidSourceExt:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
+	case model.ErrTeacherManualExtension:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case model.ErrResourceNotFound:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrInvalidVisibilitySetting:
@@ -271,6 +275,10 @@ func (s *Server) publishContentWithAssets(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case model.ErrPlanHasArchivedMaterials:
 		c.JSON(http.StatusBadRequest, L(LibraryIncludeArchivedMaterials))
+	case model.ErrInvalidSourceExt:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
+	case model.ErrTeacherManualExtension:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case nil:
 		c.JSON(http.StatusOK, "")
 	default:
@@ -384,6 +392,10 @@ func (s *Server) updateContent(c *gin.Context) {
 		c.JSON(http.StatusForbidden, L(GeneralNoPermission))
 	case model.ErrInvalidPublishStatus:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidSourceExt:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
+	case model.ErrTeacherManualExtension:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case entity.ErrRequireContentName:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrRequirePublishScope:

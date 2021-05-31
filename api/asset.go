@@ -46,6 +46,10 @@ func (s *Server) createAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidSourceExt:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
+	case model.ErrTeacherManualExtension:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case nil:
 		c.JSON(http.StatusOK, gin.H{
 			"id": cid,
@@ -99,6 +103,10 @@ func (s *Server) updateAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	case entity.ErrInvalidContentType:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	case model.ErrInvalidSourceExt:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
+	case model.ErrTeacherManualExtension:
+		c.JSON(http.StatusBadRequest, L(LibraryErrorUnsupported))
 	case nil:
 		c.JSON(http.StatusOK, "ok")
 	default:
