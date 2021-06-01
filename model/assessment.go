@@ -328,6 +328,13 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 		result = append(result, &v)
 	}
 
+	log.Debug(ctx, "convert assessments to views",
+		log.Any("result", result),
+		log.Any("operator", operator),
+		log.Any("assessments", assessments),
+		log.Any("options", options),
+	)
+
 	return result, nil
 }
 

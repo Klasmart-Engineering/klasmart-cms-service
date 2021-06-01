@@ -382,7 +382,7 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 					Scores: s.Score.Scores,
 				}
 				if s.Content != nil {
-					assessmentContent.ContentID = s.Content.ID
+					assessmentContent.ContentID = s.Content.ContentID
 					assessmentContent.ContentName = s.Content.Name
 					assessmentContent.ContentType = s.Content.Type
 				}
@@ -428,6 +428,13 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 		}
 		result[roomID] = &room
 	}
+
+	log.Debug(ctx, "get room score map",
+		log.Strings("room_ids", roomIDs),
+		log.Any("operator", operator),
+		log.Any("result", result),
+	)
+
 	return result, nil
 }
 
