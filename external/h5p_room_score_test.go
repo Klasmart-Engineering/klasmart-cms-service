@@ -8,7 +8,7 @@ import (
 func TestH5PRoomScoreService_BatchGet(t *testing.T) {
 	scores, err := GetH5PRoomScoreServiceProvider().BatchGet(context.TODO(),
 		testOperator,
-		[]string{"60a1d40a03b03c3acdb4f946"})
+		[]string{"60b49a40533e6a317aa2abb9"})
 	if err != nil {
 		t.Errorf("GetH5PRoomScoreServiceProvider().BatchGet() error = %v", err)
 		return
