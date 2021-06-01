@@ -255,9 +255,10 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 		for _, c := range contents {
 			switch c.ContentType {
 			case entity.ContentTypeMaterial:
-				lessonMaterialIDs = append(lessonMaterialIDs, c.ID)
+				lessonMaterialIDs = append(lessonMaterialIDs, c.ContentID)
 			}
 		}
+		lessonMaterialIDs = utils.SliceDeduplicationExcludeEmpty(lessonMaterialIDs)
 		lessonMaterialSourceMap, err := m.GetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
 		if err != nil {
 			log.Error(ctx, "to views: get lesson material source map failed",
