@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-type IOutcomeAssessmentModel interface {
+type IClassAndLiveAssessmentModel interface {
 	GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
 	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
@@ -29,20 +29,20 @@ type IOutcomeAssessmentModel interface {
 var (
 	ErrAssessmentHasCompleted = errors.New("assessment has completed")
 
-	outcomeAssessmentModelInstance     IOutcomeAssessmentModel
-	outcomeAssessmentModelInstanceOnce = sync.Once{}
+	classAndLiveAssessmentModelInstance     IClassAndLiveAssessmentModel
+	classAndLiveAssessmentModelInstanceOnce = sync.Once{}
 )
 
-func GetOutcomeAssessmentModel() IOutcomeAssessmentModel {
-	outcomeAssessmentModelInstanceOnce.Do(func() {
-		outcomeAssessmentModelInstance = &outcomeAssessmentModel{}
+func GetClassAndLiveAssessmentModel() IClassAndLiveAssessmentModel {
+	classAndLiveAssessmentModelInstanceOnce.Do(func() {
+		classAndLiveAssessmentModelInstance = &classAndLiveAssessmentModel{}
 	})
-	return outcomeAssessmentModelInstance
+	return classAndLiveAssessmentModelInstance
 }
 
-type outcomeAssessmentModel struct{}
+type classAndLiveAssessmentModel struct{}
 
-func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
+func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
 	if err != nil {
 		log.Error(ctx, "Get: da.GetAssessmentDA().GetExcludeSoftDeleted: get failed",
@@ -245,7 +245,7 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 	return &result, nil
 }
 
-func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
+func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
 	// check permission
 	var (
 		checker = NewAssessmentPermissionChecker(operator)
@@ -385,7 +385,7 @@ func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, op
 	return &result, nil
 }
 
-func (m *outcomeAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error) {
+func (m *classAndLiveAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error) {
 	// check permission
 	var (
 		checker = NewAssessmentPermissionChecker(operator)
@@ -493,7 +493,7 @@ func (m *outcomeAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext,
 	return &r, nil
 }
 
-func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
+func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
 	log.Debug(ctx, "add assessment args", log.Any("args", args), log.Any("operator", operator))
 
 	// clean data
@@ -501,7 +501,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 
 	// use distributed lock
 	lockKey := fmt.Sprintf("%s_%s", entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass)
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentLock, args.ScheduleID, lockKey)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentAddLock, args.ScheduleID, lockKey)
 	if err != nil {
 		log.Error(ctx, "add outcome assessment",
 			log.Err(err),
@@ -780,14 +780,14 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 	return newAssessmentID, nil
 }
 
-func (m *outcomeAssessmentModel) generateTitle(classEndTime int64, className string, scheduleTitle string) string {
+func (m *classAndLiveAssessmentModel) generateTitle(classEndTime int64, className string, scheduleTitle string) string {
 	if className == "" {
 		className = constant.AssessmentNoClass
 	}
 	return fmt.Sprintf("%s-%s-%s", time.Unix(classEndTime, 0).Format("20060102"), className, scheduleTitle)
 }
 
-func (m *outcomeAssessmentModel) addAssessmentContentsAndOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
+func (m *classAndLiveAssessmentModel) addAssessmentContentsAndOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
 	if len(contents) == 0 {
 		return nil
 	}
@@ -843,7 +843,7 @@ func (m *outcomeAssessmentModel) addAssessmentContentsAndOutcomes(ctx context.Co
 	return nil
 }
 
-func (m *outcomeAssessmentModel) addAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome) error {
+func (m *classAndLiveAssessmentModel) addAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome) error {
 	if len(outcomes) == 0 {
 		return nil
 	}
@@ -871,7 +871,7 @@ func (m *outcomeAssessmentModel) addAssessmentOutcomes(ctx context.Context, tx *
 	return nil
 }
 
-func (m *outcomeAssessmentModel) addOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome, scheduleRelations []*entity.ScheduleRelation) error {
+func (m *classAndLiveAssessmentModel) addOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome, scheduleRelations []*entity.ScheduleRelation) error {
 	if len(outcomes) == 0 || len(scheduleRelations) == 0 {
 		return nil
 	}
@@ -914,7 +914,7 @@ func (m *outcomeAssessmentModel) addOutcomeAttendances(ctx context.Context, tx *
 	return nil
 }
 
-func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
+func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
 	// validate
 	if !args.Action.Valid() {
 		log.Error(ctx, "update assessment: invalid action", log.Any("args", args))
@@ -1115,7 +1115,7 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 	return nil
 }
 
-func (m *outcomeAssessmentModel) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
+func (m *classAndLiveAssessmentModel) getAssessmentContentOutcomeMap(ctx context.Context, tx *dbo.DBContext, assessmentIDs []string, contentIDs []string) (map[string]map[string][]string, error) {
 	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
 	cond := da.QueryAssessmentContentOutcomeConditions{
 		AssessmentIDs: entity.NullStrings{

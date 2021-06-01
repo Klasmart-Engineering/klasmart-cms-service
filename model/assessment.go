@@ -16,7 +16,6 @@ import (
 )
 
 type IAssessmentModel interface {
-	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error)
 	ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error)
 	ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error)
 	AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error
@@ -27,8 +26,7 @@ type IAssessmentModel interface {
 }
 
 var (
-	ErrNotFoundAttendance     = errors.New("not found attendance")
-	ErrNotAttemptedAssessment = errors.New("not attempted assessment")
+	ErrNotFoundAttendance = errors.New("not found attendance")
 
 	assessmentModelInstance     IAssessmentModel
 	assessmentModelInstanceOnce = sync.Once{}
@@ -42,23 +40,6 @@ func GetAssessmentModel() IAssessmentModel {
 }
 
 type assessmentModel struct{}
-
-func (*assessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error) {
-	newAssessmentIDs := make([]string, 0, 2)
-	args.Types = []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass}
-	id, err := GetOutcomeAssessmentModel().Add(ctx, tx, operator, args)
-	if err != nil {
-		return nil, err
-	}
-	newAssessmentIDs = append(newAssessmentIDs, id)
-	//args.Type = entity.AssessmentTypeClassAndLiveH5P
-	//id2, err := GetH5PAssessmentModel().AddClassAndLive(ctx, tx, operator, args)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//newAssessmentIDs = append(newAssessmentIDs, id2)
-	return newAssessmentIDs, nil
-}
 
 func (m *assessmentModel) ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error) {
 	var assessments []*entity.Assessment

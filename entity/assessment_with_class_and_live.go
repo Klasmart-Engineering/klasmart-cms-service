@@ -18,7 +18,7 @@ func (a *AddAssessmentArgs) Valid() error {
 }
 
 type AddAssessmentResult struct {
-	IDs []string `json:"id"`
+	ID string `json:"id"`
 }
 
 type UpdateAssessmentAction string

@@ -517,7 +517,7 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 		)
 		return constant.ErrForbidden
 	}
-	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, dbo.MustGetDB(ctx), args.ID)
+	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, tx, args.ID)
 	if err != nil {
 		log.Error(ctx, "update study assessment: get teacher ids failed by assessment id ",
 			log.Err(err),
@@ -588,18 +588,6 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 		}
 	}
 
-	// update assessment status
-	if args.Action == entity.UpdateAssessmentActionComplete {
-		if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
-			log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-	}
-
 	// get schedule
 	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{assessment.ScheduleID}, nil)
 	if err != nil {
@@ -649,6 +637,18 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 	}
 	if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, operator, newComments); err != nil {
 		return err
+	}
+
+	// update assessment status
+	if args.Action == entity.UpdateAssessmentActionComplete {
+		if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
+			log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.Any("operator", operator),
+			)
+			return err
+		}
 	}
 
 	return nil
@@ -1102,51 +1102,4 @@ func (m *h5pAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx *
 		}
 	}
 	return result, nil
-}
-
-type H5pAssessmentItemsOrder struct {
-	Items   []*entity.ListStudyAssessmentsResultItem
-	OrderBy entity.AssessmentOrderBy
-}
-
-func NewH5pAssessmentItemsOrder(items []*entity.ListStudyAssessmentsResultItem, orderBy entity.AssessmentOrderBy) *H5pAssessmentItemsOrder {
-	return &H5pAssessmentItemsOrder{Items: items, OrderBy: orderBy}
-}
-
-func (h *H5pAssessmentItemsOrder) Len() int {
-	return len(h.Items)
-}
-
-func (h *H5pAssessmentItemsOrder) Less(i, j int) bool {
-	switch h.OrderBy {
-	case entity.AssessmentOrderByCompleteTime:
-		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt > 0 {
-			return true
-		}
-		if h.Items[i].CompleteAt != 0 && h.Items[j].CompleteAt == 0 {
-			return false
-		}
-		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt == 0 {
-			return h.Items[i].CreateAt < h.Items[j].CreateAt
-		}
-	case entity.AssessmentOrderByCompleteTimeDesc:
-		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt > 0 {
-			return false
-		}
-		if h.Items[i].CompleteAt != 0 && h.Items[j].CompleteAt == 0 {
-			return true
-		}
-		if h.Items[i].CompleteAt == 0 && h.Items[j].CompleteAt == 0 {
-			return h.Items[i].CreateAt > h.Items[j].CreateAt
-		}
-	case entity.AssessmentOrderByCreateAt:
-		return h.Items[i].CreateAt < h.Items[j].CreateAt
-	case entity.AssessmentOrderByCreateAtDesc:
-		return h.Items[i].CreateAt > h.Items[j].CreateAt
-	}
-	return false
-}
-
-func (h *H5pAssessmentItemsOrder) Swap(i, j int) {
-	h.Items[i], h.Items[j] = h.Items[j], h.Items[i]
 }

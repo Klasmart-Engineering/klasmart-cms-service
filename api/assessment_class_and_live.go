@@ -80,7 +80,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 		}
 	}
 
-	result, err := model.GetOutcomeAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	result, err := model.GetClassAndLiveAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -140,7 +140,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetOutcomeAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
+	result, err := model.GetClassAndLiveAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -179,7 +179,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetOutcomeAssessmentModel().GetDetail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
+	item, err := model.GetClassAndLiveAssessmentModel().GetDetail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
@@ -234,7 +234,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		return
 	}
 
-	err := model.GetOutcomeAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	err := model.GetClassAndLiveAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
@@ -287,19 +287,19 @@ func (s *Server) addAssessment(c *gin.Context) {
 	}
 
 	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
-	var newIDs []string
+	var newID string
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
-		newIDs, err = model.GetAssessmentModel().AddClassAndLive(ctx, tx, s.getOperator(c), args)
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), args)
 		return err
 	})
 	switch err {
 	case nil:
 		log.Debug(ctx, "add assessment jwt success",
 			log.Any("args", args),
-			log.Strings("new_id", newIDs),
+			log.String("new_id", newID),
 		)
-		c.JSON(http.StatusOK, entity.AddAssessmentResult{IDs: newIDs})
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
@@ -334,15 +334,15 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 		return
 	}
 
-	var newIDs []string
+	var newID string
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
-		newIDs, err = model.GetAssessmentModel().AddClassAndLive(ctx, tx, s.getOperator(c), args)
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), args)
 		return err
 	})
 	switch err {
 	case nil:
-		c.JSON(http.StatusOK, entity.AddAssessmentResult{IDs: newIDs})
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
 	case constant.ErrInvalidArgs:
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
