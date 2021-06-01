@@ -151,6 +151,7 @@ query {
 					content_id
 					name
 					type
+					fileType
 				}
 				score {
 					min
@@ -184,6 +185,7 @@ query {
 						content_id
 						name
 						type
+						fileType
 					}
 					score
 					date
