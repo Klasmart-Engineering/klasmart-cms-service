@@ -107,8 +107,9 @@ type LiveTokenConfig struct {
 }
 
 type AssessmentConfig struct {
-	CacheExpiration     time.Duration `yaml:"cache_expiration"`
-	AddAssessmentSecret interface{}   `json:"add_assessment_secret"`
+	CacheExpiration      time.Duration `json:"cache_expiration" yaml:"cache_expiration"`
+	AddAssessmentSecret  interface{}   `json:"add_assessment_secret"`
+	DefaultRemainingTime time.Duration `json:"default_remaining_time" yaml:"default_remaining_time"`
 }
 
 type AMSConfig struct {
@@ -365,6 +366,13 @@ func loadAssessmentConfig(ctx context.Context) {
 		log.Panic(ctx, "load assessment config: ParseRSAPublicKeyFromPEM failed", log.Err(err))
 	}
 	config.Assessment.AddAssessmentSecret = key
+
+	defaultRemainingTime, err := time.ParseDuration(os.Getenv("assessment_default_remaining_time"))
+	if err != nil {
+		config.Assessment.DefaultRemainingTime = constant.AssessmentDefaultRemainingTime
+	} else {
+		config.Assessment.DefaultRemainingTime = defaultRemainingTime
+	}
 }
 
 func loadAMSConfig(ctx context.Context) {
