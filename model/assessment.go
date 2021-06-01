@@ -45,7 +45,7 @@ type assessmentModel struct{}
 
 func (*assessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error) {
 	newAssessmentIDs := make([]string, 0, 2)
-	args.Type = entity.AssessmentTypeClassAndLiveOutcome
+	args.Types = []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass}
 	id, err := GetOutcomeAssessmentModel().Add(ctx, tx, operator, args)
 	if err != nil {
 		return nil, err

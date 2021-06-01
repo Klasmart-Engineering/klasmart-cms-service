@@ -19,9 +19,9 @@ import (
 )
 
 type IH5PAssessmentModel interface {
-	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListH5PAssessmentsArgs) (*entity.ListH5PAssessmentsResult, error)
-	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetH5PAssessmentDetailResult, error)
-	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) error
+	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
+	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error)
+	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateStudyAssessmentArgs) error
 	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	DeleteStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 	AddStudies(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
@@ -44,9 +44,9 @@ func GetH5PAssessmentModel() IH5PAssessmentModel {
 
 type h5pAssessmentModel struct{}
 
-func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListH5PAssessmentsArgs) (*entity.ListH5PAssessmentsResult, error) {
+func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error) {
 	// check args
-	if !args.Type.Valid() {
+	if len(args.ClassTypes) == 0 {
 		errMsg := "list h5p assessments: require assessment type"
 		log.Error(ctx, errMsg, log.Any("args", args), log.Any("operator", operator))
 		return nil, constant.ErrInvalidArgs
@@ -77,8 +77,8 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
-			Type: entity.NullAssessmentType{
-				Value: args.Type,
+			ClassTypes: entity.NullScheduleClassTypes{
+				Value: args.ClassTypes,
 				Valid: true,
 			},
 			OrgID: entity.NullString{
@@ -100,7 +100,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 	)
 	if args.Query != "" {
 		switch args.QueryType {
-		case entity.ListH5PAssessmentsQueryTypeTeacherName:
+		case entity.ListStudyAssessmentsQueryTypeTeacherName:
 			cond.TeacherIDs.Valid = true
 			teachers, err := external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.Query)
 			if err != nil {
@@ -158,7 +158,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 	}
 
 	// construct result
-	var result = entity.ListH5PAssessmentsResult{Total: total}
+	var result = entity.ListStudyAssessmentsResult{Total: total}
 	for _, v := range views {
 		teacherNames := make([]string, 0, len(v.Teachers))
 		for _, t := range v.Teachers {
@@ -183,7 +183,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 			contentIDs = append(contentIDs, lm.ID)
 		}
 
-		newItem := entity.ListH5PAssessmentsResultItem{
+		newItem := entity.ListStudyAssessmentsResultItem{
 			ID:            v.ID,
 			Title:         v.Title,
 			TeacherNames:  teacherNames,
@@ -201,7 +201,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 	return &result, nil
 }
 
-func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetH5PAssessmentDetailResult, error) {
+func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error) {
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
 	if err != nil {
 		log.Error(ctx, "get detail: get assessment failed",
@@ -234,14 +234,14 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 	view = views[0]
 
 	// construct result
-	result := entity.GetH5PAssessmentDetailResult{
+	result := entity.GetStudyAssessmentDetailResult{
 		ID:               view.ID,
 		Title:            view.Title,
 		ClassName:        view.Class.Name,
 		Teachers:         view.Teachers,
 		Students:         view.Students,
 		DueAt:            view.Schedule.DueAt,
-		LessonPlan:       entity.H5PAssessmentLessonPlan{},
+		LessonPlan:       entity.StudyAssessmentLessonPlan{},
 		LessonMaterials:  nil,
 		CompleteAt:       view.CompleteTime,
 		RemainingTime:    0,
@@ -268,7 +268,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 			log.String("assessment_id", id),
 		)
 	}
-	result.LessonPlan = entity.H5PAssessmentLessonPlan{
+	result.LessonPlan = entity.StudyAssessmentLessonPlan{
 		ID:   plan.ContentID,
 		Name: plan.ContentName,
 	}
@@ -280,7 +280,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		)
 	}
 	for _, m := range materials {
-		result.LessonMaterials = append(result.LessonMaterials, &entity.H5PAssessmentLessonMaterial{
+		result.LessonMaterials = append(result.LessonMaterials, &entity.StudyAssessmentLessonMaterial{
 			ID:      m.ContentID,
 			Name:    m.ContentName,
 			Comment: m.ContentComment,
@@ -305,7 +305,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 
 	// student view items
 	for _, s := range view.Students {
-		newItem := entity.H5PAssessmentStudentViewItem{
+		newItem := entity.AssessmentStudentViewH5PItem{
 			StudentID:   s.ID,
 			StudentName: s.Name,
 		}
@@ -321,7 +321,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 		}
 
 		for _, lm := range view.LessonMaterials {
-			newLessMaterial := entity.H5PAssessmentStudentViewLessonMaterial{
+			newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
 				LessonMaterialID:   lm.ID,
 				LessonMaterialName: lm.Name,
 				IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
@@ -349,7 +349,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 	}
 
 	// order students
-	sort.Sort(entity.H5PAssessmentStudentViewItemsOrder(result.StudentViewItems))
+	sort.Sort(entity.AssessmentStudentViewH5PItemsOrder(result.StudentViewItems))
 
 	return &result, nil
 }
@@ -489,7 +489,7 @@ func (m *h5pAssessmentModel) getRoomCommentMap(ctx context.Context, operator *en
 	return result, nil
 }
 
-func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateH5PAssessmentArgs) error {
+func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateStudyAssessmentArgs) error {
 	// validate
 	if !args.Action.Valid() {
 		log.Error(ctx, "update h5p assessment: invalid action", log.Any("args", args))
@@ -662,8 +662,8 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 
 	// check if assessment already exits
 	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
-		Type: entity.NullAssessmentType{
-			Value: entity.AssessmentTypeClassAndLiveH5P,
+		ClassTypes: entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
 			Valid: true,
 		},
 		ScheduleIDs: entity.NullStrings{
@@ -772,7 +772,6 @@ func (m *h5pAssessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBCont
 		newAssessment = entity.Assessment{
 			ID:           newAssessmentID,
 			ScheduleID:   args.ScheduleID,
-			Type:         entity.AssessmentTypeClassAndLiveH5P,
 			ClassLength:  args.ClassLength,
 			ClassEndTime: args.ClassEndTime,
 			Status:       entity.AssessmentStatusInProgress,
@@ -869,8 +868,8 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		scheduleIDs = append(scheduleIDs, item.ScheduleID)
 	}
 	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
-		Type: entity.NullAssessmentType{
-			Value: entity.AssessmentTypeClassAndLiveH5P,
+		ClassTypes: entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeHomework},
 			Valid: true,
 		},
 		ScheduleIDs: entity.NullStrings{
@@ -934,7 +933,6 @@ func (m *h5pAssessmentModel) AddStudies(ctx context.Context, tx *dbo.DBContext, 
 		newAssessments = append(newAssessments, &entity.Assessment{
 			ID:         utils.NewID(),
 			ScheduleID: item.ScheduleID,
-			Type:       entity.AssessmentTypeStudyH5P,
 			Title:      m.generateTitle(className, item.ScheduleTitle),
 			Status:     entity.AssessmentStatusInProgress,
 			CreateAt:   now,
@@ -1052,8 +1050,8 @@ func (m *h5pAssessmentModel) DeleteStudies(ctx context.Context, tx *dbo.DBContex
 	}
 	var assessments []entity.Assessment
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
-		Type: entity.NullAssessmentType{
-			Value: entity.AssessmentTypeClassAndLiveH5P,
+		ClassTypes: entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeHomework},
 			Valid: true,
 		},
 		OrgID: entity.NullString{
@@ -1107,11 +1105,11 @@ func (m *h5pAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx *
 }
 
 type H5pAssessmentItemsOrder struct {
-	Items   []*entity.ListH5PAssessmentsResultItem
+	Items   []*entity.ListStudyAssessmentsResultItem
 	OrderBy entity.AssessmentOrderBy
 }
 
-func NewH5pAssessmentItemsOrder(items []*entity.ListH5PAssessmentsResultItem, orderBy entity.AssessmentOrderBy) *H5pAssessmentItemsOrder {
+func NewH5pAssessmentItemsOrder(items []*entity.ListStudyAssessmentsResultItem, orderBy entity.AssessmentOrderBy) *H5pAssessmentItemsOrder {
 	return &H5pAssessmentItemsOrder{Items: items, OrderBy: orderBy}
 }
 

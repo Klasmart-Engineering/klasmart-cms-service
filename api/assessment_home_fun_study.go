@@ -33,9 +33,9 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 
 	args := entity.ListHomeFunStudiesArgs{}
 
-	if status := entity.AssessmentStatus(c.Query("status")); status.Valid() {
+	if status := c.Query("status"); status != "" && status != constant.ListOptionAll {
 		args.Status = entity.NullAssessmentStatus{
-			Value: status,
+			Value: entity.AssessmentStatus(status),
 			Valid: true,
 		}
 	}

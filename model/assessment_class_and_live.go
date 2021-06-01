@@ -140,7 +140,7 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 		}
 
 		for _, o := range outcomes {
-			newOutcomeAttendances := entity.OutcomeAttendances{
+			newOutcomeAttendances := entity.AssessmentDetailOutcome{
 				OutcomeID:     o.ID,
 				OutcomeName:   o.Name,
 				Assumed:       o.Assumed,
@@ -149,7 +149,7 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 				AttendanceIDs: outcomeAttendanceIDsMap[o.ID],
 				Checked:       assessmentOutcomeMap[o.ID].Checked,
 			}
-			result.OutcomeAttendances = append(result.OutcomeAttendances, &newOutcomeAttendances)
+			result.Outcomes = append(result.Outcomes, &newOutcomeAttendances)
 		}
 	}
 
@@ -192,7 +192,7 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 		}
 		currentContentOutcomeMap = assessmentContentOutcomeMap[id]
 		if plan != nil {
-			result.Plan = entity.AssessmentContentView{
+			result.LessonPlan = entity.AssessmentDetailContent{
 				ID:         plan.ContentID,
 				Name:       plan.ContentName,
 				Checked:    true,
@@ -200,7 +200,7 @@ func (m *outcomeAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContex
 			}
 		}
 		for _, m := range materials {
-			result.Materials = append(result.Materials, &entity.AssessmentContentView{
+			result.LessonMaterials = append(result.LessonMaterials, &entity.AssessmentDetailContent{
 				ID:         m.ContentID,
 				Name:       m.ContentName,
 				Comment:    m.ContentComment,
@@ -266,8 +266,8 @@ func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, op
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
-			Type: entity.NullAssessmentType{
-				Value: entity.AssessmentTypeClassAndLiveOutcome,
+			ClassTypes: entity.NullScheduleClassTypes{
+				Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
 				Valid: true,
 			},
 			OrgID: entity.NullString{
@@ -283,9 +283,8 @@ func (m *outcomeAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, op
 				Values: checker.AllowPairs(),
 				Valid:  len(checker.AllowPairs()) > 0,
 			},
-			ClassType: args.ClassType,
-			OrderBy:   args.OrderBy,
-			Pager:     args.Pager,
+			OrderBy: args.OrderBy,
+			Pager:   args.Pager,
 		}
 		teachers    []*external.Teacher
 		scheduleIDs []string
@@ -407,9 +406,9 @@ func (m *outcomeAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext,
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
-			Type: entity.NullAssessmentType{
-				Value: entity.AssessmentTypeClassAndLiveOutcome,
-				Valid: true,
+			ClassTypes: entity.NullScheduleClassTypes{
+				Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
+				Valid: false,
 			},
 			OrgID: entity.NullString{
 				String: operator.OrgID,
@@ -424,7 +423,6 @@ func (m *outcomeAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext,
 				Values: checker.allowPairs,
 				Valid:  len(checker.allowPairs) > 0,
 			},
-			ClassType: args.ClassType,
 		}
 		teachers    []*external.Teacher
 		scheduleIDs []string
@@ -502,7 +500,8 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
 	// use distributed lock
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentLock, args.ScheduleID, string(entity.AssessmentTypeClassAndLiveOutcome))
+	lockKey := fmt.Sprintf("%s_%s", entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass)
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentLock, args.ScheduleID, lockKey)
 	if err != nil {
 		log.Error(ctx, "add outcome assessment",
 			log.Err(err),
@@ -516,8 +515,8 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 
 	// check if assessment already exits
 	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
-		Type: entity.NullAssessmentType{
-			Value: entity.AssessmentTypeClassAndLiveOutcome,
+		ClassTypes: entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
 			Valid: true,
 		},
 		ScheduleIDs: entity.NullStrings{
@@ -648,7 +647,6 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 		newAssessment = entity.Assessment{
 			ID:           newAssessmentID,
 			ScheduleID:   args.ScheduleID,
-			Type:         entity.AssessmentTypeClassAndLiveOutcome,
 			CreateAt:     now,
 			UpdateAt:     now,
 			ClassLength:  args.ClassLength,
@@ -922,8 +920,8 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 		log.Error(ctx, "update assessment: invalid action", log.Any("args", args))
 		return constant.ErrInvalidArgs
 	}
-	if args.OutcomeAttendances != nil {
-		for _, item := range *args.OutcomeAttendances {
+	if args.Outcomes != nil {
+		for _, item := range args.Outcomes {
 			if item.Skip && item.NoneAchieved {
 				log.Error(ctx, "update assessment: check skip and none achieved combination", log.Any("args", args))
 				return constant.ErrInvalidArgs
@@ -997,8 +995,8 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 				)
 				return err
 			}
-			if args.StudentIDs != nil && len(*args.StudentIDs) > 0 {
-				if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, *args.StudentIDs); err != nil {
+			if args.StudentIDs != nil && len(args.StudentIDs) > 0 {
+				if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, args.StudentIDs); err != nil {
 					log.Error(ctx, "update: da.GetAssessmentAttendanceDA().BatchCheck: check failed",
 						log.Err(err),
 						log.Any("args", args),
@@ -1008,7 +1006,7 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 			}
 		}
 
-		if args.OutcomeAttendances != nil {
+		if args.Outcomes != nil {
 			// update assessment outcomes map
 			if err := da.GetAssessmentOutcomeDA().UncheckByAssessmentID(ctx, tx, args.ID); err != nil {
 				log.Error(ctx, "Update: da.GetAssessmentOutcomeDA().UncheckStudents: uncheck assessment outcome failed by assessment id",
@@ -1018,7 +1016,7 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 				)
 				return err
 			}
-			for _, oa := range *args.OutcomeAttendances {
+			for _, oa := range args.Outcomes {
 				newAssessmentOutcome := entity.AssessmentOutcome{
 					AssessmentID: args.ID,
 					OutcomeID:    oa.OutcomeID,
@@ -1041,7 +1039,7 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 				outcomeIDs         []string
 				outcomeAttendances []*entity.OutcomeAttendance
 			)
-			for _, oa := range *args.OutcomeAttendances {
+			for _, oa := range args.Outcomes {
 				outcomeIDs = append(outcomeIDs, oa.OutcomeID)
 				if oa.Skip {
 					continue
@@ -1074,7 +1072,7 @@ func (m *outcomeAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, 
 		}
 
 		/// update assessment contents map
-		for _, ma := range args.Materials {
+		for _, ma := range args.LessonMaterials {
 			updateArgs := da.UpdatePartialAssessmentContentArgs{
 				AssessmentID:   args.ID,
 				ContentID:      ma.ID,

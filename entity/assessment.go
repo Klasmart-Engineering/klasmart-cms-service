@@ -1,11 +1,11 @@
 package entity
 
-import "database/sql"
+import "strings"
 
 type Assessment struct {
-	ID           string           `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
-	ScheduleID   string           `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
-	Type         AssessmentType   `gorm:"column:type;type:varchar(1024);not null" json:"type"` // add: 2021-05-15
+	ID         string `gorm:"column:id;type:varchar(64);primary_key" json:"id"`
+	ScheduleID string `gorm:"column:schedule_id;type:varchar(64);not null" json:"schedule_id"`
+	//Type         AssessmentType   `gorm:"column:type;type:varchar(1024);not null" json:"type"` // add: 2021-05-15,delete 2021-05-31
 	Title        string           `gorm:"column:title;type:varchar(1024);not null" json:"title"`
 	CompleteTime int64            `gorm:"column:complete_time;type:bigint;not null" json:"complete_time"`
 	Status       AssessmentStatus `gorm:"column:status;type:varchar(128);not null" json:"status"`
@@ -19,166 +19,39 @@ type Assessment struct {
 	ClassEndTime int64 `gorm:"column:class_end_time;type:bigint;not null" json:"class_end_time"`
 }
 
-type AssessmentType string
-
-const (
-	AssessmentTypeClassAndLiveOutcome AssessmentType = "class_and_live_outcome"
-	AssessmentTypeClassAndLiveH5P     AssessmentType = "class_and_live_h5p"
-	AssessmentTypeStudyH5P            AssessmentType = "study_h5p"
-)
-
-func (t AssessmentType) Valid() bool {
-	switch t {
-	case AssessmentTypeClassAndLiveOutcome, AssessmentTypeClassAndLiveH5P, AssessmentTypeStudyH5P:
-		return true
-	default:
-		return false
-	}
-}
-
-type NullAssessmentType struct {
-	Value AssessmentType
-	Valid bool
-}
-
 func (Assessment) TableName() string {
 	return "assessments"
 }
 
-type AddAssessmentArgs struct {
-	Type          AssessmentType `json:"type"`
-	ScheduleID    string         `json:"schedule_id"`
-	AttendanceIDs []string       `json:"attendance_ids"`
-	ClassLength   int            `json:"class_length"`
-	ClassEndTime  int64          `json:"class_end_time"`
+type AssessmentStudentViewH5PItem struct {
+	StudentID       string                                    `json:"student_id"`
+	StudentName     string                                    `json:"student_name"`
+	Comment         string                                    `json:"comment"`
+	LessonMaterials []*AssessmentStudentViewH5PLessonMaterial `json:"lesson_materials"`
 }
 
-func (a *AddAssessmentArgs) Valid() error {
-	return nil
+type AssessmentStudentViewH5PItemsOrder []*AssessmentStudentViewH5PItem
+
+func (h AssessmentStudentViewH5PItemsOrder) Len() int {
+	return len(h)
 }
 
-type AddAssessmentResult struct {
-	IDs []string `json:"id"`
+func (h AssessmentStudentViewH5PItemsOrder) Less(i, j int) bool {
+	return strings.ToLower(h[i].StudentName) < strings.ToLower(h[j].StudentName)
 }
 
-type UpdateAssessmentAction string
-
-const (
-	UpdateAssessmentActionSave     UpdateAssessmentAction = "save"
-	UpdateAssessmentActionComplete UpdateAssessmentAction = "complete"
-)
-
-func (a UpdateAssessmentAction) Valid() bool {
-	switch a {
-	case UpdateAssessmentActionSave, UpdateAssessmentActionComplete:
-		return true
-	default:
-		return false
-	}
+func (h AssessmentStudentViewH5PItemsOrder) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
 }
 
-type AssessmentOrderBy string
-
-const (
-	AssessmentOrderByClassEndTime     AssessmentOrderBy = "class_end_time"
-	AssessmentOrderByClassEndTimeDesc AssessmentOrderBy = "-class_end_time"
-	AssessmentOrderByCompleteTime     AssessmentOrderBy = "complete_time"
-	AssessmentOrderByCompleteTimeDesc AssessmentOrderBy = "-complete_time"
-	AssessmentOrderByCreateAt         AssessmentOrderBy = "create_at"
-	AssessmentOrderByCreateAtDesc     AssessmentOrderBy = "-create_at"
-)
-
-func (ob AssessmentOrderBy) Valid() bool {
-	switch ob {
-	case AssessmentOrderByClassEndTime,
-		AssessmentOrderByClassEndTimeDesc,
-		AssessmentOrderByCompleteTime,
-		AssessmentOrderByCompleteTimeDesc,
-		AssessmentOrderByCreateAt,
-		AssessmentOrderByCreateAtDesc:
-		return true
-	default:
-		return false
-	}
-}
-
-type NullAssessmentsOrderBy struct {
-	Value AssessmentOrderBy
-	Valid bool
-}
-
-type AssessmentView struct {
-	*Assessment
-	Schedule        *Schedule                   `json:"schedule"`
-	RoomID          string                      `json:"room_id"`
-	Program         AssessmentProgram           `json:"program"`
-	Subjects        []*AssessmentSubject        `json:"subjects"`
-	Teachers        []*AssessmentTeacher        `json:"teachers"`
-	Students        []*AssessmentStudent        `json:"students"`
-	Class           AssessmentClass             `json:"class"`
-	LessonPlan      *AssessmentLessonPlan       `json:"lesson_plan"`
-	LessonMaterials []*AssessmentLessonMaterial `json:"lesson_materials"`
-}
-
-type AssessmentProgram struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type AssessmentTeacher struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type AssessmentStudent struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Checked bool   `json:"checked"`
-}
-
-type AssessmentClass struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type AssessmentSubject struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type ConvertToViewsOptions struct {
-	CheckedStudents  sql.NullBool
-	EnableProgram    bool
-	EnableSubjects   bool
-	EnableTeachers   bool
-	EnableStudents   bool
-	EnableClass      bool
-	EnableLessonPlan bool
-}
-
-type AssessmentLessonPlan struct {
-	ID        string                      `json:"id"`
-	Name      string                      `json:"name"`
-	Materials []*AssessmentLessonMaterial `json:"materials"`
-}
-
-type AssessmentLessonMaterial struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	FileType FileType `json:"file_type"`
-	Comment  string   `json:"comment"`
-	Source   string   `json:"source"`
-	Checked  bool     `json:"checked"`
-}
-
-type AssessmentExternalLessonPlan struct {
-	ID        string                              `json:"id"`
-	Name      string                              `json:"name"`
-	Materials []*AssessmentExternalLessonMaterial `json:"materials"`
-}
-
-type AssessmentExternalLessonMaterial struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Source string `json:"source"`
+type AssessmentStudentViewH5PLessonMaterial struct {
+	LessonMaterialID   string   `json:"lesson_material_id"`
+	LessonMaterialName string   `json:"lesson_material_name"`
+	LessonMaterialType string   `json:"lesson_material_type"`
+	Answer             string   `json:"answer"`
+	MaxScore           float64  `json:"max_score"`
+	AchievedScore      float64  `json:"achieved_score"`
+	Attempted          bool     `json:"attempted"`
+	IsH5P              bool     `json:"is_h5p"`
+	OutcomeNames       []string `json:"outcome_names"`
 }

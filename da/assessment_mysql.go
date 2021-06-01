@@ -136,7 +136,6 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 	columns := []string{
 		"id",
 		"schedule_id",
-		"`type`",
 		"title",
 		"complete_time",
 		"status",
@@ -151,7 +150,6 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 		matrix = append(matrix, []interface{}{
 			item.ID,
 			item.ScheduleID,
-			item.Type,
 			item.Title,
 			item.CompleteTime,
 			item.Status,
@@ -177,14 +175,13 @@ func (a *assessmentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, items
 
 type QueryAssessmentConditions struct {
 	IDs                          entity.NullStrings                                `json:"ids"`
-	Type                         entity.NullAssessmentType                         `json:"type"`
 	OrgID                        entity.NullString                                 `json:"org_id"`
 	Status                       entity.NullAssessmentStatus                       `json:"status"`
 	ScheduleIDs                  entity.NullStrings                                `json:"schedule_ids"`
 	TeacherIDs                   entity.NullStrings                                `json:"teacher_ids"`
 	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`
 	AllowTeacherIDAndStatusPairs entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"teacher_id_and_status_pairs"`
-	ClassType                    entity.NullScheduleClassType                      `json:"class_type"`
+	ClassTypes                   entity.NullScheduleClassTypes                     `json:"class_types"`
 	ClassIDs                     entity.NullStrings                                `json:"class_ids"`
 	ClassIDsOrTeacherIDs         NullClassIDsOrTeacherIDs                          `json:"class_ids_or_teacher_ids"`
 
@@ -209,18 +206,14 @@ func (c *QueryAssessmentConditions) GetConditions() ([]string, []interface{}) {
 		t.Appendf("id in (?)", c.IDs.Strings)
 	}
 
-	if c.Type.Valid && c.Type.Value.Valid() {
-		t.Appendf("`type` = ?", c.Type.Value)
-	}
-
 	if c.OrgID.Valid {
 		t.Appendf("exists (select 1 from schedules"+
 			" where org_id = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID.String)
 	}
 
-	if c.ClassType.Valid {
+	if c.ClassTypes.Valid {
 		t.Appendf("exists (select 1 from schedules"+
-			" where class_type = ? and delete_at = 0 and assessments.schedule_id = schedules.id)", c.OrgID.String)
+			" where class_type in (?) and delete_at = 0 and assessments.schedule_id = schedules.id)", c.ClassTypes.Value)
 	}
 
 	if c.Status.Valid {

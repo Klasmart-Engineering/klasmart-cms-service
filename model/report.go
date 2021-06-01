@@ -870,8 +870,8 @@ func (m *reportModel) getCompletedAssessments(ctx context.Context, tx *dbo.DBCon
 			Strings: ids,
 			Valid:   true,
 		},
-		Type: entity.NullAssessmentType{
-			Value: entity.AssessmentTypeClassAndLiveOutcome,
+		ClassTypes: entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
 			Valid: true,
 		},
 		Status: entity.NullAssessmentStatus{
@@ -903,8 +903,8 @@ func (m *reportModel) getAssessmentIDs(ctx context.Context, tx *dbo.DBContext, o
 	}
 	assessments := make([]*entity.Assessment, 0, len(scheduleIDs))
 	if err := da.GetAssessmentDA().Query(ctx, &da.QueryAssessmentConditions{
-		Type: entity.NullAssessmentType{
-			Value: entity.AssessmentTypeClassAndLiveOutcome,
+		ClassTypes: entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
 			Valid: true,
 		},
 		ScheduleIDs: entity.NullStrings{

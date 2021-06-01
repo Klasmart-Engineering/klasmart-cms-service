@@ -233,6 +233,11 @@ type NullScheduleClassType struct {
 	Valid bool
 }
 
+type NullScheduleClassTypes struct {
+	Value []ScheduleClassType
+	Valid bool
+}
+
 type ScheduleClassTypeLabel string
 
 const (
