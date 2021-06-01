@@ -18,6 +18,9 @@ import (
 )
 
 var (
+	ErrHomeFunStudyHasCompleted   = errors.New("home fun study has completed")
+	ErrHomeFunStudyHasNewFeedback = errors.New("home fun study has new feedback")
+
 	homeFunStudyModelInstance     IHomeFunStudyModel
 	homeFunStudyModelInstanceOnce = sync.Once{}
 )
@@ -29,21 +32,161 @@ func GetHomeFunStudyModel() IHomeFunStudyModel {
 	return homeFunStudyModelInstance
 }
 
-var (
-	ErrHomeFunStudyHasCompleted   = errors.New("home fun study has completed")
-	ErrHomeFunStudyHasNewFeedback = errors.New("home fun study has new feedback")
-)
-
 type IHomeFunStudyModel interface {
-	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
-	GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
 	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
+	GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
 	GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error)
+	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
 	Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
 }
 
 type homeFunStudyModel struct{}
+
+func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
+	var study entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
+		log.Error(ctx, "Get: da.GetHomeFunStudyDA().Get: get failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("id", id),
+		)
+		if err == dbo.ErrRecordNotFound {
+			return nil, constant.ErrRecordNotFound
+		}
+		return nil, err
+	}
+	return &study, nil
+}
+
+func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error) {
+	var study entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
+		log.Error(ctx, "da.GetHomeFunStudyDA().Get: get failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("id", id),
+		)
+		if err == sql.ErrNoRows {
+			return nil, constant.ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	checker := NewAssessmentPermissionChecker(operator)
+	if err := checker.SearchAllPermissions(ctx); err != nil {
+		log.Error(ctx, "Get: checker.SearchAllPermissions: checker failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Any("id", id),
+		)
+		return nil, err
+	}
+	if study.Status.Valid() && !checker.CheckStatus(study.Status) {
+		log.Error(ctx, "Get: checker.CheckStatus: status not allowed",
+			log.Any("operator", operator),
+			log.String("id", id),
+			log.String("status", string(study.Status)),
+			log.Any("study", study),
+		)
+		return nil, constant.ErrForbidden
+	}
+	if !checker.CheckTeacherIDs(study.TeacherIDs) {
+		log.Error(ctx, "Get: checker.CheckTeacherIDs: teacher ids not allowed",
+			log.Any("operator", operator),
+			log.String("id", id),
+			log.Strings("teacher_ids", study.TeacherIDs),
+			log.Any("study", study),
+		)
+		return nil, constant.ErrForbidden
+	}
+
+	var (
+		studentName  string
+		teacherNames []string
+	)
+	student, err := external.GetStudentServiceProvider().Get(ctx, operator, study.StudentID)
+	if err != nil {
+		log.Error(ctx, "external.GetStudentServiceProvider().Get: get failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.String("id", id),
+		)
+		return nil, err
+	}
+	studentName = student.Name
+	teachers, err := external.GetTeacherServiceProvider().BatchGet(ctx, operator, study.TeacherIDs)
+	if err != nil {
+		log.Error(ctx, "external.GetTeacherServiceProvider().BatchGet: batch get failed",
+			log.Err(err),
+			log.Any("operator", operator),
+			log.Strings("teacher_ids", study.TeacherIDs),
+		)
+		return nil, err
+	}
+	for _, t := range teachers {
+		teacherNames = append(teacherNames, t.Name)
+	}
+
+	result := &entity.GetHomeFunStudyResult{
+		ID:               study.ID,
+		ScheduleID:       study.ScheduleID,
+		Title:            study.Title,
+		TeacherIDs:       study.TeacherIDs,
+		TeacherNames:     teacherNames,
+		StudentID:        study.StudentID,
+		StudentName:      studentName,
+		Status:           study.Status,
+		DueAt:            study.DueAt,
+		CompleteAt:       study.CompleteAt,
+		AssessFeedbackID: study.AssessFeedbackID,
+		AssessScore:      study.AssessScore,
+		AssessComment:    study.AssessComment,
+	}
+
+	if result.AssessScore == 0 {
+		result.AssessScore = entity.HomeFunStudyAssessScoreAverage
+	}
+
+	return result, nil
+}
+
+func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error) {
+	cond := da.QueryHomeFunStudyCondition{
+		OrgID: entity.NullString{
+			String: operator.OrgID,
+			Valid:  true,
+		},
+		ScheduleID: entity.NullString{
+			String: scheduleID,
+			Valid:  true,
+		},
+		StudentIDs: entity.NullStrings{
+			Strings: []string{studentID},
+			Valid:   true,
+		},
+		Pager: dbo.Pager{
+			Page:     1,
+			PageSize: 1,
+		},
+	}
+	var studies []*entity.HomeFunStudy
+	if err := da.GetHomeFunStudyDA().Query(ctx, &cond, &studies); err != nil {
+		log.Error(ctx, "GetByScheduleIDAndStudentID: da.GetHomeFunStudyDA().Query: query home fun study",
+			log.Err(err),
+			log.Any("cond", cond),
+		)
+		return nil, err
+	}
+	if len(studies) == 0 {
+		log.Error(ctx, "GetByScheduleIDAndStudentID: not found home fun study",
+			log.String("schedule_id", scheduleID),
+			log.String("student_id", studentID),
+		)
+		return nil, constant.ErrRecordNotFound
+	}
+	return studies[0], nil
+}
 
 func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error) {
 	checker := NewAssessmentPermissionChecker(operator)
@@ -171,151 +314,6 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 	return &result, nil
 }
 
-func (m *homeFunStudyModel) GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error) {
-	var study entity.HomeFunStudy
-	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
-		log.Error(ctx, "da.GetHomeFunStudyDA().Get: get failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("id", id),
-		)
-		if err == sql.ErrNoRows {
-			return nil, constant.ErrRecordNotFound
-		}
-		return nil, err
-	}
-
-	checker := NewAssessmentPermissionChecker(operator)
-	if err := checker.SearchAllPermissions(ctx); err != nil {
-		log.Error(ctx, "Get: checker.SearchAllPermissions: checker failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("id", id),
-		)
-		return nil, err
-	}
-	if study.Status.Valid() && !checker.CheckStatus(study.Status) {
-		log.Error(ctx, "Get: checker.CheckStatus: status not allowed",
-			log.Any("operator", operator),
-			log.String("id", id),
-			log.String("status", string(study.Status)),
-			log.Any("study", study),
-		)
-		return nil, constant.ErrForbidden
-	}
-	if !checker.CheckTeacherIDs(study.TeacherIDs) {
-		log.Error(ctx, "Get: checker.CheckTeacherIDs: teacher ids not allowed",
-			log.Any("operator", operator),
-			log.String("id", id),
-			log.Strings("teacher_ids", study.TeacherIDs),
-			log.Any("study", study),
-		)
-		return nil, constant.ErrForbidden
-	}
-
-	var (
-		studentName  string
-		teacherNames []string
-	)
-	student, err := external.GetStudentServiceProvider().Get(ctx, operator, study.StudentID)
-	if err != nil {
-		log.Error(ctx, "external.GetStudentServiceProvider().Get: get failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("id", id),
-		)
-		return nil, err
-	}
-	studentName = student.Name
-	teachers, err := external.GetTeacherServiceProvider().BatchGet(ctx, operator, study.TeacherIDs)
-	if err != nil {
-		log.Error(ctx, "external.GetTeacherServiceProvider().BatchGet: batch get failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Strings("teacher_ids", study.TeacherIDs),
-		)
-		return nil, err
-	}
-	for _, t := range teachers {
-		teacherNames = append(teacherNames, t.Name)
-	}
-
-	result := &entity.GetHomeFunStudyResult{
-		ID:               study.ID,
-		ScheduleID:       study.ScheduleID,
-		Title:            study.Title,
-		TeacherIDs:       study.TeacherIDs,
-		TeacherNames:     teacherNames,
-		StudentID:        study.StudentID,
-		StudentName:      studentName,
-		Status:           study.Status,
-		DueAt:            study.DueAt,
-		CompleteAt:       study.CompleteAt,
-		AssessFeedbackID: study.AssessFeedbackID,
-		AssessScore:      study.AssessScore,
-		AssessComment:    study.AssessComment,
-	}
-
-	if result.AssessScore == 0 {
-		result.AssessScore = entity.HomeFunStudyAssessScoreAverage
-	}
-
-	return result, nil
-}
-
-func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
-	var study entity.HomeFunStudy
-	if err := da.GetHomeFunStudyDA().Get(ctx, id, &study); err != nil {
-		log.Error(ctx, "Get: da.GetHomeFunStudyDA().Get: get failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.String("id", id),
-		)
-		if err == dbo.ErrRecordNotFound {
-			return nil, constant.ErrRecordNotFound
-		}
-		return nil, err
-	}
-	return &study, nil
-}
-
-func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error) {
-	cond := da.QueryHomeFunStudyCondition{
-		OrgID: entity.NullString{
-			String: operator.OrgID,
-			Valid:  true,
-		},
-		ScheduleID: entity.NullString{
-			String: scheduleID,
-			Valid:  true,
-		},
-		StudentIDs: entity.NullStrings{
-			Strings: []string{studentID},
-			Valid:   true,
-		},
-		Pager: dbo.Pager{
-			Page:     1,
-			PageSize: 1,
-		},
-	}
-	var studies []*entity.HomeFunStudy
-	if err := da.GetHomeFunStudyDA().Query(ctx, &cond, &studies); err != nil {
-		log.Error(ctx, "GetByScheduleIDAndStudentID: da.GetHomeFunStudyDA().Query: query home fun study",
-			log.Err(err),
-			log.Any("cond", cond),
-		)
-		return nil, err
-	}
-	if len(studies) == 0 {
-		log.Error(ctx, "GetByScheduleIDAndStudentID: not found home fun study",
-			log.String("schedule_id", scheduleID),
-			log.String("student_id", studentID),
-		)
-		return nil, constant.ErrRecordNotFound
-	}
-	return studies[0], nil
-}
-
 func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error {
 	cond := da.QueryHomeFunStudyCondition{
 		ScheduleID: entity.NullString{
@@ -365,9 +363,9 @@ func (m *homeFunStudyModel) Save(ctx context.Context, tx *dbo.DBContext, operato
 			)
 			return errors.New("not found class")
 		}
-		title = m.EncodeTitle(&classes[0].Name, args.LessonName)
+		title = m.generateTitle(&classes[0].Name, args.LessonName)
 	} else {
-		title = m.EncodeTitle(nil, args.LessonName)
+		title = m.generateTitle(nil, args.LessonName)
 	}
 
 	if study != nil {
@@ -502,10 +500,14 @@ func (m *homeFunStudyModel) Assess(ctx context.Context, tx *dbo.DBContext, opera
 	return nil
 }
 
-func (m *homeFunStudyModel) EncodeTitle(className *string, lessonName string) string {
+// region utils
+
+func (m *homeFunStudyModel) generateTitle(className *string, lessonName string) string {
 	if className == nil {
 		tmp := constant.AssessmentNoClass
 		className = &tmp
 	}
 	return fmt.Sprintf("%s-%s", *className, lessonName)
 }
+
+// endregion
