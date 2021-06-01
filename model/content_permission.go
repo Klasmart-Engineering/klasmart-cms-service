@@ -163,7 +163,7 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 }
 func (c *ContentPermissionMySchoolModel) checkAuthedContent(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
 	records, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
-		OrgIDs:     []string{user.OrgID},
+		OrgIDs:     []string{user.OrgID, constant.ShareToAll},
 		ContentIDs: []string{cid},
 	}, user)
 	if err != nil {
