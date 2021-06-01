@@ -328,7 +328,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 			}
 			var content *entity.AssessmentH5PContentScore
 			if user != nil {
-				content = user.ContentMap[lm.Source]
+				content = user.ContentMap[lm.ID]
 				if content != nil {
 					newLessMaterial.LessonMaterialType = content.ContentType
 					newLessMaterial.Answer = content.Answer
@@ -338,7 +338,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 				} else {
 					log.Debug(ctx, "get h5p assessment detail: not found content from h5p room",
 						log.String("room_id", view.RoomID),
-						log.Any("not_found_content_id", lm.Source),
+						log.Any("not_found_content_id", lm.ID),
 						log.Any("room", room),
 					)
 				}
