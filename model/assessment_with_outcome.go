@@ -502,7 +502,7 @@ func (m *outcomeAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, ope
 	args.AttendanceIDs = utils.SliceDeduplicationExcludeEmpty(args.AttendanceIDs)
 
 	// use distributed lock
-	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentLock, args.ScheduleID, string(entity.AssessmentTypeClassAndLiveOutcome))
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentAddLock, args.ScheduleID, string(entity.AssessmentTypeClassAndLiveOutcome))
 	if err != nil {
 		log.Error(ctx, "add outcome assessment",
 			log.Err(err),

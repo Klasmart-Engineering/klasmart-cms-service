@@ -517,7 +517,7 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 		)
 		return constant.ErrForbidden
 	}
-	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, dbo.MustGetDB(ctx), args.ID)
+	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, tx, args.ID)
 	if err != nil {
 		log.Error(ctx, "update study assessment: get teacher ids failed by assessment id ",
 			log.Err(err),
@@ -588,18 +588,6 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 		}
 	}
 
-	// update assessment status
-	if args.Action == entity.UpdateAssessmentActionComplete {
-		if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
-			log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-	}
-
 	// get schedule
 	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{assessment.ScheduleID}, nil)
 	if err != nil {
@@ -649,6 +637,18 @@ func (m *h5pAssessmentModel) Update(ctx context.Context, operator *entity.Operat
 	}
 	if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, operator, newComments); err != nil {
 		return err
+	}
+
+	// update assessment status
+	if args.Action == entity.UpdateAssessmentActionComplete {
+		if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
+			log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.Any("operator", operator),
+			)
+			return err
+		}
 	}
 
 	return nil
