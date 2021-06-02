@@ -352,7 +352,8 @@ func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, us
 	for _, cid := range contentIDs {
 		contentIDExistsMap[cid] = true
 	}
-	total, attempted := 0, 0
+	total := len(userIDs) * len(contentIDs)
+	attempted := 0
 	for _, u := range room.Users {
 		if !userIDExistsMap[u.UserID] {
 			continue
@@ -361,7 +362,6 @@ func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, us
 			if !contentIDExistsMap[c.ContentID] {
 				continue
 			}
-			total++
 			if len(c.Answers) > 0 {
 				attempted++
 			}
@@ -401,6 +401,7 @@ func (m *assessmentUtils) BatchGetRoomScoreMap(ctx context.Context, operator *en
 					Scores: s.Score.Scores,
 				}
 				if s.Content != nil {
+					assessmentContent.H5PID = s.Content.H5PID
 					assessmentContent.ContentID = s.Content.ContentID
 					assessmentContent.ContentName = s.Content.Name
 					assessmentContent.ContentType = s.Content.Type
@@ -421,7 +422,7 @@ func (m *assessmentUtils) BatchGetRoomScoreMap(ctx context.Context, operator *en
 					assessmentContent.AchievedScore = s.Score.Scores[len(s.Score.Scores)-1]
 				}
 				assessmentContents = append(assessmentContents, &assessmentContent)
-				assessmentContentMap[assessmentContent.ContentID] = &assessmentContent
+				assessmentContentMap[assessmentContent.H5PID] = &assessmentContent
 			}
 			assessmentUser := entity.AssessmentH5PUser{
 				Contents:   assessmentContents,

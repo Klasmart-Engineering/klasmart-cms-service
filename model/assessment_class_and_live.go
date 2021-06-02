@@ -913,6 +913,57 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 			}
 		}
 
+		// get schedule
+		schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{assessment.ScheduleID}, nil)
+		if err != nil {
+			log.Error(ctx, "update class and live assessment: get plain schedule failed",
+				log.Err(err),
+				log.String("schedule_id", assessment.ScheduleID),
+				log.Any("args", args),
+			)
+			return err
+		}
+		if len(schedules) == 0 {
+			errMsg := "update class and live assessment: not found schedule"
+			log.Error(ctx, errMsg,
+				log.String("schedule_id", assessment.ScheduleID),
+				log.Any("args", args),
+			)
+			return errors.New(errMsg)
+		}
+		schedule := schedules[0]
+
+		// set scores
+		var newScores []*external.H5PSetScoreRequest
+		for _, item := range args.StudentViewItems {
+			for _, lm := range item.LessonMaterials {
+				newScore := external.H5PSetScoreRequest{
+					RoomID:    schedule.RoomID,
+					ContentID: lm.LessonMaterialID,
+					StudentID: item.StudentID,
+					Score:     lm.AchievedScore,
+				}
+				newScores = append(newScores, &newScore)
+			}
+		}
+		if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, operator, newScores); err != nil {
+			return err
+		}
+
+		// set comments
+		var newComments []*external.H5PAddRoomCommentRequest
+		for _, item := range args.StudentViewItems {
+			newComment := external.H5PAddRoomCommentRequest{
+				RoomID:    assessment.ScheduleID,
+				StudentID: item.StudentID,
+				Comment:   item.Comment,
+			}
+			newComments = append(newComments, &newComment)
+		}
+		if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, operator, newComments); err != nil {
+			return err
+		}
+
 		// update assessment status
 		if args.Action == entity.UpdateAssessmentActionComplete {
 			if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
