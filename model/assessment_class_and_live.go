@@ -767,7 +767,7 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 }
 
 func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
-	// validate
+	// validate args
 	if !args.Action.Valid() {
 		log.Error(ctx, "update assessment: invalid action", log.Any("args", args))
 		return constant.ErrInvalidArgs
@@ -785,6 +785,7 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 		}
 	}
 
+	// check assessment status
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, dbo.MustGetDB(ctx), args.ID)
 	if err != nil {
 		log.Error(ctx, "update assessment: get assessment exclude soft deleted failed",
@@ -792,42 +793,6 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 			log.Any("args", args),
 		)
 		return err
-	}
-
-	// permission check
-	hasP439, err := NewAssessmentPermissionChecker(operator).HasP439(ctx)
-	if err != nil {
-		return err
-	}
-	if !hasP439 {
-		log.Error(ctx, "update assessment: not have permission 439",
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return constant.ErrForbidden
-	}
-	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, dbo.MustGetDB(ctx), args.ID)
-	if err != nil {
-		log.Error(ctx, "Update: da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID: get failed",
-			log.String("assessment_id", args.ID),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-	hasOperator := false
-	for _, tid := range teacherIDs {
-		if tid == operator.UserID {
-			hasOperator = true
-			break
-		}
-	}
-	if !hasOperator {
-		log.Error(ctx, "update assessment: not find my assessment",
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return constant.ErrForbidden
 	}
 	if assessment.Status == entity.AssessmentStatusComplete {
 		log.Info(ctx, "update assessment: assessment has completed, not allow update",
@@ -837,8 +802,13 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 		return ErrAssessmentHasCompleted
 	}
 
+	// permission check
+	if err := m.checkEditPermission(ctx, operator, args.ID); err != nil {
+		return err
+	}
+
 	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		// update assessment students check property
+		// update assessment attendances
 		if args.StudentIDs != nil {
 			if err := da.GetAssessmentAttendanceDA().UncheckStudents(ctx, tx, args.ID); err != nil {
 				log.Error(ctx, "update: da.GetAssessmentAttendanceDA().UncheckStudents: uncheck failed",
@@ -859,7 +829,7 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 		}
 
 		if args.Outcomes != nil {
-			// update assessment outcomes map
+			// update assessment outcomes
 			if err := da.GetAssessmentOutcomeDA().UncheckByAssessmentID(ctx, tx, args.ID); err != nil {
 				log.Error(ctx, "Update: da.GetAssessmentOutcomeDA().UncheckStudents: uncheck assessment outcome failed by assessment id",
 					log.Err(err),
@@ -886,7 +856,8 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 					return err
 				}
 			}
-			// update outcome attendances map
+
+			// update outcome attendances
 			var (
 				outcomeIDs         []string
 				outcomeAttendances []*entity.OutcomeAttendance
@@ -923,7 +894,7 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 			}
 		}
 
-		/// update assessment contents map
+		// update assessment contents
 		for _, ma := range args.LessonMaterials {
 			updateArgs := da.UpdatePartialAssessmentContentArgs{
 				AssessmentID:   args.ID,
@@ -942,7 +913,7 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 			}
 		}
 
-		// check and update status
+		// update assessment status
 		if args.Action == entity.UpdateAssessmentActionComplete {
 			if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
 				log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
@@ -964,6 +935,43 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 		return err
 	}
 
+	return nil
+}
+
+func (m *classAndLiveAssessmentModel) checkEditPermission(ctx context.Context, operator *entity.Operator, id string) error {
+	hasP439, err := NewAssessmentPermissionChecker(operator).HasP439(ctx)
+	if err != nil {
+		return err
+	}
+	if !hasP439 {
+		log.Error(ctx, "check edit permission: not have permission 439",
+			log.String("id", id),
+			log.Any("operator", operator),
+		)
+		return constant.ErrForbidden
+	}
+	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, dbo.MustGetDB(ctx), id)
+	if err != nil {
+		log.Error(ctx, "check edit permission: get teacher ids failed by assessment id",
+			log.String("assessment_id", id),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	hasOperator := false
+	for _, tid := range teacherIDs {
+		if tid == operator.UserID {
+			hasOperator = true
+			break
+		}
+	}
+	if !hasOperator {
+		log.Error(ctx, "check edit permission: not found operator",
+			log.String("id", id),
+			log.Any("operator", operator),
+		)
+		return constant.ErrForbidden
+	}
 	return nil
 }
 
