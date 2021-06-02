@@ -10,10 +10,10 @@ type H5PContent struct {
 type FileType string
 
 const (
-	FileTypeImage        FileType = "1"
-	FileTypeVideo        FileType = "2"
-	FileTypeAudio        FileType = "3"
-	FileTypeDocument     FileType = "4"
-	FileTypeH5P          FileType = "5"
-	FileTypeH5PExtension FileType = "6"
+	FileTypeImage        FileType = "Image"
+	FileTypeVideo        FileType = "Video"
+	FileTypeAudio        FileType = "Audio"
+	FileTypeDocument     FileType = "Document"
+	FileTypeH5P          FileType = "H5P"
+	FileTypeH5PExtension FileType = "H5PExtension"
 )
