@@ -178,9 +178,11 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 		for _, s := range v.Students {
 			userIDs = append(userIDs, s.ID)
 		}
-		contentIDs := make([]string, 0, len(v.LessonMaterials))
+		h5pContentIDs := make([]string, 0, len(v.LessonMaterials))
 		for _, lm := range v.LessonMaterials {
-			contentIDs = append(contentIDs, lm.ID)
+			if lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend {
+				h5pContentIDs = append(h5pContentIDs, lm.ID)
+			}
 		}
 
 		newItem := entity.ListH5PAssessmentsResultItem{
@@ -189,7 +191,7 @@ func (m *h5pAssessmentModel) List(ctx context.Context, operator *entity.Operator
 			TeacherNames:  teacherNames,
 			ClassName:     v.Class.Name,
 			DueAt:         v.Schedule.DueAt,
-			CompleteRate:  m.getRoomCompleteRate(roomMap[v.RoomID], userIDs, contentIDs),
+			CompleteRate:  m.getRoomCompleteRate(roomMap[v.RoomID], userIDs, h5pContentIDs),
 			RemainingTime: remainingTime,
 			CompleteAt:    v.CompleteTime,
 			ScheduleID:    v.ScheduleID,
@@ -451,7 +453,8 @@ func (m *h5pAssessmentModel) getRoomCompleteRate(room *entity.AssessmentH5PRoom,
 	for _, cid := range contentIDs {
 		contentIDExistsMap[cid] = true
 	}
-	total, attempted := 0, 0
+	total := len(userIDs) * len(contentIDs)
+	attempted := 0
 	for _, u := range room.Users {
 		if !userIDExistsMap[u.UserID] {
 			continue
@@ -460,7 +463,6 @@ func (m *h5pAssessmentModel) getRoomCompleteRate(room *entity.AssessmentH5PRoom,
 			if !contentIDExistsMap[c.ContentID] {
 				continue
 			}
-			total++
 			if len(c.Answers) > 0 {
 				attempted++
 			}
