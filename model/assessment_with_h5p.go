@@ -328,7 +328,7 @@ func (m *h5pAssessmentModel) GetDetail(ctx context.Context, operator *entity.Ope
 			}
 			var content *entity.AssessmentH5PContentScore
 			if user != nil {
-				content = user.ContentMap[lm.ID]
+				content = user.ContentMap[lm.Source]
 				if content != nil {
 					newLessMaterial.LessonMaterialType = content.ContentType
 					newLessMaterial.Answer = content.Answer
@@ -385,6 +385,7 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 					assessmentContent.ContentID = s.Content.ContentID
 					assessmentContent.ContentName = s.Content.Name
 					assessmentContent.ContentType = s.Content.Type
+					assessmentContent.H5PID = s.Content.H5PID
 				}
 				if len(s.Score.Answers) > 0 {
 					assessmentContent.MaxPossibleScore = s.Score.Answers[0].MaximumPossibleScore
@@ -402,7 +403,7 @@ func (m *h5pAssessmentModel) getRoomScoreMap(ctx context.Context, operator *enti
 					assessmentContent.AchievedScore = s.Score.Scores[len(s.Score.Scores)-1]
 				}
 				assessmentContents = append(assessmentContents, &assessmentContent)
-				assessmentContentMap[assessmentContent.ContentID] = &assessmentContent
+				assessmentContentMap[assessmentContent.H5PID] = &assessmentContent
 			}
 			assessmentUser := entity.AssessmentH5PUser{
 				Contents:   assessmentContents,

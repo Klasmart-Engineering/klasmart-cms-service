@@ -5,6 +5,7 @@ type H5PContent struct {
 	Name      string   `json:"name"`
 	Type      string   `json:"type"`
 	FileType  FileType `json:"fileType"`
+	H5PID     string   `json:"h5p_id"`
 }
 
 type FileType string
