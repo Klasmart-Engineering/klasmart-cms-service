@@ -130,9 +130,22 @@ func (c *ContentPermissionMySchoolModel) CheckPublishContentsPermission(ctx cont
 }
 
 func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
+	hasAuth, err := c.checkAuthedContent(ctx, cid, user)
+	if err != nil {
+		log.Error(ctx, "checkAuthedContent failed",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Any("user", user))
+		return false, err
+	}
+	if hasAuth {
+		return true, nil
+	}
+
 	profiles, err := c.buildViewContentProfileByID(ctx, cid, user)
 	if err != nil {
-		log.Debug(ctx, "buildContentProfileByIDs result",
+		log.Error(ctx, "buildContentProfileByIDs result",
+			log.Err(err),
 			log.String("cid", cid),
 			log.Any("user", user))
 		return false, err
@@ -147,6 +160,23 @@ func (c *ContentPermissionMySchoolModel) CheckGetContentPermission(ctx context.C
 		return false, nil
 	}
 	return true, nil
+}
+func (c *ContentPermissionMySchoolModel) checkAuthedContent(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
+	records, err := GetAuthedContentRecordsModel().QueryRecordsList(ctx, dbo.MustGetDB(ctx), entity.SearchAuthedContentRequest{
+		OrgIDs:     []string{user.OrgID, constant.ShareToAll},
+		ContentIDs: []string{cid},
+	}, user)
+	if err != nil {
+		log.Error(ctx, "No permission",
+			log.Err(err),
+			log.String("cid", cid),
+			log.Any("user", user))
+		return false, err
+	}
+	if len(records) > 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (c *ContentPermissionMySchoolModel) CheckUpdateContentPermission(ctx context.Context, cid string, user *entity.Operator) (bool, error) {
