@@ -152,6 +152,7 @@ query {
 					name
 					type
 					fileType
+					h5p_id
 				}
 				score {
 					min
@@ -186,6 +187,7 @@ query {
 						name
 						type
 						fileType
+						h5p_id
 					}
 					score
 					date
