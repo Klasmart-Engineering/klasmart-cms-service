@@ -371,7 +371,7 @@ func loadAssessmentConfig(ctx context.Context) {
 	if err != nil {
 		config.Assessment.DefaultRemainingTime = constant.AssessmentDefaultRemainingTime
 	} else {
-		config.Assessment.DefaultRemainingTime = defaultRemainingTime
+		config.Assessment.DefaultRemainingTime = defaultRemainingTime * time.Second
 	}
 }
 
