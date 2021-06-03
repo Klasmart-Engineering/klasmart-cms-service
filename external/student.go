@@ -93,7 +93,7 @@ func (s AmsStudentService) BatchGetMap(ctx context.Context, operator *entity.Ope
 
 	dict := make(map[string]*NullableStudent, len(students))
 	for _, student := range students {
-		if student == nil || !student.Valid {
+		if students[0].Student == nil || !student.Valid {
 			continue
 		}
 		dict[student.ID] = student
