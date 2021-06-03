@@ -120,7 +120,7 @@ func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.O
 	}
 
 	// fill remaining time
-	result.RemainingTime = GetAssessmentUtils().CalcRemainingTime(view.Schedule.DueAt, view.CreateAt)
+	result.RemainingTime = int64(GetAssessmentUtils().CalcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
 
 	// fill student view items
 	result.StudentViewItems, err = GetAssessmentUtils().GetH5PStudentViewItems(ctx, operator, view)
