@@ -36,7 +36,7 @@ type IHomeFunStudyModel interface {
 	Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error)
 	GetDetail(ctx context.Context, operator *entity.Operator, id string) (*entity.GetHomeFunStudyResult, error)
 	GetByScheduleIDAndStudentID(ctx context.Context, operator *entity.Operator, scheduleID string, studentID string) (*entity.HomeFunStudy, error)
-	List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
+	List(ctx context.Context, operator *entity.Operator, args *entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error)
 	Save(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.SaveHomeFunStudyArgs) error
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
 }
@@ -188,7 +188,7 @@ func (m *homeFunStudyModel) GetByScheduleIDAndStudentID(ctx context.Context, ope
 	return studies[0], nil
 }
 
-func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator, args entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error) {
+func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator, args *entity.ListHomeFunStudiesArgs) (*entity.ListHomeFunStudiesResult, error) {
 	checker := NewAssessmentPermissionChecker(operator)
 	if err := checker.SearchAllPermissions(ctx); err != nil {
 		log.Error(ctx, "List: checker.SearchAllPermissions: checker failed",
@@ -199,6 +199,10 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		return nil, err
 	}
 	if args.Status.Valid && !checker.CheckStatus(args.Status.Value) {
+		log.Error(ctx, "list home fun study assessment",
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
 		return nil, constant.ErrForbidden
 	}
 	cond := da.QueryHomeFunStudyCondition{

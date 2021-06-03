@@ -48,7 +48,7 @@ func (m *assessmentUtils) ExistsByScheduleID(ctx context.Context, operator *enti
 	return len(assessments) > 0, nil
 }
 
-func (m *assessmentUtils) CalcRemainingTime(dueAt int64, createdAt int64) int64 {
+func (m *assessmentUtils) CalcRemainingTime(dueAt int64, createdAt int64) time.Duration {
 	var r int64
 	if dueAt != 0 {
 		r = dueAt - time.Now().Unix()
@@ -58,7 +58,7 @@ func (m *assessmentUtils) CalcRemainingTime(dueAt int64, createdAt int64) int64 
 	if r < 0 {
 		return 0
 	}
-	return r
+	return time.Duration(r) * time.Second
 }
 
 func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {

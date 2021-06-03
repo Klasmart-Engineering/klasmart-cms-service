@@ -39,6 +39,7 @@ type IStudyAssessmentModel interface {
 	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateStudyAssessmentArgs) error
 	Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 }
+
 type studyAssessmentModel struct{}
 
 func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error) {

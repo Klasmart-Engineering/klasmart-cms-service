@@ -51,7 +51,7 @@ func (s *Server) listHomeFunStudies(c *gin.Context) {
 
 	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 
-	result, err := model.GetHomeFunStudyModel().List(ctx, s.getOperator(c), args)
+	result, err := model.GetHomeFunStudyModel().List(ctx, s.getOperator(c), &args)
 	if err != nil {
 		log.Error(ctx, "listHomeFunStudies: model.GetHomeFunStudyModel().List",
 			log.Err(err),
