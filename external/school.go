@@ -59,7 +59,7 @@ func (s AmsSchoolService) Get(ctx context.Context, operator *entity.Operator, id
 		return nil, err
 	}
 
-	if !schools[0].Valid {
+	if schools[0].School == nil || !schools[0].Valid {
 		return nil, constant.ErrRecordNotFound
 	}
 
@@ -113,28 +113,34 @@ func (s AmsSchoolService) BatchGet(ctx context.Context, operator *entity.Operato
 }
 
 func (s AmsSchoolService) BatchGetMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]*NullableSchool, error) {
-	ages, err := s.BatchGet(ctx, operator, ids)
+	schools, err := s.BatchGet(ctx, operator, ids)
 	if err != nil {
 		return map[string]*NullableSchool{}, err
 	}
 
-	dict := make(map[string]*NullableSchool, len(ages))
-	for _, age := range ages {
-		dict[age.ID] = age
+	dict := make(map[string]*NullableSchool, len(schools))
+	for _, school := range schools {
+		if school.School == nil || !school.Valid {
+			continue
+		}
+		dict[school.ID] = school
 	}
 
 	return dict, nil
 }
 
 func (s AmsSchoolService) BatchGetNameMap(ctx context.Context, operator *entity.Operator, ids []string) (map[string]string, error) {
-	ages, err := s.BatchGet(ctx, operator, ids)
+	schools, err := s.BatchGet(ctx, operator, ids)
 	if err != nil {
 		return map[string]string{}, err
 	}
 
-	dict := make(map[string]string, len(ages))
-	for _, age := range ages {
-		dict[age.ID] = age.Name
+	dict := make(map[string]string, len(schools))
+	for _, school := range schools {
+		if school.School == nil || !school.Valid {
+			continue
+		}
+		dict[school.ID] = school.Name
 	}
 
 	return dict, nil
