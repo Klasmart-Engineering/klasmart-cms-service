@@ -1,7 +1,10 @@
 package api
 
 import (
+	"context"
 	"database/sql"
+	"github.com/dgrijalva/jwt-go"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"net/http"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
@@ -35,66 +38,49 @@ func (s *Server) listAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	args := entity.QueryAssessmentsArgs{}
-	{
-		status := c.Query("status")
-		if status != "" {
-			status := entity.ListAssessmentsStatus(status)
-			if !status.Valid() {
-				log.Info(ctx, "list assessments: invalid list assessments status",
-					log.String("status", string(status)),
-				)
-				c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-				return
-			}
-			if status != entity.ListAssessmentsStatusAll {
-				args.Status = entity.NullAssessmentStatus{
-					Value: status.AssessmentStatus(),
-					Valid: true,
-				}
-			}
-		}
-
-		teacherName := c.Query("teacher_name")
-		if teacherName != "" {
-			args.TeacherName = entity.NullString{
-				String: teacherName,
-				Valid:  true,
-			}
-		}
-
-		orderBy := c.Query("order_by")
-		if orderBy != "" {
-			orderBy := entity.AssessmentOrderBy(orderBy)
-			if !orderBy.Valid() {
-				log.Info(ctx, "list assessments: invalid order by",
-					log.String("status", string(status)),
-				)
-				c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-				return
-			}
-			args.OrderBy = entity.NullAssessmentsOrderBy{
-				Value: orderBy,
-				Valid: true,
-			}
-		} else {
-			args.OrderBy = entity.NullAssessmentsOrderBy{
-				Value: entity.AssessmentOrderByClassEndTimeDesc,
-				Valid: true,
-			}
-		}
-
-		args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
-
-		classType := c.Query("class_type")
-		if classType != "" {
-			args.ClassType = entity.NullScheduleClassType{
-				Value: entity.ScheduleClassType(classType),
-				Valid: true,
-			}
+	if status := c.Query("status"); status != "" && status != constant.ListOptionAll {
+		args.Status = entity.NullAssessmentStatus{
+			Value: entity.AssessmentStatus(status),
+			Valid: true,
 		}
 	}
 
-	result, err := model.GetOutcomeAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	if teacherName := c.Query("teacher_name"); teacherName != "" {
+		args.TeacherName = entity.NullString{
+			String: teacherName,
+			Valid:  true,
+		}
+	}
+
+	if orderBy := c.Query("order_by"); orderBy != "" {
+		orderBy := entity.AssessmentOrderBy(orderBy)
+		if !orderBy.Valid() {
+			log.Info(ctx, "list assessments: invalid order by", log.String("order_by", string(orderBy)))
+			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+			return
+		}
+		args.OrderBy = entity.NullAssessmentsOrderBy{
+			Value: orderBy,
+			Valid: true,
+		}
+	} else {
+		args.OrderBy = entity.NullAssessmentsOrderBy{
+			Value: entity.AssessmentOrderByClassEndTimeDesc,
+			Valid: true,
+		}
+	}
+
+	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
+
+	classType := c.Query("class_type")
+	if classType != "" {
+		args.ClassType = entity.NullScheduleClassType{
+			Value: entity.ScheduleClassType(classType),
+			Valid: true,
+		}
+	}
+
+	result, err := model.GetClassAndLiveAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -127,21 +113,11 @@ func (s *Server) listAssessments(c *gin.Context) {
 func (s *Server) getAssessmentsSummary(c *gin.Context) {
 	ctx := c.Request.Context()
 	args := entity.QueryAssessmentsSummaryArgs{}
-	status := c.Query("status")
-	if status != "" {
-		status := entity.ListAssessmentsStatus(status)
-		if !status.Valid() {
-			log.Info(ctx, "getAssessmentsSummary: invalid list assessments status",
-				log.String("status", string(status)),
-			)
-			c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-			return
-		}
-		if status != entity.ListAssessmentsStatusAll {
-			args.Status = entity.NullAssessmentStatus{
-				Value: status.AssessmentStatus(),
-				Valid: true,
-			}
+
+	if status := c.Query("status"); status != "" && status != constant.ListOptionAll {
+		args.Status = entity.NullAssessmentStatus{
+			Value: entity.AssessmentStatus(status),
+			Valid: true,
 		}
 	}
 	teacherName := c.Query("teacher_name")
@@ -164,7 +140,7 @@ func (s *Server) getAssessmentsSummary(c *gin.Context) {
 		return
 	}
 
-	result, err := model.GetOutcomeAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
+	result, err := model.GetClassAndLiveAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -203,7 +179,7 @@ func (s *Server) getAssessmentDetail(c *gin.Context) {
 		return
 	}
 
-	item, err := model.GetOutcomeAssessmentModel().GetDetail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
+	item, err := model.GetClassAndLiveAssessmentModel().GetDetail(ctx, dbo.MustGetDB(ctx), s.getOperator(c), id)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, item)
@@ -253,12 +229,12 @@ func (s *Server) updateAssessment(c *gin.Context) {
 	}
 	args.ID = id
 
-	if args.StudentIDs != nil && len(*args.StudentIDs) == 0 {
+	if len(args.StudentIDs) == 0 {
 		c.JSON(http.StatusBadRequest, L(AssessMsgOneStudent))
 		return
 	}
 
-	err := model.GetOutcomeAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	err := model.GetClassAndLiveAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
@@ -268,6 +244,112 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 	default:
 		log.Info(ctx, "update assessment: update failed")
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary add assessments
+// @Description add assessments
+// @Tags assessments
+// @ID addAssessment
+// @Accept json
+// @Produce json
+// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
+// @Success 200 {object} entity.AddAssessmentResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments [post]
+func (s *Server) addAssessment(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	log.Debug(ctx, "add assessment jwt: call")
+	body := struct {
+		Token string `json:"token"`
+	}{}
+	if err := c.ShouldBind(&body); err != nil {
+		log.Info(ctx, "add assessment jwt: bind failed",
+			log.Err(err),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	args := entity.AddAssessmentArgs{}
+	if _, err := jwt.ParseWithClaims(body.Token, &args, func(token *jwt.Token) (interface{}, error) {
+		return config.Get().Assessment.AddAssessmentSecret, nil
+	}); err != nil {
+		log.Error(ctx, "add assessment jwt: parse with claims failed",
+			log.Err(err),
+			log.Any("token", body.Token),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	log.Debug(ctx, "add assessment jwt: fill args", log.Any("args", args), log.String("token", body.Token))
+	var newID string
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), args)
+		return err
+	})
+	switch err {
+	case nil:
+		log.Debug(ctx, "add assessment jwt success",
+			log.Any("args", args),
+			log.String("new_id", newID),
+		)
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		log.Error(ctx, "add assessment jwt: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
+	}
+}
+
+// @Summary add assessments for test
+// @Description add assessments for test
+// @Tags assessments
+// @ID addAssessmentForTest
+// @Accept json
+// @Produce json
+// @Param assessment body entity.AddAssessmentArgs true "add assessment command"
+// @Success 200 {object} entity.AddAssessmentResult
+// @Failure 400 {object} BadRequestResponse
+// @Failure 500 {object} InternalServerErrorResponse
+// @Router /assessments_for_test [post]
+func (s *Server) addAssessmentForTest(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	args := entity.AddAssessmentArgs{}
+	if err := c.ShouldBind(&args); err != nil {
+		log.Info(ctx, "add assessment: bind failed",
+			log.Err(err),
+		)
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+		return
+	}
+
+	var newID string
+	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		var err error
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), args)
+		return err
+	})
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, entity.AddAssessmentResult{ID: newID})
+	case constant.ErrInvalidArgs:
+		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
+	default:
+		log.Error(ctx, "add assessment: add failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
 		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
 	}
 }

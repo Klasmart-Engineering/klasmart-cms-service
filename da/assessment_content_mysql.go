@@ -8,16 +8,6 @@ import (
 	"sync"
 )
 
-type IAssessmentContentDA interface {
-	dbo.DataAccesser
-	GetPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error)
-	GetMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]*entity.AssessmentContent, error)
-	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error
-	UncheckAllMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
-	BatchCheckMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error
-	UpdatePartial(ctx context.Context, tx *dbo.DBContext, args UpdatePartialAssessmentContentArgs) error
-}
-
 var (
 	assessmentContentDAInstance     IAssessmentContentDA
 	assessmentContentDAInstanceOnce = sync.Once{}
@@ -30,11 +20,21 @@ func GetAssessmentContentDA() IAssessmentContentDA {
 	return assessmentContentDAInstance
 }
 
+type IAssessmentContentDA interface {
+	dbo.DataAccesser
+	GetLessonPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error)
+	GetLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]*entity.AssessmentContent, error)
+	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error
+	UpdatePartial(ctx context.Context, tx *dbo.DBContext, args UpdatePartialAssessmentContentArgs) error
+	UncheckAllLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
+	BatchCheckLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error
+}
+
 type assessmentContentDA struct {
 	dbo.BaseDA
 }
 
-func (d *assessmentContentDA) GetPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error) {
+func (d *assessmentContentDA) GetLessonPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error) {
 	var plans []*entity.AssessmentContent
 	if err := d.QueryTx(ctx, tx, &QueryAssessmentContentConditions{
 		AssessmentID: entity.NullString{
@@ -54,7 +54,7 @@ func (d *assessmentContentDA) GetPlan(ctx context.Context, tx *dbo.DBContext, as
 	return plans[0], nil
 }
 
-func (d *assessmentContentDA) GetMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]*entity.AssessmentContent, error) {
+func (d *assessmentContentDA) GetLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]*entity.AssessmentContent, error) {
 	var materials []*entity.AssessmentContent
 	if err := d.QueryTx(ctx, tx, &QueryAssessmentContentConditions{
 		AssessmentID: entity.NullString{
@@ -100,44 +100,6 @@ func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 	return nil
 }
 
-func (*assessmentContentDA) UncheckAllMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
-	changes := map[string]interface{}{
-		"checked": false,
-	}
-	if err := tx.
-		Model(entity.AssessmentContent{}).
-		Where("assessment_id = ? and content_type = ?", assessmentID, entity.ContentTypeMaterial).
-		Updates(changes).
-		Error; err != nil {
-		log.Error(ctx, "UncheckAllMaterials: uncheck failed",
-			log.Err(err),
-			log.String("assessment_id", assessmentID),
-		)
-		return err
-	}
-	return nil
-}
-
-func (*assessmentContentDA) BatchCheckMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error {
-	changes := map[string]interface{}{
-		"checked": true,
-	}
-	if err := tx.
-		Model(entity.AssessmentContent{}).
-		Where("content_type = ? and assessment_id = ? and content_id in (?)",
-			entity.ContentTypeMaterial, assessmentID, materialIDs).
-		Updates(changes).
-		Error; err != nil {
-		log.Error(ctx, "BatchCheckMaterials: check failed",
-			log.Err(err),
-			log.String("assessment_id", assessmentID),
-			log.Strings("material_ids", materialIDs),
-		)
-		return err
-	}
-	return nil
-}
-
 func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext, args UpdatePartialAssessmentContentArgs) error {
 	changes := map[string]interface{}{
 		"content_comment": args.ContentComment,
@@ -156,6 +118,46 @@ func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext
 	}
 	return nil
 }
+
+func (*assessmentContentDA) UncheckAllLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error {
+	changes := map[string]interface{}{
+		"checked": false,
+	}
+	if err := tx.
+		Model(entity.AssessmentContent{}).
+		Where("assessment_id = ? and content_type = ?", assessmentID, entity.ContentTypeMaterial).
+		Updates(changes).
+		Error; err != nil {
+		log.Error(ctx, "UncheckAllLessonMaterials: uncheck failed",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+		)
+		return err
+	}
+	return nil
+}
+
+func (*assessmentContentDA) BatchCheckLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error {
+	changes := map[string]interface{}{
+		"checked": true,
+	}
+	if err := tx.
+		Model(entity.AssessmentContent{}).
+		Where("content_type = ? and assessment_id = ? and content_id in (?)",
+			entity.ContentTypeMaterial, assessmentID, materialIDs).
+		Updates(changes).
+		Error; err != nil {
+		log.Error(ctx, "BatchCheckLessonMaterials: check failed",
+			log.Err(err),
+			log.String("assessment_id", assessmentID),
+			log.Strings("material_ids", materialIDs),
+		)
+		return err
+	}
+	return nil
+}
+
+// region utils
 
 type QueryAssessmentContentConditions struct {
 	AssessmentID  entity.NullString
@@ -199,3 +201,5 @@ type UpdatePartialAssessmentContentArgs struct {
 	ContentComment string
 	Checked        bool
 }
+
+// endregion
