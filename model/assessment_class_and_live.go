@@ -77,20 +77,21 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 
 	// fill result
 	result := entity.AssessmentDetail{
-		ID:           assessment.ID,
-		ScheduleID:   view.ScheduleID,
-		RoomID:       view.RoomID,
-		Title:        assessment.Title,
-		Class:        view.Class,
-		Status:       assessment.Status,
-		CompleteTime: assessment.CompleteTime,
-		Teachers:     view.Teachers,
-		Students:     view.Students,
-		Program:      view.Program,
-		Subjects:     view.Subjects,
-		ClassEndTime: assessment.ClassEndTime,
-		ClassLength:  assessment.ClassLength,
-		DueAt:        view.Schedule.DueAt,
+		ID:            assessment.ID,
+		ScheduleID:    view.ScheduleID,
+		ScheduleTitle: view.Schedule.Title,
+		RoomID:        view.RoomID,
+		Title:         assessment.Title,
+		Class:         view.Class,
+		Status:        assessment.Status,
+		CompleteTime:  assessment.CompleteTime,
+		Teachers:      view.Teachers,
+		Students:      view.Students,
+		Program:       view.Program,
+		Subjects:      view.Subjects,
+		ClassEndTime:  assessment.ClassEndTime,
+		ClassLength:   assessment.ClassLength,
+		DueAt:         view.Schedule.DueAt,
 	}
 
 	// fill lesson plan and lesson materials
