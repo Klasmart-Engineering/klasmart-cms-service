@@ -218,7 +218,7 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 	result.RemainingTime = int64(GetAssessmentUtils().CalcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
 
 	// fill student view items
-	result.StudentViewItems, err = GetAssessmentUtils().GetH5PStudentViewItems(ctx, operator, view)
+	result.StudentViewItems, err = GetAssessmentUtils().GetH5PStudentViewItems(ctx, operator, tx, view)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get student view items failed",
 			log.Err(err),
