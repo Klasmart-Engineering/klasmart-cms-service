@@ -59,7 +59,7 @@ func (s AmsUserService) Get(ctx context.Context, operator *entity.Operator, id s
 		return nil, err
 	}
 
-	if !users[0].Valid {
+	if users[0].User == nil || !users[0].Valid {
 		return nil, constant.ErrRecordNotFound
 	}
 
@@ -117,6 +117,9 @@ func (s AmsUserService) BatchGetMap(ctx context.Context, operator *entity.Operat
 
 	dict := make(map[string]*NullableUser, len(users))
 	for _, user := range users {
+		if user.User == nil || !user.Valid {
+			continue
+		}
 		dict[user.ID] = user
 	}
 
@@ -131,6 +134,9 @@ func (s AmsUserService) BatchGetNameMap(ctx context.Context, operator *entity.Op
 
 	dict := make(map[string]string, len(users))
 	for _, user := range users {
+		if user.User == nil || !user.Valid {
+			continue
+		}
 		dict[user.ID] = user.Name
 	}
 

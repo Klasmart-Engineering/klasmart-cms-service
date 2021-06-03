@@ -153,6 +153,9 @@ func (s AmsClassService) BatchGetMap(ctx context.Context, operator *entity.Opera
 
 	dict := make(map[string]*NullableClass, len(classes))
 	for _, class := range classes {
+		if !class.Valid {
+			continue
+		}
 		dict[class.ID] = class
 	}
 
@@ -167,6 +170,9 @@ func (s AmsClassService) BatchGetNameMap(ctx context.Context, operator *entity.O
 
 	dict := make(map[string]string, len(classes))
 	for _, class := range classes {
+		if !class.Valid {
+			continue
+		}
 		dict[class.ID] = class.Name
 	}
 
