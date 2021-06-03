@@ -238,7 +238,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 		for _, c := range contents {
 			switch c.ContentType {
 			case entity.ContentTypeMaterial:
-				lessonMaterialIDs = append(lessonMaterialIDs, c.ID)
+				lessonMaterialIDs = append(lessonMaterialIDs, c.ContentID)
 			}
 		}
 		lessonMaterialSourceMap, err := m.BatchGetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
@@ -258,7 +258,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 					Name: c.ContentName,
 				}
 			case entity.ContentTypeMaterial:
-				data := lessonMaterialSourceMap[c.ID]
+				data := lessonMaterialSourceMap[c.ContentID]
 				if data == nil {
 					data = &MaterialData{}
 				}
@@ -483,7 +483,7 @@ func (m *assessmentUtils) BatchGetRoomCommentMap(ctx context.Context, operator *
 	return result, nil
 }
 
-func (m *assessmentUtils) GetH5PStudentViewItems(ctx context.Context, operator *entity.Operator, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+func (m *assessmentUtils) GetH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
 	roomMap, err := m.BatchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get room map failed",
@@ -496,6 +496,52 @@ func (m *assessmentUtils) GetH5PStudentViewItems(ctx context.Context, operator *
 	if room == nil {
 		log.Debug(ctx, "add h5p assessment detail: not found room", log.String("room_id", view.RoomID))
 		return nil, nil
+	}
+
+	// get outcome names map
+	lessonMaterialIDs := make([]string, 0, len(view.LessonMaterials))
+	for _, lp := range view.LessonMaterials {
+		lessonMaterialIDs = append(lessonMaterialIDs, lp.ID)
+	}
+	var lpOutcomes []*entity.AssessmentContentOutcome
+	if err := da.GetAssessmentContentOutcomeDA().Query(ctx, &da.QueryAssessmentContentOutcomeConditions{
+		AssessmentIDs: entity.NullStrings{
+			Strings: []string{view.ID},
+			Valid:   true,
+		},
+		ContentIDs: entity.NullStrings{
+			Strings: lessonMaterialIDs,
+			Valid:   true,
+		},
+	}, &lpOutcomes); err != nil {
+		log.Error(ctx, "get h5p student view items: query assessment content outcome failed",
+			log.Err(err),
+			log.Any("view", view),
+			log.Strings("lesson_materials", lessonMaterialIDs),
+		)
+		return nil, err
+	}
+	outcomeIDs := make([]string, 0, len(lpOutcomes))
+	for _, o := range lpOutcomes {
+		outcomeIDs = append(outcomeIDs, o.OutcomeID)
+	}
+	outcomeIDs = utils.SliceDeduplicationExcludeEmpty(outcomeIDs)
+	outcomes, err := GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs)
+	if err != nil {
+		log.Error(ctx, "get h5p student view items: get outcomes failed by id",
+			log.Err(err),
+			log.Any("view", view),
+			log.Strings("lesson_materials", lessonMaterialIDs),
+		)
+		return nil, err
+	}
+	outcomeNameMap := make(map[string]string, len(outcomes))
+	for _, o := range outcomes {
+		outcomeNameMap[o.ID] = o.Name
+	}
+	lpOutcomeNameMap := make(map[string][]string, len(lpOutcomes))
+	for _, o := range lpOutcomes {
+		lpOutcomeNameMap[o.ContentID] = append(lpOutcomeNameMap[o.ContentID], outcomeNameMap[o.OutcomeID])
 	}
 
 	r := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
@@ -519,7 +565,7 @@ func (m *assessmentUtils) GetH5PStudentViewItems(ctx context.Context, operator *
 				LessonMaterialID:   lm.ID,
 				LessonMaterialName: lm.Name,
 				IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
-				OutcomeNames:       nil,
+				OutcomeNames:       lpOutcomeNameMap[lm.ID],
 			}
 			var content *entity.AssessmentH5PContentScore
 			if user != nil {
