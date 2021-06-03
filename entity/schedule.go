@@ -3,10 +3,11 @@ package entity
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"time"
 )
 
 type RepeatType string
@@ -445,20 +446,21 @@ type ScheduleUpdateView struct {
 }
 
 type ScheduleListView struct {
-	ID            string            `json:"id"`
-	Title         string            `json:"title"`
-	StartAt       int64             `json:"start_at"`
-	EndAt         int64             `json:"end_at"`
-	IsRepeat      bool              `json:"is_repeat"`
-	LessonPlanID  string            `json:"lesson_plan_id"`
-	ClassType     ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
-	Status        ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
-	ClassID       string            `json:"class_id"`
-	DueAt         int64             `json:"due_at"`
-	IsHidden      bool              `json:"is_hidden"`
-	RoleType      ScheduleRoleType  `json:"role_type"`
-	ExistFeedback bool              `json:"exist_feedback"`
-	IsHomeFun     bool              `json:"is_home_fun"`
+	ID              string            `json:"id"`
+	Title           string            `json:"title"`
+	StartAt         int64             `json:"start_at"`
+	EndAt           int64             `json:"end_at"`
+	IsRepeat        bool              `json:"is_repeat"`
+	LessonPlanID    string            `json:"lesson_plan_id"`
+	ClassType       ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	Status          ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
+	ClassID         string            `json:"class_id"`
+	DueAt           int64             `json:"due_at"`
+	IsHidden        bool              `json:"is_hidden"`
+	RoleType        ScheduleRoleType  `json:"role_type"`
+	ExistFeedback   bool              `json:"exist_feedback"`
+	IsHomeFun       bool              `json:"is_home_fun"`
+	ExistAssessment bool              `json:"exist_assessment"`
 }
 
 type ScheduleDateView struct {
