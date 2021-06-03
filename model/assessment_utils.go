@@ -258,7 +258,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 					Name: c.ContentName,
 				}
 			case entity.ContentTypeMaterial:
-				data := lessonMaterialSourceMap[c.ID]
+				data := lessonMaterialSourceMap[c.ContentID]
 				if data == nil {
 					data = &MaterialData{}
 				}
