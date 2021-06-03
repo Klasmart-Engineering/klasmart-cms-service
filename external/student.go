@@ -54,7 +54,7 @@ func (s AmsStudentService) Get(ctx context.Context, operator *entity.Operator, i
 		return nil, err
 	}
 
-	if !students[0].Valid {
+	if students[0].Student == nil || !students[0].Valid {
 		return nil, constant.ErrRecordNotFound
 	}
 
@@ -93,6 +93,9 @@ func (s AmsStudentService) BatchGetMap(ctx context.Context, operator *entity.Ope
 
 	dict := make(map[string]*NullableStudent, len(students))
 	for _, student := range students {
+		if students[0].Student == nil || !student.Valid {
+			continue
+		}
 		dict[student.ID] = student
 	}
 
