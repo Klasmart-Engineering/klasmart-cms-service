@@ -3,64 +3,34 @@ package model
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"gitlab.badanamu.com.cn/calmisland/common-log/log"
-	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 	"sort"
 	"sync"
+	"time"
 
+	"gitlab.badanamu.com.cn/calmisland/common-log/log"
+	"gitlab.badanamu.com.cn/calmisland/dbo"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
-
-type IAssessmentModel interface {
-	AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error)
-	ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error)
-	ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error)
-	AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error
-	BatchAddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.BatchAddAttendancesInput) error
-	AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error
-	BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error)
-	GetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error)
-}
 
 var (
-	ErrNotFoundAttendance     = errors.New("not found attendance")
-	ErrNotAttemptedAssessment = errors.New("not attempted assessment")
-
-	assessmentModelInstance     IAssessmentModel
-	assessmentModelInstanceOnce = sync.Once{}
+	assessmentUtilsInstance     *assessmentUtils
+	assessmentUtilsInstanceOnce = sync.Once{}
 )
 
-func GetAssessmentModel() IAssessmentModel {
-	assessmentModelInstanceOnce.Do(func() {
-		assessmentModelInstance = &assessmentModel{}
+func GetAssessmentUtils() *assessmentUtils {
+	assessmentUtilsInstanceOnce.Do(func() {
+		assessmentUtilsInstance = &assessmentUtils{}
 	})
-	return assessmentModelInstance
+	return assessmentUtilsInstance
 }
 
-type assessmentModel struct{}
+type assessmentUtils struct{}
 
-func (*assessmentModel) AddClassAndLive(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) ([]string, error) {
-	newAssessmentIDs := make([]string, 0, 2)
-	args.Type = entity.AssessmentTypeClassAndLiveOutcome
-	id, err := GetOutcomeAssessmentModel().Add(ctx, tx, operator, args)
-	if err != nil {
-		return nil, err
-	}
-	newAssessmentIDs = append(newAssessmentIDs, id)
-	//args.Type = entity.AssessmentTypeClassAndLiveH5P
-	//id2, err := GetH5PAssessmentModel().AddClassAndLive(ctx, tx, operator, args)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//newAssessmentIDs = append(newAssessmentIDs, id2)
-	return newAssessmentIDs, nil
-}
-
-func (m *assessmentModel) ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error) {
+func (m *assessmentUtils) ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error) {
 	var assessments []*entity.Assessment
 	cond := da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
@@ -78,7 +48,20 @@ func (m *assessmentModel) ExistsByScheduleID(ctx context.Context, operator *enti
 	return len(assessments) > 0, nil
 }
 
-func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
+func (m *assessmentUtils) CalcRemainingTime(dueAt int64, createdAt int64) time.Duration {
+	var r int64
+	if dueAt != 0 {
+		r = dueAt - time.Now().Unix()
+	} else {
+		r = time.Unix(createdAt, 0).Add(constant.AssessmentDefaultRemainingTime).Unix() - time.Now().Unix()
+	}
+	if r < 0 {
+		return 0
+	}
+	return time.Duration(r) * time.Second
+}
+
+func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
 	if len(assessments) == 0 {
 		return nil, nil
 	}
@@ -255,11 +238,10 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 		for _, c := range contents {
 			switch c.ContentType {
 			case entity.ContentTypeMaterial:
-				lessonMaterialIDs = append(lessonMaterialIDs, c.ContentID)
+				lessonMaterialIDs = append(lessonMaterialIDs, c.ID)
 			}
 		}
-		lessonMaterialIDs = utils.SliceDeduplicationExcludeEmpty(lessonMaterialIDs)
-		lessonMaterialSourceMap, err := m.GetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
+		lessonMaterialSourceMap, err := m.BatchGetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
 		if err != nil {
 			log.Error(ctx, "to views: get lesson material source map failed",
 				log.Err(err),
@@ -276,7 +258,7 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 					Name: c.ContentName,
 				}
 			case entity.ContentTypeMaterial:
-				data := lessonMaterialSourceMap[c.ContentID]
+				data := lessonMaterialSourceMap[c.ID]
 				if data == nil {
 					data = &MaterialData{}
 				}
@@ -358,7 +340,271 @@ func (m *assessmentModel) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 	return result, nil
 }
 
-func (m *assessmentModel) GetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
+func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, userIDs []string, h5pIDs []string) float64 {
+	if room == nil {
+		return 0
+	}
+	userIDExistsMap := map[string]bool{}
+	for _, uid := range userIDs {
+		userIDExistsMap[uid] = true
+	}
+	h5pIDExistsMap := map[string]bool{}
+	for _, id := range h5pIDs {
+		h5pIDExistsMap[id] = true
+	}
+	total := len(userIDs) * len(h5pIDs)
+	attempted := 0
+	for _, u := range room.Users {
+		if !userIDExistsMap[u.UserID] {
+			continue
+		}
+		for _, c := range u.Contents {
+			if !h5pIDExistsMap[c.H5PID] {
+				continue
+			}
+			if len(c.Answers) > 0 {
+				attempted++
+			}
+		}
+	}
+	if total > 0 {
+		return float64(attempted) / float64(total)
+	}
+	return 0
+}
+
+func (m *assessmentUtils) BatchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	var roomCommentMap map[string]map[string][]string
+	if enableComment {
+		roomCommentMap, err = m.BatchGetRoomCommentMap(ctx, operator, roomIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	result := make(map[string]*entity.AssessmentH5PRoom, len(roomScoreMap))
+	for roomID, users := range roomScoreMap {
+		assessmentUsers := make([]*entity.AssessmentH5PUser, 0, len(users))
+		assessmentUserMap := make(map[string]*entity.AssessmentH5PUser, len(users))
+		attempted, total := 0, 0
+		for _, u := range users {
+			assessmentContents := make([]*entity.AssessmentH5PContentScore, 0, len(u.Scores))
+			assessmentContentMap := make(map[string]*entity.AssessmentH5PContentScore, len(u.Scores))
+			for _, s := range u.Scores {
+				total++
+				assessmentContent := entity.AssessmentH5PContentScore{
+					Scores: s.Score.Scores,
+				}
+				if s.Content != nil {
+					assessmentContent.H5PID = s.Content.H5PID
+					assessmentContent.ContentID = s.Content.ContentID
+					assessmentContent.ContentName = s.Content.Name
+					assessmentContent.ContentType = s.Content.Type
+				}
+				if len(s.Score.Answers) > 0 {
+					assessmentContent.MaxPossibleScore = s.Score.Answers[0].MaximumPossibleScore
+				}
+				for _, a := range s.Score.Answers {
+					assessmentContent.Answers = append(assessmentContent.Answers, a.Answer)
+				}
+				if len(assessmentContent.Answers) > 0 {
+					assessmentContent.Answer = assessmentContent.Answers[0]
+					attempted++
+				}
+				if len(s.TeacherScores) > 0 {
+					assessmentContent.AchievedScore = s.TeacherScores[0].Score
+				} else if len(s.Score.Scores) > 0 {
+					assessmentContent.AchievedScore = s.Score.Scores[len(s.Score.Scores)-1]
+				}
+				assessmentContents = append(assessmentContents, &assessmentContent)
+				assessmentContentMap[assessmentContent.H5PID] = &assessmentContent
+			}
+			assessmentUser := entity.AssessmentH5PUser{
+				Contents:   assessmentContents,
+				ContentMap: assessmentContentMap,
+			}
+			if u.User != nil {
+				assessmentUser.UserID = u.User.UserID
+			}
+			if enableComment &&
+				roomCommentMap != nil &&
+				roomCommentMap[roomID] != nil &&
+				assessmentUser.UserID != "" &&
+				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
+				assessmentUser.Comment = roomCommentMap[roomID][assessmentUser.UserID][0]
+			}
+			assessmentUsers = append(assessmentUsers, &assessmentUser)
+			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
+		}
+		room := entity.AssessmentH5PRoom{
+			AnyoneAttempted: attempted > 0,
+			Users:           assessmentUsers,
+			UserMap:         assessmentUserMap,
+		}
+		result[roomID] = &room
+	}
+
+	log.Debug(ctx, "get room score map",
+		log.Strings("room_ids", roomIDs),
+		log.Any("operator", operator),
+		log.Any("result", result),
+	)
+
+	return result, nil
+}
+
+func (m *assessmentUtils) BatchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
+	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]map[string][]string, len(commentMap))
+	for roomID, users := range commentMap {
+		result[roomID] = make(map[string][]string, len(users))
+		for _, u := range users {
+			if u.User == nil {
+				log.Debug(ctx, "get room comment map: user is nil",
+					log.Strings("room_ids", roomIDs),
+					log.Any("comment_map", commentMap),
+					log.Any("operator", operator),
+				)
+				continue
+			}
+			for _, c := range u.TeacherComments {
+				result[roomID][u.User.UserID] = append(result[roomID][u.User.UserID], c.Comment)
+			}
+		}
+	}
+	return result, nil
+}
+
+func (m *assessmentUtils) GetH5PStudentViewItems(ctx context.Context, operator *entity.Operator, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+	roomMap, err := m.BatchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
+	if err != nil {
+		log.Error(ctx, "get assessment detail: get room map failed",
+			log.Err(err),
+			log.String("room_id", view.RoomID),
+		)
+		return nil, err
+	}
+	room := roomMap[view.RoomID]
+	if room == nil {
+		log.Debug(ctx, "add h5p assessment detail: not found room", log.String("room_id", view.RoomID))
+		return nil, nil
+	}
+
+	r := make([]*entity.AssessmentStudentViewH5PItem, 0, len(view.Students))
+	for _, s := range view.Students {
+		newItem := entity.AssessmentStudentViewH5PItem{
+			StudentID:   s.ID,
+			StudentName: s.Name,
+		}
+		user := room.UserMap[s.ID]
+		if user != nil {
+			newItem.Comment = user.Comment
+		} else {
+			log.Debug(ctx, "get h5p assessment detail: not found user from h5p room",
+				log.String("room_id", view.RoomID),
+				log.Any("not_found_student_id", s.ID),
+				log.Any("room", room),
+			)
+		}
+		for _, lm := range view.LessonMaterials {
+			newLessMaterial := entity.AssessmentStudentViewH5PLessonMaterial{
+				LessonMaterialID:   lm.ID,
+				LessonMaterialName: lm.Name,
+				IsH5P:              lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend,
+				OutcomeNames:       nil,
+			}
+			var content *entity.AssessmentH5PContentScore
+			if user != nil {
+				content = user.ContentMap[lm.Source]
+				if content != nil {
+					newLessMaterial.LessonMaterialType = content.ContentType
+					newLessMaterial.Answer = content.Answer
+					newLessMaterial.MaxScore = content.MaxPossibleScore
+					newLessMaterial.AchievedScore = content.AchievedScore
+					newLessMaterial.Attempted = len(content.Answers) > 0
+				} else {
+					log.Debug(ctx, "get h5p assessment detail: not found content from h5p room",
+						log.String("room_id", view.RoomID),
+						log.Any("not_found_content_id", lm.Source),
+						log.Any("room", room),
+					)
+				}
+			}
+			newItem.LessonMaterials = append(newItem.LessonMaterials, &newLessMaterial)
+		}
+		r = append(r, &newItem)
+	}
+
+	sort.Sort(entity.AssessmentStudentViewH5PItemsOrder(r))
+
+	return r, nil
+}
+
+func (m *assessmentUtils) BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error) {
+	lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
+	var (
+		err         error
+		lessonPlans = make([]*entity.ContentInfoWithDetails, 0, len(lessonPlanIDs))
+	)
+	lessonPlanIDs, err = GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "BatchGetLatestLessonPlanMap: GetContentModel().GetLatestContentIDByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+	lessonPlans, err = GetContentModel().GetContentByIDList(ctx, tx, lessonPlanIDs, operator)
+	if err != nil {
+		log.Error(ctx, "ToViews: GetContentModel().GetContentByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+	lessonPlanMap := make(map[string]*entity.AssessmentExternalLessonPlan, len(lessonPlans))
+	for _, lp := range lessonPlans {
+		lessonPlanMap[lp.ID] = &entity.AssessmentExternalLessonPlan{
+			ID:   lp.ID,
+			Name: lp.Name,
+		}
+	}
+
+	// fill lesson materials
+	m2, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, dbo.MustGetDB(ctx), lessonPlanIDs, operator)
+	if err != nil {
+		log.Error(ctx, "List: GetContentModel().GetContentsSubContentsMapByIDList: get failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+	for id, lp := range lessonPlanMap {
+		lms := m2[id]
+		for _, lm := range lms {
+			newMaterial := &entity.AssessmentExternalLessonMaterial{
+				ID:   lm.ID,
+				Name: lm.Name,
+			}
+			switch v := lm.Data.(type) {
+			case *MaterialData:
+				newMaterial.Source = string(v.Source)
+			}
+			lp.Materials = append(lp.Materials, newMaterial)
+		}
+	}
+	return lessonPlanMap, nil
+}
+
+func (m *assessmentUtils) BatchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
 	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, tx, ids, operator)
 	if err != nil {
 		log.Error(ctx, "get lesson material source map: get contents faield",
@@ -385,7 +631,7 @@ func (m *assessmentModel) GetLessonMaterialDataMap(ctx context.Context, tx *dbo.
 	return result, nil
 }
 
-func (m *assessmentModel) AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error {
+func (m *assessmentUtils) AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error {
 	var (
 		err               error
 		scheduleRelations []*entity.ScheduleRelation
@@ -457,157 +703,4 @@ func (m *assessmentModel) AddAttendances(ctx context.Context, tx *dbo.DBContext,
 		return err
 	}
 	return nil
-}
-
-func (m *assessmentModel) BatchAddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.BatchAddAttendancesInput) error {
-	if len(input.Items) == 0 {
-		return nil
-	}
-	var (
-		err                         error
-		cond                        = da.ScheduleRelationCondition{}
-		scheduleRelations           []*entity.ScheduleRelation
-		scheduleIDToAssessmentIDMap = make(map[string]string, len(input.Items))
-	)
-	for _, item := range input.Items {
-		cond.ScheduleAndRelations = append(cond.ScheduleAndRelations, &da.ScheduleAndRelations{
-			ScheduleID:  item.ScheduleID,
-			RelationIDs: item.AttendanceIDs,
-		})
-		scheduleIDToAssessmentIDMap[item.ScheduleID] = item.AssessmentID
-	}
-	if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, &cond); err != nil {
-		log.Error(ctx, "AddAttendances: GetScheduleRelationModel().Query: get failed",
-			log.Err(err),
-			log.Any("input", input),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-
-	var assessmentAttendances []*entity.AssessmentAttendance
-	for _, relation := range scheduleRelations {
-		newAttendance := entity.AssessmentAttendance{
-			ID:           utils.NewID(),
-			AssessmentID: scheduleIDToAssessmentIDMap[relation.ScheduleID],
-			AttendanceID: relation.RelationID,
-			Checked:      true,
-		}
-		switch relation.RelationType {
-		case entity.ScheduleRelationTypeClassRosterStudent:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
-			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
-		case entity.ScheduleRelationTypeClassRosterTeacher:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
-			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
-		case entity.ScheduleRelationTypeParticipantStudent:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
-			newAttendance.Role = entity.AssessmentAttendanceRoleStudent
-		case entity.ScheduleRelationTypeParticipantTeacher:
-			newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
-			newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
-		default:
-			continue
-		}
-		assessmentAttendances = append(assessmentAttendances, &newAttendance)
-	}
-	if err = da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, assessmentAttendances); err != nil {
-		log.Error(ctx, "AddAttendances: da.GetAssessmentAttendanceDA().BatchInsert: batch insert failed",
-			log.Err(err),
-			log.Any("input", input),
-			log.Any("scheduleRelations", scheduleRelations),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-	return nil
-}
-
-func (m *assessmentModel) AddContents(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
-	if len(contents) == 0 {
-		return nil
-	}
-	var (
-		assessmentContents []*entity.AssessmentContent
-	)
-	for _, c := range contents {
-		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
-			ID:           utils.NewID(),
-			AssessmentID: assessmentID,
-			ContentID:    c.ID,
-			ContentName:  c.Name,
-			ContentType:  c.ContentType,
-			Checked:      true,
-		})
-	}
-	if len(assessmentContents) == 0 {
-		return nil
-	}
-	if err := da.GetAssessmentContentDA().BatchInsert(ctx, tx, assessmentContents); err != nil {
-		log.Error(ctx, "addAssessmentContentsAndOutcomes: da.GetAssessmentContentDA().BatchInsert: batch insert failed",
-			log.Err(err),
-			log.Any("assessment_contents", assessmentContents),
-			log.String("assessment_id", assessmentID),
-			log.Any("contents", contents),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-	return nil
-}
-
-func (m *assessmentModel) BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error) {
-	lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
-	var (
-		err         error
-		lessonPlans = make([]*entity.ContentInfoWithDetails, 0, len(lessonPlanIDs))
-	)
-	lessonPlanIDs, err = GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
-	if err != nil {
-		log.Error(ctx, "BatchGetLatestLessonPlanMap: GetContentModel().GetLatestContentIDByIDList: get failed",
-			log.Err(err),
-			log.Strings("lesson_plan_ids", lessonPlanIDs),
-		)
-		return nil, err
-	}
-	lessonPlans, err = GetContentModel().GetContentByIDList(ctx, tx, lessonPlanIDs, operator)
-	if err != nil {
-		log.Error(ctx, "ToViews: GetContentModel().GetContentByIDList: get failed",
-			log.Err(err),
-			log.Strings("lesson_plan_ids", lessonPlanIDs),
-		)
-		return nil, err
-	}
-	lessonPlanMap := make(map[string]*entity.AssessmentExternalLessonPlan, len(lessonPlans))
-	for _, lp := range lessonPlans {
-		lessonPlanMap[lp.ID] = &entity.AssessmentExternalLessonPlan{
-			ID:   lp.ID,
-			Name: lp.Name,
-		}
-	}
-
-	// fill lesson materials
-	m2, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, dbo.MustGetDB(ctx), lessonPlanIDs, operator)
-	if err != nil {
-		log.Error(ctx, "List: GetContentModel().GetContentsSubContentsMapByIDList: get failed",
-			log.Err(err),
-			log.Strings("lesson_plan_ids", lessonPlanIDs),
-		)
-		return nil, err
-	}
-	for id, lp := range lessonPlanMap {
-		lms := m2[id]
-		for _, lm := range lms {
-			newMaterial := &entity.AssessmentExternalLessonMaterial{
-				ID:   lm.ID,
-				Name: lm.Name,
-			}
-			switch v := lm.Data.(type) {
-			case *MaterialData:
-				newMaterial.Source = string(v.Source)
-			}
-			lp.Materials = append(lp.Materials, newMaterial)
-		}
-	}
-	return lessonPlanMap, nil
 }

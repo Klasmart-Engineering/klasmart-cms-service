@@ -740,7 +740,7 @@ func (s *scheduleModel) addSchedule(ctx context.Context, tx *dbo.DBContext, op *
 				ScheduleTitle: item.Title,
 			}
 		}
-		_, err := GetH5PAssessmentModel().AddStudies(ctx, tx, op, studyInput)
+		_, err := GetStudyAssessmentModel().Add(ctx, tx, op, studyInput)
 		if err != nil {
 			log.Error(ctx, "add schedule assessment error", log.Err(err), log.Any("allRelations", allRelations))
 			return "", err
@@ -798,7 +798,7 @@ func (s *scheduleModel) checkScheduleStatus(ctx context.Context, op *entity.Oper
 				return nil, ErrScheduleAlreadyFeedback
 			}
 		} else {
-			existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
 			if err != nil {
 				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
 				return nil, err
@@ -1097,7 +1097,7 @@ func (s *scheduleModel) deleteScheduleRelationTx(ctx context.Context, tx *dbo.DB
 	}
 
 	// delete schedule assessment relation error
-	err = GetH5PAssessmentModel().DeleteStudies(ctx, tx, op, scheduleIDs)
+	err = GetStudyAssessmentModel().Delete(ctx, tx, op, scheduleIDs)
 	if err != nil {
 		log.Error(ctx, "delete schedule assessment relation error",
 			log.Err(err),
@@ -1647,7 +1647,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 
 	// verify is exist assessment
 	if result.ClassType == entity.ScheduleClassTypeHomework && !result.IsHomeFun {
-		existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{result.ID})
+		existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{result.ID})
 		if err != nil {
 			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", result.ID))
 			return nil, err
@@ -2659,7 +2659,7 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	result.ExistFeedback = existFeedback
 
 	if schedule.ClassType == entity.ScheduleClassTypeHomework && !schedule.IsHomeFun {
-		existAssessment, err := GetH5PAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
+		existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{schedule.ID})
 		if err != nil {
 			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", schedule.ID))
 			return nil, err

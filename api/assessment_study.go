@@ -13,41 +13,33 @@ import (
 	"net/http"
 )
 
-// @Summary list h5p assessments
-// @Description list h5p assessments
-// @Tags h5pAssessments
-// @ID listH5PAssessments
+// @Summary list study assessments
+// @Description list study assessments
+// @Tags studyAssessments
+// @ID listStudyAssessments
 // @Accept json
 // @Produce json
-// @Param type query string false "h5p assessment type" enums(study_h5p)
 // @Param query query string false "query teacher name or class name"
 // @Param query_type query string false "query type" enums(all,class_name,teacher_name) default(all)
 // @Param status query string false "query status" enums(all,in_progress,complete) default(all)
 // @Param order_by query string false "list order by" enums(create_at,-create_at,complete_time,-complete_time) default(-complete_time)
 // @Param page query int false "page number" default(1)
 // @Param page_size query integer false "page size" format(int) default(10)
-// @Success 200 {object} entity.ListH5PAssessmentsResult
+// @Success 200 {object} entity.ListStudyAssessmentsResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /h5p_assessments [get]
-func (s *Server) listH5PAssessments(c *gin.Context) {
+// @Router /study_assessments [get]
+func (s *Server) listStudyAssessments(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	args := entity.ListH5PAssessmentsArgs{
-		Type:      entity.AssessmentTypeStudyH5P,
-		QueryType: entity.ListH5PAssessmentsQueryTypeTeacherName,
+	args := entity.ListStudyAssessmentsArgs{
+		ClassTypes: []entity.ScheduleClassType{entity.ScheduleClassTypeHomework},
+		QueryType:  entity.ListStudyAssessmentsQueryTypeTeacherName,
 	}
 	args.Query = c.Query("query")
-	//args.QueryType = entity.ListH5PAssessmentsQueryType(c.Query("query_type"))
-	//if status := entity.AssessmentStatus(c.Query("status")); status.Valid() {
-	//	args.Status = entity.NullAssessmentStatus{
-	//		Value: status,
-	//		Valid: true,
-	//	}
-	//}
 
-	if status := c.Query("status"); entity.AssessmentStatus(status).Valid() {
+	if status := c.Query("status"); status != "" && status != constant.ListOptionAll {
 		args.Status = entity.NullAssessmentStatus{
 			Value: entity.AssessmentStatus(status),
 			Valid: true,
@@ -66,9 +58,9 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 	}
 	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 
-	result, err := model.GetH5PAssessmentModel().List(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+	result, err := model.GetStudyAssessmentModel().List(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
 	if err != nil {
-		log.Error(ctx, "list h5p assessments: call model list failed",
+		log.Error(ctx, "list study assessments: call model list failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
@@ -85,32 +77,32 @@ func (s *Server) listH5PAssessments(c *gin.Context) {
 	}
 }
 
-// @Summary get h5p assessment detail
-// @Description get h5p assessment detail
-// @Tags h5pAssessments
-// @ID getH5PAssessmentDetail
+// @Summary get study assessment detail
+// @Description get study assessment detail
+// @Tags studyAssessments
+// @ID getStudyAssessmentDetail
 // @Accept json
 // @Produce json
-// @Param id path string true "h5p assessment id"
-// @Success 200 {object} entity.GetH5PAssessmentDetailResult
+// @Param id path string true "study assessment id"
+// @Success 200 {object} entity.GetStudyAssessmentDetailResult
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /h5p_assessments/{id} [get]
-func (s *Server) getH5PAssessmentDetail(c *gin.Context) {
+// @Router /study_assessments/{id} [get]
+func (s *Server) getStudyAssessmentDetail(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	id := c.Param("id")
 	if id == "" {
-		log.Error(ctx, "get h5p assessment detail: require id")
+		log.Error(ctx, "get study assessment detail: require id")
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 
-	result, err := model.GetH5PAssessmentModel().GetDetail(ctx, s.getOperator(c), dbo.MustGetDB(ctx), id)
+	result, err := model.GetStudyAssessmentModel().GetDetail(ctx, s.getOperator(c), dbo.MustGetDB(ctx), id)
 	if err != nil {
-		log.Info(ctx, "get h5p assessment detail: call model failed",
+		log.Info(ctx, "get study assessment detail: call model failed",
 			log.Err(err),
 			log.String("id", id),
 		)
@@ -128,32 +120,32 @@ func (s *Server) getH5PAssessmentDetail(c *gin.Context) {
 }
 
 // @Summary
-// @Description update h5p assessment
-// @Tags h5pAssessments
-// @ID updateH5PAssessment
+// @Description update study assessment
+// @Tags studyAssessments
+// @ID updateStudyAssessment
 // @Accept json
 // @Produce json
-// @Param id path string true "h5p assessment id"
-// @Param update_h5p_assessment_args body entity.UpdateH5PAssessmentArgs true "update h5p assessment args"
+// @Param id path string true "study assessment id"
+// @Param update_study_assessment_args body entity.UpdateStudyAssessmentArgs true "update study assessment args"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
 // @Failure 500 {object} InternalServerErrorResponse
-// @Router /h5p_assessments/{id} [put]
-func (s *Server) updateH5PAssessment(c *gin.Context) {
+// @Router /study_assessments/{id} [put]
+func (s *Server) updateStudyAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	args := entity.UpdateH5PAssessmentArgs{}
+	args := entity.UpdateStudyAssessmentArgs{}
 	if err := c.ShouldBind(&args); err != nil {
-		log.Error(ctx, "update h5p assessment: bind body json failed",
+		log.Error(ctx, "update study assessment: bind body json failed",
 			log.Err(err),
 		)
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	}
 	if id := c.Param("id"); id == "" {
-		log.Error(ctx, "update h5p assessment: require id")
+		log.Error(ctx, "update study assessment: require id")
 		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
 		return
 	} else {
@@ -161,10 +153,10 @@ func (s *Server) updateH5PAssessment(c *gin.Context) {
 	}
 
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		return model.GetH5PAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+		return model.GetStudyAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
 	})
 	if err != nil {
-		log.Error(ctx, "update h5p assessment: call model failed",
+		log.Error(ctx, "update study assessment: call model failed",
 			log.Err(err),
 			log.Any("args", args),
 		)
