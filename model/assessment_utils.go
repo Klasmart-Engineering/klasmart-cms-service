@@ -340,7 +340,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 	return result, nil
 }
 
-func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, userIDs []string, contentIDs []string) float64 {
+func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, userIDs []string, h5pIDs []string) float64 {
 	if room == nil {
 		return 0
 	}
@@ -348,18 +348,18 @@ func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, us
 	for _, uid := range userIDs {
 		userIDExistsMap[uid] = true
 	}
-	contentIDExistsMap := map[string]bool{}
-	for _, cid := range contentIDs {
-		contentIDExistsMap[cid] = true
+	h5pIDExistsMap := map[string]bool{}
+	for _, id := range h5pIDs {
+		h5pIDExistsMap[id] = true
 	}
-	total := len(userIDs) * len(contentIDs)
+	total := len(userIDs) * len(h5pIDs)
 	attempted := 0
 	for _, u := range room.Users {
 		if !userIDExistsMap[u.UserID] {
 			continue
 		}
 		for _, c := range u.Contents {
-			if !contentIDExistsMap[c.ContentID] {
+			if !h5pIDExistsMap[c.H5PID] {
 				continue
 			}
 			if len(c.Answers) > 0 {

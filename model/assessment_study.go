@@ -269,10 +269,10 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 		for _, s := range v.Students {
 			userIDs = append(userIDs, s.ID)
 		}
-		h5pContentIDs := make([]string, 0, len(v.LessonMaterials))
+		h5pIDs := make([]string, 0, len(v.LessonMaterials))
 		for _, lm := range v.LessonMaterials {
 			if lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend {
-				h5pContentIDs = append(h5pContentIDs, lm.ID)
+				h5pIDs = append(h5pIDs, lm.Source)
 			}
 		}
 
@@ -282,7 +282,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 			TeacherNames:  teacherNames,
 			ClassName:     v.Class.Name,
 			DueAt:         v.Schedule.DueAt,
-			CompleteRate:  GetAssessmentUtils().GetRoomCompleteRate(roomMap[v.RoomID], userIDs, h5pContentIDs),
+			CompleteRate:  GetAssessmentUtils().GetRoomCompleteRate(roomMap[v.RoomID], userIDs, h5pIDs),
 			RemainingTime: remainingTime,
 			CompleteAt:    v.CompleteTime,
 			ScheduleID:    v.ScheduleID,
