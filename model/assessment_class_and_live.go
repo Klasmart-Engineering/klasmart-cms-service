@@ -1067,10 +1067,6 @@ func (m *classAndLiveAssessmentModel) getAssessmentContentOutcomeMap(ctx context
 	return result, nil
 }
 
-func (m *classAndLiveAssessmentModel) getLessonMaterialToOutcomeNamesMap(ctx context.Context, tx *dbo.DBContext) {
-
-}
-
 func (m *classAndLiveAssessmentModel) addAssessmentContentsAndOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
 	if len(contents) == 0 {
 		return nil
