@@ -1289,6 +1289,16 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		}
 		temp.ExistFeedback = existFeedback
 
+		// verify is exist assessment
+		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
+			existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, []string{item.ID})
+			if err != nil {
+				log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", temp.ID))
+				return nil, err
+			}
+			temp.ExistAssessment = existAssessment[item.ID]
+		}
+
 		result = append(result, temp)
 	}
 
