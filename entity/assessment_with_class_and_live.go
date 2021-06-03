@@ -178,6 +178,7 @@ type NullAssessmentStatus struct {
 type AssessmentDetail struct {
 	ID               string                          `json:"id"`
 	ScheduleID       string                          `json:"schedule_id"`
+	ScheduleTitle    string                          `json:"schedule_title"`
 	RoomID           string                          `json:"room_id"`
 	Title            string                          `json:"title"`
 	Class            AssessmentClass                 `json:"class"`
