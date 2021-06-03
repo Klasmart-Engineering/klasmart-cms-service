@@ -1,13 +1,14 @@
-package service
+package mapping
 
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
-	"strings"
 )
 
 type OutcomeService struct{}
@@ -344,8 +345,10 @@ func (o OutcomeService) Do(mapper Mapper) error {
 		err := o.handle(ctx, mapper, outcomes[i], relations[outcomes[i].ID])
 		if err != nil {
 			log.Info(ctx, "handle failed",
+				log.Err(err),
 				log.Any("outcome", outcomes[i]),
 				log.Any("relations", relations[outcomes[i].ID]))
+			return err
 		}
 	}
 	return nil

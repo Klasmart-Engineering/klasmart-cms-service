@@ -6,26 +6,18 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/cmd/academic_profile/mapping"
 )
 
 func main() {
 	app := &cli.App{
 		Name:      "ap",
 		Usage:     "academic profile utils",
-		UsageText: "apm command [command options] [arguments...]",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "s",
-				Aliases: []string{"server"},
-				Value:   "http://127.0.0.1:9100",
-				Usage:   "set server address",
-			},
+		UsageText: "ap command [command options] [arguments...]",
+		Commands: []*cli.Command{
+			mapping.NewMappingCommand(),
 		},
 	}
-
-	// for _, cmd := range command.Commands {
-	// 	app.Commands = append(app.Commands, cmd.CliCommand())
-	// }
 
 	ctx := context.Background()
 	err := app.RunContext(ctx, os.Args)

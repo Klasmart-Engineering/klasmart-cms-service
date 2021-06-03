@@ -1,13 +1,14 @@
-package service
+package mapping
 
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
-	"strings"
 )
 
 type PropertySet struct {

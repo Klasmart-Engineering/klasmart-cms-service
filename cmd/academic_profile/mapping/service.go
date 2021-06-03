@@ -1,4 +1,4 @@
-package service
+package mapping
 
 import "sync"
 
@@ -13,7 +13,9 @@ var (
 
 func GetServices() []Service {
 	serviceOnce.Do(func() {
-		services = []Service{}
+		services = []Service{
+			&Schedule{},
+		}
 	})
 
 	return services
