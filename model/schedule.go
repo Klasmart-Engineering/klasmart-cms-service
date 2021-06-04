@@ -1256,6 +1256,24 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		return nil, err
 	}
 
+	assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+		ScheduleIDs: entity.NullStrings{
+			Strings: studyScheduleIDs,
+			Valid:   len(studyScheduleIDs) > 0,
+		},
+	})
+	if err != nil {
+		log.Error(ctx, "get assessment error", log.Err(err), log.Any("scheduleIDs", studyScheduleIDs))
+		return nil, err
+	}
+
+	completeAssessmentMap := make(map[string]bool, len(assessments))
+	for _, v := range assessments {
+		if v.Status == entity.AssessmentStatusComplete {
+			completeAssessmentMap[v.ID] = true
+		}
+	}
+
 	for _, item := range scheduleList {
 		temp := &entity.ScheduleListView{
 			ID:           item.ID,
@@ -1295,6 +1313,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 		}
 		temp.ExistFeedback = existFeedback
 		temp.ExistAssessment = existAssessmentMap[item.ID]
+		temp.CompleteAssessment = completeAssessmentMap[item.ID]
 
 		result = append(result, temp)
 	}
