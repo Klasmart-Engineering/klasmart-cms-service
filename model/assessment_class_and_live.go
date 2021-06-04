@@ -952,7 +952,7 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 			)
 			return err
 		}
-		lmFileTypeMap := make(map[string]entity.FileType, len(lms))
+		lmDataMap := make(map[string]*MaterialData, len(lms))
 		for _, lm := range lms {
 			data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
 			if err != nil {
@@ -960,19 +960,32 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 			}
 			lmData, ok := data.(*MaterialData)
 			if ok {
-				lmFileTypeMap[lm.ID] = lmData.FileType
+				lmDataMap[lm.ID] = lmData
 			}
 		}
 		var newScores []*external.H5PSetScoreRequest
 		for _, item := range args.StudentViewItems {
 			for _, lm := range item.LessonMaterials {
-				if lmFileTypeMap[lm.LessonMaterialID] != entity.FileTypeH5p &&
-					lmFileTypeMap[lm.LessonMaterialID] != entity.FileTypeH5pExtend {
+				lmData := lmDataMap[lm.LessonMaterialID]
+				if lmData == nil {
+					log.Debug(ctx, "not found lesson material id in data map",
+						log.String("lesson_material_id", lm.LessonMaterialID),
+					)
+					continue
+				}
+				if lmData.FileType != entity.FileTypeH5p && lmData.FileType != entity.FileTypeH5pExtend {
+					continue
+				}
+				if lmData.Source.IsNil() {
+					log.Debug(ctx, "lesson material source is nil",
+						log.String("lesson_material_id", lm.LessonMaterialID),
+						log.Any("data", lmData),
+					)
 					continue
 				}
 				newScore := external.H5PSetScoreRequest{
 					RoomID:    schedule.RoomID,
-					ContentID: lm.LessonMaterialID,
+					ContentID: string(lmData.Source),
 					StudentID: item.StudentID,
 					Score:     lm.AchievedScore,
 				}
