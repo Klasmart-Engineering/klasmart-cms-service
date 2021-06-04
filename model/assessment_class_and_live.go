@@ -956,7 +956,10 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 			if err != nil {
 				return err
 			}
-			lmFileTypeMap[lm.ID] = data.(*MaterialData).FileType
+			lmData, ok := data.(*MaterialData)
+			if ok {
+				lmFileTypeMap[lm.ID] = lmData.FileType
+			}
 		}
 		var newScores []*external.H5PSetScoreRequest
 		for _, item := range args.StudentViewItems {
