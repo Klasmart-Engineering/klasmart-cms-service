@@ -713,39 +713,4 @@ func (m *studyAssessmentModel) generateTitle(className, lessonName string) strin
 	return fmt.Sprintf("%s-%s", className, lessonName)
 }
 
-func (m *studyAssessmentModel) addAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessmentID string, schedule *entity.SchedulePlain, attendanceIDs []string) error {
-	var finalAttendanceIDs []string
-	switch schedule.ClassType {
-	case entity.ScheduleClassTypeOfflineClass:
-		users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, schedule.ID)
-		if err != nil {
-			log.Error(ctx, "add attendances: get users failed by schedule id",
-				log.Err(err),
-				log.Any("schedule", schedule),
-				log.String("assessment_id", newAssessmentID),
-			)
-			return err
-		}
-		for _, u := range users {
-			finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
-		}
-	default:
-		finalAttendanceIDs = attendanceIDs
-	}
-	if err := m.addAttendances(ctx, tx, operator, entity.AddAttendancesInput{
-		AssessmentID:  newAssessmentID,
-		ScheduleID:    schedule.ID,
-		AttendanceIDs: finalAttendanceIDs,
-	}); err != nil {
-		log.Error(ctx, "add attendances failed",
-			log.Err(err),
-			log.String("assessment_id", newAssessmentID),
-			log.Strings("attendance_ids", finalAttendanceIDs),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-	return nil
-}
-
 // endregion
