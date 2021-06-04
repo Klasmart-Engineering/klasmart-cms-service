@@ -1272,7 +1272,7 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 	completeAssessmentMap := make(map[string]bool, len(assessments))
 	for _, v := range assessments {
 		if v.Status == entity.AssessmentStatusComplete {
-			completeAssessmentMap[v.ID] = true
+			completeAssessmentMap[v.ScheduleID] = true
 		}
 	}
 
