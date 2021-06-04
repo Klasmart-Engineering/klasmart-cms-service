@@ -620,34 +620,14 @@ func (m *studyAssessmentModel) Update(ctx context.Context, operator *entity.Oper
 	}
 	schedule := schedules[0]
 
-	// set scores
-	var newScores []*external.H5PSetScoreRequest
-	for _, item := range args.StudentViewItems {
-		for _, lm := range item.LessonMaterials {
-			newScore := external.H5PSetScoreRequest{
-				RoomID:    schedule.RoomID,
-				ContentID: lm.LessonMaterialID,
-				StudentID: item.StudentID,
-				Score:     lm.AchievedScore,
-			}
-			newScores = append(newScores, &newScore)
-		}
-	}
-	if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, operator, newScores); err != nil {
-		return err
-	}
-
-	// add comments
-	var newComments []*external.H5PAddRoomCommentRequest
-	for _, item := range args.StudentViewItems {
-		newComment := external.H5PAddRoomCommentRequest{
-			RoomID:    schedule.RoomID,
-			StudentID: item.StudentID,
-			Comment:   item.Comment,
-		}
-		newComments = append(newComments, &newComment)
-	}
-	if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, operator, newComments); err != nil {
+	// set scores and comments
+	if err := m.updateStudentViewItems(ctx, tx, operator, schedule.RoomID, args.StudentViewItems); err != nil {
+		log.Error(ctx, "update assessment: update student view items failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("schedule", schedule),
+			log.Any("operator", operator),
+		)
 		return err
 	}
 

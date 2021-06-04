@@ -251,12 +251,12 @@ type AssessmentsSummary struct {
 }
 
 type UpdateAssessmentArgs struct {
-	ID               string                                  `json:"id"`
-	Action           UpdateAssessmentAction                  `json:"action" enums:"save,complete"`
-	StudentIDs       []string                                `json:"attendance_ids"`
-	LessonMaterials  []*UpdateAssessmentContentArgs          `json:"lesson_materials"`
-	Outcomes         []*UpdateAssessmentOutcomeArgs          `json:"outcomes"`
-	StudentViewItems []*UpdateStudyAssessmentStudentViewItem `json:"student_view_items"`
+	ID               string                         `json:"id"`
+	Action           UpdateAssessmentAction         `json:"action" enums:"save,complete"`
+	StudentIDs       []string                       `json:"attendance_ids"`
+	LessonMaterials  []*UpdateAssessmentContentArgs `json:"lesson_materials"`
+	Outcomes         []*UpdateAssessmentOutcomeArgs `json:"outcomes"`
+	StudentViewItems []*UpdateAssessmentH5PStudent  `json:"student_view_items"`
 }
 
 type UpdateAssessmentOutcomeArgs struct {

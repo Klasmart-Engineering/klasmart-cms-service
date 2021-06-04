@@ -75,22 +75,11 @@ type StudyAssessmentLessonMaterial struct {
 }
 
 type UpdateStudyAssessmentArgs struct {
-	ID               string                                  `json:"id"`
-	Action           UpdateAssessmentAction                  `json:"action" enums:"save,complete"`
-	StudentIDs       []string                                `json:"student_ids"`
-	LessonMaterials  []*UpdateAssessmentContentArgs          `json:"lesson_materials"`
-	StudentViewItems []*UpdateStudyAssessmentStudentViewItem `json:"student_view_items"`
-}
-
-type UpdateStudyAssessmentStudentViewItem struct {
-	StudentID       string                                          `json:"student_id"`
-	Comment         string                                          `json:"comment"`
-	LessonMaterials []*UpdateStudyAssessmentStudentViewMaterialItem `json:"lesson_materials"`
-}
-
-type UpdateStudyAssessmentStudentViewMaterialItem struct {
-	LessonMaterialID string  `json:"lesson_material_id"`
-	AchievedScore    float64 `json:"achieved_score"`
+	ID               string                         `json:"id"`
+	Action           UpdateAssessmentAction         `json:"action" enums:"save,complete"`
+	StudentIDs       []string                       `json:"student_ids"`
+	LessonMaterials  []*UpdateAssessmentContentArgs `json:"lesson_materials"`
+	StudentViewItems []*UpdateAssessmentH5PStudent  `json:"student_view_items"`
 }
 
 type AddH5PAssessmentStudyInput struct {
