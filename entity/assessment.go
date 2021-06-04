@@ -55,3 +55,14 @@ type AssessmentStudentViewH5PLessonMaterial struct {
 	IsH5P              bool     `json:"is_h5p"`
 	OutcomeNames       []string `json:"outcome_names"`
 }
+
+type UpdateAssessmentH5PStudent struct {
+	StudentID       string                               `json:"student_id"`
+	Comment         string                               `json:"comment"`
+	LessonMaterials []*UpdateAssessmentH5PLessonMaterial `json:"lesson_materials"`
+}
+
+type UpdateAssessmentH5PLessonMaterial struct {
+	LessonMaterialID string  `json:"lesson_material_id"`
+	AchievedScore    float64 `json:"achieved_score"`
+}
