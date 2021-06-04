@@ -57,7 +57,7 @@ func (s AmsTeacherService) Get(ctx context.Context, operator *entity.Operator, i
 		return nil, err
 	}
 
-	if !teachers[0].Valid {
+	if teachers[0].Teacher == nil || !teachers[0].Valid {
 		return nil, constant.ErrRecordNotFound
 	}
 
@@ -96,6 +96,9 @@ func (s AmsTeacherService) BatchGetMap(ctx context.Context, operator *entity.Ope
 
 	dict := make(map[string]*NullableTeacher, len(teachers))
 	for _, teacher := range teachers {
+		if teacher.Teacher == nil || !teacher.Valid {
+			continue
+		}
 		dict[teacher.ID] = teacher
 	}
 
