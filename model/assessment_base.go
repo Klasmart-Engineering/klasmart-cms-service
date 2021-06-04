@@ -423,7 +423,8 @@ func (m *assessmentBase) batchGetRoomScoreMap(ctx context.Context, operator *ent
 				roomCommentMap[roomID] != nil &&
 				assessmentUser.UserID != "" &&
 				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
-				assessmentUser.Comment = roomCommentMap[roomID][assessmentUser.UserID][0]
+				cc := roomCommentMap[roomID][assessmentUser.UserID]
+				assessmentUser.Comment = cc[len(cc)-1]
 			}
 			assessmentUsers = append(assessmentUsers, &assessmentUser)
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
@@ -463,10 +464,18 @@ func (m *assessmentBase) batchGetRoomCommentMap(ctx context.Context, operator *e
 				continue
 			}
 			for _, c := range u.TeacherComments {
-				result[roomID][u.User.UserID] = append(result[roomID][u.User.UserID], c.Comment)
+				uid := u.User.UserID
+				if c.Student != nil {
+					uid = c.Student.UserID
+				}
+				result[roomID][uid] = append(result[roomID][uid], c.Comment)
 			}
 		}
 	}
+	log.Debug(ctx, "batch get room comment map",
+		log.Any("result", result),
+		log.Strings("room_ids", roomIDs),
+	)
 	return result, nil
 }
 
