@@ -25,7 +25,9 @@ type IAssessmentModel interface {
 	Query(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error)
 }
 
-type assessmentModel struct{}
+type assessmentModel struct {
+	assessmentBase
+}
 
 func (m *assessmentModel) Query(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, conditions *da.QueryAssessmentConditions) ([]*entity.Assessment, error) {
 	var r []*entity.Assessment

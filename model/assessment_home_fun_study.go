@@ -41,7 +41,9 @@ type IHomeFunStudyModel interface {
 	Assess(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AssessHomeFunStudyArgs) error
 }
 
-type homeFunStudyModel struct{}
+type homeFunStudyModel struct {
+	assessmentBase
+}
 
 func (m *homeFunStudyModel) Get(ctx context.Context, operator *entity.Operator, id string) (*entity.HomeFunStudy, error) {
 	var study entity.HomeFunStudy

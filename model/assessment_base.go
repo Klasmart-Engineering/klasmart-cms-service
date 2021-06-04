@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"sort"
-	"sync"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -16,21 +15,9 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
-var (
-	assessmentUtilsInstance     *assessmentUtils
-	assessmentUtilsInstanceOnce = sync.Once{}
-)
+type assessmentBase struct{}
 
-func GetAssessmentUtils() *assessmentUtils {
-	assessmentUtilsInstanceOnce.Do(func() {
-		assessmentUtilsInstance = &assessmentUtils{}
-	})
-	return assessmentUtilsInstance
-}
-
-type assessmentUtils struct{}
-
-func (m *assessmentUtils) ExistsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error) {
+func (m *assessmentBase) existsByScheduleID(ctx context.Context, operator *entity.Operator, scheduleID string) (bool, error) {
 	var assessments []*entity.Assessment
 	cond := da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
@@ -39,7 +26,7 @@ func (m *assessmentUtils) ExistsByScheduleID(ctx context.Context, operator *enti
 		},
 	}
 	if err := da.GetAssessmentDA().Query(ctx, &cond, &assessments); err != nil {
-		log.Error(ctx, "ExistsByScheduleID: da.GetAssessmentDA().Query: query failed",
+		log.Error(ctx, "existsByScheduleID: da.GetAssessmentDA().Query: query failed",
 			log.Err(err),
 			log.Any("cond", cond),
 		)
@@ -48,7 +35,7 @@ func (m *assessmentUtils) ExistsByScheduleID(ctx context.Context, operator *enti
 	return len(assessments) > 0, nil
 }
 
-func (m *assessmentUtils) CalcRemainingTime(dueAt int64, createdAt int64) time.Duration {
+func (m *assessmentBase) calcRemainingTime(dueAt int64, createdAt int64) time.Duration {
 	var r int64
 	if dueAt != 0 {
 		r = dueAt - time.Now().Unix()
@@ -61,7 +48,7 @@ func (m *assessmentUtils) CalcRemainingTime(dueAt int64, createdAt int64) time.D
 	return time.Duration(r) * time.Second
 }
 
-func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
+func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
 	if len(assessments) == 0 {
 		return nil, nil
 	}
@@ -78,7 +65,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 		scheduleIDs = append(scheduleIDs, a.ScheduleID)
 	}
 	if schedules, err = GetScheduleModel().GetVariableDataByIDs(ctx, operator, scheduleIDs, &entity.ScheduleInclude{Subject: true}); err != nil {
-		log.Error(ctx, "ToViews: GetScheduleModel().GetVariableDataByIDs: get failed",
+		log.Error(ctx, "toViews: GetScheduleModel().GetVariableDataByIDs: get failed",
 			log.Err(err),
 			log.Strings("assessment_ids", assessmentIDs),
 			log.Any("operator", operator),
@@ -98,7 +85,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 		}
 		programNameMap, err = external.GetProgramServiceProvider().BatchGetNameMap(ctx, operator, programIDs)
 		if err != nil {
-			log.Error(ctx, "ToViews: external.GetProgramServiceProvider().BatchGetNameMap: get failed",
+			log.Error(ctx, "toViews: external.GetProgramServiceProvider().BatchGetNameMap: get failed",
 				log.Err(err),
 				log.Strings("assessment_ids", assessmentIDs),
 				log.Strings("program_ids", programIDs),
@@ -129,7 +116,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 				Valid: true,
 			},
 		}, &assessmentAttendances); err != nil {
-			log.Error(ctx, "ToViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+			log.Error(ctx, "toViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
 				log.Err(err),
 				log.Strings("assessment_ids", assessmentIDs),
 				log.Any("operator", operator),
@@ -142,7 +129,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 			assessmentTeachersMap[a.AssessmentID] = append(assessmentTeachersMap[a.AssessmentID], a)
 		}
 		if teacherNameMap, err = external.GetTeacherServiceProvider().BatchGetNameMap(ctx, operator, teacherIDs); err != nil {
-			log.Error(ctx, "ToViews: external.GetTeacherServiceProvider().BatchGetNameMap: get failed",
+			log.Error(ctx, "toViews: external.GetTeacherServiceProvider().BatchGetNameMap: get failed",
 				log.Err(err),
 				log.Strings("teacher_ids", teacherIDs),
 				log.Strings("assessment_ids", assessmentIDs),
@@ -173,7 +160,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 				Valid: true,
 			},
 		}, &assessmentAttendances); err != nil {
-			log.Error(ctx, "ToViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
+			log.Error(ctx, "toViews: da.GetAssessmentAttendanceDA().QueryTx: query failed",
 				log.Err(err),
 				log.Strings("assessment_ids", assessmentIDs),
 				log.Any("operator", operator),
@@ -188,7 +175,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 			}
 		}
 		if studentNameMap, err = external.GetStudentServiceProvider().BatchGetNameMap(ctx, operator, studentIDs); err != nil {
-			log.Error(ctx, "ToViews: external.GetStudentServiceProvider().BatchGetNameMap: get failed",
+			log.Error(ctx, "toViews: external.GetStudentServiceProvider().BatchGetNameMap: get failed",
 				log.Err(err),
 				log.Strings("student_ids", studentIDs),
 				log.Strings("assessment_ids", assessmentIDs),
@@ -241,7 +228,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 				lessonMaterialIDs = append(lessonMaterialIDs, c.ContentID)
 			}
 		}
-		lessonMaterialSourceMap, err := m.BatchGetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
+		lessonMaterialSourceMap, err := m.batchGetLessonMaterialDataMap(ctx, tx, operator, lessonMaterialIDs)
 		if err != nil {
 			log.Error(ctx, "to views: get lesson material source map failed",
 				log.Err(err),
@@ -340,7 +327,7 @@ func (m *assessmentUtils) ToViews(ctx context.Context, tx *dbo.DBContext, operat
 	return result, nil
 }
 
-func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, userIDs []string, h5pIDs []string) float64 {
+func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, userIDs []string, h5pIDs []string) float64 {
 	if room == nil {
 		return 0
 	}
@@ -373,7 +360,7 @@ func (m *assessmentUtils) GetRoomCompleteRate(room *entity.AssessmentH5PRoom, us
 	return 0
 }
 
-func (m *assessmentUtils) BatchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
+func (m *assessmentBase) batchGetRoomScoreMap(ctx context.Context, operator *entity.Operator, roomIDs []string, enableComment bool) (map[string]*entity.AssessmentH5PRoom, error) {
 	roomScoreMap, err := external.GetH5PRoomScoreServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
 		return nil, err
@@ -381,7 +368,7 @@ func (m *assessmentUtils) BatchGetRoomScoreMap(ctx context.Context, operator *en
 
 	var roomCommentMap map[string]map[string][]string
 	if enableComment {
-		roomCommentMap, err = m.BatchGetRoomCommentMap(ctx, operator, roomIDs)
+		roomCommentMap, err = m.batchGetRoomCommentMap(ctx, operator, roomIDs)
 		if err != nil {
 			return nil, err
 		}
@@ -458,7 +445,7 @@ func (m *assessmentUtils) BatchGetRoomScoreMap(ctx context.Context, operator *en
 	return result, nil
 }
 
-func (m *assessmentUtils) BatchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
+func (m *assessmentBase) batchGetRoomCommentMap(ctx context.Context, operator *entity.Operator, roomIDs []string) (map[string]map[string][]string, error) {
 	commentMap, err := external.GetH5PRoomCommentServiceProvider().BatchGet(ctx, operator, roomIDs)
 	if err != nil {
 		return nil, err
@@ -483,8 +470,8 @@ func (m *assessmentUtils) BatchGetRoomCommentMap(ctx context.Context, operator *
 	return result, nil
 }
 
-func (m *assessmentUtils) GetH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
-	roomMap, err := m.BatchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
+func (m *assessmentBase) getH5PStudentViewItems(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, view *entity.AssessmentView) ([]*entity.AssessmentStudentViewH5PItem, error) {
+	roomMap, err := m.batchGetRoomScoreMap(ctx, operator, []string{view.RoomID}, true)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get room map failed",
 			log.Err(err),
@@ -594,7 +581,7 @@ func (m *assessmentUtils) GetH5PStudentViewItems(ctx context.Context, operator *
 	return r, nil
 }
 
-func (m *assessmentUtils) BatchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error) {
+func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error) {
 	lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
 	var (
 		err         error
@@ -602,7 +589,7 @@ func (m *assessmentUtils) BatchGetLatestLessonPlanMap(ctx context.Context, tx *d
 	)
 	lessonPlanIDs, err = GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
 	if err != nil {
-		log.Error(ctx, "BatchGetLatestLessonPlanMap: GetContentModel().GetLatestContentIDByIDList: get failed",
+		log.Error(ctx, "batchGetLatestLessonPlanMap: GetContentModel().GetLatestContentIDByIDList: get failed",
 			log.Err(err),
 			log.Strings("lesson_plan_ids", lessonPlanIDs),
 		)
@@ -610,7 +597,7 @@ func (m *assessmentUtils) BatchGetLatestLessonPlanMap(ctx context.Context, tx *d
 	}
 	lessonPlans, err = GetContentModel().GetContentByIDList(ctx, tx, lessonPlanIDs, operator)
 	if err != nil {
-		log.Error(ctx, "ToViews: GetContentModel().GetContentByIDList: get failed",
+		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
 			log.Err(err),
 			log.Strings("lesson_plan_ids", lessonPlanIDs),
 		)
@@ -650,7 +637,7 @@ func (m *assessmentUtils) BatchGetLatestLessonPlanMap(ctx context.Context, tx *d
 	return lessonPlanMap, nil
 }
 
-func (m *assessmentUtils) BatchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
+func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
 	lessonMaterials, err := GetContentModel().GetContentByIDList(ctx, tx, ids, operator)
 	if err != nil {
 		log.Error(ctx, "get lesson material source map: get contents faield",
@@ -677,7 +664,7 @@ func (m *assessmentUtils) BatchGetLessonMaterialDataMap(ctx context.Context, tx 
 	return result, nil
 }
 
-func (m *assessmentUtils) AddAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error {
+func (m *assessmentBase) addAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error {
 	var (
 		err               error
 		scheduleRelations []*entity.ScheduleRelation
@@ -696,7 +683,7 @@ func (m *assessmentUtils) AddAttendances(ctx context.Context, tx *dbo.DBContext,
 			},
 		}
 		if scheduleRelations, err = GetScheduleRelationModel().Query(ctx, operator, cond); err != nil {
-			log.Error(ctx, "AddAttendances: GetScheduleRelationModel().Query: get failed",
+			log.Error(ctx, "addAttendances: GetScheduleRelationModel().Query: get failed",
 				log.Err(err),
 				log.Any("input", input),
 				log.Any("operator", operator),
@@ -705,7 +692,7 @@ func (m *assessmentUtils) AddAttendances(ctx context.Context, tx *dbo.DBContext,
 		}
 	}
 	if len(scheduleRelations) == 0 {
-		log.Error(ctx, "AddAttendances: not found any schedule relations",
+		log.Error(ctx, "addAttendances: not found any schedule relations",
 			log.Err(err),
 			log.Any("input", input),
 			log.Any("operator", operator),
@@ -740,7 +727,7 @@ func (m *assessmentUtils) AddAttendances(ctx context.Context, tx *dbo.DBContext,
 		assessmentAttendances = append(assessmentAttendances, &newAttendance)
 	}
 	if err = da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, assessmentAttendances); err != nil {
-		log.Error(ctx, "AddAttendances: da.GetAssessmentAttendanceDA().BatchInsert: batch insert failed",
+		log.Error(ctx, "addAttendances: da.GetAssessmentAttendanceDA().BatchInsert: batch insert failed",
 			log.Err(err),
 			log.Any("input", input),
 			log.Any("scheduleRelations", scheduleRelations),
