@@ -935,9 +935,36 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 		schedule := schedules[0]
 
 		// set scores
+		var lmIDs []string
+		for _, item := range args.StudentViewItems {
+			for _, lm := range item.LessonMaterials {
+				lmIDs = append(lmIDs, lm.LessonMaterialID)
+			}
+		}
+		lms, err := GetContentModel().GetRawContentByIDList(ctx, tx, lmIDs)
+		if err != nil {
+			log.Error(ctx, "update assessment: batch get contents failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.Strings("lm_ids", lmIDs),
+			)
+			return err
+		}
+		lmFileTypeMap := make(map[string]entity.FileType, len(lms))
+		for _, lm := range lms {
+			data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
+			if err != nil {
+				return err
+			}
+			lmFileTypeMap[lm.ID] = data.(*MaterialData).FileType
+		}
 		var newScores []*external.H5PSetScoreRequest
 		for _, item := range args.StudentViewItems {
 			for _, lm := range item.LessonMaterials {
+				if lmFileTypeMap[lm.LessonMaterialID] != entity.FileTypeH5p &&
+					lmFileTypeMap[lm.LessonMaterialID] != entity.FileTypeH5pExtend {
+					continue
+				}
 				newScore := external.H5PSetScoreRequest{
 					RoomID:    schedule.RoomID,
 					ContentID: lm.LessonMaterialID,
