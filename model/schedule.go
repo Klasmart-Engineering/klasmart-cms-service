@@ -1244,10 +1244,12 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 	result := make([]*entity.ScheduleListView, 0, len(scheduleList))
 
 	studyScheduleIDs := make([]string, 0, len(scheduleList))
-	for _, item := range scheduleList {
+	scheduleIDs := make([]string, len(scheduleList))
+	for i, item := range scheduleList {
 		if item.ClassType == entity.ScheduleClassTypeHomework && !item.IsHomeFun {
 			studyScheduleIDs = append(studyScheduleIDs, item.ID)
 		}
+		scheduleIDs[i] = item.ID
 	}
 
 	existAssessmentMap, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), op, studyScheduleIDs)
@@ -1258,12 +1260,12 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 
 	assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
 		ScheduleIDs: entity.NullStrings{
-			Strings: studyScheduleIDs,
-			Valid:   len(studyScheduleIDs) > 0,
+			Strings: scheduleIDs,
+			Valid:   len(scheduleIDs) > 0,
 		},
 	})
 	if err != nil {
-		log.Error(ctx, "get assessment error", log.Err(err), log.Any("scheduleIDs", studyScheduleIDs))
+		log.Error(ctx, "get assessment error", log.Err(err), log.Any("scheduleIDs", scheduleIDs))
 		return nil, err
 	}
 
