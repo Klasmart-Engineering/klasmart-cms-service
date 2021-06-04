@@ -3,12 +3,12 @@ package model
 import (
 	"context"
 	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"sort"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -40,7 +40,7 @@ func (m *assessmentBase) calcRemainingTime(dueAt int64, createdAt int64) time.Du
 	if dueAt != 0 {
 		r = dueAt - time.Now().Unix()
 	} else {
-		r = time.Unix(createdAt, 0).Add(constant.AssessmentDefaultRemainingTime).Unix() - time.Now().Unix()
+		r = time.Unix(createdAt, 0).Add(config.Get().Assessment.DefaultRemainingTime).Unix() - time.Now().Unix()
 	}
 	if r < 0 {
 		return 0
@@ -423,7 +423,8 @@ func (m *assessmentBase) batchGetRoomScoreMap(ctx context.Context, operator *ent
 				roomCommentMap[roomID] != nil &&
 				assessmentUser.UserID != "" &&
 				len(roomCommentMap[roomID][assessmentUser.UserID]) > 0 {
-				assessmentUser.Comment = roomCommentMap[roomID][assessmentUser.UserID][0]
+				cc := roomCommentMap[roomID][assessmentUser.UserID]
+				assessmentUser.Comment = cc[len(cc)-1]
 			}
 			assessmentUsers = append(assessmentUsers, &assessmentUser)
 			assessmentUserMap[assessmentUser.UserID] = &assessmentUser
@@ -463,10 +464,18 @@ func (m *assessmentBase) batchGetRoomCommentMap(ctx context.Context, operator *e
 				continue
 			}
 			for _, c := range u.TeacherComments {
-				result[roomID][u.User.UserID] = append(result[roomID][u.User.UserID], c.Comment)
+				uid := u.User.UserID
+				if c.Student != nil {
+					uid = c.Student.UserID
+				}
+				result[roomID][uid] = append(result[roomID][uid], c.Comment)
 			}
 		}
 	}
+	log.Debug(ctx, "batch get room comment map",
+		log.Any("result", result),
+		log.Strings("room_ids", roomIDs),
+	)
 	return result, nil
 }
 
@@ -735,5 +744,83 @@ func (m *assessmentBase) addAttendances(ctx context.Context, tx *dbo.DBContext, 
 		)
 		return err
 	}
+	return nil
+}
+
+func (m *assessmentBase) updateStudentViewItems(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomID string, items []*entity.UpdateAssessmentH5PStudent) error {
+	// set scores
+	var lmIDs []string
+	for _, item := range items {
+		for _, lm := range item.LessonMaterials {
+			lmIDs = append(lmIDs, lm.LessonMaterialID)
+		}
+	}
+	lms, err := GetContentModel().GetRawContentByIDList(ctx, tx, lmIDs)
+	if err != nil {
+		log.Error(ctx, "update assessment: batch get contents failed",
+			log.Err(err),
+			log.Any("items", items),
+			log.Strings("lm_ids", lmIDs),
+		)
+		return err
+	}
+	lmDataMap := make(map[string]*MaterialData, len(lms))
+	for _, lm := range lms {
+		data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
+		if err != nil {
+			return err
+		}
+		lmData, ok := data.(*MaterialData)
+		if ok {
+			lmDataMap[lm.ID] = lmData
+		}
+	}
+	var newScores []*external.H5PSetScoreRequest
+	for _, item := range items {
+		for _, lm := range item.LessonMaterials {
+			lmData := lmDataMap[lm.LessonMaterialID]
+			if lmData == nil {
+				log.Debug(ctx, "not found lesson material id in data map",
+					log.String("lesson_material_id", lm.LessonMaterialID),
+				)
+				continue
+			}
+			if lmData.FileType != entity.FileTypeH5p && lmData.FileType != entity.FileTypeH5pExtend {
+				continue
+			}
+			if lmData.Source.IsNil() {
+				log.Debug(ctx, "lesson material source is nil",
+					log.String("lesson_material_id", lm.LessonMaterialID),
+					log.Any("data", lmData),
+				)
+				continue
+			}
+			newScore := external.H5PSetScoreRequest{
+				RoomID:    roomID,
+				ContentID: string(lmData.Source),
+				StudentID: item.StudentID,
+				Score:     lm.AchievedScore,
+			}
+			newScores = append(newScores, &newScore)
+		}
+	}
+	if _, err := external.GetH5PRoomScoreServiceProvider().BatchSet(ctx, operator, newScores); err != nil {
+		return err
+	}
+
+	// set comments
+	var newComments []*external.H5PAddRoomCommentRequest
+	for _, item := range items {
+		newComment := external.H5PAddRoomCommentRequest{
+			RoomID:    roomID,
+			StudentID: item.StudentID,
+			Comment:   item.Comment,
+		}
+		newComments = append(newComments, &newComment)
+	}
+	if _, err := external.GetH5PRoomCommentServiceProvider().BatchAdd(ctx, operator, newComments); err != nil {
+		return err
+	}
+
 	return nil
 }
