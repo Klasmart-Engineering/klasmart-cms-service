@@ -399,14 +399,20 @@ func (m *assessmentBase) batchGetRoomScoreMap(ctx context.Context, operator *ent
 				for _, a := range s.Score.Answers {
 					assessmentContent.Answers = append(assessmentContent.Answers, a.Answer)
 				}
+				attemptedFlag := false
 				if len(assessmentContent.Answers) > 0 {
 					assessmentContent.Answer = assessmentContent.Answers[0]
-					attempted++
+					attemptedFlag = true
 				}
 				if len(s.TeacherScores) > 0 {
-					assessmentContent.AchievedScore = s.TeacherScores[0].Score
+					assessmentContent.AchievedScore = s.TeacherScores[len(s.TeacherScores)-1].Score
+					attemptedFlag = true
 				} else if len(s.Score.Scores) > 0 {
-					assessmentContent.AchievedScore = s.Score.Scores[len(s.Score.Scores)-1]
+					assessmentContent.AchievedScore = s.Score.Scores[0]
+					attemptedFlag = true
+				}
+				if attemptedFlag {
+					attempted++
 				}
 				assessmentContents = append(assessmentContents, &assessmentContent)
 				assessmentContentMap[assessmentContent.H5PID] = &assessmentContent
@@ -464,9 +470,15 @@ func (m *assessmentBase) batchGetRoomCommentMap(ctx context.Context, operator *e
 				continue
 			}
 			for _, c := range u.TeacherComments {
-				uid := u.User.UserID
+				var uid string
 				if c.Student != nil {
 					uid = c.Student.UserID
+				}
+				if uid == "" && u.User != nil {
+					uid = u.User.UserID
+				}
+				if uid == "" {
+					continue
 				}
 				result[roomID][uid] = append(result[roomID][uid], c.Comment)
 			}
@@ -571,7 +583,7 @@ func (m *assessmentBase) getH5PStudentViewItems(ctx context.Context, operator *e
 					newLessMaterial.Answer = content.Answer
 					newLessMaterial.MaxScore = content.MaxPossibleScore
 					newLessMaterial.AchievedScore = content.AchievedScore
-					newLessMaterial.Attempted = len(content.Answers) > 0
+					newLessMaterial.Attempted = len(content.Answers) > 0 || len(content.Scores) > 0
 				} else {
 					log.Debug(ctx, "get h5p assessment detail: not found content from h5p room",
 						log.String("room_id", view.RoomID),
