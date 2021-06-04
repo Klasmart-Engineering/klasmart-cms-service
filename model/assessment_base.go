@@ -3,12 +3,12 @@ package model
 import (
 	"context"
 	"database/sql"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"sort"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
@@ -40,7 +40,7 @@ func (m *assessmentBase) calcRemainingTime(dueAt int64, createdAt int64) time.Du
 	if dueAt != 0 {
 		r = dueAt - time.Now().Unix()
 	} else {
-		r = time.Unix(createdAt, 0).Add(constant.AssessmentDefaultRemainingTime).Unix() - time.Now().Unix()
+		r = time.Unix(createdAt, 0).Add(config.Get().Assessment.DefaultRemainingTime).Unix() - time.Now().Unix()
 	}
 	if r < 0 {
 		return 0
