@@ -41,7 +41,9 @@ type IClassAndLiveAssessmentModel interface {
 	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error
 }
 
-type classAndLiveAssessmentModel struct{}
+type classAndLiveAssessmentModel struct {
+	assessmentBase
+}
 
 func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error) {
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
@@ -58,7 +60,7 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 		views []*entity.AssessmentView
 		view  *entity.AssessmentView
 	)
-	if views, err = GetAssessmentUtils().ToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
 		EnableProgram:    true,
 		EnableSubjects:   true,
 		EnableTeachers:   true,
@@ -66,7 +68,7 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 		EnableClass:      true,
 		EnableLessonPlan: true,
 	}); err != nil {
-		log.Error(ctx, "Get: GetAssessmentUtils().ToViews: get failed",
+		log.Error(ctx, "Get: GetAssessmentUtils().toViews: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
 			log.Any("operator", operator),
@@ -216,10 +218,10 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 	}
 
 	// fill remaining time
-	result.RemainingTime = int64(GetAssessmentUtils().CalcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
+	result.RemainingTime = int64(m.calcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
 
 	// fill student view items
-	result.StudentViewItems, err = GetAssessmentUtils().GetH5PStudentViewItems(ctx, operator, tx, view)
+	result.StudentViewItems, err = m.getH5PStudentViewItems(ctx, operator, tx, view)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get student view items failed",
 			log.Err(err),
@@ -446,13 +448,13 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
-	if views, err = GetAssessmentUtils().ToViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
 		CheckedStudents: sql.NullBool{Bool: true, Valid: true},
 		EnableProgram:   true,
 		EnableSubjects:  true,
 		EnableTeachers:  true,
 	}); err != nil {
-		log.Error(ctx, "List: GetAssessmentUtils().ToViews: get failed",
+		log.Error(ctx, "List: GetAssessmentUtils().toViews: get failed",
 			log.Err(err),
 			log.Any("assessments", assessments),
 			log.Any("args", args),
@@ -713,7 +715,7 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 		)
 		return "", ErrNotFoundAttendance
 	}
-	if err = GetAssessmentUtils().AddAttendances(ctx, tx, operator, entity.AddAttendancesInput{
+	if err = m.addAttendances(ctx, tx, operator, entity.AddAttendancesInput{
 		AssessmentID:      newAssessmentID,
 		ScheduleRelations: scheduleRelations,
 	}); err != nil {
@@ -935,9 +937,39 @@ func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBCont
 		schedule := schedules[0]
 
 		// set scores
+		var lmIDs []string
+		for _, item := range args.StudentViewItems {
+			for _, lm := range item.LessonMaterials {
+				lmIDs = append(lmIDs, lm.LessonMaterialID)
+			}
+		}
+		lms, err := GetContentModel().GetRawContentByIDList(ctx, tx, lmIDs)
+		if err != nil {
+			log.Error(ctx, "update assessment: batch get contents failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.Strings("lm_ids", lmIDs),
+			)
+			return err
+		}
+		lmFileTypeMap := make(map[string]entity.FileType, len(lms))
+		for _, lm := range lms {
+			data, err := GetContentModel().CreateContentData(ctx, lm.ContentType, lm.Data)
+			if err != nil {
+				return err
+			}
+			lmData, ok := data.(*MaterialData)
+			if ok {
+				lmFileTypeMap[lm.ID] = lmData.FileType
+			}
+		}
 		var newScores []*external.H5PSetScoreRequest
 		for _, item := range args.StudentViewItems {
 			for _, lm := range item.LessonMaterials {
+				if lmFileTypeMap[lm.LessonMaterialID] != entity.FileTypeH5p &&
+					lmFileTypeMap[lm.LessonMaterialID] != entity.FileTypeH5pExtend {
+					continue
+				}
 				newScore := external.H5PSetScoreRequest{
 					RoomID:    schedule.RoomID,
 					ContentID: lm.LessonMaterialID,

@@ -40,7 +40,9 @@ type IStudyAssessmentModel interface {
 	Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 }
 
-type studyAssessmentModel struct{}
+type studyAssessmentModel struct {
+	assessmentBase
+}
 
 func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error) {
 	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
@@ -57,7 +59,7 @@ func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.O
 		views []*entity.AssessmentView
 		view  *entity.AssessmentView
 	)
-	if views, err = GetAssessmentUtils().ToViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
 		EnableProgram:    true,
 		EnableSubjects:   true,
 		EnableTeachers:   true,
@@ -65,7 +67,7 @@ func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.O
 		EnableClass:      true,
 		EnableLessonPlan: true,
 	}); err != nil {
-		log.Error(ctx, "Get: GetAssessmentUtils().ToViews: get failed",
+		log.Error(ctx, "Get: GetAssessmentUtils().toViews: get failed",
 			log.Err(err),
 			log.String("assessment_id", id),
 			log.Any("operator", operator),
@@ -120,10 +122,10 @@ func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.O
 	}
 
 	// fill remaining time
-	result.RemainingTime = int64(GetAssessmentUtils().CalcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
+	result.RemainingTime = int64(m.calcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
 
 	// fill student view items
-	result.StudentViewItems, err = GetAssessmentUtils().GetH5PStudentViewItems(ctx, operator, tx, view)
+	result.StudentViewItems, err = m.getH5PStudentViewItems(ctx, operator, tx, view)
 	if err != nil {
 		log.Error(ctx, "get assessment detail: get student view items failed",
 			log.Err(err),
@@ -217,7 +219,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 
 	// convert to assessment view
 	var views []*entity.AssessmentView
-	if views, err = GetAssessmentUtils().ToViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
+	if views, err = m.toViews(ctx, tx, operator, assessments, entity.ConvertToViewsOptions{
 		CheckedStudents:  sql.NullBool{Bool: true, Valid: true},
 		EnableProgram:    true,
 		EnableSubjects:   true,
@@ -226,7 +228,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 		EnableClass:      true,
 		EnableLessonPlan: true,
 	}); err != nil {
-		log.Error(ctx, "List: GetAssessmentUtils().ToViews: get failed",
+		log.Error(ctx, "List: GetAssessmentUtils().toViews: get failed",
 			log.Err(err),
 			log.Any("assessments", assessments),
 			log.Any("args", args),
@@ -240,7 +242,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 	for _, v := range views {
 		roomIDs = append(roomIDs, v.RoomID)
 	}
-	roomMap, err := GetAssessmentUtils().BatchGetRoomScoreMap(ctx, operator, roomIDs, false)
+	roomMap, err := m.batchGetRoomScoreMap(ctx, operator, roomIDs, false)
 	if err != nil {
 		log.Error(ctx, "list h5p assessments: get room user scores map failed",
 			log.Err(err),
@@ -283,7 +285,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 			TeacherNames:  teacherNames,
 			ClassName:     v.Class.Name,
 			DueAt:         v.Schedule.DueAt,
-			CompleteRate:  GetAssessmentUtils().GetRoomCompleteRate(roomMap[v.RoomID], userIDs, h5pIDs),
+			CompleteRate:  m.getRoomCompleteRate(roomMap[v.RoomID], userIDs, h5pIDs),
 			RemainingTime: remainingTime,
 			CompleteAt:    v.CompleteTime,
 			ScheduleID:    v.ScheduleID,
@@ -299,7 +301,7 @@ func (m *studyAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx
 	if len(roomIDs) == 0 {
 		return map[string]bool{}, nil
 	}
-	roomMap, err := GetAssessmentUtils().BatchGetRoomScoreMap(ctx, operator, roomIDs, false)
+	roomMap, err := m.batchGetRoomScoreMap(ctx, operator, roomIDs, false)
 	if err != nil {
 		return nil, err
 	}
@@ -368,9 +370,9 @@ func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, opera
 	for _, item := range input {
 		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
 	}
-	lessonPlanMap, err := GetAssessmentUtils().BatchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs)
+	lessonPlanMap, err := m.batchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs)
 	if err != nil {
-		log.Error(ctx, "Add: GetAssessmentUtils().BatchGetLatestLessonPlanMap: get failed",
+		log.Error(ctx, "Add: GetAssessmentUtils().batchGetLatestLessonPlanMap: get failed",
 			log.Err(err),
 			log.Strings("lesson_plan_ids", lessonPlanIDs),
 		)
@@ -709,41 +711,6 @@ func (m *studyAssessmentModel) Delete(ctx context.Context, tx *dbo.DBContext, op
 
 func (m *studyAssessmentModel) generateTitle(className, lessonName string) string {
 	return fmt.Sprintf("%s-%s", className, lessonName)
-}
-
-func (m *studyAssessmentModel) addAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, newAssessmentID string, schedule *entity.SchedulePlain, attendanceIDs []string) error {
-	var finalAttendanceIDs []string
-	switch schedule.ClassType {
-	case entity.ScheduleClassTypeOfflineClass:
-		users, err := GetScheduleRelationModel().GetUsersByScheduleID(ctx, operator, schedule.ID)
-		if err != nil {
-			log.Error(ctx, "add attendances: get users failed by schedule id",
-				log.Err(err),
-				log.Any("schedule", schedule),
-				log.String("assessment_id", newAssessmentID),
-			)
-			return err
-		}
-		for _, u := range users {
-			finalAttendanceIDs = append(finalAttendanceIDs, u.RelationID)
-		}
-	default:
-		finalAttendanceIDs = attendanceIDs
-	}
-	if err := GetAssessmentUtils().AddAttendances(ctx, tx, operator, entity.AddAttendancesInput{
-		AssessmentID:  newAssessmentID,
-		ScheduleID:    schedule.ID,
-		AttendanceIDs: finalAttendanceIDs,
-	}); err != nil {
-		log.Error(ctx, "Add: GetAssessmentUtils().AddAttendances: add failed",
-			log.Err(err),
-			log.String("assessment_id", newAssessmentID),
-			log.Strings("attendance_ids", finalAttendanceIDs),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-	return nil
 }
 
 // endregion
