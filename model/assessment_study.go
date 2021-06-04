@@ -457,6 +457,7 @@ func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, opera
 	for _, item := range input {
 		scheduleMap[item.ScheduleID] = item
 	}
+	assessmentContentKeys := map[[2]string]bool{}
 	for _, a := range newAssessments {
 		schedule := scheduleMap[a.ScheduleID]
 		if schedule == nil {
@@ -473,6 +474,11 @@ func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, opera
 			Checked:      true,
 		})
 		for _, lm := range lp.Materials {
+			key := [2]string{a.ID, lm.ID}
+			if assessmentContentKeys[key] {
+				continue
+			}
+			assessmentContentKeys[key] = true
 			assessmentContents = append(assessmentContents, &entity.AssessmentContent{
 				ID:           utils.NewID(),
 				AssessmentID: a.ID,
