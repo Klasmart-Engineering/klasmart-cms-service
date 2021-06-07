@@ -369,6 +369,9 @@ func loadAssessmentConfig(ctx context.Context) {
 
 	defaultRemainingTime, err := time.ParseDuration(os.Getenv("assessment_default_remaining_time"))
 	if err != nil {
+		log.Debug(ctx, "set assessment_default_remaining_time failed",
+			log.Err(err),
+		)
 		config.Assessment.DefaultRemainingTime = constant.AssessmentDefaultRemainingTime
 	} else {
 		config.Assessment.DefaultRemainingTime = defaultRemainingTime * time.Second
