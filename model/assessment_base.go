@@ -461,14 +461,6 @@ func (m *assessmentBase) batchGetRoomCommentMap(ctx context.Context, operator *e
 	for roomID, users := range commentMap {
 		result[roomID] = make(map[string][]string, len(users))
 		for _, u := range users {
-			if u.User == nil {
-				log.Debug(ctx, "get room comment map: user is nil",
-					log.Strings("room_ids", roomIDs),
-					log.Any("comment_map", commentMap),
-					log.Any("operator", operator),
-				)
-				continue
-			}
 			for _, c := range u.TeacherComments {
 				var uid string
 				if c.Student != nil {

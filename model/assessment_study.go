@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"sync"
 	"time"
 
@@ -262,7 +263,7 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 		if v.Schedule.DueAt != 0 {
 			remainingTime = v.Schedule.DueAt - time.Now().Unix()
 		} else {
-			remainingTime = time.Unix(v.CreateAt, 0).Add(constant.AssessmentDefaultRemainingTime).Unix() - time.Now().Unix()
+			remainingTime = time.Unix(v.CreateAt, 0).Add(config.Get().Assessment.DefaultRemainingTime).Unix() - time.Now().Unix()
 		}
 		if remainingTime < 0 {
 			remainingTime = 0
