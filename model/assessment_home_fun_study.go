@@ -279,7 +279,7 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 		return nil, err
 	}
 	if len(studies) == 0 {
-		return nil, nil
+		return &entity.AssessmentsSummary{}, nil
 	}
 
 	r := entity.AssessmentsSummary{}
