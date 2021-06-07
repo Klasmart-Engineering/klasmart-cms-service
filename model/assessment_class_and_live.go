@@ -35,7 +35,6 @@ func GetClassAndLiveAssessmentModel() IClassAndLiveAssessmentModel {
 
 type IClassAndLiveAssessmentModel interface {
 	GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
-	Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error)
 	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
 	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
 	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error
@@ -232,114 +231,6 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 	}
 
 	return &result, nil
-}
-
-func (m *classAndLiveAssessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsSummaryArgs) (*entity.AssessmentsSummary, error) {
-	// check permission
-	var (
-		checker = NewAssessmentPermissionChecker(operator)
-		err     error
-	)
-	if err = checker.SearchAllPermissions(ctx); err != nil {
-		return nil, err
-	}
-	if args.Status.Valid && !checker.CheckStatus(args.Status.Value) {
-		log.Error(ctx, "get outcome summary: check status failed",
-			log.Any("args", args),
-			log.Any("checker", checker),
-		)
-		return nil, constant.ErrForbidden
-	}
-
-	// get assessment list
-	var (
-		assessments []*entity.Assessment
-		cond        = da.QueryAssessmentConditions{
-			ClassTypes: entity.NullScheduleClassTypes{
-				Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
-				Valid: false,
-			},
-			OrgID: entity.NullString{
-				String: operator.OrgID,
-				Valid:  true,
-			},
-			Status: args.Status,
-			AllowTeacherIDs: entity.NullStrings{
-				Strings: checker.AllowTeacherIDs(),
-				Valid:   true,
-			},
-			AllowTeacherIDAndStatusPairs: entity.NullAssessmentAllowTeacherIDAndStatusPairs{
-				Values: checker.allowPairs,
-				Valid:  len(checker.allowPairs) > 0,
-			},
-		}
-		teachers    []*external.Teacher
-		scheduleIDs []string
-	)
-	if args.TeacherName.Valid {
-		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
-			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
-				log.Err(err),
-				log.String("org_id", operator.OrgID),
-				log.String("teacher_name", args.TeacherName.String),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return nil, err
-		}
-		log.Debug(ctx, "List: external.GetTeacherServiceProvider().Query: query success",
-			log.String("org_id", operator.OrgID),
-			log.String("teacher_name", args.TeacherName.String),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		if len(teachers) > 0 {
-			cond.TeacherIDs.Valid = true
-			for _, item := range teachers {
-				cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
-			}
-		} else {
-			cond.TeacherIDs.Valid = false
-		}
-	}
-	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {
-		log.Error(ctx, "List: GetScheduleModel().GetScheduleIDsByOrgID: get failed",
-			log.Err(err),
-			log.String("org_id", operator.OrgID),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	cond.ScheduleIDs = entity.NullStrings{
-		Strings: scheduleIDs,
-		Valid:   true,
-	}
-
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
-		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
-			log.Err(err),
-			log.Any("cond", cond),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	if len(assessments) == 0 {
-		return nil, nil
-	}
-
-	r := entity.AssessmentsSummary{}
-	for _, a := range assessments {
-		switch a.Status {
-		case entity.AssessmentStatusComplete:
-			r.Complete++
-		case entity.AssessmentStatusInProgress:
-			r.InProgress++
-		}
-	}
-
-	return &r, nil
 }
 
 func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
