@@ -28,15 +28,16 @@ type homeFunStudyDA struct {
 }
 
 type QueryHomeFunStudyCondition struct {
-	OrgID           entity.NullString                                 `json:"org_id"`
-	ScheduleID      entity.NullString                                 `json:"schedule_id"`
-	TeacherIDs      utils.NullSQLJSONStringArray                      `json:"teacher_ids"`
-	StudentIDs      entity.NullStrings                                `json:"student_ids"`
-	Status          entity.NullAssessmentStatus                       `json:"status"`
-	OrderBy         entity.NullListHomeFunStudiesOrderBy              `json:"order_by"`
-	AllowTeacherIDs entity.NullStrings                                `json:"allow_teacher_ids"`
-	AllowPairs      entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"allow_pairs"`
-	Pager           dbo.Pager                                         `json:"pager"`
+	OrgID                        entity.NullString                                 `json:"org_id"`
+	ScheduleID                   entity.NullString                                 `json:"schedule_id"`
+	ScheduleIDs                  entity.NullStrings                                `json:"schedule_ids"`
+	TeacherIDs                   utils.NullSQLJSONStringArray                      `json:"teacher_ids"`
+	StudentIDs                   entity.NullStrings                                `json:"student_ids"`
+	Status                       entity.NullAssessmentStatus                       `json:"status"`
+	OrderBy                      entity.NullListHomeFunStudiesOrderBy              `json:"order_by"`
+	AllowTeacherIDs              entity.NullStrings                                `json:"allow_teacher_ids"`
+	AllowTeacherIDAndStatusPairs entity.NullAssessmentAllowTeacherIDAndStatusPairs `json:"allow_pairs"`
+	Pager                        dbo.Pager                                         `json:"pager"`
 }
 
 func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
@@ -49,6 +50,10 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 
 	if c.ScheduleID.Valid {
 		b.Appendf("schedule_id = ?", c.ScheduleID.String)
+	}
+
+	if c.ScheduleIDs.Valid {
+		b.Appendf("schedule_id in (?)", c.ScheduleIDs.Strings)
 	}
 
 	if c.TeacherIDs.Valid || c.StudentIDs.Valid {
@@ -84,8 +89,8 @@ func (c *QueryHomeFunStudyCondition) GetConditions() ([]string, []interface{}) {
 		b.AppendResult(t2.Or())
 	}
 
-	if c.AllowPairs.Valid {
-		for _, pair := range c.AllowPairs.Values {
+	if c.AllowTeacherIDAndStatusPairs.Valid {
+		for _, pair := range c.AllowTeacherIDAndStatusPairs.Values {
 			b.Appendf("((not json_contains(teacher_ids, json_array(?))) or (json_contains(teacher_ids, json_array(?)) and status = ?))",
 				pair.TeacherID, pair.TeacherID, string(pair.Status))
 		}
