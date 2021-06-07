@@ -202,6 +202,7 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 	var (
 		assessmentLessonPlanMap      map[string]*entity.AssessmentLessonPlan
 		assessmentLessonMaterialsMap map[string][]*entity.AssessmentLessonMaterial
+		sortedLessonMaterialIDsMap   map[string][]string
 	)
 	if options.EnableLessonPlan {
 		var contents []*entity.AssessmentContent
@@ -237,9 +238,11 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 			return nil, err
 		}
 
+		var lessonPlanIDs []string
 		for _, c := range contents {
 			switch c.ContentType {
 			case entity.ContentTypePlan:
+				lessonPlanIDs = append(lessonPlanIDs, c.ContentID)
 				assessmentLessonPlanMap[c.AssessmentID] = &entity.AssessmentLessonPlan{
 					ID:   c.ContentID,
 					Name: c.ContentName,
@@ -258,6 +261,15 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 					Checked:  c.Checked,
 				})
 			}
+		}
+
+		sortedLessonMaterialIDsMap, err = m.getSortedLessonMaterialIDsMap(ctx, tx, operator, lessonPlanIDs)
+		if err != nil {
+			log.Error(ctx, "to assessment views: get sorted lesson material ids map failed",
+				log.Err(err),
+				log.Strings("lesson_plan_ids", lessonPlanIDs),
+			)
+			return nil, err
 		}
 	}
 
@@ -311,8 +323,15 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 			}
 		}
 		if options.EnableLessonPlan {
-			v.LessonPlan = assessmentLessonPlanMap[a.ID]
-			v.LessonMaterials = assessmentLessonMaterialsMap[a.ID]
+			lp := assessmentLessonPlanMap[a.ID]
+			v.LessonPlan = lp
+			var sortLessonMaterialIDs []string
+			if lp != nil {
+				sortLessonMaterialIDs = sortedLessonMaterialIDsMap[lp.ID]
+			}
+			lms := assessmentLessonMaterialsMap[a.ID]
+			m.sortedByLessonMaterialIDs(lms, sortLessonMaterialIDs)
+			v.LessonMaterials = lms
 		}
 		result = append(result, &v)
 	}
@@ -827,4 +846,46 @@ func (m *assessmentBase) updateStudentViewItems(ctx context.Context, tx *dbo.DBC
 	}
 
 	return nil
+}
+
+func (m *assessmentBase) getSortedLessonMaterialIDsMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string][]string, error) {
+	if len(lessonPlanIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+	contentMap, err := GetContentModel().GetContentsSubContentsMapByIDList(ctx, tx, lessonPlanIDs, operator)
+	if err != nil {
+		log.Error(ctx, "get sorted content ids: get content map failed",
+			log.Err(err),
+			log.Strings("ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+	r := make(map[string][]string, len(contentMap))
+	for aid, cc := range contentMap {
+		for _, c := range cc {
+			r[aid] = append(r[aid], c.ID)
+		}
+	}
+	return r, nil
+}
+
+func (m *assessmentBase) sortedByLessonMaterialIDs(items []*entity.AssessmentLessonMaterial, lessonMaterialIDs []string) {
+	if len(items) == 0 || len(lessonMaterialIDs) == 0 {
+		return
+	}
+	idMap := make(map[string]int, len(lessonMaterialIDs))
+	for i, id := range lessonMaterialIDs {
+		idMap[id] = i + 1
+	}
+	sort.Slice(items, func(i, j int) bool {
+		idI := idMap[items[i].ID]
+		idJ := idMap[items[i].ID]
+		if idI == 0 {
+			return false
+		}
+		if idJ == 0 {
+			return true
+		}
+		return idI < idJ
+	})
 }
