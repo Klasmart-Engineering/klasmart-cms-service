@@ -240,9 +240,8 @@ type ListAssessmentsResult struct {
 }
 
 type QueryAssessmentsSummaryArgs struct {
-	Status      NullAssessmentStatus  `json:"status"`
-	TeacherName NullString            `json:"teacher_name"`
-	ClassType   NullScheduleClassType `json:"class_type"`
+	Status      NullAssessmentStatus `json:"status"`
+	TeacherName NullString           `json:"teacher_name"`
 }
 
 type AssessmentsSummary struct {

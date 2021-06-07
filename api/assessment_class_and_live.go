@@ -96,66 +96,6 @@ func (s *Server) listAssessments(c *gin.Context) {
 	}
 }
 
-// @Summary get assessments summary
-// @Description get assessments summary
-// @Tags assessments
-// @ID getAssessmentsSummary
-// @Accept json
-// @Produce json
-// @Param status query string false "status search"
-// @Param teacher_name query string false "teacher name fuzzy search"
-// @Param class_type query string false "class type"
-// @Success 200 {object} entity.AssessmentsSummary
-// @Failure 400 {object} BadRequestResponse
-// @Failure 403 {object} ForbiddenResponse
-// @Failure 500 {object} InternalServerErrorResponse
-// @Router /assessments_summary [get]
-func (s *Server) getAssessmentsSummary(c *gin.Context) {
-	ctx := c.Request.Context()
-	args := entity.QueryAssessmentsSummaryArgs{}
-
-	if status := c.Query("status"); status != "" && status != constant.ListOptionAll {
-		args.Status = entity.NullAssessmentStatus{
-			Value: entity.AssessmentStatus(status),
-			Valid: true,
-		}
-	}
-	teacherName := c.Query("teacher_name")
-	if teacherName != "" {
-		args.TeacherName = entity.NullString{
-			String: teacherName,
-			Valid:  true,
-		}
-	}
-	classType := c.Query("class_type")
-	if classType != "" {
-		args.ClassType = entity.NullScheduleClassType{
-			Value: entity.ScheduleClassType(classType),
-			Valid: true,
-		}
-	}
-	operator := s.getOperator(c)
-	if operator.OrgID == "" {
-		c.JSON(http.StatusBadRequest, L(GeneralUnknown))
-		return
-	}
-
-	result, err := model.GetClassAndLiveAssessmentModel().Summary(ctx, dbo.MustGetDB(ctx), operator, args)
-	switch err {
-	case nil:
-		c.JSON(http.StatusOK, result)
-	case constant.ErrForbidden:
-		c.JSON(http.StatusForbidden, L(AssessMsgNoPermission))
-	default:
-		log.Error(ctx, "list assessments: list failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		c.JSON(http.StatusInternalServerError, L(GeneralUnknown))
-		return
-	}
-}
-
 // @Summary get assessment detail
 // @Description get assessment detail
 // @Tags assessments
