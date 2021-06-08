@@ -271,6 +271,10 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 			)
 			return nil, err
 		}
+		log.Debug(ctx, "to assessment views: get sorted lesson material ids map",
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+			log.Any("sorted_lesson_material_ids_map", sortedLessonMaterialIDsMap),
+		)
 	}
 
 	var result []*entity.AssessmentView
