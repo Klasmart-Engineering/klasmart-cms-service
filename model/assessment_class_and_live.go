@@ -95,6 +95,7 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 		DueAt:         view.Schedule.DueAt,
 	}
 
+	// fill lesson plan and lesson materials
 	var contentIDs []string
 	if view.LessonPlan != nil {
 		contentIDs = append(contentIDs, view.LessonPlan.ID)
