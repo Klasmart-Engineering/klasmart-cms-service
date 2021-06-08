@@ -269,7 +269,7 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 		Valid:   true,
 	}
 
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &studies); err != nil {
+	if err := da.GetHomeFunStudyDA().QueryTx(ctx, tx, &cond, &studies); err != nil {
 		log.Error(ctx, "summary: query studies failed",
 			log.Err(err),
 			log.Any("cond", cond),
