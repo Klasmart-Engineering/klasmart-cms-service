@@ -883,7 +883,7 @@ func (m *assessmentBase) sortedByLessonMaterialIDs(items []*entity.AssessmentLes
 	}
 	sort.Slice(items, func(i, j int) bool {
 		idI := idMap[items[i].ID]
-		idJ := idMap[items[i].ID]
+		idJ := idMap[items[j].ID]
 		if idI == 0 {
 			return false
 		}
