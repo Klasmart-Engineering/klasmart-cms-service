@@ -1234,7 +1234,7 @@ func (s *scheduleModel) QueryByCache(ctx context.Context, op *entity.Operator, c
 		item.Status = item.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 			EndAt:     item.EndAt,
 			DueAt:     item.DueAt,
-			ClassType: entity.ScheduleClassType(item.ClassType.ID),
+			ClassType: item.ClassType,
 		})
 	}
 	return result, nil
@@ -1286,23 +1286,19 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 			LessonPlanID: item.LessonPlanID,
 			Status:       item.Status,
 			ClassID:      item.ClassID,
+			ClassType:    item.ClassType,
 			DueAt:        item.DueAt,
 			IsHidden:     item.IsHidden,
 			IsHomeFun:    item.IsHomeFun,
 		}
 
-		temp.ClassType = entity.ScheduleShortInfo{
-			ID:   item.ClassType.String(),
-			Name: item.ClassType.ToLabel().String(),
-		}
-
 		temp.Status = temp.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 			EndAt:     temp.EndAt,
 			DueAt:     temp.DueAt,
-			ClassType: entity.ScheduleClassType(temp.ClassType.ID),
+			ClassType: temp.ClassType,
 		})
 
-		if entity.ScheduleClassType(temp.ClassType.ID) == entity.ScheduleClassTypeHomework && temp.DueAt != 0 {
+		if temp.ClassType == entity.ScheduleClassTypeHomework && temp.DueAt != 0 {
 			temp.StartAt = utils.TodayZeroByTimeStamp(temp.DueAt, loc).Unix()
 			temp.EndAt = utils.TodayEndByTimeStamp(temp.DueAt, loc).Unix()
 		}
@@ -1652,6 +1648,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		StartAt:        schedule.StartAt,
 		EndAt:          schedule.EndAt,
 		IsAllDay:       schedule.IsAllDay,
+		ClassType:      schedule.ClassType,
 		DueAt:          schedule.DueAt,
 		Description:    schedule.Description,
 		Version:        schedule.ScheduleVersion,
@@ -1660,11 +1657,6 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		RealTimeStatus: *realTimeData,
 		IsHomeFun:      schedule.IsHomeFun,
 		IsHidden:       schedule.IsHidden,
-	}
-
-	result.ClassType = entity.ScheduleShortInfo{
-		ID:   schedule.ClassType.String(),
-		Name: schedule.ClassType.ToLabel().String(),
 	}
 
 	// get role type
@@ -1684,7 +1676,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 	result.ExistFeedback = existFeedback
 
 	// verify is exist assessment
-	if entity.ScheduleClassType(result.ClassType.ID) == entity.ScheduleClassTypeHomework && !result.IsHomeFun {
+	if result.ClassType == entity.ScheduleClassTypeHomework && !result.IsHomeFun {
 		existAssessment, err := GetStudyAssessmentModel().BatchCheckAnyoneAttempted(ctx, dbo.MustGetDB(ctx), operator, []string{result.ID})
 		if err != nil {
 			log.Error(ctx, "judgment anyone attempt error", log.Err(err), log.String("scheduleID", result.ID))
@@ -1755,7 +1747,7 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 	result.Status = result.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 		EndAt:     result.EndAt,
 		DueAt:     result.DueAt,
-		ClassType: entity.ScheduleClassType(result.ClassType.ID),
+		ClassType: result.ClassType,
 	})
 	return result, nil
 }
@@ -1856,7 +1848,7 @@ func (s *scheduleModel) getByIDFormCache(ctx context.Context, operator *entity.O
 	cacheData.Status = cacheData.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 		EndAt:     cacheData.EndAt,
 		DueAt:     cacheData.DueAt,
-		ClassType: entity.ScheduleClassType(cacheData.ClassType.ID),
+		ClassType: cacheData.ClassType,
 	})
 	if cacheData.LessonPlan != nil {
 		lessonPlanAuthed, err := s.getLessonPlanAuthed(ctx, operator, id, cacheData.LessonPlan.ID)
