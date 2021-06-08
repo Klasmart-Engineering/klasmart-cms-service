@@ -278,6 +278,13 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 		}
 	}
 
+	log.Debug(ctx, "home fun study summary",
+		log.Any("studies", studies),
+		log.Any("result", r),
+		log.Any("args", args),
+		log.Any("operator", operator),
+	)
+
 	return &r, nil
 }
 
