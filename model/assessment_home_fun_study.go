@@ -306,6 +306,10 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		return nil, constant.ErrForbidden
 	}
 	cond := da.QueryHomeFunStudyCondition{
+		OrgID: entity.NullString{
+			String: operator.OrgID,
+			Valid:  true,
+		},
 		Status:  args.Status,
 		OrderBy: args.OrderBy,
 		AllowTeacherIDs: entity.NullStrings{
