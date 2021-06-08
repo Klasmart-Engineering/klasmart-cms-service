@@ -80,8 +80,7 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 				Valid:  len(checker.allowPairs) > 0,
 			},
 		}
-		teachers    []*external.Teacher
-		scheduleIDs []string
+		teachers []*external.Teacher
 	)
 	if args.TeacherName.Valid {
 		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
@@ -108,19 +107,6 @@ func (m *assessmentModel) Summary(ctx context.Context, tx *dbo.DBContext, operat
 		} else {
 			cond.TeacherIDs.Valid = false
 		}
-	}
-	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {
-		log.Error(ctx, "summary: get schedule ids failed",
-			log.Err(err),
-			log.String("org_id", operator.OrgID),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	cond.ScheduleIDs = entity.NullStrings{
-		Strings: scheduleIDs,
-		Valid:   true,
 	}
 
 	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
