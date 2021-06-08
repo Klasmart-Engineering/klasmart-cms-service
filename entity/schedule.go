@@ -452,7 +452,7 @@ type ScheduleListView struct {
 	EndAt              int64             `json:"end_at"`
 	IsRepeat           bool              `json:"is_repeat"`
 	LessonPlanID       string            `json:"lesson_plan_id"`
-	ClassType          ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	ClassType          ScheduleShortInfo `json:"class_type"`
 	Status             ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ClassID            string            `json:"class_id"`
 	DueAt              int64             `json:"due_at"`
@@ -475,7 +475,7 @@ type ScheduleDetailsView struct {
 	OrgID                string                        `json:"org_id"`
 	StartAt              int64                         `json:"start_at"`
 	EndAt                int64                         `json:"end_at"`
-	ClassType            ScheduleClassType             `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	ClassType            ScheduleShortInfo             `json:"class_type"`
 	DueAt                int64                         `json:"due_at"`
 	Description          string                        `json:"description"`
 	Version              int64                         `json:"version"`
