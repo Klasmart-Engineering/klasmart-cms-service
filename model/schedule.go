@@ -2662,6 +2662,17 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
+	assessments, err := GetAssessmentModel().Query(ctx, op, dbo.MustGetDB(ctx), &da.QueryAssessmentConditions{
+		ScheduleIDs: entity.NullStrings{
+			Strings: []string{id},
+			Valid:   true,
+		},
+	})
+	if err != nil {
+		log.Error(ctx, "get assessment error", log.Err(err), log.Any("scheduleID", id))
+		return nil, err
+	}
+
 	result := &entity.ScheduleViewDetail{
 		ID:           schedule.ID,
 		Title:        schedule.Title,
@@ -2678,6 +2689,12 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 	result.ClassType = entity.ScheduleShortInfo{
 		ID:   schedule.ClassType.String(),
 		Name: schedule.ClassType.ToLabel().String(),
+	}
+
+	for _, v := range assessments {
+		if v.Status == entity.AssessmentStatusComplete {
+			result.CompleteAssessment = true
+		}
 	}
 
 	// get role type
