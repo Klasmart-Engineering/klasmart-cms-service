@@ -85,41 +85,13 @@ func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.O
 		Teachers:         view.Teachers,
 		Students:         view.Students,
 		DueAt:            view.Schedule.DueAt,
-		LessonPlan:       entity.StudyAssessmentLessonPlan{},
-		LessonMaterials:  nil,
+		LessonPlan:       view.LessonPlan,
+		LessonMaterials:  view.LessonMaterials,
 		CompleteAt:       view.CompleteTime,
 		RemainingTime:    0,
 		StudentViewItems: nil,
 		ScheduleID:       view.ScheduleID,
 		Status:           view.Status,
-	}
-
-	// fill lesson plan and lesson materials
-	plan, err := da.GetAssessmentContentDA().GetLessonPlan(ctx, tx, id)
-	if err != nil {
-		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetPlan: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-		)
-	}
-	result.LessonPlan = entity.StudyAssessmentLessonPlan{
-		ID:   plan.ContentID,
-		Name: plan.ContentName,
-	}
-	materials, err := da.GetAssessmentContentDA().GetLessonMaterials(ctx, tx, id)
-	if err != nil {
-		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetLessonMaterials: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-		)
-	}
-	for _, m := range materials {
-		result.LessonMaterials = append(result.LessonMaterials, &entity.StudyAssessmentLessonMaterial{
-			ID:      m.ContentID,
-			Name:    m.ContentName,
-			Comment: m.ContentComment,
-			Checked: m.Checked,
-		})
 	}
 
 	// fill remaining time
