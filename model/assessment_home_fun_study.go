@@ -226,8 +226,7 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 				Valid:  len(checker.allowPairs) > 0,
 			},
 		}
-		teachers    []*external.Teacher
-		scheduleIDs []string
+		teachers []*external.Teacher
 	)
 	if args.TeacherName.Valid {
 		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
@@ -255,21 +254,8 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 			cond.TeacherIDs.Valid = false
 		}
 	}
-	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {
-		log.Error(ctx, "summary: get schedule ids failed",
-			log.Err(err),
-			log.String("org_id", operator.OrgID),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	cond.ScheduleIDs = entity.NullStrings{
-		Strings: scheduleIDs,
-		Valid:   true,
-	}
 
-	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &studies); err != nil {
+	if err := da.GetHomeFunStudyDA().QueryTx(ctx, tx, &cond, &studies); err != nil {
 		log.Error(ctx, "summary: query studies failed",
 			log.Err(err),
 			log.Any("cond", cond),
@@ -292,6 +278,13 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 		}
 	}
 
+	log.Debug(ctx, "home fun study summary",
+		log.Any("studies", studies),
+		log.Any("result", r),
+		log.Any("args", args),
+		log.Any("operator", operator),
+	)
+
 	return &r, nil
 }
 
@@ -313,6 +306,10 @@ func (m *homeFunStudyModel) List(ctx context.Context, operator *entity.Operator,
 		return nil, constant.ErrForbidden
 	}
 	cond := da.QueryHomeFunStudyCondition{
+		OrgID: entity.NullString{
+			String: operator.OrgID,
+			Valid:  true,
+		},
 		Status:  args.Status,
 		OrderBy: args.OrderBy,
 		AllowTeacherIDs: entity.NullStrings{
