@@ -1292,6 +1292,11 @@ func (s *scheduleModel) ProcessQueryData(ctx context.Context, op *entity.Operato
 			IsHomeFun:    item.IsHomeFun,
 		}
 
+		temp.ClassTypeLabel = entity.ScheduleShortInfo{
+			ID:   item.ClassType.String(),
+			Name: item.ClassType.ToLabel().String(),
+		}
+
 		temp.Status = temp.Status.GetScheduleStatus(entity.ScheduleStatusInput{
 			EndAt:     temp.EndAt,
 			DueAt:     temp.DueAt,
@@ -1657,6 +1662,11 @@ func (s *scheduleModel) processSingleSchedule(ctx context.Context, operator *ent
 		RealTimeStatus: *realTimeData,
 		IsHomeFun:      schedule.IsHomeFun,
 		IsHidden:       schedule.IsHidden,
+	}
+
+	result.ClassTypeLabel = entity.ScheduleShortInfo{
+		ID:   schedule.ClassType.String(),
+		Name: schedule.ClassType.ToLabel().String(),
 	}
 
 	// get role type
@@ -2665,22 +2675,25 @@ func (s *scheduleModel) GetScheduleViewByID(ctx context.Context, op *entity.Oper
 		return nil, err
 	}
 
-	result := &entity.ScheduleViewDetail{
-		ID:           schedule.ID,
-		Title:        schedule.Title,
-		StartAt:      schedule.StartAt,
-		EndAt:        schedule.EndAt,
-		DueAt:        schedule.DueAt,
-		Status:       schedule.Status,
-		IsHomeFun:    schedule.IsHomeFun,
-		IsHidden:     schedule.IsHidden,
-		RoomID:       schedule.ID,
-		IsRepeat:     schedule.RepeatID != "",
-		LessonPlanID: schedule.LessonPlanID,
-	}
-	result.ClassType = entity.ScheduleShortInfo{
+	classType := entity.ScheduleShortInfo{
 		ID:   schedule.ClassType.String(),
 		Name: schedule.ClassType.ToLabel().String(),
+	}
+
+	result := &entity.ScheduleViewDetail{
+		ID:             schedule.ID,
+		Title:          schedule.Title,
+		StartAt:        schedule.StartAt,
+		EndAt:          schedule.EndAt,
+		DueAt:          schedule.DueAt,
+		ClassType:      classType,
+		ClassTypeLabel: classType,
+		Status:         schedule.Status,
+		IsHomeFun:      schedule.IsHomeFun,
+		IsHidden:       schedule.IsHidden,
+		RoomID:         schedule.ID,
+		IsRepeat:       schedule.RepeatID != "",
+		LessonPlanID:   schedule.LessonPlanID,
 	}
 
 	for _, v := range assessments {
