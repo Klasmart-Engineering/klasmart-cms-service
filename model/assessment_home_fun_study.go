@@ -222,8 +222,8 @@ func (m *homeFunStudyModel) Summary(ctx context.Context, tx *dbo.DBContext, oper
 				Valid:   true,
 			},
 			AllowTeacherIDAndStatusPairs: entity.NullAssessmentAllowTeacherIDAndStatusPairs{
-				Values: checker.allowPairs,
-				Valid:  len(checker.allowPairs) > 0,
+				Values: checker.AllowPairs(),
+				Valid:  len(checker.AllowPairs()) > 0,
 			},
 		}
 		teachers []*external.Teacher
