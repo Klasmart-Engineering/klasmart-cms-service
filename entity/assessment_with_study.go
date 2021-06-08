@@ -45,33 +45,20 @@ type ListStudyAssessmentsResultItem struct {
 }
 
 type GetStudyAssessmentDetailResult struct {
-	ID               string                           `json:"id"`
-	Title            string                           `json:"title"`
-	ClassName        string                           `json:"class_name"`
-	Teachers         []*AssessmentTeacher             `json:"teachers"`
-	Students         []*AssessmentStudent             `json:"students"`
-	DueAt            int64                            `json:"due_at"`
-	LessonPlan       StudyAssessmentLessonPlan        `json:"lesson_plan"`
-	LessonMaterials  []*StudyAssessmentLessonMaterial `json:"lesson_materials"`
-	CompleteAt       int64                            `json:"complete_at"`
-	RemainingTime    int64                            `json:"remaining_time"`
-	StudentViewItems []*AssessmentStudentViewH5PItem  `json:"student_view_items"`
+	ID               string                          `json:"id"`
+	Title            string                          `json:"title"`
+	ClassName        string                          `json:"class_name"`
+	Teachers         []*AssessmentTeacher            `json:"teachers"`
+	Students         []*AssessmentStudent            `json:"students"`
+	DueAt            int64                           `json:"due_at"`
+	LessonPlan       *AssessmentLessonPlan           `json:"lesson_plan"`
+	LessonMaterials  []*AssessmentLessonMaterial     `json:"lesson_materials"`
+	CompleteAt       int64                           `json:"complete_at"`
+	RemainingTime    int64                           `json:"remaining_time"`
+	StudentViewItems []*AssessmentStudentViewH5PItem `json:"student_view_items"`
 	// debug
 	ScheduleID string           `json:"schedule_id"`
 	Status     AssessmentStatus `json:"status"`
-}
-
-type StudyAssessmentLessonPlan struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Comment string `json:"comment"`
-}
-
-type StudyAssessmentLessonMaterial struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Comment string `json:"comment"`
-	Checked bool   `json:"checked"`
 }
 
 type UpdateStudyAssessmentArgs struct {

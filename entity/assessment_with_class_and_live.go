@@ -117,9 +117,8 @@ type ConvertToViewsOptions struct {
 }
 
 type AssessmentLessonPlan struct {
-	ID        string                      `json:"id"`
-	Name      string                      `json:"name"`
-	Materials []*AssessmentLessonMaterial `json:"materials"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type AssessmentLessonMaterial struct {

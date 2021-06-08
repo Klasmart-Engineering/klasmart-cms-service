@@ -95,29 +95,12 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 		DueAt:         view.Schedule.DueAt,
 	}
 
-	// fill lesson plan and lesson materials
 	var contentIDs []string
-	lp, err := da.GetAssessmentContentDA().GetLessonPlan(ctx, tx, id)
-	if err != nil {
-		log.Error(ctx, "get assessment detail: get lesson plan failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-		)
-		return nil, err
-	} else {
-		contentIDs = append(contentIDs, lp.ContentID)
+	if view.LessonPlan != nil {
+		contentIDs = append(contentIDs, view.LessonPlan.ID)
 	}
-	lms, err := da.GetAssessmentContentDA().GetLessonMaterials(ctx, tx, id)
-	if err != nil {
-		log.Error(ctx, "Get: da.GetAssessmentContentDA().GetLessonMaterials: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-		)
-		return nil, err
-	} else {
-		for _, lm := range lms {
-			contentIDs = append(contentIDs, lm.ContentID)
-		}
+	for _, lm := range view.LessonMaterials {
+		contentIDs = append(contentIDs, lm.ID)
 	}
 	var currentContentOutcomeMap map[string][]string
 	if len(contentIDs) > 0 {
@@ -131,21 +114,21 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 			return nil, err
 		}
 		currentContentOutcomeMap = assessmentContentOutcomeMap[id]
-		if lp != nil {
+		if view.LessonPlan != nil {
 			result.LessonPlan = entity.AssessmentDetailContent{
-				ID:         lp.ContentID,
-				Name:       lp.ContentName,
+				ID:         view.LessonPlan.ID,
+				Name:       view.LessonPlan.Name,
 				Checked:    true,
-				OutcomeIDs: currentContentOutcomeMap[lp.ContentID],
+				OutcomeIDs: currentContentOutcomeMap[view.LessonPlan.ID],
 			}
 		}
-		for _, m := range lms {
+		for _, m := range view.LessonMaterials {
 			result.LessonMaterials = append(result.LessonMaterials, &entity.AssessmentDetailContent{
-				ID:         m.ContentID,
-				Name:       m.ContentName,
-				Comment:    m.ContentComment,
+				ID:         m.ID,
+				Name:       m.Name,
+				Comment:    m.Comment,
 				Checked:    m.Checked,
-				OutcomeIDs: currentContentOutcomeMap[m.ContentID],
+				OutcomeIDs: currentContentOutcomeMap[m.ID],
 			})
 		}
 	}
