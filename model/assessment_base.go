@@ -374,11 +374,11 @@ func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *
 
 	// calc attempted
 	userIDExistsMap := map[string]bool{}
-	for _, uid := range checkedUserIDs {
+	for _, uid := range utils.SliceDeduplicationExcludeEmpty(checkedUserIDs) {
 		userIDExistsMap[uid] = true
 	}
 	h5pIDExistsMap := map[string]bool{}
-	for _, id := range checkedH5PIDs {
+	for _, id := range utils.SliceDeduplicationExcludeEmpty(checkedH5PIDs) {
 		h5pIDExistsMap[id] = true
 	}
 	attempted := 0
