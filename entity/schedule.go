@@ -452,7 +452,8 @@ type ScheduleListView struct {
 	EndAt              int64             `json:"end_at"`
 	IsRepeat           bool              `json:"is_repeat"`
 	LessonPlanID       string            `json:"lesson_plan_id"`
-	ClassType          ScheduleShortInfo `json:"class_type"`
+	ClassType          ScheduleClassType `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	ClassTypeLabel     ScheduleShortInfo `json:"class_type_label"`
 	Status             ScheduleStatus    `json:"status" enums:"NotStart,Started,Closed"`
 	ClassID            string            `json:"class_id"`
 	DueAt              int64             `json:"due_at"`
@@ -475,7 +476,8 @@ type ScheduleDetailsView struct {
 	OrgID                string                        `json:"org_id"`
 	StartAt              int64                         `json:"start_at"`
 	EndAt                int64                         `json:"end_at"`
-	ClassType            ScheduleShortInfo             `json:"class_type"`
+	ClassType            ScheduleClassType             `json:"class_type" enums:"OnlineClass,OfflineClass,Homework,Task"`
+	ClassTypeLabel       ScheduleShortInfo             `json:"class_type_label"`
 	DueAt                int64                         `json:"due_at"`
 	Description          string                        `json:"description"`
 	Version              int64                         `json:"version"`
@@ -727,26 +729,27 @@ func (s ScheduleShowOption) IsValid() bool {
 }
 
 type ScheduleViewDetail struct {
-	ID            string               `json:"id"`
-	IsRepeat      bool                 `json:"is_repeat"`
-	LessonPlanID  string               `json:"lesson_plan_id"`
-	ClassID       string               `json:"class_id"`
-	Title         string               `json:"title"`
-	Attachment    ScheduleShortInfo    `json:"attachment"`
-	StartAt       int64                `json:"start_at"`
-	EndAt         int64                `json:"end_at"`
-	ClassType     ScheduleShortInfo    `json:"class_type"`
-	DueAt         int64                `json:"due_at"`
-	Status        ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
-	IsHidden      bool                 `json:"is_hidden"`
-	IsHomeFun     bool                 `json:"is_home_fun"`
-	RoleType      ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
-	ExistFeedback bool                 `json:"exist_feedback"`
-	LessonPlan    *ScheduleLessonPlan  `json:"lesson_plan"`
-	Class         *ScheduleShortInfo   `json:"class"`
-	Teachers      []*ScheduleShortInfo `json:"teachers"`
-	Students      []*ScheduleShortInfo `json:"students"`
-	RoomID        string               `json:"room_id"`
+	ID             string               `json:"id"`
+	IsRepeat       bool                 `json:"is_repeat"`
+	LessonPlanID   string               `json:"lesson_plan_id"`
+	ClassID        string               `json:"class_id"`
+	Title          string               `json:"title"`
+	Attachment     ScheduleShortInfo    `json:"attachment"`
+	StartAt        int64                `json:"start_at"`
+	EndAt          int64                `json:"end_at"`
+	ClassType      ScheduleShortInfo    `json:"class_type"`
+	ClassTypeLabel ScheduleShortInfo    `json:"class_type_label"`
+	DueAt          int64                `json:"due_at"`
+	Status         ScheduleStatus       `json:"status" enums:"NotStart,Started,Closed"`
+	IsHidden       bool                 `json:"is_hidden"`
+	IsHomeFun      bool                 `json:"is_home_fun"`
+	RoleType       ScheduleRoleType     `json:"role_type" enums:"Student,Teacher,Unknown"`
+	ExistFeedback  bool                 `json:"exist_feedback"`
+	LessonPlan     *ScheduleLessonPlan  `json:"lesson_plan"`
+	Class          *ScheduleShortInfo   `json:"class"`
+	Teachers       []*ScheduleShortInfo `json:"teachers"`
+	Students       []*ScheduleShortInfo `json:"students"`
+	RoomID         string               `json:"room_id"`
 	//LiveToken     string               `json:"live_token"`
 	ExistAssessment    bool `json:"exist_assessment"`
 	CompleteAssessment bool `json:"complete_assessment"`
