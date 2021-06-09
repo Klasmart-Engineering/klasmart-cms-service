@@ -360,17 +360,17 @@ func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *
 	for _, s := range v.Students {
 		checkedUserIDs = append(checkedUserIDs, s.ID)
 	}
-	checkedLessonMaterialIDs := make([]string, 0, len(v.LessonMaterials))
+	checkedLessonMaterialCount := 0
 	checkedH5PIDs := make([]string, 0, len(v.LessonMaterials))
 	for _, lm := range v.LessonMaterials {
 		if lm.Checked {
-			checkedLessonMaterialIDs = append(checkedLessonMaterialIDs, lm.Source)
+			checkedLessonMaterialCount++
 			if (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend) && lm.Source != "" {
 				checkedH5PIDs = append(checkedH5PIDs, lm.Source)
 			}
 		}
 	}
-	total := len(checkedUserIDs) * len(checkedLessonMaterialIDs)
+	total := len(checkedUserIDs) * checkedLessonMaterialCount
 
 	// calc attempted
 	userIDExistsMap := map[string]bool{}
