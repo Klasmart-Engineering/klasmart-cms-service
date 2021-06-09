@@ -241,24 +241,13 @@ func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operat
 			remainingTime = 0
 		}
 
-		userIDs := make([]string, 0, len(v.Students))
-		for _, s := range v.Students {
-			userIDs = append(userIDs, s.ID)
-		}
-		h5pIDs := make([]string, 0, len(v.LessonMaterials))
-		for _, lm := range v.LessonMaterials {
-			if lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend {
-				h5pIDs = append(h5pIDs, lm.Source)
-			}
-		}
-
 		newItem := entity.ListStudyAssessmentsResultItem{
 			ID:            v.ID,
 			Title:         v.Title,
 			TeacherNames:  teacherNames,
 			ClassName:     v.Class.Name,
 			DueAt:         v.Schedule.DueAt,
-			CompleteRate:  m.getRoomCompleteRate(roomMap[v.RoomID], userIDs, h5pIDs),
+			CompleteRate:  m.getRoomCompleteRate(roomMap[v.RoomID], v),
 			RemainingTime: remainingTime,
 			CompleteAt:    v.CompleteTime,
 			ScheduleID:    v.ScheduleID,

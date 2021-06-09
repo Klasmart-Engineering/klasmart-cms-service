@@ -350,19 +350,37 @@ func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operato
 	return result, nil
 }
 
-func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, userIDs []string, h5pIDs []string) float64 {
+func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *entity.AssessmentView) float64 {
 	if room == nil {
 		return 0
 	}
+
+	// calc total
+	checkedUserIDs := make([]string, 0, len(v.Students))
+	for _, s := range v.Students {
+		checkedUserIDs = append(checkedUserIDs, s.ID)
+	}
+	checkedLessonMaterialIDs := make([]string, 0, len(v.LessonMaterials))
+	checkedH5PIDs := make([]string, 0, len(v.LessonMaterials))
+	for _, lm := range v.LessonMaterials {
+		if lm.Checked {
+			checkedLessonMaterialIDs = append(checkedLessonMaterialIDs, lm.Source)
+			if (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend) && lm.Source != "" {
+				checkedH5PIDs = append(checkedH5PIDs, lm.Source)
+			}
+		}
+	}
+	total := len(checkedUserIDs) * len(checkedLessonMaterialIDs)
+
+	// calc attempted
 	userIDExistsMap := map[string]bool{}
-	for _, uid := range userIDs {
+	for _, uid := range checkedUserIDs {
 		userIDExistsMap[uid] = true
 	}
 	h5pIDExistsMap := map[string]bool{}
-	for _, id := range h5pIDs {
+	for _, id := range checkedH5PIDs {
 		h5pIDExistsMap[id] = true
 	}
-	total := len(userIDs) * len(h5pIDs)
 	attempted := 0
 	for _, u := range room.Users {
 		if !userIDExistsMap[u.UserID] {
@@ -372,7 +390,7 @@ func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, use
 			if !h5pIDExistsMap[c.H5PID] {
 				continue
 			}
-			if len(c.Answers) > 0 {
+			if len(c.Answers) > 0 || len(c.Scores) > 0 {
 				attempted++
 			}
 		}
