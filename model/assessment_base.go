@@ -358,7 +358,9 @@ func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *
 	// calc total
 	checkedUserIDs := make([]string, 0, len(v.Students))
 	for _, s := range v.Students {
-		checkedUserIDs = append(checkedUserIDs, s.ID)
+		if s.Checked {
+			checkedUserIDs = append(checkedUserIDs, s.ID)
+		}
 	}
 	checkedLessonMaterialCount := 0
 	checkedH5PIDs := make([]string, 0, len(v.LessonMaterials))
@@ -373,21 +375,15 @@ func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *
 	total := len(checkedUserIDs) * checkedLessonMaterialCount
 
 	// calc attempted
-	userIDExistsMap := map[string]bool{}
-	for _, uid := range utils.SliceDeduplicationExcludeEmpty(checkedUserIDs) {
-		userIDExistsMap[uid] = true
-	}
-	h5pIDExistsMap := map[string]bool{}
-	for _, id := range utils.SliceDeduplicationExcludeEmpty(checkedH5PIDs) {
-		h5pIDExistsMap[id] = true
-	}
 	attempted := 0
-	for _, u := range room.Users {
-		if !userIDExistsMap[u.UserID] {
+	for _, uid := range utils.SliceDeduplicationExcludeEmpty(checkedUserIDs) {
+		u := room.UserMap[uid]
+		if u == nil {
 			continue
 		}
-		for _, c := range u.Contents {
-			if !h5pIDExistsMap[c.H5PID] {
+		for _, h5pID := range utils.SliceDeduplicationExcludeEmpty(checkedH5PIDs) {
+			c := u.ContentMap[h5pID]
+			if c == nil {
 				continue
 			}
 			if len(c.Answers) > 0 || len(c.Scores) > 0 {
@@ -395,9 +391,11 @@ func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *
 			}
 		}
 	}
+
 	if total > 0 {
 		return float64(attempted) / float64(total)
 	}
+
 	return 0
 }
 
