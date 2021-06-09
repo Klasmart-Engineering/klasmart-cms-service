@@ -362,17 +362,13 @@ func (m *assessmentBase) getRoomCompleteRate(room *entity.AssessmentH5PRoom, v *
 			checkedUserIDs = append(checkedUserIDs, s.ID)
 		}
 	}
-	checkedLessonMaterialCount := 0
 	checkedH5PIDs := make([]string, 0, len(v.LessonMaterials))
 	for _, lm := range v.LessonMaterials {
-		if lm.Checked {
-			checkedLessonMaterialCount++
-			if (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend) && lm.Source != "" {
-				checkedH5PIDs = append(checkedH5PIDs, lm.Source)
-			}
+		if lm.Checked && (lm.FileType == entity.FileTypeH5p || lm.FileType == entity.FileTypeH5pExtend) {
+			checkedH5PIDs = append(checkedH5PIDs, lm.Source)
 		}
 	}
-	total := len(checkedUserIDs) * checkedLessonMaterialCount
+	total := len(checkedUserIDs) * len(checkedH5PIDs)
 
 	// calc attempted
 	attempted := 0
