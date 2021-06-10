@@ -14,49 +14,24 @@ func NewMappingCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "mapping",
 		Usage: "academic profile mapping",
-		// Aliases: []string{"m"},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "mysql",
 				Required: true,
-				Usage:    "specify mysql `connection string`, eg: (user:password@tcp(127.0.0.1:3306)/kidsloop2?parseTime=true&charset=utf8mb4)",
+				Usage:    "\033[1;33mRequired!\033[0m specify mysql `connection string`, eg: \"user:password@tcp(127.0.0.1:3306)/kidsloop2?parseTime=true&charset=utf8mb4\"",
 			},
-			// &cli.StringFlag{
-			// 	Name:     "redis-host",
-			// 	Value:    "127.0.0.1",
-			// 	Required: false,
-			// 	Usage:    "specify redis host `address`",
-			// },
-			// &cli.IntFlag{
-			// 	Name:     "redis-port",
-			// 	Value:    6379,
-			// 	Required: false,
-			// 	Usage:    "specify redis `port`",
-			// },
-			// &cli.StringFlag{
-			// 	Name:     "redis-password",
-			// 	Value:    "",
-			// 	Required: false,
-			// 	Usage:    "specify redis `password`",
-			// },
 			&cli.StringFlag{
 				Name:     "ams",
 				Required: true,
-				Usage:    "specify AMS `address`, eg: (https://api.alpha.kidsloop.net/user/)",
+				Usage:    "\033[1;33mRequired!\033[0m specify AMS `address`, eg: \"https://api.alpha.kidsloop.net/user/\"",
 			},
 		},
 		Action: func(c *cli.Context) error {
 			mysql := c.String("mysql")
-			// redisHost := c.String("redis-host")
-			// redisPort := c.Int("redis-port")
-			// redisPassword := c.String("redis-password")
 			ams := c.String("ams")
 
 			log.Debug(c.Context, "mapping",
 				log.String("mysql", mysql),
-				// log.String("redis host", redisHost),
-				// log.Int("redis port", redisPort),
-				// log.String("redis password", redisPassword),
 				log.String("ams", ams))
 
 			if mysql == "" || ams == "" {
@@ -72,11 +47,6 @@ func NewMappingCommand() *cli.Command {
 					MaxOpenConns:     16,
 					MaxIdleConns:     2,
 				},
-				// RedisConfig: config.RedisConfig{
-				// 	Host:     redisHost,
-				// 	Port:     redisPort,
-				// 	Password: redisPassword,
-				// },
 				AMS: config.AMSConfig{
 					EndPoint: ams,
 				},
@@ -96,12 +66,6 @@ func NewMappingCommand() *cli.Command {
 				return err
 			}
 			dbo.ReplaceGlobal(dboHandler)
-
-			// // init ro
-			// ro.SetConfig(&redis.Options{
-			// 	Addr:     fmt.Sprintf("%v:%v", config.Get().RedisConfig.Host, config.Get().RedisConfig.Port),
-			// 	Password: config.Get().RedisConfig.Password,
-			// })
 
 			fmt.Println("start mapping")
 			mapper := NewMapperImpl()
