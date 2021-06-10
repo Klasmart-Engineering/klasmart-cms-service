@@ -33,11 +33,11 @@ func GetStudyAssessmentModel() IStudyAssessmentModel {
 }
 
 type IStudyAssessmentModel interface {
-	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error)
-	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
+	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error)
+	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
 	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
 	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
-	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateStudyAssessmentArgs) error
+	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error
 	Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 }
 
@@ -45,73 +45,11 @@ type studyAssessmentModel struct {
 	assessmentBase
 }
 
-func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error) {
-	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
-	if err != nil {
-		log.Error(ctx, "get detail: get assessment failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-		)
-		return nil, err
-	}
-
-	// convert to assessment view
-	var (
-		views []*entity.AssessmentView
-		view  *entity.AssessmentView
-	)
-	if views, err = m.toViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
-		EnableProgram:    true,
-		EnableSubjects:   true,
-		EnableTeachers:   true,
-		EnableStudents:   true,
-		EnableClass:      true,
-		EnableLessonPlan: true,
-	}); err != nil {
-		log.Error(ctx, "Get: GetAssessmentUtils().toViews: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	view = views[0]
-
-	// construct result
-	result := entity.GetStudyAssessmentDetailResult{
-		ID:               view.ID,
-		Title:            view.Title,
-		ClassName:        view.Class.Name,
-		Teachers:         view.Teachers,
-		Students:         view.Students,
-		DueAt:            view.Schedule.DueAt,
-		LessonPlan:       view.LessonPlan,
-		LessonMaterials:  view.LessonMaterials,
-		CompleteAt:       view.CompleteTime,
-		RemainingTime:    0,
-		StudentViewItems: nil,
-		ScheduleID:       view.ScheduleID,
-		Status:           view.Status,
-	}
-
-	// fill remaining time
-	result.RemainingTime = int64(m.calcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
-
-	// fill student view items
-	result.StudentViewItems, err = m.getH5PStudentViewItems(ctx, operator, tx, view)
-	if err != nil {
-		log.Error(ctx, "get assessment detail: get student view items failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("view", view),
-		)
-		return nil, err
-	}
-
-	return &result, nil
+func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error) {
+	return m.assessmentBase.getDetail(ctx, tx, operator, id)
 }
 
-func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error) {
+func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error) {
 	// check args
 	if len(args.ClassTypes) == 0 {
 		errMsg := "list h5p assessments: require assessment type"
@@ -469,149 +407,8 @@ func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, opera
 	return newAssessmentIDs, nil
 }
 
-func (m *studyAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateStudyAssessmentArgs) error {
-	// validate
-	if !args.Action.Valid() {
-		log.Error(ctx, "update h5p assessment: invalid action", log.Any("args", args))
-		return constant.ErrInvalidArgs
-	}
-
-	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, dbo.MustGetDB(ctx), args.ID)
-	if err != nil {
-		log.Error(ctx, "update h5p assessment: get assessment failed",
-			log.Err(err),
-			log.Any("args", args),
-		)
-		return err
-	}
-
-	// permission check
-	hasP439, err := NewAssessmentPermissionChecker(operator).HasP439(ctx)
-	if err != nil {
-		return err
-	}
-	if !hasP439 {
-		log.Error(ctx, "update assessment: not have permission 439",
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return constant.ErrForbidden
-	}
-	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, tx, args.ID)
-	if err != nil {
-		log.Error(ctx, "update study assessment: get teacher ids failed by assessment id ",
-			log.Err(err),
-			log.String("assessment_id", args.ID),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-	hasOperator := false
-	for _, tid := range teacherIDs {
-		if tid == operator.UserID {
-			hasOperator = true
-			break
-		}
-	}
-	if !hasOperator {
-		log.Error(ctx, "update h5p assessment: teacher not int assessment",
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return constant.ErrForbidden
-	}
-	if assessment.Status == entity.AssessmentStatusComplete {
-		log.Error(ctx, "update h5p assessment: assessment has completed, not allow update",
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return ErrAssessmentHasCompleted
-	}
-
-	// update assessment students check property
-	if args.StudentIDs != nil {
-		if err := da.GetAssessmentAttendanceDA().UncheckStudents(ctx, tx, args.ID); err != nil {
-			log.Error(ctx, "update h5p assessment: uncheck student failed",
-				log.Err(err),
-				log.Any("args", args),
-			)
-			return err
-		}
-		if args.StudentIDs != nil && len(args.StudentIDs) > 0 {
-			if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, args.StudentIDs); err != nil {
-				log.Error(ctx, "update h5p assessment: batch check student failed",
-					log.Err(err),
-					log.Any("args", args),
-				)
-				return err
-			}
-		}
-	}
-
-	/// update contents
-	for _, lm := range args.LessonMaterials {
-		updateArgs := da.UpdatePartialAssessmentContentArgs{
-			AssessmentID:   args.ID,
-			ContentID:      lm.ID,
-			ContentComment: lm.Comment,
-			Checked:        lm.Checked,
-		}
-		if err = da.GetAssessmentContentDA().UpdatePartial(ctx, tx, updateArgs); err != nil {
-			log.Error(ctx, "update h5p assessment: update assessment content failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("update_args", updateArgs),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-	}
-
-	// get schedule
-	schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{assessment.ScheduleID}, nil)
-	if err != nil {
-		log.Error(ctx, "update h5p assessment: get plain schedule failed",
-			log.Err(err),
-			log.String("schedule_id", assessment.ScheduleID),
-			log.Any("args", args),
-		)
-		return err
-	}
-	if len(schedules) == 0 {
-		errMsg := "update h5p assessment: not found schedule"
-		log.Error(ctx, errMsg,
-			log.String("schedule_id", assessment.ScheduleID),
-			log.Any("args", args),
-		)
-		return errors.New(errMsg)
-	}
-	schedule := schedules[0]
-
-	// set scores and comments
-	if err := m.updateStudentViewItems(ctx, tx, operator, schedule.RoomID, args.StudentViewItems); err != nil {
-		log.Error(ctx, "update assessment: update student view items failed",
-			log.Err(err),
-			log.Any("args", args),
-			log.Any("schedule", schedule),
-			log.Any("operator", operator),
-		)
-		return err
-	}
-
-	// update assessment status
-	if args.Action == entity.UpdateAssessmentActionComplete {
-		if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
-			log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
-				log.Err(err),
-				log.Any("args", args),
-				log.Any("operator", operator),
-			)
-			return err
-		}
-	}
-
-	return nil
+func (m *studyAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error {
+	return m.assessmentBase.update(ctx, tx, operator, args)
 }
 
 func (m *studyAssessmentModel) Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error {

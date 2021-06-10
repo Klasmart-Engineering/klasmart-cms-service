@@ -80,7 +80,7 @@ func (s *Server) listAssessments(c *gin.Context) {
 		}
 	}
 
-	result, err := model.GetClassAndLiveAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	result, err := model.GetClassAndLiveAssessmentModel().List(ctx, dbo.MustGetDB(ctx), s.getOperator(c), &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, result)
@@ -174,7 +174,7 @@ func (s *Server) updateAssessment(c *gin.Context) {
 		return
 	}
 
-	err := model.GetClassAndLiveAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), s.getOperator(c), args)
+	err := model.GetClassAndLiveAssessmentModel().Update(ctx, dbo.MustGetDB(ctx), s.getOperator(c), &args)
 	switch err {
 	case nil:
 		c.JSON(http.StatusOK, http.StatusText(http.StatusOK))
@@ -230,7 +230,7 @@ func (s *Server) addAssessment(c *gin.Context) {
 	var newID string
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), args)
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), &args)
 		return err
 	})
 	switch err {
@@ -277,7 +277,7 @@ func (s *Server) addAssessmentForTest(c *gin.Context) {
 	var newID string
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
 		var err error
-		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), args)
+		newID, err = model.GetClassAndLiveAssessmentModel().Add(ctx, tx, s.getOperator(c), &args)
 		return err
 	})
 	switch err {

@@ -25,7 +25,7 @@ type IAssessmentContentDA interface {
 	GetLessonPlan(ctx context.Context, tx *dbo.DBContext, assessmentID string) (*entity.AssessmentContent, error)
 	GetLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) ([]*entity.AssessmentContent, error)
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentContent) error
-	UpdatePartial(ctx context.Context, tx *dbo.DBContext, args UpdatePartialAssessmentContentArgs) error
+	UpdatePartial(ctx context.Context, tx *dbo.DBContext, args *UpdatePartialAssessmentContentArgs) error
 	UncheckAllLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	BatchCheckLessonMaterials(ctx context.Context, tx *dbo.DBContext, assessmentID string, materialIDs []string) error
 }
@@ -100,7 +100,7 @@ func (*assessmentContentDA) BatchInsert(ctx context.Context, tx *dbo.DBContext, 
 	return nil
 }
 
-func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext, args UpdatePartialAssessmentContentArgs) error {
+func (*assessmentContentDA) UpdatePartial(ctx context.Context, tx *dbo.DBContext, args *UpdatePartialAssessmentContentArgs) error {
 	changes := map[string]interface{}{
 		"content_comment": args.ContentComment,
 		"checked":         args.Checked,

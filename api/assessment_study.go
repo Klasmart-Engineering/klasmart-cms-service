@@ -58,7 +58,7 @@ func (s *Server) listStudyAssessments(c *gin.Context) {
 	}
 	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 
-	result, err := model.GetStudyAssessmentModel().List(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+	result, err := model.GetStudyAssessmentModel().List(ctx, s.getOperator(c), dbo.MustGetDB(ctx), &args)
 	if err != nil {
 		log.Error(ctx, "list study assessments: call model list failed",
 			log.Err(err),
@@ -84,7 +84,7 @@ func (s *Server) listStudyAssessments(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "study assessment id"
-// @Success 200 {object} entity.GetStudyAssessmentDetailResult
+// @Success 200 {object} entity.AssessmentDetail
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse
@@ -126,7 +126,7 @@ func (s *Server) getStudyAssessmentDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "study assessment id"
-// @Param update_study_assessment_args body entity.UpdateStudyAssessmentArgs true "update study assessment args"
+// @Param update_assessment_args body entity.UpdateAssessmentArgs true "update assessment args"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -136,7 +136,7 @@ func (s *Server) getStudyAssessmentDetail(c *gin.Context) {
 func (s *Server) updateStudyAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	args := entity.UpdateStudyAssessmentArgs{}
+	args := entity.UpdateAssessmentArgs{}
 	if err := c.ShouldBind(&args); err != nil {
 		log.Error(ctx, "update study assessment: bind body json failed",
 			log.Err(err),
@@ -153,7 +153,7 @@ func (s *Server) updateStudyAssessment(c *gin.Context) {
 	}
 
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		return model.GetStudyAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+		return model.GetStudyAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), &args)
 	})
 	if err != nil {
 		log.Error(ctx, "update study assessment: call model failed",

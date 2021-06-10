@@ -176,13 +176,12 @@ type NullAssessmentStatus struct {
 
 type AssessmentDetail struct {
 	ID               string                          `json:"id"`
+	Title            string                          `json:"title"`
+	Status           AssessmentStatus                `json:"status"`
 	ScheduleID       string                          `json:"schedule_id"`
 	ScheduleTitle    string                          `json:"schedule_title"`
 	RoomID           string                          `json:"room_id"`
-	Title            string                          `json:"title"`
 	Class            AssessmentClass                 `json:"class"`
-	Status           AssessmentStatus                `json:"status"`
-	CompleteTime     int64                           `json:"complete_time"`
 	Teachers         []*AssessmentTeacher            `json:"teachers"`
 	Students         []*AssessmentStudent            `json:"students"`
 	Program          AssessmentProgram               `json:"program"`
@@ -191,6 +190,7 @@ type AssessmentDetail struct {
 	ClassLength      int                             `json:"class_length"`
 	DueAt            int64                           `json:"due_at"`
 	RemainingTime    int64                           `json:"remaining_time"`
+	CompleteTime     int64                           `json:"complete_time"`
 	LessonPlan       AssessmentDetailContent         `json:"lesson_plan"`
 	LessonMaterials  []*AssessmentDetailContent      `json:"lesson_materials"`
 	Outcomes         []*AssessmentDetailOutcome      `json:"outcomes"`
