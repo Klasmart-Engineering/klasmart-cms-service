@@ -20,21 +20,13 @@ func NewMappingCommand() *cli.Command {
 				Required: true,
 				Usage:    "\033[1;33mRequired!\033[0m specify mysql `connection string`, eg: \"user:password@tcp(127.0.0.1:3306)/kidsloop2?parseTime=true&charset=utf8mb4\"",
 			},
-			&cli.StringFlag{
-				Name:     "ams",
-				Required: true,
-				Usage:    "\033[1;33mRequired!\033[0m specify AMS `address`, eg: \"https://api.alpha.kidsloop.net/user/\"",
-			},
 		},
 		Action: func(c *cli.Context) error {
 			mysql := c.String("mysql")
-			ams := c.String("ams")
 
-			log.Debug(c.Context, "mapping",
-				log.String("mysql", mysql),
-				log.String("ams", ams))
+			log.Debug(c.Context, "mapping", log.String("mysql", mysql))
 
-			if mysql == "" || ams == "" {
+			if mysql == "" {
 				return constant.ErrInvalidArgs
 			}
 
@@ -46,9 +38,6 @@ func NewMappingCommand() *cli.Command {
 					ShowSQL:          true,
 					MaxOpenConns:     16,
 					MaxIdleConns:     2,
-				},
-				AMS: config.AMSConfig{
-					EndPoint: ams,
 				},
 			})
 
