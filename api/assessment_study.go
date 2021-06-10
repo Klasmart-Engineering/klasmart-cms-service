@@ -126,7 +126,7 @@ func (s *Server) getStudyAssessmentDetail(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "study assessment id"
-// @Param update_study_assessment_args body entity.UpdateStudyAssessmentArgs true "update study assessment args"
+// @Param update_assessment_args body entity.UpdateAssessmentArgs true "update assessment args"
 // @Success 200 {string} string "OK"
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
@@ -136,7 +136,7 @@ func (s *Server) getStudyAssessmentDetail(c *gin.Context) {
 func (s *Server) updateStudyAssessment(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	args := entity.UpdateStudyAssessmentArgs{}
+	args := entity.UpdateAssessmentArgs{}
 	if err := c.ShouldBind(&args); err != nil {
 		log.Error(ctx, "update study assessment: bind body json failed",
 			log.Err(err),

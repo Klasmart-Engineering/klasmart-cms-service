@@ -3,7 +3,9 @@ package model
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"sort"
 	"time"
 
@@ -251,6 +253,43 @@ func (m *assessmentBase) calcRemainingTime(dueAt int64, createdAt int64) time.Du
 		return 0
 	}
 	return time.Duration(r) * time.Second
+}
+
+func (m *assessmentBase) checkEditPermission(ctx context.Context, operator *entity.Operator, id string) error {
+	hasP439, err := NewAssessmentPermissionChecker(operator).HasP439(ctx)
+	if err != nil {
+		return err
+	}
+	if !hasP439 {
+		log.Error(ctx, "check edit permission: not have permission 439",
+			log.String("id", id),
+			log.Any("operator", operator),
+		)
+		return constant.ErrForbidden
+	}
+	teacherIDs, err := da.GetAssessmentAttendanceDA().GetTeacherIDsByAssessmentID(ctx, dbo.MustGetDB(ctx), id)
+	if err != nil {
+		log.Error(ctx, "check edit permission: get teacher ids failed by assessment id",
+			log.String("assessment_id", id),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	hasOperator := false
+	for _, tid := range teacherIDs {
+		if tid == operator.UserID {
+			hasOperator = true
+			break
+		}
+	}
+	if !hasOperator {
+		log.Error(ctx, "check edit permission: not found operator",
+			log.String("id", id),
+			log.Any("operator", operator),
+		)
+		return constant.ErrForbidden
+	}
+	return nil
 }
 
 func (m *assessmentBase) toViews(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessments []*entity.Assessment, options entity.ConvertToViewsOptions) ([]*entity.AssessmentView, error) {
@@ -988,6 +1027,209 @@ func (m *assessmentBase) addAttendances(ctx context.Context, tx *dbo.DBContext, 
 		)
 		return err
 	}
+	return nil
+}
+
+func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
+	// validate args
+	if !args.Action.Valid() {
+		log.Error(ctx, "update assessment: invalid action", log.Any("args", args))
+		return constant.ErrInvalidArgs
+	}
+	if args.Outcomes != nil {
+		for _, item := range args.Outcomes {
+			if item.Skip && item.NoneAchieved {
+				log.Error(ctx, "update assessment: check skip and none achieved combination", log.Any("args", args))
+				return constant.ErrInvalidArgs
+			}
+			if (item.Skip || item.NoneAchieved) && len(item.AttendanceIDs) > 0 {
+				log.Error(ctx, "update assessment: check skip and none achieved combination with attendance ids", log.Any("args", args))
+				return constant.ErrInvalidArgs
+			}
+		}
+	}
+
+	// check assessment status
+	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, dbo.MustGetDB(ctx), args.ID)
+	if err != nil {
+		log.Error(ctx, "update assessment: get assessment exclude soft deleted failed",
+			log.Err(err),
+			log.Any("args", args),
+		)
+		return err
+	}
+	if assessment.Status == entity.AssessmentStatusComplete {
+		log.Info(ctx, "update assessment: assessment has completed, not allow update",
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return ErrAssessmentHasCompleted
+	}
+
+	// permission check
+	if err := m.checkEditPermission(ctx, operator, args.ID); err != nil {
+		return err
+	}
+
+	if err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+		// update assessment attendances
+		if args.StudentIDs != nil {
+			if err := da.GetAssessmentAttendanceDA().UncheckStudents(ctx, tx, args.ID); err != nil {
+				log.Error(ctx, "update: da.GetAssessmentAttendanceDA().UncheckStudents: uncheck failed",
+					log.Err(err),
+					log.Any("args", args),
+				)
+				return err
+			}
+			if args.StudentIDs != nil && len(args.StudentIDs) > 0 {
+				if err := da.GetAssessmentAttendanceDA().BatchCheck(ctx, tx, args.ID, args.StudentIDs); err != nil {
+					log.Error(ctx, "update: da.GetAssessmentAttendanceDA().BatchCheck: check failed",
+						log.Err(err),
+						log.Any("args", args),
+					)
+					return err
+				}
+			}
+		}
+
+		if args.Outcomes != nil {
+			// update assessment outcomes
+			if err := da.GetAssessmentOutcomeDA().UncheckByAssessmentID(ctx, tx, args.ID); err != nil {
+				log.Error(ctx, "Update: da.GetAssessmentOutcomeDA().UncheckStudents: uncheck assessment outcome failed by assessment id",
+					log.Err(err),
+					log.Any("args", args),
+					log.String("id", args.ID),
+				)
+				return err
+			}
+			for _, oa := range args.Outcomes {
+				newAssessmentOutcome := entity.AssessmentOutcome{
+					AssessmentID: args.ID,
+					OutcomeID:    oa.OutcomeID,
+					Skip:         oa.Skip,
+					NoneAchieved: oa.NoneAchieved,
+					Checked:      true,
+				}
+				if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, newAssessmentOutcome); err != nil {
+					log.Error(ctx, "update assessment: batch update assessment outcome failed",
+						log.Err(err),
+						log.Any("new_assessment_outcome", newAssessmentOutcome),
+						log.Any("args", args),
+						log.String("assessment_id", args.ID),
+					)
+					return err
+				}
+			}
+
+			// update outcome attendances
+			var (
+				outcomeIDs         []string
+				outcomeAttendances []*entity.OutcomeAttendance
+			)
+			for _, oa := range args.Outcomes {
+				outcomeIDs = append(outcomeIDs, oa.OutcomeID)
+				if oa.Skip {
+					continue
+				}
+				for _, attendanceID := range oa.AttendanceIDs {
+					outcomeAttendances = append(outcomeAttendances, &entity.OutcomeAttendance{
+						ID:           utils.NewID(),
+						AssessmentID: args.ID,
+						OutcomeID:    oa.OutcomeID,
+						AttendanceID: attendanceID,
+					})
+				}
+			}
+			if err := da.GetOutcomeAttendanceDA().BatchDeleteByAssessmentIDAndOutcomeIDs(ctx, tx, args.ID, outcomeIDs); err != nil {
+				log.Error(ctx, "update assessment: batch delete outcome attendance map failed by outcome ids",
+					log.Err(err),
+					log.Strings("outcome_ids", outcomeIDs),
+					log.Any("args", args),
+				)
+				return err
+			}
+			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, outcomeAttendances); err != nil {
+				log.Error(ctx, "update assessment: batch insert outcome attendance map failed",
+					log.Err(err),
+					log.Any("outcome_attendances", outcomeAttendances),
+					log.Any("args", args),
+				)
+				return err
+			}
+		}
+
+		// update assessment contents
+		for _, ma := range args.LessonMaterials {
+			updateArgs := da.UpdatePartialAssessmentContentArgs{
+				AssessmentID:   args.ID,
+				ContentID:      ma.ID,
+				ContentComment: ma.Comment,
+				Checked:        ma.Checked,
+			}
+			if err = da.GetAssessmentContentDA().UpdatePartial(ctx, tx, updateArgs); err != nil {
+				log.Error(ctx, "Update: da.GetAssessmentContentDA().UpdatePartial: update failed",
+					log.Err(err),
+					log.Any("args", args),
+					log.Any("update_args", updateArgs),
+					log.Any("operator", operator),
+				)
+				return err
+			}
+		}
+
+		// get schedule
+		schedules, err := GetScheduleModel().GetVariableDataByIDs(ctx, operator, []string{assessment.ScheduleID}, nil)
+		if err != nil {
+			log.Error(ctx, "update class and live assessment: get plain schedule failed",
+				log.Err(err),
+				log.String("schedule_id", assessment.ScheduleID),
+				log.Any("args", args),
+			)
+			return err
+		}
+		if len(schedules) == 0 {
+			errMsg := "update class and live assessment: not found schedule"
+			log.Error(ctx, errMsg,
+				log.String("schedule_id", assessment.ScheduleID),
+				log.Any("args", args),
+			)
+			return errors.New(errMsg)
+		}
+		schedule := schedules[0]
+
+		// set scores and comments
+		if err := m.updateStudentViewItems(ctx, tx, operator, schedule.RoomID, args.StudentViewItems); err != nil {
+			log.Error(ctx, "update assessment: update student view items failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.Any("schedule", schedule),
+				log.Any("operator", operator),
+			)
+			return err
+		}
+
+		// update assessment status
+		if args.Action == entity.UpdateAssessmentActionComplete {
+			if err := da.GetAssessmentDA().UpdateStatus(ctx, tx, args.ID, entity.AssessmentStatusComplete); err != nil {
+				log.Error(ctx, "Update: da.GetAssessmentDA().UpdateStatus: update failed",
+					log.Err(err),
+					log.Any("args", args),
+					log.Any("operator", operator),
+				)
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		log.Error(ctx, "Update: tx failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+
 	return nil
 }
 
