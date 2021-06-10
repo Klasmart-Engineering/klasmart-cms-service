@@ -216,7 +216,6 @@ func (c *ContentService) doMappingOldContent(ctx context.Context, mapper Mapper,
 	if err != nil {
 		return nil, err
 	}
-
 	return propertySet, nil
 }
 func (c *ContentService) doMappingNewContent(ctx context.Context, mapper Mapper, content *ContentObject, properties []*entity.ContentProperty) (*PropertySet, error) {
@@ -282,7 +281,7 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 		tempSubCategory := mapper.SubCategory(ctx, org, propertySet.Program, propertySet.Category, propertySet.SubCategory[i])
 		newSubCategories = append(newSubCategories, tempSubCategory)
 	}
-	propertySet.SubCategory = newSubCategories
+	newPropertySet.SubCategory = newSubCategories
 
 	//age
 	newAges := make([]string, 0)
@@ -290,7 +289,7 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 		tempAge := mapper.Age(ctx, org, propertySet.Program, propertySet.Age[i])
 		newAges = append(newAges, tempAge)
 	}
-	propertySet.Age = newAges
+	newPropertySet.Age = newAges
 
 	//grade
 	newGrades := make([]string, 0)
@@ -298,9 +297,9 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 		tempGrade := mapper.Grade(ctx, org, propertySet.Program, propertySet.Grade[i])
 		newGrades = append(newAges, tempGrade)
 	}
-	propertySet.Grade = newGrades
+	newPropertySet.Grade = newGrades
 
-	return propertySet, nil
+	return newPropertySet, nil
 }
 
 func (c *ContentService) fetchContentData(ctx context.Context) ([]*ContentObject, map[string][]*entity.ContentProperty, error) {
