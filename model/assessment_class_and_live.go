@@ -68,10 +68,6 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 	var (
 		assessments []*entity.Assessment
 		cond        = da.QueryAssessmentConditions{
-			ClassTypes: entity.NullScheduleClassTypes{
-				Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
-				Valid: true,
-			},
 			OrgID: entity.NullString{
 				String: operator.OrgID,
 				Valid:  true,
@@ -91,6 +87,17 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		teachers    []*external.Teacher
 		scheduleIDs []string
 	)
+	if args.ClassType.Valid {
+		cond.ClassTypes = entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{args.ClassType.Value},
+			Valid: true,
+		}
+	} else {
+		cond.ClassTypes = entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
+			Valid: true,
+		}
+	}
 	if args.TeacherName.Valid {
 		if teachers, err = external.GetTeacherServiceProvider().Query(ctx, operator, operator.OrgID, args.TeacherName.String); err != nil {
 			log.Error(ctx, "List: external.GetTeacherServiceProvider().Query: query failed",
