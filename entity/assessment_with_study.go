@@ -44,31 +44,6 @@ type ListStudyAssessmentsResultItem struct {
 	CreateAt   int64  `json:"create_at"`
 }
 
-type GetStudyAssessmentDetailResult struct {
-	ID               string                          `json:"id"`
-	Title            string                          `json:"title"`
-	ClassName        string                          `json:"class_name"`
-	Teachers         []*AssessmentTeacher            `json:"teachers"`
-	Students         []*AssessmentStudent            `json:"students"`
-	DueAt            int64                           `json:"due_at"`
-	LessonPlan       *AssessmentLessonPlan           `json:"lesson_plan"`
-	LessonMaterials  []*AssessmentLessonMaterial     `json:"lesson_materials"`
-	CompleteAt       int64                           `json:"complete_at"`
-	RemainingTime    int64                           `json:"remaining_time"`
-	StudentViewItems []*AssessmentStudentViewH5PItem `json:"student_view_items"`
-	// debug
-	ScheduleID string           `json:"schedule_id"`
-	Status     AssessmentStatus `json:"status"`
-}
-
-type UpdateStudyAssessmentArgs struct {
-	ID               string                         `json:"id"`
-	Action           UpdateAssessmentAction         `json:"action" enums:"save,complete"`
-	StudentIDs       []string                       `json:"student_ids"`
-	LessonMaterials  []*UpdateAssessmentContentArgs `json:"lesson_materials"`
-	StudentViewItems []*UpdateAssessmentH5PStudent  `json:"student_view_items"`
-}
-
 type AddH5PAssessmentStudyInput struct {
 	ScheduleID string `json:"schedule_id"`
 }

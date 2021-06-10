@@ -12,7 +12,7 @@ import (
 type IAssessmentOutcomeDA interface {
 	dbo.Querier
 	BatchInsert(ctx context.Context, tx *dbo.DBContext, items []*entity.AssessmentOutcome) error
-	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error
+	UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item *entity.AssessmentOutcome) error
 	UncheckByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 	DeleteByAssessmentID(ctx context.Context, tx *dbo.DBContext, assessmentID string) error
 }
@@ -66,7 +66,7 @@ func (*assessmentOutcomeDA) DeleteByAssessmentID(ctx context.Context, tx *dbo.DB
 	return nil
 }
 
-func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item entity.AssessmentOutcome) error {
+func (*assessmentOutcomeDA) UpdateByAssessmentIDAndOutcomeID(ctx context.Context, tx *dbo.DBContext, item *entity.AssessmentOutcome) error {
 	changes := map[string]interface{}{
 		"skip":          item.Skip,
 		"none_achieved": item.NoneAchieved,
