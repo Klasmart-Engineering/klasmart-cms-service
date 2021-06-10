@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/urfave/cli/v2"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -132,6 +133,10 @@ type ContentObject struct {
 	VisibilitySetting string `gorm:"type:varchar(255);column:publish_scope" json:"publish_scope"`
 }
 
+func (cd *ContentObject) TableName() string {
+	return "cms_contents"
+}
+
 type ContentObjectDA struct {
 	s dbo.BaseDA
 }
@@ -167,8 +172,7 @@ func (cd *ContentObjectDA) SearchContentInternal(ctx context.Context, tx *dbo.DB
 type ContentService struct {
 }
 
-func (c *ContentService) Do(mapper Mapper) error {
-	ctx := context.Background()
+func (c *ContentService) Do(ctx context.Context, cliContext *cli.Context, mapper Mapper) error {
 	contentList, propertiesMap, err := c.fetchContentData(ctx)
 	if err != nil {
 		return err
@@ -258,37 +262,24 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 	}
 
 	//program
-	newProgram, err := mapper.Program(ctx, org, propertySet.Program)
-	if err != nil {
-		return nil, err
-	}
-	newPropertySet.Program = newProgram
+	newPropertySet.Program = mapper.Program(ctx, org, propertySet.Program)
 
 	//subjects
 	newSubjects := make([]string, 0)
 	for i := range propertySet.Subject {
-		tempSubject, err := mapper.Subject(ctx, org, propertySet.Program, propertySet.Subject[i])
-		if err != nil {
-			return nil, err
-		}
+		tempSubject := mapper.Subject(ctx, org, propertySet.Program, propertySet.Subject[i])
 		newSubjects = append(newSubjects, tempSubject)
 	}
 	newPropertySet.Subject = newSubjects
 
 	//category
-	newCategory, err := mapper.Category(ctx, org, propertySet.Program, propertySet.Category)
-	if err != nil {
-		return nil, err
-	}
+	newCategory := mapper.Category(ctx, org, propertySet.Program, propertySet.Category)
 	newPropertySet.Category = newCategory
 
 	//sub category
 	newSubCategories := make([]string, 0)
 	for i := range propertySet.SubCategory {
-		tempSubCategory, err := mapper.SubCategory(ctx, org, propertySet.Program, propertySet.Category, propertySet.SubCategory[i])
-		if err != nil {
-			return nil, err
-		}
+		tempSubCategory := mapper.SubCategory(ctx, org, propertySet.Program, propertySet.Category, propertySet.SubCategory[i])
 		newSubCategories = append(newSubCategories, tempSubCategory)
 	}
 	propertySet.SubCategory = newSubCategories
@@ -296,10 +287,7 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 	//age
 	newAges := make([]string, 0)
 	for i := range propertySet.Age {
-		tempAge, err := mapper.Age(ctx, org, propertySet.Program, propertySet.Age[i])
-		if err != nil {
-			return nil, err
-		}
+		tempAge := mapper.Age(ctx, org, propertySet.Program, propertySet.Age[i])
 		newAges = append(newAges, tempAge)
 	}
 	propertySet.Age = newAges
@@ -307,10 +295,7 @@ func (c *ContentService) doPropertyMapping(ctx context.Context, mapper Mapper, o
 	//grade
 	newGrades := make([]string, 0)
 	for i := range propertySet.Grade {
-		tempGrade, err := mapper.Grade(ctx, org, propertySet.Program, propertySet.Grade[i])
-		if err != nil {
-			return nil, err
-		}
+		tempGrade := mapper.Grade(ctx, org, propertySet.Program, propertySet.Grade[i])
 		newGrades = append(newAges, tempGrade)
 	}
 	propertySet.Grade = newGrades

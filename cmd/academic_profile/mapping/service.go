@@ -1,22 +1,29 @@
 package mapping
 
-import "sync"
+import (
+	"context"
+	"sync"
+
+	"github.com/urfave/cli/v2"
+)
 
 type Service interface {
-	Do(mapper Mapper) error
+	Do(ctx context.Context, cliContext *cli.Context, mapper Mapper) error
 }
 
 var (
-	serviceOnce sync.Once
-	services    = []Service{}
+	_serviceOnce sync.Once
+	_services    = []Service{}
 )
 
 func GetServices() []Service {
-	serviceOnce.Do(func() {
-		services = []Service{
+	_serviceOnce.Do(func() {
+		_services = []Service{
+			&ContentService{},
+			&OutcomeService{},
 			&Schedule{},
 		}
 	})
 
-	return services
+	return _services
 }

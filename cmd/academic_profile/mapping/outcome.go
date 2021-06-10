@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/urfave/cli/v2"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
@@ -51,11 +52,7 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 
 	programNeedUpdate := false
 	for i := range programs {
-		program, err := mapper.Program(ctx, outcome.OrganizationID, programs[i])
-		if err != nil {
-			log.Error(ctx, "mapping program failed", log.String("program", outcome.Program))
-			return false, nil, err
-		}
+		program := mapper.Program(ctx, outcome.OrganizationID, programs[i])
 		if program != programs[i] {
 			programs[i] = program
 			programNeedUpdate = true
@@ -74,11 +71,7 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 
 	subjectNeedUpdate := false
 	for i := range subjects {
-		subject, err := mapper.Subject(ctx, outcome.OrganizationID, outcome.Program, subjects[i])
-		if err != nil {
-			log.Error(ctx, "mapping subject failed", log.String("subject", subjects[i]))
-			return false, nil, err
-		}
+		subject := mapper.Subject(ctx, outcome.OrganizationID, outcome.Program, subjects[i])
 		if subject != subjects[i] {
 			subjects[i] = subject
 			subjectNeedUpdate = true
@@ -97,11 +90,7 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 
 	categoryNeedUpdate := false
 	for i := range categories {
-		category, err := mapper.Category(ctx, outcome.OrganizationID, outcome.Program, categories[i])
-		if err != nil {
-			log.Error(ctx, "mapping category failed", log.String("category", categories[i]))
-			return false, nil, err
-		}
+		category := mapper.Category(ctx, outcome.OrganizationID, outcome.Program, categories[i])
 		if category != categories[i] {
 			categories[i] = category
 			categoryNeedUpdate = true
@@ -120,11 +109,7 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 
 	subCategoryNeedUpdate := false
 	for i := range subCategories {
-		subCategory, err := mapper.SubCategory(ctx, outcome.OrganizationID, outcome.Program, categories[0], subCategories[i])
-		if err != nil {
-			log.Error(ctx, "mapping category failed", log.String("subCategory", subCategories[i]))
-			return false, nil, err
-		}
+		subCategory := mapper.SubCategory(ctx, outcome.OrganizationID, outcome.Program, categories[0], subCategories[i])
 		if subCategory != subCategories[i] {
 			subCategories[i] = subCategory
 			subCategoryNeedUpdate = true
@@ -143,11 +128,7 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 
 	ageNeedUpdate := false
 	for i := range ages {
-		age, err := mapper.Age(ctx, outcome.OrganizationID, outcome.Program, ages[i])
-		if err != nil {
-			log.Error(ctx, "mapping age failed", log.String("age", ages[i]))
-			return false, nil, err
-		}
+		age := mapper.Age(ctx, outcome.OrganizationID, outcome.Program, ages[i])
 		if age != ages[i] {
 			ages[i] = age
 			ageNeedUpdate = true
@@ -166,11 +147,7 @@ func (o OutcomeService) generateRelations(ctx context.Context, mapper Mapper, ou
 
 	gradeNeedUpdate := false
 	for i := range grades {
-		grade, err := mapper.Grade(ctx, outcome.OrganizationID, outcome.Program, grades[i])
-		if err != nil {
-			log.Error(ctx, "mapping grade failed", log.String("age", ages[i]))
-			return false, nil, err
-		}
+		grade := mapper.Grade(ctx, outcome.OrganizationID, outcome.Program, grades[i])
 		if grade != grades[i] {
 			grades[i] = grade
 			gradeNeedUpdate = true
@@ -227,61 +204,37 @@ func (o OutcomeService) mappingRelations(ctx context.Context, mapper Mapper, out
 	for i := range relations {
 		switch relations[i].RelationType {
 		case entity.ProgramType:
-			relationID, err := mapper.Program(ctx, outcome.OrganizationID, relations[i].RelationID)
-			if err != nil {
-				log.Error(ctx, "mapping program failed", log.Any("outcome", outcome), log.Any("relation", relations[i]))
-				return nil, err
-			}
+			relationID := mapper.Program(ctx, outcome.OrganizationID, relations[i].RelationID)
 			if relationID != relations[i].RelationID {
 				relations[i].RelationID = relationID
 				updateRelations = append(updateRelations, relations[i])
 			}
 		case entity.SubjectType:
-			relationID, err := mapper.Subject(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
-			if err != nil {
-				log.Error(ctx, "mapping subject failed", log.Any("outcome", outcome), log.Any("relation", relations[i]))
-				return nil, err
-			}
+			relationID := mapper.Subject(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
 			if relationID != relations[i].RelationID {
 				relations[i].RelationID = relationID
 				updateRelations = append(updateRelations, relations[i])
 			}
 		case entity.CategoryType:
-			relationID, err := mapper.Category(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
-			if err != nil {
-				log.Error(ctx, "mapping category failed", log.Any("outcome", outcome), log.Any("relation", relations[i]))
-				return nil, err
-			}
+			relationID := mapper.Category(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
 			if relationID != relations[i].RelationID {
 				relations[i].RelationID = relationID
 				updateRelations = append(updateRelations, relations[i])
 			}
 		case entity.SubcategoryType:
-			relationID, err := mapper.SubCategory(ctx, outcome.OrganizationID, programs[0], categories[0], relations[i].RelationID)
-			if err != nil {
-				log.Error(ctx, "mapping subCategory failed", log.Any("outcome", outcome), log.Any("relation", relations[i]))
-				return nil, err
-			}
+			relationID := mapper.SubCategory(ctx, outcome.OrganizationID, programs[0], categories[0], relations[i].RelationID)
 			if relationID != relations[i].RelationID {
 				relations[i].RelationID = relationID
 				updateRelations = append(updateRelations, relations[i])
 			}
 		case entity.AgeType:
-			relationID, err := mapper.Age(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
-			if err != nil {
-				log.Error(ctx, "mapping age failed", log.Any("outcome", outcome), log.Any("relation", relations[i]))
-				return nil, err
-			}
+			relationID := mapper.Age(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
 			if relationID != relations[i].RelationID {
 				relations[i].RelationID = relationID
 				updateRelations = append(updateRelations, relations[i])
 			}
 		case entity.GradeType:
-			relationID, err := mapper.Grade(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
-			if err != nil {
-				log.Error(ctx, "mapping grade failed", log.Any("outcome", outcome), log.Any("relation", relations[i]))
-				return nil, err
-			}
+			relationID := mapper.Grade(ctx, outcome.OrganizationID, programs[0], relations[i].RelationID)
 			if relationID != relations[i].RelationID {
 				relations[i].RelationID = relationID
 				updateRelations = append(updateRelations, relations[i])
@@ -332,9 +285,7 @@ func (o OutcomeService) handle(ctx context.Context, mapper Mapper, outcome *enti
 	return nil
 }
 
-func (o OutcomeService) Do(mapper Mapper) error {
-	ctx := context.Background()
-
+func (o OutcomeService) Do(ctx context.Context, cliContext *cli.Context, mapper Mapper) error {
 	outcomes, relations, err := o.fetch(ctx)
 	if err != nil {
 		log.Error(ctx, "fetch failed")
