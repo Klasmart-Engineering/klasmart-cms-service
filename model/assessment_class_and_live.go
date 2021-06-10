@@ -34,9 +34,9 @@ func GetClassAndLiveAssessmentModel() IClassAndLiveAssessmentModel {
 
 type IClassAndLiveAssessmentModel interface {
 	GetDetail(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, id string) (*entity.AssessmentDetail, error)
-	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
-	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error)
-	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error
+	List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error)
+	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddAssessmentArgs) (string, error)
+	Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.UpdateAssessmentArgs) error
 }
 
 type classAndLiveAssessmentModel struct {
@@ -47,7 +47,7 @@ func (m *classAndLiveAssessmentModel) GetDetail(ctx context.Context, tx *dbo.DBC
 	return m.assessmentBase.getDetail(ctx, tx, operator, id)
 }
 
-func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
+func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.QueryAssessmentsArgs) (*entity.ListAssessmentsResult, error) {
 	// check permission
 	var (
 		checker = NewAssessmentPermissionChecker(operator)
@@ -194,7 +194,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 	return &result, nil
 }
 
-func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.AddAssessmentArgs) (string, error) {
+func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddAssessmentArgs) (string, error) {
 	log.Debug(ctx, "add assessment args", log.Any("args", args), log.Any("operator", operator))
 
 	// clean data
@@ -481,7 +481,7 @@ func (m *classAndLiveAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext
 	return newAssessmentID, nil
 }
 
-func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
+func (m *classAndLiveAssessmentModel) Update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.UpdateAssessmentArgs) error {
 	return m.assessmentBase.update(ctx, tx, operator, args)
 }
 

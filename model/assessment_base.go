@@ -1030,7 +1030,7 @@ func (m *assessmentBase) addAttendances(ctx context.Context, tx *dbo.DBContext, 
 	return nil
 }
 
-func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args entity.UpdateAssessmentArgs) error {
+func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.UpdateAssessmentArgs) error {
 	// validate args
 	if !args.Action.Valid() {
 		log.Error(ctx, "update assessment: invalid action", log.Any("args", args))
@@ -1110,7 +1110,7 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 					NoneAchieved: oa.NoneAchieved,
 					Checked:      true,
 				}
-				if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, newAssessmentOutcome); err != nil {
+				if err := da.GetAssessmentOutcomeDA().UpdateByAssessmentIDAndOutcomeID(ctx, tx, &newAssessmentOutcome); err != nil {
 					log.Error(ctx, "update assessment: batch update assessment outcome failed",
 						log.Err(err),
 						log.Any("new_assessment_outcome", newAssessmentOutcome),
@@ -1166,7 +1166,7 @@ func (m *assessmentBase) update(ctx context.Context, tx *dbo.DBContext, operator
 				ContentComment: ma.Comment,
 				Checked:        ma.Checked,
 			}
-			if err = da.GetAssessmentContentDA().UpdatePartial(ctx, tx, updateArgs); err != nil {
+			if err = da.GetAssessmentContentDA().UpdatePartial(ctx, tx, &updateArgs); err != nil {
 				log.Error(ctx, "Update: da.GetAssessmentContentDA().UpdatePartial: update failed",
 					log.Err(err),
 					log.Any("args", args),

@@ -34,10 +34,10 @@ func GetStudyAssessmentModel() IStudyAssessmentModel {
 
 type IStudyAssessmentModel interface {
 	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error)
-	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
+	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
 	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
 	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
-	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateAssessmentArgs) error
+	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error
 	Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 }
 
@@ -49,7 +49,7 @@ func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.O
 	return m.assessmentBase.getDetail(ctx, tx, operator, id)
 }
 
-func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error) {
+func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error) {
 	// check args
 	if len(args.ClassTypes) == 0 {
 		errMsg := "list h5p assessments: require assessment type"
@@ -407,7 +407,7 @@ func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, opera
 	return newAssessmentIDs, nil
 }
 
-func (m *studyAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.UpdateAssessmentArgs) error {
+func (m *studyAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error {
 	return m.assessmentBase.update(ctx, tx, operator, args)
 }
 

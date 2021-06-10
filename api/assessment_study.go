@@ -58,7 +58,7 @@ func (s *Server) listStudyAssessments(c *gin.Context) {
 	}
 	args.Pager = utils.GetDboPager(c.Query("page"), c.Query("page_size"))
 
-	result, err := model.GetStudyAssessmentModel().List(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+	result, err := model.GetStudyAssessmentModel().List(ctx, s.getOperator(c), dbo.MustGetDB(ctx), &args)
 	if err != nil {
 		log.Error(ctx, "list study assessments: call model list failed",
 			log.Err(err),
@@ -153,7 +153,7 @@ func (s *Server) updateStudyAssessment(c *gin.Context) {
 	}
 
 	err := dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		return model.GetStudyAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), args)
+		return model.GetStudyAssessmentModel().Update(ctx, s.getOperator(c), dbo.MustGetDB(ctx), &args)
 	})
 	if err != nil {
 		log.Error(ctx, "update study assessment: call model failed",
