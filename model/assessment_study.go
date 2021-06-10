@@ -33,7 +33,7 @@ func GetStudyAssessmentModel() IStudyAssessmentModel {
 }
 
 type IStudyAssessmentModel interface {
-	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error)
+	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
 	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
 	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
@@ -45,70 +45,8 @@ type studyAssessmentModel struct {
 	assessmentBase
 }
 
-func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.GetStudyAssessmentDetailResult, error) {
-	assessment, err := da.GetAssessmentDA().GetExcludeSoftDeleted(ctx, tx, id)
-	if err != nil {
-		log.Error(ctx, "get detail: get assessment failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-		)
-		return nil, err
-	}
-
-	// convert to assessment view
-	var (
-		views []*entity.AssessmentView
-		view  *entity.AssessmentView
-	)
-	if views, err = m.toViews(ctx, tx, operator, []*entity.Assessment{assessment}, entity.ConvertToViewsOptions{
-		EnableProgram:    true,
-		EnableSubjects:   true,
-		EnableTeachers:   true,
-		EnableStudents:   true,
-		EnableClass:      true,
-		EnableLessonPlan: true,
-	}); err != nil {
-		log.Error(ctx, "Get: GetAssessmentUtils().toViews: get failed",
-			log.Err(err),
-			log.String("assessment_id", id),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	view = views[0]
-
-	// construct result
-	result := entity.GetStudyAssessmentDetailResult{
-		ID:               view.ID,
-		Title:            view.Title,
-		ClassName:        view.Class.Name,
-		Teachers:         view.Teachers,
-		Students:         view.Students,
-		DueAt:            view.Schedule.DueAt,
-		LessonPlan:       view.LessonPlan,
-		LessonMaterials:  view.LessonMaterials,
-		CompleteAt:       view.CompleteTime,
-		RemainingTime:    0,
-		StudentViewItems: nil,
-		ScheduleID:       view.ScheduleID,
-		Status:           view.Status,
-	}
-
-	// fill remaining time
-	result.RemainingTime = int64(m.calcRemainingTime(view.Schedule.DueAt, view.CreateAt).Seconds())
-
-	// fill student view items
-	result.StudentViewItems, err = m.getH5PStudentViewItems(ctx, operator, tx, view)
-	if err != nil {
-		log.Error(ctx, "get assessment detail: get student view items failed",
-			log.Err(err),
-			log.Any("operator", operator),
-			log.Any("view", view),
-		)
-		return nil, err
-	}
-
-	return &result, nil
+func (m *studyAssessmentModel) GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error) {
+	return m.assessmentBase.getDetail(ctx, tx, operator, id)
 }
 
 func (m *studyAssessmentModel) List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error) {

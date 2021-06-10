@@ -84,7 +84,7 @@ func (s *Server) listStudyAssessments(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "study assessment id"
-// @Success 200 {object} entity.GetStudyAssessmentDetailResult
+// @Success 200 {object} entity.AssessmentDetail
 // @Failure 400 {object} BadRequestResponse
 // @Failure 403 {object} ForbiddenResponse
 // @Failure 404 {object} NotFoundResponse

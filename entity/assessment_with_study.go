@@ -47,18 +47,21 @@ type ListStudyAssessmentsResultItem struct {
 type GetStudyAssessmentDetailResult struct {
 	ID               string                          `json:"id"`
 	Title            string                          `json:"title"`
+	Status           AssessmentStatus                `json:"status"`
+	ScheduleID       string                          `json:"schedule_id"`
+	ScheduleTitle    string                          `json:"schedule_title"`
+	RoomID           string                          `json:"room_id"`
 	ClassName        string                          `json:"class_name"`
 	Teachers         []*AssessmentTeacher            `json:"teachers"`
 	Students         []*AssessmentStudent            `json:"students"`
 	DueAt            int64                           `json:"due_at"`
+	RemainingTime    int64                           `json:"remaining_time"`
+	CompleteAt       int64                           `json:"complete_at"`
 	LessonPlan       *AssessmentLessonPlan           `json:"lesson_plan"`
 	LessonMaterials  []*AssessmentLessonMaterial     `json:"lesson_materials"`
-	CompleteAt       int64                           `json:"complete_at"`
-	RemainingTime    int64                           `json:"remaining_time"`
 	StudentViewItems []*AssessmentStudentViewH5PItem `json:"student_view_items"`
+	Outcomes         []*AssessmentDetailOutcome      `json:"outcomes"`
 	// debug
-	ScheduleID string           `json:"schedule_id"`
-	Status     AssessmentStatus `json:"status"`
 }
 
 type UpdateStudyAssessmentArgs struct {
