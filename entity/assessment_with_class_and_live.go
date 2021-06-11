@@ -5,15 +5,14 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 )
 
-type AddAssessmentArgs struct {
-	Types         []ScheduleClassType `json:"types"`
-	ScheduleID    string              `json:"schedule_id"`
-	AttendanceIDs []string            `json:"attendance_ids"`
-	ClassLength   int                 `json:"class_length"`
-	ClassEndTime  int64               `json:"class_end_time"`
+type AddClassAndLiveAssessmentArgs struct {
+	ScheduleID    string   `json:"schedule_id"`
+	AttendanceIDs []string `json:"attendance_ids"`
+	ClassLength   int      `json:"class_length"`
+	ClassEndTime  int64    `json:"class_end_time"`
 }
 
-func (a *AddAssessmentArgs) Valid() error {
+func (a *AddClassAndLiveAssessmentArgs) Valid() error {
 	return nil
 }
 
@@ -131,15 +130,17 @@ type AssessmentLessonMaterial struct {
 }
 
 type AssessmentExternalLessonPlan struct {
-	ID        string                              `json:"id"`
-	Name      string                              `json:"name"`
-	Materials []*AssessmentExternalLessonMaterial `json:"materials"`
+	ID         string                              `json:"id"`
+	Name       string                              `json:"name"`
+	OutcomeIDs []string                            `json:"outcome_ids"`
+	Materials  []*AssessmentExternalLessonMaterial `json:"materials"`
 }
 
 type AssessmentExternalLessonMaterial struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Source string `json:"source"`
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	Source     string   `json:"source"`
+	OutcomeIDs []string `json:"outcome_ids"`
 }
 
 type AssessmentItem struct {

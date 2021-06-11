@@ -6,7 +6,9 @@ import (
 	"errors"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
+	"gitlab.badanamu.com.cn/calmisland/kidsloop2/mutex"
 	"sort"
+	"strings"
 	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
@@ -875,11 +877,8 @@ func (m *assessmentBase) getH5PStudentViewItems(ctx context.Context, operator *e
 
 func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, lessonPlanIDs []string) (map[string]*entity.AssessmentExternalLessonPlan, error) {
 	lessonPlanIDs = utils.SliceDeduplication(lessonPlanIDs)
-	var (
-		err         error
-		lessonPlans = make([]*entity.ContentInfoWithDetails, 0, len(lessonPlanIDs))
-	)
-	lessonPlanIDs, err = GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
+
+	lessonPlanIDs, err := GetContentModel().GetLatestContentIDByIDList(ctx, tx, lessonPlanIDs)
 	if err != nil {
 		log.Error(ctx, "batchGetLatestLessonPlanMap: GetContentModel().GetLatestContentIDByIDList: get failed",
 			log.Err(err),
@@ -887,7 +886,7 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 		)
 		return nil, err
 	}
-	lessonPlans, err = GetContentModel().GetContentByIDList(ctx, tx, lessonPlanIDs, operator)
+	lessonPlans, err := GetContentModel().GetContentByIDList(ctx, tx, lessonPlanIDs, operator)
 	if err != nil {
 		log.Error(ctx, "toViews: GetContentModel().GetContentByIDList: get failed",
 			log.Err(err),
@@ -895,11 +894,12 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 		)
 		return nil, err
 	}
-	lessonPlanMap := make(map[string]*entity.AssessmentExternalLessonPlan, len(lessonPlans))
+	result := make(map[string]*entity.AssessmentExternalLessonPlan, len(lessonPlans))
 	for _, lp := range lessonPlans {
-		lessonPlanMap[lp.ID] = &entity.AssessmentExternalLessonPlan{
-			ID:   lp.ID,
-			Name: lp.Name,
+		result[lp.ID] = &entity.AssessmentExternalLessonPlan{
+			ID:         lp.ID,
+			Name:       lp.Name,
+			OutcomeIDs: lp.Outcomes,
 		}
 	}
 
@@ -912,7 +912,7 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 		)
 		return nil, err
 	}
-	for id, lp := range lessonPlanMap {
+	for id, lp := range result {
 		lms := m2[id]
 		for _, lm := range lms {
 			newMaterial := &entity.AssessmentExternalLessonMaterial{
@@ -926,7 +926,30 @@ func (m *assessmentBase) batchGetLatestLessonPlanMap(ctx context.Context, tx *db
 			lp.Materials = append(lp.Materials, newMaterial)
 		}
 	}
-	return lessonPlanMap, nil
+
+	// fill outcomes
+	var lessonMaterialIDs []string
+	for _, lp := range result {
+		for _, lm := range lp.Materials {
+			lessonMaterialIDs = append(lessonMaterialIDs, lm.ID)
+		}
+	}
+	lessonMaterials, err := GetContentModel().GetRawContentByIDList(ctx, tx, lessonMaterialIDs)
+	lessonMaterialMap := make(map[string]*entity.Content, len(lessonMaterials))
+	for _, lm := range lessonMaterials {
+		lessonMaterialMap[lm.ID] = lm
+	}
+	for _, lp := range result {
+		lessonMaterialIDs = append(lessonMaterialIDs, lp.ID)
+		for _, lm := range lp.Materials {
+			lm2 := lessonMaterialMap[lm.ID]
+			if lm2 != nil {
+				lm.OutcomeIDs = strings.Split(lm2.Outcomes, constant.StringArraySeparator)
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, ids []string) (map[string]*MaterialData, error) {
@@ -954,6 +977,652 @@ func (m *assessmentBase) batchGetLessonMaterialDataMap(ctx context.Context, tx *
 		}
 	}
 	return result, nil
+}
+
+// add: DEPRECATED
+func (m *assessmentBase) add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args *entity.AddAssessmentArgs) (string, error) {
+	log.Debug(ctx, "add assessment: print args", log.Any("args", args), log.Any("operator", operator))
+
+	// use distributed lock
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentAddLock, args.ScheduleID)
+	if err != nil {
+		log.Error(ctx, "add assessment: lock failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
+	// check if assessment already exits
+	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
+		ClassTypes: entity.NullScheduleClassTypes{
+			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeOnlineClass, entity.ScheduleClassTypeOfflineClass},
+			Valid: true,
+		},
+		ScheduleIDs: entity.NullStrings{
+			Strings: []string{args.ScheduleID},
+			Valid:   true,
+		},
+	}, entity.Assessment{})
+	if err != nil {
+		log.Error(ctx, "Add: da.GetAssessmentDA().Query: query failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+	if count > 0 {
+		log.Info(ctx, "Add: assessment already exists",
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", nil
+	}
+
+	// get contents
+	var (
+		latestContent   *entity.ContentInfoWithDetails
+		materialIDs     []string
+		materials       []*SubContentsWithName
+		materialDetails []*entity.ContentInfoWithDetails
+		contents        []*entity.ContentInfoWithDetails
+	)
+	if latestContent, err = GetContentModel().GetVisibleContentByID(ctx, dbo.MustGetDB(ctx), args.LessonPlanID, operator); err != nil {
+		log.Warn(ctx, "Add: GetContentModel().GetVisibleContentByID: get latest content failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+	} else {
+		contents = append(contents, latestContent)
+		if materials, err = GetContentModel().GetContentSubContentsByID(ctx, dbo.MustGetDB(ctx), latestContent.ID, operator); err != nil {
+			log.Warn(ctx, "Add: GetContentModel().GetContentSubContentsByID: get materials failed",
+				log.Err(err),
+				log.Any("args", args),
+				log.String("latest_lesson_plan_id", latestContent.ID),
+				log.Any("latest_content", latestContent),
+				log.Any("operator", operator),
+			)
+		} else {
+			for _, m := range materials {
+				materialIDs = append(materialIDs, m.ID)
+			}
+			materialIDs = utils.SliceDeduplicationExcludeEmpty(materialIDs)
+			if materialDetails, err = GetContentModel().GetContentByIDList(ctx, dbo.MustGetDB(ctx), materialIDs, operator); err != nil {
+				log.Warn(ctx, "Add: GetContentModel().GetContentByIDList: get contents failed",
+					log.Err(err),
+					log.Strings("material_ids", materialIDs),
+					log.Any("latest_content", latestContent),
+					log.Any("args", args),
+					log.Any("operator", operator),
+				)
+			} else {
+				contents = append(contents, materialDetails...)
+			}
+		}
+	}
+
+	// get outcomes
+	var (
+		outcomeIDs []string
+		outcomes   []*entity.Outcome
+	)
+	for _, c := range contents {
+		outcomeIDs = append(outcomeIDs, c.Outcomes...)
+	}
+	if len(outcomeIDs) > 0 {
+		outcomeIDs = utils.SliceDeduplication(outcomeIDs)
+		if outcomes, err = GetOutcomeModel().GetByIDs(ctx, operator, dbo.MustGetDB(ctx), outcomeIDs); err != nil {
+			log.Error(ctx, "Add: GetOutcomeModel().GetByIDs: get failed",
+				log.Err(err),
+				log.Strings("outcome_ids", outcomeIDs),
+				log.Any("args", args),
+				log.Any("operator", operator),
+			)
+			return "", err
+		}
+	}
+
+	// add assessment
+	var (
+		newAssessmentID = utils.NewID()
+		now             = time.Now().Unix()
+		newAssessment   = entity.Assessment{
+			ID:           newAssessmentID,
+			ScheduleID:   args.ScheduleID,
+			Title:        args.Title,
+			Status:       entity.AssessmentStatusInProgress,
+			CreateAt:     now,
+			UpdateAt:     now,
+			ClassLength:  args.ClassLength,
+			ClassEndTime: args.ClassEndTime,
+		}
+	)
+	if _, err := da.GetAssessmentDA().InsertTx(ctx, tx, &newAssessment); err != nil {
+		log.Error(ctx, "add assessment: add failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("new_item", newAssessment),
+		)
+		return "", err
+	}
+
+	// add assessment attendances
+	if err = m.addAttendances(ctx, tx, operator, entity.AddAttendancesInput{
+		AssessmentID:      newAssessmentID,
+		ScheduleRelations: args.Attendances,
+	}); err != nil {
+		log.Error(ctx, "Add: m.addAssessmentAttendances: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+
+	// add assessment outcomes
+	if err = m.addAssessmentOutcomes(ctx, tx, operator, newAssessmentID, outcomes); err != nil {
+		log.Error(ctx, "Add: m.addAssessmentOutcomes: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("outcomes", outcomes),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+
+	// add outcome attendances
+	if err = m.addOutcomeAttendances(ctx, tx, operator, newAssessmentID, outcomes, args.Attendances); err != nil {
+		log.Error(ctx, "Add: m.addOutcomeAttendances: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("outcomes", outcomes),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+
+	// add assessment contents
+	if err = m.addAssessmentContentsAndOutcomes(ctx, tx, operator, newAssessmentID, contents); err != nil {
+		log.Error(ctx, "Add: m.addAssessmentContentsAndOutcomes: add failed",
+			log.Err(err),
+			log.String("assessment_id", newAssessmentID),
+			log.Any("contents", contents),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return "", err
+	}
+
+	return newAssessmentID, nil
+}
+
+func (m *assessmentBase) batchAdd(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs) ([]string, error) {
+	log.Debug(ctx, "batch add assessments: print args", log.Any("args", args), log.Any("operator", operator))
+
+	// get schedule ids
+	var scheduleIDs []string
+	for _, item := range args {
+		scheduleIDs = append(scheduleIDs, item.ScheduleID)
+	}
+	scheduleIDs = utils.SliceDeduplicationExcludeEmpty(scheduleIDs)
+
+	// use distributed lock
+	lockKey := strings.Join(scheduleIDs, "_")
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixAssessmentAddLock, lockKey)
+	if err != nil {
+		log.Error(ctx, "add assessment: lock failed",
+			log.Err(err),
+			log.Any("args", args),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+
+	// check if assessment already exits
+	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
+		ScheduleIDs: entity.NullStrings{
+			Strings: scheduleIDs,
+			Valid:   true,
+		},
+	}, entity.Assessment{})
+	if err != nil {
+		log.Error(ctx, "batch add assessments: count failed",
+			log.Err(err),
+			log.Strings("schedule_id", scheduleIDs),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+	if count > 0 {
+		log.Info(ctx, "batch add assessments: assessment already exists",
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("operator", operator),
+		)
+		return nil, nil
+	}
+
+	// get contents
+	var lessonPlanIDs []string
+	for _, item := range args {
+		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
+	}
+	lessonPlanMap, err := m.batchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs)
+	if err != nil {
+		log.Error(ctx, "batch add assessments: batch get latest lesson plan map failed",
+			log.Err(err),
+			log.Strings("lesson_plan_ids", lessonPlanIDs),
+		)
+		return nil, err
+	}
+
+	// add assessment
+	newAssessments := make([]*entity.Assessment, 0, len(scheduleIDs))
+	now := time.Now().Unix()
+	for _, item := range args {
+		newAssessments = append(newAssessments, &entity.Assessment{
+			ID:         utils.NewID(),
+			ScheduleID: item.ScheduleID,
+			Title:      item.Title,
+			Status:     entity.AssessmentStatusInProgress,
+			CreateAt:   now,
+			UpdateAt:   now,
+		})
+	}
+	if err := da.GetAssessmentDA().BatchInsert(ctx, tx, newAssessments); err != nil {
+		log.Error(ctx, "batch add assessments: batch insert assessments failed",
+			log.Err(err),
+			log.Strings("schedule_ids", scheduleIDs),
+			log.Any("new_assessments", newAssessments),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	// add attendances
+	scheduleIDToAssessmentIDMap := make(map[string]string, len(newAssessments))
+	for _, item := range newAssessments {
+		scheduleIDToAssessmentIDMap[item.ScheduleID] = item.ID
+	}
+	var attendances []*entity.AssessmentAttendance
+	for _, item := range args {
+		for _, attendance := range item.Attendances {
+			newAttendance := entity.AssessmentAttendance{
+				ID:           utils.NewID(),
+				AssessmentID: scheduleIDToAssessmentIDMap[item.ScheduleID],
+				AttendanceID: attendance.RelationID,
+				Checked:      true,
+			}
+			switch attendance.RelationType {
+			case entity.ScheduleRelationTypeClassRosterStudent:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+			case entity.ScheduleRelationTypeClassRosterTeacher:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
+				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+			case entity.ScheduleRelationTypeParticipantStudent:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
+			case entity.ScheduleRelationTypeParticipantTeacher:
+				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
+				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
+			default:
+				continue
+			}
+			attendances = append(attendances, &newAttendance)
+		}
+	}
+	if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, attendances); err != nil {
+		log.Error(ctx, "batch add assessments: batch insert attendance failed",
+			log.Err(err),
+			log.Any("attendances", attendances),
+			log.Any("args", args),
+		)
+		return nil, err
+	}
+
+	scheduleIDToArgsItemMap := make(map[string]*entity.AddAssessmentArgs, len(args))
+	for _, item := range args {
+		scheduleIDToArgsItemMap[item.ScheduleID] = item
+	}
+
+	// add contents
+	var assessmentContents []*entity.AssessmentContent
+	assessmentContentKeys := map[[2]string]bool{}
+	for _, a := range newAssessments {
+		schedule := scheduleIDToArgsItemMap[a.ScheduleID]
+		if schedule == nil {
+			continue
+		}
+		lp := lessonPlanMap[schedule.LessonPlanID]
+		if lp == nil {
+			continue
+		}
+		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
+			ID:           utils.NewID(),
+			AssessmentID: a.ID,
+			ContentID:    lp.ID,
+			ContentName:  lp.Name,
+			ContentType:  entity.ContentTypePlan,
+			Checked:      true,
+		})
+		for _, lm := range lp.Materials {
+			key := [2]string{a.ID, lm.ID}
+			if assessmentContentKeys[key] {
+				continue
+			}
+			assessmentContentKeys[key] = true
+			assessmentContents = append(assessmentContents, &entity.AssessmentContent{
+				ID:           utils.NewID(),
+				AssessmentID: a.ID,
+				ContentID:    lm.ID,
+				ContentName:  lm.Name,
+				ContentType:  entity.ContentTypeMaterial,
+				Checked:      true,
+			})
+		}
+	}
+	if err := da.GetAssessmentContentDA().BatchInsert(ctx, tx, assessmentContents); err != nil {
+		log.Error(ctx, "batch add assessments: batch insert assessment content failed",
+			log.Err(err),
+			log.Any("schedule_ids", scheduleIDs),
+			log.Any("assessment_contents", assessmentContents),
+			log.Any("operator", operator),
+		)
+		return nil, err
+	}
+
+	// get outcomes
+	var (
+		outcomeIDs                []string
+		scheduleIDToOutcomeIDsMap = make(map[string][]string, len(args))
+	)
+	for _, item := range args {
+		lp := lessonPlanMap[item.LessonPlanID]
+		if lp == nil {
+			continue
+		}
+		scheduleIDToOutcomeIDsMap[item.ScheduleID] = lp.OutcomeIDs
+		outcomeIDs = append(outcomeIDs, lp.OutcomeIDs...)
+	}
+	outcomes := make([]*entity.Outcome, 0, len(outcomeIDs))
+	if len(outcomeIDs) > 0 {
+		outcomeIDs = utils.SliceDeduplication(outcomeIDs)
+		if outcomes, err = GetOutcomeModel().GetByIDs(ctx, operator, tx, outcomeIDs); err != nil {
+			log.Error(ctx, "batch add assessments: batch get outcomes failed",
+				log.Err(err),
+				log.Strings("outcome_ids", outcomeIDs),
+				log.Any("args", args),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+	}
+	outcomeMap := make(map[string]*entity.Outcome, len(outcomeIDs))
+	for _, o := range outcomes {
+		outcomeMap[o.ID] = o
+	}
+
+	// add assessment outcomes
+	if len(outcomes) > 0 {
+		var assessmentOutcomes []*entity.AssessmentOutcome
+		for _, a := range newAssessments {
+			outcomeIDs := scheduleIDToOutcomeIDsMap[a.ScheduleID]
+			for _, outcomeID := range outcomeIDs {
+				o := outcomeMap[outcomeID]
+				assumed := false
+				if o != nil {
+					assumed = o.Assumed
+				}
+				assessmentOutcomes = append(assessmentOutcomes, &entity.AssessmentOutcome{
+					ID:           utils.NewID(),
+					AssessmentID: a.ID,
+					OutcomeID:    outcomeID,
+					Skip:         false,
+					NoneAchieved: assumed,
+					Checked:      true,
+				})
+			}
+		}
+		if len(assessmentOutcomes) > 0 {
+			if err := da.GetAssessmentOutcomeDA().BatchInsert(ctx, tx, assessmentOutcomes); err != nil {
+				log.Error(ctx, "batch add assessments: batch insert assessment outcome failed",
+					log.Err(err),
+					log.Any("assessment_outcomes", assessmentOutcomes),
+					log.Any("outcomes", outcomes),
+					log.Any("operator", operator),
+				)
+				return nil, err
+			}
+		}
+	}
+
+	// add outcome attendances
+	if len(outcomes) > 0 {
+		var outcomeAttendances []*entity.OutcomeAttendance
+		for _, a := range newAssessments {
+			argsItem := scheduleIDToArgsItemMap[a.ScheduleID]
+			if argsItem == nil {
+				continue
+			}
+			studentIDs := make([]string, 0, len(argsItem.Attendances))
+			for _, a2 := range argsItem.Attendances {
+				if a2.RelationType == entity.ScheduleRelationTypeClassRosterStudent ||
+					a2.RelationType == entity.ScheduleRelationTypeParticipantStudent {
+					studentIDs = append(studentIDs, a2.RelationID)
+				}
+			}
+			outcomeIDs := scheduleIDToOutcomeIDsMap[a.ScheduleID]
+			for _, outcomeID := range outcomeIDs {
+				outcome := outcomeMap[outcomeID]
+				if outcome == nil {
+					continue
+				}
+				if !outcome.Assumed {
+					continue
+				}
+				for _, sid := range studentIDs {
+					outcomeAttendances = append(outcomeAttendances, &entity.OutcomeAttendance{
+						ID:           utils.NewID(),
+						AssessmentID: a.ID,
+						OutcomeID:    outcome.ID,
+						AttendanceID: sid,
+					})
+				}
+			}
+		}
+		if len(outcomeAttendances) > 0 {
+			if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, outcomeAttendances); err != nil {
+				log.Error(ctx, "batch add assessments: batch insert outcome attendances failed",
+					log.Err(err),
+					log.Any("args", args),
+					log.Any("outcome_attendances", outcomeAttendances),
+					log.Any("operator", operator),
+				)
+				return nil, err
+			}
+		}
+	}
+
+	// add assessment content outcomes
+	var assessmentContentOutcomes []*entity.AssessmentContentOutcome
+	for _, a := range newAssessments {
+		lp := lessonPlanMap[a.ScheduleID]
+		if lp == nil {
+			continue
+		}
+		for _, oid := range lp.OutcomeIDs {
+			assessmentContentOutcomes = append(assessmentContentOutcomes, &entity.AssessmentContentOutcome{
+				ID:           utils.NewID(),
+				AssessmentID: a.ID,
+				ContentID:    lp.ID,
+				OutcomeID:    oid,
+			})
+		}
+		for _, lm := range lp.Materials {
+			for _, oid := range lm.OutcomeIDs {
+				assessmentContentOutcomes = append(assessmentContentOutcomes, &entity.AssessmentContentOutcome{
+					ID:           utils.NewID(),
+					AssessmentID: a.ID,
+					ContentID:    lm.ID,
+					OutcomeID:    oid,
+				})
+			}
+		}
+	}
+	if len(assessmentContentOutcomes) > 0 {
+		if err := da.GetAssessmentContentOutcomeDA().BatchInsert(ctx, tx, assessmentContentOutcomes); err != nil {
+			log.Error(ctx, "batch add assessments: batch insert assessment content outcomes failed",
+				log.Err(err),
+				log.Any("assessment_content_outcomes", assessmentContentOutcomes),
+				log.Any("operator", operator),
+			)
+			return nil, err
+		}
+	}
+
+	// collect assessment ids
+	var newAssessmentIDs []string
+	for _, a := range newAssessments {
+		newAssessmentIDs = append(newAssessmentIDs, a.ID)
+	}
+
+	return newAssessmentIDs, nil
+}
+
+func (m *assessmentBase) addAssessmentContentsAndOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, contents []*entity.ContentInfoWithDetails) error {
+	if len(contents) == 0 {
+		return nil
+	}
+	var (
+		assessmentContents        []*entity.AssessmentContent
+		assessmentContentOutcomes []*entity.AssessmentContentOutcome
+	)
+	for _, c := range contents {
+		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
+			ID:           utils.NewID(),
+			AssessmentID: assessmentID,
+			ContentID:    c.ID,
+			ContentName:  c.Name,
+			ContentType:  c.ContentType,
+			Checked:      true,
+		})
+		for _, oid := range c.Outcomes {
+			assessmentContentOutcomes = append(assessmentContentOutcomes, &entity.AssessmentContentOutcome{
+				ID:           utils.NewID(),
+				AssessmentID: assessmentID,
+				ContentID:    c.ID,
+				OutcomeID:    oid,
+			})
+		}
+	}
+	if len(assessmentContents) == 0 {
+		return nil
+	}
+	if err := da.GetAssessmentContentDA().BatchInsert(ctx, tx, assessmentContents); err != nil {
+		log.Error(ctx, "addAssessmentContentsAndOutcomes: da.GetAssessmentContentDA().BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("assessment_contents", assessmentContents),
+			log.String("assessment_id", assessmentID),
+			log.Any("contents", contents),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	if len(assessmentContentOutcomes) == 0 {
+		return nil
+	}
+	if err := da.GetAssessmentContentOutcomeDA().BatchInsert(ctx, tx, assessmentContentOutcomes); err != nil {
+		log.Error(ctx, "addAssessmentContentsAndOutcomes: da.GetAssessmentContentOutcomeDA().BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("assessment_content_outcomes", assessmentContentOutcomes),
+			log.String("assessment_id", assessmentID),
+			log.Any("contents", contents),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+
+	return nil
+}
+
+func (m *assessmentBase) addAssessmentOutcomes(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome) error {
+	if len(outcomes) == 0 {
+		return nil
+	}
+	var assessmentOutcomes []*entity.AssessmentOutcome
+	for _, outcome := range outcomes {
+		assessmentOutcomes = append(assessmentOutcomes, &entity.AssessmentOutcome{
+			ID:           utils.NewID(),
+			AssessmentID: assessmentID,
+			OutcomeID:    outcome.ID,
+			Skip:         false,
+			NoneAchieved: !outcome.Assumed,
+			Checked:      true,
+		})
+	}
+	if err := da.GetAssessmentOutcomeDA().BatchInsert(ctx, tx, assessmentOutcomes); err != nil {
+		log.Error(ctx, "addAssessmentOutcomes: da.GetAssessmentOutcomeDA().BatchInsert: batch insert failed",
+			log.Err(err),
+			log.Any("assessment_outcomes", assessmentOutcomes),
+			log.String("assessment_id", assessmentID),
+			log.Any("outcomes", outcomes),
+			log.Any("operator", operator),
+		)
+		return err
+	}
+	return nil
+}
+
+func (m *assessmentBase) addOutcomeAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, assessmentID string, outcomes []*entity.Outcome, scheduleRelations []*entity.ScheduleRelation) error {
+	if len(outcomes) == 0 || len(scheduleRelations) == 0 {
+		return nil
+	}
+	var (
+		studentIDs         []string
+		outcomeAttendances []*entity.OutcomeAttendance
+	)
+	for _, r := range scheduleRelations {
+		if r.RelationType == entity.ScheduleRelationTypeClassRosterStudent ||
+			r.RelationType == entity.ScheduleRelationTypeParticipantStudent {
+			studentIDs = append(studentIDs, r.RelationID)
+		}
+	}
+	for _, outcome := range outcomes {
+		if !outcome.Assumed {
+			continue
+		}
+		for _, sid := range studentIDs {
+			outcomeAttendances = append(outcomeAttendances, &entity.OutcomeAttendance{
+				ID:           utils.NewID(),
+				AssessmentID: assessmentID,
+				OutcomeID:    outcome.ID,
+				AttendanceID: sid,
+			})
+		}
+	}
+	if len(outcomeAttendances) > 0 {
+		if err := da.GetOutcomeAttendanceDA().BatchInsert(ctx, tx, outcomeAttendances); err != nil {
+			log.Error(ctx, "addOutcomeAttendances: da.GetOutcomeAttendanceDA().BatchInsert: batch insert failed",
+				log.Err(err),
+				log.Any("outcome_attendances", outcomeAttendances),
+				log.String("assessment_id", assessmentID),
+				log.Any("schedule_relations", scheduleRelations),
+				log.Any("operator", operator),
+			)
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *assessmentBase) addAttendances(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input entity.AddAttendancesInput) error {

@@ -15,7 +15,6 @@ import (
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/da"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"gitlab.badanamu.com.cn/calmisland/kidsloop2/utils"
 )
 
 var (
@@ -36,7 +35,7 @@ type IStudyAssessmentModel interface {
 	GetDetail(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, id string) (*entity.AssessmentDetail, error)
 	List(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.ListStudyAssessmentsArgs) (*entity.ListStudyAssessmentsResult, error)
 	BatchCheckAnyoneAttempted(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, roomIDs []string) (map[string]bool, error)
-	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error)
+	Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddAssessmentArgs) ([]string, error)
 	Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error
 	Delete(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, scheduleIDs []string) error
 }
@@ -216,195 +215,30 @@ func (m *studyAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx
 	return result, nil
 }
 
-func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, input []*entity.AddStudyInput) ([]string, error) {
-	log.Debug(ctx, "add studies args", log.Any("input", input), log.Any("operator", operator))
+func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs) ([]string, error) {
+	log.Debug(ctx, "add studies args", log.Any("args", args), log.Any("operator", operator))
 
-	// check if assessment already exits
-	scheduleIDs := make([]string, 0, len(input))
-	for _, item := range input {
-		scheduleIDs = append(scheduleIDs, item.ScheduleID)
-	}
-	count, err := da.GetAssessmentDA().CountTx(ctx, tx, &da.QueryAssessmentConditions{
-		ClassTypes: entity.NullScheduleClassTypes{
-			Value: []entity.ScheduleClassType{entity.ScheduleClassTypeHomework},
-			Valid: true,
-		},
-		ScheduleIDs: entity.NullStrings{
-			Strings: scheduleIDs,
-			Valid:   true,
-		},
-	}, entity.Assessment{})
-	if err != nil {
-		log.Error(ctx, "Add: da.GetAssessmentDA().Query: query failed",
-			log.Err(err),
-			log.Strings("schedule_id", scheduleIDs),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	if count > 0 {
-		log.Info(ctx, "Add: assessment already exists",
-			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("operator", operator),
-		)
-		return nil, nil
-	}
-
-	// get class name map
 	var classIDs []string
-	for _, item := range input {
+	for _, item := range args {
 		classIDs = append(classIDs, item.ClassID)
 	}
 	classNameMap, err := external.GetClassServiceProvider().BatchGetNameMap(ctx, operator, classIDs)
 	if err != nil {
-		log.Error(ctx, "Add: external.GetClassServiceProvider().BatchGetNameMap: get failed",
+		log.Error(ctx, "add studies: batch get class name map failed",
 			log.Err(err),
 			log.Strings("class_ids", classIDs),
-			log.Any("schedule_ids", scheduleIDs),
 		)
 		return nil, err
 	}
-
-	// get contents
-	var lessonPlanIDs []string
-	for _, item := range input {
-		lessonPlanIDs = append(lessonPlanIDs, item.LessonPlanID)
-	}
-	lessonPlanMap, err := m.batchGetLatestLessonPlanMap(ctx, tx, operator, lessonPlanIDs)
-	if err != nil {
-		log.Error(ctx, "Add: GetAssessmentUtils().batchGetLatestLessonPlanMap: get failed",
-			log.Err(err),
-			log.Strings("lesson_plan_ids", lessonPlanIDs),
-		)
-		return nil, err
-	}
-
-	// add assessment
-	newAssessments := make([]*entity.Assessment, 0, len(scheduleIDs))
-	now := time.Now().Unix()
-	for _, item := range input {
+	for _, item := range args {
 		className := classNameMap[item.ClassID]
 		if className == "" {
 			className = constant.AssessmentNoClass
 		}
-		newAssessments = append(newAssessments, &entity.Assessment{
-			ID:         utils.NewID(),
-			ScheduleID: item.ScheduleID,
-			Title:      m.generateTitle(className, item.ScheduleTitle),
-			Status:     entity.AssessmentStatusInProgress,
-			CreateAt:   now,
-			UpdateAt:   now,
-		})
+		item.Title = m.generateTitle(className, item.ScheduleTitle)
 	}
 
-	if err := da.GetAssessmentDA().BatchInsert(ctx, tx, newAssessments); err != nil {
-		log.Error(ctx, "add studies: add failed",
-			log.Err(err),
-			log.Strings("schedule_ids", scheduleIDs),
-			log.Any("new_assessments", newAssessments),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-
-	// add attendances
-	scheduleIDToAssessmentIDMap := make(map[string]string, len(newAssessments))
-	for _, item := range newAssessments {
-		scheduleIDToAssessmentIDMap[item.ScheduleID] = item.ID
-	}
-	var attendances []*entity.AssessmentAttendance
-	for _, item := range input {
-		for _, attendance := range item.Attendances {
-			newAttendance := entity.AssessmentAttendance{
-				ID:           utils.NewID(),
-				AssessmentID: scheduleIDToAssessmentIDMap[item.ScheduleID],
-				AttendanceID: attendance.RelationID,
-				Checked:      true,
-			}
-			switch attendance.RelationType {
-			case entity.ScheduleRelationTypeClassRosterStudent:
-				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
-				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
-			case entity.ScheduleRelationTypeClassRosterTeacher:
-				newAttendance.Origin = entity.AssessmentAttendanceOriginClassRoaster
-				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
-			case entity.ScheduleRelationTypeParticipantStudent:
-				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
-				newAttendance.Role = entity.AssessmentAttendanceRoleStudent
-			case entity.ScheduleRelationTypeParticipantTeacher:
-				newAttendance.Origin = entity.AssessmentAttendanceOriginParticipants
-				newAttendance.Role = entity.AssessmentAttendanceRoleTeacher
-			default:
-				continue
-			}
-			attendances = append(attendances, &newAttendance)
-		}
-	}
-	if err := da.GetAssessmentAttendanceDA().BatchInsert(ctx, tx, attendances); err != nil {
-		log.Error(ctx, "add studies: batch insert attendance failed",
-			log.Err(err),
-			log.Any("attendances", attendances),
-			log.Any("input", input),
-		)
-		return nil, err
-	}
-
-	// add contents
-	var (
-		scheduleMap        = make(map[string]*entity.AddStudyInput, len(input))
-		assessmentContents []*entity.AssessmentContent
-	)
-	for _, item := range input {
-		scheduleMap[item.ScheduleID] = item
-	}
-	assessmentContentKeys := map[[2]string]bool{}
-	for _, a := range newAssessments {
-		schedule := scheduleMap[a.ScheduleID]
-		if schedule == nil {
-			log.Error(ctx, "add study assessment: not found schedule by id", log.Any("input", input))
-			return nil, ErrAssessmentNotFoundSchedule
-		}
-		lp := lessonPlanMap[schedule.LessonPlanID]
-		assessmentContents = append(assessmentContents, &entity.AssessmentContent{
-			ID:           utils.NewID(),
-			AssessmentID: a.ID,
-			ContentID:    lp.ID,
-			ContentName:  lp.Name,
-			ContentType:  entity.ContentTypePlan,
-			Checked:      true,
-		})
-		for _, lm := range lp.Materials {
-			key := [2]string{a.ID, lm.ID}
-			if assessmentContentKeys[key] {
-				continue
-			}
-			assessmentContentKeys[key] = true
-			assessmentContents = append(assessmentContents, &entity.AssessmentContent{
-				ID:           utils.NewID(),
-				AssessmentID: a.ID,
-				ContentID:    lm.ID,
-				ContentName:  lm.Name,
-				ContentType:  entity.ContentTypeMaterial,
-				Checked:      true,
-			})
-		}
-	}
-	if err := da.GetAssessmentContentDA().BatchInsert(ctx, tx, assessmentContents); err != nil {
-		log.Error(ctx, "addAssessmentContentsAndOutcomes: da.GetAssessmentContentDA().BatchInsert: batch insert failed",
-			log.Err(err),
-			log.Any("schedule_ids", scheduleIDs),
-			log.Any("assessment_contents", assessmentContents),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-
-	var newAssessmentIDs []string
-	for _, a := range newAssessments {
-		newAssessmentIDs = append(newAssessmentIDs, a.ID)
-	}
-
-	return newAssessmentIDs, nil
+	return m.assessmentBase.batchAdd(ctx, tx, operator, args)
 }
 
 func (m *studyAssessmentModel) Update(ctx context.Context, operator *entity.Operator, tx *dbo.DBContext, args *entity.UpdateAssessmentArgs) error {
