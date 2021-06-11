@@ -183,7 +183,9 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 		return nil
 	}
 	key := r.getHSetKey(orgID)
-	err := ro.MustGetRedis(ctx).Del(key).Err()
+	scheduleListViewKey := r.getScheduleListViewKey(orgID)
+
+	err := ro.MustGetRedis(ctx).Del(key, scheduleListViewKey).Err()
 	if err != nil {
 		log.Error(ctx, "redis del keys error",
 			log.Err(err),
@@ -191,6 +193,7 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 		)
 		return err
 	}
+
 	return nil
 }
 
@@ -209,16 +212,39 @@ func (r *ScheduleRedisDA) SaveScheduleListView(ctx context.Context, orgID string
 		return err
 	}
 
-	key := r.getScheduleListViewKey(orgID, condition)
-	err = ro.MustGetRedis(ctx).Set(key, string(b), r.expiration).Err()
+	key := r.getScheduleListViewKey(orgID)
+	field := r.conditionHash(condition)
+	exist, err := ro.MustGetRedis(ctx).Exists(key).Result()
 	if err != nil {
-		log.Error(ctx, "Save ScheduleListView redis error",
+		log.Error(ctx, "Failed to Exists ScheduleListView",
 			log.Err(err),
-			log.Any("condition", condition),
 			log.Any("key", key),
+		)
+		return err
+	}
+
+	err = ro.MustGetRedis(ctx).HSet(key, field, string(b)).Err()
+	if err != nil {
+		log.Error(ctx, "Failed to HSet ScheduleListView into cache",
+			log.Err(err),
+			log.Any("key", key),
+			log.Any("filed", field),
 			log.Any("data", data),
 		)
 		return err
+	}
+
+	// not exist
+	if exist == int64(0) {
+		err = ro.MustGetRedis(ctx).Expire(key, r.expiration).Err()
+		if err != nil {
+			log.Error(ctx, "Set ScheduleListView expire error",
+				log.Err(err),
+				log.Any("key", key),
+				log.Any("expiration", r.expiration),
+			)
+			return err
+		}
 	}
 
 	return nil
@@ -229,8 +255,9 @@ func (r *ScheduleRedisDA) GetScheduleListView(ctx context.Context, orgID string,
 		return nil, nil
 	}
 
-	key := r.getScheduleListViewKey(orgID, condition)
-	data, err := ro.MustGetRedis(ctx).Get(key).Result()
+	key := r.getScheduleListViewKey(orgID)
+	field := r.conditionHash(condition)
+	data, err := ro.MustGetRedis(ctx).HGet(key, field).Result()
 	if err != nil {
 		log.Error(ctx, "Get ScheduleListView redis error",
 			log.Err(err),
@@ -284,9 +311,8 @@ func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) strin
 	return md5Hash
 }
 
-func (r *ScheduleRedisDA) getScheduleListViewKey(orgID string, condition *ScheduleCacheCondition) string {
-	md5Hash := r.conditionHash(condition)
-	return fmt.Sprintf("%s:%s:%s", RedisKeyPrefixScheduleCondition, orgID, md5Hash)
+func (r *ScheduleRedisDA) getScheduleListViewKey(orgID string) string {
+	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleListView, orgID)
 }
 
 //func (r *ContentRedis) conditionHash(condition dbo.Conditions) string {
