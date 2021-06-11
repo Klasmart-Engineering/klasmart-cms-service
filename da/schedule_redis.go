@@ -293,30 +293,6 @@ func (r *ScheduleRedisDA) getScheduleListViewKey(orgID string) string {
 	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleListView, orgID)
 }
 
-func (r *ScheduleRedisDA) scanKeys(ctx context.Context, keyPattern string) ([]string, error) {
-	var matchedKeys []string
-	var cursor uint64
-	for {
-		var keys []string
-		var err error
-		keys, cursor, err = ro.MustGetRedis(ctx).Scan(cursor, keyPattern, 10).Result()
-		if err != nil {
-			log.Error(ctx, "Failed to scan keys",
-				log.Err(err),
-				log.Any("keyPattern", keyPattern))
-			return matchedKeys, err
-		}
-		matchedKeys = append(matchedKeys, keys...)
-		if cursor == 0 {
-			log.Debug(ctx, "No more keys found by keyPattern:",
-				log.Any("keyPattern", keyPattern))
-			break
-		}
-	}
-
-	return matchedKeys, nil
-}
-
 //func (r *ContentRedis) conditionHash(condition dbo.Conditions) string {
 //	h := md5.New()
 //	h.Write([]byte(fmt.Sprintf("%v", condition)))
