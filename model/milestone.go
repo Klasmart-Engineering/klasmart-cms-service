@@ -422,6 +422,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			return err
 		}
 
+		var needDeleteOutcomeMilestoneID []string
 		if toPublish && ms.SourceID != ms.ID {
 			err = da.GetMilestoneDA().BatchHide(ctx, tx, []string{ms.SourceID})
 			if err != nil {
@@ -441,6 +442,16 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 					log.Any("milestone", ancestorLatest))
 				return err
 			}
+			needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.SourceID)
+
+			//err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.SourceID})
+			//if err != nil {
+			//	log.Error(ctx, "Update: delete hide milestone's outcomes failed",
+			//		log.Bool("to_publish", toPublish),
+			//		log.Any("op", op),
+			//		log.Any("milestone", ms))
+			//	return err
+			//}
 		}
 
 		length := len(outcomeAncestors)
@@ -452,7 +463,8 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
-		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.ID})
+		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.ID)
+		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, needDeleteOutcomeMilestoneID)
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
@@ -883,7 +895,14 @@ func (m MilestoneModel) Publish(ctx context.Context, op *entity.Operator, IDs []
 			log.Error(ctx, "Publish: BatchHide failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("publish", publishIDs))
+				log.Strings("hide", hideIDs))
+			return err
+		}
+		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, hideIDs)
+		if err != nil {
+			log.Error(ctx, "Publish: DeleteTx failed",
+				log.Any("op", op),
+				log.Strings("hide", hideIDs))
 			return err
 		}
 		err = da.GetMilestoneDA().BatchUpdateLatest(ctx, tx, ancestorLatest)
@@ -891,7 +910,7 @@ func (m MilestoneModel) Publish(ctx context.Context, op *entity.Operator, IDs []
 			log.Error(ctx, "Publish: BatchUpdateLatest failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("publish", publishIDs))
+				log.Any("ancestor", ancestorLatest))
 			return err
 		}
 		return nil
