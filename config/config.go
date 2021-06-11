@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -104,6 +105,7 @@ type ScheduleConfig struct {
 type LiveTokenConfig struct {
 	PrivateKey interface{} `yaml:"private_key"`
 	//PublicKey  string      `yaml:"public_key"`
+	AssetsUrlPrefix string `yaml:"assets_url_prefix"`
 }
 
 type AssessmentConfig struct {
@@ -346,6 +348,16 @@ func loadLiveTokenEnvConfig(ctx context.Context) {
 		log.Panic(ctx, "CreateJWT:create jwt error", log.Err(err))
 	}
 	config.LiveTokenConfig.PrivateKey = key
+
+	assetsUrlPrefix := os.Getenv("live_assets_url_prefix")
+	u, err := url.Parse(assetsUrlPrefix)
+	if err != nil {
+		log.Panic(ctx, "load LiveTokenEnvConfig:load assets_url_prefix config error",
+			log.Err(err),
+			log.String("assetsUrlPrefix", assetsUrlPrefix),
+		)
+	}
+	config.LiveTokenConfig.AssetsUrlPrefix = u.Path
 }
 
 func loadAssessmentConfig(ctx context.Context) {
