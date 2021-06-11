@@ -1211,8 +1211,8 @@ func (s *scheduleModel) Page(ctx context.Context, operator *entity.Operator, con
 	return total, result, nil
 }
 
-func (s *scheduleModel) QueryByCache(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error) {
-	result, err := da.GetScheduleRedisDA().SearchToListView(ctx, op.OrgID, condition)
+func (s *scheduleModel) queryByCache(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition) ([]*entity.ScheduleListView, error) {
+	result, err := da.GetScheduleRedisDA().GetScheduleListView(ctx, op.OrgID, &da.ScheduleCacheCondition{Condition: condition})
 	if err != nil {
 		log.Info(ctx, "Query from cache error",
 			log.Err(err),
@@ -1221,6 +1221,7 @@ func (s *scheduleModel) QueryByCache(ctx context.Context, op *entity.Operator, c
 		)
 		return nil, err
 	}
+
 	if len(result) == 0 {
 		log.Info(ctx, "Query from cache not found",
 			log.Err(err),
@@ -1237,6 +1238,7 @@ func (s *scheduleModel) QueryByCache(ctx context.Context, op *entity.Operator, c
 			ClassType: item.ClassType,
 		})
 	}
+
 	return result, nil
 }
 
@@ -1341,7 +1343,7 @@ func (s *scheduleModel) QueryByDB(ctx context.Context, op *entity.Operator, cond
 	return scheduleList, nil
 }
 func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operator, condition *da.ScheduleCondition, loc *time.Location) ([]*entity.ScheduleListView, error) {
-	cacheData, err := s.QueryByCache(ctx, op, condition)
+	cacheData, err := s.queryByCache(ctx, op, condition)
 	if err == nil {
 		log.Debug(ctx, "Query:using cache",
 			log.Any("op", op),
@@ -1361,9 +1363,9 @@ func (s *scheduleModel) QueryByCondition(ctx context.Context, op *entity.Operato
 	}
 
 	// cache
-	err = da.GetScheduleRedisDA().Add(ctx, op.OrgID, &da.ScheduleCacheCondition{Condition: condition}, result)
+	err = da.GetScheduleRedisDA().SaveScheduleListView(ctx, op.OrgID, &da.ScheduleCacheCondition{Condition: condition}, result)
 	if err != nil {
-		log.Info(ctx, "schedule add cache error", log.Err(err))
+		log.Info(ctx, "Save ScheduleListView cache error", log.Err(err))
 	}
 
 	return result, nil
