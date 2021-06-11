@@ -83,8 +83,7 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 			OrderBy: args.OrderBy,
 			Pager:   args.Pager,
 		}
-		teachers    []*external.Teacher
-		scheduleIDs []string
+		teachers []*external.Teacher
 	)
 	if args.ClassType.Valid {
 		cond.ClassTypes = entity.NullScheduleClassTypes{
@@ -118,19 +117,6 @@ func (m *classAndLiveAssessmentModel) List(ctx context.Context, tx *dbo.DBContex
 		for _, item := range teachers {
 			cond.TeacherIDs.Strings = append(cond.TeacherIDs.Strings, item.ID)
 		}
-	}
-	if scheduleIDs, err = GetScheduleModel().GetScheduleIDsByOrgID(ctx, tx, operator, operator.OrgID); err != nil {
-		log.Error(ctx, "List: GetScheduleModel().GetScheduleIDsByOrgID: get failed",
-			log.Err(err),
-			log.String("org_id", operator.OrgID),
-			log.Any("args", args),
-			log.Any("operator", operator),
-		)
-		return nil, err
-	}
-	cond.ScheduleIDs = entity.NullStrings{
-		Strings: scheduleIDs,
-		Valid:   true,
 	}
 	if err := da.GetAssessmentDA().QueryTx(ctx, tx, &cond, &assessments); err != nil {
 		log.Error(ctx, "List: da.GetAssessmentDA().QueryTx: query failed",
