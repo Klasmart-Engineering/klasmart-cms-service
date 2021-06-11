@@ -223,6 +223,17 @@ func (r *ScheduleRedisDA) SaveScheduleListView(ctx context.Context, orgID string
 		return err
 	}
 
+	err = ro.MustGetRedis(ctx).HSet(key, field, string(b)).Err()
+	if err != nil {
+		log.Error(ctx, "Failed to HSet ScheduleListView into cache",
+			log.Err(err),
+			log.Any("key", key),
+			log.Any("filed", field),
+			log.Any("data", data),
+		)
+		return err
+	}
+
 	// not exist
 	if exist == int64(0) {
 		err = ro.MustGetRedis(ctx).Expire(key, r.expiration).Err()
@@ -234,17 +245,6 @@ func (r *ScheduleRedisDA) SaveScheduleListView(ctx context.Context, orgID string
 			)
 			return err
 		}
-	}
-
-	err = ro.MustGetRedis(ctx).HSet(key, field, string(b)).Err()
-	if err != nil {
-		log.Error(ctx, "Failed to HSet ScheduleListView into cache",
-			log.Err(err),
-			log.Any("key", key),
-			log.Any("filed", field),
-			log.Any("data", data),
-		)
-		return err
 	}
 
 	return nil
