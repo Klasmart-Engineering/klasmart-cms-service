@@ -191,6 +191,17 @@ func (r *ScheduleRedisDA) Clean(ctx context.Context, orgID string) error {
 		)
 		return err
 	}
+
+	// Clean ScheduleListView Cache
+	err = r.cleanScheduleListView(ctx, orgID)
+	if err != nil {
+		log.Error(ctx, "Failed to cleanScheduleListView",
+			log.Err(err),
+			log.Any("orgID", orgID),
+		)
+		return err
+	}
+
 	return nil
 }
 
@@ -254,6 +265,29 @@ func (r *ScheduleRedisDA) GetScheduleListView(ctx context.Context, orgID string,
 	return result, nil
 }
 
+func (r *ScheduleRedisDA) cleanScheduleListView(ctx context.Context, orgID string) error {
+	keyPattern := fmt.Sprintf("%s:%s:*", RedisKeyPrefixScheduleCondition, orgID)
+	matchedKeys, err := r.scanKeys(ctx, keyPattern)
+	if err != nil {
+		log.Error(ctx, "Failed to cleanScheduleListView",
+			log.Err(err),
+			log.String("orgID", orgID),
+		)
+		return err
+	}
+
+	err = ro.MustGetRedis(ctx).Del(matchedKeys...).Err()
+	if err != nil {
+		log.Error(ctx, "redis del keys error",
+			log.Err(err),
+			log.Any("keys", matchedKeys),
+		)
+		return err
+	}
+
+	return nil
+}
+
 func (r *ScheduleRedisDA) getHSetKey(orgID string) string {
 	return fmt.Sprintf("%s:%s", RedisKeyPrefixScheduleCondition, orgID)
 }
@@ -287,6 +321,30 @@ func (r *ScheduleRedisDA) conditionHash(condition *ScheduleCacheCondition) strin
 func (r *ScheduleRedisDA) getScheduleListViewKey(orgID string, condition *ScheduleCacheCondition) string {
 	md5Hash := r.conditionHash(condition)
 	return fmt.Sprintf("%s:%s:%s", RedisKeyPrefixScheduleCondition, orgID, md5Hash)
+}
+
+func (r *ScheduleRedisDA) scanKeys(ctx context.Context, keyPattern string) ([]string, error) {
+	var matchedKeys []string
+	var cursor uint64
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = ro.MustGetRedis(ctx).Scan(cursor, keyPattern, 10).Result()
+		if err != nil {
+			log.Error(ctx, "Failed to scan keys",
+				log.Err(err),
+				log.Any("keyPattern", keyPattern))
+			return matchedKeys, err
+		}
+		matchedKeys = append(matchedKeys, keys...)
+		if cursor == 0 {
+			log.Debug(ctx, "No more keys found by keyPattern:",
+				log.Any("keyPattern", keyPattern))
+			break
+		}
+	}
+
+	return matchedKeys, nil
 }
 
 //func (r *ContentRedis) conditionHash(condition dbo.Conditions) string {
