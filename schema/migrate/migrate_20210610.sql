@@ -105,6 +105,9 @@ insert into object_ids values
     ('60c1ac2cbb80d0962f8dbdf0'),
     ('60c1ac2cbb80d0962f8dbdf1');
 
+-- select distinct organization_id from learning_outcomes where publish_status='published';
+
+-- insert general milestone
 insert into milestones (id, organization_id, ancestor_id, source_id, latest_id, name, status, type, create_at, update_at, shortcode, author_id)
 select id, organization_id, id as ancestor_id ,id as source_id, id as latest_id,
        'General Milestone' as name, 'published' as status, 'general' as type,
@@ -117,4 +120,16 @@ from
         join
     (select *, row_number() over(partition by '1') rn  from object_ids) as mid on oid.rn=mid.rn;
 
-select * from milestones where type='general';
+-- select * from milestones where type='general';
+
+-- bind outcome with general milestone
+insert into milestones_outcomes (milestone_id, outcome_ancestor, create_at, update_at)
+select id as milestone_id, ancestor_id as outcome_ancestor, unix_timestamp(now()) as create_at, unix_timestamp(now()) as update_at from
+    (select distinct ancestor_id, organization_id from learning_outcomes where publish_status='published' and delete_at=0) as oc
+        join
+    (select id, organization_id from milestones where type='general') as ms
+    on oc.organization_id=ms.organization_id
+where not exists
+    (select * from milestones_outcomes where delete_at is null and milestone_id=ms.id and outcome_ancestor=oc.ancestor_id);
+
+drop table object_ids;
