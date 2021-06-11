@@ -108,17 +108,11 @@ insert into object_ids values
 -- select distinct organization_id from learning_outcomes where publish_status='published';
 
 -- insert general milestone
+
 insert into milestones (id, organization_id, ancestor_id, source_id, latest_id, name, status, type, create_at, update_at, shortcode, author_id)
-select id, organization_id, id as ancestor_id ,id as source_id, id as latest_id,
-       'General Milestone' as name, 'published' as status, 'general' as type,
-       unix_timestamp(now()) as create_at, unix_timestamp(now()) as update_at,
-       '' as shortcode, '' as author_id
-from
-    (select organization_id, row_number() over(partition by '1') rn  from learning_outcomes where publish_status = 'published' and not exists
-        (select * from milestones where type='general' and learning_outcomes.organization_id=milestones.organization_id)
-    group by organization_id) as oid
-        join
-    (select *, row_number() over(partition by '1') rn  from object_ids) as mid on oid.rn=mid.rn;
+select t.id, t.organization_id, t.id, t.id, t.id, 'General Milestone', 'published', 'general', t.tm, t.tm, '', '' from
+    (select replace(UUID(), '-', '') as id, organization_id, unix_timestamp(now()) as tm from learning_outcomes where publish_status='published' and not exists
+        (select * from milestones where type='general' and learning_outcomes.organization_id=milestones.organization_id) group by organization_id) as t
 
 -- select * from milestones where type='general';
 
