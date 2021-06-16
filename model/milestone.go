@@ -250,7 +250,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			return nil
 		}
 
-		outcomeAncestors := make([]string, bindLength)
+		outcomeAncestors := make([]string, 0, bindLength)
 		for i := range milestoneOutcomes {
 			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
 		}
@@ -266,21 +266,21 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 					log.Strings("ancestors", outcomeAncestors))
 				return err
 			}
-			if len(intersect) == bindLength {
-				log.Info(ctx, "Obtain: all bind to normal general", log.String("milestone", milestoneID))
-				return nil
-			}
-			intersectMap := make(map[string]bool, len(intersect))
-			for i := range intersect {
-				intersectMap[intersect[i].OutcomeAncestor] = true
-			}
-			outcomeAncestors = make([]string, 0, bindLength-len(intersect))
-			for i := range milestoneOutcomes {
-				if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
-					outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
+			if len(intersect) > 0 {
+				intersectMap := make(map[string]bool)
+				for i := range intersect {
+					intersectMap[intersect[i].OutcomeAncestor] = true
+				}
+				outcomeAncestors = make([]string, 0, bindLength-len(intersectMap))
+				for i := range milestoneOutcomes {
+					if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
+						outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
+					}
 				}
 			}
 		}
+
+		outcomeAncestors = utils.SliceDeduplication(outcomeAncestors)
 
 		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
@@ -288,14 +288,6 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 				log.Err(err),
 				log.Strings("ancestors", outcomeAncestors))
 			return err
-		}
-
-		if len(outcomeAncestors) != len(outcomes) {
-			log.Error(ctx, "Obtain: ancestor and outcomes not match",
-				log.String("milestone", milestoneID),
-				log.Strings("ancestors", outcomeAncestors),
-				log.Any("outcomes", outcomes))
-			return constant.ErrInternalServer
 		}
 
 		outcomesMap := make(map[string]*entity.Outcome, len(outcomes))
@@ -306,7 +298,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		for i := range outcomeAncestors {
 			milestone.Outcomes[i] = outcomesMap[outcomeAncestors[i]]
 		}
-		milestone.LoCounts = len(outcomes)
+		milestone.LoCounts = len(milestone.Outcomes)
 		return nil
 	})
 	return milestone, err
