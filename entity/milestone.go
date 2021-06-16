@@ -36,6 +36,10 @@ const (
 	GeneralMilestoneType TypeOfMilestone = "general"
 )
 
+const (
+	GeneralMilestoneName = "General Milestone"
+)
+
 func (Milestone) TableName() string {
 	return "milestones"
 }
