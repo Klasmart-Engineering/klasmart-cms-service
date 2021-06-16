@@ -177,6 +177,8 @@ type MilestoneCondition struct {
 	Status   sql.NullString
 	Statuses dbo.NullStrings
 
+	Type sql.NullString
+
 	OrganizationID sql.NullString
 	IncludeDeleted bool
 	OrderBy        MilestoneOrderBy `json:"order_by"`
@@ -262,6 +264,11 @@ func (c *MilestoneCondition) GetConditions() ([]string, []interface{}) {
 		params = append(params, c.Statuses.Strings)
 	}
 
+	if c.Type.Valid {
+		wheres = append(wheres, "type=?")
+		params = append(params, c.Type.String)
+	}
+
 	if !c.IncludeDeleted {
 		wheres = append(wheres, "delete_at=0")
 	}
@@ -288,17 +295,17 @@ func (c *MilestoneCondition) GetPager() *dbo.Pager {
 func (c *MilestoneCondition) GetOrderBy() string {
 	switch c.OrderBy {
 	case OrderByMilestoneName:
-		return "type desc, name"
+		return "type, name"
 	case OrderByMilestoneNameDesc:
-		return "type desc, name desc"
+		return "type, name desc"
 	case OrderByMilestoneCreatedAt:
-		return "type desc, create_at"
+		return "type, create_at"
 	case OrderByMilestoneCreatedAtDesc:
-		return "type desc, create_at desc"
+		return "type, create_at desc"
 	case OrderByMilestoneUpdatedAt:
-		return "type desc, update_at"
+		return "type, update_at"
 	case OrderByMilestoneUpdatedAtDesc:
-		return "type desc, update_at desc"
+		return "type, update_at desc"
 	case OrderByMilestoneShortcode:
 		return "shortcode"
 	default:
@@ -336,6 +343,7 @@ type MilestoneOutcomeSQLDA struct {
 type MilestoneOutcomeCondition struct {
 	MilestoneID      sql.NullString
 	MilestoneIDs     dbo.NullStrings
+	NotMilestoneID   sql.NullString
 	OutcomeAncestor  sql.NullString
 	OutcomeAncestors dbo.NullStrings
 	IncludeDeleted   bool
@@ -362,6 +370,11 @@ func (c *MilestoneOutcomeCondition) GetConditions() ([]string, []interface{}) {
 	if c.MilestoneIDs.Valid {
 		wheres = append(wheres, "milestone_id in (?)")
 		params = append(params, c.MilestoneIDs.Strings)
+	}
+
+	if c.NotMilestoneID.Valid {
+		wheres = append(wheres, "milestone_id <> ?")
+		params = append(params, c.NotMilestoneID.String)
 	}
 
 	if c.OutcomeAncestor.Valid {

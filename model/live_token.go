@@ -4,14 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 	"gitlab.badanamu.com.cn/calmisland/common-log/log"
 	"gitlab.badanamu.com.cn/calmisland/dbo"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/config"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/external"
-	"strings"
-	"sync"
-	"time"
 
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/constant"
 	"gitlab.badanamu.com.cn/calmisland/kidsloop2/entity"
@@ -330,7 +332,7 @@ func (s *liveTokenModel) getMaterials(ctx context.Context, op *entity.Operator, 
 				log.Error(ctx, "invalid resource id", log.String("resourceId", source))
 				return nil, constant.ErrInvalidArgs
 			}
-			materialItem.URL = fmt.Sprintf("/assets/%s", parts[1])
+			materialItem.URL = path.Join(config.Get().LiveTokenConfig.AssetsUrlPrefix, fmt.Sprintf("/assets/%s", parts[1]))
 		}
 		materials = append(materials, materialItem)
 	}
