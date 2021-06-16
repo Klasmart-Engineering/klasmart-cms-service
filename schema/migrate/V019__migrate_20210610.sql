@@ -111,7 +111,7 @@
 
 insert into milestones (id, organization_id, ancestor_id, source_id, latest_id, name, status, type, create_at, update_at, shortcode, author_id)
 select t.id, t.organization_id, t.id, t.id, t.id, 'General Milestone', 'published', 'general', t.tm, t.tm, '', '' from
-    (select replace(UUID(), '-', '') as id, organization_id, unix_timestamp(now()) as tm from learning_outcomes where publish_status='published' and not exists
+    (select UUID() as id, organization_id, unix_timestamp(now()) as tm from learning_outcomes where publish_status='published' and not exists
         (select * from milestones where type='general' and learning_outcomes.organization_id=milestones.organization_id) group by organization_id) as t where 1=1;
 
 -- select * from milestones where type='general';
