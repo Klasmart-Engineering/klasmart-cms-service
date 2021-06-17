@@ -218,7 +218,7 @@ func (m *studyAssessmentModel) BatchCheckAnyoneAttempted(ctx context.Context, tx
 func (m *studyAssessmentModel) Add(ctx context.Context, tx *dbo.DBContext, operator *entity.Operator, args []*entity.AddAssessmentArgs) ([]string, error) {
 	log.Debug(ctx, "add studies args", log.Any("args", args), log.Any("operator", operator))
 
-	var classIDs []string
+	classIDs := make([]string, 0, len(args))
 	for _, item := range args {
 		classIDs = append(classIDs, item.ClassID)
 	}
