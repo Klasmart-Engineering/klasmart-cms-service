@@ -66,3 +66,14 @@ type UpdateAssessmentH5PLessonMaterial struct {
 	LessonMaterialID string  `json:"lesson_material_id"`
 	AchievedScore    float64 `json:"achieved_score"`
 }
+
+type AddAssessmentArgs struct {
+	Title         string              `json:"title"`
+	ScheduleID    string              `json:"schedule_id"`
+	ScheduleTitle string              `json:"schedule_title"`
+	LessonPlanID  string              `json:"lesson_plan_id"`
+	ClassID       string              `json:"class_id"`
+	ClassLength   int                 `json:"class_length"`
+	ClassEndTime  int64               `json:"class_end_time"`
+	Attendances   []*ScheduleRelation `json:"attendances"`
+}
