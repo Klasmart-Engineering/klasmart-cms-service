@@ -1418,7 +1418,7 @@ func (m *assessmentBase) batchAdd(ctx context.Context, tx *dbo.DBContext, operat
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
+	if ok {
 		return nil, errors.New("assessment already existed")
 	}
 
