@@ -2,7 +2,6 @@ package da
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -38,12 +37,12 @@ func initDB() {
 	dbo.ReplaceGlobal(dboHandler)
 }
 
-func TestMain(m *testing.M) {
-	fmt.Println("begin test")
-	initDB()
-	m.Run()
-	fmt.Println("end test")
-}
+//func TestMain(m *testing.M) {
+//	fmt.Println("begin test")
+//	initDB()
+//	m.Run()
+//	fmt.Println("end test")
+//}
 
 func TestCreateTable(t *testing.T) {
 	dsn := "root:Badanamu123456@tcp(192.168.1.234:3310)/kidsloop2?charset=utf8mb4&parseTime=True&loc=Local"
