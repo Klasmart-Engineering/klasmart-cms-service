@@ -653,6 +653,7 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 		}
 
 		var generalIDs, normalIDs []string
+		allIDs := make([]string, len(milestones))
 		for i := range milestones {
 			if milestones[i].Type == entity.GeneralMilestoneType {
 				generalIDs = append(generalIDs, milestones[i].ID)
@@ -660,17 +661,18 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			if milestones[i].Type == entity.CustomMilestoneType {
 				normalIDs = append(normalIDs, milestones[i].ID)
 			}
+			allIDs[i] = milestones[i].ID
 		}
 
 		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: append(generalIDs, normalIDs...), Valid: true},
+			MasterIDs:  dbo.NullStrings{Strings: allIDs, Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "Search: Search failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("milestone", append(generalIDs, normalIDs...)))
+				log.Strings("milestone", allIDs))
 			return err
 		}
 		for i := range relations {
