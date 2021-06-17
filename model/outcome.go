@@ -295,6 +295,9 @@ func (ocm OutcomeModel) Get(ctx context.Context, operator *entity.Operator, outc
 			if milestones[i].Status == entity.OutcomeStatusDraft && milestones[i].SourceID != milestones[i].ID {
 				continue
 			}
+			if milestones[i].Type == entity.GeneralMilestoneType && len(milestones) != 1 {
+				continue
+			}
 			outcome.Milestones = append(outcome.Milestones, milestones[i])
 		}
 		return nil
@@ -1059,6 +1062,13 @@ func (ocm OutcomeModel) Approve(ctx context.Context, operator *entity.Operator, 
 				log.Any("outcome", outcome))
 			return err
 		}
+		err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
+		if err != nil {
+			log.Error(ctx, "Approve: BindToGeneral failed",
+				log.String("op", operator.UserID),
+				log.Any("outcome", outcome))
+			return err
+		}
 		return nil
 	})
 	return err
@@ -1164,6 +1174,13 @@ func (ocm OutcomeModel) BulkApprove(ctx context.Context, operator *entity.Operat
 			err = ocm.updateLatestToHead(ctx, operator, tx, outcome)
 			if err != nil {
 				log.Error(ctx, "BulkApprove: updateLatestToHead failed",
+					log.String("op", operator.UserID),
+					log.Any("outcome", outcome))
+				return err
+			}
+			err = GetMilestoneModel().BindToGeneral(ctx, operator, tx, outcome)
+			if err != nil {
+				log.Error(ctx, "BulkApprove: BindToGeneral failed",
 					log.String("op", operator.UserID),
 					log.Any("outcome", outcome))
 				return err
@@ -1376,28 +1393,25 @@ func (ocm OutcomeModel) HasLocked(ctx context.Context, operator *entity.Operator
 }
 
 func (ocm OutcomeModel) GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestorIDs []string) (outcomes []*entity.Outcome, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		_, outcomes, err = da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
-			AncestorIDs:   dbo.NullStrings{Strings: ancestorIDs, Valid: true},
-			PublishStatus: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished}, Valid: true},
-		})
-		if err != nil {
-			log.Error(ctx, "GetLatestByAncestors: SearchOutcome failed",
-				log.Err(err),
-				log.String("op", op.UserID),
-				log.Strings("ancestor", ancestorIDs))
-			return err
-		}
-		err = ocm.fillRelation(ctx, op, tx, outcomes)
-		if err != nil {
-			log.Error(ctx, "GetLatestByAncestors: fillRelation failed",
-				log.Err(err),
-				log.String("op", op.UserID),
-				log.Strings("ancestor", ancestorIDs))
-			return err
-		}
-		return nil
+	_, outcomes, err = da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
+		AncestorIDs:   dbo.NullStrings{Strings: ancestorIDs, Valid: true},
+		PublishStatus: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished}, Valid: true},
 	})
+	if err != nil {
+		log.Error(ctx, "GetLatestByAncestors: SearchOutcome failed",
+			log.Err(err),
+			log.String("op", op.UserID),
+			log.Strings("ancestor", ancestorIDs))
+		return
+	}
+	err = ocm.fillRelation(ctx, op, tx, outcomes)
+	if err != nil {
+		log.Error(ctx, "GetLatestByAncestors: fillRelation failed",
+			log.Err(err),
+			log.String("op", op.UserID),
+			log.Strings("ancestor", ancestorIDs))
+		return
+	}
 	return
 }
 

@@ -25,6 +25,9 @@ type IMilestoneModel interface {
 	Publish(ctx context.Context, op *entity.Operator, IDs []string) error
 	GenerateShortcode(ctx context.Context, op *entity.Operator) (string, error)
 
+	CreateGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error)
+	ObtainGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error)
+	BindToGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error
 	ShortcodeProvider
 }
 
@@ -182,6 +185,7 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
+
 		length := len(outcomeAncestors)
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
 		for i := range outcomeAncestors {
@@ -247,24 +251,44 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			return nil
 		}
 
-		outcomeAncestors := make([]string, bindLength)
+		outcomeAncestors := make([]string, 0, bindLength)
 		for i := range milestoneOutcomes {
-			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
+			outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
 		}
+
+		if milestone.Type == entity.GeneralMilestoneType {
+			intersect, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+				OutcomeAncestors: dbo.NullStrings{Strings: outcomeAncestors, Valid: true},
+				NotMilestoneID:   sql.NullString{String: milestone.ID, Valid: true},
+			})
+			if err != nil {
+				log.Debug(ctx, "Obtain: exclude normal bind from general",
+					log.Any("milestone", milestone),
+					log.Strings("ancestors", outcomeAncestors))
+				return err
+			}
+			if len(intersect) > 0 {
+				intersectMap := make(map[string]bool)
+				for i := range intersect {
+					intersectMap[intersect[i].OutcomeAncestor] = true
+				}
+				outcomeAncestors = make([]string, 0, bindLength-len(intersectMap))
+				for i := range milestoneOutcomes {
+					if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
+						outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
+					}
+				}
+			}
+		}
+
+		outcomeAncestors = utils.SliceDeduplication(outcomeAncestors)
+
 		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
 			log.Error(ctx, "Obtain: GetLatestByAncestors failed",
 				log.Err(err),
 				log.Strings("ancestors", outcomeAncestors))
 			return err
-		}
-
-		if len(outcomeAncestors) != len(outcomes) {
-			log.Error(ctx, "Obtain: ancestor and outcomes not match",
-				log.String("milestone", milestoneID),
-				log.Strings("ancestors", outcomeAncestors),
-				log.Any("outcomes", outcomes))
-			return constant.ErrInternalServer
 		}
 
 		outcomesMap := make(map[string]*entity.Outcome, len(outcomes))
@@ -275,7 +299,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		for i := range outcomeAncestors {
 			milestone.Outcomes[i] = outcomesMap[outcomeAncestors[i]]
 		}
-		milestone.LoCounts = len(outcomes)
+		milestone.LoCounts = len(milestone.Outcomes)
 		return nil
 	})
 	return milestone, err
@@ -321,17 +345,19 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}}
 		}
 
-		if toPublish && !perms[external.CreateMilestone] {
-			log.Warn(ctx, "Update: perm failed",
-				log.Any("perms", perms),
-				log.Bool("to_publish", toPublish),
-				log.Any("op", op),
-				log.Any("milestone", ms))
-			return constant.ErrOperateNotAllowed
-		}
-
 		switch ms.Status {
 		case entity.OutcomeStatusDraft:
+			if toPublish {
+				if !perms[external.CreateMilestone] {
+					log.Warn(ctx, "Update: perm failed",
+						log.Any("perms", perms),
+						log.Bool("to_publish", toPublish),
+						log.Any("op", op),
+						log.Any("milestone", ms))
+					return constant.ErrOperateNotAllowed
+				}
+				ms.Status = entity.OutcomeStatusPublished
+			}
 			if !perms[external.EditUnpublishedMilestone] {
 				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
@@ -341,6 +367,14 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 				return constant.ErrOperateNotAllowed
 			}
 		case entity.OutcomeStatusPublished:
+			if ms.Type == entity.GeneralMilestoneType {
+				log.Warn(ctx, "Update: can not operate general milestone",
+					log.Any("perms", perms),
+					log.Bool("to_publish", toPublish),
+					log.Any("op", op),
+					log.Any("milestone", ms))
+				return constant.ErrOperateNotAllowed
+			}
 			if !perms[external.EditPublishedMilestone] {
 				log.Warn(ctx, "Update: perm failed",
 					log.Any("perms", perms),
@@ -371,9 +405,6 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 		}
 		m.UpdateMilestone(milestone, ms)
-		if toPublish {
-			ms.Status = entity.OutcomeStatusPublished
-		}
 		err = da.GetMilestoneDA().Update(ctx, tx, ms)
 		if err != nil {
 			log.Error(ctx, "Update: Update failed",
@@ -384,6 +415,7 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			return err
 		}
 
+		var needDeleteOutcomeMilestoneID []string
 		if toPublish && ms.SourceID != ms.ID {
 			err = da.GetMilestoneDA().BatchHide(ctx, tx, []string{ms.SourceID})
 			if err != nil {
@@ -403,8 +435,17 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 					log.Any("milestone", ancestorLatest))
 				return err
 			}
-		}
+			needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.SourceID)
 
+			//err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.SourceID})
+			//if err != nil {
+			//	log.Error(ctx, "Update: delete hide milestone's outcomes failed",
+			//		log.Bool("to_publish", toPublish),
+			//		log.Any("op", op),
+			//		log.Any("milestone", ms))
+			//	return err
+			//}
+		}
 		length := len(outcomeAncestors)
 		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
 		for i := range outcomeAncestors {
@@ -414,7 +455,8 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			}
 			milestoneOutcomes[length-1-i] = &milestoneOutcome
 		}
-		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, []string{ms.ID})
+		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.ID)
+		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, needDeleteOutcomeMilestoneID)
 		if err != nil {
 			log.Error(ctx, "Update: DeleteTx failed",
 				log.Err(err),
@@ -477,6 +519,11 @@ func (m MilestoneModel) canBeDeleted(ctx context.Context, milestones []*entity.M
 			if !perms[external.DeletePublishedMilestone] {
 				log.Warn(ctx, "canBeDeleted: has no perm",
 					log.Any("perms", perms),
+					log.Any("milestone", milestones[i]))
+				return nil, constant.ErrOperateNotAllowed
+			}
+			if milestones[i].Type == entity.GeneralMilestoneType {
+				log.Warn(ctx, "canBeDeleted: can not operate general milestone",
 					log.Any("milestone", milestones[i]))
 				return nil, constant.ErrOperateNotAllowed
 			}
@@ -591,22 +638,42 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			log.Info(ctx, "Search: not found",
 				log.Any("op", op),
 				log.Any("cond", condition))
+			if condition.Status != entity.OutcomeStatusPublished {
+				return nil
+			}
+
+			general, err := m.CreateGeneral(ctx, op, tx, "")
+			if err != nil {
+				log.Error(ctx, "Search: CreateGeneral failed",
+					log.Any("op", op))
+				return err
+			}
+			count = 1
+			milestones = append(milestones, general)
 			return nil
 		}
-		milestoneIDs := make([]string, len(milestones))
+
+		var generalIDs, normalIDs []string
+		allIDs := make([]string, len(milestones))
 		for i := range milestones {
-			milestoneIDs[i] = milestones[i].ID
+			if milestones[i].Type == entity.GeneralMilestoneType {
+				generalIDs = append(generalIDs, milestones[i].ID)
+			}
+			if milestones[i].Type == entity.CustomMilestoneType {
+				normalIDs = append(normalIDs, milestones[i].ID)
+			}
+			allIDs[i] = milestones[i].ID
 		}
 
 		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			MasterIDs:  dbo.NullStrings{Strings: allIDs, Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "Search: Search failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("milestone", milestoneIDs))
+				log.Strings("milestone", allIDs))
 			return err
 		}
 		for i := range relations {
@@ -617,12 +684,13 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 				}
 			}
 		}
-		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, milestoneIDs)
+		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, generalIDs, normalIDs)
 		if err != nil {
 			log.Error(ctx, "Search: Count failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("milestone", milestoneIDs))
+				log.Strings("general", generalIDs),
+				log.Strings("normal", normalIDs))
 			return err
 		}
 		for i := range milestones {
@@ -675,6 +743,11 @@ func (m MilestoneModel) Occupy(ctx context.Context, op *entity.Operator, milesto
 				log.Any("op", op),
 				log.String("milestone", milestoneID))
 			return err
+		}
+
+		if ms.Type == entity.GeneralMilestoneType {
+			log.Warn(ctx, "Occupy: can not operate general milestone", log.Any("milestone", ms))
+			return constant.ErrOperateNotAllowed
 		}
 
 		if ms.LockedBy == op.UserID {
@@ -822,7 +895,14 @@ func (m MilestoneModel) Publish(ctx context.Context, op *entity.Operator, IDs []
 			log.Error(ctx, "Publish: BatchHide failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("publish", publishIDs))
+				log.Strings("hide", hideIDs))
+			return err
+		}
+		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, hideIDs)
+		if err != nil {
+			log.Error(ctx, "Publish: DeleteTx failed",
+				log.Any("op", op),
+				log.Strings("hide", hideIDs))
 			return err
 		}
 		err = da.GetMilestoneDA().BatchUpdateLatest(ctx, tx, ancestorLatest)
@@ -830,12 +910,156 @@ func (m MilestoneModel) Publish(ctx context.Context, op *entity.Operator, IDs []
 			log.Error(ctx, "Publish: BatchUpdateLatest failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("publish", publishIDs))
+				log.Any("ancestor", ancestorLatest))
 			return err
 		}
 		return nil
 	})
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m MilestoneModel) ObtainGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error) {
+	_, milestones, err := da.GetMilestoneDA().Search(ctx, tx, &da.MilestoneCondition{
+		OrganizationID: sql.NullString{String: orgID, Valid: true},
+		Type:           sql.NullString{String: string(entity.GeneralMilestoneType), Valid: true},
+	})
+	if err != nil {
+		log.Error(ctx, "ObtainGeneral:Search failed",
+			log.Any("op", op),
+			log.String("org", orgID))
+		return nil, err
+	}
+
+	if len(milestones) == 0 {
+		log.Error(ctx, "ObtainGeneral: not found",
+			log.Any("op", op),
+			log.String("org", orgID))
+		return nil, constant.ErrRecordNotFound
+	}
+
+	if len(milestones) > 1 {
+		log.Error(ctx, "ObtainGeneral: should only one",
+			log.Any("op", op),
+			log.String("org", orgID))
+		return nil, constant.ErrInternalServer
+	}
+	return milestones[0], nil
+}
+
+func (m MilestoneModel) buildGeneral(ctx context.Context, op *entity.Operator) *entity.Milestone {
+	ID := utils.NewID()
+	now := time.Now().Unix()
+	general := &entity.Milestone{
+		ID:   ID,
+		Name: entity.GeneralMilestoneName,
+		//Shortcode:      entity.GeneralMilestoneShortcode,
+		OrganizationID: op.OrgID,
+		Type:           entity.GeneralMilestoneType,
+		Status:         entity.OutcomeStatusPublished,
+		AncestorID:     ID,
+		SourceID:       ID,
+		LatestID:       ID,
+		CreateAt:       now,
+		UpdateAt:       now,
+	}
+	return general
+}
+func (m MilestoneModel) CreateGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, orgID string) (*entity.Milestone, error) {
+	locker, err := mutex.NewLock(ctx, da.RedisKeyPrefixGeneralMilestoneMute, entity.KindMileStone, op.OrgID)
+	if err != nil {
+		log.Error(ctx, "CreateGeneral: NewLock failed",
+			log.Err(err),
+			log.Any("op", op))
+		return nil, err
+	}
+	locker.Lock()
+	defer locker.Unlock()
+	if orgID == "" {
+		orgID = op.OrgID
+	}
+	general, err := m.ObtainGeneral(ctx, op, tx, orgID)
+	if err != nil && err != constant.ErrRecordNotFound {
+		log.Debug(ctx, "CreateGeneral: ObtainGeneral failed", log.Any("op", op))
+		return nil, err
+	}
+	if general != nil {
+		return general, nil
+	}
+	general = m.buildGeneral(ctx, op)
+	err = da.GetMilestoneDA().Create(ctx, tx, general)
+	if err != nil {
+		log.Debug(ctx, "CreateGeneral: Create failed", log.Any("op", op),
+			log.Any("milestone", general))
+		return nil, err
+	}
+	//err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
+	//	var err error
+	//	general, err = m.ObtainGeneral(ctx, op, tx, op.OrgID)
+	//	if err != nil && err != constant.ErrRecordNotFound {
+	//		log.Debug(ctx, "CreateGeneral: ObtainGeneral failed", log.Any("op", op))
+	//		return err
+	//	}
+	//	if general != nil {
+	//		return nil
+	//	}
+	//	general = m.buildGeneral(ctx, op)
+	//	err = da.GetMilestoneDA().Create(ctx, tx, general)
+	//	if err != nil {
+	//		log.Debug(ctx, "CreateGeneral: Create failed", log.Any("op", op),
+	//			log.Any("milestone", general))
+	//	}
+	//	return err
+	//})
+	return general, nil
+}
+
+func (m MilestoneModel) BindToGeneral(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, outcome *entity.Outcome) error {
+	general, err := m.ObtainGeneral(ctx, op, tx, outcome.OrganizationID)
+	if err != nil && err != constant.ErrRecordNotFound {
+		log.Error(ctx, "BindToGeneral: ObtainGeneral failed",
+			log.Any("op", op),
+			log.Any("outcome", outcome))
+		return err
+	}
+	if err == constant.ErrRecordNotFound {
+		general, err = m.CreateGeneral(ctx, op, tx, outcome.OrganizationID)
+		if err != nil {
+			log.Error(ctx, "BindToGeneral: CreateGeneral failed",
+				log.Any("op", op),
+				log.String("org", outcome.OrganizationID))
+			return err
+		}
+	} else {
+		milestoneOutcomes, err := da.GetMilestoneOutcomeDA().SearchTx(ctx, tx, &da.MilestoneOutcomeCondition{
+			MilestoneID:     sql.NullString{String: general.ID, Valid: true},
+			OutcomeAncestor: sql.NullString{String: outcome.AncestorID, Valid: true},
+		})
+		if err != nil {
+			log.Error(ctx, "BindToGeneral: SearchTx failed",
+				log.Any("op", op),
+				log.Any("outcome", outcome))
+			return err
+		}
+		if len(milestoneOutcomes) != 0 {
+			return nil
+		}
+	}
+	now := time.Now().Unix()
+	milestoneOutcome := &entity.MilestoneOutcome{
+		MilestoneID:     general.ID,
+		OutcomeAncestor: outcome.AncestorID,
+		CreateAt:        now,
+		UpdateAt:        now,
+	}
+	err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, []*entity.MilestoneOutcome{milestoneOutcome})
+	if err != nil {
+		log.Error(ctx, "BindToGeneral: InsertTx failed",
+			log.Any("op", op),
+			log.Any("general", general),
+			log.Any("outcome", outcome))
 		return err
 	}
 	return nil

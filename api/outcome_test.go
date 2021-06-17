@@ -25,7 +25,8 @@ func TestCreateOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	createView := model.OutcomeCreateView{
-		OutcomeName:   "outcome002",
+		OutcomeName:   "outcome001",
+		Shortcode:     "X0001",
 		Assumed:       true,
 		Program:       []string{"75004121-0c0d-486c-ba65-4c57deacb44b"},
 		Subject:       []string{"36c4f7939aa3-4fb8-84f0-68a2ab920d5a"},
@@ -36,7 +37,6 @@ func TestCreateOutcome(t *testing.T) {
 		Estimated:     30,
 		Keywords:      []string{"kyd001", "kyd002"},
 		Description:   "Hello, Brilliant",
-		Shortcode:     "Z0002",
 		Sets: []*model.OutcomeSetCreateView{
 			{SetID: "6077b3a9809f75d51b5cb023"},
 		},
@@ -115,7 +115,7 @@ func TestLockOutcome(t *testing.T) {
 func TestPublishOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	outcomeID := "609b7fac691ad140891442cc"
+	outcomeID := "609cbafd6b534d371d08c083"
 	req := model.PublishOutcomeReq{
 		Scope: "1",
 	}
@@ -131,7 +131,7 @@ func TestPublishOutcome(t *testing.T) {
 func TestApproveOutcome(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
-	outcomeID := "609b7fac691ad140891442cc"
+	outcomeID := "609cbafd6b534d371d08c083"
 	url := fmt.Sprintf("%s/learning_outcomes/%s/approve?org_id=%s", prefix, outcomeID, op.OrgID)
 	res := DoHttpWithOperator(http.MethodPut, op, url, "")
 	//res := DoHttp(http.MethodPut, prefix+"/learning_outcomes/"+outcomeID+"/approve", "")

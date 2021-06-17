@@ -54,6 +54,7 @@ func TestCreateMilestone(t *testing.T) {
 			"609b7ec4f060b597ab4782c7",
 			"609b7fac691ad140891442cc",
 		},
+		WithPublish: true,
 	}
 	data, err := json.Marshal(req)
 	if err != nil {
@@ -146,5 +147,12 @@ func TestOccupyMilestone(t *testing.T) {
 	setupMilestone()
 	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
 	res := DoHttpWithOperator(http.MethodPut, op, prefix+"/milestones/"+"609b9636b8f830a9402b0ba3/occupy"+"?org_id="+op.OrgID, "")
+	fmt.Println(res)
+}
+
+func TestCreateGeneral(t *testing.T) {
+	setupMilestone()
+	op := initOperator("8a31ebab-b879-4790-af99-ee4941a778b3", "", "")
+	res := DoHttpWithOperator(http.MethodPost, op, prefix+"/milestones/general"+"?org_id="+op.OrgID, "")
 	fmt.Println(res)
 }
