@@ -1393,28 +1393,25 @@ func (ocm OutcomeModel) HasLocked(ctx context.Context, operator *entity.Operator
 }
 
 func (ocm OutcomeModel) GetLatestByAncestors(ctx context.Context, op *entity.Operator, tx *dbo.DBContext, ancestorIDs []string) (outcomes []*entity.Outcome, err error) {
-	err = dbo.GetTrans(ctx, func(ctx context.Context, tx *dbo.DBContext) error {
-		_, outcomes, err = da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
-			AncestorIDs:   dbo.NullStrings{Strings: ancestorIDs, Valid: true},
-			PublishStatus: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished}, Valid: true},
-		})
-		if err != nil {
-			log.Error(ctx, "GetLatestByAncestors: SearchOutcome failed",
-				log.Err(err),
-				log.String("op", op.UserID),
-				log.Strings("ancestor", ancestorIDs))
-			return err
-		}
-		err = ocm.fillRelation(ctx, op, tx, outcomes)
-		if err != nil {
-			log.Error(ctx, "GetLatestByAncestors: fillRelation failed",
-				log.Err(err),
-				log.String("op", op.UserID),
-				log.Strings("ancestor", ancestorIDs))
-			return err
-		}
-		return nil
+	_, outcomes, err = da.GetOutcomeDA().SearchOutcome(ctx, op, tx, &da.OutcomeCondition{
+		AncestorIDs:   dbo.NullStrings{Strings: ancestorIDs, Valid: true},
+		PublishStatus: dbo.NullStrings{Strings: []string{entity.OutcomeStatusPublished}, Valid: true},
 	})
+	if err != nil {
+		log.Error(ctx, "GetLatestByAncestors: SearchOutcome failed",
+			log.Err(err),
+			log.String("op", op.UserID),
+			log.Strings("ancestor", ancestorIDs))
+		return
+	}
+	err = ocm.fillRelation(ctx, op, tx, outcomes)
+	if err != nil {
+		log.Error(ctx, "GetLatestByAncestors: fillRelation failed",
+			log.Err(err),
+			log.String("op", op.UserID),
+			log.Strings("ancestor", ancestorIDs))
+		return
+	}
 	return
 }
 
