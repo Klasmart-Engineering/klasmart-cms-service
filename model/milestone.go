@@ -185,14 +185,14 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		length := len(outcomeAncestors)
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
+
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     milestone.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[length-1-i] = &milestoneOutcome
+			milestoneOutcomes[i] = &milestoneOutcome
 		}
 		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
