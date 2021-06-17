@@ -12,6 +12,7 @@ type AddClassAndLiveAssessmentArgs struct {
 	ClassEndTime  int64    `json:"class_end_time"`
 }
 
+// Valid implement jwt Claims interface
 func (a *AddClassAndLiveAssessmentArgs) Valid() error {
 	return nil
 }
