@@ -463,22 +463,40 @@ func (mso MilestoneOutcomeSQLDA) InsertTx(ctx context.Context, tx *dbo.DBContext
 	return nil
 }
 
-func (mso MilestoneOutcomeSQLDA) CountTx(ctx context.Context, tx *dbo.DBContext, milestoneIDs []string) (map[string]int, error) {
-	sql := fmt.Sprintf("select milestone_id, count(outcome_ancestor) as count from %s where milestone_id in (?) group by milestone_id", entity.MilestoneOutcome{}.TableName())
-	var results []*struct {
+func (mso MilestoneOutcomeSQLDA) CountTx(ctx context.Context, tx *dbo.DBContext, generalIDs, normalIDs []string) (map[string]int, error) {
+	var generalResults, normalResults []*struct {
 		MilestoneID string `gorm:"column:milestone_id" json:"milestone_id"`
 		Count       int    `gorm:"column:count" json:"count"`
 	}
-	err := tx.Raw(sql, milestoneIDs).Find(&results).Error
+
+	generalSql := fmt.Sprintf("select gmo.milestone_id, count(gmo.outcome_ancestor) as count from "+
+		"(select any_value(milestone_id) as milestone_id, outcome_ancestor from %s where outcome_ancestor in "+
+		"(select outcome_ancestor from %s where milestone_id in (?)) "+
+		"group by outcome_ancestor having count(milestone_id) = 1) as gmo group by gmo.milestone_id", entity.MilestoneOutcome{}.TableName(), entity.MilestoneOutcome{}.TableName())
+
+	err := tx.Raw(generalSql, generalIDs).Find(&generalResults).Error
 	if err != nil {
 		log.Error(ctx, "Count: exec sql failed",
-			log.Strings("milestone", milestoneIDs),
-			log.String("sql", sql))
+			log.Strings("general", normalIDs),
+			log.String("sql", generalSql))
 		return nil, err
 	}
+
+	normalSql := fmt.Sprintf("select milestone_id, count(outcome_ancestor) as count from %s where milestone_id in (?) group by milestone_id", entity.MilestoneOutcome{}.TableName())
+	err = tx.Raw(normalSql, normalIDs).Find(&normalResults).Error
+	if err != nil {
+		log.Error(ctx, "Count: exec sql failed",
+			log.Strings("normal", normalIDs),
+			log.String("sql", normalSql))
+		return nil, err
+	}
+
 	counts := make(map[string]int)
-	for i := range results {
-		counts[results[i].MilestoneID] = results[i].Count
+	for i := range generalResults {
+		counts[generalResults[i].MilestoneID] = generalResults[i].Count
+	}
+	for i := range normalResults {
+		counts[normalResults[i].MilestoneID] = normalResults[i].Count
 	}
 	return counts, nil
 }

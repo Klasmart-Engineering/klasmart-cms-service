@@ -252,7 +252,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 
 		outcomeAncestors := make([]string, 0, bindLength)
 		for i := range milestoneOutcomes {
-			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
+			outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
 		}
 
 		if milestone.Type == entity.GeneralMilestoneType {
@@ -446,14 +446,13 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			//}
 		}
 
-		length := len(outcomeAncestors)
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     ms.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[length-1-i] = &milestoneOutcome
+			milestoneOutcomes[i] = &milestoneOutcome
 		}
 		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.ID)
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, needDeleteOutcomeMilestoneID)
@@ -653,20 +652,25 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			return nil
 		}
 
-		milestoneIDs := make([]string, len(milestones))
+		var generalIDs, normalIDs []string
 		for i := range milestones {
-			milestoneIDs[i] = milestones[i].ID
+			if milestones[i].Type == entity.GeneralMilestoneType {
+				generalIDs = append(generalIDs, milestones[i].ID)
+			}
+			if milestones[i].Type == entity.CustomMilestoneType {
+				normalIDs = append(normalIDs, milestones[i].ID)
+			}
 		}
 
 		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			MasterIDs:  dbo.NullStrings{Strings: append(generalIDs, normalIDs...), Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "Search: Search failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("milestone", milestoneIDs))
+				log.Strings("milestone", append(generalIDs, normalIDs...)))
 			return err
 		}
 		for i := range relations {
@@ -677,12 +681,13 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 				}
 			}
 		}
-		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, milestoneIDs)
+		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, generalIDs, normalIDs)
 		if err != nil {
 			log.Error(ctx, "Search: Count failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("milestone", milestoneIDs))
+				log.Strings("general", generalIDs),
+				log.Strings("normal", normalIDs))
 			return err
 		}
 		for i := range milestones {
