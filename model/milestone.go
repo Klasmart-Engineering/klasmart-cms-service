@@ -185,14 +185,14 @@ func (m MilestoneModel) Create(ctx context.Context, op *entity.Operator, milesto
 				log.Any("milestone", milestone))
 			return err
 		}
-		length := len(outcomeAncestors)
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
+
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     milestone.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[length-1-i] = &milestoneOutcome
+			milestoneOutcomes[i] = &milestoneOutcome
 		}
 		err = da.GetMilestoneOutcomeDA().InsertTx(ctx, tx, milestoneOutcomes)
 		if err != nil {
@@ -250,9 +250,9 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 			return nil
 		}
 
-		outcomeAncestors := make([]string, bindLength)
+		outcomeAncestors := make([]string, 0, bindLength)
 		for i := range milestoneOutcomes {
-			outcomeAncestors[i] = milestoneOutcomes[i].OutcomeAncestor
+			outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
 		}
 
 		if milestone.Type == entity.GeneralMilestoneType {
@@ -266,21 +266,21 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 					log.Strings("ancestors", outcomeAncestors))
 				return err
 			}
-			if len(intersect) == bindLength {
-				log.Info(ctx, "Obtain: all bind to normal general", log.String("milestone", milestoneID))
-				return nil
-			}
-			intersectMap := make(map[string]bool, len(intersect))
-			for i := range intersect {
-				intersectMap[intersect[i].OutcomeAncestor] = true
-			}
-			outcomeAncestors = make([]string, 0, bindLength-len(intersect))
-			for i := range milestoneOutcomes {
-				if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
-					outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
+			if len(intersect) > 0 {
+				intersectMap := make(map[string]bool)
+				for i := range intersect {
+					intersectMap[intersect[i].OutcomeAncestor] = true
+				}
+				outcomeAncestors = make([]string, 0, bindLength-len(intersectMap))
+				for i := range milestoneOutcomes {
+					if !intersectMap[milestoneOutcomes[i].OutcomeAncestor] {
+						outcomeAncestors = append(outcomeAncestors, milestoneOutcomes[i].OutcomeAncestor)
+					}
 				}
 			}
 		}
+
+		outcomeAncestors = utils.SliceDeduplication(outcomeAncestors)
 
 		outcomes, err := GetOutcomeModel().GetLatestByAncestors(ctx, op, tx, outcomeAncestors)
 		if err != nil {
@@ -288,14 +288,6 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 				log.Err(err),
 				log.Strings("ancestors", outcomeAncestors))
 			return err
-		}
-
-		if len(outcomeAncestors) != len(outcomes) {
-			log.Error(ctx, "Obtain: ancestor and outcomes not match",
-				log.String("milestone", milestoneID),
-				log.Strings("ancestors", outcomeAncestors),
-				log.Any("outcomes", outcomes))
-			return constant.ErrInternalServer
 		}
 
 		outcomesMap := make(map[string]*entity.Outcome, len(outcomes))
@@ -306,7 +298,7 @@ func (m MilestoneModel) Obtain(ctx context.Context, op *entity.Operator, milesto
 		for i := range outcomeAncestors {
 			milestone.Outcomes[i] = outcomesMap[outcomeAncestors[i]]
 		}
-		milestone.LoCounts = len(outcomes)
+		milestone.LoCounts = len(milestone.Outcomes)
 		return nil
 	})
 	return milestone, err
@@ -454,14 +446,13 @@ func (m MilestoneModel) Update(ctx context.Context, op *entity.Operator, perms m
 			//}
 		}
 
-		length := len(outcomeAncestors)
-		milestoneOutcomes := make([]*entity.MilestoneOutcome, length)
+		milestoneOutcomes := make([]*entity.MilestoneOutcome, len(outcomeAncestors))
 		for i := range outcomeAncestors {
 			milestoneOutcome := entity.MilestoneOutcome{
 				MilestoneID:     ms.ID,
 				OutcomeAncestor: outcomeAncestors[i],
 			}
-			milestoneOutcomes[length-1-i] = &milestoneOutcome
+			milestoneOutcomes[i] = &milestoneOutcome
 		}
 		needDeleteOutcomeMilestoneID = append(needDeleteOutcomeMilestoneID, ms.ID)
 		err = da.GetMilestoneOutcomeDA().DeleteTx(ctx, tx, needDeleteOutcomeMilestoneID)
@@ -661,20 +652,27 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 			return nil
 		}
 
-		milestoneIDs := make([]string, len(milestones))
+		var generalIDs, normalIDs []string
+		allIDs := make([]string, len(milestones))
 		for i := range milestones {
-			milestoneIDs[i] = milestones[i].ID
+			if milestones[i].Type == entity.GeneralMilestoneType {
+				generalIDs = append(generalIDs, milestones[i].ID)
+			}
+			if milestones[i].Type == entity.CustomMilestoneType {
+				normalIDs = append(normalIDs, milestones[i].ID)
+			}
+			allIDs[i] = milestones[i].ID
 		}
 
 		relations, err := da.GetMilestoneRelationDA().SearchTx(ctx, tx, &da.RelationCondition{
-			MasterIDs:  dbo.NullStrings{Strings: milestoneIDs, Valid: true},
+			MasterIDs:  dbo.NullStrings{Strings: allIDs, Valid: true},
 			MasterType: sql.NullString{String: string(entity.MilestoneType), Valid: true},
 		})
 		if err != nil {
 			log.Error(ctx, "Search: Search failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("milestone", milestoneIDs))
+				log.Strings("milestone", allIDs))
 			return err
 		}
 		for i := range relations {
@@ -685,12 +683,13 @@ func (m MilestoneModel) Search(ctx context.Context, op *entity.Operator, conditi
 				}
 			}
 		}
-		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, milestoneIDs)
+		counts, err := da.GetMilestoneOutcomeDA().CountTx(ctx, tx, generalIDs, normalIDs)
 		if err != nil {
 			log.Error(ctx, "Search: Count failed",
 				log.Err(err),
 				log.Any("op", op),
-				log.Strings("milestone", milestoneIDs))
+				log.Strings("general", generalIDs),
+				log.Strings("normal", normalIDs))
 			return err
 		}
 		for i := range milestones {

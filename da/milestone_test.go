@@ -63,3 +63,13 @@ func TestGetMilestoneDA_BatchUnLock(t *testing.T) {
 	}
 	fmt.Println("ok")
 }
+
+func TestCountTx(t *testing.T) {
+	setup()
+	ctx := context.TODO()
+	result, err := GetMilestoneOutcomeDA().CountTx(ctx, dbo.MustGetDB(ctx), []string{"607e7089eb753a919be411cf"}, []string{"6094f1e9de3afd06e06fc5d8"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(result)
+}
